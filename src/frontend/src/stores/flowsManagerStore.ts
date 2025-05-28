@@ -17,6 +17,10 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  IOModalOpen: false,
+  setIOModalOpen: (IOModalOpen: boolean) => {
+    set({ IOModalOpen });
+  },
   healthCheckMaxRetries: 5,
   setHealthCheckMaxRetries: (healthCheckMaxRetries: number) =>
     set({ healthCheckMaxRetries }),
@@ -126,11 +130,13 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setSelectedFlowsComponentsCards: (selectedFlowsComponentsCards: string[]) => {
     set({ selectedFlowsComponentsCards });
   },
-  flowToCanvas: null,
-  setFlowToCanvas: async (flowToCanvas: FlowType | null) => {
-    await new Promise<void>((resolve) => {
-      set({ flowToCanvas });
-      resolve();
+  resetStore: () => {
+    set({
+      flows: [],
+      currentFlow: undefined,
+      currentFlowId: "",
+      searchFlowsComponents: "",
+      selectedFlowsComponentsCards: [],
     });
   },
 }));

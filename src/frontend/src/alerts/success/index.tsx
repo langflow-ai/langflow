@@ -1,6 +1,6 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent from "../../components/common/genericIconComponent";
 import { SuccessAlertType } from "../../types/alerts";
 
 export default function SuccessAlert({

@@ -1,8 +1,8 @@
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 import React, { useEffect, useRef, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import SanitizedHTMLWrapper from "../../components/sanitizedHTMLWrapper";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import IconComponent from "../../components/common/genericIconComponent";
+import SanitizedHTMLWrapper from "../../components/common/sanitizedHTMLWrapper";
+import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
@@ -16,7 +16,6 @@ import {
   EDIT_TEXT_PLACEHOLDER,
   INVALID_CHARACTERS,
   MAX_WORDS_HIGHLIGHT,
-  PROMPT_DIALOG_SUBTITLE,
   regexHighlight,
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
@@ -217,17 +216,17 @@ export default function PromptModal({
       <BaseModal.Trigger disable={disabled} asChild>
         {children}
       </BaseModal.Trigger>
-      <BaseModal.Header description={PROMPT_DIALOG_SUBTITLE}>
+      <BaseModal.Header>
         <div className="flex w-full items-start gap-3">
           <div className="flex">
-            <span className="pr-2" data-testid="modal-title">
-              Edit Prompt
-            </span>
             <IconComponent
               name="TerminalSquare"
-              className="h-6 w-6 pl-1 text-primary"
+              className="h-6 w-6 pr-1 text-primary"
               aria-hidden="true"
             />
+            <span className="pl-2" data-testid="modal-title">
+              Edit Prompt
+            </span>
           </div>
         </div>
       </BaseModal.Header>
@@ -257,7 +256,7 @@ export default function PromptModal({
           ) : (
             <SanitizedHTMLWrapper
               ref={previewRef}
-              className={getClassByNumberLength() + " bg-muted"}
+              className={getClassByNumberLength() + " m-0"}
               onClick={handlePreviewClick}
               content={coloredContent}
               suppressWarning={true}

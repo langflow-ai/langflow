@@ -21,6 +21,7 @@ class IDGeneratorComponent(Component):
             display_name="Value",
             info="The generated unique ID.",
             refresh_button=True,
+            tool_mode=True,
         ),
     ]
 

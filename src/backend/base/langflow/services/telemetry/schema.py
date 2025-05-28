@@ -21,6 +21,7 @@ class VersionPayload(BaseModel):
     auto_login: bool = Field(serialization_alias="autoLogin")
     cache_type: str = Field(serialization_alias="cacheType")
     backend_only: bool = Field(serialization_alias="backendOnly")
+    desktop: bool = False
 
 
 class PlaygroundPayload(BaseModel):

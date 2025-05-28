@@ -2,6 +2,7 @@ import ast
 import operator
 
 from langchain.tools import StructuredTool
+from langchain_core.tools import ToolException
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -12,10 +13,11 @@ from langflow.schema import Data
 
 
 class CalculatorToolComponent(LCToolComponent):
-    display_name = "Calculator"
+    display_name = "Calculator [DEPRECATED]"
     description = "Perform basic arithmetic operations on a given expression."
     icon = "calculator"
     name = "CalculatorTool"
+    legacy = True
 
     inputs = [
         MessageTextInput(
@@ -35,26 +37,34 @@ class CalculatorToolComponent(LCToolComponent):
         return StructuredTool.from_function(
             name="calculator",
             description="Evaluate basic arithmetic expressions. Input should be a string containing the expression.",
-            func=self._evaluate_expression,
+            func=self._eval_expr_with_error,
             args_schema=self.CalculatorToolSchema,
         )
 
     def _eval_expr(self, node):
-        # Define the allowed operators
-        operators = {
-            ast.Add: operator.add,
-            ast.Sub: operator.sub,
-            ast.Mult: operator.mul,
-            ast.Div: operator.truediv,
-            ast.Pow: operator.pow,
-        }
         if isinstance(node, ast.Num):
             return node.n
         if isinstance(node, ast.BinOp):
-            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))
+            left_val = self._eval_expr(node.left)
+            right_val = self._eval_expr(node.right)
+            return self.operators[type(node.op)](left_val, right_val)
         if isinstance(node, ast.UnaryOp):
-            return operators[type(node.op)](self._eval_expr(node.operand))
-        raise TypeError(node)
+            operand_val = self._eval_expr(node.operand)
+            return self.operators[type(node.op)](operand_val)
+        if isinstance(node, ast.Call):
+            msg = (
+                "Function calls like sqrt(), sin(), cos() etc. are not supported. "
+                "Only basic arithmetic operations (+, -, *, /, **) are allowed."
+            )
+            raise TypeError(msg)
+        msg = f"Unsupported operation or expression type: {type(node).__name__}"
+        raise TypeError(msg)
+
+    def _eval_expr_with_error(self, expression: str) -> list[Data]:
+        try:
+            return self._evaluate_expression(expression)
+        except Exception as e:
+            raise ToolException(str(e)) from e
 
     def _evaluate_expression(self, expression: str) -> list[Data]:
         try:
@@ -71,13 +81,23 @@ class CalculatorToolComponent(LCToolComponent):
         except (SyntaxError, TypeError, KeyError) as e:
             error_message = f"Invalid expression: {e}"
             self.status = error_message
-            return [Data(data={"error": error_message})]
+            return [Data(data={"error": error_message, "input": expression})]
         except ZeroDivisionError:
             error_message = "Error: Division by zero"
             self.status = error_message
-            return [Data(data={"error": error_message})]
+            return [Data(data={"error": error_message, "input": expression})]
         except Exception as e:  # noqa: BLE001
             logger.opt(exception=True).debug("Error evaluating expression")
             error_message = f"Error: {e}"
             self.status = error_message
-            return [Data(data={"error": error_message})]
+            return [Data(data={"error": error_message, "input": expression})]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.operators = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.Pow: operator.pow,
+        }

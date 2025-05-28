@@ -1,160 +1,115 @@
 ---
-title: How to contribute?
-sidebar_position: 1
+title: Contribute to Langflow
 slug: /contributing-how-to-contribute
 ---
 
+This guide is intended to help you start contributing to Langflow.
+As an open-source project in a rapidly developing field, Langflow welcomes contributions, whether it be in the form of a new feature, improved infrastructure, or better documentation.
 
+To contribute code or documentation to this project, follow the [fork and pull request](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
 
-:::info
+## Contribute code
 
-This page may contain outdated information. It will be updated as soon as possible.
+Develop Langflow locally with [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js](https://nodejs.org/en/download/package-manager).
 
-:::
+### Prerequisites
 
+* [uv(>=0.4)](https://docs.astral.sh/uv/getting-started/installation/)
+* [Node.js](https://nodejs.org/en/download/package-manager)
 
+### Clone the Langflow Repository
 
+1. Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow), and then click **Fork**.
 
-👋 Hello there! 
+2. Add the new remote to your local repository on your local machine:
 
-We welcome contributions from developers of all levels to our open-source project on [GitHub](https://github.com/langflow-ai/langflow). If you'd like to contribute, please check our contributing guidelines and help make Langflow more accessible.
+```bash
+git remote add fork https://github.com/<your_git_username>/langflow.git
+```
 
+### Prepare the development environment
 
+1. Create development hooks.
 
-As an open-source project in a rapidly developing field, we are extremely open to contributions, whether in the form of a new feature, improved infra, or better documentation.
+```bash
+make init
+```
 
+This command sets up the development environment by installing backend and frontend dependencies, building the frontend static files, and initializing the project. It runs `make install_backend`, `make install_frontend`, `make build_frontend`, and finally `uv run langflow run` to start the application.
 
+2. Run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
 
-To contribute to this project, please follow a ["fork and pull request"](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow. Please do not try to push directly to this repo unless you are a maintainer.
+### Debug
 
+The repo includes a `.vscode/launch.json` file for debugging the backend in VSCode, which is faster than debugging with Docker Compose. To debug Langflow with the `launch.json` file in VSCode:
 
-## Local Development {#0388cc3c758d434d994022863a6bafa9}
+1. Open Langflow in VSCode.
+2. Press **Ctrl+Shift+D** for Windows **or Cmd+Shift+D** for Mac to open the Run and Debug view.
+3. From the **Run and Debug** dropdown, choose a debugging configuration.
+4. Click the green **Play** button or press F5 to start debugging.
 
+Use `launch.json` to quickly debug different parts of your application, like the backend, frontend, or CLI, directly from VSCode.
 
----
+### Run Langflow locally
 
+After setting up the environment with `make init`, you can run Langflow's backend and frontend separately for development.
+Langflow recommends using a virtual environment like [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda) to isolate dependencies.
 
-You can develop Langflow using docker compose, or locally.
+Before you begin, ensure you have [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js](https://nodejs.org/en/download/package-manager) installed.
 
+1. In the repository root, install the dependencies and start the development server for the backend:
 
-We provide a `.vscode/launch.json` file for debugging the backend in VSCode, which is a lot faster than using docker compose.
+```bash
+make backend
+```
 
+2. Install dependencies and start the frontend:
 
-Setting up hooks:
+```bash
+make frontend
+```
 
+This approach allows you to work on the backend and frontend independently, with hot-reloading for faster development.
 
-`make init`
+## Contribute documentation
 
+The documentation is built using [Docusaurus](https://docusaurus.io/) and written in [Markdown](https://docusaurus.io/docs/markdown-features).
 
-This will install the pre-commit hooks, which will run `make format` on every commit.
+### Prerequisites
 
+* [Node.js](https://nodejs.org/en/download/package-manager)
 
-It is advised to run `make lint` before pushing to the repository.
+### Clone the Langflow repository
 
+1. Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow), and then click **Fork**.
 
-## Run Locally {#5225c2ef0cd6403c9f6c6bbd888115e0}
+2. Add the new remote to your local repository on your local machine:
 
+```bash
+git remote add fork https://github.com/<your_git_username>/langflow.git
+```
 
----
+3. To run the documentation locally, run the following commands:
 
+```bash
+cd docs
+yarn install
+yarn start
+```
 
-Langflow can run locally by cloning the repository and installing the dependencies. We recommend using a virtual environment to isolate the dependencies from your system.
+The documentation will be available at `localhost:3000` and all the files are located in the `docs/docs` folder.
 
+## Open a pull request
 
-Before you start, make sure you have the following installed:
+Once you have written and manually tested your changes with `make lint` and `make unit_tests`, open a pull request to send your changes upstream to the main Langflow repository.
 
-- Poetry (&gt;=1.4)
-- Node.js
-
-Then, in the root folder, install the dependencies and start the development server for the backend:
-
-
-`make backend`
-
-
-And the frontend:
-
-
-`make frontend`
-
-
-## Docker Compose {#b07f359414ff4220ac615afc364ee46e}
-
-
----
-
-
-The following snippet will run the backend and frontend in separate containers. The frontend will be available at `localhost:3000` and the backend at `localhost:7860`.
-
-
-`docker compose up --build# ormake dev build=1`
-
-
-## Documentation {#5f34bcaeccdc4489b0c5ee2c4a21354e}
-
-
----
-
-
-The documentation is built using [Docusaurus](https://docusaurus.io/). To run the documentation locally, run the following commands:
-
-
-`cd docsnpm installnpm run start`
-
-
-The documentation will be available at `localhost:3000` and all the files are located in the `docs/docs` folder. Once you are done with your changes, you can create a Pull Request to the `main` branch.
-
-
-## Submitting Components {#9676353bc4504551a4014dd572ac8be8}
-
-
----
-
-
-New components are added as objects of the [CustomComponent](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/interface/custom/custom_component/custom_component.py) class and any dependencies are added to the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/dev/pyproject.toml#L27) file.
-
-
-### Add an example component {#8caae106c853465d83183e7f5272e4d8}
-
-
-You have a new document loader called **MyCustomDocumentLoader** and it would look awesome in Langflow.
-
-1. Write your loader as an object of the [CustomComponent](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/interface/custom/custom_component/custom_component.py) class. You'll create a new class, `MyCustomDocumentLoader`, that will inherit from `CustomComponent` and override the base class's methods.
-2. Define optional attributes like `display_name`, `description`, and `documentation` to provide information about your custom component.
-3. Implement the `build_config` method to define the configuration options for your custom component.
-4. Implement the `build` method to define the logic for taking input parameters specified in the `build_config` method and returning the desired output.
-5. Add the code to the [/components/documentloaders](https://github.com/langflow-ai/langflow/tree/dev/src/backend/base/langflow/components) folder.
-6. Add the dependency to [/documentloaders/__init__.py](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/components/documentloaders/__init__.py) as `from .MyCustomDocumentLoader import MyCustomDocumentLoader`.
-7. Add any new dependencies to the outer [pyproject.toml](https://github.com/langflow-ai/langflow/blob/dev/pyproject.toml#L27) file.
-8. Submit documentation for your component. For this example, you'd submit documentation to the [loaders page](https://github.com/langflow-ai/langflow/blob/dev/docs/docs/components/loaders).
-9. Submit your changes as a pull request. The Langflow team will have a look, suggest changes, and add your component to Langflow.
-
-## User Sharing {#34ac32e11f344eab892b94531a21d2c9}
-
-
----
-
-
-You might want to share and test your custom component with others, but don't need it merged into the main source code.
-
-
-If so, you can share your component on the Langflow store.
-
-
-1. [Register at the Langflow store](https://www.langflow.store/login/).
-
-
-2. Undergo pre-validation before receiving an API key.
-
-
-3. To deploy your amazing component directly to the Langflow store, without it being merged into the main source code, navigate to your flow, and then click **Share**. The share window appears:
-
-
-![](./683296796.png)
-
-
-4. Choose whether you want to flow to be public or private. You can also **Export** your flow as a JSON file from this window. When you're ready to share the flow, click **Share Flow**. You should see a **Flow shared successfully** popup.
-
-
-5. To confirm, navigate to the **Langflow Store** and filter results by **Created By Me**. You should see your new flow on the **Langflow Store**.
-
+1. Open a new GitHub pull request with your patch against the `main` branch.
+2. Ensure the PR title follows semantic commit conventions. For example, features are `feat: add new feature` and fixes are `fix: correct issue with X`.
+3. A Langflow maintainer will review your pull request. Thanks for your contribution!
+
+Some additional guidance on pull request titles:
+* Ensure the pull request description clearly describes the problem and solution. If the PR fixes an issue, include a link to the fixed issue in the PR description with `Fixes #1234`.
+* Pull request titles appear in Langflow's release notes, so they should explain what the PR does as explicitly as possible.
+* Pull requests should strive to fix one thing **only**, and should contain a good description of what is being fixed.
+
+For more information, see the [Python Developer's Guide](https://devguide.python.org/getting-started/pull-request-lifecycle/index.html#making-good-commits).

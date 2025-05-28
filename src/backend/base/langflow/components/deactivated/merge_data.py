@@ -76,7 +76,7 @@ class MergeDataComponent(Component):
                     # Use the existing value if the key exists, otherwise use an empty string
                     value = data_input.data.get(key, "")
                     if key not in data_input.data:
-                        log_message = f"Key '{key}' missing in data input at index {idx}. " "Assigning empty string."
+                        log_message = f"Key '{key}' missing in data input at index {idx}. Assigning empty string."
                         logger.debug(log_message)
                     merged_data_dict[key] = value
 

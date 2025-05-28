@@ -27,7 +27,6 @@ import useScrollToElement from "../hooks/use-scroll-to-element";
 import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
-import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 
 export const GeneralPage = () => {
   const { scrollId } = useParams();
@@ -39,11 +38,7 @@ export const GeneralPage = () => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
-  const hasStore = useStoreStore((state) => state.hasStore);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
-  const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
-  const { password, cnfPassword, profilePicture, apikey } = inputState;
+  const { password, cnfPassword, profilePicture } = inputState;
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { storeApiKey } = useContext(AuthContext);
@@ -142,10 +137,10 @@ export const GeneralPage = () => {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-6">
+    <div className="flex h-full w-full flex-col gap-6 overflow-x-hidden">
       <GeneralPageHeaderComponent />
 
-      <div className="grid gap-6">
+      <div className="flex w-full flex-col gap-6">
         {ENABLE_PROFILE_ICONS && (
           <ProfilePictureFormComponent
             profilePicture={profilePicture}
@@ -162,16 +157,6 @@ export const GeneralPage = () => {
             cnfPassword={cnfPassword}
             handleInput={handleInput}
             handlePatchPassword={handlePatchPassword}
-          />
-        )}
-        {hasStore && (
-          <StoreApiKeyFormComponent
-            apikey={apikey}
-            handleInput={handleInput}
-            handleSaveKey={handleSaveKey}
-            loadingApiKey={loadingApiKey}
-            validApiKey={validApiKey}
-            hasApiKey={hasApiKey}
           />
         )}
       </div>

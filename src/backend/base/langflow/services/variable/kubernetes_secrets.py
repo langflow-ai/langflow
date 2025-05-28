@@ -162,31 +162,31 @@ def encode_user_id(user_id: UUID | str) -> str:
         return f"uuid-{str(user_id).lower()}"[:253]
 
     # Convert string to lowercase
-    _user_id = str(user_id).lower()
+    user_id_ = str(user_id).lower()
 
     # If the user_id looks like an email, replace @ and . with allowed characters
-    if "@" in _user_id or "." in _user_id:
-        _user_id = _user_id.replace("@", "-at-").replace(".", "-dot-")
+    if "@" in user_id_ or "." in user_id_:
+        user_id_ = user_id_.replace("@", "-at-").replace(".", "-dot-")
 
     # Encode the user_id to base64
     # encoded = base64.b64encode(user_id.encode("utf-8")).decode("utf-8")
 
     # Replace characters not allowed in Kubernetes names
-    _user_id = _user_id.replace("+", "-").replace("/", "_").rstrip("=")
+    user_id_ = user_id_.replace("+", "-").replace("/", "_").rstrip("=")
 
     # Ensure the name starts with an alphanumeric character
-    if not _user_id[0].isalnum():
-        _user_id = "a-" + _user_id
+    if not user_id_[0].isalnum():
+        user_id_ = "a-" + user_id_
 
     # Truncate to 253 characters (Kubernetes name length limit)
-    _user_id = _user_id[:253]
+    user_id_ = user_id_[:253]
 
-    if not all(c.isalnum() or c in "-_" for c in _user_id):
-        msg = f"Invalid user_id: {_user_id}"
+    if not all(c.isalnum() or c in "-_" for c in user_id_):
+        msg = f"Invalid user_id: {user_id_}"
         raise ValueError(msg)
 
     # Ensure the name ends with an alphanumeric character
-    while not _user_id[-1].isalnum():
-        _user_id = _user_id[:-1]
+    while not user_id_[-1].isalnum():
+        user_id_ = user_id_[:-1]
 
-    return _user_id
+    return user_id_

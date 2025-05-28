@@ -1,5 +1,5 @@
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, available_timezones
 
 from loguru import logger
 
@@ -12,50 +12,16 @@ class CurrentDateComponent(Component):
     display_name = "Current Date"
     description = "Returns the current date and time in the selected timezone."
     icon = "clock"
-    beta = True
     name = "CurrentDate"
 
     inputs = [
         DropdownInput(
             name="timezone",
             display_name="Timezone",
-            options=[
-                "UTC",
-                "US/Eastern",
-                "US/Central",
-                "US/Mountain",
-                "US/Pacific",
-                "Europe/London",
-                "Europe/Paris",
-                "Europe/Berlin",
-                "Europe/Moscow",
-                "Asia/Tokyo",
-                "Asia/Shanghai",
-                "Asia/Singapore",
-                "Asia/Dubai",
-                "Australia/Sydney",
-                "Australia/Melbourne",
-                "Pacific/Auckland",
-                "America/Sao_Paulo",
-                "America/Mexico_City",
-                "America/Toronto",
-                "America/Vancouver",
-                "Africa/Cairo",
-                "Africa/Johannesburg",
-                "Atlantic/Reykjavik",
-                "Indian/Maldives",
-                "America/Bogota",
-                "America/Lima",
-                "America/Santiago",
-                "America/Buenos_Aires",
-                "America/Caracas",
-                "America/La_Paz",
-                "America/Montevideo",
-                "America/Asuncion",
-                "America/Cuiaba",
-            ],
+            options=list(available_timezones()),
             value="UTC",
             info="Select the timezone for the current date and time.",
+            tool_mode=True,
         ),
     ]
     outputs = [

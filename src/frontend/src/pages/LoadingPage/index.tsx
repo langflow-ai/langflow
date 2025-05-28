@@ -1,4 +1,4 @@
-import LoadingComponent from "@/components/loadingComponent";
+import LoadingComponent from "@/components/common/loadingComponent";
 import { cn } from "@/utils/utils";
 
 export function LoadingPage({ overlay = false }: { overlay?: boolean }) {

@@ -1,4 +1,3 @@
-import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useFlowStore from "@/stores/flowStore";
@@ -9,7 +8,6 @@ import useAddFlow from "./use-add-flow";
 const useUploadFlow = () => {
   const addFlow = useAddFlow();
   const paste = useFlowStore((state) => state.paste);
-  const { mutate: refreshFlows } = useGetRefreshFlows();
 
   const getFlowsFromFiles = async ({
     files,
@@ -90,7 +88,6 @@ const useUploadFlow = () => {
             throw new Error("Invalid flow data");
           }
         }
-        await refreshFlows({ get_all: true, header_flows: true });
       }
     } catch (e) {
       throw e;

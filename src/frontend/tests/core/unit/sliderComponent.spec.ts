@@ -1,112 +1,100 @@
 import { expect, Page, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: This component doesn't have slider needs updating
-test.skip("user should be able to use slider input", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
+test(
+  "user should be able to use slider input",
+  {
+    tag: ["@release", "@workspace"],
+  },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("ollama");
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
+    await page.waitForSelector('[data-testid="modelsOllama"]', {
+      timeout: 3000,
+    });
 
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    await page
+      .getByTestId("modelsOllama")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
 
-  const getUA = await page.evaluate(() => navigator.userAgent);
-  const userAgentInfo = uaParser(getUA);
-  let control = "Control";
+    await page.getByTestId("title-Ollama").click();
+    await page.getByTestId("code-button-modal").click();
 
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
+    let cleanCode = await extractAndCleanCode(page);
 
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("blank-flow").click();
-  await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("ollama");
+    // Replace the multiline string in the code
+    const newCode = cleanCode.replace(
+      `name="temperature",
+            display_name="Temperature",
+            value=0.1,
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,`,
+      `name="temperature",
+            display_name="Temperature",
+            value=0.2,
+            range_spec=RangeSpec(min=3, max=30, step=1),
+            min_label="test",
+            max_label="test2",
+            min_label_icon="pencil-ruler",
+            max_label_icon="palette",
+            slider_buttons=False,
+            slider_buttons_options=[],
+            slider_input=False,
+            advanced=False,`,
+    );
+    // make sure codes are different
+    expect(cleanCode).not.toEqual(newCode);
+    await page.locator("textarea").last().press(`ControlOrMeta+a`);
+    await page.keyboard.press("Backspace");
+    await page.locator("textarea").last().fill(newCode);
+    await page.locator('//*[@id="checkAndSaveBtn"]').click();
 
-  await page.waitForTimeout(1000);
+    await page.getByTestId("fit_view").click();
 
-  await page
-    .getByTestId("modelsOllama")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
+    await mutualValidation(page);
 
-  await page.getByTestId("title-Ollama").click();
-  await page.getByTestId("code-button-modal").click();
+    await moveSlider(page, "right", false);
 
-  let cleanCode = await extractAndCleanCode(page);
+    // wait for the slider to update
 
-  // Replace the import statement
-  cleanCode = cleanCode.replace("FloatInput(", "SliderInput(");
-  cleanCode = cleanCode.replace(
-    "from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput",
-    "from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput, SliderInput",
-  );
+    await page.waitForTimeout(500);
 
-  cleanCode = cleanCode.replace(
-    "value=0.2,",
-    "value=0.2, range_spec=RangeSpec(min=3, max=30, step=1), min_label='test', max_label='test2', min_label_icon='pencil-ruler', max_label_icon='palette', slider_buttons=False, slider_buttons_options=[], slider_input=False,",
-  );
+    await page.getByTestId("zoom_out").click();
 
-  await page.locator("textarea").last().press(`${control}+a`);
-  await page.keyboard.press("Backspace");
-  await page.locator("textarea").last().fill(cleanCode);
-  await page.locator('//*[@id="checkAndSaveBtn"]').click();
-  await page.waitForTimeout(500);
+    await page.getByTestId("more-options-modal").click();
+    await page.getByText("Controls", { exact: true }).last().click();
+    await expect(
+      page.getByTestId("default_slider_display_value_advanced"),
+    ).toHaveText("19.00");
 
-  await page.getByTestId("fit_view").click();
+    await moveSlider(page, "left", true);
+    // Wait for any potential updates
+    await page.waitForTimeout(500);
 
-  await mutualValidation(page);
+    await expect(
+      page.getByTestId("default_slider_display_value_advanced"),
+    ).toHaveText("14.00");
 
-  await moveSlider(page, "right", false);
+    await page.getByText("Close").last().click();
 
-  await page.waitForTimeout(500);
-
-  await page.getByTestId("zoom_out").click();
-
-  await page.getByTestId("more-options-modal").click();
-  await page.getByText("Controls", { exact: true }).last().click();
-  await expect(
-    page.getByTestId("default_slider_display_value_advanced"),
-  ).toHaveText("19.00");
-
-  await moveSlider(page, "left", true);
-  // Wait for any potential updates
-  await page.waitForTimeout(500);
-
-  await expect(
-    page.getByTestId("default_slider_display_value_advanced"),
-  ).toHaveText("14.00");
-
-  await page.getByText("Close").last().click();
-
-  await expect(page.getByTestId("default_slider_display_value")).toHaveText(
-    "14.00",
-  );
-});
+    await expect(page.getByTestId("default_slider_display_value")).toHaveText(
+      "14.00",
+    );
+  },
+);
 
 async function extractAndCleanCode(page: Page): Promise<string> {
   const outerHTML = await page

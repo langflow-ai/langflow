@@ -1,29 +1,35 @@
-# Source: https://github.com/a5chin/python-uv
-FROM debian:bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-ENV CARGO_HOME="/opt/.cargo"
+# Set timezone
+ENV TZ=UTC
 
-SHELL [ "/bin/bash", "-o", "pipefail", "-c" ]
+# Set up work directory
+WORKDIR /workspace
 
-WORKDIR /opt
+# Install additional dev dependencies
+RUN apt-get update && apt-get install -y \
+    zsh \
+    curl \
+    git \
+    build-essential \
+    npm \
+    lsof \
+    procps \
+    vim \
+    less \
+    net-tools \
+    sudo \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# The installer requires curl (and certificates) to download the release archive
-# hadolint ignore=DL3008
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates curl
+# Create the vscode user and group with the expected UID and GID (1000)
+RUN groupadd -g 1000 langflow && \
+    useradd -m -u 1000 -g 1000 -s /bin/zsh langflow && \
+    echo "langflow ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Run uv installer
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# Set default shell to Zsh
+SHELL ["/bin/zsh", "-c"]
 
+RUN echo 'export PS1="%~ %# "' >> /home/langflow/.zshrc
 
-FROM mcr.microsoft.com/vscode/devcontainers/base:bookworm
-
-
-ENV CARGO_HOME="/opt/.cargo"
-ENV PATH="$CARGO_HOME/bin/:$PATH"
-ENV PYTHONUNBUFFERED=True
-ENV UV_LINK_MODE=copy
-
-WORKDIR /opt
-
-COPY --from=builder --chown=vscode: $CARGO_HOME $CARGO_HOME
+# Set the default user
+USER langflow

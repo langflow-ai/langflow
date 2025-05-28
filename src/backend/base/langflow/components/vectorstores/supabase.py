@@ -3,14 +3,13 @@ from supabase.client import Client, create_client
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
+from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
 class SupabaseVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Supabase"
     description = "Supabase Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/supabase/"
     name = "SupabaseVectorStore"
     icon = "Supabase"
 
@@ -19,12 +18,7 @@ class SupabaseVectorStoreComponent(LCVectorStoreComponent):
         SecretStrInput(name="supabase_service_key", display_name="Supabase Service Key", required=True),
         StrInput(name="table_name", display_name="Table Name", advanced=True),
         StrInput(name="query_name", display_name="Query Name"),
-        MultilineInput(name="search_query", display_name="Search Query"),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
@@ -38,6 +32,9 @@ class SupabaseVectorStoreComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self) -> SupabaseVectorStore:
         supabase: Client = create_client(self.supabase_url, supabase_key=self.supabase_service_key)
+
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
 
         documents = []
         for _input in self.ingest_data or []:

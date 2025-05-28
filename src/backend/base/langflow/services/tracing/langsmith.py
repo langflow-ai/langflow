@@ -10,6 +10,7 @@ from loguru import logger
 from typing_extensions import override
 
 from langflow.schema.data import Data
+from langflow.serialization.serialization import serialize
 from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
@@ -43,7 +44,7 @@ class LangSmithTracer(BaseTracer):
             self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
             self._children: dict[str, RunTree] = {}
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error setting up LangSmith tracer")
+            logger.debug("Error setting up LangSmith tracer")
             self._ready = False
 
     @property
@@ -63,17 +64,16 @@ class LangSmithTracer(BaseTracer):
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         return True
 
-    @override
     def add_trace(
         self,
-        trace_id: str,
+        trace_id: str,  # noqa: ARG002
         trace_name: str,
         trace_type: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
-        vertex: Vertex | None = None,
+        vertex: Vertex | None = None,  # noqa: ARG002
     ) -> None:
-        if not self._ready:
+        if not self._ready or not self._run_tree:
             return
         processed_inputs = {}
         if inputs:
@@ -98,9 +98,7 @@ class LangSmithTracer(BaseTracer):
         from langflow.schema.message import Message
 
         if isinstance(value, dict):
-            for key, _value in value.copy().items():
-                _value = self._convert_to_langchain_type(_value)
-                value[key] = _value
+            value = {key: self._convert_to_langchain_type(val) for key, val in value.items()}
         elif isinstance(value, list):
             value = [self._convert_to_langchain_type(v) for v in value]
         elif isinstance(value, Message):
@@ -117,16 +115,15 @@ class LangSmithTracer(BaseTracer):
             value = str(value)
         return value
 
-    @override
     def end_trace(
         self,
-        trace_id: str,
+        trace_id: str,  # noqa: ARG002
         trace_name: str,
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
-    ) -> None:
-        if not self._ready:
+    ):
+        if not self._ready or trace_name not in self._children:
             return
         child = self._children[trace_name]
         raw_outputs = {}
@@ -143,9 +140,9 @@ class LangSmithTracer(BaseTracer):
             child.patch()
         else:
             child.post()
-        self._child_link[trace_name] = child.get_url()
 
-    def _error_to_string(self, error: Exception | None):
+    @staticmethod
+    def _error_to_string(error: Exception | None):
         error_message = None
         if error:
             string_stacktrace = traceback.format_exception(error)
@@ -159,14 +156,20 @@ class LangSmithTracer(BaseTracer):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        if not self._ready:
+        if not self._ready or not self._run_tree:
             return
-        self._run_tree.add_metadata({"inputs": inputs})
+        self._run_tree.add_metadata({"inputs": serialize(inputs)})
         if metadata:
-            self._run_tree.add_metadata(metadata)
-        self._run_tree.end(outputs=outputs, error=self._error_to_string(error))
+            self._run_tree.add_metadata(serialize(metadata))
+        self._run_tree.end(outputs=serialize(outputs), error=self._error_to_string(error))
         self._run_tree.post()
-        self._run_link = self._run_tree.get_url()
 
+    @property
+    def run_link(self):
+        if not self._ready or not self._run_tree:
+            return None
+        return self._run_tree.get_url()
+
+    @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         return None

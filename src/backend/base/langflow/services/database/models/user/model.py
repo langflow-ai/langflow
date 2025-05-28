@@ -1,8 +1,12 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
+from pydantic import BaseModel
+from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
+
+from langflow.schema.serialize import UUIDstr
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key import ApiKey
@@ -11,8 +15,15 @@ if TYPE_CHECKING:
     from langflow.services.database.models.variable import Variable
 
 
+class UserOptin(BaseModel):
+    github_starred: bool = Field(default=False)
+    dialog_dismissed: bool = Field(default=False)
+    discord_clicked: bool = Field(default=False)
+    # Add more opt-in actions as needed
+
+
 class User(SQLModel, table=True):  # type: ignore[call-arg]
-    id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
+    id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)
     password: str = Field()
     profile_image: str | None = Field(default=None, nullable=True)
@@ -35,11 +46,17 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )
+    optins: dict[str, Any] | None = Field(
+        sa_column=Column(JSON, default=lambda: UserOptin().model_dump(), nullable=True)
+    )
 
 
 class UserCreate(SQLModel):
     username: str = Field()
     password: str = Field()
+    optins: dict[str, Any] | None = Field(
+        default={"github_starred": False, "dialog_dismissed": False, "discord_clicked": False}
+    )
 
 
 class UserRead(SQLModel):
@@ -52,6 +69,7 @@ class UserRead(SQLModel):
     create_at: datetime = Field()
     updated_at: datetime = Field()
     last_login_at: datetime | None = Field(nullable=True)
+    optins: dict[str, Any] | None = Field(default=None)
 
 
 class UserUpdate(SQLModel):
@@ -61,3 +79,4 @@ class UserUpdate(SQLModel):
     is_active: bool | None = None
     is_superuser: bool | None = None
     last_login_at: datetime | None = None
+    optins: dict[str, Any] | None = None

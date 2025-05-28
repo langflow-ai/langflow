@@ -1,6 +1,7 @@
+import copy
 import operator
-from typing import Any, ClassVar
-from uuid import UUID
+import re
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
@@ -10,6 +11,9 @@ from langflow.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.custom.code_parser import CodeParser
 from langflow.custom.eval import eval_custom_component_code
 from langflow.utils import validate
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 
 class ComponentCodeNullError(HTTPException):
@@ -24,15 +28,15 @@ class BaseComponent:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
     ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
 
-    _code: str | None = None
-    """The code of the component. Defaults to None."""
-    _function_entrypoint_name: str = "build"
-    field_config: dict = {}
-    _user_id: str | UUID | None = None
-    _template_config: dict = {}
-
     def __init__(self, **data) -> None:
+        self._code: str | None = None
+        self._function_entrypoint_name: str = "build"
+        self.field_config: dict = {}
+        self._user_id: str | UUID | None = None
+        self._template_config: dict = {}
+
         self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
+
         for key, value in data.items():
             if key == "user_id":
                 self._user_id = value
@@ -40,8 +44,12 @@ class BaseComponent:
                 setattr(self, key, value)
 
     def __setattr__(self, key, value) -> None:
-        if key == "_user_id" and self._user_id is not None:
-            logger.warning("user_id is immutable and cannot be changed.")
+        if key == "_user_id":
+            try:
+                if self._user_id is not None:
+                    logger.warning("user_id is immutable and cannot be changed.")
+            except (KeyError, AttributeError):
+                pass
         super().__setattr__(key, value)
 
     @cachedmethod(cache=operator.attrgetter("cache"))
@@ -76,7 +84,8 @@ class BaseComponent:
             if hasattr(component, attribute):
                 value = getattr(component, attribute)
                 if value is not None:
-                    template_config[attribute] = func(value=value)
+                    value_copy = copy.deepcopy(value)
+                    template_config[attribute] = func(value=value_copy)
 
         for key in template_config.copy():
             if key not in ATTR_FUNC_MAPPING:
@@ -93,7 +102,15 @@ class BaseComponent:
         if not self._code:
             return {}
 
-        cc_class = eval_custom_component_code(self._code)
+        try:
+            cc_class = eval_custom_component_code(self._code)
+
+        except AttributeError as e:
+            pattern = r"module '.*?' has no attribute '.*?'"
+            if re.search(pattern, str(e)):
+                raise ImportError(e) from e
+            raise
+
         component_instance = cc_class(_code=self._code)
         return self.get_template_config(component_instance)
 

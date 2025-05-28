@@ -3,8 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_serializer, model_validator
 
-from langflow.graph.utils import serialize_field
 from langflow.schema.schema import OutputValue, StreamURL
+from langflow.serialization import serialize
 from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta
 
 
@@ -23,8 +23,8 @@ class ResultData(BaseModel):
     @field_serializer("results")
     def serialize_results(self, value):
         if isinstance(value, dict):
-            return {key: serialize_field(val) for key, val in value.items()}
-        return serialize_field(value)
+            return {key: serialize(val) for key, val in value.items()}
+        return serialize(value)
 
     @model_validator(mode="before")
     @classmethod
@@ -60,13 +60,13 @@ CHAT_COMPONENTS = [InterfaceComponentTypes.ChatInput, InterfaceComponentTypes.Ch
 RECORDS_COMPONENTS = [InterfaceComponentTypes.DataOutput]
 INPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatInput,
-    InterfaceComponentTypes.TextInput,
     InterfaceComponentTypes.WebhookInput,
+    InterfaceComponentTypes.TextInput,
 ]
 OUTPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatOutput,
-    InterfaceComponentTypes.TextOutput,
     InterfaceComponentTypes.DataOutput,
+    InterfaceComponentTypes.TextOutput,
 ]
 
 

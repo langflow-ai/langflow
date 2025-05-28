@@ -63,6 +63,13 @@ DIRECT_TYPES = [
     "code",
     "NestedDict",
     "table",
+    "slider",
+    "tab",
+    "sortableList",
+    "auth",
+    "connect",
+    "query",
+    "tools",
 ]
 
 
@@ -184,5 +191,3 @@ MESSAGE_SENDER_AI = "Machine"
 MESSAGE_SENDER_USER = "User"
 MESSAGE_SENDER_NAME_AI = "AI"
 MESSAGE_SENDER_NAME_USER = "User"
-
-MAX_TEXT_LENGTH = 99999

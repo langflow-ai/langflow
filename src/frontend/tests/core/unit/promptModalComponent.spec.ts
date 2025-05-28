@@ -1,221 +1,223 @@
 import { expect, test } from "@playwright/test";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { zoomOut } from "../../utils/zoom-out";
+test(
+  "PromptTemplateComponent",
+  { tag: ["@release", "@workspace"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
 
-test("PromptTemplateComponent", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("prompt");
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+    await page.waitForSelector('[data-testid="promptsPrompt"]', {
+      timeout: 3000,
+    });
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+    await page
+      .locator('//*[@id="promptsPrompt"]')
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page.mouse.up();
+    await page.mouse.down();
+    await adjustScreenView(page);
+    await page.getByTestId("promptarea_prompt_template").click();
+
+    await page
+      .getByTestId("modal-promptarea_prompt_template")
+      .fill("{prompt} example {prompt1}");
+
+    let value = await page
+      .getByTestId("modal-promptarea_prompt_template")
+      .inputValue();
+
+    if (value != "{prompt} example {prompt1}") {
+      expect(false).toBeTruthy();
     }
-  } catch (error) {
-    modalCount = 0;
-  }
 
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("blank-flow").click();
-  await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("prompt");
+    let valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
+    if (valueBadgeOne != "prompt") {
+      expect(false).toBeTruthy();
+    }
 
-  await page.waitForTimeout(1000);
+    let valueBadgeTwo = await page.locator('//*[@id="badge1"]').innerText();
+    if (valueBadgeTwo != "prompt1") {
+      expect(false).toBeTruthy();
+    }
 
-  await page
-    .locator('//*[@id="promptsPrompt"]')
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("promptarea_prompt_template").click();
+    await page.getByTestId("genericModalBtnSave").click();
 
-  await page
-    .getByTestId("modal-promptarea_prompt_template")
-    .fill("{prompt} example {prompt1}");
+    await page.getByTestId("textarea_str_prompt").click();
+    await page.getByTestId("textarea_str_prompt").fill("prompt_value_!@#!@#");
 
-  let value = await page
-    .getByTestId("modal-promptarea_prompt_template")
-    .inputValue();
+    value = await page.getByTestId("textarea_str_prompt").inputValue();
 
-  if (value != "{prompt} example {prompt1}") {
-    expect(false).toBeTruthy();
-  }
+    if (value != "prompt_value_!@#!@#") {
+      expect(false).toBeTruthy();
+    }
 
-  let valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
-  if (valueBadgeOne != "prompt") {
-    expect(false).toBeTruthy();
-  }
+    await page.getByTestId("div-generic-node").click();
 
-  let valueBadgeTwo = await page.locator('//*[@id="badge1"]').innerText();
-  if (valueBadgeTwo != "prompt1") {
-    expect(false).toBeTruthy();
-  }
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("save-button-modal").click();
 
-  await page.getByTestId("genericModalBtnSave").click();
+    const replace = await page.getByTestId("replace-button").isVisible();
 
-  await page.getByTestId("textarea_str_prompt").click();
-  await page.getByTestId("textarea_str_prompt").fill("prompt_value_!@#!@#");
+    if (replace) {
+      await page.getByTestId("replace-button").click();
+    }
 
-  value = await page.getByTestId("textarea_str_prompt").inputValue();
+    await page.getByTestId("textarea_str_prompt1").click();
+    await page
+      .getByTestId("textarea_str_prompt1")
+      .fill("prompt_name_test_123123!@#!@#");
 
-  if (value != "prompt_value_!@#!@#") {
-    expect(false).toBeTruthy();
-  }
+    value = await page.getByTestId("textarea_str_prompt1").inputValue();
 
-  await page.getByTestId("div-generic-node").click();
+    if (value != "prompt_name_test_123123!@#!@#") {
+      expect(false).toBeTruthy();
+    }
 
-  await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("save-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
-  const replace = await page.getByTestId("replace-button").isVisible();
+    value =
+      (await page
+        .locator('//*[@id="textarea_str_edit_prompt"]')
+        .inputValue()) ?? "";
 
-  if (replace) {
-    await page.getByTestId("replace-button").click();
-  }
+    if (value != "prompt_value_!@#!@#") {
+      expect(false).toBeTruthy();
+    }
 
-  await page.getByTestId("textarea_str_prompt1").click();
-  await page
-    .getByTestId("textarea_str_prompt1")
-    .fill("prompt_name_test_123123!@#!@#");
+    value =
+      (await page
+        .locator('//*[@id="textarea_str_edit_prompt1"]')
+        .inputValue()) ?? "";
 
-  value = await page.getByTestId("textarea_str_prompt1").inputValue();
+    if (value != "prompt_name_test_123123!@#!@#") {
+      expect(false).toBeTruthy();
+    }
 
-  if (value != "prompt_name_test_123123!@#!@#") {
-    expect(false).toBeTruthy();
-  }
+    value = await page
+      .locator('//*[@id="promptarea_prompt_edit_template"]')
+      .innerText();
 
-  await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("advanced-button-modal").click();
+    if (value != "{prompt} example {prompt1}") {
+      expect(false).toBeTruthy();
+    }
 
-  value =
-    (await page.locator('//*[@id="textarea_str_edit_prompt"]').inputValue()) ??
-    "";
+    await page
+      .getByTestId(
+        "button_open_text_area_modal_textarea_str_edit_prompt1_advanced",
+      )
+      .click();
+    await page
+      .getByTestId("text-area-modal")
+      .fill("prompt_edit_test_12312312321!@#$");
 
-  if (value != "prompt_value_!@#!@#") {
-    expect(false).toBeTruthy();
-  }
+    await page.getByText("Finish Editing", { exact: true }).click();
 
-  value =
-    (await page.locator('//*[@id="textarea_str_edit_prompt1"]').inputValue()) ??
-    "";
+    await page
+      .getByTestId(
+        "button_open_text_area_modal_textarea_str_edit_prompt_advanced",
+      )
+      .nth(0)
+      .click();
+    await page
+      .getByTestId("text-area-modal")
+      .fill("prompt_edit_test_44444444444!@#$");
 
-  if (value != "prompt_name_test_123123!@#!@#") {
-    expect(false).toBeTruthy();
-  }
+    await page.getByText("Finish Editing", { exact: true }).click();
 
-  value = await page
-    .locator('//*[@id="promptarea_prompt_edit_template"]')
-    .innerText();
+    await page.locator('//*[@id="showtemplate"]').click();
+    expect(
+      await page.locator('//*[@id="showtemplate"]').isChecked(),
+    ).toBeFalsy();
 
-  if (value != "{prompt} example {prompt1}") {
-    expect(false).toBeTruthy();
-  }
+    await page.locator('//*[@id="showprompt"]').click();
+    expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeFalsy();
 
-  await page
-    .getByTestId(
-      "button_open_text_area_modal_textarea_str_edit_prompt1_advanced",
-    )
-    .click();
-  await page
-    .getByTestId("text-area-modal")
-    .fill("prompt_edit_test_12312312321!@#$");
+    await page.locator('//*[@id="showprompt1"]').click();
+    expect(
+      await page.locator('//*[@id="showprompt1"]').isChecked(),
+    ).toBeFalsy();
 
-  await page.getByText("Finish Editing", { exact: true }).click();
+    await page.locator('//*[@id="showtemplate"]').click();
+    expect(
+      await page.locator('//*[@id="showtemplate"]').isChecked(),
+    ).toBeTruthy();
 
-  await page
-    .getByTestId(
-      "button_open_text_area_modal_textarea_str_edit_prompt_advanced",
-    )
-    .nth(0)
-    .click();
-  await page
-    .getByTestId("text-area-modal")
-    .fill("prompt_edit_test_44444444444!@#$");
+    await page.locator('//*[@id="showprompt"]').click();
+    expect(
+      await page.locator('//*[@id="showprompt"]').isChecked(),
+    ).toBeTruthy();
 
-  await page.getByText("Finish Editing", { exact: true }).click();
+    await page.locator('//*[@id="showprompt1"]').click();
+    expect(
+      await page.locator('//*[@id="showprompt1"]').isChecked(),
+    ).toBeTruthy();
 
-  await page.locator('//*[@id="showtemplate"]').click();
-  expect(await page.locator('//*[@id="showtemplate"]').isChecked()).toBeFalsy();
+    await page.locator('//*[@id="showtemplate"]').click();
+    expect(
+      await page.locator('//*[@id="showtemplate"]').isChecked(),
+    ).toBeFalsy();
 
-  await page.locator('//*[@id="showprompt"]').click();
-  expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeFalsy();
+    await page.locator('//*[@id="showprompt"]').click();
+    expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeFalsy();
 
-  await page.locator('//*[@id="showprompt1"]').click();
-  expect(await page.locator('//*[@id="showprompt1"]').isChecked()).toBeFalsy();
+    await page.locator('//*[@id="showprompt1"]').click();
+    expect(
+      await page.locator('//*[@id="showprompt1"]').isChecked(),
+    ).toBeFalsy();
 
-  await page.locator('//*[@id="showtemplate"]').click();
-  expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked(),
-  ).toBeTruthy();
+    await page.locator('//*[@id="showtemplate"]').click();
+    expect(
+      await page.locator('//*[@id="showtemplate"]').isChecked(),
+    ).toBeTruthy();
 
-  await page.locator('//*[@id="showprompt"]').click();
-  expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeTruthy();
+    await page.locator('//*[@id="showprompt"]').click();
+    expect(
+      await page.locator('//*[@id="showprompt"]').isChecked(),
+    ).toBeTruthy();
 
-  await page.locator('//*[@id="showprompt1"]').click();
-  expect(await page.locator('//*[@id="showprompt1"]').isChecked()).toBeTruthy();
+    await page.getByText("Close").last().click();
 
-  await page.locator('//*[@id="showtemplate"]').click();
-  expect(await page.locator('//*[@id="showtemplate"]').isChecked()).toBeFalsy();
+    await zoomOut(page, 2);
+    await page.getByTestId("edit-button-modal").last().click();
 
-  await page.locator('//*[@id="showprompt"]').click();
-  expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeFalsy();
+    await page.locator('//*[@id="showprompt1"]').click();
+    expect(
+      await page.locator('//*[@id="showprompt1"]').isChecked(),
+    ).toBeTruthy();
 
-  await page.locator('//*[@id="showprompt1"]').click();
-  expect(await page.locator('//*[@id="showprompt1"]').isChecked()).toBeFalsy();
+    value =
+      (await page
+        .locator('//*[@id="textarea_str_edit_prompt"]')
+        .inputValue()) ?? "";
 
-  await page.locator('//*[@id="showtemplate"]').click();
-  expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked(),
-  ).toBeTruthy();
+    if (value != "prompt_edit_test_44444444444!@#$") {
+      expect(false).toBeTruthy();
+    }
 
-  await page.locator('//*[@id="showprompt"]').click();
-  expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeTruthy();
+    value =
+      (await page
+        .locator('//*[@id="textarea_str_edit_prompt1"]')
+        .inputValue()) ?? "";
 
-  await page.getByText("Close").last().click();
+    if (value != "prompt_edit_test_12312312321!@#$") {
+      expect(false).toBeTruthy();
+    }
 
-  await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("advanced-button-modal").click();
+    value = await page
+      .locator('//*[@id="promptarea_prompt_edit_template"]')
+      .innerText();
 
-  await page.locator('//*[@id="showprompt1"]').click();
-  expect(await page.locator('//*[@id="showprompt1"]').isChecked()).toBeTruthy();
-
-  value =
-    (await page.locator('//*[@id="textarea_str_edit_prompt"]').inputValue()) ??
-    "";
-
-  if (value != "prompt_edit_test_44444444444!@#$") {
-    expect(false).toBeTruthy();
-  }
-
-  value =
-    (await page.locator('//*[@id="textarea_str_edit_prompt1"]').inputValue()) ??
-    "";
-
-  if (value != "prompt_edit_test_12312312321!@#$") {
-    expect(false).toBeTruthy();
-  }
-
-  value = await page
-    .locator('//*[@id="promptarea_prompt_edit_template"]')
-    .innerText();
-
-  if (value != "{prompt} example {prompt1}") {
-    expect(false).toBeTruthy();
-  }
-});
+    if (value != "{prompt} example {prompt1}") {
+      expect(false).toBeTruthy();
+    }
+  },
+);

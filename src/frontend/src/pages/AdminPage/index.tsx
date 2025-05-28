@@ -1,15 +1,15 @@
+import PaginatorComponent from "@/components/common/paginatorComponent";
 import {
   useAddUser,
   useDeleteUsers,
   useGetUsers,
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
+import CustomLoader from "@/customization/components/custom-loader";
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import LoadingComponent from "../../components/loadingComponent";
-import PaginatorComponent from "../../components/paginatorComponent";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import IconComponent from "../../components/common/genericIconComponent";
+import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import { CheckBoxDiv } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
@@ -303,7 +303,7 @@ export default function AdminPage() {
           </div>
           {isPending || isIdle ? (
             <div className="flex h-full w-full items-center justify-center">
-              <LoadingComponent remSize={12} />
+              <CustomLoader remSize={12} />
             </div>
           ) : userList.current.length === 0 && !isIdle ? (
             <>

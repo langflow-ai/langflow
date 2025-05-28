@@ -1,4 +1,4 @@
-.PHONY: all init format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_all
+.PHONY: all init format_backend format_frontend format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_all
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -19,11 +19,19 @@ open_browser ?= true
 path = src/backend/base/langflow/frontend
 workers ?= 1
 async ?= true
+lf ?= false
+ff ?= true
 all: help
 
 ######################
 # UTILITIES
 ######################
+
+# Some directories may be mount points as in devcontainer, so we need to clear their
+# contents rather than remove the entire directory. But we must also be mindful that
+# we are not running in a devcontainer, so need to ensure the directories exist.
+# See https://code.visualstudio.com/remote/advancedcontainers/improve-performance
+CLEAR_DIRS = $(foreach dir,$1,$(shell mkdir -p $(dir) && find $(dir) -mindepth 1 -delete))
 
 # increment the patch version of the current package
 patch: ## bump the version in langflow and langflow-base
@@ -37,14 +45,8 @@ patch: ## bump the version in langflow and langflow-base
 check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
-	@command -v pipx >/dev/null 2>&1 || { echo >&2 "$(RED)pipx is not installed. Aborting.$(NC)"; exit 1; }
-	@$(MAKE) check_env
 	@echo "$(GREEN)All required tools are installed.$(NC)"
 
-# check if Python version is compatible
-check_env: ## check if Python version is compatible
-	@chmod +x scripts/setup/check_env.sh
-	@scripts/setup/check_env.sh "$(PYTHON_REQUIRED)"
 
 help: ## show this help message
 	@echo '----'
@@ -63,17 +65,24 @@ reinstall_backend: ## forces reinstall all dependencies (no caching)
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@uv sync --frozen
+	@uv sync --frozen --extra "postgresql" $(EXTRA_ARGS)
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
 	@cd src/frontend && npm install > /dev/null 2>&1
 
 build_frontend: ## build the frontend static files
-	@echo 'Building frontend static files'
-	@cd src/frontend && CI='' npm run build > /dev/null 2>&1
-	@rm -rf src/backend/base/langflow/frontend
-	@cp -r src/frontend/build src/backend/base/langflow/frontend
+	@echo '==== Starting frontend build ===='
+	@echo 'Current directory: $$(pwd)'
+	@echo 'Checking if src/frontend exists...'
+	@ls -la src/frontend || true
+	@echo 'Building frontend static files...'
+	@cd src/frontend && CI='' npm run build 2>&1 || { echo "\nBuild failed! Error output above ☝️"; exit 1; }
+	@echo 'Clearing destination directory...'
+	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
+	@echo 'Copying build files...'
+	@cp -r src/frontend/build/. src/backend/base/langflow/frontend
+	@echo '==== Frontend build complete ===='
 
 init: check_tools clean_python_cache clean_npm_cache ## initialize the project
 	@make install_backend
@@ -92,13 +101,14 @@ clean_python_cache:
 	find . -type f -name '*.py[cod]' -exec rm -f {} +
 	find . -type f -name '*~' -exec rm -f {} +
 	find . -type f -name '.*~' -exec rm -f {} +
-	find . -type d -empty -delete
+	$(call CLEAR_DIRS,.mypy_cache )
 	@echo "$(GREEN)Python cache cleaned.$(NC)"
 
 clean_npm_cache:
 	@echo "Cleaning npm cache..."
 	cd src/frontend && npm cache clean --force
-	rm -rf src/frontend/node_modules src/frontend/build src/backend/base/langflow/frontend src/frontend/package-lock.json
+	$(call CLEAR_DIRS,src/frontend/node_modules src/frontend/build src/backend/base/langflow/frontend)
+	rm -f src/frontend/package-lock.json
 	@echo "$(GREEN)NPM cache and frontend directories cleaned.$(NC)"
 
 clean_all: clean_python_cache clean_npm_cache # clean all caches and temporary directories
@@ -130,26 +140,24 @@ endif
 coverage: ## run the tests and generate a coverage report
 	@uv run coverage run
 	@uv run coverage erase
-	#@poetry run coverage run
-	#@poetry run coverage erase
 
 unit_tests: ## run unit tests
-	@uv sync --extra dev --frozen
-ifeq ($(async), true)
-	uv run pytest src/backend/tests \
-		--ignore=src/backend/tests/integration \
-		--instafail -n auto -ra -m "not api_key_required" \
-		--durations-path src/backend/tests/.test_durations \
-		--splitting-algorithm least_duration \
-		$(args)
-else
-	uv run pytest src/backend/tests \
-		--ignore=src/backend/tests/integration \
-		--instafail -ra -m "not api_key_required" \
-		--durations-path src/backend/tests/.test_durations \
-		--splitting-algorithm least_duration \
-		$(args)
-endif
+	@uv sync --frozen
+	@EXTRA_ARGS=""
+	@if [ "$(async)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --instafail -n auto"; \
+	fi; \
+	if [ "$(lf)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --lf"; \
+	fi; \
+	if [ "$(ff)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
+	fi; \
+	uv run pytest src/backend/tests/unit \
+	--ignore=src/backend/tests/integration $$EXTRA_ARGS \
+	--instafail -ra -m 'not api_key_required' \
+	--durations-path src/backend/tests/.test_durations \
+	--splitting-algorithm least_duration $(args)
 
 unit_tests_looponfail:
 	@make unit_tests args="-f"
@@ -189,10 +197,14 @@ fix_codespell: ## run codespell to fix spelling errors
 	@poetry install --with spelling
 	poetry run codespell --toml pyproject.toml --write
 
-format: ## run code formatters
+format_backend: ## backend code formatters
 	@uv run ruff check . --fix
-	@uv run ruff format .
+	@uv run ruff format . --config pyproject.toml
+
+format_frontend: ## frontend code formatters
 	@cd src/frontend && npm run format
+
+format: format_backend format_frontend ## run code formatters
 
 unsafe_fix:
 	@uv run ruff check . --fix --unsafe-fixes
@@ -204,11 +216,11 @@ install_frontendci:
 	@cd src/frontend && npm ci > /dev/null 2>&1
 
 install_frontendc:
-	@cd src/frontend && rm -rf node_modules package-lock.json && npm install > /dev/null 2>&1
+	@cd src/frontend && $(call CLEAR_DIRS,node_modules) && rm -f package-lock.json && npm install > /dev/null 2>&1
 
 run_frontend: ## run the frontend
 	@-kill -9 `lsof -t -i:3000`
-	@cd src/frontend && npm start
+	@cd src/frontend && npm start $(if $(FRONTEND_START_FLAGS),-- $(FRONTEND_START_FLAGS))
 
 tests_frontend: ## run frontend tests
 ifeq ($(UI), true)
@@ -219,11 +231,13 @@ endif
 
 run_cli: install_frontend install_backend build_frontend ## run the CLI
 	@echo 'Running the CLI'
-ifdef env
-	@make start env=$(env) host=$(host) port=$(port) log_level=$(log_level)
-else
-	@make start host=$(host) port=$(port) log_level=$(log_level)
-endif
+	@uv run langflow run \
+		--frontend-path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		$(if $(env),--env-file $(env),) \
+		$(if $(filter false,$(open_browser)),--no-open-browser)
 
 run_cli_debug:
 	@echo 'Running the CLI in debug mode'
@@ -238,25 +252,6 @@ else
 	@make start host=$(host) port=$(port) log_level=debug
 endif
 
-start:
-	@echo 'Running the CLI'
-
-ifeq ($(open_browser),false)
-	@make install_backend && uv run langflow run \
-		--frontend-path $(path) \
-		--log-level $(log_level) \
-		--host $(host) \
-		--port $(port) \
-		--env-file $(env) \
-		--no-open-browser
-else
-	@make install_backend && uv run langflow run \
-		--frontend-path $(path) \
-		--log-level $(log_level) \
-		--host $(host) \
-		--port $(port) \
-		--env-file $(env)
-endif
 
 setup_devcontainer: ## set up the development container
 	make install_backend
@@ -299,16 +294,14 @@ else
 endif
 
 build_and_run: setup_env ## build the project and run it
-	rm -rf dist
-	rm -rf src/backend/base/dist
+	$(call CLEAR_DIRS,dist src/backend/base/dist)
 	make build
 	uv run pip install dist/*.tar.gz
 	uv run langflow run
 
 build_and_install: ## build the project and install it
 	@echo 'Removing dist folder'
-	rm -rf dist
-	rm -rf src/backend/base/dist
+	$(call CLEAR_DIRS,dist src/backend/base/dist)
 	make build && uv run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
 
 build: setup_env ## build the frontend static files and package the project
@@ -327,7 +320,6 @@ endif
 
 build_langflow_base:
 	cd src/backend/base && uv build $(args)
-	rm -rf src/backend/base/langflow/frontend
 
 build_langflow_backup:
 	uv lock && uv build
@@ -471,3 +463,51 @@ alembic-check: ## check migration status
 alembic-stamp: ## stamp the database with a specific revision
 	@echo 'Stamping the database with revision $(revision)'
 	cd src/backend/base/langflow/ && uv run alembic stamp $(revision)
+
+######################
+# LOAD TESTING
+######################
+
+# Default values for locust configuration
+locust_users ?= 10
+locust_spawn_rate ?= 1
+locust_host ?= http://localhost:7860
+locust_headless ?= true
+locust_time ?= 300s
+locust_api_key ?= your-api-key
+locust_flow_id ?= your-flow-id
+locust_file ?= src/backend/tests/locust/locustfile.py
+locust_min_wait ?= 2000
+locust_max_wait ?= 5000
+locust_request_timeout ?= 30.0
+
+locust: ## run locust load tests (options: locust_users=10 locust_spawn_rate=1 locust_host=http://localhost:7860 locust_headless=true locust_time=300s locust_api_key=your-api-key locust_flow_id=your-flow-id locust_file=src/backend/tests/locust/locustfile.py locust_min_wait=2000 locust_max_wait=5000 locust_request_timeout=30.0)
+	@if [ ! -f "$(locust_file)" ]; then \
+		echo "$(RED)Error: Locustfile not found at $(locust_file)$(NC)"; \
+		exit 1; \
+	fi
+	@echo "Starting Locust with $(locust_users) users, spawn rate of $(locust_spawn_rate)"
+	@echo "Testing host: $(locust_host)"
+	@echo "Using locustfile: $(locust_file)"
+	@export API_KEY=$(locust_api_key) && \
+	export FLOW_ID=$(locust_flow_id) && \
+	export LANGFLOW_HOST=$(locust_host) && \
+	export MIN_WAIT=$(locust_min_wait) && \
+	export MAX_WAIT=$(locust_max_wait) && \
+	export REQUEST_TIMEOUT=$(locust_request_timeout) && \
+	cd $$(dirname "$(locust_file)") && \
+	if [ "$(locust_headless)" = "true" ]; then \
+		uv run locust \
+			--headless \
+			-u $(locust_users) \
+			-r $(locust_spawn_rate) \
+			--run-time $(locust_time) \
+			--host $(locust_host) \
+			-f $$(basename "$(locust_file)"); \
+	else \
+		uv run locust \
+			-u $(locust_users) \
+			-r $(locust_spawn_rate) \
+			--host $(locust_host) \
+			-f $$(basename "$(locust_file)"); \
+	fi

@@ -1,18 +1,18 @@
 import { uniqueId } from "lodash";
 import { useContext, useEffect, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import PageLayout from "../../components/pageLayout";
-import ShadTooltip from "../../components/shadTooltipComponent";
-import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
+import IconComponent from "../../components/common/genericIconComponent";
+import PageLayout from "../../components/common/pageLayout";
+import ShadTooltip from "../../components/common/shadTooltipComponent";
+import { SkeletonCardComponent } from "../../components/common/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 
-import StoreCardComponent from "@/components/storeCardComponent";
+import PaginatorComponent from "@/components/common/paginatorComponent";
+import StoreCardComponent from "@/components/common/storeCardComponent";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useParams } from "react-router-dom";
-import PaginatorComponent from "../../components/paginatorComponent";
-import { TagsSelector } from "../../components/tagsSelectorComponent";
+import { TagsSelector } from "../../components/common/tagsSelectorComponent";
 import { Badge } from "../../components/ui/badge";
 import {
   Select,
@@ -42,7 +42,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
-import InputSearchComponent from "../MainPage/oldComponents/myCollectionComponent/components/inputSearchComponent";
+import InputSearchComponent from "../MainPage/components/inputSearchComponent";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -148,7 +148,10 @@ export default function StorePage(): JSX.Element {
           setLoading(false);
           setErrorData({
             title: COMPONENTS_ERROR_ALERT,
-            list: [err["response"]["data"]["detail"]],
+            list: [
+              err?.response?.data?.detail ??
+                "There was an error fetching the components",
+            ],
           });
         }
       });
@@ -380,7 +383,6 @@ export default function StorePage(): JSX.Element {
         {!loading && searchData.length > 0 && (
           <div className="relative py-6">
             <PaginatorComponent
-              storeComponent={true}
               pageIndex={pageIndex}
               pageSize={pageSize}
               rowsCount={STORE_PAGINATION_ROWS_COUNT}

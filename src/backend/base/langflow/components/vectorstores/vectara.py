@@ -1,12 +1,11 @@
 from typing import TYPE_CHECKING
 
 from langchain_community.vectorstores import Vectara
-from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import HandleInput, IntInput, MessageTextInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
+from langflow.schema import Data, DataFrame
 
 if TYPE_CHECKING:
     from langchain_community.vectorstores import Vectara
@@ -17,7 +16,6 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "Vectara"
     description: str = "Vectara Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/vectara"
     name = "Vectara"
     icon = "Vectara"
 
@@ -30,16 +28,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             display_name="Embedding",
             input_types=["Embeddings"],
         ),
-        HandleInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            input_types=["Document", "Data"],
-            is_list=True,
-        ),
-        MessageTextInput(
-            name="search_query",
-            display_name="Search Query",
-        ),
+        *LCVectorStoreComponent.inputs,
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -69,23 +58,27 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
 
     def _add_documents_to_vector_store(self, vector_store: "Vectara") -> None:
         """Adds documents to the Vector Store."""
-        if not self.ingest_data:
+        ingest_data: list | Data | DataFrame = self.ingest_data
+        if not ingest_data:
             self.status = "No documents to add to Vectara"
             return
 
+        # Convert DataFrame to Data if needed using parent's method
+        ingest_data = self._prepare_ingest_data()
+
         documents = []
-        for _input in self.ingest_data or []:
+        for _input in ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
 
         if documents:
-            logger.debug(f"Adding {len(documents)} documents to Vectara.")
+            self.log(f"Adding {len(documents)} documents to Vectara.")
             vector_store.add_documents(documents)
             self.status = f"Added {len(documents)} documents to Vectara"
         else:
-            logger.debug("No documents to add to Vectara.")
+            self.log("No documents to add to Vectara.")
             self.status = "No valid documents to add to Vectara"
 
     def search_documents(self) -> list[Data]:

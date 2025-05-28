@@ -1,6 +1,7 @@
 import importlib
 
 from langchain.tools import StructuredTool
+from langchain_core.tools import ToolException
 from langchain_experimental.utilities import PythonREPL
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -12,9 +13,11 @@ from langflow.schema import Data
 
 
 class PythonREPLToolComponent(LCToolComponent):
-    display_name = "Python REPL Tool"
+    display_name = "Python REPL [DEPRECATED]"
     description = "A tool for running Python code in a REPL environment."
     name = "PythonREPLTool"
+    icon = "Python"
+    legacy = True
 
     inputs = [
         StrInput(
@@ -68,15 +71,15 @@ class PythonREPLToolComponent(LCToolComponent):
         return global_dict
 
     def build_tool(self) -> Tool:
-        _globals = self.get_globals(self.global_imports)
-        python_repl = PythonREPL(_globals=_globals)
+        globals_ = self.get_globals(self.global_imports)
+        python_repl = PythonREPL(_globals=globals_)
 
         def run_python_code(code: str) -> str:
             try:
                 return python_repl.run(code)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 logger.opt(exception=True).debug("Error running Python code")
-                return f"Error: {e}"
+                raise ToolException(str(e)) from e
 
         tool = StructuredTool.from_function(
             name=self.name,

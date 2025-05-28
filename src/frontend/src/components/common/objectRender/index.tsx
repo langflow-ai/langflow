@@ -1,0 +1,29 @@
+import DictAreaModal from "../../../modals/dictAreaModal";
+
+export default function ObjectRender({
+  object,
+  setValue,
+}: {
+  object: any;
+  setValue?: (value: any) => void;
+}): JSX.Element {
+  let newObject = object;
+  if (typeof object === "string") {
+    try {
+      newObject = JSON.parse(object);
+    } catch (e) {
+      newObject = object;
+    }
+  }
+  let preview =
+    newObject === null || newObject === undefined
+      ? "‎"
+      : JSON.stringify(newObject);
+  return (
+    <DictAreaModal onChange={setValue} value={newObject ?? {}}>
+      <div className="flex h-full w-full items-center align-middle transition-all">
+        <div className="truncate">{preview}</div>
+      </div>
+    </DictAreaModal>
+  );
+}

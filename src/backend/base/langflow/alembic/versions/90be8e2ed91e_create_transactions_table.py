@@ -8,11 +8,11 @@ Create Date: 2024-07-24 11:37:48.532933
 
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 import sqlmodel
-from langflow.utils import migration
+from alembic import op
 
+from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "90be8e2ed91e"
@@ -32,8 +32,8 @@ def upgrade() -> None:
             sa.Column("inputs", sa.JSON(), nullable=True),
             sa.Column("outputs", sa.JSON(), nullable=True),
             sa.Column("status", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-            sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
-            sa.Column("flow_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+            sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+            sa.Column("flow_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("error", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.ForeignKeyConstraint(
                 ["flow_id"],

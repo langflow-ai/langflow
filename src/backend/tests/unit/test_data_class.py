@@ -1,3 +1,5 @@
+import copy
+
 import pytest
 from langchain_core.documents import Document
 from langflow.schema import Data
@@ -62,8 +64,6 @@ def test_custom_attribute_get_set_del():
 
 
 def test_deep_copy():
-    import copy
-
     record1 = Data(data={"text": "Hello", "number": 10})
     record2 = copy.deepcopy(record1)
     assert record2.text == "Hello"
@@ -138,3 +138,4 @@ def test_get_text_with_none_data():
     schema = Data(data=data, text_key="text", default_value="default")
     result = schema.get_text()
     assert result == "default"
+    assert schema.data == {}

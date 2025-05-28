@@ -37,11 +37,11 @@ class PythonCodeStructuredTool(LCToolComponent):
         "_classes",
         "_functions",
     ]
-    display_name = "Python Code Structured Tool"
+    display_name = "Python Code Structured"
     description = "structuredtool dataclass code to tool"
     documentation = "https://python.langchain.com/docs/modules/tools/custom_tools/#structuredtool-dataclass"
     name = "PythonCodeStructuredTool"
-    icon = "🐍"
+    icon = "Python"
     field_order = ["name", "description", "tool_code", "return_direct", "tool_function"]
     legacy: bool = True
 
@@ -98,7 +98,9 @@ class PythonCodeStructuredTool(LCToolComponent):
     ]
 
     @override
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+    async def update_build_config(
+        self, build_config: dotdict, field_value: Any, field_name: str | None = None
+    ) -> dotdict:
         if field_name is None:
             return build_config
 
@@ -142,7 +144,7 @@ class PythonCodeStructuredTool(LCToolComponent):
         return build_config
 
     async def build_tool(self) -> Tool:
-        _local_namespace = {}  # type: ignore[var-annotated]
+        local_namespace = {}  # type: ignore[var-annotated]
         modules = self._find_imports(self.tool_code)
         import_code = ""
         for module in modules["imports"]:
@@ -154,7 +156,7 @@ class PythonCodeStructuredTool(LCToolComponent):
                 f"from {from_module.module} import {', '.join([alias.name for alias in from_module.names])}\n"
             )
         exec(import_code, globals())
-        exec(self.tool_code, globals(), _local_namespace)
+        exec(self.tool_code, globals(), local_namespace)
 
         class PythonCodeToolFunc:
             params: dict = {}
@@ -163,23 +165,23 @@ class PythonCodeStructuredTool(LCToolComponent):
                 for key, arg in kwargs.items():
                     if key not in PythonCodeToolFunc.params:
                         PythonCodeToolFunc.params[key] = arg
-                return _local_namespace[self.tool_function](**PythonCodeToolFunc.params)
+                return local_namespace[self.tool_function](**PythonCodeToolFunc.params)
 
-        _globals = globals()
-        _local = {}
-        _local[self.tool_function] = PythonCodeToolFunc
-        _globals.update(_local)
+        globals_ = globals()
+        local = {}
+        local[self.tool_function] = PythonCodeToolFunc
+        globals_.update(local)
 
         if isinstance(self.global_variables, list):
             for data in self.global_variables:
                 if isinstance(data, Data):
-                    _globals.update(data.data)
+                    globals_.update(data.data)
         elif isinstance(self.global_variables, dict):
-            _globals.update(self.global_variables)
+            globals_.update(self.global_variables)
 
         classes = json.loads(self._attributes["_classes"])
         for class_dict in classes:
-            exec("\n".join(class_dict["code"]), _globals)
+            exec("\n".join(class_dict["code"]), globals_)
 
         named_functions = json.loads(self._attributes["_functions"])
         schema_fields = {}
@@ -199,8 +201,8 @@ class PythonCodeStructuredTool(LCToolComponent):
             field_description = self._get_value(self._attributes[attr], str)
 
             if field_annotation:
-                exec(f"temp_annotation_type = {field_annotation}", _globals)
-                schema_annotation = _globals["temp_annotation_type"]
+                exec(f"temp_annotation_type = {field_annotation}", globals_)
+                schema_annotation = globals_["temp_annotation_type"]
             else:
                 schema_annotation = Any
             schema_fields[field_name] = (
@@ -211,37 +213,37 @@ class PythonCodeStructuredTool(LCToolComponent):
                 ),
             )
 
-        if "temp_annotation_type" in _globals:
-            _globals.pop("temp_annotation_type")
+        if "temp_annotation_type" in globals_:
+            globals_.pop("temp_annotation_type")
 
         python_code_tool_schema = None
         if schema_fields:
             python_code_tool_schema = create_model("PythonCodeToolSchema", **schema_fields)
 
         return StructuredTool.from_function(
-            func=_local[self.tool_function].run,
+            func=local[self.tool_function].run,
             args_schema=python_code_tool_schema,
             name=self.tool_name,
             description=self.tool_description,
             return_direct=self.return_direct,
         )
 
-    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
         """This function is called after the code validation is done."""
-        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
-        frontend_node["template"] = self.update_build_config(
+        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        frontend_node["template"] = await self.update_build_config(
             frontend_node["template"],
             frontend_node["template"]["tool_code"]["value"],
             "tool_code",
         )
-        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
+        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
         for key in frontend_node["template"]:
             if key in self.DEFAULT_KEYS:
                 continue
-            frontend_node["template"] = self.update_build_config(
+            frontend_node["template"] = await self.update_build_config(
                 frontend_node["template"], frontend_node["template"][key]["value"], key
             )
-            frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
+            frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
         return frontend_node
 
     def _parse_code(self, code: str) -> tuple[list[dict], list[dict]]:

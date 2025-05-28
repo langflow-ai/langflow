@@ -8,6 +8,7 @@ from sqlmodel import select
 from langflow.api.utils import format_elapsed_time
 from langflow.api.v1.schemas import ResultDataResponse, VertexBuildResponse
 from langflow.graph.graph.base import Graph
+from langflow.graph.graph.utils import layered_topological_sort
 from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex
 from langflow.services.database.models.flow.model import Flow
@@ -23,15 +24,21 @@ def set_socketio_server(socketio_server) -> None:
 
 async def get_vertices(sio, sid, flow_id, chat_service) -> None:
     try:
-        session = next(get_session())
-        flow: Flow = session.exec(select(Flow).where(Flow.id == flow_id)).first()
+        session = await anext(get_session())
+        stmt = select(Flow).where(Flow.id == flow_id)
+        flow: Flow = (await session.exec(stmt)).first()
         if not flow or not flow.data:
             await sio.emit("error", data="Invalid flow ID", to=sid)
             return
 
         graph = Graph.from_payload(flow.data)
         chat_service.set_cache(flow_id, graph)
-        vertices = graph.layered_topological_sort(graph.vertices)
+        vertices = layered_topological_sort(
+            set(graph.get_vertex_ids()),
+            graph.in_degree_map,
+            graph.successor_map,
+            graph.predecessor_map,
+        )
 
         # Emit the vertices to the client
         await sio.emit("vertices_order", data=vertices, to=sid)
@@ -87,7 +94,7 @@ async def build_vertex(
             result_dict = ResultDataResponse(results={})
             artifacts = {}
         await set_cache(flow_id, graph)
-        log_vertex_build(
+        await log_vertex_build(
             flow_id=flow_id,
             vertex_id=vertex_id,
             valid=valid,

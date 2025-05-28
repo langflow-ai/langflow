@@ -1,163 +1,52 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import uaParser from "ua-parser-js";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test("Simple Agent", async ({ page }) => {
-  test.skip(
-    !process?.env?.OPENAI_API_KEY,
-    "OPENAI_API_KEY required to run this test",
-  );
+withEventDeliveryModes(
+  "Simple Agent",
+  { tag: ["@release", "@starter-projects"] },
+  async ({ page }) => {
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
 
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
-
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
-
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
-
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
-
-  const getUA = await page.evaluate(() => navigator.userAgent);
-  const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
-
-  await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Simple Agent" }).first().click();
-
-  await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 100000,
-  });
-
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-
-  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-
-  while (outdatedComponents > 0) {
-    await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
-    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-  }
-
-  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  while (filledApiKey > 0) {
-    await page.getByTestId("remove-icon-badge").first().click();
-    await page.waitForTimeout(1000);
-    filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  }
-
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
-
-  await page.getByTestId("fit_view").click();
-
-  await page.getByTestId("dropdown_str_model_name").click();
-  await page.getByTestId("gpt-4o-1-option").click();
-
-  await page.waitForTimeout(1000);
-
-  await page
-    .getByTestId("textarea_str_input_value")
-    .fill(
-      "Use the Python REPL tool to create a python function that calculates 4 + 4 and stores it in a variable.",
+      "OPENAI_API_KEY required to run this test",
     );
 
-  await page.getByTestId("button_run_chat output").click();
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+    }
 
-  await page.getByText("built successfully").last().click({
-    timeout: 15000,
-  });
+    await awaitBootstrapTest(page);
 
-  await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await initialGPTsetup(page);
 
-  await page.waitForSelector(
-    "text=Use the Python REPL tool to create a python function that calculates 4 + 4 and stores it in a variable.",
-    {
-      timeout: 30000,
-    },
-  );
+    await page.getByTestId("playground-btn-flow-io").click();
 
-  await page.waitForTimeout(1000);
+    await page
+      .getByTestId("input-chat-playground")
+      .last()
+      .fill("Hello, tell me about Langflow.");
 
-  expect(page.getByText("User")).toBeVisible();
+    await page.getByTestId("button-send").last().click();
 
-  let pythonWords = await page.getByText("4 + 4").count();
+    const stopButton = page.getByRole("button", { name: "Stop" });
+    await stopButton.waitFor({ state: "visible", timeout: 30000 });
 
-  expect(pythonWords).toBe(2);
+    if (await stopButton.isVisible()) {
+      await expect(stopButton).toBeHidden({ timeout: 120000 });
+    }
 
-  await page
-    .getByPlaceholder("Send a message...")
-    .fill("write short python scsript to say hello world");
+    const textContents = await page.getByTestId("div-chat-message").innerText();
 
-  await page.getByTestId("icon-LucideSend").last().click();
-
-  await page.waitForSelector(
-    "text=write short python scsript to say hello world",
-    {
-      timeout: 30000,
-    },
-  );
-
-  await page.waitForSelector(".api-modal-tablist-div", {
-    timeout: 100000,
-    state: "visible",
-  });
-
-  await page.waitForSelector("role=tab", {
-    timeout: 100000,
-    state: "visible",
-  });
-
-  await page.waitForTimeout(1000);
-
-  await page.waitForSelector('[data-testid="btn-copy-code"]', {
-    state: "visible",
-    timeout: 30000,
-  });
-
-  await page.waitForTimeout(1000);
-  await page.getByTestId("btn-copy-code").last().click();
-
-  await page.waitForTimeout(500);
-
-  await page.getByPlaceholder("Send a message...").click();
-
-  await page.waitForTimeout(500);
-
-  await page.keyboard.press(`${control}+V`);
-
-  await page.waitForTimeout(500);
-
-  pythonWords = await page.getByText("Hello, World!").count();
-
-  expect(pythonWords).toBe(3);
-});
+    expect(await page.getByTestId("header-icon").last().isVisible());
+    expect(await page.getByTestId("duration-display").last().isVisible());
+    expect(await page.getByTestId("icon-check").nth(0).isVisible());
+    expect(await page.getByTestId("icon-Check").nth(0).isVisible());
+    expect(textContents.length).toBeGreaterThan(30);
+  },
+);

@@ -6,8 +6,9 @@ from pydantic import BaseModel
 from typing_extensions import TypedDict
 
 from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
-from langflow.schema.serialize import recursive_serialize_or_str
+from langflow.serialization.serialization import serialize
 
 INPUT_FIELD_NAME = "input_value"
 
@@ -51,7 +52,7 @@ def get_type(payload):
         case dict():
             result = LogType.OBJECT
 
-        case list():
+        case list() | DataFrame():
             result = LogType.ARRAY
 
         case str():
@@ -91,9 +92,9 @@ def build_output_logs(vertex, result) -> dict:
             payload = component_instance._artifacts
             output_result = payload.get(output["name"], {}).get("raw")
         message = get_message(output_result)
-        _type = get_type(output_result)
+        type_ = get_type(output_result)
 
-        match _type:
+        match type_:
             case LogType.STREAM if "stream_url" in message:
                 message = StreamURL(location=message["stream_url"])
 
@@ -107,8 +108,10 @@ def build_output_logs(vertex, result) -> dict:
                 message = ""
 
             case LogType.ARRAY:
-                message = [recursive_serialize_or_str(item) for item in message]
+                if isinstance(message, DataFrame):
+                    message = message.to_dict(orient="records")
+                message = [serialize(item) for item in message]
         name = output.get("name", f"output_{index}")
-        outputs |= {name: OutputValue(message=message, type=_type).model_dump()}
+        outputs |= {name: OutputValue(message=message, type=type_).model_dump()}
 
     return outputs

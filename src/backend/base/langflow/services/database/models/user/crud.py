@@ -5,20 +5,25 @@ from fastapi import HTTPException, status
 from loguru import logger
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
-from sqlmodel import Session, select
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.user.model import User, UserUpdate
 
 
-def get_user_by_username(db: Session, username: str) -> User | None:
-    return db.exec(select(User).where(User.username == username)).first()
+async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
+    stmt = select(User).where(User.username == username)
+    return (await db.exec(stmt)).first()
 
 
-def get_user_by_id(db: Session, user_id: UUID) -> User | None:
-    return db.exec(select(User).where(User.id == user_id)).first()
+async def get_user_by_id(db: AsyncSession, user_id: UUID) -> User | None:
+    if isinstance(user_id, str):
+        user_id = UUID(user_id)
+    stmt = select(User).where(User.id == user_id)
+    return (await db.exec(stmt)).first()
 
 
-def update_user(user_db: User | None, user: UserUpdate, db: Session) -> User:
+async def update_user(user_db: User | None, user: UserUpdate, db: AsyncSession) -> User:
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -40,18 +45,18 @@ def update_user(user_db: User | None, user: UserUpdate, db: Session) -> User:
     flag_modified(user_db, "updated_at")
 
     try:
-        db.commit()
+        await db.commit()
     except IntegrityError as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     return user_db
 
 
-def update_user_last_login_at(user_id: UUID, db: Session):
+async def update_user_last_login_at(user_id: UUID, db: AsyncSession):
     try:
         user_data = UserUpdate(last_login_at=datetime.now(timezone.utc))
-        user = get_user_by_id(db, user_id)
-        return update_user(user, user_data, db)
-    except Exception:  # noqa: BLE001
-        logger.opt(exception=True).debug("Error updating user last login at")
+        user = await get_user_by_id(db, user_id)
+        return await update_user(user, user_data, db)
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error updating user last login at: {e!s}")

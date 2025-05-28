@@ -4,36 +4,47 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
+from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 
 @pytest.fixture
-def body():
+def generic_variable():
     return {
-        "name": "test_variable",
-        "value": "test_value",
-        "type": "test_type",
+        "name": "test_generic_variable",
+        "value": "test_generic_value",
+        "type": GENERIC_TYPE,
+        "default_fields": ["test_field"],
+    }
+
+
+@pytest.fixture
+def credential_variable():
+    return {
+        "name": "test_credential_variable",
+        "value": "test_credential_value",
+        "type": CREDENTIAL_TYPE,
         "default_fields": ["test_field"],
     }
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_create_variable(client: AsyncClient, body, logged_in_headers):
-    response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
+async def test_create_variable(client: AsyncClient, generic_variable, logged_in_headers):
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_201_CREATED
-    assert body["name"] == result["name"]
-    assert body["type"] == result["type"]
-    assert body["default_fields"] == result["default_fields"]
+    assert generic_variable["name"] == result["name"]
+    assert generic_variable["type"] == result["type"]
+    assert generic_variable["default_fields"] == result["default_fields"]
     assert "id" in result
-    assert body["value"] != result["value"]
+    assert generic_variable["value"] != result["value"]  # Value should be encrypted
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_create_variable__variable_name_already_exists(client: AsyncClient, body, logged_in_headers):
-    await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
+async def test_create_variable__variable_name_already_exists(client: AsyncClient, generic_variable, logged_in_headers):
+    await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
 
-    response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -41,11 +52,13 @@ async def test_create_variable__variable_name_already_exists(client: AsyncClient
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_create_variable__variable_name_and_value_cannot_be_empty(client: AsyncClient, body, logged_in_headers):
-    body["name"] = ""
-    body["value"] = ""
+async def test_create_variable__variable_name_and_value_cannot_be_empty(
+    client: AsyncClient, generic_variable, logged_in_headers
+):
+    generic_variable["name"] = ""
+    generic_variable["value"] = ""
 
-    response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -53,10 +66,10 @@ async def test_create_variable__variable_name_and_value_cannot_be_empty(client: 
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_create_variable__variable_name_cannot_be_empty(client: AsyncClient, body, logged_in_headers):
-    body["name"] = ""
+async def test_create_variable__variable_name_cannot_be_empty(client: AsyncClient, generic_variable, logged_in_headers):
+    generic_variable["name"] = ""
 
-    response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -64,10 +77,12 @@ async def test_create_variable__variable_name_cannot_be_empty(client: AsyncClien
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_create_variable__variable_value_cannot_be_empty(client: AsyncClient, body, logged_in_headers):
-    body["value"] = ""
+async def test_create_variable__variable_value_cannot_be_empty(
+    client: AsyncClient, generic_variable, logged_in_headers
+):
+    generic_variable["value"] = ""
 
-    response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -75,13 +90,13 @@ async def test_create_variable__variable_value_cannot_be_empty(client: AsyncClie
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_create_variable__httpexception(client: AsyncClient, body, logged_in_headers):
+async def test_create_variable__httpexception(client: AsyncClient, generic_variable, logged_in_headers):
     status_code = 418
     generic_message = "I'm a teapot"
 
     with mock.patch("langflow.services.auth.utils.encrypt_api_key") as m:
         m.side_effect = HTTPException(status_code=status_code, detail=generic_message)
-        response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
+        response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
         result = response.json()
 
         assert response.status_code == status.HTTP_418_IM_A_TEAPOT
@@ -89,12 +104,12 @@ async def test_create_variable__httpexception(client: AsyncClient, body, logged_
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_create_variable__exception(client: AsyncClient, body, logged_in_headers):
+async def test_create_variable__exception(client: AsyncClient, generic_variable, logged_in_headers):
     generic_message = "Generic error message"
 
     with mock.patch("langflow.services.auth.utils.encrypt_api_key") as m:
         m.side_effect = Exception(generic_message)
-        response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
+        response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
         result = response.json()
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -102,17 +117,33 @@ async def test_create_variable__exception(client: AsyncClient, body, logged_in_h
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_read_variables(client: AsyncClient, body, logged_in_headers):
-    names = ["test_variable1", "test_variable2", "test_variable3"]
-    for name in names:
-        body["name"] = name
-        await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
+async def test_read_variables(client: AsyncClient, generic_variable, credential_variable, logged_in_headers):
+    # Create a generic variable
+    create_response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+
+    # Create a credential variable
+    create_response = await client.post("api/v1/variables/", json=credential_variable, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
 
     response = await client.get("api/v1/variables/", headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK
-    assert all(name in [r["name"] for r in result] for name in names)
+
+    # Check both variables exist
+    assert generic_variable["name"] in [r["name"] for r in result]
+    assert credential_variable["name"] in [r["name"] for r in result]
+
+    # Assert that credentials are not decrypted and generic are decrypted
+    credential_vars = [r for r in result if r["type"] == CREDENTIAL_TYPE]
+    generic_vars = [r for r in result if r["type"] == GENERIC_TYPE]
+
+    # Credential variables should remain encrypted (value should be different)
+    assert all(c["value"] != credential_variable["value"] for c in credential_vars)
+
+    # Generic variables should be decrypted (value should match original)
+    assert all(g["value"] == generic_variable["value"] for g in generic_vars)
 
 
 @pytest.mark.usefixtures("active_user")
@@ -140,16 +171,18 @@ async def test_read_variables__(client: AsyncClient, logged_in_headers):
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_update_variable(client: AsyncClient, body, logged_in_headers):
-    saved = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
+async def test_update_variable(client: AsyncClient, generic_variable, logged_in_headers):
+    saved = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
     saved = saved.json()
-    body["id"] = saved.get("id")
-    body["name"] = "new_name"
-    body["value"] = "new_value"
-    body["type"] = "new_type"
-    body["default_fields"] = ["new_field"]
+    generic_variable["id"] = saved.get("id")
+    generic_variable["name"] = "new_name"
+    generic_variable["value"] = "new_value"
+    generic_variable["type"] = GENERIC_TYPE  # Ensure we keep it as GENERIC_TYPE
+    generic_variable["default_fields"] = ["new_field"]
 
-    response = await client.patch(f"api/v1/variables/{saved.get('id')}", json=body, headers=logged_in_headers)
+    response = await client.patch(
+        f"api/v1/variables/{saved.get('id')}", json=generic_variable, headers=logged_in_headers
+    )
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK
@@ -159,11 +192,11 @@ async def test_update_variable(client: AsyncClient, body, logged_in_headers):
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_update_variable__exception(client: AsyncClient, body, logged_in_headers):
+async def test_update_variable__exception(client: AsyncClient, generic_variable, logged_in_headers):
     wrong_id = uuid4()
-    body["id"] = str(wrong_id)
+    generic_variable["id"] = str(wrong_id)
 
-    response = await client.patch(f"api/v1/variables/{wrong_id}", json=body, headers=logged_in_headers)
+    response = await client.patch(f"api/v1/variables/{wrong_id}", json=generic_variable, headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -171,8 +204,8 @@ async def test_update_variable__exception(client: AsyncClient, body, logged_in_h
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_delete_variable(client: AsyncClient, body, logged_in_headers):
-    response = await client.post("api/v1/variables/", json=body, headers=logged_in_headers)
+async def test_delete_variable(client: AsyncClient, generic_variable, logged_in_headers):
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
     saved = response.json()
     response = await client.delete(f"api/v1/variables/{saved.get('id')}", headers=logged_in_headers)
 

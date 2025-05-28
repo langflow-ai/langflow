@@ -1,4 +1,4 @@
-import ForwardedIconComponent from "@/components/genericIconComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -32,9 +32,25 @@ export default function TemplatesModal({
       ],
     },
     {
-      title: "Usecase",
+      title: "Use Cases",
       items: [
-        { title: "Chatbots", icon: "MessagesSquare", id: "chatbots" },
+        { title: "Assistants", icon: "BotMessageSquare", id: "assistants" },
+        { title: "Classification", icon: "Tags", id: "classification" },
+        { title: "Coding", icon: "TerminalIcon", id: "coding" },
+        {
+          title: "Content Generation",
+          icon: "Newspaper",
+          id: "content-generation",
+        },
+        { title: "Q&A", icon: "Database", id: "q-a" },
+        // { title: "Summarization", icon: "Bot", id: "summarization" },
+        // { title: "Web Scraping", icon: "CodeXml", id: "web-scraping" },
+      ],
+    },
+    {
+      title: "Methodology",
+      items: [
+        { title: "Prompting", icon: "MessagesSquare", id: "chatbots" },
         { title: "RAG", icon: "Database", id: "rag" },
         { title: "Agents", icon: "Bot", id: "agents" },
       ],

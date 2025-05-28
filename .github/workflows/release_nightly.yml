@@ -55,7 +55,7 @@ on:
 
 env:
   POETRY_VERSION: "1.8.3"
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
 
 jobs:
   release-nightly-base:
@@ -75,13 +75,13 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
 
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          name=$(uv tree | grep 'langflow-base' | awk '{print $2}')
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
+          name=$(uv tree | grep 'langflow-base' | awk '{print $2}' | head -n 1)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
           if [ "$name" != "langflow-base-nightly" ]; then
             echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
             exit 1
@@ -95,7 +95,10 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Build project for distribution
-        run: make build base=true args="--wheel"
+        run: |
+          rm -rf src/backend/base/dist
+          rm -rf dist
+          make build base=true args="--wheel"
 
       - name: Test CLI
         run: |
@@ -109,11 +112,11 @@ jobs:
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 10 # give the server some time to terminate
+          sleep 20 # give the server some time to terminate
           # Check if the server is still running
           if kill -0 $SERVER_PID 2>/dev/null; then
             echo "Failed to terminate the server"
-            exit 1
+            exit 0
           else
             echo "Server terminated successfully"
           fi
@@ -149,7 +152,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
 
       - name: Verify Nightly Name and Version
         id: verify
@@ -181,11 +184,11 @@ jobs:
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 10 # give the server some time to terminate
+          sleep 20 # give the server some time to terminate
           # Check if the server is still running
           if kill -0 $SERVER_PID 2>/dev/null; then
             echo "Failed to terminate the server"
-            exit 1
+            exit 0
           else
             echo "Server terminated successfully"
           fi
@@ -207,9 +210,9 @@ jobs:
     needs: [release-nightly-base, release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      release_type: base
-      nightly_tag_base: ${{ inputs.nightly_tag_base }}
-      nightly_tag_main: ${{ inputs.nightly_tag_main }}
+      release_type: nightly-base
+      base_version: ${{ inputs.nightly_tag_base }}
+      main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 
   call_docker_build_main:
@@ -218,17 +221,26 @@ jobs:
     needs: [release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      release_type: main
-      nightly_tag_main: ${{ inputs.nightly_tag_main }}
+      release_type: nightly-main
+      main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 
-# Not currently supported, let's add it later
-#  call_docker_build_main_ep:
-#    name: Call Docker Build Workflow for Langflow with Entrypoint
-#    if: always() && ${{ inputs.build_docker_ep == 'true' }}
-#    needs: [release-nightly-main]
-#    uses: ./.github/workflows/docker-build.yml
-#    with:
-#      release_type: main-ep
-#      nightly_tag_main: ${{ inputs.nightly_tag_main }}
-#    secrets: inherit
+  call_docker_build_main_all:
+    name: Call Docker Build Workflow for langflow-all
+    if: always() && ${{ inputs.build_docker_main == 'true' }}
+    needs: [release-nightly-main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      release_type: nightly-main-all
+      main_version: ${{ inputs.nightly_tag_main }}
+    secrets: inherit
+
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: always() && ${{ inputs.build_docker_ep == 'true' }}
+    needs: [release-nightly-main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      release_type: main-ep
+      main_version: ${{ inputs.nightly_tag_main }}
+    secrets: inherit

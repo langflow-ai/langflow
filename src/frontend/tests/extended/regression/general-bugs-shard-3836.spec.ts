@@ -1,125 +1,61 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { uploadFile } from "../../utils/upload-file";
 
-test("user must be able to send an image on chat using advanced tool on ChatInputComponent", async ({
-  page,
-}) => {
-  test.skip(
-    !process?.env?.OPENAI_API_KEY,
-    "OPENAI_API_KEY required to run this test",
-  );
+test(
+  "user must be able to send an image on chat using advanced tool on ChatInputComponent",
+  { tag: ["@release", "@components"] },
+  async ({ page }) => {
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
+    );
 
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
-
-  await page.goto("/");
-
-  await page.waitForTimeout(1000);
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
-  } catch (error) {
-    modalCount = 0;
-  }
 
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    await awaitBootstrapTest(page);
 
-  await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 100000,
-  });
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await initialGPTsetup(page);
 
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
+    await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
-  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByTestId("edit-button-modal").last().click();
+    await page.getByTestId("showfiles").click();
+    await page.getByText("Close").last().click();
 
-  while (outdatedComponents > 0) {
-    await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
-    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-  }
+    const userQuestion = "What is this image?";
+    await page.getByTestId("textarea_str_input_value").fill(userQuestion);
 
-  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  while (filledApiKey > 0) {
-    await page.getByTestId("remove-icon-badge").first().click();
-    await page.waitForTimeout(1000);
-    filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  }
+    await uploadFile(page, "chain.png");
 
-  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+    await page.getByTestId("button_run_chat output").click();
 
-  if (isApiKeyInputVisible) {
-    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
-  }
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
-  await page.getByTestId("dropdown_str_model_name").click();
-  await page.getByTestId("gpt-4o-1-option").click();
+    await page.waitForSelector('[data-testid="button-send"]', {
+      timeout: 100000,
+    });
 
-  await page.waitForSelector("text=Chat Input", { timeout: 30000 });
+    await page.waitForSelector("text=chain.png", { timeout: 30000 });
 
-  await page.getByText("Chat Input", { exact: true }).click();
-  await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("advanced-button-modal").click();
-  await page.getByTestId("showfiles").click();
-  await page.getByText("Close").last().click();
+    expect(await page.getByAltText("generated image").isVisible()).toBeTruthy();
 
-  await page.waitForTimeout(500);
+    expect(
+      await page.getByTestId(`chat-message-User-${userQuestion}`).isVisible(),
+    ).toBeTruthy();
 
-  const userQuestion = "What is this image?";
-  await page.getByTestId("textarea_str_input_value").fill(userQuestion);
+    const textContents = await page
+      .getByTestId("div-chat-message")
+      .allTextContents();
 
-  const filePath = "tests/assets/chain.png";
-
-  await page.click('[data-testid="button_upload_file"]');
-
-  const [fileChooser] = await Promise.all([
-    page.waitForEvent("filechooser"),
-    page.click('[data-testid="button_upload_file"]'),
-  ]);
-
-  await fileChooser.setFiles(filePath);
-
-  await page.keyboard.press("Escape");
-
-  await page.getByTestId("button_run_chat output").click();
-  await page.getByText("built successfully").last().click({
-    timeout: 15000,
-  });
-
-  await page.getByText("Playground", { exact: true }).last().click();
-
-  await page.waitForTimeout(500);
-
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
-    timeout: 100000,
-  });
-
-  await page.waitForSelector("text=chain.png", { timeout: 30000 });
-
-  expect(await page.getByAltText("generated image").isVisible()).toBeTruthy();
-
-  expect(
-    await page.getByTestId(`chat-message-User-${userQuestion}`).isVisible(),
-  ).toBeTruthy();
-
-  const textContents = await page
-    .getByTestId("div-chat-message")
-    .allTextContents();
-
-  expect(textContents[0]).toContain("chain");
-});
+    expect(textContents[0]).toContain("chain");
+  },
+);

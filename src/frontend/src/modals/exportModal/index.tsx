@@ -1,8 +1,9 @@
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
+import { FlowType } from "@/types/flow";
 import { ReactNode, forwardRef, useEffect, useState } from "react";
-import EditFlowSettings from "../../components/editFlowSettingsComponent";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent from "../../components/common/genericIconComponent";
+import EditFlowSettings from "../../components/core/editFlowSettingsComponent";
 import { Checkbox } from "../../components/ui/checkbox";
 import { API_WARNING_NOTICE_ALERT } from "../../constants/alerts_constants";
 import {
@@ -16,18 +17,36 @@ import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
-  (props: { children: ReactNode }, ref): JSX.Element => {
+  (
+    props: {
+      children?: ReactNode;
+      open?: boolean;
+      setOpen?: (open: boolean) => void;
+      flowData?: FlowType;
+    },
+    ref,
+  ): JSX.Element => {
     const version = useDarkStore((state) => state.version);
+    const setSuccessData = useAlertStore((state) => state.setSuccessData);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(false);
-    const currentFlow = useFlowStore((state) => state.currentFlow);
+    const currentFlowOnPage = useFlowStore((state) => state.currentFlow);
+    const currentFlow = props.flowData ?? currentFlowOnPage;
+    const isBuilding = useFlowStore((state) => state.isBuilding);
     useEffect(() => {
-      setName(currentFlow!.name);
-      setDescription(currentFlow!.description);
-    }, [currentFlow!.name, currentFlow!.description]);
-    const [name, setName] = useState(currentFlow!.name);
-    const [description, setDescription] = useState(currentFlow!.description);
-    const [open, setOpen] = useState(false);
+      setName(currentFlow?.name ?? "");
+      setDescription(currentFlow?.description ?? "");
+    }, [currentFlow?.name, currentFlow?.description]);
+    const [name, setName] = useState(currentFlow?.name ?? "");
+    const [description, setDescription] = useState(
+      currentFlow?.description ?? "",
+    );
+
+    const [customOpen, customSetOpen] = useState(false);
+    const [open, setOpen] =
+      props.open !== undefined && props.setOpen !== undefined
+        ? [props.open, props.setOpen]
+        : [customOpen, customSetOpen];
 
     return (
       <BaseModal
@@ -45,6 +64,7 @@ const ExportModal = forwardRef(
                 last_tested_version: version,
                 endpoint_name: currentFlow!.endpoint_name,
                 is_component: false,
+                tags: currentFlow!.tags,
               },
               name!,
               description,
@@ -62,15 +82,20 @@ const ExportModal = forwardRef(
                 last_tested_version: version,
                 endpoint_name: currentFlow!.endpoint_name,
                 is_component: false,
+                tags: currentFlow!.tags,
               }),
               name!,
               description,
-            );
+            ).then(() => {
+              setSuccessData({
+                title: "Flow exported successfully",
+              });
+            });
           setOpen(false);
           track("Flow Exported", { flowId: currentFlow!.id });
         }}
       >
-        <BaseModal.Trigger asChild>{props.children}</BaseModal.Trigger>
+        <BaseModal.Trigger asChild>{props.children ?? <></>}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
           <span className="pr-2">Export</span>
           <IconComponent
@@ -103,7 +128,13 @@ const ExportModal = forwardRef(
           </span>
         </BaseModal.Content>
 
-        <BaseModal.Footer submit={{ label: "Export" }} />
+        <BaseModal.Footer
+          submit={{
+            label: "Export",
+            loading: isBuilding,
+            dataTestId: "modal-export-button",
+          }}
+        />
       </BaseModal>
     );
   },

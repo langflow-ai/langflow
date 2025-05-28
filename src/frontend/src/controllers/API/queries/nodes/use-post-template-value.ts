@@ -10,6 +10,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IPostTemplateValue {
   value: any;
+  tool_mode?: boolean;
 }
 
 interface IPostTemplateValueParams {
@@ -32,7 +33,6 @@ export const usePostTemplateValue: useMutationFunctionType<
     const template = node.template;
 
     if (!template) return;
-
     const response = await api.post<APIClassType>(
       getURL("CUSTOM_COMPONENT", { update: "update" }),
       {
@@ -40,6 +40,7 @@ export const usePostTemplateValue: useMutationFunctionType<
         template: template,
         field: parameterId,
         field_value: payload.value,
+        tool_mode: payload.tool_mode,
       },
     );
 
@@ -53,7 +54,10 @@ export const usePostTemplateValue: useMutationFunctionType<
   > = mutate(
     ["usePostTemplateValue", { parameterId, nodeId }],
     postTemplateValueFn,
-    options,
+    {
+      ...options,
+      retry: 0,
+    },
   );
 
   return mutation;

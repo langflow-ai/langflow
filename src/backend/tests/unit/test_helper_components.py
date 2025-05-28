@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from langflow.components import helpers
+from langflow.components import helpers, processing
 from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
 from langflow.schema.message import Message
@@ -53,7 +53,7 @@ def test_uuid_generator_component():
 
 def test_data_as_text_component():
     # Arrange
-    data_as_text_component = helpers.ParseDataComponent()
+    data_as_text_component = processing.ParseDataComponent()
 
     # Act
     # Replace with your actual test data

@@ -8,7 +8,7 @@ on:
 
 env:
   POETRY_VERSION: "1.8.3"
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
 
 jobs:
   create-nightly-tag:
@@ -31,7 +31,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
 
       - name: Generate main nightly tag
         id: generate_main_tag
@@ -41,19 +41,16 @@ jobs:
           echo "main_tag=$MAIN_TAG" >> $GITHUB_OUTPUT
           echo "main_tag=$MAIN_TAG"
 
-      - name: Check if main tag already exists
+      - name: Delete existing tag if it exists
         id: check_main_tag
         run: |
           git fetch --tags
-          if git rev-parse -q --verify "refs/tags/${{ steps.generate_main_tag.outputs.main_tag }}" >/dev/null; then
-            echo "main_tag_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "main_tag_exists=false" >> $GITHUB_OUTPUT
-          fi
+          git tag -d ${{ steps.generate_main_tag.outputs.main_tag }} || true
+          git push --delete origin ${{ steps.generate_main_tag.outputs.main_tag }} || true
+          echo "main_tag_exists=false" >> $GITHUB_OUTPUT
 
       - name: Generate base nightly tag
         id: generate_base_tag
-        if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'false' }}
         run: |
           # NOTE: This outputs the tag with the `v` prefix.
           BASE_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py base)"
@@ -62,7 +59,6 @@ jobs:
 
       - name: Commit tag
         id: commit_tag
-        if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'false' }}
         run: |
           # If the main tag does not exist in GH, we create the base tag from the existing codebase.
 
@@ -95,17 +91,15 @@ jobs:
 
       - name: Checkout main nightly tag
         uses: actions/checkout@v4
-        if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'true' }}
         with:
           ref: ${{ steps.generate_main_tag.outputs.main_tag }}
 
       - name: Retrieve Base Tag
         id: retrieve_base_tag
-        if: ${{ steps.check_main_tag.outputs.main_tag_exists == 'true' }}
         working-directory: src/backend/base
         run: |
           # If the main tag already exists, we need to retrieve the base version from the main tag codebase.
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
           echo "base_tag=$version" >> $GITHUB_OUTPUT
           echo "base_tag=$version"
 
@@ -132,9 +126,12 @@ jobs:
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: "tests"
+      release: true
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
   backend-unit-tests:
     if: github.repository == 'langflow-ai/langflow'
@@ -142,7 +139,7 @@ jobs:
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
     with:
-      python-versions: '["3.10", "3.11", "3.12"]'
+      python-versions: '["3.10", "3.11", "3.12", "3.13"]'
 
   # Not making nightly builds dependent on integration test success
   # due to inherent flakiness of 3rd party integrations
@@ -152,7 +149,7 @@ jobs:
   #   needs: create-nightly-tag
   #   uses: ./.github/workflows/integration_tests.yml
   #   with:
-  #     python-versions: '["3.10", "3.11", "3.12"]'
+  #     python-versions: '["3.10", "3.11", "3.12", "3.13"]'
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:

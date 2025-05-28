@@ -43,10 +43,10 @@ async def test_delete_api_key_route(client: AsyncClient, logged_in_headers, acti
         "api_key": "string",
         "user_id": str(active_user.id),
     }
-    _response = await client.post("api/v1/api_key/", json=basic_case, headers=logged_in_headers)
-    _id = _response.json()["id"]
+    response_ = await client.post("api/v1/api_key/", json=basic_case, headers=logged_in_headers)
+    id_ = response_.json()["id"]
 
-    response = await client.delete(f"api/v1/api_key/{_id}", headers=logged_in_headers)
+    response = await client.delete(f"api/v1/api_key/{id_}", headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK

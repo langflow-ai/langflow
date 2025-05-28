@@ -6,6 +6,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.graph.vertex.base import Vertex
+from langflow.processing.utils import validate_and_repair_json
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_settings_service
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
     from langflow.graph.graph.base import Graph
     from langflow.graph.schema import RunOutputs
+    from langflow.services.event_manager import EventManager
 
 
 class Result(BaseModel):
@@ -29,10 +31,11 @@ async def run_graph_internal(
     session_id: str | None = None,
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
+    event_manager: EventManager | None = None,
 ) -> tuple[list[RunOutputs], str]:
     """Run the graph and generate the result."""
     inputs = inputs or []
-    session_id_str = flow_id if session_id is None else session_id
+    effective_session_id = session_id or flow_id
     components = []
     inputs_list = []
     types = []
@@ -45,17 +48,18 @@ async def run_graph_internal(
         types.append(input_value_request.type)
 
     fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
-
+    graph.session_id = effective_session_id
     run_outputs = await graph.arun(
         inputs=inputs_list,
         inputs_components=components,
         types=types,
         outputs=outputs or [],
         stream=stream,
-        session_id=session_id_str or "",
+        session_id=effective_session_id or "",
         fallback_to_env_vars=fallback_to_env_vars,
+        event_manager=event_manager,
     )
-    return run_outputs, session_id_str
+    return run_outputs, effective_session_id
 
 
 async def run_graph(
@@ -67,6 +71,7 @@ async def run_graph(
     session_id: str | None = None,
     fallback_to_env_vars: bool = False,
     output_component: str | None = None,
+    stream: bool = False,
 ) -> list[RunOutputs]:
     """Runs the given Langflow Graph with the specified input and returns the outputs.
 
@@ -79,6 +84,7 @@ async def run_graph(
         fallback_to_env_vars (bool, optional): Whether to fallback to environment variables.
             Defaults to False.
         output_component (Optional[str], optional): The specific output component to retrieve. Defaults to None.
+        stream (bool, optional): Whether to stream the results or not. Defaults to False.
 
     Returns:
         List[RunOutputs]: A list of RunOutputs objects representing the outputs of the graph.
@@ -109,7 +115,7 @@ async def run_graph(
         inputs_components=components,
         types=types,
         outputs=outputs or [],
-        stream=False,
+        stream=stream,
         session_id=session_id,
         fallback_to_env_vars=fallback_to_env_vars,
     )
@@ -142,10 +148,13 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
         if tweak_name not in template_data:
             continue
         if tweak_name in template_data:
-            if isinstance(tweak_value, dict):
+            if template_data[tweak_name]["type"] == "NestedDict":
+                value = validate_and_repair_json(tweak_value)
+                template_data[tweak_name]["value"] = value
+            elif isinstance(tweak_value, dict):
                 for k, v in tweak_value.items():
-                    _k = "file_path" if template_data[tweak_name]["type"] == "file" else k
-                    template_data[tweak_name][_k] = v
+                    k_ = "file_path" if template_data[tweak_name]["type"] == "file" else k
+                    template_data[tweak_name][k_] = v
             else:
                 key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
                 template_data[tweak_name][key] = tweak_value
@@ -171,10 +180,10 @@ def process_tweaks(
     :return: The modified graph_data dictionary.
     :raises ValueError: If the input is not in the expected format.
     """
-    tweaks_dict = cast(dict[str, Any], tweaks.model_dump()) if not isinstance(tweaks, dict) else tweaks
+    tweaks_dict = cast("dict[str, Any]", tweaks.model_dump()) if not isinstance(tweaks, dict) else tweaks
     if "stream" not in tweaks_dict:
         tweaks_dict |= {"stream": stream}
-    nodes = validate_input(graph_data, cast(dict[str, str | dict[str, Any]], tweaks_dict))
+    nodes = validate_input(graph_data, cast("dict[str, str | dict[str, Any]]", tweaks_dict))
     nodes_map = {node.get("id"): node for node in nodes}
     nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
 

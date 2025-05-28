@@ -1,10 +1,9 @@
 ---
-title: Vector Store RAG
-sidebar_position: 4
+title: Vector store RAG
 slug: /starter-projects-vector-store-rag
 ---
 
-
+import Icon from "@site/src/components/icon";
 
 Retrieval Augmented Generation, or RAG, is a pattern for training LLMs on your data and querying it.
 
@@ -15,78 +14,76 @@ RAG is backed by a **vector store**, a vector database which stores embeddings 
 This enables **vector search**, a more powerful and context-aware search.
 
 
-We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-pre-release&utm_medium=referral&utm_campaign=langflow-announcement&utm_content=create-a-free-astra-db-account) as the vector database for this starter project, but you can follow along with any of Langflow's vector database options.
+We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-pre-release&utm_medium=referral&utm_campaign=langflow-announcement&utm_content=create-a-free-astra-db-account) as the vector database for this starter flow, but you can follow along with any of Langflow's vector database options.
 
 
-## Prerequisites {#6aa2c6dff6894eccadc39d4903d79e66}
+## Prerequisites
+
+- [A running Langflow instance](/get-started-installation)
+- [An OpenAI API key](https://platform.openai.com/)
+- [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with the following:
+	- An Astra DB application token scoped to read and write to the database
+	- A collection created in [Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection) or a new collection created in the **Astra DB** component
 
 
----
+## Open Langflow and start a new project
 
-- [Langflow installed and running](https://docs.langflow.org/getting-started-installation)
-- [OpenAI API key](https://platform.openai.com/)
-- [An Astra DB vector database created](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
-	- Application Token
-	- API Endpoint
-
-![](./648489928.png)
-
-
-## Vector Store RAG {#1c37d15332f94cfe8f6e11dc6cc8a4ea}
-
-
----
-
-
-### Create the vector store RAG project {#e3ed64193e5e448f81279e1d54ba43cf}
-
-1. From the Langflow dashboard, click **New Project**.
+1. From the Langflow dashboard, click **New Flow**.
 2. Select **Vector Store RAG**.
-3. The **Vector Store RAG** project is created.
+3. The **Vector Store RAG** flow is created.
 
-![](./1946624394.png)
+## Build the vector RAG flow
 
+The vector store RAG flow is built of two separate flows for ingestion and query.
 
-The vector store RAG flow is built of two separate flows. Ingestion and query.
+![](/img/starter-flow-vector-rag.png)
 
+The **Load Data Flow** (bottom of the screen) creates a searchable index to be queried for contextual similarity.
+This flow populates the vector store with data from a local file.
+It ingests data from a local file, splits it into chunks, indexes it in Astra DB, and computes embeddings for the chunks using the OpenAI embeddings model.
 
-The **ingestion** part (bottom of the screen) populates the vector store with data from a local file. It ingests data from a file (**File**), splits it into chunks (**Split Text**), indexes it in Astra DB (**Astra DB**), and computes embeddings for the chunks using an embedding model (**OpenAI Embeddings**). 
+The **Retriever Flow** (top of the screen) embeds the user's queries into vectors, which are compared to the vector store data from the **Load Data Flow** for contextual similarity.
 
+- **Chat Input** receives user input from the **Playground**.
+- **OpenAI Embeddings** converts the user query into vector form.
+- **Astra DB** performs similarity search using the query vector.
+- **Parser** processes the retrieved chunks.
+- **Prompt** combines the user query with relevant context.
+- **OpenAI** generates the response using the prompt.
+- **Chat Output** returns the response to the **Playground**.
 
-:::tip
-
-Embeddings are numerical vectors that represent data meaningfully. They enable efficient similarity searches in vector stores by placing similar items close together in the vector space, enhancing search and recommendation tasks.
-
-:::
-
-
-
-
-This part creates a searchable index to be queried for contextual similarity.
-
-
-The **query** part (top of the screen) allows users to retrieve embedded vector store data. Components:
-
-- **Chat Input** defines where to send the user input (coming from the Playground).
-- **OpenAI Embeddings** is the model used to generate embeddings from the user input.
-- **Astra DB** retrieves the most relevant chunks from the Astra DB database (here, used for search, not ingestion).
-- **Parse Data** converts chunks coming from the **Astra DB** component into plain text to feed a prompt.
-- **Prompt** takes in the user input and the retrieved chunks as text and builds a prompt for the model.
-- **OpenAI** takes in the prompt to generate a response.
-- **Chat Output** component displays the response in the Playground.
-1. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
-	1. In the **Variable Name** field, enter `openai_api_key`.
-	2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
-	3. Click **Save Variable**.
-1. To create environment variables for the **Astra DB** and **Astra DB Search** components:
-	1. In the **Token** field, click the **Globe** button, and then click **Add New Variable**.
-	2. In the **Variable Name** field, enter `astra_token`.
-	3. In the **Value** field, paste your Astra application token (`AstraCS:WSnyFUhRxsrg…`).
+1. Configure the **OpenAI** model component.
+	1. To create a global variable for the **OpenAI** component, in the **OpenAI API Key** field, click the <Icon name="Globe" aria-label="Globe" /> **Globe** button, and then click **Add New Variable**.
+	2. In the **Variable Name** field, enter `openai_api_key`.
+	3. In the **Value** field, paste your OpenAI API Key (`sk-...`).
 	4. Click **Save Variable**.
-	5. Repeat the above steps for the **API Endpoint** field, pasting your Astra API Endpoint instead (`https://ASTRA_DB_ID-ASTRA_DB_REGION.apps.astra.datastax.com`).
-	6. Add the global variable to both the **Astra DB** and **Astra DB Search** components.
+2. Configure the **Astra DB** component.
+	1. In the **Astra DB Application Token** field, add your **Astra DB** application token.
+	The component connects to your database and populates the menus with existing databases and collections.
+	2. Select your **Database**.
+	If you don't have a collection, select **New database**.
+	Complete the **Name**, **Cloud provider**, and **Region** fields, and then click **Create**. **Database creation takes a few minutes**.
+	3. Select your **Collection**. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data.
+	:::info
+	If you select a collection embedded with Nvidia through Astra's vectorize service, the **Embedding Model** port is removed, because you have already generated embeddings for this collection with the Nvidia `NV-Embed-QA` model. The component fetches the data from the collection, and uses the same embeddings for queries.
+	:::
 
-### Run the Vector Store RAG {#815a6536d2d548d987f0f4e375a58b15}
+3. If you don't have a collection, create a new one within the component.
+	1. Select **New collection**.
+	2. Complete the **Name**, **Embedding generation method**, **Embedding model**, and **Dimensions** fields, and then click **Create**.
+
+		Your choice for the **Embedding generation method** and **Embedding model** depends on whether you want to use embeddings generated by a provider through Astra's vectorize service, or generated by a component in Langflow.
+
+		* To use embeddings generated by a provider through Astra's vectorize service, select the model from the **Embedding generation method** dropdown menu, and then select the model from the **Embedding model** dropdown menu.
+		* To use embeddings generated by a component in Langflow, select **Bring your own** for both the **Embedding generation method** and **Embedding model** fields. In this starter project, the option for the embeddings method and model is the **OpenAI Embeddings** component connected to the **Astra DB** component.
+		* The **Dimensions** value must match the dimensions of your collection. This field is **not required** if you use embeddings generated through Astra's vectorize service. You can find this value in the **Collection** in your [Astra DB deployment](https://astra.datastax.com).
+
+		For more information, see the [DataStax Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
+
+
+If you used Langflow's **Global Variables** feature, the RAG application flow components are already configured with the necessary credentials.
+
+## Run the Vector Store RAG flow
 
 1. Click the **Playground** button. Here you can chat with the AI that uses context from the database you created.
 2. Type a message and press Enter. (Try something like "What topics do you know about?")

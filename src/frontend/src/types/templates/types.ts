@@ -12,8 +12,8 @@ export interface Category {
 }
 
 export interface CardData {
-  bg: string;
-  spiralImage: string;
+  bgImage: string;
+  bgHorizontalImage: string;
   icon: string;
   category: string;
   flow: FlowType | undefined;

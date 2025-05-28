@@ -1,24 +1,26 @@
 from langflow.custom import Component
-from langflow.inputs import HandleInput, MessageInput
+from langflow.inputs import HandleInput
 from langflow.inputs.inputs import MessageTextInput
-from langflow.memory import get_messages, store_message
+from langflow.memory import aget_messages, astore_message
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 
-class StoreMessageComponent(Component):
-    display_name = "Store Message"
+class MessageStoreComponent(Component):
+    display_name = "Message Store"
     description = "Stores a chat message or text into Langflow tables or an external memory."
-    icon = "save"
+    icon = "message-square-text"
     name = "StoreMessage"
 
     inputs = [
-        MessageInput(name="message", display_name="Message", info="The chat message to be stored.", required=True),
+        MessageTextInput(
+            name="message", display_name="Message", info="The chat message to be stored.", required=True, tool_mode=True
+        ),
         HandleInput(
             name="memory",
             display_name="External Memory",
-            input_types=["BaseChatMessageHistory"],
+            input_types=["Memory"],
             info="The external memory to store the message. If empty, it will use the Langflow tables.",
         ),
         MessageTextInput(
@@ -39,31 +41,47 @@ class StoreMessageComponent(Component):
             display_name="Session ID",
             info="The session ID of the chat. If empty, the current session ID parameter will be used.",
             value="",
+            advanced=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Stored Messages", name="stored_messages", method="store_message"),
+        Output(display_name="Stored Messages", name="stored_messages", method="store_message", hidden=True),
     ]
 
-    def store_message(self) -> Message:
-        message = self.message
+    async def store_message(self) -> Message:
+        message = Message(text=self.message) if isinstance(self.message, str) else self.message
 
         message.session_id = self.session_id or message.session_id
         message.sender = self.sender or message.sender or MESSAGE_SENDER_AI
         message.sender_name = self.sender_name or message.sender_name or MESSAGE_SENDER_NAME_AI
 
+        stored_messages: list[Message] = []
+
         if self.memory:
-            # override session_id
             self.memory.session_id = message.session_id
             lc_message = message.to_lc_message()
-            self.memory.add_messages([lc_message])
-            stored = self.memory.messages
-            stored = [Message.from_lc_message(m) for m in stored]
+            await self.memory.aadd_messages([lc_message])
+
+            stored_messages = await self.memory.aget_messages() or []
+
+            stored_messages = [Message.from_lc_message(m) for m in stored_messages] if stored_messages else []
+
             if message.sender:
-                stored = [m for m in stored if m.sender == message.sender]
+                stored_messages = [m for m in stored_messages if m.sender == message.sender]
         else:
-            store_message(message, flow_id=self.graph.flow_id)
-            stored = get_messages(session_id=message.session_id, sender_name=message.sender_name, sender=message.sender)
-        self.status = stored
-        return stored
+            await astore_message(message, flow_id=self.graph.flow_id)
+            stored_messages = (
+                await aget_messages(
+                    session_id=message.session_id, sender_name=message.sender_name, sender=message.sender
+                )
+                or []
+            )
+
+        if not stored_messages:
+            msg = "No messages were stored. Please ensure that the session ID and sender are properly set."
+            raise ValueError(msg)
+
+        stored_message = stored_messages[0]
+        self.status = stored_message
+        return stored_message

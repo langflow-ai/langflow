@@ -14,44 +14,46 @@ import { Outlet } from "react-router-dom";
 import { LoadingPage } from "../LoadingPage";
 
 export function AppInitPage() {
-  const dark = useDarkStore((state) => state.dark);
   const refreshStars = useDarkStore((state) => state.refreshStars);
+  const refreshDiscordCount = useDarkStore(
+    (state) => state.refreshDiscordCount,
+  );
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
-  const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
+  const { isFetched, refetch } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
-  useGetConfig({ enabled: isFetched });
+  const { isFetched: isConfigFetched } = useGetConfig({ enabled: isFetched });
   useGetGlobalVariables({ enabled: isFetched });
-  useGetBasicExamplesQuery({ enabled: isFetched });
   useGetTagsQuery({ enabled: isFetched });
+  useGetFoldersQuery({ enabled: isFetched });
+  const { isFetched: isExamplesFetched, refetch: refetchExamples } =
+    useGetBasicExamplesQuery();
 
-  const { refetch: refetchFolders } = useGetFoldersQuery();
   useEffect(() => {
     if (isFetched) {
       refreshStars();
-      refetchFolders();
+      refreshDiscordCount();
     }
-  }, [isFetched]);
 
-  useEffect(() => {
-    if (!dark) {
-      document.getElementById("body")!.classList.remove("dark");
-    } else {
-      document.getElementById("body")!.classList.add("dark");
+    if (isConfigFetched) {
+      refetch();
+      refetchExamples();
     }
-  }, [dark]);
+  }, [isFetched, isConfigFetched]);
 
   return (
     //need parent component with width and height
     <>
       {isLoaded ? (
-        (isLoading || !isFetched) && <LoadingPage overlay />
+        (isLoading || !isFetched || !isExamplesFetched) && (
+          <LoadingPage overlay />
+        )
       ) : (
         <CustomLoadingPage />
       )}
-      {isFetched && <Outlet />}
+      {isFetched && isExamplesFetched && <Outlet />}
     </>
   );
 }

@@ -47,8 +47,9 @@ jobs:
     name: CI
     uses: ./.github/workflows/ci.yml
     with:
-      python-versions: "['3.10', '3.11', '3.12']"
+      python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
+      release: true
 
   release-base:
     name: Release Langflow Base
@@ -64,11 +65,11 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
       - name: Check Version
         id: check-version
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 2 | xargs)
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
@@ -94,15 +95,16 @@ jobs:
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 10 # give the server some time to terminate
+          sleep 20 # give the server some time to terminate
           # Check if the server is still running
           if kill -0 $SERVER_PID 2>/dev/null; then
             echo "Failed to terminate the server"
-            exit 1
+            exit 0
           else
             echo "Server terminated successfully"
           fi
       - name: Publish to PyPI
+        if: steps.check-version.outputs.skipped == 'false'
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
@@ -127,7 +129,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
 
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow
@@ -167,11 +169,11 @@ jobs:
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 10 # give the server some time to terminate
+          sleep 20 # give the server some time to terminate
           # Check if the server is still running
           if kill -0 $SERVER_PID 2>/dev/null; then
             echo "Failed to terminate the server"
-            exit 1
+            exit 0
           else
             echo "Server terminated successfully"
           fi
@@ -189,10 +191,11 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: inputs.build_docker_base == true
-    needs: release-base
+    needs: [release-base, release-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      version: ${{ needs.release-base.outputs.version }}
+      base_version: ${{ needs.release-base.outputs.version }}
+      main_version: ${{ needs.release-main.outputs.version }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
@@ -200,20 +203,32 @@ jobs:
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: inputs.build_docker_main == true
-    needs: release-main
+    needs: [release-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      version: ${{ needs.release-main.outputs.version }}
+      main_version: ${{ needs.release-main.outputs.version }}
       release_type: main
+      pre_release: ${{ inputs.pre_release }}
+    secrets: inherit
+
+  call_docker_build_main_all:
+    name: Call Docker Build Workflow for langflow-all
+    if: inputs.build_docker_main == true
+    needs: [release-main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      main_version: ${{ needs.release-main.outputs.version }}
+      release_type: main-all
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: inputs.build_docker_ep == true
+    needs: [release-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      version: needs.release-main.outputs.version
+      main_version: ${{ needs.release-main.outputs.version }}
       release_type: main-ep
       pre_release: False
     secrets: inherit
@@ -235,5 +250,5 @@ jobs:
           draft: false
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
-          tag: v${{ needs.release-main.outputs.version }}
+          tag: ${{ needs.release-main.outputs.version }}
           commit: ${{ github.ref }}

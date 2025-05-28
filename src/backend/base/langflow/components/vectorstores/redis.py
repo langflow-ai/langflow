@@ -5,7 +5,7 @@ from langchain_community.vectorstores.redis import Redis
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
+from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -14,8 +14,8 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "Redis"
     description: str = "Implementation of Vector Store using Redis"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/redis"
     name = "Redis"
+    icon = "Redis"
 
     inputs = [
         SecretStrInput(name="redis_server_url", display_name="Redis Server Connection String", required=True),
@@ -28,12 +28,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
             name="schema",
             display_name="Schema",
         ),
-        MultilineInput(name="search_query", display_name="Search Query"),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -46,8 +41,10 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
 
     @check_cached_vector_store
     def build_vector_store(self) -> Redis:
-        documents = []
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
 
+        documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())

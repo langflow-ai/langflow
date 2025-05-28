@@ -1,10 +1,9 @@
-import asyncio
 import logging
 from collections import deque
 
 import pytest
-from langflow.components.agents import ToolCallingAgentComponent
 from langflow.components.inputs import ChatInput
+from langflow.components.langchain_utilities import ToolCallingAgentComponent
 from langflow.components.outputs import ChatOutput, TextOutputComponent
 from langflow.components.tools import YfinanceToolComponent
 from langflow.graph import Graph
@@ -14,17 +13,17 @@ from langflow.graph.graph.constants import Finish
 async def test_graph_not_prepared():
     chat_input = ChatInput()
     chat_output = ChatOutput()
-    graph = await asyncio.to_thread(Graph)
+    graph = Graph()
     graph.add_component(chat_input)
     graph.add_component(chat_output)
     with pytest.raises(ValueError, match="Graph not prepared"):
         await graph.astep()
 
 
-async def test_graph(caplog: pytest.LogCaptureFixture):
+def test_graph(caplog: pytest.LogCaptureFixture):
     chat_input = ChatInput()
     chat_output = ChatOutput()
-    graph = await asyncio.to_thread(Graph)
+    graph = Graph()
     graph.add_component(chat_input)
     graph.add_component(chat_output)
     caplog.clear()
@@ -36,7 +35,7 @@ async def test_graph(caplog: pytest.LogCaptureFixture):
 async def test_graph_with_edge():
     chat_input = ChatInput()
     chat_output = ChatOutput()
-    graph = await asyncio.to_thread(Graph)
+    graph = Graph()
     input_id = graph.add_component(chat_input)
     output_id = graph.add_component(chat_output)
     graph.add_component_edge(input_id, (chat_input.outputs[0].name, chat_input.inputs[0].name), output_id)
@@ -55,9 +54,10 @@ async def test_graph_with_edge():
 
 async def test_graph_functional():
     chat_input = ChatInput(_id="chat_input")
+    chat_input.set(should_store_message=False)
     chat_output = ChatOutput(input_value="test", _id="chat_output")
     chat_output.set(sender_name=chat_input.message_response)
-    graph = await asyncio.to_thread(Graph, chat_input, chat_output)
+    graph = Graph(chat_input, chat_output)
     assert graph._run_queue == deque(["chat_input"])
     await graph.astep()
     assert graph._run_queue == deque(["chat_output"])
@@ -72,7 +72,7 @@ async def test_graph_functional_async_start():
     chat_input = ChatInput(_id="chat_input")
     chat_output = ChatOutput(input_value="test", _id="chat_output")
     chat_output.set(sender_name=chat_input.message_response)
-    graph = await asyncio.to_thread(Graph, chat_input, chat_output)
+    graph = Graph(chat_input, chat_output)
     # Now iterate through the graph
     # and check that the graph is running
     # correctly

@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from langflow.components.inputs import ChatInput
 from langflow.components.models import OpenAIModelComponent
@@ -25,5 +27,7 @@ Answer:
 
     chat_output = ChatOutput()
     chat_output.set(input_value=openai_component.text_response)
-    with pytest.raises(ValueError, match="Component OpenAI field 'input_values' might not be a valid input."):
+    with pytest.raises(
+        ValueError, match=re.escape("Component OpenAI field 'input_values' might not be a valid input.")
+    ):
         Graph(start=chat_input, end=chat_output)

@@ -2,9 +2,9 @@ from langchain_openai import AzureChatOpenAI
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
+from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import MessageTextInput
-from langflow.inputs.inputs import HandleInput
-from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput
+from langflow.io import DropdownInput, IntInput, SecretStrInput, SliderInput
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -25,6 +25,9 @@ class AzureChatOpenAIComponent(LCModelComponent):
         "2023-12-01-preview",
         "2024-02-15-preview",
         "2024-03-01-preview",
+        "2024-12-01-preview",
+        "2025-01-01-preview",
+        "2025-02-01-preview",
     ]
 
     inputs = [
@@ -36,7 +39,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             required=True,
         ),
         MessageTextInput(name="azure_deployment", display_name="Deployment Name", required=True),
-        SecretStrInput(name="api_key", display_name="API Key"),
+        SecretStrInput(name="api_key", display_name="API Key", required=True),
         DropdownInput(
             name="api_version",
             display_name="API Version",
@@ -50,19 +53,19 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 AZURE_OPENAI_API_VERSIONS[0],
             ),
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.7),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.7,
+            range_spec=RangeSpec(min=0, max=2, step=0.01),
+            info="Controls randomness. Lower values are more deterministic, higher values are more creative.",
+            advanced=True,
+        ),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
             advanced=True,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-        ),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
         ),
     ]
 

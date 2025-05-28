@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 import pytest
-from langflow.components.helpers import MemoryComponent
+from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.inputs import ChatInput
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
@@ -75,9 +75,9 @@ def test_graph_functional_start_graph_state_update():
 
 def test_graph_state_model_serialization():
     chat_input = ChatInput(_id="chat_input")
-    chat_input.set(input_value="Test Sender Name")
+    chat_input.set(input_value="Test Sender Name", should_store_message=False)
     chat_output = ChatOutput(input_value="test", _id="chat_output")
-    chat_output.set(sender_name=chat_input.message_response)
+    chat_output.set(sender_name=chat_input.message_response, should_store_message=False)
 
     graph = Graph(chat_input, chat_output)
     graph.prepare()

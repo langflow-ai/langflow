@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import os
 import platform
-import sys
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -41,11 +40,12 @@ class TelemetryService(Service):
 
         self.ot = OpenTelemetry(prometheus_enabled=settings_service.settings.prometheus_enabled)
         self.architecture: str | None = None
-
+        self.worker_task: asyncio.Task | None = None
         # Check for do-not-track settings
         self.do_not_track = (
             os.getenv("DO_NOT_TRACK", "False").lower() == "true" or settings_service.settings.do_not_track
         )
+        self.log_package_version_task: asyncio.Task | None = None
 
     async def telemetry_worker(self) -> None:
         while self.running:
@@ -53,7 +53,7 @@ class TelemetryService(Service):
             try:
                 await func(payload, path)
             except Exception:  # noqa: BLE001
-                logger.exception("Error sending telemetry data")
+                logger.error("Error sending telemetry data")
             finally:
                 self.telemetry_queue.task_done()
 
@@ -73,11 +73,11 @@ class TelemetryService(Service):
             else:
                 logger.debug("Telemetry data sent successfully.")
         except httpx.HTTPStatusError:
-            logger.exception("HTTP error occurred")
+            logger.error("HTTP error occurred")
         except httpx.RequestError:
-            logger.exception("Request error occurred")
+            logger.error("Request error occurred")
         except Exception:  # noqa: BLE001
-            logger.exception("Unexpected error occurred")
+            logger.error("Unexpected error occurred")
 
     async def log_package_run(self, payload: RunPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "run"))
@@ -90,6 +90,10 @@ class TelemetryService(Service):
         if self.do_not_track or self._stopping:
             return
         await self.telemetry_queue.put(payload)
+
+    def _get_langflow_desktop(self) -> bool:
+        # Coerce to bool, could be 1, 0, True, False, "1", "0", "True", "False"
+        return str(os.getenv("LANGFLOW_DESKTOP", "False")).lower() in {"1", "true"}
 
     async def log_package_version(self) -> None:
         python_version = ".".join(platform.python_version().split(".")[:2])
@@ -105,6 +109,7 @@ class TelemetryService(Service):
             backend_only=self.settings_service.settings.backend_only,
             arch=self.architecture,
             auto_login=self.settings_service.auth_settings.AUTO_LOGIN,
+            desktop=self._get_langflow_desktop(),
         )
         await self._queue_event((self.send_telemetry_data, payload, None))
 
@@ -133,17 +138,14 @@ class TelemetryService(Service):
         except Exception:  # noqa: BLE001
             logger.exception("Error flushing logs")
 
-    async def _cancel_task(self, task: asyncio.Task, cancel_msg: str) -> None:
+    @staticmethod
+    async def _cancel_task(task: asyncio.Task, cancel_msg: str) -> None:
         task.cancel(cancel_msg)
-        try:
-            await task
-        except asyncio.CancelledError:
-            current_task = asyncio.current_task()
-            if sys.version_info >= (3, 11):
-                if current_task and current_task.cancelling() > 0:
-                    raise
-            elif current_task and hasattr(current_task, "_must_cancel") and current_task._must_cancel:
-                raise
+        await asyncio.wait([task])
+        if not task.cancelled():
+            exc = task.exception()
+            if exc is not None:
+                raise exc
 
     async def stop(self) -> None:
         if self.do_not_track or self._stopping:

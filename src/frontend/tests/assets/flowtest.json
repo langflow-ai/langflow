@@ -71,7 +71,7 @@
             },
             "base_classes": ["str"],
             "display_name": "text checkpoint",
-            "documentation": "http://docs.langflow.org/components/custom",
+            "documentation": "https://docs.langflow.org/components-custom-components",
             "custom_fields": {
               "save_path": null,
               "text_input": null

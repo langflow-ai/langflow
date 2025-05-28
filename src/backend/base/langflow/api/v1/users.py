@@ -9,12 +9,12 @@ from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
+from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import (
     get_current_active_superuser,
     get_password_hash,
     verify_password,
 )
-from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.deps import get_settings_service
@@ -33,13 +33,13 @@ async def add_user(
         new_user.password = get_password_hash(user.password)
         new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
-        session.commit()
-        session.refresh(new_user)
-        folder = create_default_folder_if_it_doesnt_exist(session, new_user.id)
+        await session.commit()
+        await session.refresh(new_user)
+        folder = await get_or_create_default_folder(session, new_user.id)
         if not folder:
-            raise HTTPException(status_code=500, detail="Error creating default folder")
+            raise HTTPException(status_code=500, detail="Error creating default project")
     except IntegrityError as e:
-        session.rollback()
+        await session.rollback()
         raise HTTPException(status_code=400, detail="This username is unavailable.") from e
 
     return new_user
@@ -62,10 +62,10 @@ async def read_all_users(
 ) -> UsersResponse:
     """Retrieve a list of users from the database with pagination."""
     query: SelectOfScalar = select(User).offset(skip).limit(limit)
-    users = session.exec(query).fetchall()
+    users = (await session.exec(query)).fetchall()
 
     count_query = select(func.count()).select_from(User)
-    total_count = session.exec(count_query).first()
+    total_count = (await session.exec(count_query)).first()
 
     return UsersResponse(
         total_count=total_count,
@@ -93,10 +93,10 @@ async def patch_user(
             raise HTTPException(status_code=400, detail="You can't change your password here")
         user_update.password = get_password_hash(user_update.password)
 
-    if user_db := get_user_by_id(session, user_id):
+    if user_db := await get_user_by_id(session, user_id):
         if not update_password:
             user_update.password = user_db.password
-        return update_user(user_db, user_update, session)
+        return await update_user(user_db, user_update, session)
     raise HTTPException(status_code=404, detail="User not found")
 
 
@@ -117,8 +117,8 @@ async def reset_password(
         raise HTTPException(status_code=400, detail="You can't use your current password")
     new_password = get_password_hash(user_update.password)
     user.password = new_password
-    session.commit()
-    session.refresh(user)
+    await session.commit()
+    await session.refresh(user)
 
     return user
 
@@ -135,11 +135,12 @@ async def delete_user(
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Permission denied")
 
-    user_db = session.exec(select(User).where(User.id == user_id)).first()
+    stmt = select(User).where(User.id == user_id)
+    user_db = (await session.exec(stmt)).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
-    session.delete(user_db)
-    session.commit()
+    await session.delete(user_db)
+    await session.commit()
 
     return {"detail": "User deleted"}

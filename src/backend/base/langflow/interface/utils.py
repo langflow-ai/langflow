@@ -15,13 +15,13 @@ from langflow.services.deps import get_settings_service
 
 
 def load_file_into_dict(file_path: str) -> dict:
-    _file_path = Path(file_path)
-    if not _file_path.exists():
+    file_path_ = Path(file_path)
+    if not file_path_.exists():
         msg = f"File not found: {file_path}"
         raise FileNotFoundError(msg)
 
     # Files names are UUID, so we can't find the extension
-    with _file_path.open(encoding="utf-8") as file:
+    with file_path_.open(encoding="utf-8") as file:
         try:
             data = json.load(file)
         except json.JSONDecodeError:
@@ -97,7 +97,7 @@ def setup_llm_caching() -> None:
     except ImportError:
         logger.warning(f"Could not import {settings_service.settings.cache_type}. ")
     except Exception:  # noqa: BLE001
-        logger.opt(exception=True).warning("Could not setup LLM caching.")
+        logger.warning("Could not setup LLM caching.")
 
 
 def set_langchain_cache(settings) -> None:
@@ -115,4 +115,4 @@ def set_langchain_cache(settings) -> None:
         except ImportError:
             logger.warning(f"Could not import {cache_type}. ")
     else:
-        logger.info("No LLM cache set.")
+        logger.debug("No LLM cache set.")

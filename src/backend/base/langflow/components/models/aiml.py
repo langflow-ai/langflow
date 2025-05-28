@@ -1,19 +1,19 @@
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
+from typing_extensions import override
 
-from langflow.base.models.aiml_constants import AIML_CHAT_MODELS
+from langflow.base.models.aiml_constants import AimlModels
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import (
     DictInput,
     DropdownInput,
-    FloatInput,
     IntInput,
     SecretStrInput,
+    SliderInput,
     StrInput,
 )
-from langflow.inputs.inputs import HandleInput
 
 
 class AIMLModelComponent(LCModelComponent):
@@ -37,8 +37,8 @@ class AIMLModelComponent(LCModelComponent):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=AIML_CHAT_MODELS,
-            value=AIML_CHAT_MODELS[0],
+            options=[],
+            refresh_button=True,
         ),
         StrInput(
             name="aiml_api_base",
@@ -53,23 +53,20 @@ class AIMLModelComponent(LCModelComponent):
             info="The AIML API Key to use for the OpenAI model.",
             advanced=False,
             value="AIML_API_KEY",
+            required=True,
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.1),
-        IntInput(
-            name="seed",
-            display_name="Seed",
-            info="The seed controls the reproducibility of the job.",
-            advanced=True,
-            value=1,
-        ),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
+        SliderInput(
+            name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)
         ),
     ]
+
+    @override
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        if field_name in {"api_key", "aiml_api_base", "model_name"}:
+            aiml = AimlModels()
+            aiml.get_aiml_models()
+            build_config["model_name"]["options"] = aiml.chat_models
+        return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         aiml_api_key = self.api_key
@@ -77,10 +74,14 @@ class AIMLModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
-        aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com"
-        seed = self.seed
+        aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com/v2"
 
         openai_api_key = aiml_api_key.get_secret_value() if isinstance(aiml_api_key, SecretStr) else aiml_api_key
+
+        # TODO: Once OpenAI fixes their o1 models, this part will need to be removed
+        # to work correctly with o1 temperature settings.
+        if "o1" in model_name:
+            temperature = 1
 
         return ChatOpenAI(
             model=model_name,
@@ -88,7 +89,6 @@ class AIMLModelComponent(LCModelComponent):
             api_key=openai_api_key,
             base_url=aiml_api_base,
             max_tokens=max_tokens or None,
-            seed=seed,
             **model_kwargs,
         )
 

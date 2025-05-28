@@ -1,4 +1,5 @@
 import base64
+from pathlib import Path
 
 from PIL import Image as PILImage
 from pydantic import BaseModel
@@ -21,7 +22,8 @@ def get_file_paths(files: list[str]):
     storage_service = get_storage_service()
     file_paths = []
     for file in files:
-        flow_id, file_name = file.split("/")
+        file_path = Path(file)
+        flow_id, file_name = str(file_path.parent), file_path.name
         file_paths.append(storage_service.build_full_path(flow_id=flow_id, file_name=file_name))
     return file_paths
 
@@ -33,8 +35,9 @@ async def get_files(
 ):
     storage_service = get_storage_service()
     file_objects: list[str | bytes] = []
-    for file_path in file_paths:
-        flow_id, file_name = file_path.split("/")
+    for file in file_paths:
+        file_path = Path(file)
+        flow_id, file_name = str(file_path.parent), file_path.name
         file_object = await storage_service.get_file(flow_id=flow_id, file_name=file_name)
         if convert_to_base64:
             file_base64 = base64.b64encode(file_object).decode("utf-8")

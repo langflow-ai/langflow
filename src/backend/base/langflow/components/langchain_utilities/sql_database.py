@@ -13,6 +13,7 @@ class SQLDatabaseComponent(Component):
     display_name = "SQLDatabase"
     description = "SQL Database"
     name = "SQLDatabase"
+    icon = "LangChain"
 
     inputs = [
         StrInput(name="uri", display_name="URI", info="URI to the database.", required=True),

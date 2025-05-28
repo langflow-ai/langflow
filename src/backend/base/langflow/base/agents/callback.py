@@ -13,6 +13,33 @@ class AgentAsyncHandler(AsyncCallbackHandler):
     def __init__(self, log_function: LogFunctionType | None = None):
         self.log_function = log_function
 
+    async def on_chain_start(
+        self,
+        serialized: dict[str, Any],
+        inputs: dict[str, Any],
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if self.log_function is None:
+            return
+        self.log_function(
+            {
+                "type": "chain_start",
+                "serialized": serialized,
+                "inputs": inputs,
+                "run_id": run_id,
+                "parent_run_id": parent_run_id,
+                "tags": tags,
+                "metadata": metadata,
+                **kwargs,
+            },
+            name="Chain Start",
+        )
+
     async def on_tool_start(
         self,
         serialized: dict[str, Any],

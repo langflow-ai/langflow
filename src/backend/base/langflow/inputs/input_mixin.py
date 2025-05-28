@@ -11,8 +11,9 @@ from pydantic import (
 )
 
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.inputs.constants import MAX_TAB_OPTION_LENGTH, MAX_TAB_OPTIONS
 from langflow.inputs.validators import CoalesceBool
-from langflow.schema.table import Column, TableSchema
+from langflow.schema.table import Column, TableOptions, TableSchema
 
 
 class FieldTypes(str, Enum):
@@ -23,6 +24,9 @@ class FieldTypes(str, Enum):
     BOOLEAN = "bool"
     DICT = "dict"
     NESTED_DICT = "NestedDict"
+    SORTABLE_LIST = "sortableList"
+    CONNECTION = "connect"
+    AUTH = "auth"
     FILE = "file"
     PROMPT = "prompt"
     CODE = "code"
@@ -30,6 +34,9 @@ class FieldTypes(str, Enum):
     TABLE = "table"
     LINK = "link"
     SLIDER = "slider"
+    TAB = "tab"
+    QUERY = "query"
+    TOOLS = "tools"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -72,6 +79,9 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
     dynamic: bool = False
     """Specifies if the field is dynamic. Defaults to False."""
 
+    helper_text: str | None = None
+    """Adds a helper text to the field. Defaults to an empty string."""
+
     info: str | None = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
@@ -80,6 +90,7 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
 
     refresh_button: bool | None = None
     """Specifies if the field should have a refresh button. Defaults to False."""
+
     refresh_button_text: str | None = None
     """Specifies the text for the refresh button. Defaults to None."""
 
@@ -106,6 +117,10 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
         return dump
 
 
+class ToolModeMixin(BaseModel):
+    tool_mode: bool = False
+
+
 class InputTraceMixin(BaseModel):
     trace_as_input: bool = True
 
@@ -117,6 +132,7 @@ class MetadataTraceMixin(BaseModel):
 # Mixin for input fields that can be listable
 class ListableInputMixin(BaseModel):
     is_list: bool = Field(default=False, alias="list")
+    list_add_label: str | None = Field(default="Add More")
 
 
 # Specific mixin for fields needing database interaction
@@ -124,10 +140,38 @@ class DatabaseLoadMixin(BaseModel):
     load_from_db: bool = Field(default=True)
 
 
+class AuthMixin(BaseModel):
+    auth_tooltip: str | None = Field(default="")
+
+
+class QueryMixin(BaseModel):
+    separator: str | None = Field(default=None)
+    """Separator for the query input. Defaults to None."""
+
+
 # Specific mixin for fields needing file interaction
 class FileMixin(BaseModel):
-    file_path: str | None = Field(default="")
+    file_path: list[str] | str | None = Field(default="")
     file_types: list[str] = Field(default=[], alias="fileTypes")
+    temp_file: bool = Field(default=False)
+
+    @field_validator("file_path")
+    @classmethod
+    def validate_file_path(cls, v):
+        if v is None or v == "":
+            return v
+        # If it's already a list, validate each element is a string
+        if isinstance(v, list):
+            for item in v:
+                if not isinstance(item, str):
+                    msg = "All file paths must be strings"
+                    raise TypeError(msg)
+            return v
+        # If it's a single string, that's also valid
+        if isinstance(v, str):
+            return v
+        msg = "file_path must be a string, list of strings, or None"
+        raise ValueError(msg)
 
     @field_validator("file_types")
     @classmethod
@@ -153,8 +197,79 @@ class RangeMixin(BaseModel):
 class DropDownMixin(BaseModel):
     options: list[str] | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
+    options_metadata: list[dict[str, Any]] | None = None
+    """List of dictionaries with metadata for each option."""
     combobox: CoalesceBool = False
     """Variable that defines if the user can insert custom values in the dropdown."""
+    dialog_inputs: dict[str, Any] | None = None
+    """Dictionary of dialog inputs for the field. Default is an empty object."""
+    toggle: bool = False
+    """Variable that defines if a toggle button is shown."""
+    toggle_value: bool | None = None
+    """Variable that defines the value of the toggle button. Defaults to None."""
+    toggle_disable: bool | None = None
+    """Variable that defines if the toggle button is disabled. Defaults to None."""
+
+    @field_validator("toggle_value")
+    @classmethod
+    def validate_toggle_value(cls, v):
+        if v is not None and not isinstance(v, bool):
+            msg = "toggle_value must be a boolean or None"
+            raise ValueError(msg)
+        return v
+
+
+class SortableListMixin(BaseModel):
+    helper_text: str | None = None
+    """Adds a helper text to the field. Defaults to an empty string."""
+    helper_text_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for the helper text."""
+    search_category: list[str] = Field(default=[])
+    """Specifies the category of the field. Defaults to an empty list."""
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    """List of dictionaries with metadata for each option."""
+    limit: int | None = None
+    """Specifies the limit of the field. Defaults to None."""
+
+
+class ConnectionMixin(BaseModel):
+    helper_text: str | None = None
+    """Adds a helper text to the field. Defaults to an empty string."""
+    helper_text_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for the helper text."""
+    connection_link: str | None = None
+    """Specifies the link of the connection. Defaults to an empty string."""
+    button_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for the button."""
+    search_category: list[str] = Field(default=[])
+    """Specifies the category of the field. Defaults to an empty list."""
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    """List of dictionaries with metadata for each option."""
+
+
+class TabMixin(BaseModel):
+    """Mixin for tab input fields that allows a maximum of 3 values, each with a maximum of 20 characters."""
+
+    options: list[str] = Field(default_factory=list, max_length=3)
+    """List of tab options. Maximum of 3 values allowed."""
+
+    @field_validator("options")
+    @classmethod
+    def validate_options(cls, v):
+        """Validate that there are at most 3 tab values and each value has at most 20 characters."""
+        if len(v) > MAX_TAB_OPTIONS:
+            msg = f"Maximum of {MAX_TAB_OPTIONS} tab values allowed. Got {len(v)} values."
+            raise ValueError(msg)
+
+        for i, value in enumerate(v):
+            if len(value) > MAX_TAB_OPTION_LENGTH:
+                msg = (
+                    f"Tab value at index {i} exceeds maximum length of {MAX_TAB_OPTION_LENGTH} "
+                    f"characters. Got {len(value)} characters."
+                )
+                raise ValueError(msg)
+
+        return v
 
 
 class MultilineMixin(BaseModel):
@@ -180,6 +295,10 @@ class SliderMixin(BaseModel):
 
 class TableMixin(BaseModel):
     table_schema: TableSchema | list[Column] | None = None
+    trigger_text: str = Field(default="Open table")
+    trigger_icon: str = Field(default="Table")
+    table_icon: str = Field(default="Table")
+    table_options: TableOptions | None = None
 
     @field_validator("table_schema")
     @classmethod

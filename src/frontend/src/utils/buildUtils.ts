@@ -1,11 +1,20 @@
-import { BASE_URL_API } from "@/constants/constants";
+import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
+import {
+  BASE_URL_API,
+  BUILD_POLLING_INTERVAL,
+  POLLING_MESSAGES,
+} from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
+import {
+  customBuildUrl,
+  customCancelBuildUrl,
+  customEventsUrl,
+} from "@/customization/utils/custom-buildUtils";
 import { useMessagesStore } from "@/stores/messagesStore";
+import { Edge, Node } from "@xyflow/react";
 import { AxiosError } from "axios";
-import { timeStamp } from "console";
 import { flushSync } from "react-dom";
-import { Edge, Node } from "reactflow";
-import { BuildStatus } from "../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
@@ -15,7 +24,6 @@ import { VertexLayerElementType } from "../types/zustand/flow";
 import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
-  setLockChat?: (lock: boolean) => void;
   flowId: string; // Assuming FlowType is the type for your flow
   input_value?: any; // Replace any with the actual type if it's not any
   files?: string[];
@@ -36,6 +44,8 @@ type BuildVerticesParams = {
   edges?: Edge[];
   logBuilds?: boolean;
   session?: string;
+  playgroundPage?: boolean;
+  eventDelivery: EventDeliveryType;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -65,9 +75,12 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   return inactiveVertexData;
 }
 
+function logFlowLoad(message: string, data?: any) {
+  console.log(`[FlowLoad] ${message}`, data || "");
+}
+
 export async function updateVerticesOrder(
   flowId: string,
-  setLockChat?: (lock: boolean) => void,
   startNodeId?: string | null,
   stopNodeId?: string | null,
   nodes?: Node[],
@@ -78,6 +91,7 @@ export async function updateVerticesOrder(
   runId?: string;
   verticesToRun: string[];
 }> {
+  logFlowLoad("Updating vertices order");
   return new Promise(async (resolve, reject) => {
     const setErrorData = useAlertStore.getState().setErrorData;
     let orderResponse;
@@ -89,13 +103,14 @@ export async function updateVerticesOrder(
         nodes,
         edges,
       );
+      logFlowLoad("Got vertices order response:", orderResponse);
     } catch (error: any) {
+      logFlowLoad("Error getting vertices order:", error);
       setErrorData({
-        title: "Oops! Looks like you missed something",
+        title: MISSED_ERROR_ALERT,
         list: [error.response?.data?.detail ?? "Unknown Error"],
       });
       useFlowStore.getState().setIsBuilding(false);
-      setLockChat && setLockChat(false);
       throw new Error("Invalid components");
     }
     // orderResponse.data.ids,
@@ -127,17 +142,114 @@ export async function updateVerticesOrder(
 export async function buildFlowVerticesWithFallback(
   params: BuildVerticesParams,
 ) {
+  logFlowLoad("Starting flow load");
   try {
-    return await buildFlowVertices(params);
+    // Use the event_delivery parameter directly
+    return await buildFlowVertices({ ...params });
   } catch (e: any) {
-    if (e.message === "Endpoint not available") {
-      return await buildVertices(params);
+    if (
+      e.message === POLLING_MESSAGES.ENDPOINT_NOT_AVAILABLE ||
+      e.message === POLLING_MESSAGES.STREAMING_NOT_SUPPORTED
+    ) {
+      // Fallback to polling
+      return await buildFlowVertices({
+        ...params,
+        eventDelivery: EventDeliveryType.POLLING,
+      });
     }
     throw e;
   }
 }
 
 const MIN_VISUAL_BUILD_TIME_MS = 300;
+
+async function pollBuildEvents(
+  url: string,
+  buildResults: Array<boolean>,
+  verticesStartTimeMs: Map<string, number>,
+  callbacks: {
+    onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
+    onBuildComplete?: (allNodesValid: boolean) => void;
+    onBuildError?: (
+      title: string,
+      list: string[],
+      idList?: VertexLayerElementType[],
+    ) => void;
+    onGetOrderSuccess?: () => void;
+    onValidateNodes?: (nodes: string[]) => void;
+  },
+  abortController: AbortController,
+): Promise<void> {
+  let isDone = false;
+  while (!isDone) {
+    const response = await fetch(
+      `${url}?event_delivery=${EventDeliveryType.POLLING}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/x-ndjson",
+        },
+        signal: abortController.signal, // Add abort signal to fetch
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.detail ||
+          "Langflow was not able to connect to the server. Please make sure your connection is working properly.",
+      );
+    }
+
+    // Get the response text - will be NDJSON format (one JSON per line)
+    const responseText = await response.text();
+
+    // Skip if empty response
+    if (!responseText.trim()) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      continue;
+    }
+
+    // Split by newlines to get individual JSON objects
+    const eventLines = responseText.split("\n").filter((line) => line.trim());
+
+    // If no events, continue polling
+    if (eventLines.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      continue;
+    }
+
+    // Process all events in the NDJSON response
+    for (const eventStr of eventLines) {
+      // Process the event
+      const event = JSON.parse(eventStr);
+      const result = await onEvent(
+        event.event,
+        event.data,
+        buildResults,
+        verticesStartTimeMs,
+        callbacks,
+      );
+
+      if (!result) {
+        isDone = true;
+        abortController.abort();
+        break;
+      }
+
+      // Check if this was the end event
+      if (event.event === "end") {
+        isDone = true;
+        break;
+      }
+    }
+
+    // Add a small delay between polls
+    await new Promise((resolve) => setTimeout(resolve, BUILD_POLLING_INTERVAL));
+  }
+}
 
 export async function buildFlowVertices({
   flowId,
@@ -155,20 +267,35 @@ export async function buildFlowVertices({
   nodes,
   edges,
   logBuilds,
-  setLockChat,
   session,
+  playgroundPage,
+  eventDelivery,
 }: BuildVerticesParams) {
   const inputs = {};
-  let url = `${BASE_URL_API}build/${flowId}/flow?`;
+
+  let buildUrl = customBuildUrl(flowId, playgroundPage);
+
+  const queryParams = new URLSearchParams();
+
   if (startNodeId) {
-    url = `${url}&start_component_id=${startNodeId}`;
+    queryParams.append("start_component_id", startNodeId);
   }
   if (stopNodeId) {
-    url = `${url}&stop_component_id=${stopNodeId}`;
+    queryParams.append("stop_component_id", stopNodeId);
   }
   if (logBuilds !== undefined) {
-    url = `${url}&log_builds=${logBuilds}`;
+    queryParams.append("log_builds", logBuilds.toString());
   }
+
+  queryParams.append(
+    "event_delivery",
+    eventDelivery ?? EventDeliveryType.POLLING,
+  );
+
+  if (queryParams.toString()) {
+    buildUrl = `${buildUrl}?${queryParams.toString()}`;
+  }
+
   const postData = {};
   if (files) {
     postData["files"] = files;
@@ -189,167 +316,347 @@ export async function buildFlowVertices({
     postData["inputs"] = inputs;
   }
 
-  const buildResults: Array<boolean> = [];
+  try {
+    // If event_delivery is direct, we'll stream from the build endpoint directly
+    if (eventDelivery === EventDeliveryType.DIRECT) {
+      const buildController = new AbortController();
+      buildController.signal.addEventListener("abort", () => {
+        onBuildStopped && onBuildStopped();
+      });
+      useFlowStore.getState().setBuildController(buildController);
 
-  const verticesStartTimeMs: Map<string, number> = new Map();
+      const buildResults: Array<boolean> = [];
+      const verticesStartTimeMs: Map<string, number> = new Map();
 
-  const onEvent = async (type, data): Promise<boolean> => {
-    const onStartVertices = (ids: Array<string>) => {
-      useFlowStore.getState().updateBuildStatus(ids, BuildStatus.TO_BUILD);
-      if (onBuildStart)
-        onBuildStart(ids.map((id) => ({ id: id, reference: id })));
-      ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
-    };
-
-    switch (type) {
-      case "vertices_sorted": {
-        const verticesToRun = data.to_run;
-        const verticesIds = data.ids;
-
-        onStartVertices(verticesIds);
-
-        let verticesLayers: Array<Array<VertexLayerElementType>> =
-          verticesIds.map((id: string) => {
-            return [{ id: id, reference: id }];
+      return performStreamingRequest({
+        method: "POST",
+        url: buildUrl,
+        body: postData,
+        onData: async (event) => {
+          const type = event["event"];
+          const data = event["data"];
+          return await onEvent(type, data, buildResults, verticesStartTimeMs, {
+            onBuildStart,
+            onBuildUpdate,
+            onBuildComplete,
+            onBuildError,
+            onGetOrderSuccess,
+            onValidateNodes,
           });
-
-        useFlowStore.getState().updateVerticesBuild({
-          verticesLayers,
-          verticesIds,
-          verticesToRun,
-        });
-        if (onValidateNodes) {
-          try {
-            onValidateNodes(data.to_run);
-            if (onGetOrderSuccess) onGetOrderSuccess();
-            useFlowStore.getState().setIsBuilding(true);
-            return true;
-          } catch (e) {
-            useFlowStore.getState().setIsBuilding(false);
-            setLockChat && setLockChat(false);
-            return false;
+        },
+        onError: (statusCode) => {
+          if (statusCode === 404) {
+            throw new Error("Flow not found");
           }
-        }
-        return true;
+          throw new Error("Error processing build events");
+        },
+        onNetworkError: (error: Error) => {
+          if (error.name === "AbortError") {
+            onBuildStopped && onBuildStopped();
+            return;
+          }
+          onBuildError!("Error Building Component", [
+            "Network error. Please check the connection to the server.",
+          ]);
+        },
+        buildController,
+      });
+    }
+  } catch (e) {
+    console.log(e);
+  }
+
+  try {
+    // Otherwise, use the existing two-step process (job_id + events endpoint)
+    // First, start the build and get the job ID
+    const buildResponse = await fetch(buildUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(postData),
+    });
+
+    if (!buildResponse.ok) {
+      if (buildResponse.status === 404) {
+        throw new Error("Flow not found");
       }
-      case "end_vertex": {
-        const buildData = data.build_data;
-        const startTimeMs = verticesStartTimeMs.get(buildData.id);
-        if (startTimeMs) {
-          const delta = Date.now() - startTimeMs;
-          if (delta < MIN_VISUAL_BUILD_TIME_MS) {
-            // this is a visual trick to make the build process look more natural
-            await new Promise((resolve) =>
-              setTimeout(resolve, MIN_VISUAL_BUILD_TIME_MS - delta),
-            );
-          }
-        }
+      throw new Error("Error starting build process");
+    }
 
-        if (onBuildUpdate) {
-          if (!buildData.valid) {
-            // lots is a dictionary with the key the output field name and the value the log object
-            // logs: { [key: string]: { message: any; type: string }[] };
-            const errorMessages = Object.keys(buildData.data.outputs).map(
-              (key) => {
-                const outputs = buildData.data.outputs[key];
-                if (Array.isArray(outputs)) {
-                  return outputs
-                    .filter((log) => isErrorLogType(log.message))
-                    .map((log) => log.message.errorMessage);
-                }
-                if (!isErrorLogType(outputs.message)) {
-                  return [];
-                }
-                return [outputs.message.errorMessage];
-              },
-            );
-            onBuildError!("Error Building Component", errorMessages, [
+    const { job_id } = await buildResponse.json();
+
+    const cancelBuildUrl = customCancelBuildUrl(job_id);
+
+    // Get the buildController from flowStore
+    const buildController = new AbortController();
+    buildController.signal.addEventListener("abort", () => {
+      try {
+        fetch(cancelBuildUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      } catch (error) {
+        console.error("Error canceling build:", error);
+      }
+    });
+    useFlowStore.getState().setBuildController(buildController);
+    // Then stream the events
+    const eventsUrl = customEventsUrl(job_id);
+    const buildResults: Array<boolean> = [];
+    const verticesStartTimeMs: Map<string, number> = new Map();
+
+    if (eventDelivery === EventDeliveryType.STREAMING) {
+      return performStreamingRequest({
+        method: "GET",
+        url: eventsUrl,
+        onData: async (event) => {
+          const type = event["event"];
+          const data = event["data"];
+          return await onEvent(type, data, buildResults, verticesStartTimeMs, {
+            onBuildStart,
+            onBuildUpdate,
+            onBuildComplete,
+            onBuildError,
+            onGetOrderSuccess,
+            onValidateNodes,
+          });
+        },
+        onError: (statusCode) => {
+          if (statusCode === 404) {
+            throw new Error("Build job not found");
+          }
+          throw new Error("Error processing build events");
+        },
+        onNetworkError: (error: Error) => {
+          if (error.name === "AbortError") {
+            onBuildStopped && onBuildStopped();
+            return;
+          }
+          onBuildError!("Error Building Component", [
+            "Network error. Please check the connection to the server.",
+          ]);
+        },
+        buildController,
+      });
+    } else {
+      const callbacks = {
+        onBuildStart,
+        onBuildUpdate,
+        onBuildComplete,
+        onBuildError,
+        onGetOrderSuccess,
+        onValidateNodes,
+      };
+      return await pollBuildEvents(
+        eventsUrl,
+        buildResults,
+        verticesStartTimeMs,
+        callbacks,
+        buildController,
+      );
+    }
+  } catch (error: unknown) {
+    console.error("Build process error:", error);
+    if (error instanceof Error && error.name === "AbortError") {
+      onBuildStopped && onBuildStopped();
+      return;
+    }
+    onBuildError!("Error Building Flow", [
+      (error as Error).message ||
+        "Langflow was not able to connect to the server. Please make sure your connection is working properly.",
+    ]);
+    throw error;
+  }
+}
+/**
+ * Handles various build events and calls corresponding callbacks.
+ *
+ * @param {string} type - The event type.
+ * @param {any} data - The event data.
+ * @param {boolean[]} buildResults - Array tracking build results.
+ * @param {Map<string, number>} verticesStartTimeMs - Map tracking start times for vertices.
+ * @param {Object} callbacks - Object containing callback functions.
+ * @param {(idList: VertexLayerElementType[]) => void} [callbacks.onBuildStart] - Callback when vertices start building.
+ * @param {(data: any, status: BuildStatus, buildId: string) => void} [callbacks.onBuildUpdate] - Callback for build updates.
+ * @param {(allNodesValid: boolean) => void} [callbacks.onBuildComplete] - Callback when build completes.
+ * @param {(title: string, list: string[], idList?: VertexLayerElementType[]) => void} [callbacks.onBuildError] - Callback on build errors.
+ * @param {() => void} [callbacks.onGetOrderSuccess] - Callback for successful ordering.
+ * @param {(nodes: string[]) => void} [callbacks.onValidateNodes] - Callback to validate nodes.
+ * @param {(lock: boolean) => void} [callbacks.setLockChat] - Callback to lock/unlock chat.
+ * @returns {Promise<boolean>} Promise that resolves to true if the event was handled successfully.
+ */
+async function onEvent(
+  type: string,
+  data: any,
+  buildResults: boolean[],
+  verticesStartTimeMs: Map<string, number>,
+  callbacks: {
+    onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
+    onBuildComplete?: (allNodesValid: boolean) => void;
+    onBuildError?: (
+      title: string,
+      list: string[],
+      idList?: VertexLayerElementType[],
+    ) => void;
+    onGetOrderSuccess?: () => void;
+    onValidateNodes?: (nodes: string[]) => void;
+  },
+): Promise<boolean> {
+  const {
+    onBuildStart,
+    onBuildUpdate,
+    onBuildComplete,
+    onBuildError,
+    onGetOrderSuccess,
+    onValidateNodes,
+  } = callbacks;
+
+  // Helper to update status and register start times for an array of vertex IDs.
+  const onStartVertices = (ids: Array<string>) => {
+    useFlowStore.getState().updateBuildStatus(ids, BuildStatus.TO_BUILD);
+    if (onBuildStart) {
+      onBuildStart(ids.map((id) => ({ id: id, reference: id })));
+    }
+    ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
+  };
+
+  switch (type) {
+    case "vertices_sorted": {
+      const verticesToRun = data.to_run;
+      const verticesIds = data.ids;
+
+      onStartVertices(verticesIds);
+
+      const verticesLayers: Array<Array<VertexLayerElementType>> =
+        verticesIds.map((id: string) => [{ id: id, reference: id }]);
+
+      useFlowStore.getState().updateVerticesBuild({
+        verticesLayers,
+        verticesIds,
+        verticesToRun,
+      });
+      if (onValidateNodes) {
+        try {
+          onValidateNodes(data.to_run);
+          if (onGetOrderSuccess) onGetOrderSuccess();
+          useFlowStore.getState().setIsBuilding(true);
+          return true;
+        } catch (e) {
+          useFlowStore.getState().setIsBuilding(false);
+          return false;
+        }
+      }
+      return true;
+    }
+    case "end_vertex": {
+      const buildData = data.build_data;
+      const startTimeMs = verticesStartTimeMs.get(buildData.id);
+      if (startTimeMs) {
+        const delta = Date.now() - startTimeMs;
+        if (delta < MIN_VISUAL_BUILD_TIME_MS) {
+          // Ensure a minimum visual build time for a smoother UI experience.
+          await new Promise((resolve) =>
+            setTimeout(resolve, MIN_VISUAL_BUILD_TIME_MS - delta),
+          );
+        }
+      }
+
+      if (onBuildUpdate) {
+        if (!buildData.valid) {
+          // Aggregate error messages from the build outputs.
+          const errorMessages = Object.keys(buildData.data.outputs).flatMap(
+            (key) => {
+              const outputs = buildData.data.outputs[key];
+              if (Array.isArray(outputs)) {
+                return outputs
+                  .filter((log) => isErrorLogType(log.message))
+                  .map((log) => log.message.errorMessage);
+              }
+              if (!isErrorLogType(outputs.message)) {
+                return [];
+              }
+              return [outputs.message.errorMessage];
+            },
+          );
+          onBuildError &&
+            onBuildError("Error Building Component", errorMessages, [
               { id: buildData.id },
             ]);
-            onBuildUpdate(buildData, BuildStatus.ERROR, "");
-            buildResults.push(false);
-            return false;
-          } else {
-            onBuildUpdate(buildData, BuildStatus.BUILT, "");
-            buildResults.push(true);
-          }
+          onBuildUpdate(buildData, BuildStatus.ERROR, "");
+          buildResults.push(false);
+          return false;
+        } else {
+          onBuildUpdate(buildData, BuildStatus.BUILT, "");
+          buildResults.push(true);
         }
+      }
 
-        await useFlowStore.getState().clearEdgesRunningByNodes();
+      await useFlowStore.getState().clearEdgesRunningByNodes();
 
-        if (buildData.next_vertices_ids) {
-          if (isStringArray(buildData.next_vertices_ids)) {
-            useFlowStore
-              .getState()
-              .setCurrentBuildingNodeId(buildData?.next_vertices_ids ?? []);
-            useFlowStore
-              .getState()
-              .updateEdgesRunningByNodes(
-                buildData?.next_vertices_ids ?? [],
-                true,
-              );
-          }
-          onStartVertices(buildData.next_vertices_ids);
+      if (buildData.next_vertices_ids) {
+        if (isStringArray(buildData.next_vertices_ids)) {
+          useFlowStore
+            .getState()
+            .setCurrentBuildingNodeId(buildData.next_vertices_ids ?? []);
+          useFlowStore
+            .getState()
+            .updateEdgesRunningByNodes(buildData.next_vertices_ids ?? [], true);
         }
-        return true;
+        onStartVertices(buildData.next_vertices_ids);
       }
-      case "message": {
-        //adds a message to the messsage table
-        useMessagesStore.getState().addMessage(data);
-        return true;
-      }
-      case "token": {
-        // flushSync and timeout is needed to avoid react batched updates
-        setTimeout(() => {
-          flushSync(() => {
-            useMessagesStore.getState().updateMessagePartial(data);
-          });
-        }, 10);
-        return true;
-      }
-      case "end": {
-        const allNodesValid = buildResults.every((result) => result);
-        onBuildComplete!(allNodesValid);
-        useFlowStore.getState().setIsBuilding(false);
-        return true;
-      }
-      case "error": {
-        const errorMessage = data.error;
-        onBuildError!("Error Running Flow", [errorMessage], []);
-        buildResults.push(false);
-        useFlowStore.getState().setIsBuilding(false);
-        return true;
-      }
-      default:
-        return true;
+      return true;
     }
-    return true;
-  };
-  return performStreamingRequest({
-    method: "POST",
-    url,
-    body: postData,
-    onData: async (event) => {
-      const type = event["event"];
-      const data = event["data"];
-      return await onEvent(type, data);
-    },
-    onError: (statusCode) => {
-      if (statusCode === 404) {
-        throw new Error("Endpoint not available");
+    case "add_message": {
+      // Add a message to the messages store.
+      useMessagesStore.getState().addMessage(data);
+      return true;
+    }
+    case "token": {
+      // Use flushSync with a timeout to avoid React batching issues.
+      setTimeout(() => {
+        flushSync(() => {
+          useMessagesStore.getState().updateMessageText(data.id, data.chunk);
+        });
+      }, 10);
+      return true;
+    }
+    case "remove_message": {
+      useMessagesStore.getState().removeMessage(data);
+      return true;
+    }
+    case "end": {
+      const allNodesValid = buildResults.every((result) => result);
+      onBuildComplete && onBuildComplete(allNodesValid);
+      useFlowStore.getState().setIsBuilding(false);
+      return true;
+    }
+    case "error": {
+      if (data?.category === "error") {
+        useMessagesStore.getState().addMessage(data);
+        // Use a falsy check to correctly determine if the source ID is missing.
+        if (!data?.properties?.source?.id) {
+          onBuildError && onBuildError("Error Building Flow", [data.text]);
+        }
       }
-      throw new Error("Error Building Component");
-    },
-    onNetworkError: (error: Error) => {
-      if (error.name === "AbortError") {
-        onBuildStopped && onBuildStopped();
-        return;
-      }
-      onBuildError!("Error Building Component", [
-        "Network error. Please check the connection to the server.",
-      ]);
-    },
-  });
+      buildResults.push(false);
+      return true;
+    }
+    case "build_start":
+      useFlowStore
+        .getState()
+        .updateBuildStatus([data.id], BuildStatus.BUILDING);
+      break;
+    case "build_end":
+      useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
+      break;
+    default:
+      return true;
+  }
+  return true;
 }
 
 export async function buildVertices({
@@ -366,7 +673,6 @@ export async function buildVertices({
   onValidateNodes,
   nodes,
   edges,
-  setLockChat,
 }: BuildVerticesParams) {
   // if startNodeId and stopNodeId are provided
   // something is wrong
@@ -375,7 +681,6 @@ export async function buildVertices({
   }
   let verticesOrderResponse = await updateVerticesOrder(
     flowId,
-    setLockChat,
     startNodeId,
     stopNodeId,
     nodes,
@@ -386,7 +691,6 @@ export async function buildVertices({
       onValidateNodes(verticesOrderResponse.verticesToRun);
     } catch (e) {
       useFlowStore.getState().setIsBuilding(false);
-      setLockChat && setLockChat(false);
       return;
     }
   }

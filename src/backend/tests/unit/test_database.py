@@ -1,4 +1,3 @@
-import asyncio
 import json
 from typing import NamedTuple
 from uuid import UUID, uuid4
@@ -14,6 +13,7 @@ from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlalchemy import text
 
 
 @pytest.fixture(scope="module")
@@ -181,12 +181,15 @@ async def test_read_flows_components_only_paginated(client: AsyncClient, logged_
         FlowCreate(name=f"Flow {i}", description="description", data={}, is_component=True)
         for i in range(number_of_flows)
     ]
+
     for flow in flows:
         response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
         assert response.status_code == 201
+
     response = await client.get(
         "api/v1/flows/", headers=logged_in_headers, params={"components_only": True, "get_all": False}
     )
+
     assert response.status_code == 200
     response_json = response.json()
     assert response_json["total"] == 10
@@ -307,7 +310,7 @@ async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logg
             "vertex_id": "vid",
             "flow_id": flow_id,
         }
-        log_vertex_build(
+        await log_vertex_build(
             flow_id=build["flow_id"],
             vertex_id=build["vertex_id"],
             valid=build["valid"],
@@ -325,7 +328,8 @@ async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logg
             "GET", "api/v1/monitor/transactions", params={"flow_id": flow_id}, headers=logged_in_headers
         )
         assert response.status_code == 200
-        assert response.json() == []
+        json_response = response.json()
+        assert json_response["items"] == []
 
     for flow_id in flow_ids:
         response = await client.request(
@@ -337,11 +341,11 @@ async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logg
 
 @pytest.mark.usefixtures("active_user")
 async def test_delete_folder_with_flows_with_transaction_and_build(client: AsyncClient, logged_in_headers):
-    # Create a new folder
-    folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
+    # Create a new project
+    folder_name = f"Test Project {uuid4()}"
+    project = FolderCreate(name=folder_name, description="Test project description", components_list=[], flows_list=[])
 
-    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    response = await client.post("api/v1/projects/", json=project.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201, f"Expected status code 201, but got {response.status_code}"
 
     created_folder = response.json()
@@ -359,11 +363,15 @@ async def test_delete_folder_with_flows_with_transaction_and_build(client: Async
 
     class VertexTuple(NamedTuple):
         id: str
+        params: dict
 
     # Create a transaction for each flow
     for flow_id in flow_ids:
         await log_transaction(
-            str(flow_id), source=VertexTuple(id="vid"), target=VertexTuple(id="tid"), status="success"
+            str(flow_id),
+            source=VertexTuple(id="vid", params={}),
+            target=VertexTuple(id="tid", params={}),
+            status="success",
         )
 
     # Create a build for each flow
@@ -376,7 +384,7 @@ async def test_delete_folder_with_flows_with_transaction_and_build(client: Async
             "vertex_id": "vid",
             "flow_id": flow_id,
         }
-        log_vertex_build(
+        await log_vertex_build(
             flow_id=build["flow_id"],
             vertex_id=build["vertex_id"],
             valid=build["valid"],
@@ -385,15 +393,16 @@ async def test_delete_folder_with_flows_with_transaction_and_build(client: Async
             artifacts=build.get("artifacts"),
         )
 
-    response = await client.request("DELETE", f"api/v1/folders/{folder_id}", headers=logged_in_headers)
+    response = await client.request("DELETE", f"api/v1/projects/{folder_id}", headers=logged_in_headers)
     assert response.status_code == 204
 
     for flow_id in flow_ids:
         response = await client.request(
             "GET", "api/v1/monitor/transactions", params={"flow_id": flow_id}, headers=logged_in_headers
         )
-        assert response.status_code == 200
-        assert response.json() == []
+        assert response.status_code == 200, response.json()
+        json_response = response.json()
+        assert json_response["items"] == []
 
     for flow_id in flow_ids:
         response = await client.request(
@@ -404,22 +413,22 @@ async def test_delete_folder_with_flows_with_transaction_and_build(client: Async
 
 
 async def test_get_flows_from_folder_pagination(client: AsyncClient, logged_in_headers):
-    # Create a new folder
-    folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
+    # Create a new project
+    folder_name = f"Test Project {uuid4()}"
+    project = FolderCreate(name=folder_name, description="Test project description", components_list=[], flows_list=[])
 
-    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    response = await client.post("api/v1/projects/", json=project.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201, f"Expected status code 201, but got {response.status_code}"
 
     created_folder = response.json()
     folder_id = created_folder["id"]
 
     response = await client.get(
-        f"api/v1/folders/{folder_id}", headers=logged_in_headers, params={"page": 1, "size": 50}
+        f"api/v1/projects/{folder_id}", headers=logged_in_headers, params={"page": 1, "size": 50}
     )
     assert response.status_code == 200
     assert response.json()["folder"]["name"] == folder_name
-    assert response.json()["folder"]["description"] == "Test folder description"
+    assert response.json()["folder"]["description"] == "Test project description"
     assert response.json()["flows"]["page"] == 1
     assert response.json()["flows"]["size"] == 50
     assert response.json()["flows"]["pages"] == 0
@@ -428,22 +437,22 @@ async def test_get_flows_from_folder_pagination(client: AsyncClient, logged_in_h
 
 
 async def test_get_flows_from_folder_pagination_with_params(client: AsyncClient, logged_in_headers):
-    # Create a new folder
-    folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
+    # Create a new project
+    folder_name = f"Test Project {uuid4()}"
+    project = FolderCreate(name=folder_name, description="Test project description", components_list=[], flows_list=[])
 
-    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    response = await client.post("api/v1/projects/", json=project.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201, f"Expected status code 201, but got {response.status_code}"
 
     created_folder = response.json()
     folder_id = created_folder["id"]
 
     response = await client.get(
-        f"api/v1/folders/{folder_id}", headers=logged_in_headers, params={"page": 3, "size": 10}
+        f"api/v1/projects/{folder_id}", headers=logged_in_headers, params={"page": 3, "size": 10}
     )
     assert response.status_code == 200
     assert response.json()["folder"]["name"] == folder_name
-    assert response.json()["folder"]["description"] == "Test folder description"
+    assert response.json()["folder"]["description"] == "Test project description"
     assert response.json()["flows"]["page"] == 3
     assert response.json()["flows"]["size"] == 10
     assert response.json()["flows"]["pages"] == 0
@@ -530,14 +539,14 @@ async def test_download_file(
         ]
     )
     db_manager = get_db_service()
-    with session_getter(db_manager) as _session:
+    async with session_getter(db_manager) as _session:
         saved_flows = []
         for flow in flow_list.flows:
             flow.user_id = active_user.id
             db_flow = Flow.model_validate(flow, from_attributes=True)
             _session.add(db_flow)
             saved_flows.append(db_flow)
-        _session.commit()
+        await _session.commit()
         # Make request to endpoint inside the session context
         flow_ids = [str(db_flow.id) for db_flow in saved_flows]  # Convert UUIDs to strings
         flow_ids_json = json.dumps(flow_ids)
@@ -605,54 +614,52 @@ async def test_delete_nonexistent_flow(client: AsyncClient, logged_in_headers):
 @pytest.mark.usefixtures("active_user")
 async def test_read_only_starter_projects(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/flows/basic_examples/", headers=logged_in_headers)
-    starter_projects = await asyncio.to_thread(load_starter_projects)
+    starter_projects = await load_starter_projects()
     assert response.status_code == 200
     assert len(response.json()) == len(starter_projects)
 
 
-def test_sqlite_pragmas():
+async def test_sqlite_pragmas():
     db_service = get_db_service()
 
-    with db_service.with_session() as session:
-        from sqlalchemy import text
-
-        assert session.exec(text("PRAGMA journal_mode;")).scalar() == "wal"
-        assert session.exec(text("PRAGMA synchronous;")).scalar() == 1
+    async with db_service.with_session() as session:
+        assert (await session.exec(text("PRAGMA journal_mode;"))).scalar() == "wal"
+        assert (await session.exec(text("PRAGMA synchronous;"))).scalar() == 1
 
 
 @pytest.mark.usefixtures("active_user")
 async def test_read_folder(client: AsyncClient, logged_in_headers):
-    # Create a new folder
-    folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description")
-    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    # Create a new project
+    folder_name = f"Test Project {uuid4()}"
+    project = FolderCreate(name=folder_name, description="Test project description")
+    response = await client.post("api/v1/projects/", json=project.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     created_folder = response.json()
     folder_id = created_folder["id"]
 
-    # Read the folder
-    response = await client.get(f"api/v1/folders/{folder_id}", headers=logged_in_headers)
+    # Read the project
+    response = await client.get(f"api/v1/projects/{folder_id}", headers=logged_in_headers)
     assert response.status_code == 200
     folder_data = response.json()
     assert folder_data["name"] == folder_name
-    assert folder_data["description"] == "Test folder description"
+    assert folder_data["description"] == "Test project description"
     assert "flows" in folder_data
     assert isinstance(folder_data["flows"], list)
 
 
 @pytest.mark.usefixtures("active_user")
 async def test_read_folder_with_pagination(client: AsyncClient, logged_in_headers):
-    # Create a new folder
-    folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description")
-    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    # Create a new project
+    folder_name = f"Test Project {uuid4()}"
+    project = FolderCreate(name=folder_name, description="Test project description")
+    response = await client.post("api/v1/projects/", json=project.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     created_folder = response.json()
     folder_id = created_folder["id"]
 
-    # Read the folder with pagination
+    # Read the project with pagination
     response = await client.get(
-        f"api/v1/folders/{folder_id}", headers=logged_in_headers, params={"page": 1, "size": 10}
+        f"api/v1/projects/{folder_id}", headers=logged_in_headers, params={"page": 1, "size": 10}
     )
     assert response.status_code == 200
     folder_data = response.json()
@@ -660,7 +667,7 @@ async def test_read_folder_with_pagination(client: AsyncClient, logged_in_header
     assert "folder" in folder_data
     assert "flows" in folder_data
     assert folder_data["folder"]["name"] == folder_name
-    assert folder_data["folder"]["description"] == "Test folder description"
+    assert folder_data["folder"]["description"] == "Test project description"
     assert folder_data["flows"]["page"] == 1
     assert folder_data["flows"]["size"] == 10
     assert isinstance(folder_data["flows"]["items"], list)
@@ -668,16 +675,16 @@ async def test_read_folder_with_pagination(client: AsyncClient, logged_in_header
 
 @pytest.mark.usefixtures("active_user")
 async def test_read_folder_with_flows(client: AsyncClient, json_flow: str, logged_in_headers):
-    # Create a new folder
-    folder_name = f"Test Folder {uuid4()}"
+    # Create a new project
+    folder_name = f"Test Project {uuid4()}"
     flow_name = f"Test Flow {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description")
-    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    project = FolderCreate(name=folder_name, description="Test project description")
+    response = await client.post("api/v1/projects/", json=project.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     created_folder = response.json()
     folder_id = created_folder["id"]
 
-    # Create a flow in the folder
+    # Create a flow in the project
     flow_data = orjson.loads(json_flow)
     data = flow_data["data"]
     flow = FlowCreate(name=flow_name, description="description", data=data)
@@ -685,12 +692,12 @@ async def test_read_folder_with_flows(client: AsyncClient, json_flow: str, logge
     response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
 
-    # Read the folder with flows
-    response = await client.get(f"api/v1/folders/{folder_id}", headers=logged_in_headers)
+    # Read the project with flows
+    response = await client.get(f"api/v1/projects/{folder_id}", headers=logged_in_headers)
     assert response.status_code == 200
     folder_data = response.json()
     assert folder_data["name"] == folder_name
-    assert folder_data["description"] == "Test folder description"
+    assert folder_data["description"] == "Test project description"
     assert len(folder_data["flows"]) == 1
     assert folder_data["flows"][0]["name"] == flow_name
 
@@ -698,22 +705,22 @@ async def test_read_folder_with_flows(client: AsyncClient, json_flow: str, logge
 @pytest.mark.usefixtures("active_user")
 async def test_read_nonexistent_folder(client: AsyncClient, logged_in_headers):
     nonexistent_id = str(uuid4())
-    response = await client.get(f"api/v1/folders/{nonexistent_id}", headers=logged_in_headers)
+    response = await client.get(f"api/v1/projects/{nonexistent_id}", headers=logged_in_headers)
     assert response.status_code == 404
-    assert response.json()["detail"] == "Folder not found"
+    assert response.json()["detail"] == "Project not found"
 
 
 @pytest.mark.usefixtures("active_user")
 async def test_read_folder_with_search(client: AsyncClient, json_flow: str, logged_in_headers):
-    # Create a new folder
-    folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description")
-    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    # Create a new project
+    folder_name = f"Test Project {uuid4()}"
+    project = FolderCreate(name=folder_name, description="Test project description")
+    response = await client.post("api/v1/projects/", json=project.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     created_folder = response.json()
     folder_id = created_folder["id"]
 
-    # Create two flows in the folder
+    # Create two flows in the project
     flow_data = orjson.loads(json_flow)
     flow_name_1 = f"Test Flow 1 {uuid4()}"
     flow_name_2 = f"Another Flow {uuid4()}"
@@ -729,9 +736,9 @@ async def test_read_folder_with_search(client: AsyncClient, json_flow: str, logg
     await client.post("api/v1/flows/", json=flow1.model_dump(), headers=logged_in_headers)
     await client.post("api/v1/flows/", json=flow2.model_dump(), headers=logged_in_headers)
 
-    # Read the folder with search
+    # Read the project with search
     response = await client.get(
-        f"api/v1/folders/{folder_id}", headers=logged_in_headers, params={"search": "Test", "page": 1, "size": 10}
+        f"api/v1/projects/{folder_id}", headers=logged_in_headers, params={"search": "Test", "page": 1, "size": 10}
     )
     assert response.status_code == 200
     folder_data = response.json()
@@ -741,15 +748,15 @@ async def test_read_folder_with_search(client: AsyncClient, json_flow: str, logg
 
 @pytest.mark.usefixtures("active_user")
 async def test_read_folder_with_component_filter(client: AsyncClient, json_flow: str, logged_in_headers):
-    # Create a new folder
-    folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description")
-    response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
+    # Create a new project
+    folder_name = f"Test Project {uuid4()}"
+    project = FolderCreate(name=folder_name, description="Test project description")
+    response = await client.post("api/v1/projects/", json=project.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     created_folder = response.json()
     folder_id = created_folder["id"]
 
-    # Create a component flow in the folder
+    # Create a component flow in the project
     flow_data = orjson.loads(json_flow)
     component_flow_name = f"Component Flow {uuid4()}"
     component_flow = FlowCreate(
@@ -762,9 +769,9 @@ async def test_read_folder_with_component_filter(client: AsyncClient, json_flow:
     component_flow.folder_id = folder_id
     await client.post("api/v1/flows/", json=component_flow.model_dump(), headers=logged_in_headers)
 
-    # Read the folder with component filter
+    # Read the project with component filter
     response = await client.get(
-        f"api/v1/folders/{folder_id}", headers=logged_in_headers, params={"is_component": True, "page": 1, "size": 10}
+        f"api/v1/projects/{folder_id}", headers=logged_in_headers, params={"is_component": True, "page": 1, "size": 10}
     )
     assert response.status_code == 200
     folder_data = response.json()

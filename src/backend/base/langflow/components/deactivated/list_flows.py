@@ -12,9 +12,9 @@ class ListFlowsComponent(CustomComponent):
     def build_config(self):
         return {}
 
-    def build(
+    async def build(
         self,
     ) -> list[Data]:
-        flows = self.list_flows()
+        flows = await self.alist_flows()
         self.status = flows
         return flows

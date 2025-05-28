@@ -1,163 +1,151 @@
-import { expect, test } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
-test("user must be able to freeze a path", async ({ page }) => {
-  test.skip(
-    !process?.env?.OPENAI_API_KEY,
-    "OPENAI_API_KEY required to run this test",
-  );
+test(
+  "user must be able to freeze a path",
+  { tag: ["@release", "@workspace", "@components"] },
 
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
-
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
-
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
-
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
-
-  await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
-
-  await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 100000,
-  });
-
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-
-  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-
-  while (outdatedComponents > 0) {
-    await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
-    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-  }
-
-  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  while (filledApiKey > 0) {
-    await page.getByTestId("remove-icon-badge").first().click();
-    await page.waitForTimeout(1000);
-    filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  }
-
-  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-  const isApiKeyInputVisible = await apiKeyInput.isVisible();
-
-  if (isApiKeyInputVisible) {
-    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
-  }
-
-  await page
-    .getByTestId("textarea_str_input_value")
-    .first()
-    .fill(
-      "say a random number between 1 and 100000 and a random animal that lives in the sea",
+  async ({ page }) => {
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
     );
 
-  await page.getByTestId("dropdown_str_model_name").click();
-  await page.getByTestId("gpt-4o-1-option").click();
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+    }
 
-  await page.waitForTimeout(1000);
+    await awaitBootstrapTest(page);
 
-  await page.getByTestId("float_float_temperature").fill("1.0");
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-  await page.waitForTimeout(1000);
+    await initialGPTsetup(page);
 
-  await page.getByTestId("button_run_chat output").click();
+    await page
+      .getByTestId("textarea_str_input_value")
+      .first()
+      .fill(
+        "say a random number between 1 and 300000 and a random animal that lives in the sea",
+      );
 
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.getByTestId("dropdown_str_model_name").click();
+    await page.getByTestId("gpt-4o-1-option").click();
 
-  await page.getByText("built successfully").last().click({
-    timeout: 15000,
-  });
+    await page.getByTestId("fit_view").click();
 
-  await page.getByTestId("output-inspection-text").first().click();
+    await page.waitForSelector('[data-testid="button_run_chat output"]', {
+      timeout: 3000,
+    });
 
-  const randomTextGeneratedByAI = await page
-    .getByPlaceholder("Empty")
-    .first()
-    .inputValue();
+    await page.getByTestId("button_run_chat output").click();
 
-  await page.getByText("Close").first().click();
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-  await page.waitForTimeout(3000);
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
-  await page.getByTestId("float_float_temperature").fill("");
-  await page.getByTestId("float_float_temperature").fill("1.2");
+    const randomTextGeneratedByAI = await page
+      .getByPlaceholder("Empty")
+      .first()
+      .inputValue();
 
-  await page.waitForTimeout(1000);
+    await page.getByText("Close").last().click();
 
-  await page.getByTestId("button_run_chat output").click();
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    // Change model to force different output
+    await page.getByTestId("dropdown_str_model_name").click();
+    await page.getByTestId("gpt-4o-mini-0-option").click();
 
-  await page.getByText("built successfully").last().click({
-    timeout: 15000,
-  });
+    await page.waitForSelector('[data-testid="button_run_chat output"]', {
+      timeout: 3000,
+    });
 
-  await page.getByTestId("output-inspection-text").first().click();
+    await page.getByTestId("button_run_chat output").click();
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-  const secondRandomTextGeneratedByAI = await page
-    .getByPlaceholder("Empty")
-    .first()
-    .inputValue();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
-  await page.getByText("Close").first().click();
+    const secondRandomTextGeneratedByAI = await page
+      .getByPlaceholder("Empty")
+      .first()
+      .inputValue();
 
-  await page.waitForTimeout(3000);
+    await page.getByText("Close").last().click();
 
-  await page.getByText("openai").first().click();
+    await page.waitForSelector("text=OpenAI", {
+      timeout: 3000,
+    });
 
-  await page.waitForTimeout(1000);
+    await page.getByText("OpenAI", { exact: true }).last().click();
 
-  await page.getByTestId("icon-FreezeAll").click();
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 3000,
+    });
 
-  await page.waitForTimeout(1000);
+    await page.getByText("Freeze").first().click();
 
-  expect(await page.getByTestId("icon-Snowflake").count()).toBeGreaterThan(0);
+    await page.waitForTimeout(2000);
 
-  await page.waitForTimeout(1000);
-  await page.getByTestId("button_run_chat output").click();
+    await page.waitForSelector('[data-testid="icon-Snowflake"]', {
+      timeout: 3000,
+    });
 
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    expect(await page.getByTestId("icon-Snowflake").count()).toBeGreaterThan(0);
 
-  await page.getByText("built successfully").last().click({
-    timeout: 15000,
-  });
+    await page.waitForSelector('[data-testid="button_run_chat output"]', {
+      timeout: 3000,
+    });
 
-  await page.getByTestId("output-inspection-text").first().click();
+    await page.getByTestId("button_run_chat output").click();
 
-  const thirdRandomTextGeneratedByAI = await page
-    .getByPlaceholder("Empty")
-    .first()
-    .inputValue();
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-  await page.getByText("Close").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
-  expect(randomTextGeneratedByAI).not.toEqual(secondRandomTextGeneratedByAI);
-  expect(randomTextGeneratedByAI).not.toEqual(thirdRandomTextGeneratedByAI);
-  expect(secondRandomTextGeneratedByAI).toEqual(thirdRandomTextGeneratedByAI);
-});
+    const thirdRandomTextGeneratedByAI = await page
+      .getByPlaceholder("Empty")
+      .first()
+      .inputValue();
+
+    await page.getByText("Close").last().click();
+
+    expect(randomTextGeneratedByAI).not.toEqual(secondRandomTextGeneratedByAI);
+    expect(randomTextGeneratedByAI).not.toEqual(thirdRandomTextGeneratedByAI);
+    expect(secondRandomTextGeneratedByAI).toEqual(thirdRandomTextGeneratedByAI);
+  },
+);
+
+async function moveSlider(
+  page: Page,
+  side: "left" | "right",
+  advanced: boolean = false,
+) {
+  const thumbSelector = `slider_thumb${advanced ? "_advanced" : ""}`;
+  const trackSelector = `slider_track${advanced ? "_advanced" : ""}`;
+
+  await page.getByTestId(thumbSelector).click();
+
+  const trackBoundingBox = await page.getByTestId(trackSelector).boundingBox();
+
+  if (trackBoundingBox) {
+    const moveDistance =
+      trackBoundingBox.width * 0.1 * (side === "left" ? -1 : 1);
+    const centerX = trackBoundingBox.x + trackBoundingBox.width / 2;
+    const centerY = trackBoundingBox.y + trackBoundingBox.height / 2;
+
+    await page.mouse.move(centerX + moveDistance, centerY);
+    await page.mouse.down();
+    await page.mouse.up();
+  }
+}

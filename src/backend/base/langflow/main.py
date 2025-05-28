@@ -6,34 +6,49 @@ import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
+import anyio
+import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi_pagination import add_pagination
 from loguru import logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
-from rich import print as rprint
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router
+from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
+    load_bundles_from_urls,
     load_flows_from_directory,
+    sync_flows_from_fs,
 )
-from langflow.interface.types import get_and_cache_all_types_dict
+from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
-from langflow.services.deps import get_settings_service, get_telemetry_service
+from langflow.middleware import ContentSizeLimitMiddleware
+from langflow.services.deps import (
+    get_queue_service,
+    get_settings_service,
+    get_telemetry_service,
+)
 from langflow.services.utils import initialize_services, teardown_services
+
+if TYPE_CHECKING:
+    from tempfile import TemporaryDirectory
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
+_tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
 
@@ -42,7 +57,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
     def __init__(self, app) -> None:
         super().__init__(app)
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         sentinel = object()
 
         async def cancel_handler():
@@ -65,7 +80,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         try:
             response = await call_next(request)
         except Exception as exc:
@@ -86,37 +101,104 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
+async def load_bundles_with_error_handling():
+    try:
+        return await load_bundles_from_urls()
+    except (httpx.TimeoutException, httpx.HTTPError, httpx.RequestError) as exc:
+        logger.error(f"Error loading bundles from URLs: {exc}")
+        return [], []
+
+
 def get_lifespan(*, fix_migration=False, version=None):
     telemetry_service = get_telemetry_service()
-
-    def _initialize():
-        initialize_services(fix_migration=fix_migration)
-        setup_llm_caching()
-        initialize_super_user_if_needed()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         configure(async_file=True)
+
         # Startup message
         if version:
-            rprint(f"[bold green]Starting Langflow v{version}...[/bold green]")
+            logger.debug(f"Starting Langflow v{version}...")
         else:
-            rprint("[bold green]Starting Langflow...[/bold green]")
+            logger.debug("Starting Langflow...")
+
+        temp_dirs: list[TemporaryDirectory] = []
+        sync_flows_from_fs_task = None
         try:
-            await asyncio.to_thread(_initialize)
+            start_time = asyncio.get_event_loop().time()
+
+            logger.debug("Initializing services")
+            await initialize_services(fix_migration=fix_migration)
+            logger.debug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Setting up LLM caching")
+            setup_llm_caching()
+            logger.debug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Initializing super user")
+            await initialize_super_user_if_needed()
+            logger.debug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Loading bundles")
+            temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
+            get_settings_service().settings.components_path.extend(bundles_components_paths)
+            logger.debug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Caching types")
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
-            await asyncio.to_thread(create_or_update_starter_projects, all_types_dict)
+            logger.debug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Creating/updating starter projects")
+            await create_or_update_starter_projects(all_types_dict)
+            logger.debug(f"Starter projects updated in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Starting telemetry service")
             telemetry_service.start()
-            await asyncio.to_thread(load_flows_from_directory)
+            logger.debug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Loading flows")
+            await load_flows_from_directory()
+            sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
+            queue_service = get_queue_service()
+            if not queue_service.is_started():  # Start if not already started
+                queue_service.start()
+            logger.debug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Loading mcp servers for projects")
+            await init_mcp_servers()
+            logger.debug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            total_time = asyncio.get_event_loop().time() - start_time
+            logger.debug(f"Total initialization time: {total_time:.2f}s")
             yield
+
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.exception(exc)
             raise
-        # Shutdown message
-        rprint("[bold red]Shutting down Langflow...[/bold red]")
-        await teardown_services()
-        await logger.complete()
+        finally:
+            # Clean shutdown
+            logger.info("Cleaning up resources...")
+            if sync_flows_from_fs_task:
+                sync_flows_from_fs_task.cancel()
+                await asyncio.wait([sync_flows_from_fs_task])
+            await teardown_services()
+
+            await asyncio.sleep(0.1)  # let logger flush async logs
+            await logger.complete()
+
+            temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
+            await asyncio.gather(*temp_dir_cleanups)
+            # Final message
+            logger.debug("Langflow shutdown complete")
 
     return lifespan
 
@@ -126,10 +208,17 @@ def create_app():
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
-
     configure()
     lifespan = get_lifespan(version=__version__)
-    app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    app = FastAPI(
+        title="Langflow",
+        version=__version__,
+        lifespan=lifespan,
+    )
+    app.add_middleware(
+        ContentSizeLimitMiddleware,
+    )
+
     setup_sentry(app)
     origins = ["*"]
 
@@ -164,9 +253,12 @@ def create_app():
             body = await request.body()
 
             boundary_start = f"--{boundary}".encode()
+            # The multipart/form-data spec doesn't require a newline after the boundary, however many clients do
+            # implement it that way
             boundary_end = f"--{boundary}--\r\n".encode()
+            boundary_end_no_newline = f"--{boundary}--".encode()
 
-            if not body.startswith(boundary_start) or not body.endswith(boundary_end):
+            if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
                 return JSONResponse(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     content={"detail": "Invalid multipart formatting"},
@@ -189,7 +281,7 @@ def create_app():
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
         if prome_port > 0 or prome_port < MAX_PORT:
-            rprint(f"[bold green]Starting Prometheus server on port {prome_port}...[/bold green]")
+            logger.debug(f"Starting Prometheus server on port {prome_port}...")
             settings.prometheus_enabled = True
             settings.prometheus_port = prome_port
         else:
@@ -200,6 +292,11 @@ def create_app():
         from prometheus_client import start_http_server
 
         start_http_server(settings.prometheus_port)
+
+    if settings.mcp_server_enabled:
+        from langflow.api.v1 import mcp_router
+
+        router.include_router(mcp_router)
 
     app.include_router(router)
     app.include_router(health_check_router)
@@ -220,6 +317,8 @@ def create_app():
         )
 
     FastAPIInstrumentor.instrument_app(app)
+
+    add_pagination(app)
 
     return app
 
@@ -253,9 +352,9 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
-        path = static_files_dir / "index.html"
+        path = anyio.Path(static_files_dir) / "index.html"
 
-        if not path.exists():
+        if not await path.exists():
             msg = f"File at path {path} does not exist."
             raise RuntimeError(msg)
         return FileResponse(path)

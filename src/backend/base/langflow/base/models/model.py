@@ -3,6 +3,7 @@ import json
 import warnings
 from abc import abstractmethod
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import BaseOutputParser
@@ -10,38 +11,65 @@ from langchain_core.output_parsers import BaseOutputParser
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
-from langflow.inputs import MessageInput, MessageTextInput
-from langflow.inputs.inputs import BoolInput, InputTypes
+from langflow.inputs import MessageInput
+from langflow.inputs.inputs import BoolInput, InputTypes, MultilineInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
+
+# Enabled detailed thinking for NVIDIA reasoning models.
+#
+# Models are trained with this exact string. Do not update.
+DETAILED_THINKING_PREFIX = "detailed thinking on\n\n"
 
 
 class LCModelComponent(Component):
     display_name: str = "Model Name"
     description: str = "Model Description"
     trace_type = "llm"
+    metadata = {
+        "keywords": [
+            "model",
+            "llm",
+            "language model",
+            "large language model",
+        ],
+    }
 
     # Optional output parser to pass to the runnable. Subclasses may allow the user to input an `output_parser`
     output_parser: BaseOutputParser | None = None
 
     _base_inputs: list[InputTypes] = [
         MessageInput(name="input_value", display_name="Input"),
-        MessageTextInput(
+        MultilineInput(
             name="system_message",
             display_name="System Message",
             info="System message to pass to the model.",
-            advanced=True,
+            advanced=False,
         ),
         BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
     ]
 
     outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Message", name="text_output", method="text_response"),
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
     def _get_exception_message(self, e: Exception):
         return str(e)
+
+    def supports_tool_calling(self, model: LanguageModel) -> bool:
+        try:
+            # Check if the bind_tools method is the same as the base class's method
+            if model.bind_tools is BaseChatModel.bind_tools:
+                return False
+
+            def test_tool(x: int) -> int:
+                return x
+
+            model_with_tool = model.bind_tools([test_tool])
+            return hasattr(model_with_tool, "tools") and len(model_with_tool.tools) > 0
+        except (AttributeError, TypeError, ValueError):
+            return False
 
     def _validate_outputs(self) -> None:
         # At least these two outputs must be defined
@@ -148,6 +176,24 @@ class LCModelComponent(Component):
         input_value: str | Message,
         system_message: str | None = None,
     ):
+        if getattr(self, "detailed_thinking", False):
+            system_message = DETAILED_THINKING_PREFIX + (system_message or "")
+
+        return self._get_chat_result(
+            runnable=runnable,
+            stream=stream,
+            input_value=input_value,
+            system_message=system_message,
+        )
+
+    def _get_chat_result(
+        self,
+        *,
+        runnable: LanguageModel,
+        stream: bool,
+        input_value: str | Message,
+        system_message: str | None = None,
+    ):
         messages: list[BaseMessage] = []
         if not input_value and not system_message:
             msg = "The message you want to send to the model is empty."
@@ -175,7 +221,8 @@ class LCModelComponent(Component):
             messages.insert(0, SystemMessage(content=system_message))
         inputs: list | dict = messages or {}
         try:
-            if self.output_parser is not None:
+            # TODO: Depreciated Feature to be removed in upcoming release
+            if hasattr(self, "output_parser") and self.output_parser is not None:
                 runnable |= self.output_parser
 
             runnable = runnable.with_config(
@@ -237,9 +284,17 @@ class LCModelComponent(Component):
             # Ensure component_inputs is a list of the expected types
             if not isinstance(component_inputs, list):
                 component_inputs = []
-            models_module = importlib.import_module("langflow.components.models")
-            component_class = getattr(models_module, str(module_name))
-            component = component_class()
+
+            import warnings
+
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
+                )
+                warnings.filterwarnings("ignore", message="Valid config keys have changed in V2", category=UserWarning)
+                models_module = importlib.import_module("langflow.components.models")
+                component_class = getattr(models_module, str(module_name))
+                component = component_class()
 
             return self.build_llm_model_from_inputs(component, component_inputs)
         except Exception as e:

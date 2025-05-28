@@ -4,12 +4,10 @@ from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cache
 from langflow.helpers.data import docs_to_data
 from langflow.inputs import BoolInput, FloatInput
 from langflow.io import (
-    DataInput,
     DictInput,
     DropdownInput,
     HandleInput,
     IntInput,
-    MultilineInput,
     SecretStrInput,
     StrInput,
 )
@@ -19,7 +17,6 @@ from langflow.schema import Data
 class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Clickhouse"
     description = "Clickhouse Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/clickhouse/"
     name = "Clickhouse"
     icon = "Clickhouse"
 
@@ -52,10 +49,9 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             value=False,
             advanced=True,
         ),
-        StrInput(name="index_param", display_name="Param of the index", value="'L2Distance',100", advanced=True),
+        StrInput(name="index_param", display_name="Param of the index", value="100,'L2Distance'", advanced=True),
         DictInput(name="index_query_params", display_name="index query params", advanced=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
-        DataInput(name="ingest_data", display_name="Ingest Data", is_list=True),
+        *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
@@ -79,11 +75,16 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             raise ImportError(msg) from e
 
         try:
-            client = clickhouse_connect.get_client(host=self.host, username=self.username, password=self.password)
+            client = clickhouse_connect.get_client(
+                host=self.host, port=self.port, username=self.username, password=self.password
+            )
             client.command("SELECT 1")
         except Exception as e:
             msg = f"Failed to connect to Clickhouse: {e}"
             raise ValueError(msg) from e
+
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
 
         documents = []
         for _input in self.ingest_data or []:

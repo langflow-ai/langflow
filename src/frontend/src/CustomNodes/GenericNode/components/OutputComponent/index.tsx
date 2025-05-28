@@ -1,4 +1,12 @@
-import ShadTooltip from "../../../../components/shadTooltipComponent";
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
 
@@ -7,9 +15,13 @@ export default function OutputComponent({
   types,
   frozen = false,
   nodeId,
+  outputs,
   idx,
   name,
   proxy,
+  isToolMode = false,
+  handleSelectOutput,
+  outputName,
 }: outputComponentType) {
   const displayProxy = (children) => {
     if (proxy) {
@@ -23,10 +35,56 @@ export default function OutputComponent({
     }
   };
 
-  return displayProxy(
-    <span className={cn("text-[13px] font-medium", frozen ? "text-ice" : "")}>
+  const singleOutput = displayProxy(
+    <span
+      className={cn(
+        "text-xs font-medium",
+        isToolMode && "text-secondary",
+        frozen ? "text-ice" : "",
+      )}
+    >
       {name}
     </span>,
+  );
+
+  return (
+    <div>
+      {outputs.length > 1 ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              unstyled
+              className="flex items-center gap-2"
+              data-testid={`dropdown-output-${outputName?.toLowerCase()}`}
+            >
+              {name}
+              <ForwardedIconComponent
+                name="ChevronDown"
+                className="h-4 w-4 text-muted-foreground"
+              />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {outputs.map((output) => (
+              <DropdownMenuItem
+                key={output.name}
+                data-testid={`dropdown-item-output-${outputName?.toLowerCase()}-${output.display_name?.toLowerCase()}`}
+                className="cursor-pointer px-3 py-2"
+                onClick={() => {
+                  handleSelectOutput && handleSelectOutput(output);
+                }}
+              >
+                <span className="truncate text-[13px]">
+                  {output.display_name ?? output.name}
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        singleOutput
+      )}
+    </div>
   );
 
   // ! DEACTIVATED UNTIL BETTER IMPLEMENTATION

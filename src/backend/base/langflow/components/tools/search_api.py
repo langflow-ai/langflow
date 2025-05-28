@@ -11,10 +11,12 @@ from langflow.schema import Data
 
 
 class SearchAPIComponent(LCToolComponent):
-    display_name: str = "Search API"
+    display_name: str = "Search API [DEPRECATED]"
     description: str = "Call the searchapi.io API with result limiting"
     name = "SearchAPI"
     documentation: str = "https://www.searchapi.io/docs/google"
+    icon = "SearchAPI"
+    legacy = True
 
     inputs = [
         MessageTextInput(name="engine", display_name="Engine", value="google"),
@@ -30,7 +32,7 @@ class SearchAPIComponent(LCToolComponent):
 
     class SearchAPISchema(BaseModel):
         query: str = Field(..., description="The search query")
-        params: dict[str, Any] | None = Field(default_factory=dict, description="Additional search parameters")
+        params: dict[str, Any] = Field(default_factory=dict, description="Additional search parameters")
         max_results: int = Field(5, description="Maximum number of results to return")
         max_snippet_length: int = Field(100, description="Maximum length of each result snippet")
 

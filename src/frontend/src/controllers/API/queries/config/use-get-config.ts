@@ -1,3 +1,8 @@
+import {
+  DEFAULT_POLLING_INTERVAL,
+  DEFAULT_TIMEOUT,
+} from "@/constants/constants";
+import { EventDeliveryType } from "@/constants/enums";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import axios from "axios";
@@ -13,6 +18,8 @@ export interface ConfigResponse {
   health_check_max_retries: number;
   max_file_size_upload: number;
   feature_flags: Record<string, any>;
+  webhook_polling_interval: number;
+  event_delivery: EventDeliveryType;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
@@ -29,7 +36,10 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     (state) => state.setMaxFileSizeUpload,
   );
   const setFeatureFlags = useUtilityStore((state) => state.setFeatureFlags);
-
+  const setWebhookPollingInterval = useUtilityStore(
+    (state) => state.setWebhookPollingInterval,
+  );
+  const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
   const { query } = UseRequestProcessor();
 
   const getConfigFn = async () => {
@@ -38,7 +48,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     if (data) {
       const timeoutInMilliseconds = data.frontend_timeout
         ? data.frontend_timeout * 1000
-        : 30000;
+        : DEFAULT_TIMEOUT;
       axios.defaults.baseURL = "";
       axios.defaults.timeout = timeoutInMilliseconds;
       setAutoSaving(data.auto_saving);
@@ -46,6 +56,10 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
       setHealthCheckMaxRetries(data.health_check_max_retries);
       setMaxFileSizeUpload(data.max_file_size_upload);
       setFeatureFlags(data.feature_flags);
+      setWebhookPollingInterval(
+        data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
+      );
+      setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
     }
     return data;
   };

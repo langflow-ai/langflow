@@ -5,7 +5,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import Fuse from "fuse.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { ForwardedIconComponent } from "../../../../components/genericIconComponent";
+import { ForwardedIconComponent } from "../../../../components/common/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { TemplateContentProps } from "../../../../types/templates/types";
@@ -75,7 +75,7 @@ export default function TemplateContentComponent({
 
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-hidden">
-      <div className="relative flex-1 grow-0 p-px">
+      <div className="relative mx-3 flex-1 grow-0 py-px">
         <ForwardedIconComponent
           name="Search"
           className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
@@ -83,6 +83,7 @@ export default function TemplateContentComponent({
         <Input
           type="search"
           placeholder="Search..."
+          data-testid="search-input-template"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           ref={searchInputRef}

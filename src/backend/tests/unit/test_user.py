@@ -11,12 +11,12 @@ from sqlmodel import select
 
 
 @pytest.fixture
-def super_user(client):  # noqa: ARG001
+async def super_user(client):  # noqa: ARG001
     settings_manager = get_settings_service()
     auth_settings = settings_manager.auth_settings
-    with session_getter(get_db_service()) as session:
-        return create_super_user(
-            db=session,
+    async with session_getter(get_db_service()) as db:
+        return await create_super_user(
+            db=db,
             username=auth_settings.SUPERUSER,
             password=auth_settings.SUPERUSER_PASSWORD,
         )
@@ -41,8 +41,8 @@ async def super_user_headers(
 
 
 @pytest.fixture
-def deactivated_user(client):  # noqa: ARG001
-    with session_getter(get_db_service()) as session:
+async def deactivated_user(client):  # noqa: ARG001
+    async with session_getter(get_db_service()) as session:
         user = User(
             username="deactivateduser",
             password=get_password_hash("testpassword"),
@@ -51,8 +51,8 @@ def deactivated_user(client):  # noqa: ARG001
             last_login_at=datetime.now(tz=timezone.utc),
         )
         session.add(user)
-        session.commit()
-        session.refresh(user)
+        await session.commit()
+        await session.refresh(user)
     return user
 
 
@@ -61,15 +61,16 @@ async def test_user_waiting_for_approval(client):
     password = "testpassword"  # noqa: S105
 
     # Debug: Check if the user already exists
-    with session_getter(get_db_service()) as session:
-        existing_user = session.exec(select(User).where(User.username == username)).first()
+    async with session_getter(get_db_service()) as session:
+        stmt = select(User).where(User.username == username)
+        existing_user = (await session.exec(stmt)).first()
         if existing_user:
             pytest.fail(
                 f"User {username} already exists before the test. Database URL: {get_db_service().database_url}"
             )
 
     # Create a user that is not active and has never logged in
-    with session_getter(get_db_service()) as session:
+    async with session_getter(get_db_service()) as session:
         user = User(
             username=username,
             password=get_password_hash(password),
@@ -77,7 +78,7 @@ async def test_user_waiting_for_approval(client):
             last_login_at=None,
         )
         session.add(user)
-        session.commit()
+        await session.commit()
 
     login_data = {"username": "waitingforapproval", "password": "testpassword"}
     response = await client.post("api/v1/login", data=login_data)
@@ -85,8 +86,9 @@ async def test_user_waiting_for_approval(client):
     assert response.json()["detail"] == "Waiting for approval"
 
     # Debug: Check if the user still exists after the test
-    with session_getter(get_db_service()) as session:
-        existing_user = session.exec(select(User).where(User.username == username)).first()
+    async with session_getter(get_db_service()) as session:
+        stmt = select(User).where(User.username == username)
+        existing_user = (await session.exec(stmt)).first()
         if existing_user:
             pass
         else:
@@ -138,7 +140,7 @@ async def test_data_consistency_after_delete(client: AsyncClient, test_user, sup
 @pytest.mark.api_key_required
 async def test_inactive_user(client: AsyncClient):
     # Create a user that is not active and has a last_login_at value
-    with session_getter(get_db_service()) as session:
+    async with session_getter(get_db_service()) as session:
         user = User(
             username="inactiveuser",
             password=get_password_hash("testpassword"),
@@ -146,7 +148,7 @@ async def test_inactive_user(client: AsyncClient):
             last_login_at=datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
         )
         session.add(user)
-        session.commit()
+        await session.commit()
 
     login_data = {"username": "inactiveuser", "password": "testpassword"}
     response = await client.post("api/v1/login", data=login_data)

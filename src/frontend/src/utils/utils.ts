@@ -1,23 +1,33 @@
+import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
+import TableDropdownCellEditor from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableDropdownCellEditor";
+import useAlertStore from "@/stores/alertStore";
 import { ColumnField, FormatterType } from "@/types/utils/functions";
-import { ColDef, ColGroupDef } from "ag-grid-community";
+import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
+import moment from "moment";
+import "moment-timezone";
 import { twMerge } from "tailwind-merge";
-import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
 import {
   DRAG_EVENTS_CUSTOM_TYPESS,
   MESSAGES_TABLE_ORDER,
   MODAL_CLASSES,
   SHORTCUT_KEYS,
 } from "../constants/constants";
-import { APIDataType, InputFieldType, VertexDataTypeAPI } from "../types/api";
+import {
+  APIDataType,
+  InputFieldType,
+  TableOptionsTypeAPI,
+  VertexDataTypeAPI,
+} from "../types/api";
 import {
   groupedObjType,
   nodeGroupedObjType,
   tweakType,
 } from "../types/components";
-import { NodeDataType, NodeType } from "../types/flow";
+import { AllNodeType, NodeDataType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { isErrorLog } from "../types/utils/typeCheckingUtils";
+import { parseString } from "./stringManipulation";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -27,14 +37,21 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
+export function toCamelCase(str: string): string {
+  return str
+    .split(" ")
+    .map((s, index) => (index !== 0 ? toNormalCase(s) : s.toLowerCase()))
+    .join("");
+}
+
 export function toNormalCase(str: string): string {
   let result = str
     .split("_")
     .map((word, index) => {
       if (index === 0) {
-        return word[0].toUpperCase() + word.slice(1).toLowerCase();
+        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
       }
-      return word.toLowerCase();
+      return word?.toLowerCase();
     })
     .join(" ");
 
@@ -42,9 +59,9 @@ export function toNormalCase(str: string): string {
     .split("-")
     .map((word, index) => {
       if (index === 0) {
-        return word[0].toUpperCase() + word.slice(1).toLowerCase();
+        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
       }
-      return word.toLowerCase();
+      return word?.toLowerCase();
     })
     .join(" ");
 }
@@ -54,11 +71,11 @@ export function normalCaseToSnakeCase(str: string): string {
     .split(" ")
     .map((word, index) => {
       if (index === 0) {
-        return word[0].toUpperCase() + word.slice(1).toLowerCase();
+        return word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
       }
-      return word.toLowerCase();
+      return word?.toLowerCase();
     })
-    .join("_");
+    ?.join("_");
 }
 
 export function toTitleCase(
@@ -67,41 +84,41 @@ export function toTitleCase(
 ): string {
   if (!str) return "";
   let result = str
-    .split("_")
-    .map((word, index) => {
+    ?.split("_")
+    ?.map((word, index) => {
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0]?.toUpperCase() + word.slice(1)?.toLowerCase(),
         );
       }
-      return checkUpperWords(word.toLowerCase());
+      return checkUpperWords(word?.toLowerCase());
     })
     .join(" ");
 
   return result
-    .split("-")
-    .map((word, index) => {
+    ?.split("-")
+    ?.map((word, index) => {
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0]?.toUpperCase() + word.slice(1)?.toLowerCase(),
         );
       }
-      return checkUpperWords(word.toLowerCase());
+      return checkUpperWords(word?.toLowerCase());
     })
-    .join(" ");
+    ?.join(" ");
 }
 
 export const upperCaseWords: string[] = ["llm", "uri"];
 export function checkUpperWords(str: string): string {
-  const words = str.split(" ").map((word) => {
-    return upperCaseWords.includes(word.toLowerCase())
-      ? word.toUpperCase()
-      : word[0].toUpperCase() + word.slice(1).toLowerCase();
+  const words = str?.split(" ")?.map((word) => {
+    return upperCaseWords.includes(word?.toLowerCase())
+      ? word?.toUpperCase()
+      : word[0]?.toUpperCase() + word.slice(1)?.toLowerCase();
   });
 
-  return words.join(" ");
+  return words?.join(" ");
 }
 
 export function buildInputs(): string {
@@ -115,6 +132,12 @@ export function getRandomKeyByssmm(): string {
   return seconds + milliseconds + Math.abs(Math.floor(Math.random() * 10001));
 }
 
+export function getNumberFromString(str: string): number {
+  const hash = str.split("").reduce((acc, char) => {
+    return char.charCodeAt(0) + acc;
+  }, 0);
+  return hash;
+}
 export function buildTweakObject(tweak: tweakType) {
   tweak.forEach((el) => {
     Object.keys(el).forEach((key) => {
@@ -224,7 +247,7 @@ export function groupByFamily(
   data: APIDataType,
   baseClasses: string,
   left: boolean,
-  flow?: NodeType[],
+  flow?: AllNodeType[],
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{
@@ -246,6 +269,7 @@ export function groupByFamily(
     return (
       template?.type &&
       template?.show &&
+      !template?.advanced &&
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
         (template?.input_types &&
@@ -259,7 +283,12 @@ export function groupByFamily(
     // se existir o flow
     for (const node of flow) {
       // para cada node do flow
-      if (node!.data!.node!.flow || !node!.data!.node!.template) break; // não faz nada se o node for um group
+      if (
+        node!.type !== "genericNode" ||
+        !node!.data!.node!.flow ||
+        !node!.data!.node!.template
+      )
+        break; // não faz nada se o node for um group
       const nodeData = node.data;
 
       const foundNode = checkedNodes.get(nodeData.type); // verifica se o tipo do node já foi checado
@@ -435,39 +464,55 @@ export const logHasMessage = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
-    return outputs.some((outputLog) => outputLog.message);
-  } else {
-    return outputs?.message;
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
+    return outputs.some((outputLog) => outputLog?.message);
   }
+  return !!outputs?.message;
+};
+
+export const logFirstMessage = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
+  if (!outputName || !data?.outputs) return false;
+  for (const key of Object.keys(data.outputs)) {
+    if (logHasMessage(data, key)) {
+      return key === outputName;
+    }
+  }
+  return false;
 };
 
 export const logTypeIsUnknown = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
-    return outputs.some((outputLog) => outputLog.type === "unknown");
-  } else {
-    return outputs?.type === "unknown";
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
+    return outputs.some((outputLog) => outputLog?.type === "unknown");
   }
+  return outputs?.type === "unknown";
 };
 
 export const logTypeIsError = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
     return outputs.some((log) => isErrorLog(log));
-  } else {
-    return isErrorLog(outputs);
   }
+  return isErrorLog(outputs);
 };
 
 export function isEndpointNameValid(name: string, maxLength: number): boolean {
@@ -496,12 +541,36 @@ export function brokenEdgeMessage({
 export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   if (!columns) return [];
   const basic_types = new Set(["date", "number"]);
-  const colDefs = columns.map((col, index) => {
+  const colDefs = columns.map((col) => {
     let newCol: ColDef = {
       headerName: col.display_name,
       field: col.name,
       sortable: col.sortable,
       filter: col.filterable,
+      context: col.description ? { info: col.description } : {},
+      cellClass: col.disable_edit ? "cell-disable-edit" : "",
+      hide: col.hidden,
+      valueParser: (params: ValueParserParams) => {
+        const { context, newValue, colDef, oldValue } = params;
+        if (
+          context.field_parsers &&
+          context.field_parsers[colDef.field ?? ""]
+        ) {
+          try {
+            return parseString(
+              newValue,
+              context.field_parsers[colDef.field ?? ""],
+            );
+          } catch (error: any) {
+            useAlertStore.getState().setErrorData({
+              title: "Error parsing string",
+              list: [String(error.message ?? error)],
+            });
+            return oldValue;
+          }
+        }
+        return newValue;
+      },
     };
     if (!col.formatter) {
       col.formatter = FormatterType.text;
@@ -512,7 +581,41 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       newCol.cellRendererParams = {
         formatter: col.formatter,
       };
-      newCol.cellRenderer = TableAutoCellRender;
+
+      if (
+        col.formatter !== FormatterType.text ||
+        col.edit_mode !== "inline" ||
+        col.options
+      ) {
+        if (col.options && col.formatter === FormatterType.text) {
+          newCol.cellEditor = TableDropdownCellEditor;
+          newCol.cellEditorPopup = true;
+          newCol.cellEditorParams = {
+            values: col.options,
+          };
+          newCol.autoHeight = false;
+          newCol.cellClass = "no-border !py-2";
+        } else if (
+          col.edit_mode === "popover" &&
+          col.formatter === FormatterType.text
+        ) {
+          newCol.wrapText = false;
+          newCol.autoHeight = false;
+          newCol.cellEditor = "agLargeTextCellEditor";
+          newCol.cellEditorPopup = true;
+          newCol.cellEditorParams = {
+            maxLength: 100000000,
+          };
+        } else if (col.formatter === FormatterType.boolean) {
+          newCol.cellRenderer = TableAutoCellRender;
+          newCol.editable = false;
+          newCol.autoHeight = false;
+          newCol.cellClass = "no-border !py-2";
+          newCol.type = "boolean";
+        } else {
+          newCol.cellRenderer = TableAutoCellRender;
+        }
+      }
     }
     return newCol;
   });
@@ -520,15 +623,19 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   return colDefs;
 }
 
-export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
+export function generateBackendColumnsFromValue(
+  rows: Object[],
+  tableOptions?: TableOptionsTypeAPI,
+): ColumnField[] {
   const columns = extractColumnsFromRows(rows, "union");
   return columns.map((column) => {
     const newColumn: ColumnField = {
       name: column.field ?? "",
       display_name: column.headerName ?? "",
-      sortable: true,
-      filterable: true,
+      sortable: !tableOptions?.block_sort,
+      filterable: !tableOptions?.block_filter,
       default: null, // Initialize default to null or appropriate value
+      hidden: false,
     };
 
     // Attempt to infer the default value from the data, if possible
@@ -665,8 +772,115 @@ export const formatPlaceholderName = (name) => {
   return `Select ${prefix} ${formattedName}`;
 };
 
+export const formatName = (name) => {
+  const formattedName = name
+    .split("_")
+    .map((word: string) => word.toLowerCase())
+    .join(" ");
+
+  const firstWord =
+    formattedName.split(" ")[0].charAt(0) +
+    formattedName.split(" ")[0].slice(1);
+
+  return { formattedName, firstWord };
+};
+
 export const isStringArray = (value: unknown): value is string[] => {
   return (
     Array.isArray(value) && value.every((item) => typeof item === "string")
   );
+};
+
+export const stringToBool = (str) => (str === "false" ? false : true);
+
+// Filter out null/undefined options
+export const filterNullOptions = (opts: any[]): any[] => {
+  return opts.filter((opt) => opt !== null && opt !== undefined);
+};
+
+/**
+ * Gets a cookie value by its name
+ * @param {string} name - The name of the cookie to retrieve
+ * @returns {string | undefined} The cookie value if found, undefined otherwise
+ */
+export function getCookie(name: string): string | undefined {
+  const cookie = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
+
+  if (cookie) {
+    return cookie.split("=")[1];
+  }
+  return undefined;
+}
+
+/**
+ * Interface for cookie options
+ */
+export interface CookieOptions {
+  path?: string;
+  domain?: string;
+  maxAge?: number;
+  expires?: Date;
+  secure?: boolean;
+  sameSite?: "Strict" | "Lax" | "None";
+}
+
+/**
+ * Sets a cookie with the specified name, value, and optional configuration
+ * @param {string} name - The name of the cookie
+ * @param {string} value - The value to store in the cookie
+ * @param {CookieOptions} options - Optional configuration for the cookie
+ */
+export function setCookie(
+  name: string,
+  value: string,
+  options: CookieOptions = {},
+): void {
+  const {
+    path = "/",
+    domain,
+    maxAge,
+    expires,
+    secure = true,
+    sameSite = "Strict",
+  } = options;
+
+  let cookieString = `${name}=${encodeURIComponent(value)}`;
+
+  if (path) cookieString += `; path=${path}`;
+  if (domain) cookieString += `; domain=${domain}`;
+  if (maxAge) cookieString += `; max-age=${maxAge}`;
+  if (expires) cookieString += `; expires=${expires.toUTCString()}`;
+  if (secure) cookieString += "; secure";
+  if (sameSite) cookieString += `; SameSite=${sameSite}`;
+
+  document.cookie = cookieString;
+}
+
+/**
+ * Converts a string to snake_case
+ * Example: "New York" becomes "new_york"
+ * @param {string} str - The string to convert
+ * @returns {string} The snake_case string
+ */
+export function testIdCase(str: string): string {
+  return str.toLowerCase().replace(/\s+/g, "_");
+}
+
+export const convertUTCToLocalTimezone = (timestamp: string) => {
+  const localTimezone = moment.tz.guess();
+  return moment.utc(timestamp).tz(localTimezone).format("MM/DD/YYYY HH:mm:ss");
+};
+
+export const formatNumber = (num: number | undefined): string => {
+  if (num === undefined) return "0";
+
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(0) + "M";
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(0) + "k";
+  }
+  return num?.toString();
 };

@@ -9,7 +9,7 @@ from langflow.schema import Data
 class DynamicOutputComponent(Component):
     display_name = "Dynamic Output Component"
     description = "Use as a template to create your own component."
-    documentation: str = "http://docs.langflow.org/components/custom"
+    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "custom_components"
     name = "DynamicOutputComponent"
 

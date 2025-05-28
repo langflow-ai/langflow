@@ -1,74 +1,61 @@
-import ForwardedIconComponent from "@/components/genericIconComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import useAlertStore from "@/stores/alertStore";
 import { FlowType } from "@/types/flow";
-import { downloadFlow } from "@/utils/reactflowUtils";
-import useDuplicateFlows from "../../oldComponents/componentsComponent/hooks/use-handle-duplicate";
-import useSelectOptionsChange from "../../oldComponents/componentsComponent/hooks/use-select-options-change";
+import useDuplicateFlow from "../../hooks/use-handle-duplicate";
+import useSelectOptionsChange from "../../hooks/use-select-options-change";
 
 type DropdownComponentProps = {
   flowData: FlowType;
   setOpenDelete: (open: boolean) => void;
-  handlePlaygroundClick?: () => void;
+  handleExport: () => void;
+  handleEdit: () => void;
 };
 
 const DropdownComponent = ({
   flowData,
   setOpenDelete,
-  handlePlaygroundClick,
+  handleExport,
+  handleEdit,
 }: DropdownComponentProps) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { handleDuplicate } = useDuplicateFlow({ flow: flowData });
 
-  const { handleDuplicate } = useDuplicateFlows(
-    [flowData.id],
-    [flowData],
-    () => {},
-    setSuccessData,
-    () => {},
-    () => {},
-    "flow",
-  );
-
-  const handleExport = () => {
-    downloadFlow(flowData, flowData.name, flowData.description);
-    setSuccessData({ title: `${flowData.name} exported successfully` });
+  const duplicateFlow = () => {
+    handleDuplicate().then(() =>
+      setSuccessData({
+        title: `${flowData.is_component ? "Component" : "Flow"} duplicated successfully`,
+      }),
+    );
   };
 
   const { handleSelectOptionsChange } = useSelectOptionsChange(
     [flowData.id],
     setErrorData,
     setOpenDelete,
-    handleDuplicate,
     handleExport,
+    duplicateFlow,
+    handleEdit,
   );
 
   return (
     <>
-      {/* <DropdownMenuItem onClick={() => {}} className="cursor-pointer">
+      <DropdownMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          handleSelectOptionsChange("edit");
+        }}
+        className="cursor-pointer"
+        data-testid="btn-edit-flow"
+      >
         <ForwardedIconComponent
-          name="square-pen"
+          name="SquarePen"
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
         Edit details
-      </DropdownMenuItem> */}
-      {handlePlaygroundClick && (
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handlePlaygroundClick();
-          }}
-          className="cursor-pointer sm:hidden"
-        >
-          <ForwardedIconComponent
-            name="play"
-            aria-hidden="true"
-            className="mr-2 h-4 w-4"
-          />
-          Playground
-        </DropdownMenuItem>
-      )}
+      </DropdownMenuItem>
       <DropdownMenuItem
         onClick={(e) => {
           e.stopPropagation();
@@ -78,11 +65,11 @@ const DropdownComponent = ({
         data-testid="btn-download-json"
       >
         <ForwardedIconComponent
-          name="download"
+          name="Download"
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
-        Download JSON
+        Export
       </DropdownMenuItem>
       <DropdownMenuItem
         onClick={(e) => {
@@ -93,7 +80,7 @@ const DropdownComponent = ({
         data-testid="btn-duplicate-flow"
       >
         <ForwardedIconComponent
-          name="copy-plus"
+          name="CopyPlus"
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
@@ -104,10 +91,11 @@ const DropdownComponent = ({
           e.stopPropagation();
           setOpenDelete(true);
         }}
-        className="cursor-pointer text-red-500 focus:text-red-500 dark:text-red-500 dark:focus:text-red-500"
+        className="cursor-pointer text-destructive"
+        data-testid="btn_delete_dropdown_menu"
       >
         <ForwardedIconComponent
-          name="trash"
+          name="Trash2"
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />

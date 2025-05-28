@@ -127,6 +127,26 @@ class MyComponent(CustomComponent):
     assert result.value == "test"
 
 
+def test_create_class_module_import():
+    code = """
+from langflow.custom import CustomComponent
+from PIL import ImageDraw
+
+class ExternalClass:
+    def __init__(self, value):
+        self.value = value
+
+class MyComponent(CustomComponent):
+    def build(self):
+        return ExternalClass("test")
+"""
+    class_name = "MyComponent"
+    created_class = create_class(code, class_name)
+    instance = created_class()
+    result = instance.build()
+    assert result.value == "test"
+
+
 def test_create_class_with_multiple_external_classes():
     code = """
 from langflow.custom import CustomComponent

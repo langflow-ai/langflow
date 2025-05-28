@@ -1,4 +1,3 @@
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -12,9 +11,6 @@ from langflow.services.database.models.api_key.crud import create_api_key, delet
 from langflow.services.database.models.api_key.model import ApiKeyCreate, UnmaskedApiKeyRead
 from langflow.services.deps import get_settings_service
 
-if TYPE_CHECKING:
-    pass
-
 router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
 
@@ -25,7 +21,7 @@ async def get_api_keys_route(
 ) -> ApiKeysResponse:
     try:
         user_id = current_user.id
-        keys = get_api_keys(db, user_id)
+        keys = await get_api_keys(db, user_id)
 
         return ApiKeysResponse(total_count=len(keys), user_id=user_id, api_keys=keys)
     except Exception as exc:
@@ -40,7 +36,7 @@ async def create_api_key_route(
 ) -> UnmaskedApiKeyRead:
     try:
         user_id = current_user.id
-        return create_api_key(db, req, user_id=user_id)
+        return await create_api_key(db, req, user_id=user_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -51,7 +47,7 @@ async def delete_api_key_route(
     db: DbSession,
 ):
     try:
-        delete_api_key(db, api_key_id)
+        await delete_api_key(db, api_key_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return {"detail": "API Key deleted"}
@@ -74,7 +70,7 @@ async def save_store_api_key(
         encrypted = auth_utils.encrypt_api_key(api_key, settings_service=settings_service)
         current_user.store_api_key = encrypted
         db.add(current_user)
-        db.commit()
+        await db.commit()
 
         response.set_cookie(
             "apikey_tkn_lflw",

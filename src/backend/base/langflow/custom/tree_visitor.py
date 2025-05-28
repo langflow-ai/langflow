@@ -11,6 +11,11 @@ class RequiredInputsVisitor(ast.NodeVisitor):
 
     @override
     def visit_Attribute(self, node) -> None:
-        if isinstance(node.value, ast.Name) and node.value.id == "self" and node.attr in self.inputs:
+        if (
+            isinstance(node.value, ast.Name)
+            and node.value.id == "self"
+            and node.attr in self.inputs
+            and self.inputs[node.attr].required
+        ):
             self.required_inputs.add(node.attr)
         self.generic_visit(node)

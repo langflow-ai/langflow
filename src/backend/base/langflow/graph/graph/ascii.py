@@ -90,11 +90,11 @@ class AsciiCanvas:
             self.point(x0, y0, char)
         elif abs(dx) >= abs(dy):
             for x in range(x0, x1 + 1):
-                y = y0 + int(round((x - x0) * dy / float(dx))) if dx else y0
+                y = y0 + round((x - x0) * dy / float(dx)) if dx else y0
                 self.point(x, y, char)
         else:
             for y in range(min(y0, y1), max(y0, y1) + 1):
-                x = x0 + int(round((y - y0) * dx / float(dy))) if dy else x0
+                x = x0 + round((y - y0) * dx / float(dy)) if dy else x0
                 self.point(x, y, char)
 
     def text(self, x, y, text) -> None:
@@ -171,8 +171,8 @@ def draw_graph(vertexes, edges, *, return_ascii=True):
     maxx = max(xlist)
     maxy = max(ylist)
 
-    canvas_cols = int(math.ceil(maxx - minx)) + 1
-    canvas_lines = int(round(maxy - miny))
+    canvas_cols = math.ceil(maxx - minx) + 1
+    canvas_lines = round(maxy - miny)
 
     canvas = AsciiCanvas(canvas_cols, canvas_lines)
 
@@ -184,18 +184,18 @@ def draw_graph(vertexes, edges, *, return_ascii=True):
             start = edge.view._pts[index - 1]
             end = edge.view._pts[index]
             canvas.line(
-                int(round(start[0] - minx)),
-                int(round(start[1] - miny)),
-                int(round(end[0] - minx)),
-                int(round(end[1] - miny)),
+                round(start[0] - minx),
+                round(start[1] - miny),
+                round(end[0] - minx),
+                round(end[1] - miny),
                 "*",
             )
 
     for vertex in sug.g.sV:
         x = vertex.view.xy[0] - vertex.view.w / 2.0
         y = vertex.view.xy[1]
-        canvas.box(int(round(x - minx)), int(round(y - miny)), vertex.view.w, vertex.view.h)
-        canvas.text(int(round(x - minx)) + 1, int(round(y - miny)) + 1, vertex.data)
+        canvas.box(round(x - minx), round(y - miny), vertex.view.w, vertex.view.h)
+        canvas.text(round(x - minx) + 1, round(y - miny) + 1, vertex.data)
     if return_ascii:
         return canvas.draws()
     canvas.draw()

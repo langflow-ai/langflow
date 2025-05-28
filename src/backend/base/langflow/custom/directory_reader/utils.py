@@ -1,3 +1,5 @@
+import asyncio
+
 from loguru import logger
 
 from langflow.custom.directory_reader import DirectoryReader
@@ -83,7 +85,7 @@ def build_custom_component_list_from_path(path: str):
 
 async def abuild_custom_component_list_from_path(path: str):
     """Build a list of custom components for the langchain from a given path."""
-    file_list = load_files_from_path(path)
+    file_list = await asyncio.to_thread(load_files_from_path, path)
     reader = DirectoryReader(path, compress_code_field=False)
 
     valid_components, invalid_components = await abuild_and_validate_all_files(reader, file_list)

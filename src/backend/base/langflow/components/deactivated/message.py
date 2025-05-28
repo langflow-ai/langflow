@@ -19,7 +19,7 @@ class MessageComponent(CustomComponent):
             "session_id": {
                 "display_name": "Session ID",
                 "info": "Session ID of the chat history.",
-                "input_types": ["Text"],
+                "input_types": ["Message"],
             },
         }
 
@@ -30,9 +30,8 @@ class MessageComponent(CustomComponent):
         session_id: str | None = None,
         text: str = "",
     ) -> Message:
-        message = Message(
-            text=text, sender=sender, sender_name=sender_name, flow_id=self.graph.flow_id, session_id=session_id
-        )
+        flow_id = self.graph.flow_id if hasattr(self, "graph") else None
+        message = Message(text=text, sender=sender, sender_name=sender_name, flow_id=flow_id, session_id=session_id)
 
         self.status = message
         return message

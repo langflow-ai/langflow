@@ -1,15 +1,16 @@
+import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
+import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import useFlowStore from "@/stores/flowStore";
 import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
+import "ace-builds/src-noconflict/ext-searchbox";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-// import "ace-builds/webpack-resolver";
-import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
-import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import ReactAce from "react-ace/lib/ace";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import {
@@ -40,6 +41,7 @@ export default function CodeAreaModal({
   readonly = false,
   open: myOpen,
   setOpen: mySetOpen,
+  componentId,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const [open, setOpen] =
@@ -52,7 +54,7 @@ export default function CodeAreaModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openConfirmation, setOpenConfirmation] = useState(false);
   const codeRef = useRef<ReactAce | null>(null);
-  const { mutate, isPending } = usePostValidateCode();
+  const { mutate } = usePostValidateCode();
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
@@ -142,7 +144,7 @@ export default function CodeAreaModal({
   useEffect(() => {
     // Function to be executed after the state changes
     const delayedFunction = setTimeout(() => {
-      if (error?.detail.error !== undefined) {
+      if (error?.detail?.error !== undefined) {
         //trigger to update the height, does not really apply any height
         setHeight("90%");
       }
@@ -174,6 +176,8 @@ export default function CodeAreaModal({
         } else {
           if (
             !(
+              codeRef.current?.editor.completer &&
+              "popup" in codeRef.current?.editor.completer &&
               codeRef.current?.editor.completer.popup &&
               codeRef.current?.editor.completer.popup.isOpen
             )

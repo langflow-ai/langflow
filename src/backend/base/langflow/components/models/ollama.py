@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 from urllib.parse import urljoin
 
@@ -5,9 +6,13 @@ import httpx
 from langchain_ollama import ChatOllama
 
 from langflow.base.models.model import LCModelComponent
+from langflow.base.models.ollama_constants import URL_LIST
 from langflow.field_typing import LanguageModel
-from langflow.inputs.inputs import HandleInput
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
+from langflow.logging import logger
+
+HTTP_STATUS_OK = 200
 
 
 class ChatOllamaComponent(LCModelComponent):
@@ -16,81 +21,36 @@ class ChatOllamaComponent(LCModelComponent):
     icon = "Ollama"
     name = "OllamaModel"
 
-    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
-        if field_name == "mirostat":
-            if field_value == "Disabled":
-                build_config["mirostat_eta"]["advanced"] = True
-                build_config["mirostat_tau"]["advanced"] = True
-                build_config["mirostat_eta"]["value"] = None
-                build_config["mirostat_tau"]["value"] = None
-
-            else:
-                build_config["mirostat_eta"]["advanced"] = False
-                build_config["mirostat_tau"]["advanced"] = False
-
-                if field_value == "Mirostat 2.0":
-                    build_config["mirostat_eta"]["value"] = 0.2
-                    build_config["mirostat_tau"]["value"] = 10
-                else:
-                    build_config["mirostat_eta"]["value"] = 0.1
-                    build_config["mirostat_tau"]["value"] = 5
-
-        if field_name == "model_name":
-            base_url_dict = build_config.get("base_url", {})
-            base_url_load_from_db = base_url_dict.get("load_from_db", False)
-            base_url_value = base_url_dict.get("value")
-            if base_url_load_from_db:
-                base_url_value = self.variables(base_url_value, field_name)
-            elif not base_url_value:
-                base_url_value = "http://localhost:11434"
-            build_config["model_name"]["options"] = self.get_model(base_url_value)
-        if field_name == "keep_alive_flag":
-            if field_value == "Keep":
-                build_config["keep_alive"]["value"] = "-1"
-                build_config["keep_alive"]["advanced"] = True
-            elif field_value == "Immediately":
-                build_config["keep_alive"]["value"] = "0"
-                build_config["keep_alive"]["advanced"] = True
-            else:
-                build_config["keep_alive"]["advanced"] = False
-
-        return build_config
-
-    def get_model(self, base_url_value: str) -> list[str]:
-        try:
-            url = urljoin(base_url_value, "/api/tags")
-            with httpx.Client() as client:
-                response = client.get(url)
-                response.raise_for_status()
-                data = response.json()
-
-                return [model["name"] for model in data.get("models", [])]
-        except Exception as e:
-            msg = "Could not retrieve models. Please, make sure Ollama is running."
-            raise ValueError(msg) from e
+    # Define constants for JSON keys
+    JSON_MODELS_KEY = "models"
+    JSON_NAME_KEY = "name"
+    JSON_CAPABILITIES_KEY = "capabilities"
+    DESIRED_CAPABILITY = "completion"
+    TOOL_CALLING_CAPABILITY = "tools"
 
     inputs = [
-        *LCModelComponent._base_inputs,
-        StrInput(
+        MessageTextInput(
             name="base_url",
             display_name="Base URL",
-            info="Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
-            value="http://localhost:11434",
+            info="Endpoint of the Ollama API.",
+            value="",
         ),
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            value="llama3.1",
+            options=[],
             info="Refer to https://ollama.com/library for more models.",
             refresh_button=True,
+            real_time_refresh=True,
         ),
-        FloatInput(
+        SliderInput(
             name="temperature",
             display_name="Temperature",
-            value=0.2,
-            info="Controls the creativity of model responses.",
+            value=0.1,
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="format", display_name="Format", info="Specify the format of the output (e.g., json).", advanced=True
         ),
         DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
@@ -151,28 +111,33 @@ class ChatOllamaComponent(LCModelComponent):
             name="top_k", display_name="Top K", info="Limits token selection to top K. (Default: 40)", advanced=True
         ),
         FloatInput(name="top_p", display_name="Top P", info="Works together with top-k. (Default: 0.9)", advanced=True),
-        BoolInput(name="verbose", display_name="Verbose", info="Whether to print out response text."),
-        StrInput(
+        BoolInput(name="verbose", display_name="Verbose", info="Whether to print out response text.", advanced=True),
+        MessageTextInput(
             name="tags",
             display_name="Tags",
             info="Comma-separated list of tags to add to the run trace.",
             advanced=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="stop_tokens",
             display_name="Stop Tokens",
             info="Comma-separated list of tokens to signal the model to stop generating text.",
             advanced=True,
         ),
-        StrInput(name="system", display_name="System", info="System to use for generating text.", advanced=True),
-        StrInput(name="template", display_name="Template", info="Template to use for generating text.", advanced=True),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
+        MessageTextInput(
+            name="system", display_name="System", info="System to use for generating text.", advanced=True
         ),
+        BoolInput(
+            name="tool_model_enabled",
+            display_name="Tool Model Enabled",
+            info="Whether to enable tool calling in the model.",
+            value=True,
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="template", display_name="Template", info="Template to use for generating text.", advanced=True
+        ),
+        *LCModelComponent._base_inputs,
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -208,12 +173,12 @@ class ChatOllamaComponent(LCModelComponent):
             "temperature": self.temperature or None,
             "stop": self.stop_tokens.split(",") if self.stop_tokens else None,
             "system": self.system,
-            "template": self.template,
             "tfs_z": self.tfs_z or None,
             "timeout": self.timeout or None,
             "top_k": self.top_k or None,
             "top_p": self.top_p or None,
             "verbose": self.verbose,
+            "template": self.template,
         }
 
         # Remove parameters with None values
@@ -222,7 +187,141 @@ class ChatOllamaComponent(LCModelComponent):
         try:
             output = ChatOllama(**llm_params)
         except Exception as e:
-            msg = "Could not initialize Ollama LLM."
+            msg = (
+                "Unable to connect to the Ollama API. ",
+                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again.",
+            )
             raise ValueError(msg) from e
 
         return output
+
+    async def is_valid_ollama_url(self, url: str) -> bool:
+        try:
+            async with httpx.AsyncClient() as client:
+                return (await client.get(urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
+        except httpx.RequestError:
+            return False
+
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+        if field_name == "mirostat":
+            if field_value == "Disabled":
+                build_config["mirostat_eta"]["advanced"] = True
+                build_config["mirostat_tau"]["advanced"] = True
+                build_config["mirostat_eta"]["value"] = None
+                build_config["mirostat_tau"]["value"] = None
+
+            else:
+                build_config["mirostat_eta"]["advanced"] = False
+                build_config["mirostat_tau"]["advanced"] = False
+
+                if field_value == "Mirostat 2.0":
+                    build_config["mirostat_eta"]["value"] = 0.2
+                    build_config["mirostat_tau"]["value"] = 10
+                else:
+                    build_config["mirostat_eta"]["value"] = 0.1
+                    build_config["mirostat_tau"]["value"] = 5
+
+        if field_name in {"base_url", "model_name"}:
+            if build_config["base_url"].get("load_from_db", False):
+                base_url_value = await self.get_variables(build_config["base_url"].get("value", ""), "base_url")
+            else:
+                base_url_value = build_config["base_url"].get("value", "")
+
+            if not await self.is_valid_ollama_url(base_url_value):
+                # Check if any URL in the list is valid
+                valid_url = ""
+                check_urls = URL_LIST
+                if self.base_url:
+                    check_urls = [self.base_url, *URL_LIST]
+                for url in check_urls:
+                    if await self.is_valid_ollama_url(url):
+                        valid_url = url
+                        break
+                if valid_url != "":
+                    build_config["base_url"]["value"] = valid_url
+                else:
+                    msg = "No valid Ollama URL found."
+                    raise ValueError(msg)
+        if field_name in {"model_name", "base_url", "tool_model_enabled"}:
+            if await self.is_valid_ollama_url(self.base_url):
+                tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
+                build_config["model_name"]["options"] = await self.get_models(self.base_url, tool_model_enabled)
+            elif await self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
+                tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
+                build_config["model_name"]["options"] = await self.get_models(
+                    build_config["base_url"].get("value", ""), tool_model_enabled
+                )
+            else:
+                build_config["model_name"]["options"] = []
+        if field_name == "keep_alive_flag":
+            if field_value == "Keep":
+                build_config["keep_alive"]["value"] = "-1"
+                build_config["keep_alive"]["advanced"] = True
+            elif field_value == "Immediately":
+                build_config["keep_alive"]["value"] = "0"
+                build_config["keep_alive"]["advanced"] = True
+            else:
+                build_config["keep_alive"]["advanced"] = False
+
+        return build_config
+
+    async def get_models(self, base_url_value: str, tool_model_enabled: bool | None = None) -> list[str]:
+        """Fetches a list of models from the Ollama API that do not have the "embedding" capability.
+
+        Args:
+            base_url_value (str): The base URL of the Ollama API.
+            tool_model_enabled (bool | None, optional): If True, filters the models further to include
+                only those that support tool calling. Defaults to None.
+
+        Returns:
+            list[str]: A list of model names that do not have the "embedding" capability. If
+                `tool_model_enabled` is True, only models supporting tool calling are included.
+
+        Raises:
+            ValueError: If there is an issue with the API request or response, or if the model
+                names cannot be retrieved.
+        """
+        try:
+            # Normalize the base URL to avoid the repeated "/" at the end
+            base_url = base_url_value.rstrip("/") + "/"
+
+            # Ollama REST API to return models
+            tags_url = urljoin(base_url, "api/tags")
+
+            # Ollama REST API to return model capabilities
+            show_url = urljoin(base_url, "api/show")
+
+            async with httpx.AsyncClient() as client:
+                # Fetch available models
+                tags_response = await client.get(tags_url)
+                tags_response.raise_for_status()
+                models = tags_response.json()
+                if asyncio.iscoroutine(models):
+                    models = await models
+                logger.debug(f"Available models: {models}")
+
+                # Filter models that are NOT embedding models
+                model_ids = []
+                for model in models[self.JSON_MODELS_KEY]:
+                    model_name = model[self.JSON_NAME_KEY]
+                    logger.debug(f"Checking model: {model_name}")
+
+                    payload = {"model": model_name}
+                    show_response = await client.post(show_url, json=payload)
+                    show_response.raise_for_status()
+                    json_data = show_response.json()
+                    if asyncio.iscoroutine(json_data):
+                        json_data = await json_data
+                    capabilities = json_data.get(self.JSON_CAPABILITIES_KEY, [])
+                    logger.debug(f"Model: {model_name}, Capabilities: {capabilities}")
+
+                    if self.DESIRED_CAPABILITY in capabilities and (
+                        not tool_model_enabled or self.TOOL_CALLING_CAPABILITY in capabilities
+                    ):
+                        model_ids.append(model_name)
+
+        except (httpx.RequestError, ValueError) as e:
+            msg = "Could not get model names from Ollama."
+            raise ValueError(msg) from e
+
+        return model_ids

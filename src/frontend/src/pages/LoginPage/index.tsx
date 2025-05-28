@@ -1,8 +1,9 @@
+import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import * as Form from "@radix-ui/react-form";
 import { useContext, useState } from "react";
-import InputComponent from "../../components/inputComponent";
+import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { SIGNIN_ERROR_ALERT } from "../../constants/alerts_constants";
@@ -61,11 +62,14 @@ export default function LoginPage(): JSX.Element {
         const data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
       }}
-      className="h-full w-full"
+      className="h-screen w-full"
     >
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
         <div className="flex w-72 flex-col items-center justify-center gap-2">
-          <span className="mb-4 text-5xl">⛓️</span>
+          <LangflowLogo
+            title="Langflow logo"
+            className="mb-4 h-10 w-10 scale-[1.5]"
+          />
           <span className="mb-6 text-2xl font-semibold text-primary">
             Sign in to Langflow
           </span>

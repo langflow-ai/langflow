@@ -1,275 +1,210 @@
-import Fuse from "fuse.js";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook"; // Import useHotkeys
-
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Disclosure,
-  DisclosureContent,
-  DisclosureTrigger,
-} from "@/components/ui/disclosure";
-import { Input } from "@/components/ui/input";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSkeleton,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { Switch } from "@/components/ui/switch";
-import { CustomLink } from "@/customization/components/custom-link";
-import { useAddComponent } from "@/hooks/useAddComponent";
+import SkeletonGroup from "@/components/ui/skeletonGroup";
+import { useAddComponent } from "@/hooks/use-add-component";
+import { useShortcutsStore } from "@/stores/shortcuts";
 import { useStoreStore } from "@/stores/storeStore";
+import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
 import {
   nodeColors,
   SIDEBAR_BUNDLES,
   SIDEBAR_CATEGORIES,
 } from "@/utils/styleUtils";
-import { removeCountFromString } from "@/utils/utils";
+import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
-import { SidebarFilterComponent } from "../extraSidebarComponent/sidebarFilterComponent";
-import sensitiveSort from "../extraSidebarComponent/utils/sensitive-sort";
-import ShortcutDisplay from "../nodeToolbarComponent/shortcutDisplay";
-import SidebarDraggableComponent from "./components/sidebarDraggableComponent";
+import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
+import { CategoryGroup } from "./components/categoryGroup";
+import NoResultsMessage from "./components/emptySearchComponent";
+import MemoizedSidebarGroup from "./components/sidebarBundles";
+import SidebarMenuButtons from "./components/sidebarFooterButtons";
+import { SidebarHeaderComponent } from "./components/sidebarHeader";
+import { applyBetaFilter } from "./helpers/apply-beta-filter";
+import { applyEdgeFilter } from "./helpers/apply-edge-filter";
+import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
+import { combinedResultsFn } from "./helpers/combined-results";
+import { filteredDataFn } from "./helpers/filtered-data";
+import { normalizeString } from "./helpers/normalize-string";
+import sensitiveSort from "./helpers/sensitive-sort";
+import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
+import { UniqueInputsComponents } from "./types";
 
-export function FlowSidebarComponent() {
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
+const CATEGORIES = SIDEBAR_CATEGORIES;
+const BUNDLES = SIDEBAR_BUNDLES;
 
-  useHotkeys("/", (event) => {
-    event.preventDefault();
-    searchInputRef.current?.focus();
-  });
+interface FlowSidebarComponentProps {
+  isLoading?: boolean;
+  showLegacy?: boolean;
+  setShowLegacy?: (value: boolean) => void;
+}
 
-  // Add this new useHotkeys hook
-  useHotkeys(
-    "esc",
-    (event) => {
-      event.preventDefault();
-      searchInputRef.current?.blur();
-    },
-    {
-      // Only enable this hotkey when the input is focused
-      enableOnFormTags: true,
-      enabled: isInputFocused,
-    },
+export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
+  const data = useTypesStore((state) => state.data);
+
+  const { getFilterEdge, setFilterEdge, filterType } = useFlowStore(
+    useShallow((state) => ({
+      getFilterEdge: state.getFilterEdge,
+      setFilterEdge: state.setFilterEdge,
+      filterType: state.filterType,
+    })),
   );
 
-  const categories = SIDEBAR_CATEGORIES;
-  const bundles = SIDEBAR_BUNDLES;
-
-  const data = useTypesStore((state) => state.data);
-  const templates = useTypesStore((state) => state.templates);
-  const getFilterEdge = useFlowStore((state) => state.getFilterEdge);
-  const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const hasStore = useStoreStore((state) => state.hasStore);
-  const filterType = useFlowStore((state) => state.filterType);
-
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const [dataFilter, setFilterData] = useState(data);
-  const [search, setSearch] = useState("");
+  const { setOpen } = useSidebar();
   const addComponent = useAddComponent();
 
+  // State
+  const [dataFilter, setFilterData] = useState(data);
+  const [search, setSearch] = useState("");
   const [fuse, setFuse] = useState<Fuse<any> | null>(null);
-
   const [openCategories, setOpenCategories] = useState<string[]>([]);
-
   const [showConfig, setShowConfig] = useState(false);
   const [showBeta, setShowBeta] = useState(true);
   const [showLegacy, setShowLegacy] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const customComponent = useMemo(() => {
+    return data?.["custom_component"]?.["CustomComponent"] ?? null;
+  }, [data]);
+
+  const searchResults = useMemo(() => {
+    if (!search || !fuse) return null;
+
+    const searchTerm = normalizeString(search);
+    const fuseResults = fuse.search(search).map((result) => ({
+      ...result,
+      item: { ...result.item, score: result.score },
+    }));
+
+    return {
+      fuseResults,
+      fuseCategories: fuseResults.map((result) => result.item.category),
+      combinedResults: combinedResultsFn(fuseResults, data),
+      traditionalResults: traditionalSearchMetadata(data, searchTerm),
+    };
+  }, [search, fuse, data]);
+
+  const searchFilteredData = useMemo(() => {
+    if (!search || !searchResults) return cloneDeep(data);
+
+    return filteredDataFn(
+      data,
+      searchResults.combinedResults,
+      searchResults.traditionalResults,
+    );
+  }, [data, search, searchResults]);
+
+  const sortedCategories = useMemo(() => {
+    if (!searchResults || !searchFilteredData) return [];
+
+    return Object.keys(searchFilteredData).toSorted((a, b) =>
+      searchResults.fuseCategories.indexOf(b) <
+      searchResults.fuseCategories.indexOf(a)
+        ? 1
+        : -1,
+    );
+  }, [searchResults, searchFilteredData, CATEGORIES, BUNDLES]);
+
+  const finalFilteredData = useMemo(() => {
+    let filteredData = searchFilteredData;
+
+    if (getFilterEdge?.length > 0) {
+      filteredData = applyEdgeFilter(filteredData, getFilterEdge);
+    }
+
+    if (!showBeta) {
+      filteredData = applyBetaFilter(filteredData);
+    }
+
+    if (!showLegacy) {
+      filteredData = applyLegacyFilter(filteredData);
+    }
+
+    return filteredData;
+  }, [searchFilteredData, getFilterEdge, showBeta, showLegacy]);
 
   const hasResults = useMemo(() => {
-    return Object.values(dataFilter).some(
-      (category) => Object.keys(category).length > 0,
+    return Object.entries(dataFilter).some(
+      ([category, items]) =>
+        Object.keys(items).length > 0 &&
+        (CATEGORIES.find((c) => c.name === category) ||
+          BUNDLES.find((b) => b.name === category)),
     );
   }, [dataFilter]);
 
-  useEffect(() => {
-    filterComponents();
-  }, [data, search, filterType, getFilterEdge, showBeta, showLegacy]);
-  function normalizeString(str: string): string {
-    return str.toLowerCase().replace(/_/g, " ").replace(/\s+/g, "");
-  }
-
-  function searchInMetadata(metadata: any, searchTerm: string): boolean {
-    if (!metadata || typeof metadata !== "object") return false;
-
-    return Object.entries(metadata).some(([key, value]) => {
-      if (typeof value === "string") {
-        return (
-          normalizeString(key).includes(searchTerm) ||
-          normalizeString(value).includes(searchTerm)
+  const handleKeyDownInput = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>, name: string) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setOpenCategories((prev) =>
+          prev.includes(name)
+            ? prev.filter((cat) => cat !== name)
+            : [...prev, name],
         );
       }
-      if (typeof value === "object") {
-        return searchInMetadata(value, searchTerm);
-      }
-      return false;
-    });
-  }
+    },
+    [],
+  );
 
-  const filterComponents = () => {
-    let filteredData = cloneDeep(data);
+  const handleClearSearch = useCallback(() => {
+    setSearch("");
+    setFilterData(data);
+    setOpenCategories([]);
+  }, [data]);
 
-    // Apply search filter
-    if (search && fuse) {
-      const results = fuse.search(search);
-      filteredData = Object.fromEntries(
-        Object.entries(data).map(([category, items]) => {
-          const categoryResults = results.filter(
-            (result) => result.item.category === category,
-          );
-          const filteredItems = Object.fromEntries(
-            categoryResults.map((result) => [result.item.key, result.item]),
-          );
-          return [category, filteredItems];
-        }),
-      );
-    } else {
-      // Fallback to traditional search if Fuse.js is not available
-      const searchTerm = normalizeString(search);
-      filteredData = Object.fromEntries(
-        Object.entries(data).map(([category, items]) => {
-          const filteredItems = Object.fromEntries(
-            Object.entries(items).filter(
-              ([key, item]) =>
-                normalizeString(key).includes(searchTerm) ||
-                normalizeString(item.display_name).includes(searchTerm) ||
-                normalizeString(category).includes(searchTerm) ||
-                (item.metadata && searchInMetadata(item.metadata, searchTerm)),
-            ),
-          );
-          return [category, filteredItems];
-        }),
-      );
-    }
-
-    // Apply edge filter
-    if (getFilterEdge?.length > 0) {
-      filteredData = Object.fromEntries(
-        Object.entries(filteredData).map(([family, familyData]) => {
-          const edgeFilter = getFilterEdge.find((x) => x.family === family);
-          if (!edgeFilter) return [family, {}];
-
-          const filteredTypes = edgeFilter.type
-            .split(",")
-            .map((t) => t.trim())
-            .filter((t) => t !== "");
-
-          if (filteredTypes.length === 0) return [family, familyData];
-
-          const filteredFamilyData = Object.fromEntries(
-            Object.entries(familyData).filter(([key]) =>
-              filteredTypes.includes(key),
-            ),
-          );
-
-          return [family, filteredFamilyData];
-        }),
-      );
-    }
-
-    // Apply beta filter
-    if (!showBeta) {
-      filteredData = Object.fromEntries(
-        Object.entries(filteredData).map(([category, items]) => [
-          category,
-          Object.fromEntries(
-            Object.entries(items).filter(([_, value]) => !value.beta),
-          ),
-        ]),
-      );
-    }
-
-    // Apply legacy filter
-    if (!showLegacy) {
-      filteredData = Object.fromEntries(
-        Object.entries(filteredData).map(([category, items]) => [
-          category,
-          Object.fromEntries(
-            Object.entries(items).filter(([_, value]) => !value.legacy),
-          ),
-        ]),
-      );
-    }
-
-    setFilterData(filteredData);
-    if (search !== "" || filterType || getFilterEdge.length > 0) {
-      setOpenCategories(
-        Object.keys(filteredData).filter(
-          (cat) => Object.keys(filteredData[cat]).length > 0,
-        ),
-      );
-    }
-  };
-
-  useEffect(() => {
-    if (search === "" && getFilterEdge.length === 0) {
-      setOpenCategories([]);
-    }
-  }, [search, getFilterEdge]);
-
-  function handleSearchInput(e: string) {
-    setSearch(e);
-    filterComponents();
-  }
-
-  function onDragStart(
-    event: React.DragEvent<any>,
-    data: { type: string; node?: APIClassType },
-  ): void {
-    //start drag event
-    var crt = event.currentTarget.cloneNode(true);
-    crt.style.position = "absolute";
-    crt.style.width = "215px";
-    crt.style.top = "-500px";
-    crt.style.right = "-500px";
-    crt.classList.add("cursor-grabbing");
-    document.body.appendChild(crt);
-    event.dataTransfer.setDragImage(crt, 0, 0);
-    event.dataTransfer.setData("genericNode", JSON.stringify(data));
-  }
-
-  useEffect(() => {
-    // show components with error on load
-    let errors: string[] = [];
-    Object.keys(templates).forEach((component) => {
-      if (templates[component].error) {
-        errors.push(component);
-      }
-    });
-    if (errors.length > 0)
-      setErrorData({ title: " Components with errors: ", list: errors });
+  const handleInputFocus = useCallback(() => {
+    setIsInputFocused(true);
   }, []);
 
+  const handleInputBlur = useCallback(() => {
+    setIsInputFocused(false);
+  }, []);
+
+  const handleSearchInput = useCallback((value: string) => {
+    setSearch(value);
+  }, []);
+
+  const handleInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handleSearchInput(event.target.value);
+    },
+    [handleSearchInput],
+  );
+
   useEffect(() => {
-    if (getFilterEdge.length !== 0) {
-      setSearch("");
+    if (filterType) {
+      setOpen(true);
     }
-  }, [getFilterEdge, data]);
+  }, [filterType, setOpen]);
+
+  useEffect(() => {
+    setFilterData(finalFilteredData);
+
+    if (search !== "" || filterType || getFilterEdge.length > 0) {
+      const newOpenCategories = Object.keys(finalFilteredData).filter(
+        (cat) => Object.keys(finalFilteredData[cat]).length > 0,
+      );
+      setOpenCategories(newOpenCategories);
+    }
+  }, [finalFilteredData, search, filterType, getFilterEdge]);
 
   useEffect(() => {
     const options = {
-      keys: ["display_name", "description", "type"],
-      threshold: 0.3,
+      keys: ["display_name", "description", "type", "category"],
+      threshold: 0.2,
+      includeScore: true,
     };
 
     const fuseData = Object.entries(data).flatMap(([category, items]) =>
@@ -281,428 +216,173 @@ export function FlowSidebarComponent() {
     );
 
     setFuse(new Fuse(fuseData, options));
-    handleSearchInput(search);
   }, [data]);
 
-  const customComponent = useMemo(() => {
-    return data?.["custom_component"]?.["CustomComponent"] ?? null;
-  }, [data]);
-
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLDivElement>,
-    name: string,
-  ) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      setOpenCategories((prev) =>
-        prev.includes(name)
-          ? prev.filter((cat) => cat !== name)
-          : [...prev, name],
-      );
+  useEffect(() => {
+    if (getFilterEdge.length !== 0) {
+      setSearch("");
     }
-  };
+  }, [getFilterEdge, data]);
+
+  useEffect(() => {
+    if (search === "" && getFilterEdge.length === 0) {
+      setOpenCategories([]);
+    }
+  }, [search, getFilterEdge]);
+
+  const searchComponentsSidebar = useShortcutsStore(
+    (state) => state.searchComponentsSidebar,
+  );
+
+  useHotkeys(
+    searchComponentsSidebar,
+    (e: KeyboardEvent) => {
+      if (isWrappedWithClass(e, "noflow")) return;
+      e.preventDefault();
+      searchInputRef.current?.focus();
+      setOpen(true);
+    },
+    {
+      preventDefault: true,
+    },
+  );
+
+  useHotkeys(
+    "esc",
+    (event) => {
+      event.preventDefault();
+      searchInputRef.current?.blur();
+    },
+    {
+      enableOnFormTags: true,
+      enabled: isInputFocused,
+    },
+  );
+
+  const onDragStart = useCallback(
+    (
+      event: React.DragEvent<any>,
+      data: { type: string; node?: APIClassType },
+    ) => {
+      var crt = event.currentTarget.cloneNode(true);
+      crt.style.position = "absolute";
+      crt.style.width = "215px";
+      crt.style.top = "-500px";
+      crt.style.right = "-500px";
+      crt.classList.add("cursor-grabbing");
+      document.body.appendChild(crt);
+      event.dataTransfer.setDragImage(crt, 0, 0);
+      event.dataTransfer.setData("genericNode", JSON.stringify(data));
+    },
+    [],
+  );
+
+  const hasBundleItems = useMemo(
+    () =>
+      BUNDLES.some(
+        (item) =>
+          dataFilter[item.name] &&
+          Object.keys(dataFilter[item.name]).length > 0,
+      ),
+    [dataFilter],
+  );
 
   return (
-    <Sidebar data-testid="shad-sidebar">
-      <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
-        <Disclosure open={showConfig} onOpenChange={setShowConfig}>
-          <div className="flex w-full items-center justify-between">
-            <h3 className="text-sm font-semibold">Components</h3>
-            <DisclosureTrigger>
-              <Button
-                variant={showConfig ? "ghostActive" : "ghost"}
-                size="iconMd"
-                data-testid="sidebar-options-trigger"
-              >
-                <ForwardedIconComponent
-                  name="SlidersHorizontal"
-                  className="h-4 w-4"
-                />
-              </Button>
-            </DisclosureTrigger>
+    <Sidebar
+      collapsible="offcanvas"
+      data-testid="shad-sidebar"
+      className="noflow"
+    >
+      <SidebarHeaderComponent
+        showConfig={showConfig}
+        setShowConfig={setShowConfig}
+        showBeta={showBeta}
+        setShowBeta={setShowBeta}
+        showLegacy={showLegacy}
+        setShowLegacy={setShowLegacy}
+        searchInputRef={searchInputRef}
+        isInputFocused={isInputFocused}
+        search={search}
+        handleInputFocus={handleInputFocus}
+        handleInputBlur={handleInputBlur}
+        handleInputChange={handleInputChange}
+        filterType={filterType}
+        setFilterEdge={setFilterEdge}
+        setFilterData={setFilterData}
+        data={data}
+      />
+
+      <SidebarContent>
+        {isLoading ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1 p-3">
+              <SkeletonGroup count={13} className="my-0.5 h-7" />
+            </div>
+            <div className="h-8" />
+            <div className="flex flex-col gap-1 px-3 pt-2">
+              <SkeletonGroup count={21} className="my-0.5 h-7" />
+            </div>
           </div>
-          <DisclosureContent>
-            <div className="flex flex-col gap-7 border-b pb-7 pt-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium">
-                    Show{" "}
-                    <Badge variant="pinkStatic" size="sq">
-                      BETA
-                    </Badge>{" "}
-                    Components
-                  </span>
-                </div>
-                <Switch
-                  checked={showBeta}
-                  onCheckedChange={setShowBeta}
-                  data-testid="sidebar-beta-switch"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium">
-                    Show{" "}
-                    <Badge variant="secondaryStatic" size="sq">
-                      LEGACY
-                    </Badge>{" "}
-                    Components
-                  </span>
-                </div>
-                <Switch
-                  checked={showLegacy}
-                  onCheckedChange={setShowLegacy}
-                  data-testid="sidebar-legacy-switch"
-                />
-              </div>
-            </div>
-          </DisclosureContent>
-        </Disclosure>
-        <div className="relative w-full flex-1">
-          <ForwardedIconComponent
-            name="Search"
-            className="absolute inset-y-0 left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-primary"
-          />
-          <Input
-            ref={searchInputRef}
-            type="search"
-            data-testid="sidebar-search-input"
-            className="w-full rounded-lg bg-background pl-8 text-sm"
-            onFocus={() => setIsInputFocused(true)}
-            onBlur={() => setIsInputFocused(false)}
-            value={search}
-            onChange={(e) => handleSearchInput(e.target.value)}
-          />
-          {!isInputFocused && search === "" && (
-            <div className="pointer-events-none absolute inset-y-0 left-8 top-1/2 flex -translate-y-1/2 items-center gap-2 text-sm text-muted-foreground">
-              Type{" "}
-              <span>
-                <ShortcutDisplay sidebar shortcut="/" />
-              </span>{" "}
-              to search components
-            </div>
-          )}
-        </div>
-        {filterType && (
-          <SidebarFilterComponent
-            isInput={!!filterType.source}
-            type={filterType.type}
-            resetFilters={() => {
-              setFilterEdge([]);
-              setFilterData(data);
-            }}
-          />
-        )}
-      </SidebarHeader>
-      <SidebarContent className="p-2">
-        {hasResults ? (
-          <>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {!data
-                    ? Array.from({ length: 5 }).map((_, index) => (
-                        <SidebarMenuItem key={index}>
-                          <SidebarMenuSkeleton />
-                        </SidebarMenuItem>
-                      ))
-                    : categories.map(
-                        (item) =>
-                          dataFilter[item.name] &&
-                          Object.keys(dataFilter[item.name]).length > 0 && (
-                            <Collapsible
-                              key={item.name}
-                              className="group/collapsible"
-                              open={openCategories.includes(item.name)}
-                              onOpenChange={(isOpen) => {
-                                setOpenCategories((prev) =>
-                                  isOpen
-                                    ? [...prev, item.name]
-                                    : prev.filter((cat) => cat !== item.name),
-                                );
-                              }}
-                            >
-                              <SidebarMenuItem>
-                                <CollapsibleTrigger asChild>
-                                  <SidebarMenuButton asChild>
-                                    <div
-                                      data-testid={`disclosure-${item.display_name.toLocaleLowerCase()}`}
-                                      tabIndex={0}
-                                      onKeyDown={(e) =>
-                                        handleKeyDown(e, item.name)
-                                      }
-                                      className="flex cursor-pointer items-center gap-2"
-                                    >
-                                      <ForwardedIconComponent
-                                        name={item.icon}
-                                        className="h-4 w-4 text-muted-foreground group-data-[state=open]/collapsible:text-pink-600 group-data-[state=open]/collapsible:dark:text-pink-400"
-                                      />
-                                      <span className="group-data-[state=open]/collapsible:font-semibold">
-                                        {item.display_name}
-                                      </span>
-                                      <ForwardedIconComponent
-                                        name="ChevronRight"
-                                        className="h-4 w-4 text-muted-foreground transition-all group-data-[state=open]/collapsible:rotate-90"
-                                      />
-                                    </div>
-                                  </SidebarMenuButton>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent>
-                                  <div className="flex flex-col gap-1 py-2">
-                                    {Object.keys(dataFilter[item.name])
-                                      .sort((a, b) =>
-                                        sensitiveSort(
-                                          dataFilter[item.name][a].display_name,
-                                          dataFilter[item.name][b].display_name,
-                                        ),
-                                      )
-                                      .map((SBItemName: string, idx) => (
-                                        <ShadTooltip
-                                          content={
-                                            dataFilter[item.name][SBItemName]
-                                              .display_name
-                                          }
-                                          side="right"
-                                          key={idx}
-                                        >
-                                          <SidebarDraggableComponent
-                                            sectionName={item.name as string}
-                                            apiClass={
-                                              dataFilter[item.name][SBItemName]
-                                            }
-                                            icon={
-                                              dataFilter[item.name][SBItemName]
-                                                .icon ??
-                                              item.icon ??
-                                              "Unknown"
-                                            }
-                                            key={idx}
-                                            onDragStart={(event) =>
-                                              onDragStart(event, {
-                                                type: removeCountFromString(
-                                                  SBItemName,
-                                                ),
-                                                node: dataFilter[item.name][
-                                                  SBItemName
-                                                ],
-                                              })
-                                            }
-                                            color={nodeColors[item.name]}
-                                            itemName={SBItemName}
-                                            error={
-                                              !!dataFilter[item.name][
-                                                SBItemName
-                                              ].error
-                                            }
-                                            display_name={
-                                              dataFilter[item.name][SBItemName]
-                                                .display_name
-                                            }
-                                            official={
-                                              dataFilter[item.name][SBItemName]
-                                                .official === false
-                                                ? false
-                                                : true
-                                            }
-                                            beta={
-                                              dataFilter[item.name][SBItemName]
-                                                .beta ?? false
-                                            }
-                                            legacy={
-                                              dataFilter[item.name][SBItemName]
-                                                .legacy ?? false
-                                            }
-                                          />
-                                        </ShadTooltip>
-                                      ))}
-                                  </div>
-                                </CollapsibleContent>
-                              </SidebarMenuItem>
-                            </Collapsible>
-                          ),
-                      )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-            <SidebarGroup>
-              <SidebarGroupLabel>Bundles</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {!data
-                    ? Array.from({ length: 5 }).map((_, index) => (
-                        <SidebarMenuItem key={index}>
-                          <SidebarMenuSkeleton />
-                        </SidebarMenuItem>
-                      ))
-                    : bundles.map(
-                        (item) =>
-                          dataFilter[item.name] &&
-                          Object.keys(dataFilter[item.name]).length > 0 && (
-                            <Collapsible
-                              key={item.name}
-                              className="group/collapsible"
-                              open={openCategories.includes(item.name)}
-                              onOpenChange={(isOpen) => {
-                                setOpenCategories((prev) =>
-                                  isOpen
-                                    ? [...prev, item.name]
-                                    : prev.filter((cat) => cat !== item.name),
-                                );
-                              }}
-                            >
-                              <SidebarMenuItem>
-                                <CollapsibleTrigger asChild>
-                                  <SidebarMenuButton asChild>
-                                    <div
-                                      tabIndex={0}
-                                      onKeyDown={(e) =>
-                                        handleKeyDown(e, item.name)
-                                      }
-                                      className="flex cursor-pointer items-center gap-2"
-                                    >
-                                      <ForwardedIconComponent
-                                        name={item.icon}
-                                        className="h-4 w-4 text-muted-foreground group-data-[state=open]/collapsible:text-pink-600 group-data-[state=open]/collapsible:dark:text-pink-400"
-                                      />
-                                      <span className="group-data-[state=open]/collapsible:font-semibold">
-                                        {item.display_name}
-                                      </span>
-                                      <ForwardedIconComponent
-                                        name="ChevronRight"
-                                        className="h-4 w-4 text-muted-foreground transition-all group-data-[state=open]/collapsible:rotate-90"
-                                      />
-                                    </div>
-                                  </SidebarMenuButton>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent>
-                                  <div className="flex flex-col gap-1 py-2">
-                                    {Object.keys(dataFilter[item.name])
-                                      .sort((a, b) =>
-                                        sensitiveSort(
-                                          dataFilter[item.name][a].display_name,
-                                          dataFilter[item.name][b].display_name,
-                                        ),
-                                      )
-                                      .map((SBItemName: string, idx) => (
-                                        <ShadTooltip
-                                          content={
-                                            dataFilter[item.name][SBItemName]
-                                              .display_name
-                                          }
-                                          side="right"
-                                          key={idx}
-                                        >
-                                          <SidebarDraggableComponent
-                                            sectionName={item.name as string}
-                                            apiClass={
-                                              dataFilter[item.name][SBItemName]
-                                            }
-                                            icon={
-                                              dataFilter[item.name][SBItemName]
-                                                .icon ??
-                                              item.icon ??
-                                              "Unknown"
-                                            }
-                                            key={idx}
-                                            onDragStart={(event) =>
-                                              onDragStart(event, {
-                                                type: removeCountFromString(
-                                                  SBItemName,
-                                                ),
-                                                node: dataFilter[item.name][
-                                                  SBItemName
-                                                ],
-                                              })
-                                            }
-                                            color={nodeColors[item.name]}
-                                            itemName={SBItemName}
-                                            error={
-                                              !!dataFilter[item.name][
-                                                SBItemName
-                                              ].error
-                                            }
-                                            display_name={
-                                              dataFilter[item.name][SBItemName]
-                                                .display_name
-                                            }
-                                            official={
-                                              dataFilter[item.name][SBItemName]
-                                                .official === false
-                                                ? false
-                                                : true
-                                            }
-                                            beta={
-                                              dataFilter[item.name][SBItemName]
-                                                .beta ?? false
-                                            }
-                                            legacy={
-                                              dataFilter[item.name][SBItemName]
-                                                .legacy ?? false
-                                            }
-                                          />
-                                        </ShadTooltip>
-                                      ))}
-                                  </div>
-                                </CollapsibleContent>
-                              </SidebarMenuItem>
-                            </Collapsible>
-                          ),
-                      )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </>
         ) : (
-          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-            <ForwardedIconComponent
-              name="Search"
-              className="mb-4 h-8 w-8 text-muted-foreground"
-            />
-            <h3 className="mb-2 text-lg font-semibold">No results found</h3>
-            <p className="text-sm text-muted-foreground">
-              Try adjusting your search or filter to find what you're looking
-              for.
-            </p>
-          </div>
+          <>
+            {hasResults ? (
+              <>
+                <CategoryGroup
+                  dataFilter={dataFilter}
+                  sortedCategories={sortedCategories}
+                  CATEGORIES={CATEGORIES}
+                  openCategories={openCategories}
+                  setOpenCategories={setOpenCategories}
+                  search={search}
+                  nodeColors={nodeColors}
+                  onDragStart={onDragStart}
+                  sensitiveSort={sensitiveSort}
+                />
+
+                {hasBundleItems && (
+                  <MemoizedSidebarGroup
+                    BUNDLES={BUNDLES}
+                    search={search}
+                    sortedCategories={sortedCategories}
+                    dataFilter={dataFilter}
+                    nodeColors={nodeColors}
+                    onDragStart={onDragStart}
+                    sensitiveSort={sensitiveSort}
+                    openCategories={openCategories}
+                    setOpenCategories={setOpenCategories}
+                    handleKeyDownInput={handleKeyDownInput}
+                  />
+                )}
+              </>
+            ) : (
+              <NoResultsMessage onClearSearch={handleClearSearch} />
+            )}
+          </>
         )}
       </SidebarContent>
       <SidebarFooter className="border-t p-4 py-3">
-        {hasStore && (
-          <SidebarMenuButton asChild>
-            <CustomLink to="/store">
-              <div className="flex items-center gap-2">
-                <ForwardedIconComponent
-                  name="Store"
-                  className="h-4 w-4 text-muted-foreground"
-                />
-                <span className="group-data-[state=open]/collapsible:font-semibold">
-                  Discover more components
-                </span>
-              </div>
-            </CustomLink>
-          </SidebarMenuButton>
-        )}
-        <SidebarMenuButton asChild>
-          <Button
-            unstyled
-            onClick={() => {
-              if (customComponent) {
-                addComponent(customComponent, "CustomComponent");
-              }
-            }}
-            data-testid="sidebar-custom-component-button"
-            className="flex items-center gap-2"
-          >
-            <ForwardedIconComponent
-              name="Plus"
-              className="h-4 w-4 text-muted-foreground"
-            />
-            <span className="group-data-[state=open]/collapsible:font-semibold">
-              Custom Component
-            </span>
-          </Button>
-        </SidebarMenuButton>
+        <SidebarMenuButtons
+          hasStore={hasStore}
+          customComponent={customComponent}
+          addComponent={addComponent}
+          isLoading={isLoading}
+        />
       </SidebarFooter>
     </Sidebar>
   );
 }
+
+FlowSidebarComponent.displayName = "FlowSidebarComponent";
+
+export default memo(
+  FlowSidebarComponent,
+  (
+    prevProps: FlowSidebarComponentProps,
+    nextProps: FlowSidebarComponentProps,
+  ) => {
+    return (
+      prevProps.showLegacy === nextProps.showLegacy &&
+      prevProps.setShowLegacy === nextProps.setShowLegacy
+    );
+  },
+);

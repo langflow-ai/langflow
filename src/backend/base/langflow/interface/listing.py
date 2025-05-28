@@ -1,3 +1,5 @@
+from typing_extensions import override
+
 from langflow.services.deps import get_settings_service
 from langflow.utils.lazy_load import LazyLoadDictBase
 
@@ -13,8 +15,9 @@ class AllTypesDict(LazyLoadDictBase):
             "Custom": ["Custom Tool", "Python Function"],
         }
 
+    @override
     def get_type_dict(self):
-        from langflow.interface.types import get_all_types_dict
+        from langflow.interface.components import get_all_types_dict
 
         settings_service = get_settings_service()
         return get_all_types_dict(settings_service.settings.components_path)

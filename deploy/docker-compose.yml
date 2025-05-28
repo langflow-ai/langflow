@@ -80,7 +80,7 @@ services:
       labels:
         - traefik.enable=true
         - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
-        - traefik.http.routers.${STACK_NAME?Variable not set}-backend-http.rule=PathPrefix(`/api/v1`) || PathPrefix(`/docs`) || PathPrefix(`/health`)
+        - traefik.http.routers.${STACK_NAME?Variable not set}-backend-http.rule=PathPrefix(`/api/v1`) || PathPrefix(`/api/v2`) || PathPrefix(`/docs`) || PathPrefix(`/health`)
         - traefik.http.services.${STACK_NAME?Variable not set}-backend.loadbalancer.server.port=7860
 
   db:

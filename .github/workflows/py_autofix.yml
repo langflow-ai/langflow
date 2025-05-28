@@ -2,9 +2,7 @@ name: autofix.ci
 on:
   pull_request:
     paths:
-      - "poetry.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
+      - "**/*.py"
 env:
   POETRY_VERSION: "1.8.2"
 
@@ -14,7 +12,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: install-pinned/ruff@9ebc31a5721a0fb034f915e4bbcb2ee6feeaecbc
-      - run: ruff check --fix-only .
-      - run: ruff format .
-      - uses: autofix-ci/action@dd55f44df8f7cdb7a6bf74c78677eb8acd40cd0a
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
+      - run: uv run ruff check --fix-only .
+      - run: uv run ruff format . --config pyproject.toml
+      - uses: autofix-ci/action@551dded8c6cc8a1054039c8bc0b8b48c51dfc6ef
+      - name: Minimize uv cache
+        run: uv cache prune --ci
+
+  update-starter-projects:
+    name: Update Starter Projects
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
+
+      - name: "Install dependencies"
+        run: |
+          uv sync
+          uv pip install -e .
+
+      - name: Run starter projects update
+        run: uv run python scripts/ci/update_starter_projects.py
+
+      - uses: autofix-ci/action@551dded8c6cc8a1054039c8bc0b8b48c51dfc6ef
+
+      - name: Minimize uv cache
+        run: uv cache prune --ci
+

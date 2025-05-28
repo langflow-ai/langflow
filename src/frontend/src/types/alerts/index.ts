@@ -6,9 +6,10 @@ export type ErrorAlertType = {
 };
 export type NoticeAlertType = {
   title: string;
-  link: string | undefined;
+  link?: string;
   id: string;
   removeAlert: (id: string) => void;
+  list?: Array<string>;
 };
 export type SuccessAlertType = {
   title: string;

@@ -7,12 +7,18 @@ from langflow.schema import Data
 class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
-    documentation: str = "http://docs.langflow.org/components/custom"
+    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "code"
     name = "CustomComponent"
 
     inputs = [
-        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+        MessageTextInput(
+            name="input_value",
+            display_name="Input Value",
+            info="This is a custom component Input",
+            value="Hello, World!",
+            tool_mode=True,
+        ),
     ]
 
     outputs = [

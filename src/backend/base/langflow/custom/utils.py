@@ -1,7 +1,11 @@
+# mypy: ignore-errors
 import ast
+import asyncio
 import contextlib
+import inspect
 import re
 import traceback
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -44,15 +48,15 @@ def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: l
                 },
             )
         if return_type is str:
-            _return_type = "Text"
+            return_type_ = "Text"
         elif hasattr(return_type, "__name__"):
-            _return_type = return_type.__name__
+            return_type_ = return_type.__name__
         elif hasattr(return_type, "__class__"):
-            _return_type = return_type.__class__.__name__
+            return_type_ = return_type.__class__.__name__
         else:
-            _return_type = str(return_type)
+            return_type_ = str(return_type)
 
-        frontend_node.add_output_type(_return_type)
+        frontend_node.add_output_type(return_type_)
 
 
 def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list[str]) -> None:
@@ -200,7 +204,7 @@ def add_extra_fields(frontend_node, field_config, function_args) -> None:
     """Add extra fields to the frontend node."""
     if not function_args:
         return
-    _field_config = field_config.copy()
+    field_config_ = field_config.copy()
     function_args_names = [arg["name"] for arg in function_args]
     # If kwargs is in the function_args and not all field_config keys are in function_args
     # then we need to add the extra fields
@@ -214,7 +218,7 @@ def add_extra_fields(frontend_node, field_config, function_args) -> None:
             continue
 
         field_name, field_type, field_value, field_required = get_field_properties(extra_field)
-        config = _field_config.pop(field_name, {})
+        config = field_config_.pop(field_name, {})
         frontend_node = add_new_custom_field(
             frontend_node=frontend_node,
             field_name=field_name,
@@ -224,18 +228,18 @@ def add_extra_fields(frontend_node, field_config, function_args) -> None:
             field_config=config,
         )
     if "kwargs" in function_args_names and not all(key in function_args_names for key in field_config):
-        for field_name, config in _field_config.items():
+        for field_name, config in field_config_.items():
             if "name" not in config or field_name == "code":
                 continue
-            _config = config.model_dump() if isinstance(config, BaseModel) else config
-            _field_name, field_type, field_value, field_required = get_field_properties(extra_field=_config)
+            config_ = config.model_dump() if isinstance(config, BaseModel) else config
+            field_name_, field_type, field_value, field_required = get_field_properties(extra_field=config_)
             frontend_node = add_new_custom_field(
                 frontend_node=frontend_node,
-                field_name=_field_name,
+                field_name=field_name_,
                 field_type=field_type,
                 field_value=field_value,
                 field_required=field_required,
-                field_config=_config,
+                field_config=config_,
             )
 
 
@@ -424,8 +428,8 @@ def build_custom_component_template(
 
         frontend_node = add_code_field(frontend_node, custom_component._code)
 
-        add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
-        add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
+        add_base_classes(frontend_node, custom_component._get_function_entrypoint_return_type)
+        add_output_types(frontend_node, custom_component._get_function_entrypoint_return_type)
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
@@ -506,42 +510,6 @@ async def abuild_custom_components(components_paths: list[str]):
     return custom_components_from_file
 
 
-def update_field_dict(
-    custom_component_instance: "CustomComponent",
-    field_dict: dict,
-    build_config: dict,
-    *,
-    update_field: str | None = None,
-    update_field_value: Any | None = None,
-    call: bool = False,
-):
-    """Update the field dictionary by calling options() or value() if they are callable."""
-    if (
-        ("real_time_refresh" in field_dict or "refresh_button" in field_dict)
-        and any(
-            (
-                field_dict.get("real_time_refresh", False),
-                field_dict.get("refresh_button", False),
-            )
-        )
-        and call
-    ):
-        try:
-            dd_build_config = dotdict(build_config)
-            custom_component_instance.update_build_config(
-                build_config=dd_build_config,
-                field_value=update_field,
-                field_name=update_field_value,
-            )
-            build_config = dd_build_config
-        except Exception as exc:
-            msg = f"Error while running update_build_config: {exc}"
-            logger.exception(msg)
-            raise UpdateBuildConfigError(msg) from exc
-
-    return build_config
-
-
 def sanitize_field_config(field_config: dict | Input):
     # If any of the already existing keys are in field_config, remove them
     field_dict = field_config.to_dict() if isinstance(field_config, Input) else field_config
@@ -583,3 +551,145 @@ def get_instance_name(instance):
     if hasattr(instance, "name") and instance.name:
         name = instance.name
     return name
+
+
+async def update_component_build_config(
+    component: CustomComponent,
+    build_config: dotdict,
+    field_value: Any,
+    field_name: str | None = None,
+):
+    if inspect.iscoroutinefunction(component.update_build_config):
+        return await component.update_build_config(build_config, field_value, field_name)
+    return await asyncio.to_thread(component.update_build_config, build_config, field_value, field_name)
+
+
+async def get_all_types_dict(components_paths: list[str]):
+    """Get all types dictionary with full component loading."""
+    # This is the async version of the existing function
+    return await abuild_custom_components(components_paths=components_paths)
+
+
+async def get_single_component_dict(component_type: str, component_name: str, components_paths: list[str]):
+    """Get a single component dictionary."""
+    # For example, if components are loaded by importing Python modules:
+    for base_path in components_paths:
+        module_path = Path(base_path) / component_type / f"{component_name}.py"
+        if module_path.exists():
+            # Try to import the module
+            module_name = f"langflow.components.{component_type}.{component_name}"
+            try:
+                # This is a simplified example - actual implementation may vary
+                import importlib.util
+
+                spec = importlib.util.spec_from_file_location(module_name, module_path)
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    if hasattr(module, "template"):
+                        return module.template
+            except ImportError as e:
+                logger.error(f"Import error loading component {module_path}: {e!s}")
+            except AttributeError as e:
+                logger.error(f"Attribute error loading component {module_path}: {e!s}")
+            except ValueError as e:
+                logger.error(f"Value error loading component {module_path}: {e!s}")
+            except (KeyError, IndexError) as e:
+                logger.error(f"Data structure error loading component {module_path}: {e!s}")
+            except RuntimeError as e:
+                logger.error(f"Runtime error loading component {module_path}: {e!s}")
+                logger.debug("Full traceback for runtime error", exc_info=True)
+            except OSError as e:
+                logger.error(f"OS error loading component {module_path}: {e!s}")
+
+    # If we get here, the component wasn't found or couldn't be loaded
+    return None
+
+
+async def load_custom_component(component_name: str, components_paths: list[str]):
+    """Load a custom component by name.
+
+    Args:
+        component_name: Name of the component to load
+        components_paths: List of paths to search for components
+    """
+    from langflow.interface.custom_component import get_custom_component_from_name
+
+    try:
+        # First try to get the component from the registered components
+        component_class = get_custom_component_from_name(component_name)
+        if component_class:
+            # Define the function locally if it's not imported
+            def get_custom_component_template(component_cls):
+                """Get template for a custom component class."""
+                # This is a simplified implementation - adjust as needed
+                if hasattr(component_cls, "get_template"):
+                    return component_cls.get_template()
+                if hasattr(component_cls, "template"):
+                    return component_cls.template
+                return None
+
+            return get_custom_component_template(component_class)
+
+        # If not found in registered components, search in the provided paths
+        for path in components_paths:
+            # Try to find the component in different category directories
+            base_path = Path(path)
+            if base_path.exists() and base_path.is_dir():
+                # Search for the component in all subdirectories
+                for category_dir in base_path.iterdir():
+                    if category_dir.is_dir():
+                        component_file = category_dir / f"{component_name}.py"
+                        if component_file.exists():
+                            # Try to import the module
+                            module_name = f"langflow.components.{category_dir.name}.{component_name}"
+                            try:
+                                import importlib.util
+
+                                spec = importlib.util.spec_from_file_location(module_name, component_file)
+                                if spec and spec.loader:
+                                    module = importlib.util.module_from_spec(spec)
+                                    spec.loader.exec_module(module)
+                                    if hasattr(module, "template"):
+                                        return module.template
+                                    if hasattr(module, "get_template"):
+                                        return module.get_template()
+                            except ImportError as e:
+                                logger.error(f"Import error loading component {component_file}: {e!s}")
+                                logger.debug("Import error traceback", exc_info=True)
+                            except AttributeError as e:
+                                logger.error(f"Attribute error loading component {component_file}: {e!s}")
+                                logger.debug("Attribute error traceback", exc_info=True)
+                            except (ValueError, TypeError) as e:
+                                logger.error(f"Value/Type error loading component {component_file}: {e!s}")
+                                logger.debug("Value/Type error traceback", exc_info=True)
+                            except (KeyError, IndexError) as e:
+                                logger.error(f"Data structure error loading component {component_file}: {e!s}")
+                                logger.debug("Data structure error traceback", exc_info=True)
+                            except RuntimeError as e:
+                                logger.error(f"Runtime error loading component {component_file}: {e!s}")
+                                logger.debug("Runtime error traceback", exc_info=True)
+                            except OSError as e:
+                                logger.error(f"OS error loading component {component_file}: {e!s}")
+                                logger.debug("OS error traceback", exc_info=True)
+
+    except ImportError as e:
+        logger.error(f"Import error loading custom component {component_name}: {e!s}")
+        return None
+    except AttributeError as e:
+        logger.error(f"Attribute error loading custom component {component_name}: {e!s}")
+        return None
+    except ValueError as e:
+        logger.error(f"Value error loading custom component {component_name}: {e!s}")
+        return None
+    except (KeyError, IndexError) as e:
+        logger.error(f"Data structure error loading custom component {component_name}: {e!s}")
+        return None
+    except RuntimeError as e:
+        logger.error(f"Runtime error loading custom component {component_name}: {e!s}")
+        logger.debug("Full traceback for runtime error", exc_info=True)
+        return None
+
+    # If we get here, the component wasn't found in any of the paths
+    logger.warning(f"Component {component_name} not found in any of the provided paths")
+    return None

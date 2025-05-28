@@ -38,7 +38,8 @@ class SessionService(Service):
 
         return graph, artifacts
 
-    def build_key(self, session_id, data_graph) -> str:
+    @staticmethod
+    def build_key(session_id, data_graph) -> str:
         json_hash = compute_dict_hash(data_graph)
         return f"{session_id}{':' if session_id else ''}{json_hash}"
 

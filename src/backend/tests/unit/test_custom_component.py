@@ -13,7 +13,8 @@ from langflow.custom.utils import build_custom_component_template
 
 @pytest.fixture
 def code_component_with_multiple_outputs():
-    code = Path("src/backend/tests/data/component_multiple_outputs.py").read_text(encoding="utf-8")
+    path = Path(__file__).parent.parent / "data" / "component_multiple_outputs.py"
+    code = path.read_text(encoding="utf-8")
     return Component(_code=code)
 
 
@@ -186,7 +187,7 @@ def test_custom_component_get_function_entrypoint_args():
 def test_custom_component_get_function_entrypoint_return_type():
     """Test the get_function_entrypoint_return_type property of the CustomComponent class."""
     custom_component = CustomComponent(_code=code_default, _function_entrypoint_name="build")
-    return_type = custom_component.get_function_entrypoint_return_type
+    return_type = custom_component._get_function_entrypoint_return_type
     assert return_type == [Document]
 
 
@@ -334,7 +335,7 @@ class MyClass(CustomComponent):
         pass"""
 
     custom_component = CustomComponent(_code=my_code, _function_entrypoint_name="build")
-    return_type = custom_component.get_function_entrypoint_return_type
+    return_type = custom_component._get_function_entrypoint_return_type
     assert return_type == []
 
 
@@ -360,7 +361,7 @@ def test_build_config_no_code():
     component = CustomComponent(_code=None)
 
     assert component.get_function_entrypoint_args == []
-    assert component.get_function_entrypoint_return_type == []
+    assert component._get_function_entrypoint_return_type == []
 
 
 @pytest.fixture

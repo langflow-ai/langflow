@@ -1,6 +1,8 @@
+# noqa: A005
 from langflow.inputs import (
     BoolInput,
     CodeInput,
+    DataFrameInput,
     DataInput,
     DefaultPromptField,
     DictInput,
@@ -17,16 +19,20 @@ from langflow.inputs import (
     MultiselectInput,
     NestedDictInput,
     PromptInput,
+    QueryInput,
     SecretStrInput,
     SliderInput,
     StrInput,
+    TabInput,
     TableInput,
+    ToolsInput,
 )
 from langflow.template import Output
 
 __all__ = [
     "BoolInput",
     "CodeInput",
+    "DataFrameInput",
     "DataInput",
     "DefaultPromptField",
     "DefaultPromptField",
@@ -46,8 +52,11 @@ __all__ = [
     "NestedDictInput",
     "Output",
     "PromptInput",
+    "QueryInput",
     "SecretStrInput",
     "SliderInput",
     "StrInput",
+    "TabInput",
     "TableInput",
+    "ToolsInput",
 ]

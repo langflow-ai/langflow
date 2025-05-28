@@ -1,5 +1,5 @@
-from langflow.components.helpers import ParseJSONDataComponent
 from langflow.components.inputs import ChatInput
+from langflow.components.processing.parse_json_data import ParseJSONDataComponent
 from langflow.schema import Data
 
 from tests.integration.components.mock_components import TextToData
@@ -37,7 +37,7 @@ async def test_from_message():
         ParseJSONDataComponent,
         inputs={
             "input_value": ComponentInputHandle(clazz=ChatInput, inputs={}, output_name="message"),
-            "query": ".[0].key",
+            "query": ".key",
         },
         run_input="{'key':'value1'}",
     )
@@ -47,7 +47,7 @@ async def test_from_message():
         ParseJSONDataComponent,
         inputs={
             "input_value": ComponentInputHandle(clazz=ChatInput, inputs={}, output_name="message"),
-            "query": ".[0].key.[0].field2",
+            "query": ".key.[0].field2",
         },
         run_input='{"key":[{"field1": 1, "field2": 2}]}',
     )

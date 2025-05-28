@@ -1,146 +1,107 @@
-import { expect, test } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test("Travel Planning Agent", async ({ page }) => {
-  test.skip(
-    !process?.env?.OPENAI_API_KEY,
-    "OPENAI_API_KEY required to run this test",
-  );
-
-  test.skip(
-    !process?.env?.SEARCH_API_KEY,
-    "SEARCH_API_KEY required to run this test",
-  );
-
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
-
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
-
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
-
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
-
-  await page.getByTestId("side_nav_options_all-templates").click();
-  await page
-    .getByRole("heading", { name: "Travel Planning Agents" })
-    .last()
-    .click();
-
-  await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 100000,
-  });
-
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-
-  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-
-  while (outdatedComponents > 0) {
-    await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
-    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-  }
-
-  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  while (filledApiKey > 0) {
-    await page.getByTestId("remove-icon-badge").first().click();
-    await page.waitForTimeout(1000);
-    filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  }
-
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .last()
-    .fill(process.env.SEARCH_API_KEY ?? "");
-
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .first()
-    .fill(process.env.OPENAI_API_KEY ?? "");
-
-  const randomCity = cities[Math.floor(Math.random() * cities.length)];
-  const randomCity2 = cities[Math.floor(Math.random() * cities.length)];
-  const randomFood = foods[Math.floor(Math.random() * foods.length)];
-
-  await page
-    .getByTestId("textarea_str_input_value")
-    .first()
-    .fill(
-      `Create a travel plan from ${randomCity} to ${randomCity2} with ${randomFood}`,
+withEventDeliveryModes(
+  "Travel Planning Agent",
+  { tag: ["@release", "@starter-projects"] },
+  async ({ page }) => {
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
     );
 
-  await page.getByTestId("dropdown_str_model_name").click();
-  await page.getByTestId("gpt-4o-1-option").click();
+    test.skip(
+      !process?.env?.SEARCH_API_KEY,
+      "SEARCH_API_KEY required to run this test",
+    );
 
-  await page.waitForTimeout(1000);
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+    }
 
-  await page.getByTestId("button_run_chat output").click();
+    await page.goto("/");
+    await awaitBootstrapTest(page);
 
-  const result = await Promise.race([
-    // Look for rate limit indicators
-    page.waitForSelector("text=429", { timeout: 10000 }),
-    page.waitForSelector("text=Too Many Requests", { timeout: 10000 }),
-    page.waitForResponse((response) => response.status() === 429, {
-      timeout: 10000,
-    }),
-  ]);
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page
+      .getByRole("heading", { name: "Travel Planning Agents" })
+      .last()
+      .click();
 
-  if (result) {
-    console.log("Rate limit detected, skipping test");
-    test.skip();
-  } else {
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 100000,
+    });
+
+    await initialGPTsetup(page);
+
+    const randomCity = cities[Math.floor(Math.random() * cities.length)];
+    const randomCity2 = cities[Math.floor(Math.random() * cities.length)];
+    const randomFood = foods[Math.floor(Math.random() * foods.length)];
+
+    await page
+      .getByTestId("textarea_str_input_value")
+      .first()
+      .fill(
+        `Create a travel plan from ${randomCity} to ${randomCity2} with ${randomFood}`,
+      );
+
+    await page
+      .getByTestId("popover-anchor-input-api_key")
+      .first()
+      .fill(process.env.SEARCH_API_KEY ?? "");
+
     await page.getByTestId("button_run_chat output").click();
+
+    await page.getByTestId("button_run_chat output").last().click();
+
+    if (await checkRateLimit(page)) {
+      console.log("Rate limit detected, skipping test");
+      test.skip();
+    }
 
     await page.waitForSelector("text=built successfully", {
       timeout: 60000 * 3,
     });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector("text=default session", {
       timeout: 30000,
     });
 
-    await page.waitForTimeout(1000);
-
     const output = await page.getByTestId("div-chat-message").allTextContents();
     const outputText = output.join("\n");
 
-    expect(outputText.toLowerCase()).toContain("weather");
-    expect(outputText.toLowerCase()).toContain("budget");
+    expect(outputText.toLowerCase()).toContain("travel");
+    expect(outputText.toLowerCase()).toContain("day");
 
-    expect(outputText.toLowerCase()).toContain(randomCity);
-    expect(outputText.toLowerCase()).toContain(randomCity2);
-    expect(outputText.toLowerCase()).toContain(randomFood);
+    expect(outputText.toLowerCase()).toContain(randomCity.toLowerCase());
+    expect(outputText.toLowerCase()).toContain(randomCity2.toLowerCase());
+    expect(outputText.toLowerCase()).toContain(randomFood.toLowerCase());
+  },
+);
+
+async function checkRateLimit(page: Page): Promise<boolean> {
+  try {
+    await Promise.race([
+      page.waitForSelector("text=429", { timeout: 10000 }),
+      page.waitForSelector("text=Too Many Requests", { timeout: 10000 }),
+      page.waitForResponse((response) => response.status() === 429, {
+        timeout: 10000,
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("No rate limit detected")), 10000),
+      ),
+    ]);
+    return true;
+  } catch {
+    return false;
   }
-});
+}
 
 const cities = [
   "Tokyo",

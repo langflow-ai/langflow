@@ -1,115 +1,56 @@
-import ShortLangFlowIcon from "@/components/appHeaderComponent/assets//ShortLangFlowIcon.svg?react";
-import ForwardedIconComponent from "@/components/genericIconComponent";
+import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { Button } from "@/components/ui/button";
-import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { useFolderStore } from "@/stores/foldersStore";
-import { PaginatedFolderType } from "../../entities";
+import useFileDrop from "../../hooks/use-on-file-drop";
 
 type EmptyPageProps = {
   setOpenModal: (open: boolean) => void;
-  setShowFolderModal: (open: boolean) => void;
-  folderData: PaginatedFolderType | null;
 };
 
-export const EmptyPage = ({
-  setOpenModal,
-  setShowFolderModal,
-  folderData,
-}: EmptyPageProps) => {
+export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
   const folders = useFolderStore((state) => state.folders);
+  const handleFileDrop = useFileDrop(undefined);
 
   return (
-    <div className="m-0 p-0">
-      <div className="text-container">
-        {(folderData?.folder?.name && folderData?.flows?.items?.length !== 0) ||
-          (folders?.length > 1 && (
-            <div className="absolute left-10 top-10 flex items-center text-2xl font-semibold dark:text-white">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowFolderModal(true)}
-                className="mr-2 bg-transparent lg:hidden"
-              >
-                <ForwardedIconComponent
-                  name="panel-left-open"
-                  aria-hidden="true"
-                  className="h-5 w-5 text-zinc-500 dark:text-zinc-400"
-                />
-              </Button>
-              {folderData?.folder?.name}
-            </div>
-          ))}
-        <div className="relative z-20 flex w-full flex-col items-center justify-center gap-2">
-          {ENABLE_NEW_LOGO ? (
-            <ShortLangFlowIcon className="h-7 w-7 fill-black dark:fill-[white]" />
-          ) : (
-            <span className="fill-black text-4xl dark:fill-white">⛓️</span>
-          )}
-          <h3
-            className="pt-5 text-2xl font-semibold dark:text-white"
-            style={{
-              fontFamily: "Chivo",
-            }}
-            data-testid="mainpage_title"
-          >
-            {folders?.length > 1 ? "Empty folder" : "Start building"}
-          </h3>
-          <p className="pb-5 text-sm dark:text-white">
-            Begin with a template, or start from scratch.
-          </p>
-          <Button
-            variant="default"
-            onClick={() => setOpenModal(true)}
-            id="new-project-btn"
-          >
-            <ForwardedIconComponent
-              name="plus"
-              aria-hidden="true"
-              className="h-4 w-4"
-            />
-            <span className="hidden whitespace-nowrap font-semibold md:inline">
-              New Flow
-            </span>
-          </Button>
-        </div>
-      </div>
-      {folders?.length > 1 ? (
-        <svg
-          width="100vw"
-          height="calc(99vh - 62px)"
-          style={{ backgroundColor: "var(--color-bg1)" }}
-          xmlns="http://www.w3.org/2000/svg"
-          xmlnsXlink="http://www.w3.org/1999/xlink"
-        >
-          <g opacity="0.4">
-            <rect
-              width="100%"
-              height="100%"
-              fill="url(#pattern0_5875_59136)"
-              fill-opacity="0.7"
-            />
-          </g>
-          <defs>
-            <pattern
-              id="pattern0_5875_59136"
-              patternContentUnits="objectBoundingBox"
-              width="0.54"
-              height="0.737062"
+    <CardsWrapComponent
+      dragMessage={`Drop your flows or components here`}
+      onFileDrop={handleFileDrop}
+    >
+      <div className="m-0 h-full w-full bg-secondary p-0">
+        <div className="text-container">
+          <div className="relative z-20 flex w-full flex-col items-center justify-center gap-2">
+            <LangflowLogo className="h-7 w-8" />
+            <h3
+              className="pt-5 font-chivo text-2xl font-semibold text-foreground"
+              data-testid="mainpage_title"
             >
-              <use
-                xlinkHref="#image0_5875_59136"
-                transform="scale(0.000555556 0.000758294)"
+              {folders?.length > 1 ? "Empty project" : "Start building"}
+            </h3>
+            <p
+              data-testid="empty-project-description"
+              className="pb-5 text-sm text-secondary-foreground"
+            >
+              Begin with a template, or start from scratch.
+            </p>
+            <Button
+              variant="default"
+              onClick={() => setOpenModal(true)}
+              id="new-project-btn"
+              data-testid="new_project_btn_empty_page"
+            >
+              <ForwardedIconComponent
+                name="Plus"
+                aria-hidden="true"
+                className="h-4 w-4"
               />
-            </pattern>
-            <image
-              id="image0_5875_59136"
-              width="972"
-              height="972"
-              xlinkHref="data:image/png;base64,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"
-            />
-          </defs>
-        </svg>
-      ) : (
+              <span className="hidden whitespace-nowrap font-semibold md:inline">
+                New Flow
+              </span>
+            </Button>
+          </div>
+        </div>
         <div className="gradient-bg">
           <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
             <defs>
@@ -145,8 +86,8 @@ export const EmptyPage = ({
             <div className="g6" />
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </CardsWrapComponent>
   );
 };
 

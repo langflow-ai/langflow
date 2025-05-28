@@ -13,6 +13,7 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
 from langflow.services.storage.utils import build_content_type_from_extension
 
@@ -22,32 +23,31 @@ router = APIRouter(tags=["Files"], prefix="/files")
 # Create dep that gets the flow_id from the request
 # then finds it in the database and returns it while
 # using the current user as the owner
-def get_flow_id(
+async def get_flow(
     flow_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
 ):
-    flow_id_str = str(flow_id)
     # AttributeError: 'SelectOfScalar' object has no attribute 'first'
-    flow = session.get(Flow, flow_id_str)
+    flow = await session.get(Flow, flow_id)
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     if flow.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="You don't have access to this flow")
-    return flow_id_str
+    return flow
 
 
 @router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
 async def upload_file(
     *,
     file: UploadFile,
-    flow_id: Annotated[UUID, Depends(get_flow_id)],
+    flow: Annotated[Flow, Depends(get_flow)],
     current_user: CurrentActiveUser,
-    session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
     try:
-        max_file_size_upload = get_settings_service().settings.max_file_size_upload
+        max_file_size_upload = settings_service.settings.max_file_size_upload
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -55,12 +55,6 @@ async def upload_file(
         raise HTTPException(
             status_code=413, detail=f"File size is larger than the maximum file size {max_file_size_upload}MB."
         )
-
-    try:
-        flow_id_str = str(flow_id)
-        flow = session.get(Flow, flow_id_str)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
 
     if flow.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="You don't have access to this flow")
@@ -70,9 +64,9 @@ async def upload_file(
         timestamp = datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d_%H-%M-%S")
         file_name = file.filename or hashlib.sha256(file_content).hexdigest()
         full_file_name = f"{timestamp}_{file_name}"
-        folder = flow_id_str
+        folder = str(flow.id)
         await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
-        return UploadFileResponse(flow_id=flow_id_str, file_path=f"{folder}/{full_file_name}")
+        return UploadFileResponse(flow_id=str(flow.id), file_path=f"{folder}/{full_file_name}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -174,12 +168,11 @@ async def list_profile_pictures():
 
 @router.get("/list/{flow_id}")
 async def list_files(
-    flow_id: Annotated[UUID, Depends(get_flow_id)],
+    flow: Annotated[Flow, Depends(get_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
-        flow_id_str = str(flow_id)
-        files = await storage_service.list_files(flow_id=flow_id_str)
+        files = await storage_service.list_files(flow_id=str(flow.id))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -189,12 +182,11 @@ async def list_files(
 @router.delete("/delete/{flow_id}/{file_name}")
 async def delete_file(
     file_name: str,
-    flow_id: Annotated[UUID, Depends(get_flow_id)],
+    flow: Annotated[Flow, Depends(get_flow)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
-        flow_id_str = str(flow_id)
-        await storage_service.delete_file(flow_id=flow_id_str, file_name=file_name)
+        await storage_service.delete_file(flow_id=str(flow.id), file_name=file_name)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

@@ -1,6 +1,5 @@
 ---
 title: LangWatch
-sidebar_position: 4
 slug: /integrations-langwatch
 ---
 
@@ -32,11 +31,9 @@ or export it in your terminal:
 export LANGWATCH_API_KEY="your-api-key"
 ```
 
-1. Restart Langflow using `langflow run --env-file .env`
-2. Run any project and check the LangWatch dashboard for monitoring and observability.
+3. Restart Langflow using `langflow run --env-file .env`
+4. Run a project in Langflow.
+5. View the LangWatch dashboard for monitoring and observability.
 
-![](./505849097.png)
-
-
-![](./1503538843.png)
+![](/img/langwatch-dashboard.png)
 

@@ -12,7 +12,6 @@ class ServiceType(str, Enum):
     CHAT_SERVICE = "chat_service"
     SESSION_SERVICE = "session_service"
     TASK_SERVICE = "task_service"
-    PLUGINS_SERVICE = "plugins_service"
     STORE_SERVICE = "store_service"
     VARIABLE_SERVICE = "variable_service"
     STORAGE_SERVICE = "storage_service"
@@ -20,3 +19,4 @@ class ServiceType(str, Enum):
     STATE_SERVICE = "state_service"
     TRACING_SERVICE = "tracing_service"
     TELEMETRY_SERVICE = "telemetry_service"
+    JOB_QUEUE_SERVICE = "job_queue_service"

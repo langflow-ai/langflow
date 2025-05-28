@@ -14,10 +14,12 @@ NODE_FORMAT_ATTRIBUTES = [
     "beta",
     "legacy",
     "icon",
-    "display_name",
     "output_types",
     "edited",
     "metadata",
+    # remove display_name to prevent overwriting the display_name from the latest template
+    # "display_name",
+    "description",
 ]
 
 
@@ -37,7 +39,7 @@ FIELD_FORMAT_ATTRIBUTES = [
     "refresh_button_text",
     "options",
     "advanced",
-    "load_from_db",
+    "copy_field",
 ]
 
 ORJSON_OPTIONS = orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS | orjson.OPT_OMIT_MICROSECONDS

@@ -21,9 +21,11 @@ ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
     # deps for building python deps
     build-essential \
+    git \
     # npm
     npm \
     # gcc
@@ -38,9 +40,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    uv sync --frozen --no-install-project --no-editable
+    uv sync --frozen --no-install-project --no-editable --extra nv-ingest --extra postgresql
 
-ADD ./src /app/src
+COPY ./src /app/src
 
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
@@ -51,12 +53,12 @@ RUN --mount=type=cache,target=/root/.npm \
     && rm -rf /tmp/src/frontend
 
 WORKDIR /app
-ADD ./pyproject.toml /app/pyproject.toml
-ADD ./uv.lock /app/uv.lock
-ADD ./README.md /app/README.md
+COPY ./pyproject.toml /app/pyproject.toml
+COPY ./uv.lock /app/uv.lock
+COPY ./README.md /app/README.md
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-editable
+    uv sync --frozen --no-editable --extra nv-ingest --extra postgresql
 
 ################################
 # RUNTIME
@@ -64,8 +66,25 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 FROM python:3.12.3-slim AS runtime
 
-RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y \
+        curl \
+        git \
+        # Add PostgreSQL client libraries
+        libpq5 \
+        gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
+    && mkdir /data && chown -R 1000:0 /data
+
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
+
+# curl is required for langflow health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
@@ -76,16 +95,11 @@ LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
 LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
 
-RUN useradd ragstack -u 10000 -g 0 --no-create-home --home-dir /app/data
 WORKDIR /app
-
-RUN mkdir /data
-RUN chown -R 10000:0 /data
-RUN chown -R 10000:0 /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
+ENV LANGFLOW_EVENT_DELIVERY=polling
 
-USER 10000
-
-ENTRYPOINT ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--backend-only"]
+USER 1000
+CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--backend-only"]

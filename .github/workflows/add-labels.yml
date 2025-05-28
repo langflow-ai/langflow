@@ -1,0 +1,65 @@
+name: Manage Review Labels
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  label-on-review:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Manage LGTM Review Label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const LGTM_LABEL = 'lgtm';
+
+            // Extract review details
+            const { state: reviewState } = context.payload.review;
+            const pullRequestNumber = context.payload.pull_request.number;
+            const repoDetails = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pullRequestNumber
+            };
+
+            // Log review information
+            console.log(`Processing review for PR #${pullRequestNumber}`);
+            console.log(`Review state: ${reviewState}`);
+
+            // Helper function to check for LGTM label
+            async function hasLgtmLabel() {
+              const { data: labels } = await github.rest.issues.listLabelsOnIssue(repoDetails);
+              return labels.some(label => label.name === LGTM_LABEL);
+            }
+
+            if (reviewState === 'approved') {
+              const lgtmExists = await hasLgtmLabel();
+
+              if (!lgtmExists) {
+                console.log(`Adding ${LGTM_LABEL} label to PR #${pullRequestNumber}`);
+                await github.rest.issues.addLabels({
+                  ...repoDetails,
+                  labels: [LGTM_LABEL]
+                });
+                console.log('Label added successfully');
+              } else {
+                console.log(`${LGTM_LABEL} label already exists`);
+              }
+            } else if (reviewState === 'changes_requested') {
+              const lgtmExists = await hasLgtmLabel();
+
+              if (lgtmExists) {
+                console.log(`Removing ${LGTM_LABEL} label from PR #${pullRequestNumber}`);
+                await github.rest.issues.removeLabel({
+                  ...repoDetails,
+                  name: LGTM_LABEL
+                });
+                console.log('Label removed successfully');
+              } else {
+                console.log(`No ${LGTM_LABEL} label to remove`);
+              }
+            }

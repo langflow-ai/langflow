@@ -16,6 +16,7 @@ class EmbeddingSimilarityComponent(Component):
             display_name="Embedding Vectors",
             info="A list containing exactly two data objects with embedding vectors to compare.",
             is_list=True,
+            required=True,
         ),
         DropdownInput(
             name="similarity_metric",

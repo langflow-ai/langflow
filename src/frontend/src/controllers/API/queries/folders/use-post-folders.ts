@@ -22,14 +22,14 @@ export const usePostFolders: useMutationFunctionType<
       components_list: newFolder.data.components ?? [],
     };
 
-    const res = await api.post(`${getURL("FOLDERS")}/`, payload);
+    const res = await api.post(`${getURL("PROJECTS")}/`, payload);
     return res.data;
   };
 
   const mutation = mutate(["usePostFolders"], addFoldersFn, {
     ...options,
-    onSettled: () => {
-      queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+    onSuccess: () => {
+      return queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
     },
   });
 
