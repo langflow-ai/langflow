@@ -111,7 +111,7 @@ test(
       "modelsMistralAI",
       "modelsNVIDIA",
       "modelsOllama",
-      "modelsOpenAI",
+      "languagemodelsOpenAI",
       "modelsPerplexity",
       "modelsQianfan",
       "modelsSambaNova",
