@@ -1,11 +1,6 @@
-from typing import Any, List
-
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.inputs.inputs import DropdownInput, SecretStrInput
-from langflow.io import FloatInput, MessageTextInput
-from langflow.schema.dotdict import dotdict
-from sentence_transformers import SentenceTransformer
+from langflow.io import MessageTextInput
 
 
 class SentenceTransformerEmbeddings(LCEmbeddingsModel):
@@ -35,10 +30,10 @@ class SentenceTransformerEmbeddings(LCEmbeddingsModel):
             raise ValueError(f"Failed to load SentenceTransformer model: {e}") from e
 
         class LangflowEmbeddingWrapper:
-            def embed_documents(self, texts: List[str]) -> List[List[float]]:
+            def embed_documents(self, texts: list[str]) -> list[list[float]]:
                 return model.encode(texts, convert_to_numpy=True).tolist()
 
-            def embed_query(self, text: str) -> List[float]:
+            def embed_query(self, text: str) -> list[float]:
                 return model.encode(text, convert_to_numpy=True).tolist()
 
         return LangflowEmbeddingWrapper()
