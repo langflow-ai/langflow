@@ -230,7 +230,7 @@ export const SIDEBAR_CATEGORIES = [
 
 export const SIDEBAR_BUNDLES = [
   {
-    display_name: "LanguageModels",
+    display_name: "Language Models",
     name: "languagemodels",
     icon: "BrainCircuit",
   },
