@@ -25,9 +25,52 @@ export default function NodeOutputs({
   selectedOutput: any;
   handleSelectOutput: any;
 }) {
-  // Find the output that should be displayed
-  // If there's a selectedOutput, use it; otherwise find the output with a selected property
-  // If neither exists, use the first output
+  // Check if any output has allows_loop or if it's a ConditionalRouter component
+  const hasLoopOutput = outputs.some((output) => output.allows_loop);
+  const isConditionalRouter = data.type === "ConditionalRouter";
+  const shouldShowAllOutputs = hasLoopOutput || isConditionalRouter;
+
+  // For components that should show all outputs
+  if (shouldShowAllOutputs) {
+    const outputsToRender =
+      keyPrefix === "hidden"
+        ? outputs.filter((output) => output.hidden)
+        : outputs;
+
+    return (
+      <>
+        {outputsToRender?.map((output, idx) => (
+          <OutputParameter
+            key={`${keyPrefix}-${output.name}-${idx}`}
+            output={output}
+            outputs={outputs}
+            idx={
+              data.node!.outputs?.findIndex(
+                (out) => out.name === output.name,
+              ) ?? idx
+            }
+            lastOutput={idx === outputsToRender.length - 1}
+            data={data}
+            types={types}
+            selected={selected}
+            showNode={showNode}
+            isToolMode={isToolMode}
+            showHiddenOutputs={showHiddenOutputs}
+            handleSelectOutput={handleSelectOutput}
+            hidden={
+              keyPrefix === "hidden"
+                ? showHiddenOutputs
+                  ? output.hidden
+                  : true
+                : false
+            }
+          />
+        ))}
+      </>
+    );
+  }
+
+  // For regular components, show only the selected output
   const getDisplayOutput = () => {
     if (selectedOutput) {
       return outputs.find((output) => output.name === selectedOutput.name);
@@ -40,67 +83,7 @@ export default function NodeOutputs({
 
   if (!displayOutput) return null;
 
-  const isLoop = displayOutput?.allows_loop ?? false;
-
-  const hiddenOutputs = outputs.filter((output) => output.hidden);
-
-  return isLoop ? (
-    keyPrefix === "hidden" ? (
-      hiddenOutputs?.map((output, idx) => (
-        <OutputParameter
-          key={`${keyPrefix}-${output.name}-${idx}`}
-          output={output}
-          outputs={outputs}
-          idx={
-            data.node!.outputs?.findIndex((out) => out.name === output.name) ??
-            idx
-          }
-          lastOutput={idx === hiddenOutputs.length - 1}
-          data={data}
-          types={types}
-          selected={selected}
-          showNode={showNode}
-          isToolMode={isToolMode}
-          showHiddenOutputs={showHiddenOutputs}
-          handleSelectOutput={handleSelectOutput}
-          hidden={
-            keyPrefix === "hidden"
-              ? showHiddenOutputs
-                ? output.hidden
-                : true
-              : false
-          }
-        />
-      ))
-    ) : (
-      outputs?.map((output, idx) => (
-        <OutputParameter
-          key={`${keyPrefix}-${output.name}-${idx}`}
-          output={output}
-          outputs={outputs}
-          idx={
-            data.node!.outputs?.findIndex((out) => out.name === output.name) ??
-            idx
-          }
-          lastOutput={idx === outputs.length - 1}
-          data={data}
-          types={types}
-          selected={selected}
-          showNode={showNode}
-          isToolMode={isToolMode}
-          showHiddenOutputs={showHiddenOutputs}
-          handleSelectOutput={handleSelectOutput}
-          hidden={
-            keyPrefix === "hidden"
-              ? showHiddenOutputs
-                ? output.hidden
-                : true
-              : false
-          }
-        />
-      ))
-    )
-  ) : (
+  return (
     <OutputParameter
       key={`${keyPrefix}-${displayOutput.name}`}
       output={displayOutput}

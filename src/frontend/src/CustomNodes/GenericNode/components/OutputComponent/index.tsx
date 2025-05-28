@@ -6,6 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import useFlowStore from "@/stores/flowStore";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
@@ -23,6 +24,11 @@ export default function OutputComponent({
   handleSelectOutput,
   outputName,
 }: outputComponentType) {
+  // Get the node type from the flow store
+  const nodeType = useFlowStore(
+    (state) => state.nodes.find((node) => node.id === nodeId)?.data?.type,
+  );
+
   const displayProxy = (children) => {
     if (proxy) {
       return (
@@ -47,9 +53,19 @@ export default function OutputComponent({
     </span>,
   );
 
+  // Check if we should show dropdown
+  // Don't show dropdown if:
+  // 1. There's only one output
+  // 2. Any output has allows_loop (loop component)
+  // 3. Component is ConditionalRouter (if-else component)
+  const hasLoopOutput = outputs?.some?.((output) => output.allows_loop);
+  const isConditionalRouter = nodeType === "ConditionalRouter";
+  const shouldShowDropdown =
+    outputs.length > 1 && !hasLoopOutput && !isConditionalRouter;
+
   return (
     <div>
-      {outputs.length > 1 ? (
+      {shouldShowDropdown ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
