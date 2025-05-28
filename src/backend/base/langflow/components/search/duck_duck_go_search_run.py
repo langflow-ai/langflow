@@ -1,7 +1,6 @@
 from langchain_community.tools import DuckDuckGoSearchRun
 
 from langflow.custom import Component
-from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import IntInput, MessageTextInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
@@ -89,4 +88,4 @@ class DuckDuckGoSearchComponent(Component):
             DataFrame: A DataFrame containing the search results.
         """
         data = self.fetch_content()
-        return data_to_dataframe(data)
+        return DataFrame(data)

@@ -2,7 +2,6 @@ import httpx
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.helpers.data import data_to_dataframe
 from langflow.io import BoolInput, DropdownInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
@@ -115,4 +114,4 @@ class TavilyExtractComponent(Component):
 
     def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
-        return data_to_dataframe(data)
+        return DataFrame(data)
