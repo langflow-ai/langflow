@@ -9,7 +9,7 @@ from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import BoolInput
-from langflow.io import DropdownInput, MessageTextInput, SecretStrInput, SliderInput
+from langflow.io import DropdownInput, MessageTextInput, Output, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
 
 
@@ -71,6 +71,10 @@ class LanguageModelComponent(LCModelComponent):
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             advanced=True,
         ),
+    ]
+
+    outputs = [
+        Output(display_name="Model Response", name="text", method="text_response"),
     ]
 
     def build_model(self) -> LanguageModel:

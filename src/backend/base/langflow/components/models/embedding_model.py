@@ -12,6 +12,7 @@ from langflow.io import (
     FloatInput,
     IntInput,
     MessageTextInput,
+    Output,
     SecretStrInput,
 )
 from langflow.schema.dotdict import dotdict
@@ -72,6 +73,10 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             advanced=True,
             info="Additional keyword arguments to pass to the model.",
         ),
+    ]
+
+    outputs = [
+        Output(display_name="Embedding Model", name="embedding", method="embedding_response"),
     ]
 
     def build_embeddings(self) -> Embeddings:
