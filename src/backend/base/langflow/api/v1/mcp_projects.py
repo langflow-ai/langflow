@@ -591,7 +591,7 @@ async def install_mcp_config(
         # Check if running on WSL (will appear as Linux but with Microsoft in release info)
         is_wsl = False
         if os_type == "Linux" and "microsoft" in platform.uname().release.lower():
-            logger.info("WSL detected, using Windows-specific configuration")
+            logger.debug("WSL detected, using Windows-specific configuration")
             is_wsl = True
 
             # If we're in WSL and the host is localhost, we might need to adjust the URL
@@ -605,7 +605,7 @@ async def install_mcp_config(
                     result = subprocess.run(["hostname", "-I"], capture_output=True, text=True, check=False)
                     if result.returncode == 0 and result.stdout.strip():
                         wsl_ip = result.stdout.strip().split()[0]  # Get first IP address
-                        logger.info(f"Using WSL IP for external access: {wsl_ip}")
+                        logger.debug(f"Using WSL IP for external access: {wsl_ip}")
                         # Replace the localhost with the WSL IP in the URL
                         sse_url = sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
                 except Exception as e:
@@ -614,10 +614,10 @@ async def install_mcp_config(
         if os_type == "Windows":
             command = "cmd"
             args = ["/c", "uvx", "mcp-proxy", sse_url]
-            logger.info("Windows detected, using cmd command")
+            logger.debug("Windows detected, using cmd command")
         elif is_wsl:
             # For WSL, we keep the default uvx command as we're on Linux
-            logger.info(f"WSL environment detected, using URL: {sse_url}")
+            logger.debug(f"WSL environment detected, using URL: {sse_url}")
         # Keep the default for macOS and standard Linux
 
         # Create the MCP configuration
@@ -722,9 +722,8 @@ async def check_installed_mcp_servers(
             except json.JSONDecodeError:
                 pass
 
-        return results
-
     except Exception as e:
         msg = f"Error checking MCP configuration: {e!s}"
         logger.exception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
+    return results
