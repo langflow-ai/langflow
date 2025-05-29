@@ -1,11 +1,8 @@
-from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 from langflow.custom import Component
 from langflow.io import HandleInput, Output, TabInput
 from langflow.schema import Data, DataFrame, Message
-from langflow.services.database.models.message.model import MessageBase
-
 
 # def get_message_converter(v) -> Message:
 #     # If v is a instance of Message, then its fine
@@ -50,7 +47,7 @@ from langflow.services.database.models.message.model import MessageBase
 #         return Data(data=v)
 #     if not isinstance(v, Data):
 #         msg = f"Invalid value type {type(v)} for input Expected Data."
-#         raise ValueError(msg)  # noqa: TRY004
+#         raise ValueError(msg)
 #     return v
 
 
@@ -72,7 +69,7 @@ from langflow.services.database.models.message.model import MessageBase
 #         return DataFrame(data=[v])
 #     if not isinstance(v, DataFrame):
 #         msg = f"Invalid value type {type(v)}. Expected DataFrame."
-#         raise ValueError(msg)  # noqa: TRY004
+#         raise ValueError(msg)
 #     return v
 
 
