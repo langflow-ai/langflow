@@ -31,7 +31,7 @@ dependencies = [
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental>=0.3.4,<1.0.0",
     "sqlmodel==0.0.22",
-    "pydantic~=2.10.1",
+    "pydantic>=2.11.5,<3.0.0",
     "pydantic-settings>=2.2.0,<3.0.0",
     "typer>=0.13.0,<1.0.0",
     "cachetools>=5.5.0,<6.0.0",
