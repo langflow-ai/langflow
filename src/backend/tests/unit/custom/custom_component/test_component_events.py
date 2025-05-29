@@ -149,6 +149,11 @@ async def test_component_build_results():
         "tool_output": Output(name="tool_output", method="get_tool"),
     }
 
+    component.outputs = [
+        Output(name="text_output", method="get_text"),
+        Output(name="tool_output", method="get_tool"),
+    ]
+
     # Build results
     results, artifacts = await component._build_results()
 
