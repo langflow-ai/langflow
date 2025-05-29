@@ -963,9 +963,8 @@ class Component(CustomComponent):
             self._append_tool_to_outputs_map()
 
     def _should_process_output(self, output):
-        """
-        Determines whether a given output should be processed based on vertex edge configuration.
-        
+        """Determines whether a given output should be processed based on vertex edge configuration.
+
         Returns True if the component has no vertex or outgoing edges, or if the output's name is among the vertex's source edge names.
         """
         if not self._vertex or not self._vertex.outgoing_edges:
@@ -973,14 +972,13 @@ class Component(CustomComponent):
         return output.name in self._vertex.edges_source_names
 
     def _get_outputs_to_process(self):
-        """
-        Returns a list of outputs to process, ordered according to self.outputs.
-        
+        """Returns a list of outputs to process, ordered according to self.outputs.
+
         Outputs are included only if they should be processed, as determined by _should_process_output. Raises a ValueError if any output name in self.outputs is missing from _outputs_map.
-        
+
         Returns:
             list: Outputs to be processed in the defined order.
-        
+
         Raises:
             ValueError: If an output name in self.outputs is not present in _outputs_map.
         """
@@ -997,9 +995,8 @@ class Component(CustomComponent):
         return result
 
     async def _get_output_result(self, output):
-        """
-        Computes and returns the result for a given output, applying caching and output options.
-        
+        """Computes and returns the result for a given output, applying caching and output options.
+
         If the output is cached and a value is already defined, returns the cached value. Otherwise, invokes the associated output method asynchronously, applies output options, updates the cache, and returns the result. Raises a ValueError if the output method is not defined, or a TypeError if the method invocation fails.
         """
         if output.cache and output.value != UNDEFINED:
@@ -1029,9 +1026,8 @@ class Component(CustomComponent):
         return result
 
     async def resolve_output(self, output_name: str) -> Any:
-        """
-        Resolves and returns the value for a specified output by name.
-        
+        """Resolves and returns the value for a specified output by name.
+
         If output caching is enabled and a value is already available, returns the cached value; otherwise, computes and returns the output result. Raises a KeyError if the output name does not exist.
         """
         output = self._outputs_map.get(output_name)
@@ -1046,9 +1042,8 @@ class Component(CustomComponent):
         return await self._get_output_result(output)
 
     def _build_artifact(self, result):
-        """
-        Builds an artifact dictionary containing a string representation, raw data, and type for a result.
-        
+        """Builds an artifact dictionary containing a string representation, raw data, and type for a result.
+
         The artifact includes a human-readable representation, the processed raw result, and its determined type.
         """
         custom_repr = self.custom_repr()
