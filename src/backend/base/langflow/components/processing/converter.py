@@ -1,11 +1,9 @@
-from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 from langflow.custom import Component
 from langflow.io import HandleInput, Output, TabInput
 from langflow.schema import Data, DataFrame, Message
-from langflow.services.database.models.message.model import MessageBase
-
+from langflow.inputs.inputs import DataFrameInput, DataInput, MessageInput, MessageTextInput
 
 # def get_message_converter(v) -> Message:
 #     # If v is a instance of Message, then its fine
@@ -127,12 +125,27 @@ class TypeConverterComponent(Component):
 
     def convert_to_message(self) -> Message:
         """Convert input to Message type."""
-        return Message(text=self.input_data)
+        return MessageInput(
+            name="converted_message",
+            display_name="Converted Message",
+            value=self.input_data,
+            input_types=["Message", "DataFrame", "Data"]
+        ).value
 
     def convert_to_data(self) -> Data:
         """Convert input to Data type."""
-        return Data(data=self.input_data)
+        return DataInput(
+            name="converted_data",
+            display_name="Converted Data",
+            value=self.input_data,
+            input_types=["Data", "DataFrame", "Message"]
+        ).value
 
     def convert_to_dataframe(self) -> DataFrame:
         """Convert input to DataFrame type."""
-        return DataFrame(self.input_data)
+        return DataFrameInput(
+            name="converted_dataframe",
+            display_name="Converted DataFrame",
+            value=self.input_data,
+            input_types=["DataFrame", "Data", "Message"]
+        ).value
