@@ -17,6 +17,7 @@ def create_model_metadata(
     provider: str, 
     name: str, 
     icon: str, 
+    *,
     tool_calling: bool = False, 
     reasoning: bool = False,
     search: bool = False,
