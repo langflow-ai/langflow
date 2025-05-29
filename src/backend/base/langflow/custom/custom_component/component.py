@@ -985,7 +985,7 @@ class Component(CustomComponent):
         result = []
         for output in self.outputs:
             try:
-                output_obj = self._outputs_map[output.name]
+                output_obj = self._outputs_map.get(output.name, deepcopy(output))
                 if self._should_process_output(output_obj):
                     result.append(output_obj)
             except KeyError as e:
