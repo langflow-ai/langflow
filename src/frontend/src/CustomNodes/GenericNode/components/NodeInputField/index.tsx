@@ -1,12 +1,15 @@
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
+import { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import {
   CustomParameterComponent,
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
+import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { default as IconComponent } from "../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
@@ -18,7 +21,6 @@ import {
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { NodeInputFieldComponentType } from "../../../../types/components";
-import { scapedJSONStringfy } from "../../../../utils/reactflowUtils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import NodeInputInfo from "../NodeInputInfo";
@@ -42,8 +44,13 @@ export default function NodeInputField({
   isToolMode = false,
 }: NodeInputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
-  const nodes = useFlowStore((state) => state.nodes);
-  const edges = useFlowStore((state) => state.edges);
+  const isAuth = useAuthStore((state) => state.isAuthenticated);
+  const { currentFlowId, currentFlowName } = useFlowStore(
+    useShallow((state) => ({
+      currentFlowId: state.currentFlow?.id,
+      currentFlowName: state.currentFlow?.name,
+    })),
+  );
   const myData = useTypesStore((state) => state.data);
   const postTemplateValue = usePostTemplateValue({
     node: data.node!,
@@ -52,11 +59,6 @@ export default function NodeInputField({
   });
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const { handleNodeClass } = useHandleNodeClass(data.id);
-  let disabled =
-    edges.some(
-      (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
-    ) || isToolMode;
 
   const { handleOnNewValue } = useHandleOnNewValue({
     node: data.node!,
@@ -64,7 +66,27 @@ export default function NodeInputField({
     name,
   });
 
-  useFetchDataOnMount(data.node!, handleNodeClass, name, postTemplateValue);
+  const hasRefreshButton = useMemo(() => {
+    return data.node?.template[name]?.refresh_button;
+  }, [data.node?.template, name]);
+
+  const nodeInformationMetadata: NodeInfoType = useMemo(() => {
+    return {
+      flowId: currentFlowId ?? "",
+      nodeType: data?.type?.toLowerCase() ?? "",
+      flowName: currentFlowName ?? "",
+      isAuth,
+      variableName: name,
+    };
+  }, [data?.node?.id, isAuth, name]);
+
+  useFetchDataOnMount(
+    data.node!,
+    data.id,
+    handleNodeClass,
+    name,
+    postTemplateValue,
+  );
 
   useEffect(() => {
     if (optionalHandle && optionalHandle.length === 0) {
@@ -75,19 +97,18 @@ export default function NodeInputField({
   const displayHandle =
     (!LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
       (optionalHandle && optionalHandle.length > 0)) &&
-    !isToolMode;
+    !isToolMode &&
+    !hasRefreshButton;
 
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
 
   const Handle = (
     <HandleRenderComponent
       left={true}
-      nodes={nodes}
       tooltipTitle={tooltipTitle}
       proxy={proxy}
       id={id}
       title={title}
-      edges={edges}
       myData={myData}
       colors={colors}
       setFilterEdge={setFilterEdge}
@@ -133,6 +154,7 @@ export default function NodeInputField({
                       title,
                       nodeId: data.id,
                       isFlexView,
+                      required,
                     })}
                   </span>
                 }
@@ -146,13 +168,13 @@ export default function NodeInputField({
                         title,
                         nodeId: data.id,
                         isFlexView,
+                        required,
                       })}
                     </span>
                   }
                 </span>
               </div>
             )}
-            <span className={"text-status-red"}>{required ? "*" : ""}</span>
             <div>
               {info !== "" && (
                 <ShadTooltip content={<NodeInputInfo info={info} />}>
@@ -161,7 +183,7 @@ export default function NodeInputField({
                     <IconComponent
                       name="Info"
                       strokeWidth={ICON_STROKE_WIDTH}
-                      className="relative bottom-px ml-1 h-3 w-3 text-placeholder"
+                      className="relative ml-1 h-3 w-3 text-placeholder"
                     />
                   </div>
                 </ShadTooltip>
@@ -181,18 +203,20 @@ export default function NodeInputField({
             handleOnNewValue={handleOnNewValue}
             name={name}
             nodeId={data.id}
+            inputId={id}
             templateData={data.node?.template[name]!}
             templateValue={data.node?.template[name].value ?? ""}
             editNode={false}
             handleNodeClass={handleNodeClass}
             nodeClass={data.node!}
-            disabled={disabled}
             placeholder={
               isToolMode
                 ? DEFAULT_TOOLSET_PLACEHOLDER
                 : data.node?.template[name].placeholder
             }
             isToolMode={isToolMode}
+            nodeInformationMetadata={nodeInformationMetadata}
+            proxy={proxy}
           />
         )}
       </div>

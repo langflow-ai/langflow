@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 from uuid import UUID
 
 import nanoid
+import pandas as pd
 import yaml
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
@@ -17,7 +18,6 @@ from pydantic import BaseModel, ValidationError
 from langflow.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
     TOOL_OUTPUT_NAME,
-    TOOL_TABLE_SCHEMA,
     TOOLS_METADATA_INFO,
     TOOLS_METADATA_INPUT_NAME,
 )
@@ -32,7 +32,6 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
-from langflow.schema.table import FieldParserType, TableOptions
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -49,6 +48,7 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
+    from langflow.schema.dataframe import DataFrame
     from langflow.schema.log import LoggableType
 
 
@@ -153,13 +153,26 @@ class Component(CustomComponent):
         self._reset_all_output_values()
         if self.inputs is not None:
             self.map_inputs(self.inputs)
-        if self.outputs is not None:
-            self.map_outputs(self.outputs)
+        self.map_outputs()
 
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
+
+    @property
+    def enabled_tools(self) -> list[str] | None:
+        """Dynamically determine which tools should be enabled.
+
+        This property can be overridden by subclasses to provide custom tool filtering.
+        By default, it returns None, which means all tools are enabled.
+
+        Returns:
+            list[str] | None: List of tool names or tags to enable, or None to enable all tools.
+        """
+        # Default implementation returns None (all tools enabled)
+        # Subclasses can override this to provide custom filtering
+        return None
 
     def _there_is_overlap_in_inputs_and_outputs(self) -> set[str]:
         """Check the `.name` of inputs and outputs to see if there is overlap.
@@ -291,9 +304,10 @@ class Component(CustomComponent):
             if module is None:
                 msg = "Could not find module for class"
                 raise ValueError(msg)
+
             class_code = inspect.getsource(module)
             self._code = class_code
-        except OSError as e:
+        except (OSError, TypeError) as e:
             msg = f"Could not find source code for {self.__class__.__name__}"
             raise ValueError(msg) from e
 
@@ -389,7 +403,7 @@ class Component(CustomComponent):
             msg = f"Output {name} not found in {self.__class__.__name__}"
             raise ValueError(msg)
 
-    def map_outputs(self, outputs: list[Output]) -> None:
+    def map_outputs(self) -> None:
         """Maps the given list of outputs to the component.
 
         Args:
@@ -401,6 +415,19 @@ class Component(CustomComponent):
         Returns:
             None
         """
+        # override outputs (generated from the class code) with vertex outputs
+        # if they exist (generated from the frontend)
+        outputs = []
+        if self._vertex and self._vertex.outputs:
+            for output in self._vertex.outputs:
+                try:
+                    output_ = Output(**output)
+                    outputs.append(output_)
+                except ValidationError as e:
+                    msg = f"Invalid output: {e}"
+                    raise ValueError(msg) from e
+        else:
+            outputs = self.outputs
         for output in outputs:
             if output.name is None:
                 msg = "Output name cannot be None."
@@ -448,6 +475,7 @@ class Component(CustomComponent):
                 frontend_node["tool_mode"] = True
                 tools_metadata_input = await self._build_tools_metadata_input()
                 frontend_node["template"][TOOLS_METADATA_INPUT_NAME] = tools_metadata_input.to_dict()
+                self._append_tool_to_outputs_map()
             elif "template" in frontend_node:
                 frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME, None)
         self.tools_metadata = frontend_node.get("template", {}).get(TOOLS_METADATA_INPUT_NAME, {}).get("value")
@@ -690,6 +718,7 @@ class Component(CustomComponent):
 
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
+            # It is a dict of attributes that are not inputs or outputs all the raw data it should have the loop input.
             return self.__dict__["_attributes"][name]
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
@@ -869,7 +898,7 @@ class Component(CustomComponent):
     async def _build_with_tracing(self):
         inputs = self.get_trace_as_inputs()
         metadata = self.get_trace_as_metadata()
-        async with self._tracing_service.trace_context(self, self.trace_name, inputs, metadata):
+        async with self._tracing_service.trace_component(self, self.trace_name, inputs, metadata):
             results, artifacts = await self._build_results()
             self._tracing_service.set_outputs(self.trace_name, results)
 
@@ -928,7 +957,9 @@ class Component(CustomComponent):
             self._pre_run_setup()
 
     def _handle_tool_mode(self):
-        if hasattr(self, "outputs") and any(getattr(_input, "tool_mode", False) for _input in self.inputs):
+        if (
+            hasattr(self, "outputs") and any(getattr(_input, "tool_mode", False) for _input in self.inputs)
+        ) or self.add_tool_output:
             self._append_tool_to_outputs_map()
 
     def _should_process_output(self, output):
@@ -961,8 +992,9 @@ class Component(CustomComponent):
             and self._vertex.graph.flow_id is not None
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
-
+        result = output.apply_options(result)
         output.value = result
+
         return result
 
     def _build_artifact(self, result):
@@ -978,17 +1010,22 @@ class Component(CustomComponent):
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     def _process_raw_result(self, result):
-        if len(self.outputs) == 1:
-            return self.status or self.extract_data(result)
         return self.extract_data(result)
 
     def extract_data(self, result):
+        """Extract the data from the result. this is where the self.status is set."""
+        if isinstance(result, Message):
+            self.status = result.get_text()
+            return (
+                self.status if self.status is not None else "No text available"
+            )  # Provide a default message if .text_key is missing
         if hasattr(result, "data"):
             return result.data
         if hasattr(result, "model_dump"):
             return result.model_dump()
         if isinstance(result, Data | dict | str):
             return result.data if isinstance(result, Data) else result
+
         if self.status:
             return self.status
         return result
@@ -1042,11 +1079,146 @@ class Component(CustomComponent):
         return Input(**kwargs)
 
     async def to_toolkit(self) -> list[Tool]:
-        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
-        tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+        """Convert component to a list of tools.
+
+        This is a template method that defines the skeleton of the toolkit creation
+        algorithm. Subclasses can override _get_tools() to provide custom tool
+        implementations while maintaining the metadata update functionality.
+
+        Returns:
+            list[Tool]: A list of tools with updated metadata. Each tool contains:
+                - name: The name of the tool
+                - description: A description of what the tool does
+                - tags: List of tags associated with the tool
+        """
+        # Get tools from subclass implementation
+        tools = await self._get_tools()
+
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
-            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
-        return tools
+            tools = self._filter_tools_by_status(tools=tools, metadata=self.tools_metadata)
+            return self._update_tools_with_metadata(tools=tools, metadata=self.tools_metadata)
+
+        # If no metadata exists yet, filter based on enabled_tools
+        return self._filter_tools_by_status(tools=tools, metadata=None)
+
+    async def _get_tools(self) -> list[Tool]:
+        """Get the list of tools for this component.
+
+        This method can be overridden by subclasses to provide custom tool implementations.
+        The default implementation uses ComponentToolkit.
+
+        Returns:
+            list[Tool]: List of tools provided by this component
+        """
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
+        return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+
+    def _extract_tools_tags(self, tools_metadata: list[dict]) -> list[str]:
+        """Extract the first tag from each tool's metadata."""
+        return [tool["tags"][0] for tool in tools_metadata if tool["tags"]]
+
+    def _update_tools_with_metadata(self, tools: list[Tool], metadata: DataFrame | None) -> list[Tool]:
+        """Update tools with provided metadata."""
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
+        return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
+
+    def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
+        # First check length - if different lengths, they can't be equal
+        if len(old_tags) != len(new_tags):
+            return True
+        # Use set comparison for O(n) average case complexity, earlier the old_tags.sort() != new_tags.sort() was used
+        return set(old_tags) != set(new_tags)
+
+    def _filter_tools_by_status(self, tools: list[Tool], metadata: pd.DataFrame | None) -> list[Tool]:
+        """Filter tools based on their status in metadata.
+
+        Args:
+            tools (list[Tool]): List of tools to filter.
+            metadata (list[dict] | None): Tools metadata containing status information.
+
+        Returns:
+            list[Tool]: Filtered list of tools.
+        """
+        # Convert metadata to a list of dicts if it's a DataFrame
+        metadata_dict = None  # Initialize as None to avoid lint issues with empty dict
+        if isinstance(metadata, pd.DataFrame):
+            metadata_dict = metadata.to_dict(orient="records")
+
+        # If metadata is None or empty, use enabled_tools
+        if not metadata_dict:
+            enabled = self.enabled_tools
+            return (
+                tools
+                if enabled is None
+                else [
+                    tool for tool in tools if any(enabled_name in [tool.name, *tool.tags] for enabled_name in enabled)
+                ]
+            )
+
+        # Ensure metadata is a list of dicts
+        if not isinstance(metadata_dict, list):
+            return tools
+
+        # Create a mapping of tool names to their status
+        tool_status = {item["name"]: item.get("status", True) for item in metadata_dict}
+        return [tool for tool in tools if tool_status.get(tool.name, True)]
+
+    def _build_tool_data(self, tool: Tool) -> dict:
+        if tool.metadata is None:
+            tool.metadata = {}
+        return {
+            "name": tool.name,
+            "description": tool.description,
+            "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
+            "status": True,  # Initialize all tools with status True
+            "display_name": tool.metadata.get("display_name", tool.name),
+            "display_description": tool.metadata.get("display_description", tool.description),
+            "readonly": tool.metadata.get("readonly", False),
+            "args": tool.args,
+            # "args_schema": tool.args_schema,
+        }
+
+    async def _build_tools_metadata_input(self):
+        tools = await self._get_tools()
+        # Always use the latest tool data
+        tool_data = [self._build_tool_data(tool) for tool in tools]
+        # print(tool_data)
+        if hasattr(self, TOOLS_METADATA_INPUT_NAME):
+            old_tags = self._extract_tools_tags(self.tools_metadata)
+            new_tags = self._extract_tools_tags(tool_data)
+            if self.check_for_tool_tag_change(old_tags, new_tags):
+                # If enabled tools are set, update status based on them
+                enabled = self.enabled_tools
+                if enabled is not None:
+                    for item in tool_data:
+                        item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
+                self.tools_metadata = tool_data
+            else:
+                # Preserve existing status values
+                existing_status = {item["name"]: item.get("status", True) for item in self.tools_metadata}
+                for item in tool_data:
+                    item["status"] = existing_status.get(item["name"], True)
+                tool_data = self.tools_metadata
+        else:
+            # If enabled tools are set, update status based on them
+            enabled = self.enabled_tools
+            if enabled is not None:
+                for item in tool_data:
+                    item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
+            self.tools_metadata = tool_data
+
+        try:
+            from langflow.io import ToolsInput
+        except ImportError as e:
+            msg = "Failed to import ToolsInput from langflow.io"
+            raise ImportError(msg) from e
+
+        return ToolsInput(
+            name=TOOLS_METADATA_INPUT_NAME,
+            display_name="Actions",
+            info=TOOLS_METADATA_INFO,
+            value=tool_data,
+        )
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:
@@ -1139,7 +1311,7 @@ class Component(CustomComponent):
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
-            data_dict = message.data.copy() if hasattr(message, "data") else message.model_dump()
+            data_dict = message.model_dump()["data"] if hasattr(message, "data") else message.model_dump()
             if id_ and not data_dict.get("id"):
                 data_dict["id"] = id_
             category = category or data_dict.get("category", None)
@@ -1258,45 +1430,6 @@ class Component(CustomComponent):
 
     def _build_tool_output(self) -> Output:
         return Output(name=TOOL_OUTPUT_NAME, display_name=TOOL_OUTPUT_DISPLAY_NAME, method="to_toolkit", types=["Tool"])
-
-    async def _build_tools_metadata_input(self):
-        tools = await self.to_toolkit()
-        tool_data = (
-            self.tools_metadata
-            if hasattr(self, TOOLS_METADATA_INPUT_NAME)
-            else [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
-        )
-        try:
-            from langflow.io import TableInput
-        except ImportError as e:
-            msg = "Failed to import TableInput from langflow.io"
-            raise ImportError(msg) from e
-
-        return TableInput(
-            name=TOOLS_METADATA_INPUT_NAME,
-            display_name="Edit tools",
-            real_time_refresh=True,
-            table_schema=TOOL_TABLE_SCHEMA,
-            value=tool_data,
-            table_icon="Hammer",
-            trigger_icon="Hammer",
-            trigger_text="",
-            table_options=TableOptions(
-                block_add=True,
-                block_delete=True,
-                block_edit=True,
-                block_sort=True,
-                block_filter=True,
-                block_hide=True,
-                block_select=True,
-                hide_options=True,
-                field_parsers={
-                    "name": [FieldParserType.SNAKE_CASE, FieldParserType.NO_BLANK],
-                    "commands": FieldParserType.COMMANDS,
-                },
-                description=TOOLS_METADATA_INFO,
-            ),
-        )
 
     def get_input_display_name(self, input_name: str) -> str:
         """Get the display name of an input.

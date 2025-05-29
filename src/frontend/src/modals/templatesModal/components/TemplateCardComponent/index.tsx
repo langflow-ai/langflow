@@ -43,7 +43,10 @@ export default function TemplateCardComponent({
         />
       </div>
       <div className="flex flex-1 flex-col justify-between">
-        <div>
+        <div
+          data-testid="text_card_container"
+          role={convertTestName(example.name)}
+        >
           <div className="flex w-full items-center">
             <h3
               className="line-clamp-3 font-semibold"

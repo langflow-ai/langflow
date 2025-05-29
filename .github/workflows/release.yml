@@ -47,7 +47,7 @@ jobs:
     name: CI
     uses: ./.github/workflows/ci.yml
     with:
-      python-versions: "['3.10', '3.11', '3.12']"
+      python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
 
@@ -65,11 +65,11 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
       - name: Check Version
         id: check-version
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 2 | xargs)
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
@@ -129,7 +129,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
 
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow
@@ -222,6 +222,27 @@ jobs:
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
+  call_docker_build_main_all:
+    name: Call Docker Build Workflow for langflow-all
+    if: inputs.build_docker_main == true
+    needs: [release-main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      main_version: ${{ needs.release-main.outputs.version }}
+      release_type: main-all
+      pre_release: ${{ inputs.pre_release }}
+    secrets: inherit
+
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: inputs.build_docker_ep == true
+    needs: [release-main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      main_version: ${{ needs.release-main.outputs.version }}
+      release_type: main-ep
+      pre_release: False
+    secrets: inherit
 
   create_release:
     name: Create Release

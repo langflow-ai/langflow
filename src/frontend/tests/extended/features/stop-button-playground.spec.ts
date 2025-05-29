@@ -23,12 +23,11 @@ test(
 
     await page.getByTestId("sidebar-custom-component-button").click();
     await page.getByTitle("fit view").click();
-    await page.getByTitle("zoom out").click();
-    await page.getByTitle("zoom out").click();
-    await page.getByTitle("zoom out").click();
 
     await page.getByTestId("sidebar-search-input").click();
+    await page.waitForTimeout(500);
     await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="outputsChat Output"]', {
       timeout: 3000,
@@ -36,7 +35,9 @@ test(
 
     await page
       .getByTestId("outputsChat Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 400, y: 400 },
+      });
 
     await adjustScreenView(page);
 
@@ -61,7 +62,7 @@ from langflow.schema.message import Message
 class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
-    documentation: str = "http://docs.langflow.org/components/custom"
+    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "custom_components"
     name = "CustomComponent"
 
@@ -108,7 +109,7 @@ class CustomComponent(Component):
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="button-stop"]', {
       timeout: 30000,

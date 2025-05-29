@@ -1,9 +1,11 @@
 # noqa: INP001
+import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool, text
+from sqlalchemy import pool, text
 from sqlalchemy.event import listen
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from langflow.services.database.service import SQLModel
 
@@ -16,12 +18,19 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = SQLModel.metadata
-
+target_metadata.naming_convention = NAMING_CONVENTION
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -47,6 +56,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         render_as_batch=True,
+        prepare_threshold=None,
     )
 
     with context.begin_transaction():
@@ -68,14 +78,20 @@ def _sqlite_do_begin(conn):
     conn.exec_driver_sql("BEGIN EXCLUSIVE")
 
 
-def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
+def _do_run_migrations(connection):
+    context.configure(
+        connection=connection, target_metadata=target_metadata, render_as_batch=True, prepare_threshold=None
+    )
 
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
+    with context.begin_transaction():
+        if connection.dialect.name == "postgresql":
+            connection.execute(text("SET LOCAL lock_timeout = '60s';"))
+            connection.execute(text("SELECT pg_advisory_xact_lock(112233);"))
+        context.run_migrations()
 
-    """
-    connectable = engine_from_config(
+
+async def _run_async_migrations() -> None:
+    connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
@@ -83,17 +99,23 @@ def run_migrations_online() -> None:
 
     if connectable.dialect.name == "sqlite":
         # See https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
-        listen(connectable, "connect", _sqlite_do_connect)
-        listen(connectable, "begin", _sqlite_do_begin)
+        listen(connectable.sync_engine, "connect", _sqlite_do_connect)
+        listen(connectable.sync_engine, "begin", _sqlite_do_begin)
 
-    with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
+    async with connectable.connect() as connection:
+        await connection.run_sync(_do_run_migrations)
 
-        with context.begin_transaction():
-            if connection.dialect.name == "postgresql":
-                connection.execute(text("SET LOCAL lock_timeout = '60s';"))
-                connection.execute(text("SELECT pg_advisory_xact_lock(112233);"))
-            context.run_migrations()
+    await connectable.dispose()
+
+
+def run_migrations_online() -> None:
+    """Run migrations in 'online' mode.
+
+    In this scenario we need to create an Engine
+    and associate a connection with the context.
+
+    """
+    asyncio.run(_run_async_migrations())
 
 
 if context.is_offline_mode():

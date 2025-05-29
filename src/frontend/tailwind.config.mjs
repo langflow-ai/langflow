@@ -33,14 +33,57 @@ const config = {
       center: true,
       screens: {
         "2xl": "1400px",
+        "3xl": "1500px",
       },
     },
     extend: {
       screens: {
         xl: "1200px",
         "2xl": "1400px",
+        "3xl": "1500px",
       },
       keyframes: {
+        // Overlay animations
+        overlayShow: {
+          from: { opacity: 0 },
+          to: { opacity: 1 },
+        },
+        overlayHide: {
+          from: { opacity: 1 },
+          to: { opacity: 0 },
+        },
+
+        // Content animations - now including both scale and clip in one animation
+        contentShow: {
+          from: {
+            opacity: 0,
+            transform: "translate(-50%, -50%) scale(0.95)",
+            clipPath: "inset(50% 0)",
+            boxShadow: "0 4px 8px -2px rgba(0, 0, 0, 0.1)", // Smaller shadow
+          },
+          to: {
+            opacity: 1,
+            transform: "translate(-50%, -50%) scale(1)",
+            clipPath: "inset(0% 0)",
+            boxShadow:
+              "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+          },
+        },
+        contentHide: {
+          from: {
+            opacity: 1,
+            transform: "translate(-50%, -50%) scale(1)",
+            clipPath: "inset(0% 0)",
+            boxShadow:
+              "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+          },
+          to: {
+            opacity: 0,
+            transform: "translate(-50%, -50%) scale(0.95)",
+            clipPath: "inset(50% 0)",
+            boxShadow: "0 4px 8px -2px rgba(0, 0, 0, 0.1)",
+          },
+        },
         wiggle: {
           "0%, 100%": { transform: "scale(100%)" },
           "50%": { transform: "scale(120%)" },
@@ -50,9 +93,19 @@ const config = {
             "offset-distance": "100%",
           },
         },
+        "pulse-pink": {
+          "0%, 100%": { backgroundColor: "hsla(var(--accent-pink), 1)" },
+          "50%": { backgroundColor: "hsla(var(--accent-pink), 0.4)" },
+        },
       },
       animation: {
+        // Animation definitions
+        overlayShow: "overlayShow 400ms cubic-bezier(0.16, 1, 0.3, 1)",
+        overlayHide: "overlayHide 500ms cubic-bezier(0.16, 1, 0.3, 1)",
+        contentShow: "contentShow 400ms cubic-bezier(0.16, 1, 0.3, 1)",
+        contentHide: "contentHide 500ms cubic-bezier(0.16, 1, 0.3, 1)",
         wiggle: "wiggle 150ms ease-in-out 1",
+        "pulse-pink": "pulse-pink 2s linear infinite",
         "slow-wiggle": "wiggle 500ms ease-in-out 1",
         "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
       },
@@ -117,6 +170,8 @@ const config = {
         "success-foreground": "var(--success-foreground)",
         "accent-pink": "hsl(var(--accent-pink))",
         "accent-pink-foreground": "hsl(var(--accent-pink-foreground))",
+        "accent-purple-foreground": "hsl(var(--accent-purple-foreground))",
+        "accent-red-foreground": "hsl(var(--accent-red-foreground))",
         filter: {
           foreground: "var(--filter-foreground)",
           background: "var(--filter-background)",
@@ -174,6 +229,10 @@ const config = {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+        },
+        "accent-amber": {
+          DEFAULT: "hsl(var(--accent-amber))",
+          foreground: "hsl(var(--accent-amber-foreground))",
         },
         "accent-emerald": {
           DEFAULT: "hsl(var(--accent-emerald))",
@@ -257,6 +316,10 @@ const config = {
         "terminal-green": "hsl(var(--terminal-green))",
         "cosmic-void": "hsl(var(--cosmic-void))",
         "slider-input-border": "var(--slider-input-border)",
+        "zinc-foreground": "hsl(var(--zinc-foreground))",
+        "red-foreground": "hsl(var(--red-foreground))",
+        "indigo-foreground": "hsl(var(--indigo-foreground))",
+        "discord-color": "var(--discord-color)",
       },
       borderRadius: {
         lg: `var(--radius)`,
@@ -287,6 +350,10 @@ const config = {
         90: "90",
         100: "100",
         999: "999",
+      },
+      fontSize: {
+        xxs: "11px",
+        mmd: "13px",
       },
     },
   },
@@ -361,6 +428,9 @@ const config = {
           "&::-webkit-scrollbar-thumb:hover": {
             backgroundColor: "hsl(var(--placeholder-foreground))",
           },
+          "&::-webkit-scrollbar-corner": {
+            backgroundColor: "transparent",
+          },
           cursor: "auto",
         },
         ".dark .theme-attribution .react-flow__attribution": {
@@ -412,7 +482,7 @@ const config = {
                 content: '""',
                 position: "absolute",
                 inset: "0 0 0 0",
-                background: `linear-gradient(to right, transparent, 75%, ${colorValue})`,
+                background: `linear-gradient(to right, transparent 80%, ${colorValue})`,
               },
             };
           } else if (typeof colorValue === "object") {
@@ -425,7 +495,7 @@ const config = {
                   content: '""',
                   position: "absolute",
                   inset: "0 0 0 0",
-                  background: `linear-gradient(to right, transparent, ${colorValue.DEFAULT})`,
+                  background: `linear-gradient(to right, transparent 80%, ${colorValue.DEFAULT})`,
                 },
               };
             }

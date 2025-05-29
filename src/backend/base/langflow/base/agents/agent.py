@@ -14,6 +14,7 @@ from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import InputTypes, MultilineInput
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
+from langflow.logging import logger
 from langflow.memory import delete_message
 from langflow.schema import Data
 from langflow.schema.content_block import ContentBlock
@@ -168,11 +169,15 @@ class LCAgentComponent(Component):
                 cast("SendMessageFunctionType", self.send_message),
             )
         except ExceptionWithMessageError as e:
-            msg_id = e.agent_message.id
-            await delete_message(id_=msg_id)
+            if hasattr(e, "agent_message") and hasattr(e.agent_message, "id"):
+                msg_id = e.agent_message.id
+                await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
+            logger.error(f"ExceptionWithMessageError: {e}")
             raise
-        except Exception:
+        except Exception as e:
+            # Log or handle any other exceptions
+            logger.error(f"Error: {e}")
             raise
 
         self.status = result
@@ -233,7 +238,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             tools_names = ", ".join([tool.name for tool in self.tools])
         return tools_names
 
-    async def to_toolkit(self) -> list[Tool]:
+    async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()

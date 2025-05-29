@@ -1,18 +1,18 @@
 from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
+from langflow.base.agents.events import ExceptionWithMessageError
 from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
     MODEL_PROVIDERS_DICT,
+    MODELS_METADATA,
 )
 from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
-from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
-from langflow.field_typing import Tool
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.logging import logger
 from langflow.schema.dotdict import dotdict
@@ -42,6 +42,7 @@ class AgentComponent(ToolCallingAgentComponent):
             value="OpenAI",
             real_time_refresh=True,
             input_types=[],
+            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{"icon": "brain"}],
         ),
         *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
         MultilineInput(
@@ -65,43 +66,32 @@ class AgentComponent(ToolCallingAgentComponent):
 
     async def message_response(self) -> Message:
         try:
+            # Get LLM model and validate
             llm_model, display_name = self.get_llm()
             if llm_model is None:
-                msg = "No language model selected"
+                msg = "No language model selected. Please choose a model to proceed."
                 raise ValueError(msg)
             self.model_name = get_model_name(llm_model, display_name=display_name)
-        except Exception as e:
-            # Log the error for debugging purposes
-            logger.error(f"Error retrieving language model: {e}")
-            raise
 
-        try:
+            # Get memory data
             self.chat_history = await self.get_memory_data()
-        except Exception as e:
-            logger.error(f"Error retrieving chat history: {e}")
-            raise
 
-        if self.add_current_date_tool:
-            try:
+            # Add current date tool if enabled
+            if self.add_current_date_tool:
                 if not isinstance(self.tools, list):  # type: ignore[has-type]
                     self.tools = []
-                # Convert CurrentDateComponent to a StructuredTool
                 current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
-                if isinstance(current_date_tool, StructuredTool):
-                    self.tools.append(current_date_tool)
-                else:
+                if not isinstance(current_date_tool, StructuredTool):
                     msg = "CurrentDateComponent must be converted to a StructuredTool"
                     raise TypeError(msg)
-            except Exception as e:
-                logger.error(f"Error adding current date tool: {e}")
-                raise
+                self.tools.append(current_date_tool)
 
-        if not self.tools:
-            msg = "Tools are required to run the agent."
-            logger.error(msg)
-            raise ValueError(msg)
+            # Validate tools
+            if not self.tools:
+                msg = "Tools are required to run the agent. Please add at least one tool."
+                raise ValueError(msg)
 
-        try:
+            # Set up and run agent
             self.set(
                 llm=llm_model,
                 tools=self.tools,
@@ -110,38 +100,48 @@ class AgentComponent(ToolCallingAgentComponent):
                 system_prompt=self.system_prompt,
             )
             agent = self.create_agent_runnable()
-        except Exception as e:
-            logger.error(f"Error setting up the agent: {e}")
-            raise
+            return await self.run_agent(agent)
 
-        return await self.run_agent(agent)
+        except (ValueError, TypeError, KeyError) as e:
+            logger.error(f"{type(e).__name__}: {e!s}")
+            raise
+        except ExceptionWithMessageError as e:
+            logger.error(f"ExceptionWithMessageError occurred: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error: {e!s}")
+            raise
 
     async def get_memory_data(self):
         memory_kwargs = {
             component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
         }
         # filter out empty values
-        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}
+        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}
 
         return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()
 
     def get_llm(self):
-        if isinstance(self.agent_llm, str):
-            try:
-                provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
-                if provider_info:
-                    component_class = provider_info.get("component_class")
-                    display_name = component_class.display_name
-                    inputs = provider_info.get("inputs")
-                    prefix = provider_info.get("prefix", "")
-                    return (
-                        self._build_llm_model(component_class, inputs, prefix),
-                        display_name,
-                    )
-            except Exception as e:
-                msg = f"Error building {self.agent_llm} language model"
-                raise ValueError(msg) from e
-        return self.agent_llm, None
+        if not isinstance(self.agent_llm, str):
+            return self.agent_llm, None
+
+        try:
+            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
+            if not provider_info:
+                msg = f"Invalid model provider: {self.agent_llm}"
+                raise ValueError(msg)
+
+            component_class = provider_info.get("component_class")
+            display_name = component_class.display_name
+            inputs = provider_info.get("inputs")
+            prefix = provider_info.get("prefix", "")
+
+            return self._build_llm_model(component_class, inputs, prefix), display_name
+
+        except Exception as e:
+            logger.error(f"Error building {self.agent_llm} language model: {e!s}")
+            msg = f"Failed to initialize language model: {e!s}"
+            raise ValueError(msg) from e
 
     def _build_llm_model(self, component, inputs, prefix=""):
         model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
@@ -224,6 +224,8 @@ class AgentComponent(ToolCallingAgentComponent):
                     value="Custom",
                     real_time_refresh=True,
                     input_types=["LanguageModel"],
+                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]
+                    + [{"icon": "brain"}],
                 )
                 build_config.update({"agent_llm": custom_component.to_dict()})
             # Update input types for all fields
@@ -266,16 +268,3 @@ class AgentComponent(ToolCallingAgentComponent):
                         component_class, build_config, field_value, "model_name"
                     )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
-
-    async def to_toolkit(self) -> list[Tool]:
-        component_toolkit = _get_component_toolkit()
-        tools_names = self._build_tools_names()
-        agent_description = self.get_tool_description()
-        # TODO: Agent Description Depreciated Feature to be removed
-        description = f"{agent_description}{tools_names}"
-        tools = component_toolkit(component=self).get_tools(
-            tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()
-        )
-        if hasattr(self, "tools_metadata"):
-            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
-        return tools

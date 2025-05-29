@@ -62,7 +62,11 @@ export const usePostRetrieveVertexOrder: useMutationFunctionType<
   const mutation = mutate(
     ["usePostRetrieveVertexOrder"],
     postRetrieveVertexOrder,
-    options,
+    {
+      ...options,
+      retry: 0,
+      retryDelay: 0,
+    },
   );
 
   return mutation;

@@ -31,11 +31,9 @@ test(
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
     await page.getByText("Chat Input", { exact: true }).click();
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
     await page.getByText("Close").last().click();
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     // Read the image file as a binary string
     const filePath = "tests/assets/chain.png";
@@ -84,7 +82,7 @@ test(
       timeout: 30000,
     });
 
-    await page.getByTestId("icon-TextSearchIcon").nth(4).click();
+    await page.getByTestId("icon-TextSearchIcon").nth(2).click();
 
     await page.getByText("Restart").isHidden();
   },

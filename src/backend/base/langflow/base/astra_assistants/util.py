@@ -17,7 +17,7 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 from requests.exceptions import RequestException
 
-from langflow.components.tools.mcp_stdio import create_input_schema_from_json_schema
+from langflow.base.mcp.util import create_input_schema_from_json_schema
 from langflow.services.cache.utils import CacheMiss
 
 client_lock = threading.Lock()
@@ -59,7 +59,14 @@ def tools_from_package(your_package) -> None:
         module_name = f"{package_name}.{module_info.name}"
 
         # Dynamically import the module
-        module = importlib.import_module(module_name)
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
+            )
+            warnings.filterwarnings("ignore", message="Valid config keys have changed in V2", category=UserWarning)
+            module = importlib.import_module(module_name)
 
         # Iterate over all members of the module
         for name, obj in inspect.getmembers(module, inspect.isclass):

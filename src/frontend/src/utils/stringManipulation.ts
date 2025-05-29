@@ -1,7 +1,9 @@
+import DOMPurify from "dompurify";
+import React from "react";
 import { FieldParserType } from "../types/api";
 
 function toSnakeCase(str: string): string {
-  return str.trim().replace(/\s+/g, "_");
+  return str.trim().replace(/[-\s]+/g, "_");
 }
 
 function toCamelCase(str: string): string {
@@ -26,11 +28,20 @@ function toKebabCase(str: string): string {
 }
 
 function toLowerCase(str: string): string {
-  return str.toLowerCase();
+  return str?.toLowerCase();
 }
 
 function toUpperCase(str: string): string {
-  return str.toUpperCase();
+  return str?.toUpperCase();
+}
+
+function toSpaceCase(str: string): string {
+  return str
+    .trim()
+    .replace(/[_\s-]+/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
 function noBlank(str: string): string {
@@ -99,6 +110,9 @@ export function parseString(
         case "no_blank":
           result = noBlank(result);
           break;
+        case "space_case":
+          result = toSpaceCase(result);
+          break;
         case "valid_csv":
           result = validCsv(result);
           break;
@@ -113,3 +127,44 @@ export function parseString(
 
   return result;
 }
+
+export const getStatusColor = (status: string): string => {
+  const amberStatuses = [
+    "initializing",
+    "pending",
+    "hibernating",
+    "hiberated",
+    "maintenance",
+    "parked",
+  ];
+
+  if (amberStatuses.includes(status?.toLowerCase())) {
+    return "text-accent-amber-foreground";
+  }
+
+  if (status?.toLowerCase() === "terminating") {
+    return "red-500";
+  }
+
+  return "";
+};
+
+export const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return "0 Bytes";
+
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+};
+
+export const convertStringToHTML = (htmlString: string): JSX.Element => {
+  return React.createElement("span", {
+    dangerouslySetInnerHTML: { __html: sanitizeHTML(htmlString) },
+  });
+};
+
+export const sanitizeHTML = (htmlString: string): string => {
+  return DOMPurify.sanitize(htmlString);
+};

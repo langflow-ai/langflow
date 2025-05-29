@@ -1,15 +1,23 @@
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
 
 from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
+from langflow.serialization import constants as serialization_constants
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.serialization.serialization import serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
@@ -18,7 +26,6 @@ from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
 from langflow.services.settings.feature_flags import FeatureFlags
 from langflow.services.tracing.schema import Log
-from langflow.utils.util_strings import truncate_long_strings
 
 
 class BuildStatus(Enum):
@@ -302,8 +309,7 @@ class VertexBuildResponse(BaseModel):
 
     @field_serializer("data")
     def serialize_data(self, data: ResultDataResponse) -> dict:
-        data_dict = data.model_dump() if isinstance(data, BaseModel) else data
-        return truncate_long_strings(data_dict)
+        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
 
 class VerticesBuiltResponse(BaseModel):
@@ -371,8 +377,32 @@ class FlowDataRequest(BaseModel):
 
 class ConfigResponse(BaseModel):
     feature_flags: FeatureFlags
+    serialization_max_items_lenght: int = serialization_constants.MAX_ITEMS_LENGTH
+    serialization_max_text_length: int = serialization_constants.MAX_TEXT_LENGTH
     frontend_timeout: int
     auto_saving: bool
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
+    webhook_polling_interval: int
+    public_flow_cleanup_interval: int
+    public_flow_expiration: int
+    event_delivery: Literal["polling", "streaming", "direct"]
+
+
+class CancelFlowResponse(BaseModel):
+    """Response model for flow build cancellation."""
+
+    success: bool
+    message: str
+
+
+class MCPSettings(BaseModel):
+    """Model representing MCP settings for a flow."""
+
+    id: UUID
+    mcp_enabled: bool | None = None
+    action_name: str | None = None
+    action_description: str | None = None
+    name: str | None = None
+    description: str | None = None

@@ -1,24 +1,23 @@
 from typing import Any
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from langflow.field_typing import VectorStore
-from langflow.inputs.inputs import DataInput
-from langflow.io import DropdownInput, MultilineInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.base.compressors.model import LCCompressorComponent
+from langflow.field_typing import BaseDocumentCompressor
+from langflow.inputs.inputs import SecretStrInput
+from langflow.io import DropdownInput, StrInput
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Output
 
 
-class NvidiaRerankComponent(LCVectorStoreComponent):
+class NvidiaRerankComponent(LCCompressorComponent):
     display_name = "NVIDIA Rerank"
-    description = "Rerank documents using the NVIDIA API and a retriever."
+    description = "Rerank documents using the NVIDIA API."
     icon = "NVIDIA"
 
     inputs = [
-        MultilineInput(
-            name="search_query",
-            display_name="Search Query",
-            tool_mode=True,
+        *LCCompressorComponent.inputs,
+        SecretStrInput(
+            name="api_key",
+            display_name="NVIDIA API Key",
         ),
         StrInput(
             name="base_url",
@@ -33,27 +32,20 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
             options=["nv-rerank-qa-mistral-4b:1"],
             value="nv-rerank-qa-mistral-4b:1",
         ),
-        SecretStrInput(name="api_key", display_name="API Key"),
-        DataInput(
-            name="search_results",
-            display_name="Search Results",
-            info="Search Results from a Vector Store.",
-            is_list=True,
-        ),
     ]
 
     outputs = [
         Output(
             display_name="Reranked Documents",
             name="reranked_documents",
-            method="rerank_documents",
+            method="compress_documents",
         ),
     ]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "base_url" and field_value:
             try:
-                build_model = self.build_reranker()
+                build_model = self.build_compressor()
                 ids = [model.id for model in build_model.available_models]
                 build_config["model"]["options"] = ids
                 build_config["model"]["value"] = ids[0]
@@ -62,25 +54,10 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
                 raise ValueError(msg) from e
         return build_config
 
-    def build_reranker(self):
+    def build_compressor(self) -> BaseDocumentCompressor:
         try:
             from langchain_nvidia_ai_endpoints import NVIDIARerank
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
             raise ImportError(msg) from e
-        return NVIDIARerank(api_key=self.api_key, model=self.model, base_url=self.base_url)
-
-    async def rerank_documents(self) -> list[Data]:  # type: ignore[override]
-        reranker = self.build_reranker()
-        documents = reranker.compress_documents(
-            query=self.search_query,
-            documents=[passage.to_lc_document() for passage in self.search_results if isinstance(passage, Data)],
-        )
-        data = self.to_data(documents)
-        self.status = data
-        return data
-
-    @check_cached_vector_store
-    def build_vector_store(self) -> VectorStore:
-        msg = "NVIDIA Rerank does not support vector stores."
-        raise NotImplementedError(msg)
+        return NVIDIARerank(api_key=self.api_key, model=self.model, base_url=self.base_url, top_n=self.top_n)

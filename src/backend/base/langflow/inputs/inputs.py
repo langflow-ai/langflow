@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator, Iterator
 from typing import Any, TypeAlias, get_args
 
 from pandas import DataFrame
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
@@ -12,7 +12,9 @@ from langflow.services.database.models.message.model import MessageBase
 from langflow.template.field.base import Input
 
 from .input_mixin import (
+    AuthMixin,
     BaseInputMixin,
+    ConnectionMixin,
     DatabaseLoadMixin,
     DropDownMixin,
     FieldTypes,
@@ -22,10 +24,13 @@ from .input_mixin import (
     ListableInputMixin,
     MetadataTraceMixin,
     MultilineMixin,
+    QueryMixin,
     RangeMixin,
     SerializableFieldTypes,
     SliderMixin,
+    SortableListMixin,
     TableMixin,
+    TabMixin,
     ToolModeMixin,
 )
 
@@ -37,18 +42,32 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, _info):
-        # Check if value is a list of dicts
+        # Convert single dict or Data instance into a list.
+        if isinstance(v, dict | Data):
+            v = [v]
+        # Automatically convert DataFrame into a list of dictionaries.
         if isinstance(v, DataFrame):
             v = v.to_dict(orient="records")
+        # Verify the value is now a list.
         if not isinstance(v, list):
-            msg = f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list."
+            msg = (
+                "The table input must be a list of rows. You provided a "
+                f"{type(v).__name__}, which cannot be converted to table format. "
+                "Please provide your data as either:\n"
+                "- A list of dictionaries (each dict is a row)\n"
+                "- A pandas DataFrame\n"
+                "- A single dictionary (will become a one-row table)\n"
+                "- A Data object (Langflow's internal data structure)\n"
+            )
             raise ValueError(msg)  # noqa: TRY004
-
-        for item in v:
+        # Ensure each item in the list is either a dict or a Data instance.
+        for i, item in enumerate(v):
             if not isinstance(item, dict | Data):
                 msg = (
-                    "TableInput value must be a list of dictionaries or Data. "
-                    f"Item '{item}' is not a dictionary or Data."
+                    f"Row {i + 1} in your table has an invalid format. Each row must be either:\n"
+                    "- A dictionary containing column name/value pairs\n"
+                    "- A Data object (Langflow's internal data structure for passing data between components)\n"
+                    f"Instead, got a {type(item).__name__}. Please check the format of your input data."
                 )
                 raise ValueError(msg)  # noqa: TRY004
         return v
@@ -66,6 +85,21 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
 
     input_types: list[str] = Field(default_factory=list)
     field_type: SerializableFieldTypes = FieldTypes.OTHER
+
+
+class ToolsInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents an Input that contains a list of tools to activate, deactivate, or edit.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input.
+        value (list[dict]): The value of the input.
+
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.TOOLS
+    value: list[dict] = Field(default_factory=list)
+    is_list: bool = True
+    real_time_refresh: bool = True
 
 
 class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
@@ -91,7 +125,13 @@ class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
 
 
 # Applying mixins to a specific input type
-class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin, ToolModeMixin):
+class StrInput(
+    BaseInputMixin,
+    ListableInputMixin,
+    DatabaseLoadMixin,
+    MetadataTraceMixin,
+    ToolModeMixin,
+):
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
@@ -226,6 +266,7 @@ class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin, ToolMode
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     multiline: CoalesceBool = True
+    copy_field: CoalesceBool = False
 
 
 class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
@@ -254,7 +295,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.PASSWORD
     password: CoalesceBool = Field(default=True)
-    input_types: list[str] = ["Message"]
+    input_types: list[str] = []
     load_from_db: CoalesceBool = True
 
     @field_validator("value")
@@ -384,7 +425,13 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolMode
     value: CoalesceBool = False
 
 
-class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, InputTraceMixin, ToolModeMixin):
+class NestedDictInput(
+    BaseInputMixin,
+    ListableInputMixin,
+    MetadataTraceMixin,
+    InputTraceMixin,
+    ToolModeMixin,
+):
     """Represents a nested dictionary field.
 
     This class represents a nested dictionary input and provides functionality for handling dictionary values.
@@ -396,7 +443,7 @@ class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, In
     """
 
     field_type: SerializableFieldTypes = FieldTypes.NESTED_DICT
-    value: dict | Data | None = {}
+    value: dict | None = {}
 
 
 class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
@@ -411,7 +458,10 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
     """
 
     field_type: SerializableFieldTypes = FieldTypes.DICT
-    value: dict | None = {}
+    # value: dict | None = {"key": "value"}
+    # Note do not set value to an empty dict, it will break the component in dynamic update build config
+    # value: dict | None = {}
+    value: dict = Field(default_factory=dict)
 
 
 class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
@@ -427,6 +477,8 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
         options_metadata (Optional[list[dict[str, str]]): List of dictionaries with metadata for each option.
             Default is None.
         combobox (CoalesceBool): Variable that defines if the user can insert custom values in the dropdown.
+        toggle (CoalesceBool): Variable that defines if a toggle button is shown.
+        toggle_value (CoalesceBool | None): Variable that defines the value of the toggle button. Defaults to None.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
@@ -434,6 +486,96 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     options_metadata: list[dict[str, Any]] = Field(default_factory=list)
     combobox: CoalesceBool = False
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
+    toggle: bool = False
+    toggle_disable: bool | None = None
+    toggle_value: bool | None = None
+
+
+class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a connection input field.
+
+    This class represents a connection input field and provides functionality for handling connection values.
+    It inherits from the `BaseInputMixin` and `ConnectionMixin` classes.
+
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.CONNECTION
+
+
+class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
+    """Represents an authentication input field.
+
+    This class represents an authentication input field and provides functionality for handling authentication values.
+    It inherits from the `BaseInputMixin` and `AuthMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.AUTH.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.AUTH
+    show: bool = False
+
+
+class QueryInput(MessageTextInput, QueryMixin):
+    """Represents a query input field.
+
+    This class represents an query input field and provides functionality for handling search values.
+    It inherits from the `BaseInputMixin` and `QueryMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.SEARCH.
+        separator (str | None): The separator for the query input. Defaults to None.
+        value (str): The value for the query input. Defaults to an empty string.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.QUERY
+    separator: str | None = Field(default=None)
+
+
+class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a list selection input field.
+
+    This class represents a list selection input field and provides functionality for handling list selection values.
+    It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.SORTABLE_LIST.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.SORTABLE_LIST
+
+
+class TabInput(BaseInputMixin, TabMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a tab input field.
+
+    This class represents a tab input field that allows a maximum of 3 values, each with a maximum of 20 characters.
+    It inherits from the `BaseInputMixin` and `TabMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.TAB.
+        options (list[str]): List of tab options. Maximum of 3 values allowed, each with a maximum of 20 characters.
+        active_tab (int): Index of the currently active tab. Defaults to 0.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.TAB
+    options: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    @classmethod
+    def validate_value(cls, values):
+        """Validates the value to ensure it's one of the tab values."""
+        options = values.options  # Agora temos certeza de que options está disponível
+        value = values.value
+
+        if not isinstance(value, str):
+            msg = f"TabInput value must be a string. Got {type(value).__name__}."
+            raise TypeError(msg)
+
+        if value not in options and value != "":
+            msg = f"TabInput value must be one of the following: {options}. Got: '{value}'"
+            raise ValueError(msg)
+
+        return values
 
 
 class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
@@ -503,12 +645,16 @@ class DefaultPromptField(Input):
 
 InputTypes: TypeAlias = (
     Input
+    | AuthInput
+    | QueryInput
     | DefaultPromptField
     | BoolInput
     | DataInput
     | DictInput
     | DropdownInput
     | MultiselectInput
+    | SortableListInput
+    | ConnectionInput
     | FileInput
     | FloatInput
     | HandleInput
@@ -516,6 +662,7 @@ InputTypes: TypeAlias = (
     | MultilineInput
     | MultilineSecretInput
     | NestedDictInput
+    | ToolsInput
     | PromptInput
     | CodeInput
     | SecretStrInput
@@ -526,6 +673,7 @@ InputTypes: TypeAlias = (
     | LinkInput
     | SliderInput
     | DataFrameInput
+    | TabInput
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}

@@ -6,7 +6,7 @@ import pytest
 from langflow.components.data import FileComponent
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
 from langflow.components.inputs import ChatInput
-from langflow.components.models import OpenAIModelComponent
+from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
 from langflow.components.processing import ParseDataComponent
 from langflow.components.processing.split_text import SplitTextComponent
@@ -30,7 +30,13 @@ def ingestion_graph():
     openai_embeddings.set(
         openai_api_key="sk-123", openai_api_base="https://api.openai.com/v1", openai_api_type="openai"
     )
+
     vector_store = AstraDBVectorStoreComponent(_id="ingestion-vector-store-123")
+
+    # Mock search_documents by changing the value otherwise set by the vector_store_connection_decorator
+    vector_store.set_on_output(name="vectorstoreconnection", value=[Data(text="This is a test file.")], cache=True)
+
+    vector_store.set_on_output(name="vectorstoreconnection", value=[Data(text="This is a test file.")], cache=True)
     vector_store.set_on_output(name="search_results", value=[Data(text="This is a test file.")], cache=True)
     vector_store.set_on_output(name="dataframe", value=DataFrame(data=[Data(text="This is a test file.")]), cache=True)
     vector_store.set(

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -13,6 +14,8 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
@@ -92,7 +95,7 @@ test(
       .first();
     const secondBlockedHandle = page
       .getByTestId("div-handle-combinetext-shownode-combined text-right")
-      .nth(3);
+      .nth(1);
     const thirdBlockedHandle = page
       .getByTestId("div-handle-textoutput-shownode-message-right")
       .first();
@@ -192,7 +195,7 @@ test(
     //connection 2
     const elementTextOutput1 = page
       .getByTestId("handle-textinput-shownode-message-right")
-      .nth(4);
+      .nth(2);
     await elementTextOutput1.click();
     const elementGroupInput1 = page
       .getByTestId("handle-groupnode-shownode-second text-left")
@@ -202,7 +205,7 @@ test(
     //connection 3
     const elementTextOutput2 = page
       .getByTestId("handle-textinput-shownode-message-right")
-      .nth(2);
+      .nth(1);
     await elementTextOutput2.click();
 
     const elementGroupInput2 = page
@@ -237,10 +240,6 @@ test(
     await page.getByTestId("button_run_text output").last().click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
 
     expect(
       await page

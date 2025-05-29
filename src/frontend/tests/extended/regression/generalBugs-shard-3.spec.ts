@@ -32,40 +32,33 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
 
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
-      timeout: 30000,
-    });
+    await page
+      .getByTestId("outputsChat Output")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 0, y: 0 },
+      });
 
     await page
       .getByTestId("outputsChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
-
-    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
-    await page.waitForSelector('[data-testid="inputsChat Input"]', {
-      timeout: 30000,
-    });
 
     await page
       .getByTestId("inputsChat Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 100 },
+      });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
 
-    await adjustScreenView(page, { numberOfZoomOut: 1 });
-
     await page
-      .getByTestId("modelsOpenAI")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.down();
-    await page.mouse.up();
+      .getByTestId("languagemodelsOpenAI")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 200 },
+      });
 
     await initialGPTsetup(page);
 
@@ -73,73 +66,22 @@ test(
       timeout: 5000,
       state: "visible",
     });
-    // This causes the Chat Input to be hidden
-    // await page.getByTestId("fit_view").click();
-
-    const elementsChatInput = await page
-      .locator('[data-testid="handle-chatinput-noshownode-message-source"]')
-      .all();
-
-    let visibleElementHandle;
-
-    for (const element of elementsChatInput) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
-    }
-
-    await page.locator(".react-flow__pane").click();
-    await adjustScreenView(page, { numberOfZoomOut: 1 });
-    await visibleElementHandle.hover();
-    await page.mouse.down();
-
-    const elementsOpenAiInput = await page
-      .locator('[data-testid="handle-openaimodel-shownode-input-left"]')
-      .all();
-
-    for (const element of elementsOpenAiInput) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
-    }
-
-    await visibleElementHandle.hover();
-    await page.mouse.up();
-
-    const elementsOpenAiOutput = await page
-      .locator('[data-testid="handle-openaimodel-shownode-message-right"]')
-      .all();
-
-    for (const element of elementsOpenAiOutput) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
-    }
-
-    // Click and hold on the first element
-    await visibleElementHandle.hover();
-    await page.mouse.down();
-
-    // Move to the second element
-    const elementsChatOutput = await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
-      .all();
-
-    for (const element of elementsChatOutput) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
-    }
-
-    await visibleElementHandle.hover();
-    await page.mouse.up();
 
     await page.getByTestId("fit_view").click();
-    await page.getByText("Playground", { exact: true }).last().click();
+
+    await page
+      .getByTestId("handle-chatinput-noshownode-message-source")
+      .click();
+    await page.getByTestId("handle-openaimodel-shownode-input-left").click();
+
+    await page.getByTestId("handle-openaimodel-shownode-message-right").click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .last()
+      .click();
+
+    await page.getByTestId("fit_view").click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });

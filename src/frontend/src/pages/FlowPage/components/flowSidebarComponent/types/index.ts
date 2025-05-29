@@ -1,6 +1,10 @@
 import { APIClassType, APIDataType } from "@/types/api";
 import { Dispatch, SetStateAction } from "react";
 
+export interface NodeColors {
+  [key: string]: string;
+}
+
 export interface CategoryGroupProps {
   dataFilter: APIDataType;
   sortedCategories: string[];
@@ -10,17 +14,51 @@ export interface CategoryGroupProps {
     icon: string;
   }[];
   openCategories: string[];
-  setOpenCategories: (categories: string[]) => void;
+  setOpenCategories: Dispatch<SetStateAction<string[]>>;
   search: string;
-  nodeColors: {
-    [key: string]: string;
-  };
-  chatInputAdded: boolean;
+  nodeColors: NodeColors;
   onDragStart: (
     event: React.DragEvent<any>,
     data: { type: string; node?: APIClassType },
   ) => void;
   sensitiveSort: (a: string, b: string) => number;
+}
+
+export interface SidebarGroupProps {
+  BUNDLES: any;
+  search: string;
+  sortedCategories: string[];
+  dataFilter: APIDataType;
+  nodeColors: NodeColors;
+  onDragStart: (
+    event: React.DragEvent<HTMLDivElement>,
+    data: { type: string; node?: APIClassType },
+  ) => void;
+  sensitiveSort: (a: string, b: string) => number;
+  handleKeyDownInput: (
+    event: React.KeyboardEvent<HTMLDivElement>,
+    name: string,
+  ) => void;
+  openCategories: string[];
+  setOpenCategories: Dispatch<SetStateAction<string[]>>;
+}
+
+export interface BundleItemProps {
+  item: {
+    name: string;
+    display_name: string;
+    icon: string;
+  };
+  openCategories: string[];
+  setOpenCategories: Dispatch<SetStateAction<string[]>>;
+  dataFilter: APIDataType;
+  nodeColors: NodeColors;
+  onDragStart: (
+    event: React.DragEvent<any>,
+    data: { type: string; node?: APIClassType },
+  ) => void;
+  sensitiveSort: (a: string, b: string) => number;
+  handleKeyDownInput: (event: React.KeyboardEvent<any>, name: string) => void;
 }
 
 export interface SidebarHeaderComponentProps {
@@ -49,4 +87,9 @@ export interface SidebarHeaderComponentProps {
   setFilterEdge: (edge: any[]) => void;
   setFilterData: Dispatch<SetStateAction<APIDataType>>;
   data: APIDataType;
+}
+
+export interface UniqueInputsComponents {
+  chatInput: boolean;
+  webhookInput: boolean;
 }

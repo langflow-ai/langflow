@@ -1,18 +1,15 @@
 GOOGLE_GENERATIVE_AI_MODELS = [
+    # GEMINI 1.5
     "gemini-1.5-pro",
     "gemini-1.5-flash",
     "gemini-1.5-flash-8b",
-    "gemini-1.0-pro",
-    "gemini-1.0-pro-vision",
-    "gemini-1.5-pro-001",
-    "gemini-1.5-pro-002",
-    "gemini-1.5-flash-001",
-    "gemini-1.5-flash-002",
-    "gemini-1.5-pro-exp-0827",
-    "gemini-1.5-flash-exp-0827",
-    "gemini-1.5-flash-8b-exp-0827",
-    "gemini-1.5-flash-8b-exp-0924",
-    "gemini-exp-1114",
-    "gemini-2.0-flash-exp",
+    # PREVIEW
+    "gemini-2.0-flash",
     "gemini-exp-1206",
+    "gemini-2.0-flash-thinking-exp-01-21",
+    "learnlm-1.5-pro-experimental",
+    # GEMMA
+    "gemma-2-2b",
+    "gemma-2-9b",
+    "gemma-2-27b",
 ]

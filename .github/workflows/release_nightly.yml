@@ -55,7 +55,7 @@ on:
 
 env:
   POETRY_VERSION: "1.8.3"
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
 
 jobs:
   release-nightly-base:
@@ -75,13 +75,13 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
 
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          name=$(uv tree | grep 'langflow-base' | awk '{print $2}')
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
+          name=$(uv tree | grep 'langflow-base' | awk '{print $2}' | head -n 1)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
           if [ "$name" != "langflow-base-nightly" ]; then
             echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
             exit 1
@@ -105,8 +105,8 @@ jobs:
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist/
-          python -m pip install src/backend/base/dist/*.whl
-          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          uv pip install src/backend/base/dist/*.whl
+          uv run python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
@@ -152,7 +152,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
 
       - name: Verify Nightly Name and Version
         id: verify
@@ -222,6 +222,16 @@ jobs:
     uses: ./.github/workflows/docker-build.yml
     with:
       release_type: nightly-main
+      main_version: ${{ inputs.nightly_tag_main }}
+    secrets: inherit
+
+  call_docker_build_main_all:
+    name: Call Docker Build Workflow for langflow-all
+    if: always() && ${{ inputs.build_docker_main == 'true' }}
+    needs: [release-nightly-main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      release_type: nightly-main-all
       main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 

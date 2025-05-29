@@ -58,8 +58,8 @@ export function SaveChangesModal({
             Unsaved changes will be permanently lost.{" "}
             <a
               target="_blank"
-              className="underline"
-              href="https://docs.langflow.org/configuration-auto-saving"
+              className="text-secondary underline"
+              href="https://docs.langflow.org/configuration-auto-save"
             >
               Enable auto-saving
             </a>{" "}

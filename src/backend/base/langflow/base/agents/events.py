@@ -4,7 +4,7 @@ from time import perf_counter
 from typing import Any, Protocol
 
 from langchain_core.agents import AgentFinish
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessageChunk, BaseMessage
 from typing_extensions import TypedDict
 
 from langflow.schema.content_block import ContentBlock
@@ -14,9 +14,17 @@ from langflow.schema.message import Message
 
 
 class ExceptionWithMessageError(Exception):
-    def __init__(self, agent_message: Message):
+    def __init__(self, agent_message: Message, message: str):
         self.agent_message = agent_message
-        super().__init__()
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self):
+        return (
+            f"Agent message: {self.agent_message.text} \nError: {self.message}."
+            if self.agent_message.error or self.agent_message.text
+            else f"{self.message}."
+        )
 
 
 class InputDict(TypedDict):
@@ -73,13 +81,25 @@ async def handle_on_chain_start(
 
 def _extract_output_text(output: str | list) -> str:
     if isinstance(output, str):
-        text = output
-    elif isinstance(output, list) and len(output) == 1 and isinstance(output[0], dict) and "text" in output[0]:
-        text = output[0]["text"]
-    else:
+        return output
+    if isinstance(output, list) and len(output) == 0:
+        return ""
+    if not isinstance(output, list) or len(output) != 1:
         msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
-        raise ValueError(msg)
-    return text
+        raise TypeError(msg)
+
+    item = output[0]
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict):
+        if "text" in item:
+            return item["text"]
+        # If the item's type is "tool_use", return an empty string.
+        # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
+        if item.get("type") == "tool_use":
+            return ""
+    msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
+    raise TypeError(msg)
 
 
 async def handle_on_chain_end(
@@ -205,6 +225,14 @@ async def handle_on_chain_stream(
         agent_message.properties.state = "complete"
         agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
+    elif isinstance(data_chunk, AIMessageChunk):
+        output_text = _extract_output_text(data_chunk.content)
+        if output_text and isinstance(agent_message.text, str):
+            agent_message.text += output_text
+            agent_message.properties.state = "partial"
+            agent_message = await send_message_method(message=agent_message)
+        if not agent_message.text:
+            start_time = perf_counter()
     return agent_message, start_time
 
 
@@ -236,6 +264,7 @@ CHAIN_EVENT_HANDLERS: dict[str, ChainEventHandler] = {
     "on_chain_start": handle_on_chain_start,
     "on_chain_end": handle_on_chain_end,
     "on_chain_stream": handle_on_chain_stream,
+    "on_chat_model_stream": handle_on_chain_stream,
 }
 
 TOOL_EVENT_HANDLERS: dict[str, ToolEventHandler] = {
@@ -273,6 +302,5 @@ async def process_agent_events(
                 agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time)
         agent_message.properties.state = "complete"
     except Exception as e:
-        raise ExceptionWithMessageError(agent_message) from e
-
+        raise ExceptionWithMessageError(agent_message, str(e)) from e
     return await Message.create(**agent_message.model_dump())

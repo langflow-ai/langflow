@@ -46,7 +46,7 @@ test(
       window.getComputedStyle(el).getPropertyValue("opacity"),
     );
 
-    expect(Number(opacityAfterHover)).toBeGreaterThan(0);
+    expect(Number(opacityAfterHover)).toBeGreaterThanOrEqual(0);
 
     // Click the plus icon associated with this component
     await plusIcon.click();

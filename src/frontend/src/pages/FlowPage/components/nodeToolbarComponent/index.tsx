@@ -7,6 +7,7 @@ import ToggleShadComponent from "@/components/core/parameterRenderComponent/comp
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import { APIClassType } from "@/types/api";
 import { useUpdateNodeInternals } from "@xyflow/react";
@@ -34,7 +35,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { cn, getNodeLength, openInNewTab } from "../../../../utils/utils";
+import { cn, getNodeLength } from "../../../../utils/utils";
 import { ToolbarButton } from "./components/toolbar-button";
 import ToolbarModals from "./components/toolbar-modals";
 import useShortcuts from "./hooks/use-shortcuts";
@@ -52,6 +53,8 @@ const NodeToolbarComponent = memo(
     onCloseAdvancedModal,
     updateNode,
     isOutdated,
+    isUserEdited,
+    hasBreakingChange,
     setOpenShowMoreOptions,
   }: nodeToolbarPropsType): JSX.Element => {
     const version = useDarkStore((state) => state.version);
@@ -73,12 +76,9 @@ const NodeToolbarComponent = memo(
     const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
     const [openModal, setOpenModal] = useState(false);
     const frozen = data.node?.frozen ?? false;
-    const currentFlow = useFlowStore((state) => state.currentFlow);
     const updateNodeInternals = useUpdateNodeInternals();
 
     const paste = useFlowStore((state) => state.paste);
-    const nodes = useFlowStore((state) => state.nodes);
-    const edges = useFlowStore((state) => state.edges);
     const setNodes = useFlowStore((state) => state.setNodes);
     const setEdges = useFlowStore((state) => state.setEdges);
     const getNodePosition = useFlowStore((state) => state.getNodePosition);
@@ -93,21 +93,6 @@ const NodeToolbarComponent = memo(
       },
     });
 
-    const flowDataNodes = useMemo(
-      () => currentFlow?.data?.nodes,
-      [currentFlow],
-    );
-
-    const node = useMemo(
-      () => flowDataNodes?.find((n) => n.id === data.id),
-      [flowDataNodes, data.id],
-    );
-
-    const index = useMemo(
-      () => flowDataNodes?.indexOf(node!)!,
-      [flowDataNodes, node],
-    );
-
     const postToolModeValue = usePostTemplateValue({
       node: data.node!,
       nodeId: data.id,
@@ -117,8 +102,6 @@ const NodeToolbarComponent = memo(
     const isSaved = flows?.some((flow) =>
       Object.values(flow).includes(data.node?.display_name!),
     );
-
-    const setNode = useFlowStore((state) => state.setNode);
 
     const nodeLength = useMemo(() => getNodeLength(data), [data]);
     const hasCode = useMemo(
@@ -177,6 +160,7 @@ const NodeToolbarComponent = memo(
       setToolMode(newValue);
       mutateTemplate(
         newValue,
+        data.id,
         data.node!,
         handleNodeClass,
         postToolModeValue,
@@ -199,6 +183,14 @@ const NodeToolbarComponent = memo(
       });
     }, [isMinimal, showNode, data.id]);
 
+    useEffect(() => {
+      if (!isMinimal && !showNode) {
+        setShowNode(true);
+        updateNodeInternals(data.id);
+        return;
+      }
+    }, [isMinimal, showNode, data.id]);
+
     const handleungroup = useCallback(() => {
       if (isGroup) {
         takeSnapshot();
@@ -206,8 +198,6 @@ const NodeToolbarComponent = memo(
           data.id,
           updateFlowPosition(getNodePosition(data.id), data.node?.flow!),
           data.node!.template,
-          nodes,
-          edges,
           setNodes,
           setEdges,
           data.node?.outputs,
@@ -219,8 +209,6 @@ const NodeToolbarComponent = memo(
       data.node?.flow,
       data.node?.template,
       data.node?.outputs,
-      nodes,
-      edges,
       setNodes,
       setEdges,
       takeSnapshot,
@@ -256,25 +244,12 @@ const NodeToolbarComponent = memo(
 
     const openDocs = useCallback(() => {
       if (data.node?.documentation) {
-        return openInNewTab(data.node.documentation);
+        return customOpenNewTab(data.node.documentation);
       }
       setNoticeData({
         title: `${data.id} docs is not available at the moment.`,
       });
-    }, [data.id, data.node?.documentation, openInNewTab]);
-
-    const freezeFunction = useCallback(() => {
-      setNode(data.id, (old) => ({
-        ...old,
-        data: {
-          ...old.data,
-          node: {
-            ...old.data.node,
-            frozen: old.data?.node?.frozen ? false : true,
-          },
-        },
-      }));
-    }, [data.id, setNode]);
+    }, [data.id, data.node?.documentation]);
 
     useShortcuts({
       showOverrideModal,
@@ -284,7 +259,6 @@ const NodeToolbarComponent = memo(
       FreezeAllVertices: () => {
         FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
       },
-      Freeze: freezeFunction,
       downloadFunction: () => downloadNode(flowComponent!),
       displayDocs: openDocs,
       saveComponent,
@@ -327,14 +301,12 @@ const NodeToolbarComponent = memo(
 
     const handleSelectChange = useCallback(
       (event) => {
+        let nodes;
         setSelectedValue(event);
 
         switch (event) {
           case "save":
             saveComponent();
-            break;
-          case "freeze":
-            freezeFunction();
             break;
           case "freezeAll":
             FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
@@ -379,10 +351,12 @@ const NodeToolbarComponent = memo(
             updateNode();
             break;
           case "copy":
+            nodes = useFlowStore.getState().nodes;
             const node = nodes.filter((node) => node.id === data.id);
             setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
             break;
           case "duplicate":
+            nodes = useFlowStore.getState().nodes;
             paste(
               {
                 nodes: [nodes.find((node) => node.id === data.id)!],
@@ -405,7 +379,6 @@ const NodeToolbarComponent = memo(
       },
       [
         saveComponent,
-        freezeFunction,
         FreezeAllVertices,
         setOpenModal,
         setShowModalAdvanced,
@@ -445,11 +418,20 @@ const NodeToolbarComponent = memo(
       setOpenShowMoreOptions && setOpenShowMoreOptions(open);
     };
 
+    const isCustomComponent = useMemo(() => {
+      const isCustom = data.type === "CustomComponent" && !data.node?.edited;
+      if (isCustom) {
+        data.node.edited = true;
+      }
+      return isCustom;
+    }, [data.type, data.node]);
+
     const renderToolbarButtons = useMemo(
       () => (
         <>
           {hasCode && (
             <ToolbarButton
+              className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
               label="Code"
               onClick={() => setOpenModal(true)}
@@ -473,7 +455,7 @@ const NodeToolbarComponent = memo(
           {!hasToolMode && (
             <ToolbarButton
               icon="FreezeAll"
-              label="Freeze Path"
+              label="Freeze"
               onClick={() => {
                 takeSnapshot();
                 FreezeAllVertices({
@@ -482,7 +464,7 @@ const NodeToolbarComponent = memo(
                 });
               }}
               shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("freeze path"),
+                s.name.toLowerCase().startsWith("freeze"),
               )}
               className={cn("node-toolbar-buttons", frozen && "text-blue-500")}
             />
@@ -519,7 +501,7 @@ const NodeToolbarComponent = memo(
                     toolMode ? "text-primary" : "",
                   )}
                 />
-                <span className="text-[13px] font-medium">Tool Mode</span>
+                <span className="text-mmd font-medium">Tool Mode</span>
                 <ToggleShadComponent
                   value={toolMode}
                   editNode={false}
@@ -583,34 +565,6 @@ const NodeToolbarComponent = memo(
               <SelectContentWithoutPortal
                 className={"relative top-1 w-56 bg-background"}
               >
-                {hasCode && (
-                  <SelectItem value={"code"}>
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find((obj) => obj.name === "Code")?.shortcut!
-                      }
-                      value={"Code"}
-                      icon={"Code"}
-                      dataTestId="code-button-modal"
-                    />
-                  </SelectItem>
-                )}
-                {nodeLength > 0 && (
-                  <SelectItem
-                    value={nodeLength === 0 ? "disabled" : "advanced"}
-                  >
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find(
-                          (obj) => obj.name === "Advanced Settings",
-                        )?.shortcut!
-                      }
-                      value={"Controls"}
-                      icon={"SlidersHorizontal"}
-                      dataTestId="advanced-button-modal"
-                    />
-                  </SelectItem>
-                )}
                 <SelectItem value={"save"}>
                   <ToolbarSelectItem
                     shortcut={
@@ -650,8 +604,11 @@ const NodeToolbarComponent = memo(
                         shortcuts.find((obj) => obj.name === "Update")
                           ?.shortcut!
                       }
-                      value={"Restore"}
-                      icon={"RefreshCcwDot"}
+                      style={
+                        hasBreakingChange ? "text-accent-amber-foreground" : ""
+                      }
+                      value={isUserEdited ? "Restore" : "Update"}
+                      icon={isUserEdited ? "RefreshCcwDot" : "CircleArrowUp"}
                       dataTestId="update-button-modal"
                     />
                   </SelectItem>
@@ -713,29 +670,21 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
-                <SelectItem value="freeze">
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
-                    }
-                    value={"Freeze"}
-                    icon={"Snowflake"}
-                    dataTestId="freeze-button"
-                    style={`${frozen ? " text-ice" : ""} transition-all`}
-                  />
-                </SelectItem>
-                <SelectItem value="freezeAll">
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Freeze Path")
-                        ?.shortcut!
-                    }
-                    value={"Freeze Path"}
-                    icon={"FreezeAll"}
-                    dataTestId="freeze-path-button"
-                    style={`${frozen ? " text-ice" : ""} transition-all`}
-                  />
-                </SelectItem>
+                {hasToolMode && (
+                  <SelectItem value="freezeAll">
+                    <ToolbarSelectItem
+                      shortcut={
+                        shortcuts.find((obj) =>
+                          obj.name.toLowerCase().startsWith("freeze"),
+                        )?.shortcut!
+                      }
+                      value={"Freeze"}
+                      icon={"FreezeAll"}
+                      dataTestId="freeze-path-button"
+                      style={`${frozen ? " text-ice" : ""} transition-all`}
+                    />
+                  </SelectItem>
+                )}
                 <SelectItem value="Download">
                   <ToolbarSelectItem
                     shortcut={

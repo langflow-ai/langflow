@@ -23,7 +23,7 @@ from emoji import demojize, purely_emoji
 from loguru import logger
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
-from sqlmodel import select
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
@@ -56,21 +56,14 @@ def update_projects_components_with_latest_component_versions(project_data, all_
         node_data = node.get("data").get("node")
         node_type = node.get("data").get("type")
 
-        # Skip updating if tool_mode is True
-        if node_data.get("tool_mode", False):
-            continue
-
-        # Skip nodes with outputs of the specified format
-        # NOTE: to account for the fact that the Simple Agent has dynamic outputs
-        if any(output.get("types") == ["Tool"] for output in node_data.get("outputs", [])):
-            continue
-
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
 
-            if "outputs" in latest_node:
+            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") == "Agent"
+            has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
+            if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
                 node_data["outputs"] = latest_node["outputs"]
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
@@ -146,13 +139,18 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             # Remove fields that are not in the latest template
             if node_type != "Prompt":
                 for field_name in list(node_data["template"].keys()):
-                    if field_name not in latest_template:
+                    is_tool_mode_and_field_is_tools_metadata = (
+                        node_data.get("tool_mode", False) and field_name == "tools_metadata"
+                    )
+                    if field_name not in latest_template and not is_tool_mode_and_field_is_tools_metadata:
                         node_data["template"].pop(field_name)
     log_node_changes(node_changes_log)
     return project_data_copy
 
 
 def scape_json_parse(json_string: str) -> dict:
+    if json_string is None:
+        return {}
     if isinstance(json_string, dict):
         return json_string
     parsed_string = json_string.replace("œ", '"')
@@ -244,14 +242,50 @@ def update_new_output(data):
 
 
 def update_edges_with_latest_component_versions(project_data):
+    """Update edges in a project with the latest component versions.
+
+    This function processes each edge in the project data and ensures that the source and target handles
+    are updated to match the latest component versions. It tracks all changes made to edges in a log
+    for debugging purposes.
+
+    Args:
+        project_data (dict): The project data containing nodes and edges to be updated.
+
+    Returns:
+        dict: A deep copy of the project data with updated edges.
+
+    The function performs the following operations:
+    1. Creates a deep copy of the project data to avoid modifying the original
+    2. For each edge, extracts and parses the source and target handles
+    3. Finds the corresponding source and target nodes
+    4. Updates output types in the source handle based on the node's outputs
+    5. Updates input types in the target handle based on the node's template
+    6. Escapes and updates the handles in the edge data
+    7. Logs all changes made to the edges
+    """
+    # Initialize a dictionary to track changes for logging
     edge_changes_log = defaultdict(list)
+    # Create a deep copy to avoid modifying the original data
     project_data_copy = deepcopy(project_data)
+
+    # Create a mapping of node types to node IDs for node reconciliation
+    node_type_map = {}
+    for node in project_data_copy.get("nodes", []):
+        node_type = node.get("data", {}).get("type", "")
+        if node_type:
+            if node_type not in node_type_map:
+                node_type_map[node_type] = []
+            node_type_map[node_type].append(node.get("id"))
+
+    # Process each edge in the project
     for edge in project_data_copy.get("edges", []):
-        source_handle = edge.get("data").get("sourceHandle")
+        # Extract and parse source and target handles
+        source_handle = edge.get("data", {}).get("sourceHandle")
         source_handle = scape_json_parse(source_handle)
-        target_handle = edge.get("data").get("targetHandle")
+        target_handle = edge.get("data", {}).get("targetHandle")
         target_handle = scape_json_parse(target_handle)
-        # Now find the source and target nodes in the nodes list
+
+        # Find the corresponding source and target nodes
         source_node = next(
             (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("source")),
             None,
@@ -260,27 +294,95 @@ def update_edges_with_latest_component_versions(project_data):
             (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("target")),
             None,
         )
+
+        # Try to reconcile missing nodes by type
+        if source_node is None and source_handle and "dataType" in source_handle:
+            node_type = source_handle.get("dataType")
+            if node_type_map.get(node_type):
+                # Use the first node of matching type as replacement
+                new_node_id = node_type_map[node_type][0]
+                logger.info(f"Reconciling missing source node: replacing {edge.get('source')} with {new_node_id}")
+
+                # Update edge source
+                edge["source"] = new_node_id
+
+                # Update source handle ID
+                source_handle["id"] = new_node_id
+
+                # Find the new source node
+                source_node = next(
+                    (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
+                    None,
+                )
+
+                # Update edge ID (complex as it contains encoded handles)
+                # This is a simplified approach - in production you'd need to parse and rebuild the ID
+                old_id_prefix = edge.get("id", "").split("{")[0]
+                if old_id_prefix:
+                    new_id_prefix = old_id_prefix.replace(edge.get("source"), new_node_id)
+                    edge["id"] = edge.get("id", "").replace(old_id_prefix, new_id_prefix)
+
+        if target_node is None and target_handle and "id" in target_handle:
+            # Extract node type from target handle ID (e.g., "AstraDBGraph-jr8pY" -> "AstraDBGraph")
+            id_parts = target_handle.get("id", "").split("-")
+            if len(id_parts) > 0:
+                node_type = id_parts[0]
+                if node_type_map.get(node_type):
+                    # Use the first node of matching type as replacement
+                    new_node_id = node_type_map[node_type][0]
+                    logger.info(f"Reconciling missing target node: replacing {edge.get('target')} with {new_node_id}")
+
+                    # Update edge target
+                    edge["target"] = new_node_id
+
+                    # Update target handle ID
+                    target_handle["id"] = new_node_id
+
+                    # Find the new target node
+                    target_node = next(
+                        (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
+                        None,
+                    )
+
+                    # Update edge ID (simplified approach)
+                    old_id_suffix = edge.get("id", "").split("}-")[1] if "}-" in edge.get("id", "") else ""
+                    if old_id_suffix:
+                        new_id_suffix = old_id_suffix.replace(edge.get("target"), new_node_id)
+                        edge["id"] = edge.get("id", "").replace(old_id_suffix, new_id_suffix)
+
         if source_node and target_node:
-            source_node_data = source_node.get("data").get("node")
-            target_node_data = target_node.get("data").get("node")
+            # Extract node data for easier access
+            source_node_data = source_node.get("data", {}).get("node", {})
+            target_node_data = target_node.get("data", {}).get("node", {})
+
+            # Find the output data that matches the source handle name
             output_data = next(
-                (output for output in source_node_data.get("outputs", []) if output["name"] == source_handle["name"]),
+                (
+                    output
+                    for output in source_node_data.get("outputs", [])
+                    if output.get("name") == source_handle.get("name")
+                ),
                 None,
             )
+
+            # If not found by name, try to find by display_name
             if not output_data:
                 output_data = next(
                     (
                         output
                         for output in source_node_data.get("outputs", [])
-                        if output["display_name"] == source_handle["name"]
+                        if output.get("display_name") == source_handle.get("name")
                     ),
                     None,
                 )
+                # Update source handle name if found by display_name
                 if output_data:
-                    source_handle["name"] = output_data["name"]
+                    source_handle["name"] = output_data.get("name")
+
+            # Determine the new output types based on the output data
             if output_data:
-                if len(output_data.get("types")) == 1:
-                    new_output_types = output_data.get("types")
+                if len(output_data.get("types", [])) == 1:
+                    new_output_types = output_data.get("types", [])
                 elif output_data.get("selected"):
                     new_output_types = [output_data.get("selected")]
                 else:
@@ -288,42 +390,51 @@ def update_edges_with_latest_component_versions(project_data):
             else:
                 new_output_types = []
 
-            if source_handle["output_types"] != new_output_types:
-                edge_changes_log[source_node_data["display_name"]].append(
+            # Update output types if they've changed and log the change
+            if source_handle.get("output_types", []) != new_output_types:
+                edge_changes_log[source_node_data.get("display_name", "unknown")].append(
                     {
                         "attr": "output_types",
-                        "old_value": source_handle["output_types"],
+                        "old_value": source_handle.get("output_types", []),
                         "new_value": new_output_types,
                     }
                 )
                 source_handle["output_types"] = new_output_types
 
+            # Update input types if they've changed and log the change
             field_name = target_handle.get("fieldName")
-            if field_name in target_node_data.get("template") and target_handle["inputTypes"] != target_node_data.get(
-                "template"
-            ).get(field_name).get("input_types"):
-                edge_changes_log[target_node_data["display_name"]].append(
+            if field_name in target_node_data.get("template", {}) and target_handle.get(
+                "inputTypes", []
+            ) != target_node_data.get("template", {}).get(field_name, {}).get("input_types", []):
+                edge_changes_log[target_node_data.get("display_name", "unknown")].append(
                     {
                         "attr": "inputTypes",
-                        "old_value": target_handle["inputTypes"],
-                        "new_value": target_node_data.get("template").get(field_name).get("input_types"),
+                        "old_value": target_handle.get("inputTypes", []),
+                        "new_value": target_node_data.get("template", {}).get(field_name, {}).get("input_types", []),
                     }
                 )
-                target_handle["inputTypes"] = target_node_data.get("template").get(field_name).get("input_types")
+                target_handle["inputTypes"] = (
+                    target_node_data.get("template", {}).get(field_name, {}).get("input_types", [])
+                )
+
+            # Escape the updated handles for JSON storage
             escaped_source_handle = escape_json_dump(source_handle)
             escaped_target_handle = escape_json_dump(target_handle)
-            try:
-                old_escape_source_handle = escape_json_dump(json.loads(edge["sourceHandle"]))
 
-            except json.JSONDecodeError:
-                old_escape_source_handle = edge["sourceHandle"]
+            # Try to parse and escape the old handles for comparison
+            try:
+                old_escape_source_handle = escape_json_dump(json.loads(edge.get("sourceHandle", "{}")))
+            except (json.JSONDecodeError, TypeError):
+                old_escape_source_handle = edge.get("sourceHandle", "")
 
             try:
-                old_escape_target_handle = escape_json_dump(json.loads(edge["targetHandle"]))
-            except json.JSONDecodeError:
-                old_escape_target_handle = edge["targetHandle"]
+                old_escape_target_handle = escape_json_dump(json.loads(edge.get("targetHandle", "{}")))
+            except (json.JSONDecodeError, TypeError):
+                old_escape_target_handle = edge.get("targetHandle", "")
+
+            # Update source handle if it's changed and log the change
             if old_escape_source_handle != escaped_source_handle:
-                edge_changes_log[source_node_data["display_name"]].append(
+                edge_changes_log[source_node_data.get("display_name", "unknown")].append(
                     {
                         "attr": "sourceHandle",
                         "old_value": old_escape_source_handle,
@@ -331,8 +442,12 @@ def update_edges_with_latest_component_versions(project_data):
                     }
                 )
                 edge["sourceHandle"] = escaped_source_handle
+                if "data" in edge:
+                    edge["data"]["sourceHandle"] = source_handle
+
+            # Update target handle if it's changed and log the change
             if old_escape_target_handle != escaped_target_handle:
-                edge_changes_log[target_node_data["display_name"]].append(
+                edge_changes_log[target_node_data.get("display_name", "unknown")].append(
                     {
                         "attr": "targetHandle",
                         "old_value": old_escape_target_handle,
@@ -340,9 +455,14 @@ def update_edges_with_latest_component_versions(project_data):
                     }
                 )
                 edge["targetHandle"] = escaped_target_handle
+                if "data" in edge:
+                    edge["data"]["targetHandle"] = target_handle
 
         else:
+            # Log an error if source or target node is not found after reconciliation attempt
             logger.error(f"Source or target node not found for edge: {edge}")
+
+    # Log all the changes that were made
     log_node_changes(edge_changes_log)
     return project_data_copy
 
@@ -374,7 +494,7 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
             try:
                 project = orjson.loads(content)
                 starter_projects.append((file, project))
-                logger.info(f"Loaded starter project {file}")
+                logger.debug(f"Loaded starter project {file}")
                 break  # Break if load is successful
             except orjson.JSONDecodeError as e:
                 attempt += 1
@@ -483,7 +603,7 @@ async def update_project_file(project_path: anyio.Path, project: dict, updated_p
     project["data"] = updated_project_data
     async with async_open(str(project_path), "w", encoding="utf-8") as f:
         await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
-    logger.info(f"Updated starter project {project['name']} file")
+    logger.debug(f"Updated starter project {project['name']} file")
 
 
 def update_existing_project(
@@ -536,9 +656,9 @@ def create_new_project(
     session.add(db_flow)
 
 
-async def get_all_flows_similar_to_project(session, folder_id):
+async def get_all_flows_similar_to_project(session: AsyncSession, folder_id: UUID) -> list[Flow]:
     stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == folder_id)
-    return (await session.exec(stmt)).first().flows
+    return list((await session.exec(stmt)).first().flows)
 
 
 async def delete_start_projects(session, folder_id) -> None:
@@ -597,8 +717,8 @@ async def load_flows_from_directory() -> None:
         # Ensure that the default folder exists for this user
         _ = await get_or_create_default_folder(session, user.id)
 
-        async for file_path in anyio.Path(flows_path).iterdir():
-            if not await file_path.is_file() or file_path.suffix != ".json":
+        for file_path in await asyncio.to_thread(Path(flows_path).iterdir):
+            if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
                 continue
             logger.info(f"Loading flow from file: {file_path.name}")
             async with async_open(str(file_path), "r", encoding="utf-8") as f:
@@ -785,7 +905,8 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
                     # We also need to update the project data in the file
                     await update_project_file(project_path, project, updated_project_data)
             if do_create and project_name and project_data:
-                for existing_project in await get_all_flows_similar_to_project(session, new_folder.id):
+                existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
+                for existing_project in existing_flows:
                     await session.delete(existing_project)
 
                 create_new_project(
@@ -855,3 +976,37 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
         msg = "Failed to get or create default folder"
         raise ValueError(msg) from e
     return FolderRead.model_validate(folder_obj, from_attributes=True)
+
+
+async def sync_flows_from_fs():
+    flow_mtimes = {}
+    fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
+    while True:
+        try:
+            async with session_scope() as session:
+                stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
+                flows = (await session.exec(stmt)).all()
+                for flow in flows:
+                    mtime = flow_mtimes.setdefault(flow.id, 0)
+                    path = anyio.Path(flow.fs_path)
+                    try:
+                        if await path.exists():
+                            new_mtime = (await path.stat()).st_mtime
+                            if new_mtime > mtime:
+                                update_data = orjson.loads(await path.read_text(encoding="utf-8"))
+                                try:
+                                    for field_name in ("name", "description", "data", "locked"):
+                                        if new_value := update_data.get(field_name):
+                                            setattr(flow, field_name, new_value)
+                                    if folder_id := update_data.get("folder_id"):
+                                        flow.folder_id = UUID(folder_id)
+                                    await session.commit()
+                                    await session.refresh(flow)
+                                except Exception:  # noqa: BLE001
+                                    logger.exception(f"Couldn't update flow {flow.id} in database from path {path}")
+                                flow_mtimes[flow.id] = new_mtime
+                    except Exception:  # noqa: BLE001
+                        logger.exception(f"Error while handling flow file {path}")
+        except Exception:  # noqa: BLE001
+            logger.exception("Error while syncing flows from database")
+        await asyncio.sleep(fs_flows_polling_interval)

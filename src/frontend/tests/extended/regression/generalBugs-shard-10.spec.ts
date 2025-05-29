@@ -29,7 +29,7 @@ test(
 
     await page.getByTestId("fit_view").click();
 
-    await page.getByText("openai").first().click();
+    await page.getByText("openai").last().click();
     await page.keyboard.press("Delete");
 
     //connection 1
@@ -66,9 +66,12 @@ test(
 
     await page.getByText("Prompt", { exact: true }).last().click();
 
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 1000,
+    });
     await page.getByTestId("more-options-modal").click();
 
-    await page.getByText("Freeze", { exact: true }).last().click();
+    await page.getByText("Freeze", { exact: true }).first().click();
 
     await page.waitForSelector(".border-ring-frozen", { timeout: 3000 });
 
@@ -76,7 +79,7 @@ test(
 
     await page.getByTestId("button_open_prompt_modal").click();
 
-    await page.getByTestId("edit-prompt-sanitized").first().click();
+    await page.getByTestId("edit-prompt-sanitized").last().click();
 
     await page
       .getByTestId("modal-promptarea_prompt_template")
@@ -94,8 +97,8 @@ test(
       .getByTestId("div-chat-message")
       .allTextContents();
 
-    const concatAllText2 = textContents2.join(" ");
-
-    expect(concatAllText2).toBe(concatAllText);
+    textContents2.forEach((text) => {
+      expect(text).toBe(concatAllText);
+    });
   },
 );

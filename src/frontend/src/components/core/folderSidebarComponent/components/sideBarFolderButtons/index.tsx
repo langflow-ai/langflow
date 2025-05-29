@@ -1,6 +1,8 @@
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -9,17 +11,31 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
+  DEFAULT_FOLDER,
+  DEFAULT_FOLDER_DEPRECATED,
+} from "@/constants/constants";
+import { useUpdateUser } from "@/controllers/API/queries/auth";
+import {
   usePatchFolders,
   usePostFolders,
   usePostUploadFolders,
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
-import { ENABLE_CUSTOM_PARAM } from "@/customization/feature-flags";
+import { CustomStoreButton } from "@/customization/components/custom-store-button";
+import {
+  ENABLE_CUSTOM_PARAM,
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_FILE_MANAGEMENT,
+  ENABLE_MCP_NOTICE,
+} from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
+import { customGetDownloadFolderBlob } from "@/customization/utils/custom-get-download-folders";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
+import useAuthStore from "@/stores/authStore";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
@@ -33,15 +49,18 @@ import useFileDrop from "../../hooks/use-on-file-drop";
 import { SidebarFolderSkeleton } from "../sidebarFolderSkeleton";
 import { HeaderButtons } from "./components/header-buttons";
 import { InputEditFolderName } from "./components/input-edit-folder-name";
+import { MCPServerNotice } from "./components/mcp-server-notice";
 import { SelectOptions } from "./components/select-options";
 
 type SideBarFoldersButtonsComponentProps = {
   handleChangeFolder?: (id: string) => void;
   handleDeleteFolder?: (item: FolderType) => void;
+  handleFilesClick?: () => void;
 };
 const SideBarFoldersButtonsComponent = ({
   handleChangeFolder,
   handleDeleteFolder,
+  handleFilesClick,
 }: SideBarFoldersButtonsComponentProps) => {
   const location = useLocation();
   const pathname = location.pathname;
@@ -49,12 +68,15 @@ const SideBarFoldersButtonsComponent = ({
   const loading = !folders;
   const refInput = useRef<HTMLInputElement>(null);
 
+  const navigate = useCustomNavigate();
+
   const currentFolder = pathname.split("/");
   const urlWithoutPath =
     pathname.split("/").length < (ENABLE_CUSTOM_PARAM ? 5 : 4);
+  const checkPathFiles = pathname.includes("files");
 
   const checkPathName = (itemId: string) => {
-    if (urlWithoutPath && itemId === myCollectionId) {
+    if (urlWithoutPath && itemId === myCollectionId && !checkPathFiles) {
       return true;
     }
     return currentFolder.includes(itemId);
@@ -130,13 +152,13 @@ const SideBarFoldersButtonsComponent = ({
               {
                 onSuccess: () => {
                   setSuccessData({
-                    title: "Folder uploaded successfully.",
+                    title: "Project uploaded successfully.",
                   });
                 },
                 onError: (err) => {
                   console.log(err);
                   setErrorData({
-                    title: `Error on uploading your folder, try dragging it into an existing folder.`,
+                    title: `Error on uploading your project, try dragging it into an existing project.`,
                     list: [err["response"]["data"]["message"]],
                   });
                 },
@@ -148,39 +170,18 @@ const SideBarFoldersButtonsComponent = ({
     });
   };
 
-  const handleDownloadFolder = (id: string) => {
+  const handleDownloadFolder = (id: string, folderName: string) => {
     mutateDownloadFolder(
       {
         folderId: id,
       },
       {
         onSuccess: (response) => {
-          // Create a blob from the response data
-          const blob = new Blob([response.data], {
-            type: "application/x-zip-compressed",
-          });
-
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-
-          // Get filename from header or use default
-          const filename =
-            response.headers?.["content-disposition"]
-              ?.split("filename=")[1]
-              ?.replace(/['"]/g, "") ?? "flows.zip";
-
-          link.setAttribute("download", filename);
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(url);
-
-          track("Folder Exported", { folderId: id });
+          customGetDownloadFolderBlob(response, id, folderName, setSuccessData);
         },
-        onError: () => {
+        onError: (e) => {
           setErrorData({
-            title: `An error occurred while downloading folder.`,
+            title: `An error occurred while downloading your project.`,
           });
         },
       },
@@ -191,14 +192,14 @@ const SideBarFoldersButtonsComponent = ({
     mutateAddFolder(
       {
         data: {
-          name: "New Folder",
+          name: "New Project",
           parent_id: null,
           description: "",
         },
       },
       {
         onSuccess: (folder) => {
-          track("Create New Folder");
+          track("Create New Project");
           handleChangeFolder!(folder.id);
         },
       },
@@ -276,7 +277,7 @@ const SideBarFoldersButtonsComponent = ({
   };
 
   const handleDoubleClick = (event, item) => {
-    if (item.name === "My Projects") {
+    if (item.name === DEFAULT_FOLDER_DEPRECATED) {
       return;
     }
 
@@ -335,12 +336,33 @@ const SideBarFoldersButtonsComponent = ({
 
   const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
 
+  const userData = useAuthStore((state) => state.userData);
+  const { mutate: updateUser } = useUpdateUser();
+  const userDismissedMcpDialog = userData?.optins?.mcp_dialog_dismissed;
+
+  const [isDismissedMcpDialog, setIsDismissedMcpDialog] = useState(
+    userDismissedMcpDialog,
+  );
+
+  const handleDismissMcpDialog = () => {
+    setIsDismissedMcpDialog(true);
+    updateUser({
+      user_id: userData?.id!,
+      user: {
+        optins: {
+          ...userData?.optins,
+          mcp_dialog_dismissed: true,
+        },
+      },
+    });
+  };
+
   return (
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
-      data-testid="folder-sidebar"
+      data-testid="project-sidebar"
     >
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="px-4 py-1">
         <HeaderButtons
           handleUploadFlowsToFolder={handleUploadFlowsToFolder}
           isUpdatingFolder={isUpdatingFolder}
@@ -401,8 +423,10 @@ const SideBarFoldersButtonsComponent = ({
                                   handleKeyDown={handleKeyDown}
                                 />
                               ) : (
-                                <span className="block w-0 grow truncate text-[13px] opacity-100">
-                                  {item.name}
+                                <span className="block w-0 grow truncate text-sm opacity-100">
+                                  {item.name === DEFAULT_FOLDER_DEPRECATED
+                                    ? DEFAULT_FOLDER
+                                    : item.name}
                                 </span>
                               )}
                             </div>
@@ -416,7 +440,9 @@ const SideBarFoldersButtonsComponent = ({
                             item={item}
                             index={index}
                             handleDeleteFolder={handleDeleteFolder}
-                            handleDownloadFolder={handleDownloadFolder}
+                            handleDownloadFolder={() =>
+                              handleDownloadFolder(item.id!, item.name)
+                            }
                             handleSelectFolderToRename={
                               handleSelectFolderToRename
                             }
@@ -436,7 +462,30 @@ const SideBarFoldersButtonsComponent = ({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        <div className="flex-1" />
+
+        {ENABLE_MCP_NOTICE && !isDismissedMcpDialog && (
+          <div className="p-2">
+            <MCPServerNotice handleDismissDialog={handleDismissMcpDialog} />
+          </div>
+        )}
       </SidebarContent>
+      {ENABLE_FILE_MANAGEMENT && (
+        <SidebarFooter className="border-t">
+          <div className="grid w-full items-center gap-2 p-2">
+            {!ENABLE_DATASTAX_LANGFLOW && <CustomStoreButton />}
+            <SidebarMenuButton
+              isActive={checkPathFiles}
+              onClick={() => handleFilesClick?.()}
+              size="md"
+              className="text-sm"
+            >
+              <ForwardedIconComponent name="File" className="h-4 w-4" />
+              My Files
+            </SidebarMenuButton>
+          </div>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 };

@@ -44,9 +44,10 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
+from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
+from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -58,10 +59,16 @@ router = APIRouter(tags=["Base"])
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all():
+    """Retrieve all component types with compression for better performance.
+
+    Returns a compressed response containing all available component types.
+    """
     from langflow.interface.components import get_and_cache_all_types_dict
 
     try:
-        return await get_and_cache_all_types_dict(settings_service=get_settings_service())
+        all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+        # Return compressed response using our utility function
+        return compress_response(all_types)
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -260,7 +267,7 @@ async def run_flow_generator(
         await event_manager.queue.put((None, None, time.time))
 
 
-@router.post("/run/{flow_id_or_name}", response_model_exclude_none=True)  # noqa: RUF100, FAST003
+@router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
@@ -501,7 +508,7 @@ async def experimental_run_flow(
 
     ### Example usage:
     ```json
-    POST /run/{flow_id}
+    POST /run/flow_id
     x-api-key: YOUR_API_KEY
     Payload:
     {
@@ -580,14 +587,14 @@ async def experimental_run_flow(
 
 
 @router.post(
-    "/predict/{flow_id}",
+    "/predict/{_flow_id}",
     dependencies=[Depends(api_key_security)],
 )
 @router.post(
-    "/process/{flow_id}",
+    "/process/{_flow_id}",
     dependencies=[Depends(api_key_security)],
 )
-async def process() -> None:
+async def process(_flow_id) -> None:
     """Endpoint to process an input with a given flow_id."""
     # Raise a depreciation warning
     logger.warning(
@@ -599,29 +606,16 @@ async def process() -> None:
     )
 
 
-@router.get("/task/{task_id}")
-async def get_task_status(task_id: str) -> TaskStatusResponse:
-    task_service = get_task_service()
-    task = task_service.get_task(task_id)
-    result = None
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if task.ready():
-        result = task.result
-        # If result isinstance of Exception, can we get the traceback?
-        if isinstance(result, Exception):
-            logger.exception(task.traceback)
+@router.get("/task/{_task_id}", deprecated=True)
+async def get_task_status(_task_id: str) -> TaskStatusResponse:
+    """Get the status of a task by ID (Deprecated).
 
-        if isinstance(result, dict) and "result" in result:
-            result = result["result"]
-        elif hasattr(result, "result"):
-            result = result.result
-
-    if task.status == "FAILURE":
-        result = str(task.result)
-        logger.error(f"Task {task_id} failed: {task.traceback}")
-
-    return TaskStatusResponse(status=task.status, result=result)
+    This endpoint is deprecated and will be removed in a future version.
+    """
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="The /task endpoint is deprecated and will be removed in a future version. Please use /run instead.",
+    )
 
 
 @router.post(
@@ -754,8 +748,6 @@ async def custom_component_update(
 @router.get("/config", response_model=ConfigResponse)
 async def get_config():
     try:
-        from langflow.services.deps import get_settings_service
-
         settings_service: SettingsService = get_settings_service()
 
         return {
