@@ -3,8 +3,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
-from litellm import ConfigDict
-from pydantic import field_serializer, field_validator
+from pydantic import ConfigDict, field_serializer, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, SQLModel
 
