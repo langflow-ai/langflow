@@ -37,13 +37,17 @@
     --canvas: 240 5% 96%; /* hsl(240, 5%, 96%) */
     --canvas-dot: 240 5% 65%; /* hsl(240, 5%, 65%) */
     --accent-emerald: 149 80% 90%; /* hsl(149, 80%, 90%) */
-    --accent-emerald-foreground: 161 41% 30%; /* hsl(161, 41%, 30%) */
+    --accent-emerald-foreground: 161 94% 30%; /* hsl(161, 94%, 30%) */
     --accent-emerald-hover: 152.4 76% 80.4%; /* hsl(152.4, 76%, 80.4%) */
     --accent-indigo: 226 100% 94%; /* hsl(226, 100%, 94%) */
     --accent-indigo-foreground: 243 75% 59%; /* hsl(243, 75%, 59%) */
+    --accent-red-foreground: 0 72% 51%; /* hsl(0, 72%, 51%) */
 
     --accent-pink: 326, 78%, 95%; /* hsl(326, 78%, 95%) */
     --accent-pink-foreground: 333 71% 51%; /* hsl(333, 71%, 51%) */
+
+    --accent-purple-foreground: 271 81% 56%;
+
     --tooltip: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --tooltip-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
 
@@ -53,8 +57,8 @@
     --jse-main-border: hsl(240, 6%, 90%);
     --jse-background-color: hsl(240, 5%, 96%);
     --jse-text-color: hsl(0, 0%, 0%);
-    --jse-selection-background-color: hsl(240, 5%, 96%);
-    --jse-selection-background-inactive-color: hsl(240, 6%, 90%);
+    --jse-selection-background-color: hsl(240, 4%, 46%, 0.2);
+    --jse-selection-background-inactive-color: hsl(240, 4%, 46%, 0.15);
     --jse-hover-background-color: hsl(240, 5%, 96%);
     --jse-active-line-background-color: hsl(240, 5%, 96%);
     --jse-search-match-background-color: hsl(240, 5%, 96%);
@@ -231,6 +235,8 @@
     --accent-indigo-foreground: 234 89% 74%; /* hsl(234, 89%, 74%) */
     --accent-pink: 336, 69%, 30%; /* hsl(336, 69%, 30%) */
     --accent-pink-foreground: 329 86% 70%; /* hsl(329, 86%, 70%) */
+    --accent-purple-foreground: 270, 95%, 75%;
+    --accent-red-foreground: 0 91% 71%; /* hsl(0, 91%, 71%) */
     --tooltip: 0 0% 100%; /* hsl(0, 0%, 100%) */
 
     --jse-theme-color: hsl(240, 4%, 16%) !important;
@@ -241,8 +247,8 @@
     --jse-main-border: hsl(240, 5%, 26%);
     --jse-background-color: hsl(240, 4%, 16%);
     --jse-text-color: hsl(0, 0%, 100%);
-    --jse-selection-background-color: hsl(240, 4%, 16%);
-    --jse-selection-background-inactive-color: hsl(240, 5%, 26%);
+    --jse-selection-background-color: hsl(240, 5%, 65%, 0.2);
+    --jse-selection-background-inactive-color: hsl(240, 5%, 65%, 0.15);
     --jse-hover-background-color: hsl(240, 4%, 16%);
     --jse-active-line-background-color: hsl(240, 4%, 16%);
     --jse-search-match-background-color: hsl(240, 4%, 16%);

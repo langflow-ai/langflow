@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Langflow",
-    "version": "1.4.0"
+    "version": "1.4.2"
   },
   "paths": {
     "/api/v1/build/{flow_id}/vertices": {
@@ -5464,6 +5464,116 @@
         ]
       }
     },
+    "/api/v2/files/batch/": {
+      "post": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Download Files Batch",
+        "description": "Download multiple files as a zip file by their IDs.",
+        "operationId": "download_files_batch_api_v2_files_batch__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array",
+                "title": "File Ids"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Delete Files Batch",
+        "description": "Delete multiple files by their IDs.",
+        "operationId": "delete_files_batch_api_v2_files_batch__delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array",
+                "title": "File Ids"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
     "/api/v2/files/{file_id}": {
       "get": {
         "tags": [
@@ -9508,7 +9618,6 @@
         "type": "object",
         "required": [
           "items",
-          "total",
           "page",
           "size"
         ],
@@ -9575,7 +9684,6 @@
         "type": "object",
         "required": [
           "items",
-          "total",
           "page",
           "size"
         ],
@@ -9642,7 +9750,6 @@
         "type": "object",
         "required": [
           "items",
-          "total",
           "page",
           "size"
         ],

@@ -40,7 +40,6 @@ To find your project ID, call the Langflow [/api/v1/projects/](#read-projects) e
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/projects/" \
-  "$LANGFLOW_URL/api/v1/projects/" \
   -H "accept: application/json"
 ```
 
@@ -58,8 +57,8 @@ curl -X GET \
 ```
   </TabItem>
 </Tabs>
-Export the `project-id` as an environment variable.
-Export the `project-id` as an environment variable.
+
+- Export the `project-id` as an environment variable.
 ```bash
 export project_ID="1415de42-8f01-4f36-bf34-539f23e47466"
 ```
@@ -1054,7 +1053,7 @@ To retrieve only the flows from a specific project, pass `project_id` in the que
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&project_id=$project_ID&header_flows=false&page=1&size=1" \
+  "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&project_id=$PROJECT_ID&header_flows=false&page=1&size=1" \
   -H "accept: application/json"
 ```
 
@@ -1263,7 +1262,7 @@ This example uploads a local file named `agent-with-astra-db-tool.json`.
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$project_ID" \
+  "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$PROJECT_ID" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@agent-with-astra-db-tool.json;type=application/json"
@@ -1296,7 +1295,7 @@ The target `project_id` must already exist before uploading a flow. Call the [/a
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$project_ID" \
+  "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$PROJECT_ID" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@agent-with-astra-db-tool.json;type=application/json"
@@ -1360,8 +1359,6 @@ A list of example flows.
 
 ## Projects
 
-## Projects
-
 Use the `/projects` endpoint to create, read, update, and delete projects.
 
 Projects store your flows and components.
@@ -1375,7 +1372,6 @@ Get a list of Langflow projects.
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/projects/" \
   "$LANGFLOW_URL/api/v1/projects/" \
   -H "accept: application/json"
 ```
@@ -1399,9 +1395,6 @@ curl -X GET \
 
 ### Create project
 
-### Create project
-
-Create a new project.
 Create a new project.
 
 <Tabs>
@@ -1410,11 +1403,8 @@ Create a new project.
 ```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/projects/" \
-  "$LANGFLOW_URL/api/v1/projects/" \
-  -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
-  "name": "new_project_name",
   "name": "new_project_name",
   "description": "string",
   "components_list": [],
@@ -1428,7 +1418,6 @@ curl -X POST \
 ```json
 {
   "name": "new_project_name",
-  "name": "new_project_name",
   "description": "string",
   "id": "b408ddb9-6266-4431-9be8-e04a62758331",
   "parent_id": null
@@ -1439,19 +1428,15 @@ curl -X POST \
 </Tabs>
 
 To add flows and components at project creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](#get-all-components) and [/api/v1/flows/read](#read-flows) endpoints and add them to the request body.
-To add flows and components at project creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](#get-all-components) and [/api/v1/flows/read](#read-flows) endpoints and add them to the request body.
 
-Adding a flow to a project moves the flow from its previous location. The flow is not copied.
 Adding a flow to a project moves the flow from its previous location. The flow is not copied.
 
 ```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/projects/" \
-  "$LANGFLOW_URL/api/v1/projects/" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
-  "name": "new_project_name",
   "name": "new_project_name",
   "description": "string",
   "components_list": [
@@ -1465,12 +1450,8 @@ curl -X POST \
 
 ### Read project
 
-### Read project
-
-Retrieve details of a specific project.
 Retrieve details of a specific project.
 
-To find the UUID of your project, call the [read projects](#read-projects) endpoint.
 To find the UUID of your project, call the [read projects](#read-projects) endpoint.
 
 <Tabs>
@@ -1478,7 +1459,7 @@ To find the UUID of your project, call the [read projects](#read-projects) endpo
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/projects/$project_ID" \
+  "$LANGFLOW_URL/api/v1/projects/$PROJECT_ID" \
   -H "accept: application/json"
 ```
 
@@ -1501,12 +1482,8 @@ curl -X GET \
 
 ### Update project
 
-### Update project
-
-Update the information of a specific project with a `PATCH` request.
 Update the information of a specific project with a `PATCH` request.
 
-Each PATCH request updates the project with the values you send.
 Each PATCH request updates the project with the values you send.
 Only the fields you include in your request are updated.
 If you send the same values multiple times, the update is still processed, even if the values are unchanged.
@@ -1517,9 +1494,7 @@ If you send the same values multiple times, the update is still processed, even 
 ```bash
 curl -X PATCH \
   "$LANGFLOW_URL/api/v1/projects/b408ddb9-6266-4431-9be8-e04a62758331" \
-  "$LANGFLOW_URL/api/v1/projects/b408ddb9-6266-4431-9be8-e04a62758331" \
   -H "accept: application/json" \
-  -H "Content-Type: application/json" \
   -d '{
   "name": "string",
   "description": "string",
@@ -1550,9 +1525,6 @@ curl -X PATCH \
 
 ### Delete project
 
-### Delete project
-
-Delete a specific project.
 Delete a specific project.
 
 <Tabs>
@@ -1560,7 +1532,7 @@ Delete a specific project.
 
 ```bash
 curl -X DELETE \
-  "$LANGFLOW_URL/api/v1/projects/$project_ID" \
+  "$LANGFLOW_URL/api/v1/projects/$PROJECT_ID" \
   -H "accept: */*"
 ```
 
@@ -1576,9 +1548,6 @@ curl -X DELETE \
 
 ### Download project
 
-### Download project
-
-Download all flows from a project as a zip file.
 Download all flows from a project as a zip file.
 
 The `--output` flag is optional.
@@ -1589,9 +1558,7 @@ The `--output` flag is optional.
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/projects/download/b408ddb9-6266-4431-9be8-e04a62758331" \
-  "$LANGFLOW_URL/api/v1/projects/download/b408ddb9-6266-4431-9be8-e04a62758331" \
   -H "accept: application/json" \
-  --output langflow-project.zip
   --output langflow-project.zip
 ```
 
@@ -1600,7 +1567,6 @@ curl -X GET \
 
 ```text
 The project contents.
-The project contents.
 ```
 
   </TabItem>
@@ -1608,9 +1574,6 @@ The project contents.
 
 ### Upload project
 
-### Upload project
-
-Upload a project to Langflow.
 Upload a project to Langflow.
 
 <Tabs>
@@ -1618,7 +1581,6 @@ Upload a project to Langflow.
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/projects/upload/" \
   "$LANGFLOW_URL/api/v1/projects/upload/" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
@@ -1630,7 +1592,6 @@ curl -X POST \
   <TabItem value="result" label="Result">
 
 ```text
-The project contents are uploaded to Langflow.
 The project contents are uploaded to Langflow.
 ```
 

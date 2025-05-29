@@ -35,25 +35,27 @@ export const GetStartedProgress: FC<{
   const hasFlows = flows && flows?.length > 0;
 
   const percentageGetStarted = useMemo(() => {
-    const totalSteps = 3;
-    let hasFlowsCount = 0;
-    const completedSteps = Object.keys(userData?.optins ?? {}).filter(
-      (key) => userData?.optins?.[key],
-    )?.length;
+    const stepValue = 33;
+    let totalPercentage = 0;
 
-    if (hasFlows) {
-      hasFlowsCount = 33;
+    if (userData?.optins?.github_starred) {
+      totalPercentage += stepValue;
     }
 
-    const percentage =
-      Math.round((completedSteps / totalSteps) * 100) + hasFlowsCount;
+    if (userData?.optins?.discord_clicked) {
+      totalPercentage += stepValue;
+    }
 
-    if (percentage > 100) {
+    if (hasFlows) {
+      totalPercentage += stepValue;
+    }
+
+    if (totalPercentage === 99) {
       return 100;
     }
 
-    return percentage;
-  }, [userData?.optins, isGithubStarredChild, isDiscordJoinedChild, hasFlows]);
+    return Math.min(totalPercentage, 100);
+  }, [userData?.optins, hasFlows]);
 
   const handleUserTrack = (key: string) => {
     const optins = userData?.optins ?? {};
@@ -85,7 +87,7 @@ export const GetStartedProgress: FC<{
     <div className="mt-3 h-[10.8rem] w-full">
       <div className="mb-2 flex items-center justify-between">
         <span
-          className="text-sm font-semibold"
+          className="text-sm font-medium"
           data-testid="get_started_progress_title"
         >
           {percentageGetStarted >= 100 ? (

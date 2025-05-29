@@ -1,4 +1,4 @@
-import { usePostUploadFileV2 } from "@/controllers/API/queries/file-management/use-post-upload-file";
+import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 
@@ -9,7 +9,7 @@ const useUploadFile = ({
   types?: string[];
   multiple?: boolean;
 }) => {
-  const { mutateAsync: uploadFileMutation } = usePostUploadFileV2();
+  const { mutateAsync: uploadFileMutation } = customPostUploadFileV2();
   const { validateFileSize } = useFileSizeValidator();
 
   const getFilesToUpload = async ({
@@ -38,12 +38,10 @@ const useUploadFile = ({
       for (const file of filesToUpload) {
         validateFileSize(file);
         // Check if file extension is allowed
-        const fileExtension = file.type
-          ? file.name.split(".").pop()?.toLowerCase()
-          : null;
-        if (types && (!fileExtension || !types.includes(fileExtension))) {
+        const fileExtension = file.name.split(".").pop()?.toLowerCase();
+        if (!fileExtension || (types && !types.includes(fileExtension))) {
           throw new Error(
-            `File type not allowed. Allowed types: ${types.join(", ")}`,
+            `File type ${fileExtension} not allowed. Allowed types: ${types?.join(", ")}`,
           );
         }
         if (!fileExtension) {
