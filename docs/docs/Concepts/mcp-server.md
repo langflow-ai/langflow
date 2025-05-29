@@ -301,9 +301,9 @@ You can use the ngrok console output to monitor requests for your project's endp
 16:35:48.566 EDT GET /api/v1/mcp/project/fdbc12af-0dd4-43dc-b9ce-c324d1ce5cd1 200 OK
 ```
 
-## Troubleshooting
+## Troubleshooting MCP server
 
-If Claude for Desktop is not using your server's tools correctly, you may need to explicitly define the path to your local `uvx` or `npx` executable file in `claude_desktop_config.json` configuration file.
+If Claude for Desktop is not using your server's tools correctly, you may need to explicitly define the path to your local `uvx` or `npx` executable file in the `claude_desktop_config.json` configuration file.
 
 1. To find your UVX path, run `which uvx`.
 To find your NPX path, run `which npx`.
