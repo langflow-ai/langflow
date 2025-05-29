@@ -265,4 +265,38 @@ LANGFLOW_LOG_LEVEL=DEBUG
 
 For more information, see [API examples](/api-reference-api-examples#logs).
 
+This complete example streams runs a flow and streams the logs.
 
+```typescript
+import { LangflowClient } from "@datastax/langflow-client";
+
+async function runFlow(client: LangflowClient) {
+    const flowId = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
+    const input = "Is anyone there?";
+
+    const response = await client.flow(flowId).run(input);
+    console.log('Flow response:', response);
+}
+
+async function main() {
+    const baseUrl = "http://127.0.0.1:7860";
+    const client = new LangflowClient({ baseUrl });
+
+    // First run the flow
+    await runFlow(client);
+
+    // Then start streaming logs (this will run indefinitely)
+    console.log('Starting log stream...');
+    for await (const log of await client.logs.stream()) {
+        console.log('Log:', log);
+    }
+}
+
+main().catch(console.error);
+```
+
+## Langflow TypeScript project repository
+
+You can do even more with the Langflow TypeScript client.
+
+For more information, see the [langflow-client-ts](https://github.com/datastax/langflow-client-ts/) repository.
