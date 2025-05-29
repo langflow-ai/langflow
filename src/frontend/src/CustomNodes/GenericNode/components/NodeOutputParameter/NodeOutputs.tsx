@@ -84,17 +84,20 @@ export default function NodeOutputs({
         : outputs.filter((output) => !output.hidden);
 
     if (selectedOutput) {
-      return filteredOutputs.find(
-        (output) => output.name === selectedOutput.name,
+      return (
+        filteredOutputs.find((output) => output.name === selectedOutput.name) ||
+        filteredOutputs[0]
       );
     }
+
     const outputWithSelection = filteredOutputs.find(
       (output) => output.selected,
     );
+
     return outputWithSelection || filteredOutputs[0];
   };
 
-  const displayOutput = isToolMode ? outputs[0] : getDisplayOutput();
+  const displayOutput = getDisplayOutput();
 
   if (!displayOutput) return null;
 
