@@ -164,11 +164,14 @@ test(
     //---------------------------------- OPENAI
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
-    await page.waitForSelector('[data-testid="modelsOpenAI"]', {
-      timeout: 2000,
-    });
+    await page.waitForSelector(
+      '[data-testid="languagemodels_openai_draggable"]',
+      {
+        timeout: 2000,
+      },
+    );
     await page
-      .getByTestId("modelsOpenAI")
+      .getByTestId("languagemodelsOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 300 },
       });

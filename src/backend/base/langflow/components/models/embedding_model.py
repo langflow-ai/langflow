@@ -22,7 +22,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
     description = "Generate embeddings using a specified provider."
     icon = "binary"
     name = "EmbeddingModel"
-    category = "embeddings"
+    category = "models"
 
     inputs = [
         DropdownInput(
