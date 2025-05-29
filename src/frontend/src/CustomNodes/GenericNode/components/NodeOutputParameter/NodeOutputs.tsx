@@ -94,7 +94,7 @@ export default function NodeOutputs({
     return outputWithSelection || filteredOutputs[0];
   };
 
-  const displayOutput = getDisplayOutput();
+  const displayOutput = isToolMode ? outputs[0] : getDisplayOutput();
 
   if (!displayOutput) return null;
 
