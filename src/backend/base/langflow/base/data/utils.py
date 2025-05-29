@@ -1,3 +1,4 @@
+import re
 import unicodedata
 from collections.abc import Callable
 from concurrent import futures
@@ -135,7 +136,12 @@ def parse_pdf_to_text(file_path: str) -> str:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
-def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+def parse_text_file_to_data(
+    file_path: str,
+    *,
+    silent_errors: bool,
+    original_filename: str | None = None,
+) -> Data | None:
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)
@@ -164,7 +170,30 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
             raise ValueError(msg) from e
         return None
 
-    return Data(data={"file_path": file_path, "text": text})
+    # Use provided original_filename if available
+    if original_filename is not None:
+        pass
+    else:
+        # Extract original filename from the path
+        path = Path(file_path)
+        original_filename = path.name
+
+        # If the file is in the cache directory, try to extract the original filename
+        if "langflow" in str(path) and "Library/Caches" in str(path):
+            parent_dir = path.parent.name
+            if "_" in parent_dir:
+                original_filename = "_".join(parent_dir.split("_")[1:])
+        elif "/" in str(path):
+            parts = str(path).split("/")
+            min_parts_for_filename_extraction = 2
+            if len(parts) >= min_parts_for_filename_extraction:
+                original_filename = parts[-1]
+                if re.match(
+                    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[a-zA-Z0-9]+$", original_filename
+                ):
+                    pass
+
+    return Data(data={"file_path": file_path, "text": text, "original_filename": original_filename})
 
 
 # ! Removing unstructured dependency until

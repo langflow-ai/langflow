@@ -251,6 +251,7 @@ class NvidiaIngestComponent(BaseFileComponent):
                                 text=metadata.get("content", ""),
                                 file_path=source_metadata.get("source_name", ""),
                                 document_type=document_type,
+                                original_filename=self.get_original_filename(source_metadata.get("source_name", "")),
                                 metadata=metadata,
                             )
                         )
@@ -258,31 +259,29 @@ class NvidiaIngestComponent(BaseFileComponent):
                     # with extracted text in "table_content"
                     elif document_type == document_type_structured:
                         table_metadata = metadata.get("table_metadata", {})
-
                         # reformat chart/table images as binary data
                         if "content" in metadata:
                             metadata["content"] = {"$binary": metadata["content"]}
-
                         data.append(
                             Data(
                                 text=table_metadata.get("table_content", ""),
                                 file_path=source_metadata.get("source_name", ""),
                                 document_type=document_type,
+                                original_filename=self.get_original_filename(source_metadata.get("source_name", "")),
                                 metadata=metadata,
                             )
                         )
                     elif document_type == "image":
                         image_metadata = metadata.get("image_metadata", {})
-
                         # reformat images as binary data
                         if "content" in metadata:
                             metadata["content"] = {"$binary": metadata["content"]}
-
                         data.append(
                             Data(
                                 text=image_metadata.get("caption", "No caption available"),
                                 file_path=source_metadata.get("source_name", ""),
                                 document_type=document_type,
+                                original_filename=self.get_original_filename(source_metadata.get("source_name", "")),
                                 metadata=metadata,
                             )
                         )

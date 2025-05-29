@@ -1,3 +1,9 @@
+import asyncio
+import os
+from pathlib import Path
+
+from platformdirs import user_cache_dir
+
 from langflow.base.data import BaseFileComponent
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from langflow.io import BoolInput, IntInput
@@ -50,22 +56,77 @@ class FileComponent(BaseFileComponent):
             list[BaseFileComponent.BaseFile]: Updated list of files with merged data.
         """
 
-        def process_file(file_path: str, *, silent_errors: bool = False) -> Data | None:
+        def process_file(file_path: str, *, silent_errors: bool = False, base_file=None) -> Data | None:
             """Processes a single file and returns its Data object."""
             try:
-                return parse_text_file_to_data(file_path, silent_errors=silent_errors)
-            except FileNotFoundError as e:
-                msg = f"File not found: {file_path}. Error: {e}"
-                self.log(msg)
+                # Skip macOS-specific hidden files
+                if Path(file_path).name.startswith("._"):
+                    return None
+
+                # Try to get original_filename from the BaseFile's data
+                original_filename = None
+                if base_file is not None and base_file.data:
+                    # base_file.data is a list of Data objects
+                    for data_obj in base_file.data:
+                        if isinstance(data_obj, Data):
+                            # First try to get from data.original_filename
+                            original_filename = data_obj.data.get("original_filename")
+                            if not original_filename:
+                                # Then try to get from data.data.original_filename
+                                original_filename = data_obj.data.get("data", {}).get("original_filename")
+                            if original_filename:
+                                break
+
+                # If we still don't have the original filename, try to get it from the database
+                if not original_filename:
+                    try:
+                        from sqlmodel import select
+
+                        from langflow.services.database.models.file import File as UserFile
+                        from langflow.services.deps import get_db_service
+
+                        db = get_db_service()
+                        # Convert absolute path to relative path
+                        cache_root = user_cache_dir("langflow", "langflow")
+                        relative_path = os.path.relpath(file_path, start=cache_root)
+
+                        async def get_filename():
+                            async with db.with_session() as session:
+                                stmt = select(UserFile).where(UserFile.path == relative_path)
+                                result = await session.exec(stmt)
+                                file_record = result.first()
+                                if file_record:
+                                    # Append the extension from the path
+                                    extension = Path(file_record.path).suffix
+                                    return file_record.name + extension
+                            return None
+
+                        # Handle potential event loop issues
+                        try:
+                            asyncio.get_running_loop()
+                            # If we're already in an async context, we can't use asyncio.run()
+                            original_filename = None
+                        except RuntimeError:
+                            # No running loop, safe to use asyncio.run()
+                            original_filename = asyncio.run(get_filename())
+                    except OSError as _:
+                        pass
+
+                result = parse_text_file_to_data(
+                    file_path, silent_errors=silent_errors, original_filename=original_filename
+                )
+                if result and result.data:
+                    return result
+            except FileNotFoundError as _:
                 if not silent_errors:
                     raise
                 return None
             except Exception as e:
-                msg = f"Unexpected error processing {file_path}: {e}"
-                self.log(msg)
                 if not silent_errors:
-                    raise
+                    msg = f"Unexpected error processing {file_path}: {e}"
+                    raise ValueError(msg) from e
                 return None
+            return None
 
         if not file_list:
             msg = "No files to process."
@@ -78,14 +139,18 @@ class FileComponent(BaseFileComponent):
         if concurrency < parallel_processing_threshold or file_count < parallel_processing_threshold:
             if file_count > 1:
                 self.log(f"Processing {file_count} files sequentially.")
-            processed_data = [process_file(str(file.path), silent_errors=self.silent_errors) for file in file_list]
+            processed_data = [
+                process_file(str(file.path), silent_errors=self.silent_errors, base_file=file) for file in file_list
+            ]
         else:
             self.log(f"Starting parallel processing of {file_count} files with concurrency: {concurrency}.")
-            file_paths = [str(file.path) for file in file_list]
+            # For parallel, we need to pass base_file as well, so use a lambda
             processed_data = parallel_load_data(
-                file_paths,
+                [(str(file.path), file) for file in file_list],
                 silent_errors=self.silent_errors,
-                load_function=process_file,
+                load_function=lambda args, silent_errors: process_file(
+                    args[0], silent_errors=silent_errors, base_file=args[1]
+                ),
                 max_concurrency=concurrency,
             )
 

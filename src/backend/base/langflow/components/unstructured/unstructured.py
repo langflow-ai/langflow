@@ -113,9 +113,11 @@ class UnstructuredComponent(BaseFileComponent):
 
         processed_data: list[Data | None] = [Data.from_document(doc) if doc else None for doc in documents]
 
-        # Rename the `source` field to `self.SERVER_FILE_PATH_FIELDNAME`, to avoid conflicts with the `source` field
+        # Get original filenames from database and update Data objects
         for data in processed_data:
             if data and "source" in data.data:
-                data.data[self.SERVER_FILE_PATH_FIELDNAME] = data.data.pop("source")
+                file_path = data.data.pop("source")
+                data.data[self.SERVER_FILE_PATH_FIELDNAME] = file_path
+                data.original_filename = self.get_original_filename(file_path)
 
         return self.rollup_data(file_list, processed_data)
