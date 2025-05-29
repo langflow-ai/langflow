@@ -160,8 +160,10 @@ const CanvasControls = ({ children }) => {
       />
       {/* Display Helper Lines */}
       <CustomControlButton
-        iconName="UnfoldHorizontal"
-        tooltipText="Display Helper Lines"
+        iconName={helperLineEnabled ? "FoldHorizontal" : "UnfoldHorizontal"}
+        tooltipText={
+          helperLineEnabled ? "Hide Helper Lines" : "Show Helper Lines"
+        }
         onClick={onToggleHelperLines}
         backgroundClasses={cn(helperLineEnabled && "bg-muted")}
         iconClasses={cn(helperLineEnabled && "text-muted-foreground")}
