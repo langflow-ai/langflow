@@ -21,7 +21,6 @@ export function getHelperLines(
 ): HelperLinesState {
   const helperLines: HelperLinesState = {};
 
-  // Get the dragging node bounds
   const draggingNodeBounds = {
     left: draggingNode.position.x,
     right:
@@ -38,7 +37,6 @@ export function getHelperLines(
 
   const otherNodes = nodes.filter((node) => node.id !== draggingNode.id);
 
-  // Check for vertical alignment (horizontal lines)
   for (const node of otherNodes) {
     const nodeBounds = {
       left: node.position.x,
@@ -49,7 +47,6 @@ export function getHelperLines(
       centerY: node.position.y + (node.measured?.height || nodeHeight) / 2,
     };
 
-    // Check top alignment
     if (Math.abs(draggingNodeBounds.top - nodeBounds.top) < SNAP_DISTANCE) {
       helperLines.horizontal = {
         id: `horizontal-top-${node.id}`,
@@ -58,7 +55,6 @@ export function getHelperLines(
       };
     }
 
-    // Check bottom alignment
     if (
       Math.abs(draggingNodeBounds.bottom - nodeBounds.bottom) < SNAP_DISTANCE
     ) {
@@ -69,7 +65,6 @@ export function getHelperLines(
       };
     }
 
-    // Check center alignment
     if (
       Math.abs(draggingNodeBounds.centerY - nodeBounds.centerY) < SNAP_DISTANCE
     ) {
@@ -81,7 +76,6 @@ export function getHelperLines(
     }
   }
 
-  // Check for horizontal alignment (vertical lines)
   for (const node of otherNodes) {
     const nodeBounds = {
       left: node.position.x,
@@ -92,7 +86,6 @@ export function getHelperLines(
       centerY: node.position.y + (node.measured?.height || nodeHeight) / 2,
     };
 
-    // Check left alignment
     if (Math.abs(draggingNodeBounds.left - nodeBounds.left) < SNAP_DISTANCE) {
       helperLines.vertical = {
         id: `vertical-left-${node.id}`,
@@ -101,7 +94,6 @@ export function getHelperLines(
       };
     }
 
-    // Check right alignment
     if (Math.abs(draggingNodeBounds.right - nodeBounds.right) < SNAP_DISTANCE) {
       helperLines.vertical = {
         id: `vertical-right-${node.id}`,
@@ -110,7 +102,6 @@ export function getHelperLines(
       };
     }
 
-    // Check center alignment
     if (
       Math.abs(draggingNodeBounds.centerX - nodeBounds.centerX) < SNAP_DISTANCE
     ) {
@@ -149,7 +140,6 @@ export function getSnapPosition(
         (draggingNode.measured?.height || nodeHeight) / 2,
     };
 
-    // Snap to the helper line position
     if (helperLines.horizontal.id.includes("top")) {
       snapPosition.y = helperLines.horizontal.position;
     } else if (helperLines.horizontal.id.includes("bottom")) {
@@ -173,7 +163,6 @@ export function getSnapPosition(
         (draggingNode.measured?.width || nodeWidth) / 2,
     };
 
-    // Snap to the helper line position
     if (helperLines.vertical.id.includes("left")) {
       snapPosition.x = helperLines.vertical.position;
     } else if (helperLines.vertical.id.includes("right")) {
