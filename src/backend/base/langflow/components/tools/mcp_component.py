@@ -19,6 +19,8 @@ from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema import DataFrame, Message
 
+from langflow.utils.payload import extract_input_variables
+from langflow.inputs.inputs import DefaultPromptField
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
     """If any key looks nested (contains a dot or “[index]”), rebuild the.
@@ -67,6 +69,7 @@ class MCPToolsComponent(Component):
     tool_names: list[str] = []
     _tool_cache: dict = {}  # Cache for tool objects
     _prompt_cache: dict = {}  # Cache for prompts
+    client = None  # Current active client
     default_keys: list[str] = [
         "code",
         "_type",
@@ -84,7 +87,7 @@ class MCPToolsComponent(Component):
     display_name = "MCP Connection"
     description = "Connect to an MCP server to use its tools."
     icon = "Mcp"
-    name = "MCPToolsprompts"
+    name = "MCPTools"
 
     inputs = [
         TabInput(
@@ -262,44 +265,59 @@ class MCPToolsComponent(Component):
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
         try:
+            print(f"update_build_config called with field_name={field_name}, field_value={field_value}")
+            print(f"Initial build_config keys: {list(build_config.keys())}")
+
             if field_name == "mode":
-                self.remove_non_default_keys(build_config)
-                build_config["tool"]["options"] = []
-                build_config["prompt"]["options"] = []
+                # Mode-specific field visibility
                 if field_value == "Stdio":
                     build_config["command"]["show"] = True
                     build_config["env"]["show"] = True
-                    build_config["headers_input"]["show"] = False
                     build_config["sse_url"]["show"] = False
+                    build_config["headers_input"]["show"] = False
                 elif field_value == "SSE":
                     build_config["command"]["show"] = False
                     build_config["env"]["show"] = False
                     build_config["sse_url"]["show"] = True
-                    build_config["sse_url"]["value"] = "MCP_SSE"
                     build_config["headers_input"]["show"] = True
-                    return build_config
-            if field_name in ("command", "sse_url", "mode"):
-                try:
-                    await self.update_tools_and_prompts(
-                        mode=build_config["mode"]["value"],
-                        command=build_config["command"]["value"],
-                        url=build_config["sse_url"]["value"],
-                        env=build_config["env"]["value"],
-                        headers=build_config["headers_input"]["value"],
-                    )
-                    print(f"build_config {build_config}")
-                    if "tool" in build_config:
-                        build_config["tool"]["options"] = self.tool_names
-                    if "prompt" in build_config:
-                        build_config["prompt"]["options"] = self.prompts
-                except Exception as e:
-                    build_config["tool"]["options"] = []
-                    msg = f"Failed to update tools: {e!s}"
-                    raise ValueError(msg) from e
                 else:
-                    return build_config
-            elif field_name == "tool":
-                if len(self.tools) == 0:
+                    msg = f"Invalid mode: {field_value}"
+                    logger.error(msg)
+                    raise ValueError(msg)
+
+                # Reset and update tools and prompts
+                self.tools = []
+                self.prompts = []
+                self.tool_names = []
+                self._tool_cache = {}
+                self._prompt_cache = {}
+                await self.update_tools_and_prompts(
+                    mode=field_value,
+                    command=build_config["command"]["value"],
+                    url=build_config["sse_url"]["value"],
+                    env=build_config["env"]["value"],
+                    headers=build_config["headers_input"]["value"],
+                )
+
+                # Update tool and prompt options
+                build_config["tool"]["options"] = self.tool_names
+                build_config["prompt"]["options"] = [prompt for prompt in self.prompts]
+
+            elif field_name in ["command", "sse_url", "env", "headers_input"]:
+                # Update tools and prompts when connection params change
+                await self.update_tools_and_prompts(
+                    mode=build_config["mode"]["value"],
+                    command=build_config["command"]["value"],
+                    url=build_config["sse_url"]["value"],
+                    env=build_config["env"]["value"],
+                    headers=build_config["headers_input"]["value"],
+                )
+                build_config["tool"]["options"] = self.tool_names
+                build_config["prompt"]["options"] = [prompt for prompt in self.prompts]
+
+            elif field_name == "prompt":
+                print(f"Processing prompt field change to: {field_value}")
+                if len(self.prompts) == 0:
                     await self.update_tools_and_prompts(
                         mode=build_config["mode"]["value"],
                         command=build_config["command"]["value"],
@@ -307,31 +325,107 @@ class MCPToolsComponent(Component):
                         env=build_config["env"]["value"],
                         headers=build_config["headers_input"]["value"],
                     )
-                if self.tool is None:
-                    return build_config
-                tool_obj = None
-                for tool in self.tools:
-                    if tool.name == self.tool:
-                        tool_obj = tool
-                        break
-                if tool_obj is None:
-                    msg = f"Tool {self.tool} not found in available tools: {self.tools}"
-                    logger.warning(msg)
-                    return build_config
-                self.remove_non_default_keys(build_config)
-                await self._update_tool_config(build_config, field_value)
-            elif field_name == "tool_mode":
-                build_config["tool"]["show"] = not field_value
-                for key, value in list(build_config.items()):
-                    if key not in self.default_keys and isinstance(value, dict) and "show" in value:
-                        build_config[key]["show"] = not field_value
 
+                # Remove any existing prompt variables
+                keys_to_remove = [k for k in build_config.keys() if k.startswith("prompt_var_")]
+                print(f"Removing existing prompt variables: {keys_to_remove}")
+                for key in keys_to_remove:
+                    del build_config[key]
+
+                if field_value:
+                    self.prompt = field_value
+
+                    # Get prompt object and extract variables
+                    prompt_obj = self._prompt_cache.get(field_value)
+                    if not prompt_obj:
+                        print(f"Prompt {field_value} not found in cache")
+                        return build_config
+
+                    # Extract variables from the prompt arguments
+                    variables = []
+                    if hasattr(prompt_obj, 'arguments') and prompt_obj.arguments:
+                        print(f"Prompt arguments: {prompt_obj.arguments}")
+                        # Handle both string arguments and object arguments
+                        for arg in prompt_obj.arguments:
+                            if isinstance(arg, str):
+                                variables.append(arg)
+                            elif hasattr(arg, 'name'):
+                                variables.append(arg.name)
+
+                    if not variables:
+                        # Try to get a description or other text that might contain variables
+                        if hasattr(prompt_obj, 'description') and prompt_obj.description:
+                            print(f"Extracting variables from description: {prompt_obj.description}")
+                            variables = re.findall(r"\{(.*?)\}", prompt_obj.description)
+
+                    if not variables:
+                        print("No variables found for prompt")
+                        return build_config
+
+                    print(f"Found variables: {variables}")
+
+                    # Create a new ordered dictionary with prompt variables in the right position
+                    new_build_config = {}
+
+                    # Find the position of the prompt field
+                    keys = list(build_config.keys())
+                    print(f"Current build_config keys: {keys}")
+                    print(f"Looking for 'prompt' in keys")
+
+                    # Insert prompt variables after the prompt field
+                    prompt_index = keys.index("prompt") if "prompt" in keys else -1
+                    print(f"Prompt index: {prompt_index}")
+
+                    if prompt_index >= 0:
+                        # Add all keys up to and including prompt
+                        for i in range(prompt_index + 1):
+                            key = keys[i]
+                            new_build_config[key] = build_config[key]
+
+                        # Add prompt variables
+                        for variable in variables:
+                            if variable in ["chat_history", "agent_scratchpad"]:
+                                print(f"Skipping reserved variable: {variable}")
+                                continue
+
+                            field_name = f"prompt_var_{variable}"
+                            print(f"Adding prompt variable field: {field_name}")
+                            new_build_config[field_name] = DefaultPromptField(
+                                name=field_name,
+                                display_name=variable,
+                                info=f"Value for {{{variable}}} in the prompt",
+                                advanced=False,
+                                multiline=True,
+                            ).to_dict()
+
+                        # Add remaining keys
+                        for i in range(prompt_index + 1, len(keys)):
+                            key = keys[i]
+                            new_build_config[key] = build_config[key]
+
+                        # Replace build_config with new ordered version
+                        print(f"New build_config keys: {list(new_build_config.keys())}")
+                        build_config.clear()
+                        build_config.update(new_build_config)
+                    else:
+                        print("Could not find 'prompt' in build_config keys")
+
+                print(f"Final build_config keys after prompt processing: {list(build_config.keys())}")
+
+            elif field_name == "tool":
+                print(f"Processing tool field change to: {field_value}")
+                if field_value:
+                    self.tool = field_value
+                    self.remove_non_default_keys(build_config)
+                    await self._update_tool_config(build_config, field_value)
+
+                print(f"Final build_config keys after tool processing: {list(build_config.keys())}")
+
+            return build_config
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
-        else:
-            return build_config
 
     def get_inputs_for_all_tools(self, tools: list) -> dict:
         """Get input schemas for all tools."""
@@ -364,9 +458,19 @@ class MCPToolsComponent(Component):
 
     def remove_non_default_keys(self, build_config: dict) -> None:
         """Remove non-default keys from the build config."""
-        for key in list(build_config.keys()):
-            if key not in self.default_keys:
-                build_config.pop(key)
+        print(f"remove_non_default_keys called with keys: {list(build_config.keys())}")
+        print(f"Default keys: {self.default_keys}")
+
+        keys_to_remove = []
+        for key in build_config.keys():
+            if key not in self.default_keys and not key.startswith("prompt_var_"):
+                keys_to_remove.append(key)
+
+        print(f"Keys to remove: {keys_to_remove}")
+        for key in keys_to_remove:
+            build_config.pop(key)
+
+        print(f"Final keys after removal: {list(build_config.keys())}")
 
     async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
         """Update tool configuration with proper error handling."""
@@ -408,6 +512,10 @@ class MCPToolsComponent(Component):
                     continue
 
                 try:
+                    # Prefix the input name with tool_var_ to avoid conflicts
+                    original_name = schema_input.name
+                    schema_input.name = f"tool_var_{original_name}"
+
                     name = schema_input.name
                     input_dict = schema_input.to_dict()
                     input_dict.setdefault("value", None)
@@ -427,15 +535,33 @@ class MCPToolsComponent(Component):
             logger.exception(msg)
             raise ValueError(msg) from e
 
-    async def build_prompt_output(self) -> Message:
+    async def build_prompt_output(self) -> DataFrame:
         await self.update_tools_and_prompts()
         print(f"self.prompt {self.prompt}")
         if self.prompt and self.prompt != "":
-            print(f"self._prompt_cache {self._prompt_cache}")
-            prompt = self._prompt_cache[self.prompt]
-            print(f"prompt {prompt}")
-            return Message(text=prompt)
-        return Message(error=True, text="You must select a prompt")
+            # Collect prompt variables from attributes
+            prompt_kwargs = {}
+
+            # Get all attributes that start with prompt_var_
+            for attr_name in dir(self):
+                if attr_name.startswith("prompt_var_"):
+                    var_name = attr_name.replace("prompt_var_", "")
+                    var_value = getattr(self, attr_name)
+                    if var_value:  # Only add non-empty values
+                        prompt_kwargs[var_name] = var_value
+
+            # Add default URL if no variables provided
+            if not prompt_kwargs:
+                prompt_kwargs = {"url": "https://news.ycombinator.com"}
+
+            result = await self.client.session.get_prompt(self.prompt, prompt_kwargs)
+            # Convert to dataframe
+            prompt_content = []
+            for item in result.messages:
+                item_dict = item.model_dump()
+                prompt_content.append(item_dict)
+            return DataFrame(data=prompt_content)
+        return DataFrame(data=[{"error": "You must select a prompt"}])
 
     async def build_tool_output(self) -> DataFrame:
         """Build output with improved error handling and validation."""
@@ -446,8 +572,12 @@ class MCPToolsComponent(Component):
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
                 kwargs = {}
                 for arg in tool_args:
-                    value = getattr(self, arg.name, None)
+                    # Get the prefixed attribute name
+                    prefixed_name = f"tool_var_{arg.name}"
+                    # Get the value from the prefixed attribute
+                    value = getattr(self, prefixed_name, None)
                     if value:
+                        # Use the original name as the key in kwargs
                         kwargs[arg.name] = value
 
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
@@ -524,6 +654,9 @@ class MCPToolsComponent(Component):
                 logger.warning("Unknown mode, cannot fetch tools or prompts")
                 return []
 
+            # Set the current active client
+            self.client = client
+
             # Fetch prompts if supported
             self.prompts = []
             if hasattr(client, "session") and client.session and hasattr(client.session, "list_prompts"):
@@ -591,3 +724,114 @@ class MCPToolsComponent(Component):
             msg = "SSE URL is not set"
             raise ValueError(msg)
         return await self.update_tools_and_prompts()
+
+    async def _update_prompt_config(self, build_config: dict, prompt_name: str) -> None:
+        """Update prompt configuration with dynamic input fields for prompt variables."""
+        print(f"Starting _update_prompt_config for prompt: {prompt_name}")
+
+        # Early return if prompt_name is empty or None
+        if not prompt_name:
+            print("No prompt_name provided, returning early")
+            return
+
+        try:
+            # First, ensure we have prompts loaded
+            if not self.prompts:
+                print("No prompts found, calling update_tools_and_prompts")
+                try:
+                    print("Before update_tools_and_prompts call")
+                    await self.update_tools_and_prompts(
+                        mode=build_config["mode"]["value"],
+                        command=build_config["command"]["value"],
+                        url=build_config["sse_url"]["value"],
+                        env=build_config["env"]["value"],
+                        headers=build_config["headers_input"]["value"],
+                    )
+                    print("After update_tools_and_prompts call")
+                except Exception as e:
+                    print(f"Error in update_tools_and_prompts: {e}")
+                    raise
+
+            # Check if prompt exists in cache
+            print(f"Checking if prompt {prompt_name} exists in cache")
+            if prompt_name not in self._prompt_cache:
+                msg = f"Prompt {prompt_name} not found in available prompts"
+                print(msg)
+                return
+
+            print("Removing non-default keys from build_config")
+            # Remove old prompt inputs
+            self.remove_non_default_keys(build_config)
+
+            print(f"Getting prompt object for {prompt_name}")
+            # Get prompt template and extract variables
+            prompt_obj = self._prompt_cache[prompt_name]
+
+            # Extract variables from the prompt arguments
+            variables = []
+            if hasattr(prompt_obj, 'arguments') and prompt_obj.arguments:
+                print(f"Found arguments in prompt: {prompt_obj.arguments}")
+                variables = [arg.name for arg in prompt_obj.arguments if hasattr(arg, 'name')]
+
+            if not variables:
+                # Try to get a description or other text that might contain variables
+                if hasattr(prompt_obj, 'description') and prompt_obj.description:
+                    print(f"Using description to find variables: {prompt_obj.description}")
+                    variables = re.findall(r"\{(.*?)\}", prompt_obj.description)
+
+            if not variables:
+                msg = f"No variables found for prompt '{prompt_name}'"
+                print(msg)
+                return
+
+            print(f"Found variables: {variables}")
+
+            # Create a new ordered dictionary for the build config
+            new_build_config = {}
+
+            # Find the position of the prompt field
+            prompt_position = -1
+            for i, (key, _) in enumerate(build_config.items()):
+                if key == "prompt":
+                    prompt_position = i
+                    break
+
+            # Add all fields up to and including the prompt field
+            keys = list(build_config.keys())
+            for i in range(prompt_position + 1):
+                if i < len(keys):
+                    key = keys[i]
+                    new_build_config[key] = build_config[key]
+
+            # Add the prompt variable fields
+            for variable in variables:
+                # Skip internal variables or reserved names
+                if variable in ["chat_history", "agent_scratchpad"]:
+                    print(f"Skipping reserved variable: {variable}")
+                    continue
+
+                print(f"Adding field for variable: {variable}")
+                field_name = f"prompt_var_{variable}"
+                new_build_config[field_name] = DefaultPromptField(
+                    name=field_name,
+                    display_name=variable,
+                    info=f"Value for {{{variable}}} in the prompt",
+                    advanced=False,
+                    multiline=True,
+                ).to_dict()
+
+            # Add the remaining fields
+            for i in range(prompt_position + 1, len(keys)):
+                key = keys[i]
+                new_build_config[key] = build_config[key]
+
+            # Update the build_config with our new ordered version
+            build_config.clear()
+            build_config.update(new_build_config)
+
+            print("Successfully completed _update_prompt_config")
+
+        except Exception as e:
+            print(f"Error in _update_prompt_config: {e!s}")
+            msg = f"Error in _update_prompt_config: {e!s}"
+            raise ValueError(msg) from e
