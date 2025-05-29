@@ -208,11 +208,11 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Inputs", name: "inputs", icon: "Download" },
   { display_name: "Outputs", name: "outputs", icon: "Upload" },
   { display_name: "Prompts", name: "prompts", icon: "TerminalSquare" },
+  { display_name: "Models", name: "models", icon: "BrainCog" },
   { display_name: "Data", name: "data", icon: "Database" },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
-  { display_name: "Models", name: "models", icon: "BrainCircuit" },
+
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
-  { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Agents", name: "agents", icon: "Bot" },
   { display_name: "Chains", name: "chains", icon: "Link" },
   { display_name: "Loaders", name: "documentloaders", icon: "Paperclip" },
@@ -229,8 +229,15 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  {
+    display_name: "Language Models",
+    name: "languagemodels",
+    icon: "BrainCircuit",
+  },
+  { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
+  { display_name: "GitHub", name: "github", icon: "Github" },
   {
     display_name: "Googlecalendar",
     name: "googlecalendar",
@@ -243,7 +250,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   {
     display_name: "DataStax",
-    name: "astra_assistants",
+    name: "datastax",
     icon: "AstraDB",
   },
   { display_name: "Olivya", name: "olivya", icon: "Olivya" },
@@ -271,6 +278,8 @@ export const SIDEBAR_BUNDLES = [
     name: "homeassistant",
     icon: "HomeAssistant",
   },
+  { display_name: "Search", name: "search", icon: "Search" },
+  { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
 ];
 
 export const categoryIcons: Record<string, string> = {
@@ -306,7 +315,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   outputs: "Upload",
   prompts: "TerminalSquare",
   data: "Database",
-  models: "BrainCircuit",
+  models: "BrainCog",
   helpers: "Wand2",
   vectorstores: "Layers",
   embeddings: "Binary",
@@ -329,6 +338,8 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   //Integration Icons
   AIML: "AI/ML",
   AgentQL: "AgentQL",
+  LanguageModels: "BrainCircuit",
+  EmbeddingModels: "Binary",
   AirbyteJSONLoader: "Airbyte",
   AmazonBedrockEmbeddings: "AWS",
   Amazon: "AWS",

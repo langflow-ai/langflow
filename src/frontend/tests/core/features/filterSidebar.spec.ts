@@ -119,13 +119,11 @@ test(
     await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
     await expect(page.getByTestId("disclosure-vector stores")).toBeVisible();
     await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
-    await expect(page.getByTestId("disclosure-embeddings")).toBeVisible();
     await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 
     await expect(page.getByTestId("dataAPI Request")).toBeVisible();
     await expect(page.getByTestId("helpersMessage History")).toBeVisible();
     await expect(page.getByTestId("vectorstoresAstra DB")).toBeVisible();
-    await expect(page.getByTestId("toolsSearch API")).toBeVisible();
     await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
 
     await page.getByTestId("sidebar-options-trigger").click();
@@ -137,19 +135,16 @@ test(
     await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
 
     await expect(page.getByTestId("processingSplit Text")).toBeVisible();
-    await expect(page.getByTestId("toolsSearch API")).toBeVisible();
 
     await page.getByTestId("icon-X").first().click();
 
     await expect(page.getByTestId("dataAPI Request")).not.toBeVisible();
     await expect(page.getByTestId("helpersMessage History")).not.toBeVisible();
     await expect(page.getByTestId("vectorstoresAstra DB")).not.toBeVisible();
-    await expect(page.getByTestId("toolsSearch API")).not.toBeVisible();
     await expect(
       page.getByTestId("logicSub Flow [Deprecated]"),
     ).not.toBeVisible();
 
     await expect(page.getByTestId("processingSplit Text")).not.toBeVisible();
-    await expect(page.getByTestId("toolsSearch API")).not.toBeVisible();
   },
 );
