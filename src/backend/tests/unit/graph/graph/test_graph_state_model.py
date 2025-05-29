@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from langflow.components.helpers.memory import MemoryComponent
-from langflow.components.io import ChatInput, ChatOutput
+from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph

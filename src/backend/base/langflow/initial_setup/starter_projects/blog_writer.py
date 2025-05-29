@@ -1,7 +1,7 @@
 from textwrap import dedent
 
 from langflow.components.data import URLComponent
-from langflow.components.io import ChatOutput, TextInputComponent
+from langflow.components.input_output import ChatOutput, TextInputComponent
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.processing import ParseDataComponent
 from langflow.components.prompts import PromptComponent
