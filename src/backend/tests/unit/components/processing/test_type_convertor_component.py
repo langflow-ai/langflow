@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from langflow.components.processing.convertor import TypeConverterComponent
+from langflow.components.processing.converter import TypeConverterComponent
 from langflow.schema import Data, DataFrame, Message
 
 from tests.base import ComponentTestBaseWithoutClient

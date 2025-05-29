@@ -1,6 +1,6 @@
 from .alter_metadata import AlterMetadataComponent
 from .combine_text import CombineTextComponent
-from .convertor import TypeConverterComponent
+from .converter import TypeConverterComponent
 from .create_data import CreateDataComponent
 from .data_operations import DataOperationsComponent
 from .extract_key import ExtractDataKeyComponent
