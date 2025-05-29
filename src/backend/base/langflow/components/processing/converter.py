@@ -5,6 +5,8 @@ from langflow.io import HandleInput, Output, TabInput
 from langflow.schema import Data, DataFrame, Message
 from langflow.inputs.inputs import DataFrameInput, DataInput, MessageInput, MessageTextInput
 
+
+
 # def get_message_converter(v) -> Message:
 #     # If v is a instance of Message, then its fine
 #     if isinstance(v, dict):
@@ -125,27 +127,36 @@ class TypeConverterComponent(Component):
 
     def convert_to_message(self) -> Message:
         """Convert input to Message type."""
+        value = self.input_data
+        if isinstance(value, list):
+            value = value[0] if value else None
         return MessageTextInput(
             name="converted_message",
             display_name="Converted Message",
-            value=self.input_data,
+            value=value,
             input_types=["Message", "DataFrame", "Data"]
         ).value
 
     def convert_to_data(self) -> Data:
         """Convert input to Data type."""
+        value = self.input_data
+        if isinstance(value, list):
+            value = value[0] if value else None
         return DataInput(
             name="converted_data",
             display_name="Converted Data",
-            value=self.input_data,
+            value=value,
             input_types=["Data", "DataFrame", "Message"]
         ).value
 
     def convert_to_dataframe(self) -> DataFrame:
         """Convert input to DataFrame type."""
+        value = self.input_data
+        if isinstance(value, list):
+            value = value[0] if value else None
         return DataFrameInput(
             name="converted_dataframe",
             display_name="Converted DataFrame",
-            value=self.input_data,
+            value=value,
             input_types=["DataFrame", "Data", "Message"]
         ).value

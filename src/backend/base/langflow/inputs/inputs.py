@@ -107,7 +107,7 @@ class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin)
         input_types (list[str]): A list of input types supported by this data input.
     """
 
-    input_types: list[str] = ["Data", "DataFrame", "Message"]
+    input_types: list[str] = ["Data"]
 
     @field_validator("value")
     @classmethod
@@ -127,7 +127,7 @@ class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin)
 
 
 class DataFrameInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
-    input_types: list[str] = ["DataFrame", "Data", "Message"]
+    input_types: list[str] = ["DataFrame"]
 
     @field_validator("value")
     @classmethod
@@ -221,7 +221,7 @@ class StrInput(
 
 
 class MessageInput(StrInput, InputTraceMixin):
-    input_types: list[str] = ["Message", "DataFrame", "Data"]
+    input_types: list[str] = ["Message"]
 
     @staticmethod
     def _validate_value(v: Any, _info):
@@ -266,7 +266,7 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMi
             In this case, it supports the "Message" input type.
     """
 
-    input_types: list[str] = ["Message", "DataFrame", "Data"]
+    input_types: list[str] = ["Message"]
 
     @staticmethod
     def _validate_value(v: Any, info):
