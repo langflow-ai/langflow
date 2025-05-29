@@ -16,11 +16,11 @@ class ModelMetadata(TypedDict, total=False):
 
 
 def create_model_metadata(
-    provider: str, 
-    name: str, 
-    icon: str, 
+    provider: str,
+    name: str,
+    icon: str,
     *,
-    tool_calling: bool = False, 
+    tool_calling: bool = False,
     reasoning: bool = False,
     search: bool = False,
     preview: bool = False,
