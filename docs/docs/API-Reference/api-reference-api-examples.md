@@ -793,7 +793,7 @@ For more information, see [Supported environment variables](/environment-variabl
 
 1. To send an image to your flow with the API, POST the image file to the `/api/v2/files` endpoint.
    Replace **FILE_NAME** with the uploaded file name.
-   This is the same step described in [Upload file (v2)](#upload-file-v2), but since you need the filename
+   This is the same step described in [Upload file (v2)](#upload-file-v2), but since you need the filename to upload to your flow, it is included here.
 
 ```bash
 curl -X POST \
@@ -818,7 +818,7 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API
 
 2. To use this file in your flow, add a [File](/components-data#file) component to load a file into the flow.
 3. To load the file into your flow, send it to the **File** component.
-To retrieve the **File** component's full name with the UUID attached, call the [Read flow](#read-flow) endpoint.
+To retrieve the **File** component's full name with the UUID attached, call the [Read flow](#read-flow) endpoint, and then include your **File** component and the file path as a tweak with the `/v1/run` POST request.
 In this example, the file uploaded to `/v2/files` is included with the `/v1/run` POST request.
 
 ```text
