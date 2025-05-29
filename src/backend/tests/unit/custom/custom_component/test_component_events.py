@@ -134,7 +134,11 @@ async def test_component_error_handling():
 
 @pytest.mark.usefixtures("client")
 async def test_component_build_results():
-    """Test component's build_results functionality."""
+    """
+    Tests that the component's _build_results method correctly generates output results and artifacts for defined outputs.
+    
+    Verifies that the results dictionary contains expected output keys and values, and that the artifacts dictionary includes the correct types for each output.
+    """
     # Create event queue and manager
     queue = asyncio.Queue()
     event_manager = EventManager(queue)
