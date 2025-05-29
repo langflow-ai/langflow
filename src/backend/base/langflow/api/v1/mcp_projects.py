@@ -31,7 +31,7 @@ from langflow.api.v1.mcp import (
 from langflow.api.v1.schemas import InputValueRequest, MCPInstallRequest, MCPSettings
 from langflow.base.mcp.util import get_flow_snake_case
 from langflow.helpers.flow import json_schema_from_flow
-from langflow.services.auth.utils import get_current_active_user, get_current_user
+from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, Folder, User
 from langflow.services.deps import get_db_service, get_settings_service, get_storage_service, session_scope
 from langflow.services.storage.utils import build_content_type_from_extension
@@ -55,13 +55,13 @@ def get_project_sse(project_id: UUID) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
-@router.get("/{project_id}", response_model=list[MCPSettings])
+@router.get("/{project_id}")
 async def list_project_tools(
     project_id: UUID,
     current_user: Annotated[User, Depends(get_current_active_user)],
     *,
     mcp_enabled: bool = True,
-):
+) -> list[MCPSettings]:
     """List all tools in a project that are enabled for MCP."""
     tools: list[MCPSettings] = []
     try:
@@ -129,7 +129,7 @@ async def im_alive():
     return Response()
 
 
-@router.get("/{project_id}/sse", response_class=HTMLResponse, dependencies=[Depends(get_current_user)])
+@router.get("/{project_id}/sse", response_class=HTMLResponse)
 async def handle_project_sse(
     project_id: UUID,
     request: Request,
@@ -185,7 +185,7 @@ async def handle_project_sse(
     return Response(status_code=200)
 
 
-@router.post("/{project_id}", dependencies=[Depends(get_current_user)])
+@router.post("/{project_id}")
 async def handle_project_messages(
     project_id: UUID, request: Request, current_user: Annotated[User, Depends(get_current_active_user)]
 ):
@@ -215,7 +215,7 @@ async def handle_project_messages(
         current_project_ctx.reset(project_token)
 
 
-@router.post("/{project_id}/", dependencies=[Depends(get_current_user)])
+@router.post("/{project_id}/")
 async def handle_project_messages_with_slash(
     project_id: UUID, request: Request, current_user: Annotated[User, Depends(get_current_active_user)]
 ):
@@ -224,7 +224,7 @@ async def handle_project_messages_with_slash(
     return await handle_project_messages(project_id, request, current_user)
 
 
-@router.patch("/{project_id}", status_code=200, dependencies=[Depends(get_current_user)])
+@router.patch("/{project_id}", status_code=200)
 async def update_project_mcp_settings(
     project_id: UUID,
     settings: list[MCPSettings],
@@ -274,7 +274,7 @@ async def update_project_mcp_settings(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/{project_id}/install", dependencies=[Depends(get_current_user)])
+@router.post("/{project_id}/install")
 async def install_mcp_config(
     project_id: UUID,
     body: MCPInstallRequest,
@@ -391,7 +391,7 @@ async def install_mcp_config(
         return {"message": message}
 
 
-@router.get("/{project_id}/installed", dependencies=[Depends(get_current_user)])
+@router.get("/{project_id}/installed")
 async def check_installed_mcp_servers(
     project_id: UUID,
     current_user: Annotated[User, Depends(get_current_active_user)],
