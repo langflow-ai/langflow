@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import platform
+from asyncio.subprocess import create_subprocess_exec
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
@@ -596,20 +597,26 @@ async def install_mcp_config(
 
             # If we're in WSL and the host is localhost, we might need to adjust the URL
             # so Windows applications can reach the WSL service
-            if host == "localhost" or host == "127.0.0.1":
+            if host in {"localhost", "127.0.0.1"}:
                 try:
                     # Try to get the WSL IP address for host.docker.internal or similar access
-                    import subprocess
 
                     # This might vary depending on WSL version and configuration
-                    result = subprocess.run(["hostname", "-I"], capture_output=True, text=True, check=False)
-                    if result.returncode == 0 and result.stdout.strip():
-                        wsl_ip = result.stdout.strip().split()[0]  # Get first IP address
-                        logger.debug(f"Using WSL IP for external access: {wsl_ip}")
+                    proc = await create_subprocess_exec(
+                        "/usr/bin/hostname",
+                        "-I",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                    )
+                    stdout, stderr = await proc.communicate()
+
+                    if proc.returncode == 0 and stdout.strip():
+                        wsl_ip = stdout.decode().strip().split()[0]  # Get first IP address
+                        logger.debug("Using WSL IP for external access: %s", wsl_ip)
                         # Replace the localhost with the WSL IP in the URL
                         sse_url = sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
-                except Exception as e:
-                    logger.warning(f"Failed to get WSL IP address: {e}. Using default URL.")
+                except OSError as e:
+                    logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
         if os_type == "Windows":
             command = "cmd"
@@ -617,7 +624,7 @@ async def install_mcp_config(
             logger.debug("Windows detected, using cmd command")
         elif is_wsl:
             # For WSL, we keep the default uvx command as we're on Linux
-            logger.debug(f"WSL environment detected, using URL: {sse_url}")
+            logger.debug("WSL environment detected, using URL: %s", sse_url)
         # Keep the default for macOS and standard Linux
 
         # Create the MCP configuration
