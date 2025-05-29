@@ -29,15 +29,18 @@ export default function NodeOutputs({
   const hasLoopOutput = outputs.some((output) => output.allows_loop);
   const hasGroupOutputs = outputs.some((output) => output.group_outputs);
   const isConditionalRouter = data.type === "ConditionalRouter"; // Keep as fallback for existing components
-  const shouldShowAllOutputs =
-    hasLoopOutput || hasGroupOutputs || isConditionalRouter;
+  const hasHiddenOutputs = outputs.some((output) => output.hidden);
 
-  // For components that should show all outputs
+  // Components should show all outputs if they have loop outputs, group outputs, are ConditionalRouter, or have hidden outputs
+  const shouldShowAllOutputs =
+    hasLoopOutput || hasGroupOutputs || isConditionalRouter || hasHiddenOutputs;
+
+  // For components that should show all outputs (including those with hidden outputs)
   if (shouldShowAllOutputs) {
     const outputsToRender =
       keyPrefix === "hidden"
         ? outputs.filter((output) => output.hidden)
-        : outputs;
+        : outputs.filter((output) => !output.hidden);
 
     return (
       <>
@@ -74,11 +77,21 @@ export default function NodeOutputs({
 
   // For regular components, show only the selected output
   const getDisplayOutput = () => {
+    // Filter outputs based on keyPrefix first
+    const filteredOutputs =
+      keyPrefix === "hidden"
+        ? outputs.filter((output) => output.hidden)
+        : outputs.filter((output) => !output.hidden);
+
     if (selectedOutput) {
-      return outputs.find((output) => output.name === selectedOutput.name);
+      return filteredOutputs.find(
+        (output) => output.name === selectedOutput.name,
+      );
     }
-    const outputWithSelection = outputs.find((output) => output.selected);
-    return outputWithSelection || outputs[0];
+    const outputWithSelection = filteredOutputs.find(
+      (output) => output.selected,
+    );
+    return outputWithSelection || filteredOutputs[0];
   };
 
   const displayOutput = getDisplayOutput();

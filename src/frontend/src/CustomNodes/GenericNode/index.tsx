@@ -54,13 +54,12 @@ const HiddenOutputsButton = memo(
   }) => (
     <Button
       unstyled
-      className="group flex h-[1.75rem] w-[1.75rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
+      className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
       onClick={onClick}
     >
       <ForwardedIconComponent
         name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        strokeWidth={ICON_STROKE_WIDTH}
-        className="icon-size text-placeholder-foreground group-hover:text-foreground"
+        className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
       />
     </Button>
   ),
@@ -590,38 +589,32 @@ function GenericNode({
               >
                 {" "}
               </div>
-              {!showHiddenOutputs && shownOutputs && (
+              <MemoizedNodeOutputs
+                outputs={shownOutputs}
+                keyPrefix={"shown"}
+                data={data}
+                types={types}
+                selected={selected ?? false}
+                showNode={showNode}
+                isToolMode={isToolMode}
+                showHiddenOutputs={showHiddenOutputs}
+                selectedOutput={selectedOutput}
+                handleSelectOutput={handleSelectOutput}
+              />
+              {showHiddenOutputs && (
                 <MemoizedNodeOutputs
-                  outputs={showHiddenOutputs ? hiddenOutputs : shownOutputs}
-                  keyPrefix="shown"
+                  outputs={hiddenOutputs}
+                  keyPrefix="hidden"
                   data={data}
                   types={types}
                   selected={selected ?? false}
                   showNode={showNode}
                   isToolMode={isToolMode}
-                  showHiddenOutputs={showHiddenOutputs}
+                  showHiddenOutputs={true}
                   selectedOutput={selectedOutput}
                   handleSelectOutput={handleSelectOutput}
                 />
               )}
-              <div
-                className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
-              >
-                <div className="block">
-                  <MemoizedNodeOutputs
-                    outputs={data.node!.outputs}
-                    keyPrefix="hidden"
-                    data={data}
-                    types={types}
-                    selected={selected ?? false}
-                    showNode={showNode}
-                    isToolMode={isToolMode}
-                    showHiddenOutputs={showHiddenOutputs}
-                    selectedOutput={selectedOutput}
-                    handleSelectOutput={handleSelectOutput}
-                  />
-                </div>
-              </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
                 <ShadTooltip
                   content={
