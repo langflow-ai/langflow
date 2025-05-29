@@ -66,9 +66,6 @@ This example uses the minimum values for sending a message and running your flow
 Replace `baseUrl` and `flowId` with values from your deployment.
 The `input` string is the message you're sending to your flow.
 
-<Tabs>
-<TabItem value="TypeScript" label="TypeScript" default>
-
 ```typescript
 import { LangflowClient } from "@datastax/langflow-client";
 
@@ -86,9 +83,6 @@ async function runFlow() {
 
 runFlow().catch(console.error);
 ```
-
-</TabItem>
-</Tabs>
 
 <details open>
 <summary>Response</summary>
