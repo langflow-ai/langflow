@@ -392,7 +392,7 @@ class MCPToolsComponent(Component):
                             print(f"Adding prompt variable field: {field_name}")
                             new_build_config[field_name] = DefaultPromptField(
                                 name=field_name,
-                                display_name=variable,
+                                display_name="Prompt: "+variable,
                                 info=f"Value for {{{variable}}} in the prompt",
                                 advanced=False,
                                 multiline=True,
@@ -515,6 +515,12 @@ class MCPToolsComponent(Component):
                     # Prefix the input name with tool_var_ to avoid conflicts
                     original_name = schema_input.name
                     schema_input.name = f"tool_var_{original_name}"
+                    
+                    # Also update the display name to indicate it's a tool variable
+                    if hasattr(schema_input, "display_name"):
+                        schema_input.display_name = f"Tool: {schema_input.display_name}"
+                    else:
+                        schema_input.display_name = f"Tool: {original_name}"
 
                     name = schema_input.name
                     input_dict = schema_input.to_dict()
@@ -536,32 +542,31 @@ class MCPToolsComponent(Component):
             raise ValueError(msg) from e
 
     async def build_prompt_output(self) -> DataFrame:
-        await self.update_tools_and_prompts()
-        print(f"self.prompt {self.prompt}")
-        if self.prompt and self.prompt != "":
-            # Collect prompt variables from attributes
-            prompt_kwargs = {}
+        try:
+            await self.update_tools_and_prompts()
+            print(f"self.prompt {self.prompt}")
+            if self.prompt and self.prompt != "":
+                # Collect prompt variables from attributes
+                prompt_kwargs = {}
 
-            # Get all attributes that start with prompt_var_
-            for attr_name in dir(self):
-                if attr_name.startswith("prompt_var_"):
-                    var_name = attr_name.replace("prompt_var_", "")
-                    var_value = getattr(self, attr_name)
-                    if var_value:  # Only add non-empty values
-                        prompt_kwargs[var_name] = var_value
+                # Get all attributes from self._attributes that start with prompt_var_
+                print(self._attributes.items())
+                for attr_name, value in self._attributes.items():
+                    if attr_name.startswith("prompt_var_"):
+                        var_name = attr_name.replace("prompt_var_", "")
+                        if value:  # Only add non-empty values
+                            prompt_kwargs[var_name] = value
 
-            # Add default URL if no variables provided
-            if not prompt_kwargs:
-                prompt_kwargs = {"url": "https://news.ycombinator.com"}
-
-            result = await self.client.session.get_prompt(self.prompt, prompt_kwargs)
-            # Convert to dataframe
-            prompt_content = []
-            for item in result.messages:
-                item_dict = item.model_dump()
-                prompt_content.append(item_dict)
-            return DataFrame(data=prompt_content)
-        return DataFrame(data=[{"error": "You must select a prompt"}])
+                result = await self.client.session.get_prompt(self.prompt, prompt_kwargs)
+                # Convert to dataframe
+                prompt_content = []
+                for item in result.messages:
+                    item_dict = item.model_dump()
+                    prompt_content.append(item_dict)
+                return DataFrame(data=prompt_content)
+            return DataFrame(data=[{"error": "You must select a prompt"}])
+        except Exception as e:
+            return DataFrame(data=[{"error": f"Error fetching prompt output: {e!s}"}])
 
     async def build_tool_output(self) -> DataFrame:
         """Build output with improved error handling and validation."""
@@ -591,9 +596,7 @@ class MCPToolsComponent(Component):
                 return DataFrame(data=tool_content)
             return DataFrame(data=[{"error": "You must select a tool"}])
         except Exception as e:
-            msg = f"Error in build_tool_output: {e!s}"
-            logger.exception(msg)
-            raise ValueError(msg) from e
+            return DataFrame(data=[{"error": f"Error fetching tool output: {e!s}"}])
 
     async def update_tools_and_prompts(
         self,
