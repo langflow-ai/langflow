@@ -218,7 +218,7 @@ jobs:
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: always() && ${{ inputs.build_docker_main == 'true' }}
-    needs: [release-nightly-main]
+    needs: [release-nightly-main, call_docker_build_base]
     uses: ./.github/workflows/docker-build.yml
     with:
       release_type: nightly-main
@@ -238,7 +238,7 @@ jobs:
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: always() && ${{ inputs.build_docker_ep == 'true' }}
-    needs: [release-nightly-main]
+    needs: [release-nightly-main, call_docker_build_main]
     uses: ./.github/workflows/docker-build.yml
     with:
       release_type: main-ep
