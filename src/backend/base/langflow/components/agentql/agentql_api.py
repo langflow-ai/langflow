@@ -4,7 +4,9 @@ from loguru import logger
 from langflow.components.agentql.utils import (
     AGENTQL_QUERY_DOCUMENTATION,
     AGENTQL_REST_API_DOCUMENTATION,
-    INVALID_API_KEY_MESSAGE,
+    NO_INPUT_MESSAGE,
+    SINGLE_INPUT_MESSAGE,
+    handle_agentql_error,
 )
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
@@ -20,7 +22,7 @@ from langflow.io import (
 from langflow.schema import Data
 
 
-class AgentQLQueryWeb(Component):
+class AgentQL(Component):
     display_name = "Extract Web Data"
     description = "Extracts structured data from a web page using an AgentQL query or a Natural Language description."
     documentation: str = AGENTQL_REST_API_DOCUMENTATION
@@ -130,10 +132,10 @@ class AgentQLQueryWeb(Component):
         }
 
         if not self.prompt and not self.query:
-            self.status = "Either Query or Prompt must be provided."
+            self.status = NO_INPUT_MESSAGE
             raise ValueError(self.status)
         if self.prompt and self.query:
-            self.status = "Both Query and Prompt can't be provided at the same time."
+            self.status = SINGLE_INPUT_MESSAGE
             raise ValueError(self.status)
 
         try:
@@ -144,20 +146,8 @@ class AgentQLQueryWeb(Component):
             data = Data(result=response_json["data"], metadata=response_json["metadata"])
 
         except httpx.HTTPStatusError as e:
-            response = e.response
-            if response.status_code == httpx.codes.UNAUTHORIZED:
-                self.status = INVALID_API_KEY_MESSAGE
-            else:
-                try:
-                    error_json = response.json()
-                    logger.error(
-                        f"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}"
-                    )
-                    msg = error_json["error_info"] if "error_info" in error_json else error_json["detail"]
-                except (ValueError, TypeError):
-                    msg = f"HTTP {e}."
-                self.status = msg
-            raise ValueError(self.status) from e
+                self.status = handle_agentql_error(e)
+                raise ValueError(self.status) from e
 
         else:
             self.status = data
