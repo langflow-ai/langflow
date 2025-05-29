@@ -6,14 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import {
-  useGetDownloadFileV2,
-  useGetFilesV2,
-  usePostUploadFileV2,
-} from "@/controllers/API/queries/file-management";
+import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
 import { useGetDownloadFilesV2 } from "@/controllers/API/queries/file-management/use-get-download-files";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
+import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
@@ -115,7 +112,7 @@ export const FilesPage = () => {
     }
   };
 
-  const { mutate: uploadFileDirect } = usePostUploadFileV2();
+  const { mutate: uploadFileDirect } = customPostUploadFileV2();
 
   const colDefs: ColDef[] = [
     {
