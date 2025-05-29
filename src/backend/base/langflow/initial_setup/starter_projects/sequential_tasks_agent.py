@@ -1,7 +1,7 @@
 from langflow.components.crewai.sequential_crew import SequentialCrewComponent
 from langflow.components.crewai.sequential_task_agent import SequentialTaskAgentComponent
 from langflow.components.io import ChatOutput, TextInputComponent
-from langflow.components.models import OpenAIModelComponent
+from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.prompts import PromptComponent
 from langflow.components.tools import SearchAPIComponent
 from langflow.graph import Graph

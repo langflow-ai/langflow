@@ -3,8 +3,8 @@ import os
 import pytest
 from langflow.components.io import ChatInput, ChatOutput, TextOutputComponent
 from langflow.components.io.text import TextInputComponent
+from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.logic.conditional_router import ConditionalRouterComponent
-from langflow.components.models import OpenAIModelComponent
 from langflow.components.prompts import PromptComponent
 from langflow.custom import Component
 from langflow.graph import Graph
