@@ -285,4 +285,6 @@ export type FlowStoreType = {
   setCurrentBuildingNodeId: (nodeIds: string[] | undefined) => void;
   clearEdgesRunningByNodes: () => Promise<void>;
   updateToolMode: (nodeId: string, toolMode: boolean) => void;
+  helperLineEnabled: boolean;
+  setHelperLineEnabled: (helperLineEnabled: boolean) => void;
 };

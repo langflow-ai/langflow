@@ -15,8 +15,10 @@ import { useAddComponent } from "@/hooks/use-add-component";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import {
+  applyNodeChanges,
   Connection,
   Edge,
+  NodeChange,
   OnNodeDrag,
   OnSelectionChangeParams,
   ReactFlow,
@@ -67,6 +69,12 @@ import {
   MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
+import HelperLines from "./components/helper-lines";
+import {
+  getHelperLines,
+  getSnapPosition,
+  HelperLinesState,
+} from "./helpers/helper-lines";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -345,10 +353,14 @@ export default function Page({
     [takeSnapshot, onConnect],
   );
 
+  const [helperLines, setHelperLines] = useState<HelperLinesState>({});
+  const [isDragging, setIsDragging] = useState(false);
+  const helperLineEnabled = useFlowStore((state) => state.helperLineEnabled);
+
   const onNodeDragStart: OnNodeDrag = useCallback(() => {
     // 👇 make dragging a node undoable
-
     takeSnapshot();
+    setIsDragging(true);
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
 
@@ -357,6 +369,8 @@ export default function Page({
     autoSaveFlow();
     updateCurrentFlow({ nodes });
     setPositionDictionary({});
+    setIsDragging(false);
+    setHelperLines({});
   }, [
     takeSnapshot,
     autoSaveFlow,
@@ -366,9 +380,76 @@ export default function Page({
     setPositionDictionary,
   ]);
 
-  const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
-    // 👇 make dragging a selection undoable
+  const onNodesChangeWithHelperLines = useCallback(
+    (changes: NodeChange<AllNodeType>[]) => {
+      // Only process helper lines if the feature is enabled
+      if (helperLineEnabled) {
+        const dragChange = changes.find(
+          (change) =>
+            change.type === "position" &&
+            "dragging" in change &&
+            change.dragging &&
+            "id" in change,
+        );
 
+        if (
+          dragChange &&
+          dragChange.type === "position" &&
+          "position" in dragChange &&
+          isDragging
+        ) {
+          const draggingNode = nodes.find((node) => node.id === dragChange.id);
+          if (draggingNode && dragChange.position) {
+            const updatedNode = {
+              ...draggingNode,
+              position: dragChange.position,
+            };
+
+            const currentHelperLines = getHelperLines(updatedNode, nodes);
+            setHelperLines(currentHelperLines);
+
+            const snapPosition = getSnapPosition(updatedNode, nodes);
+
+            if (
+              snapPosition.x !== dragChange.position.x ||
+              snapPosition.y !== dragChange.position.y
+            ) {
+              const updatedChanges = changes.map((change) => {
+                if (
+                  "id" in change &&
+                  change.id === dragChange.id &&
+                  change.type === "position" &&
+                  "position" in change
+                ) {
+                  return {
+                    ...change,
+                    position: snapPosition,
+                  };
+                }
+                return change;
+              });
+              onNodesChange(updatedChanges);
+              return;
+            }
+          }
+        }
+
+        if (!isDragging && (helperLines.horizontal || helperLines.vertical)) {
+          setHelperLines({});
+        }
+      } else {
+        // Clear helper lines if feature is disabled
+        if (helperLines.horizontal || helperLines.vertical) {
+          setHelperLines({});
+        }
+      }
+
+      onNodesChange(changes);
+    },
+    [onNodesChange, nodes, isDragging, helperLines, helperLineEnabled],
+  );
+
+  const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     takeSnapshot();
   }, [takeSnapshot]);
 
@@ -582,7 +663,7 @@ export default function Page({
           <ReactFlow<AllNodeType, EdgeType>
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChange}
+            onNodesChange={onNodesChangeWithHelperLines}
             onEdgesChange={onEdgesChange}
             onConnect={onConnectMod}
             disableKeyboardA11y={true}
@@ -620,6 +701,7 @@ export default function Page({
             <FlowBuildingComponent />
             <UpdateAllComponents />
             <MemoizedBackground />
+            {helperLineEnabled && <HelperLines helperLines={helperLines} />}
           </ReactFlow>
           <div
             id="shadow-box"
