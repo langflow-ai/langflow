@@ -34,7 +34,7 @@ test.skip(
     await page.getByTestId("sidebar-search-input").fill("openai");
     await page.waitForTimeout(1000);
     await page
-      .getByTestId("modelsOpenAI")
+      .getByTestId("languagemodelsOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -122,13 +122,11 @@ test.skip(
       .getByTestId(/^rf__node-TextInput-[a-zA-Z0-9]+$/)
       .getByTestId("textarea_str_input_value")
       .fill("This is a test!");
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
+    let outdatedComponents = await page.getByTestId("update-button").count();
     while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
+      await page.getByTestId("update-button").first().click();
       await page.waitForTimeout(1000);
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+      outdatedComponents = await page.getByTestId("update-button").count();
     }
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
     while (filledApiKey > 0) {
