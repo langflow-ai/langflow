@@ -2384,7 +2384,7 @@ curl -X GET \
 
 Use the `/users` endpoint to manage user accounts in Langflow.
 
-### Add User
+### Add user
 
 Create a new user account with a username and password.
 
@@ -2396,7 +2396,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/users/" \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "newuser",
+    "username": "newuser2",
     "password": "securepassword123"
   }'
 ```
@@ -2426,7 +2426,7 @@ curl -X POST \
   </TabItem>
 </Tabs>
 
-### Get Current User
+### Get current user
 
 Retrieve information about the currently authenticated user.
 
@@ -2459,9 +2459,10 @@ curl -X GET \
   </TabItem>
 </Tabs>
 
-### List All Users (Superuser Only)
+### List all users
 
-Get a paginated list of all users in the system, accessible only to superusers.
+Get a paginated list of all users in the system.
+This endpoint can only be used by superusers (`is_superuser: true`).
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -2535,7 +2536,7 @@ curl -X GET \
   </TabItem>
 </Tabs>
 
-### Update User
+### Update user
 
 Modify an existing user's information with a PATCH request.
 
@@ -2579,7 +2580,7 @@ curl -X PATCH \
   </TabItem>
 </Tabs>
 
-### Reset Password
+### Reset password
 
 Change a user's password to a new secure value.
 
@@ -2622,7 +2623,7 @@ curl -X PATCH \
   </TabItem>
 </Tabs>
 
-### Delete User (Superuser Only)
+### Delete user
 
 Remove a user account from the system.
 
