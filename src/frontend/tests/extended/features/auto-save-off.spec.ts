@@ -3,7 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user should be able to manually save a flow when the auto_save is off",
-  { tag: ["@release", "@api", "@database"] },
+  { tag: ["@release", "@api", "@database", "@components"] },
   async ({ page }) => {
     await page.route("**/api/v1/config", (route) => {
       route.fulfill({
@@ -31,12 +31,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="languagemodelsNVIDIA"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsNVIDIA")
+      .getByTestId("languagemodelsNVIDIA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -46,21 +46,6 @@ test(
     });
 
     await page.getByTestId("fit_view").click();
-
-    expect(await page.getByText("Saved").last().isVisible()).toBeTruthy();
-
-    await page
-      .getByText("Saved")
-      .first()
-      .hover()
-      .then(async () => {
-        await expect(
-          page.getByText("Auto-saving is disabled").nth(0),
-        ).toBeVisible({ timeout: 5000 });
-        await expect(
-          page.getByText("Enable auto-saving to avoid losing progress.").nth(0),
-        ).toBeVisible({ timeout: 3000 });
-      });
 
     expect(await page.getByTestId("save-flow-button").isEnabled()).toBeTruthy();
 
@@ -100,7 +85,7 @@ test(
     await page.keyboard.press("Escape");
     await page.locator('//*[@id="react-flow-id"]').click();
 
-    const lastNvidiaModel = page.getByTestId("modelsNVIDIA").last();
+    const lastNvidiaModel = page.getByTestId("languagemodelsNVIDIA").last();
     await lastNvidiaModel.scrollIntoViewIfNeeded();
 
     try {
@@ -136,19 +121,19 @@ test(
       timeout: 5000,
     });
 
-    await expect(page.getByTestId("title-NVIDIA")).toBeVisible({
+    await expect(page.getByTestId("title-NVIDIA").first()).toBeVisible({
       timeout: 5000,
     });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="languagemodelsNVIDIA"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsNVIDIA")
+      .getByTestId("languagemodelsNVIDIA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();

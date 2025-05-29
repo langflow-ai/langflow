@@ -25,7 +25,7 @@ module.exports = {
         'Sample-Flows/blog-writer',
         'Sample-Flows/document-qa',
         'Sample-Flows/memory-chatbot',
-        'Sample-Flows/math-agent',
+        'Sample-Flows/financial-report-parser',
         'Sample-Flows/sequential-agent',
         'Sample-Flows/travel-planning-agent',
       ],
@@ -40,6 +40,8 @@ module.exports = {
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
+        "Concepts/embedded-chat-widget",
+        "Concepts/mcp-server",
         "Concepts/concepts-file-management",
         "Concepts/concepts-voice-mode",
       ],
@@ -55,7 +57,6 @@ module.exports = {
         "Components/components-embedding-models",
         "Components/components-helpers",
         "Components/components-io",
-        "Components/components-loaders",
         "Components/components-logic",
         "Components/components-memories",
         "Components/components-models",
@@ -79,25 +80,51 @@ module.exports = {
       items: [
         "Configuration/configuration-api-keys",
         "Configuration/configuration-authentication",
-        "Configuration/configuration-auto-saving",
-        "Configuration/configuration-backend-only",
         "Configuration/configuration-cli",
         "Configuration/configuration-custom-database",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
-        "Configuration/configuration-security-best-practices"
       ],
     },
     {
       type: "category",
       label: "Develop",
       items: [
-        "Develop/develop-overview",
-        "Develop/develop-application",
-        "Develop/install-custom-dependencies",
-        "Develop/memory",
-        "Develop/session-id",
-        "Develop/logging",
+        {
+          type: "doc",
+          id: "Develop/develop-overview",
+          label: "Overview"
+        },
+        {
+          type: "doc",
+          id: "Develop/develop-application",
+          label: "Develop an application in Langflow"
+        },
+        {
+          type: "doc",
+          id: "Develop/install-custom-dependencies",
+          label: "Install custom dependencies"
+        },
+        {
+          type: "doc",
+          id: "Develop/memory",
+          label: "Memory management"
+        },
+        {
+          type: "doc",
+          id: "Develop/session-id",
+          label: "Session ID"
+        },
+        {
+          type: "doc",
+          id: "Develop/logging",
+          label: "Logging"
+        },
+        {
+          type: "doc",
+          id: "Develop/webhook",
+          label: "Webhook"
+        },
       ],
     },
     {
@@ -116,8 +143,29 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Deployment/deployment-kubernetes",
-          label: "Kubernetes"
+          id: "Deployment/deployment-caddyfile",
+          label: "Deploy Langflow on a remote server"
+        },
+        {
+          type: "category",
+          label: "Kubernetes",
+          items: [
+            {
+              type: "doc",
+              id: "Deployment/deployment-prod-best-practices",
+              label: "Langflow architecture and best practices"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-kubernetes-dev",
+              label: "Deploy in development"
+            },
+            {
+              type: "doc",
+              id: "Deployment/deployment-kubernetes-prod",
+              label: "Deploy in production"
+            }
+          ]
         },
         {
           type: "doc",
@@ -138,7 +186,7 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-render",
           label: "Render"
-        }
+        },
       ],
     },
     {
@@ -162,28 +210,34 @@ module.exports = {
       label: "Integrations",
       items: [
         "Integrations/Apify/integrations-apify",
-        "Integrations/Arize/integrations-arize",
+        {
+          type: "doc",
+          id: "Integrations/Arize/integrations-arize",
+          label: "Arize",
+        },
+        {
+          type: "doc",
+          id: "Integrations/mcp-component-astra",
+          label: "Astra DB MCP server",
+        },
         "Integrations/integrations-assemblyai",
-        "Integrations/Composio/integrations-composio",
+        {
+          type: "doc",
+          id: "Integrations/Composio/integrations-composio",
+          label: "Composio",
+        },
         {
           type: 'category',
           label: 'Google',
           items: [
             'Integrations/Google/integrations-setup-google-oauth-langflow',
             'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
+            'Integrations/Google/integrations-google-big-query',
           ],
         },
         "Integrations/integrations-langfuse",
         "Integrations/integrations-langsmith",
         "Integrations/integrations-langwatch",
-        {
-          type: 'category',
-          label: 'MCP (Model Context Protocol)',
-          items: [
-            'Integrations/MCP/integrations-mcp',
-            'Integrations/MCP/mcp-component-astra',
-          ],
-        },
         "Integrations/integrations-opik",
         {
           type: "category",
@@ -200,6 +254,7 @@ module.exports = {
           items: [
             "Integrations/Nvidia/integrations-nvidia-ingest",
             "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
+            "Integrations/Nvidia/integrations-nvidia-system-assist",
           ],
         },
       ],
@@ -209,11 +264,13 @@ module.exports = {
       label: "Contributing",
       items: [
         "Contributing/contributing-community",
+        "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-components",
         "Contributing/contributing-component-tests",
+        "Contributing/contributing-templates",
+        "Contributing/contributing-bundles",
         "Contributing/contributing-github-discussion-board",
         "Contributing/contributing-github-issues",
-        "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-telemetry",
       ],
     },

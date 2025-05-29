@@ -1,40 +1,6 @@
-import useFlowStore from "@/stores/flowStore";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { GetCodeType } from "@/types/tweaks";
-
-/**
- * Function to get the curl code for the API
- * @param {string} flowId - The id of the flow
- * @param {boolean} isAuth - If the API is authenticated
- * @returns {string} - The curl code
- */
-export function getCurlRunCode({
-  flowId,
-  isAuth,
-  tweaksBuildedObject,
-  endpointName,
-  activeTweaks,
-}: GetCodeType): string {
-  let tweaksString = "{}";
-  const inputs = useFlowStore.getState().inputs;
-  const outputs = useFlowStore.getState().outputs;
-  const hasChatInput = inputs.some((input) => input.type === "ChatInput");
-  const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
-  if (tweaksBuildedObject)
-    tweaksString = JSON.stringify(tweaksBuildedObject, null, 2);
-  // show the endpoint name in the curl command if it exists
-  return `curl -X POST \\
-    "${window.location.protocol}//${window.location.host}/api/v1/run/${
-      endpointName || flowId
-    }?stream=false" \\
-    -H 'Content-Type: application/json'\\${
-      !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
-    }
-    -d '{${!activeTweaks ? `"input_value": "message",` : ""}
-    "output_type": ${hasChatOutput ? '"chat"' : '"text"'},
-    "input_type": ${hasChatInput ? '"chat"' : '"text"'},
-    "tweaks": ${tweaksString}}'
-    `;
-}
 
 /**
  * Generates a cURL command for making a POST request to a webhook endpoint.
@@ -53,7 +19,8 @@ export function getCurlWebhookCode({
   endpointName,
   format = "multiline",
 }: GetCodeType & { format?: "multiline" | "singleline" }) {
-  const baseUrl = `${window.location.protocol}//${window.location.host}/api/v1/webhook/${endpointName || flowId}`;
+  const { protocol, host } = customGetHostProtocol();
+  const baseUrl = `${protocol}//${host}/api/v1/webhook/${endpointName || flowId}`;
   const authHeader = !isAuth ? `-H 'x-api-key: <your api key>'` : "";
 
   if (format === "singleline") {
@@ -62,8 +29,12 @@ export function getCurlWebhookCode({
 
   return `curl -X POST \\
   "${baseUrl}" \\
-  -H 'Content-Type: application/json'\\${
-    !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
+  -H 'Content-Type: application/json' \\${
+    isAuth ? `\n  -H 'x-api-key: <your api key>' \\` : ""
+  }${
+    ENABLE_DATASTAX_LANGFLOW
+      ? `\n  -H 'Authorization: Bearer <YOUR_APPLICATION_TOKEN>' \\`
+      : ""
   }
   -d '{"any": "data"}'
   `.trim();
@@ -77,6 +48,7 @@ export function getNewCurlCode({
   output_type,
   tweaksObject,
   activeTweaks,
+  endpointName,
 }: {
   flowId: string;
   isAuthenticated: boolean;
@@ -85,10 +57,10 @@ export function getNewCurlCode({
   output_type: string;
   tweaksObject: any;
   activeTweaks: boolean;
+  endpointName: string;
 }): string {
-  const host = window.location.host;
-  const protocol = window.location.protocol;
-  const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
+  const { protocol, host } = customGetHostProtocol();
+  const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
   const tweaksString =
     tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";

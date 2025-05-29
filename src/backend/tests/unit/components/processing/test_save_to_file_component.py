@@ -163,3 +163,75 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
 
         with pytest.raises(ValueError, match="Unsupported input type"):
             component.save_to_file()
+
+    @pytest.mark.parametrize(
+        ("path_str", "fmt", "expected_suffix"),
+        [
+            ("./test_output", "csv", ".csv"),
+            ("./test_output", "json", ".json"),
+            ("./test_output", "markdown", ".markdown"),
+            ("./test_output", "txt", ".txt"),
+        ],
+    )
+    def test_adjust_path_adds_extension(self, component_class, path_str, fmt, expected_suffix):
+        """Test that the correct extension is added when none exists."""
+        component = component_class()
+        input_path = Path(path_str)
+        expected_path = Path(f"{path_str}{expected_suffix}")
+        result = component._adjust_file_path_with_format(input_path, fmt)
+        assert str(result) == str(expected_path.expanduser())
+
+    @pytest.mark.parametrize(
+        ("path_str", "fmt"),
+        [
+            ("./test_output.csv", "csv"),
+            ("./test_output.json", "json"),
+            ("./test_output.markdown", "markdown"),
+            ("./test_output.txt", "txt"),
+        ],
+    )
+    def test_adjust_path_keeps_existing_correct_extension(self, component_class, path_str, fmt):
+        """Test that the existing correct extension is kept."""
+        component = component_class()
+        input_path = Path(path_str)
+        result = component._adjust_file_path_with_format(input_path, fmt)
+        assert str(result) == str(input_path.expanduser())
+
+    @pytest.mark.parametrize(
+        ("path_str", "fmt", "expected_path_str"),
+        [
+            ("./test_output.txt", "csv", "./test_output.txt.csv"),  # Incorrect extension
+            ("./test_output", "excel", "./test_output.xlsx"),  # Add .xlsx for excel
+            ("./test_output.txt", "excel", "./test_output.txt.xlsx"),  # Incorrect extension for excel
+        ],
+    )
+    def test_adjust_path_handles_incorrect_or_excel_add(self, component_class, path_str, fmt, expected_path_str):
+        """Test handling incorrect extensions and adding .xlsx for excel."""
+        component = component_class()
+        input_path = Path(path_str)
+        expected_path = Path(expected_path_str)
+        result = component._adjust_file_path_with_format(input_path, fmt)
+        assert str(result) == str(expected_path.expanduser())
+
+    @pytest.mark.parametrize(
+        "path_str",
+        [
+            "./test_output.xlsx",
+            "./test_output.xls",
+        ],
+    )
+    def test_adjust_path_keeps_existing_excel_extension(self, component_class, path_str):
+        """Test that existing .xlsx or .xls extensions are kept for excel format."""
+        component = component_class()
+        input_path = Path(path_str)
+        result = component._adjust_file_path_with_format(input_path, "excel")
+        assert str(result) == str(input_path.expanduser())
+
+    def test_adjust_path_expands_home(self, component_class):
+        """Test that the home directory symbol '~' is expanded."""
+        component = component_class()
+        input_path = Path("~/test_output")
+        expected_path = Path("~/test_output.csv").expanduser()
+        result = component._adjust_file_path_with_format(input_path, "csv")
+        assert str(result) == str(expected_path)
+        assert "~" not in str(result)  # Ensure ~ was expanded

@@ -1,4 +1,5 @@
 from .inputs import (
+    AuthInput,
     BoolInput,
     CodeInput,
     ConnectionInput,
@@ -20,15 +21,18 @@ from .inputs import (
     MultiselectInput,
     NestedDictInput,
     PromptInput,
+    QueryInput,
     SecretStrInput,
     SliderInput,
     SortableListInput,
     StrInput,
     TabInput,
     TableInput,
+    ToolsInput,
 )
 
 __all__ = [
+    "AuthInput",
     "BoolInput",
     "CodeInput",
     "ConnectionInput",
@@ -52,10 +56,12 @@ __all__ = [
     "MultiselectInput",
     "NestedDictInput",
     "PromptInput",
+    "QueryInput",
     "SecretStrInput",
     "SliderInput",
     "SortableListInput",
     "StrInput",
     "TabInput",
     "TableInput",
+    "ToolsInput",
 ]

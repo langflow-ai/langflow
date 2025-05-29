@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -8,6 +9,10 @@ test(
   { tag: ["@release", "@api", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
+
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
 
     await page.getByTestId("blank-flow").click();
 
@@ -57,7 +62,6 @@ test(
       "disclosure-models",
       "disclosure-helpers",
       "disclosure-vector stores",
-      "disclosure-embeddings",
       "disclosure-agents",
       "disclosure-memories",
       "disclosure-logic",
@@ -70,12 +74,10 @@ test(
     const elementTestIds = [
       "outputsChat Output",
       "dataAPI Request",
-      "modelsAmazon Bedrock",
       "vectorstoresAstra DB",
-      "embeddingsAmazon Bedrock Embeddings",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
-      "memoriesAstra DB Chat Memory",
+      "memoriesMem0 Chat Memory",
       "logicCondition",
       "langchain_utilitiesSelf Query Retriever",
       "langchain_utilitiesCharacterTextSplitter",
@@ -96,24 +98,23 @@ test(
     await page.getByTestId("sidebar-search-input").click();
 
     const visibleModelSpecsTestIds = [
-      "modelsAIML",
-      "modelsAmazon Bedrock",
-      "modelsAnthropic",
-      "modelsAzure OpenAI",
-      "modelsCohere",
-      "modelsGoogle Generative AI",
-      "modelsGroq",
-      "modelsHuggingFace",
-      "modelsLM Studio",
-      "modelsMaritalk",
-      "modelsMistralAI",
-      "modelsNVIDIA",
-      "modelsOllama",
-      "modelsOpenAI",
-      "modelsPerplexity",
-      "modelsQianfan",
-      "modelsSambaNova",
-      "modelsVertex AI",
+      "languagemodelsAIML",
+      "languagemodelsAnthropic",
+      "languagemodelsAzure OpenAI",
+      "languagemodelsCohere",
+      "languagemodelsGoogle Generative AI",
+      "languagemodelsGroq",
+      "languagemodelsHuggingFace",
+      "languagemodelsLM Studio",
+      "languagemodelsMaritalk",
+      "languagemodelsMistralAI",
+      "languagemodelsNVIDIA",
+      "languagemodelsOllama",
+      "languagemodelsOpenAI",
+      "languagemodelsPerplexity",
+      "languagemodelsQianfan",
+      "languagemodelsSambaNova",
+      "languagemodelsVertex AI",
     ];
 
     await Promise.all(
