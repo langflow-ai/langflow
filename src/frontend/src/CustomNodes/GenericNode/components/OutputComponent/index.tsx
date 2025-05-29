@@ -24,7 +24,6 @@ export default function OutputComponent({
   handleSelectOutput,
   outputName,
 }: outputComponentType) {
-  // Get the node type from the flow store (fallback for existing components)
   const nodeType = useFlowStore(
     (state) => state.nodes.find((node) => node.id === nodeId)?.data?.type,
   );
@@ -53,15 +52,9 @@ export default function OutputComponent({
     </span>,
   );
 
-  // Check if we should show dropdown
-  // Don't show dropdown if:
-  // 1. There's only one output
-  // 2. Any output has allows_loop (loop component)
-  // 3. Any output has group_outputs flag
-  // 4. Component is ConditionalRouter (fallback for existing components)
   const hasLoopOutput = outputs?.some?.((output) => output.allows_loop);
   const hasGroupOutputs = outputs?.some?.((output) => output.group_outputs);
-  const isConditionalRouter = nodeType === "ConditionalRouter"; // Keep as fallback
+  const isConditionalRouter = nodeType === "ConditionalRouter";
   const hasOutputs = outputs.length > 1;
 
   const shouldShowDropdown =
@@ -106,51 +99,4 @@ export default function OutputComponent({
       )}
     </div>
   );
-
-  // ! DEACTIVATED UNTIL BETTER IMPLEMENTATION
-  // return (
-  //   <div className="noflow nopan nodelete nodrag  flex items-center gap-2">
-  //     <DropdownMenu>
-  //       <DropdownMenuTrigger asChild>
-  //         <Button
-  //           disabled={frozen}
-  //           variant="primary"
-  //           size="xs"
-  //           className={cn(
-  //             frozen ? "text-ice" : "",
-  //             "items-center gap-1 pl-2 pr-1.5 align-middle text-xs font-normal",
-  //           )}
-  //         >
-  //           <span className="pb-px">{selected}</span>
-  //           <ForwardedIconComponent name="ChevronDown" className="h-3 w-3" />
-  //         </Button>
-  //       </DropdownMenuTrigger>
-  //       <DropdownMenuContent>
-  //         {types.map((type) => (
-  //           <DropdownMenuItem
-  //             onSelect={() => {
-  //               // TODO: UDPDATE SET NODE TO NEW NODE FORM
-  //               setNode(nodeId, (node) => {
-  //                 const newNode = cloneDeep(node);
-  //                 (newNode.data as NodeDataType).node!.outputs![idx].selected =
-  //                   type;
-  //                 return newNode;
-  //               });
-  //               updateNodeInternals(nodeId);
-  //             }}
-  //           >
-  //             {type}
-  //           </DropdownMenuItem>
-  //         ))}
-  //       </DropdownMenuContent>
-  //     </DropdownMenu>
-  //     {proxy ? (
-  //       <ShadTooltip content={<span>{proxy.nodeDisplayName}</span>}>
-  //         <span>{name}</span>
-  //       </ShadTooltip>
-  //     ) : (
-  //       <span>{name}</span>
-  //     )}
-  //   </div>
-  // );
 }

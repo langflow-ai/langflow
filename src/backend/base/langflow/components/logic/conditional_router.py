@@ -68,7 +68,7 @@ class ConditionalRouterComponent(Component):
         Output(display_name="True", name="true_result", method="true_response", group_outputs=True),
         Output(display_name="False", name="false_result", method="false_response", group_outputs=True),
     ]
-    # Note: group_outputs=True tells the frontend to show all outputs without dropdowns
+    
 
     def _pre_run_setup(self):
         self.__iteration_updated = False

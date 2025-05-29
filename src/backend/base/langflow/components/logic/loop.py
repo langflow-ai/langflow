@@ -24,7 +24,7 @@ class LoopComponent(Component):
         Output(display_name="Item", name="item", method="item_output", allows_loop=True, group_outputs=True),
         Output(display_name="Done", name="done", method="done_output", group_outputs=True),
     ]
-    # Note: group_outputs=True tells the frontend to show all outputs without dropdowns
+    
 
     def initialize_data(self) -> None:
         """Initialize the data list, context index, and aggregated list."""

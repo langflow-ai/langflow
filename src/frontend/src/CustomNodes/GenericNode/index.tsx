@@ -218,7 +218,6 @@ function GenericNode({
   const update = useShortcutsStore((state) => state.update);
   useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault: true });
 
-  // Memoized values
   const isToolMode = useMemo(
     () =>
       data.node?.outputs?.some(
@@ -259,7 +258,6 @@ function GenericNode({
     return { shownOutputs, hiddenOutputs };
   }, [data.node?.outputs]);
 
-  // Initialize selectedOutput from persisted data
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
     () => data.node?.outputs?.find((output) => output.selected) || null,
   );
@@ -268,14 +266,11 @@ function GenericNode({
     (output) => {
       setSelectedOutput(output);
 
-      // Update existing edges to use the new selected output type
       setEdges((eds) => {
         return eds.map((edge) => {
-          // Check if this edge is from the current node and output
           if (edge.source === data.id && edge.data?.sourceHandle) {
             const sourceHandle = edge.data.sourceHandle;
             if (sourceHandle.name === output.name) {
-              // Update the edge to use the new selected type
               const newSourceHandle = {
                 ...sourceHandle,
                 output_types: [output.selected ?? output.types[0]],
@@ -299,14 +294,12 @@ function GenericNode({
       setNode(data.id, (oldNode) => {
         const newNode = cloneDeep(oldNode);
         if (newNode.data.node?.outputs) {
-          // First, clear any previous selections
           newNode.data.node.outputs.forEach((out) => {
             if (out.selected) {
               out.selected = undefined;
             }
           });
 
-          // Then set the new selection
           const outputIndex = newNode.data.node.outputs.findIndex(
             (o) => o.name === output.name,
           );
