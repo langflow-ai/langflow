@@ -333,7 +333,7 @@ To find your NPX path, run `which npx`.
 ```json
 {
   "mcpServers": {
-    "langflow-my_projects": {
+    "PROJECT_NAME": {
       "command": "PATH_TO_NPX",
       "args": [
         "-y",
