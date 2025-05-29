@@ -48,7 +48,7 @@ from langflow.inputs.inputs import DataFrameInput, DataInput, MessageInput, Mess
 #         return Data(data=v)
 #     if not isinstance(v, Data):
 #         msg = f"Invalid value type {type(v)} for input Expected Data."
-#         raise ValueError(msg)  # noqa: TRY004
+#         raise ValueError(msg)
 #     return v
 
 
@@ -70,7 +70,7 @@ from langflow.inputs.inputs import DataFrameInput, DataInput, MessageInput, Mess
 #         return DataFrame(data=[v])
 #     if not isinstance(v, DataFrame):
 #         msg = f"Invalid value type {type(v)}. Expected DataFrame."
-#         raise ValueError(msg)  # noqa: TRY004
+#         raise ValueError(msg)
 #     return v
 
 
@@ -125,7 +125,7 @@ class TypeConverterComponent(Component):
 
     def convert_to_message(self) -> Message:
         """Convert input to Message type."""
-        return MessageInput(
+        return MessageTextInput(
             name="converted_message",
             display_name="Converted Message",
             value=self.input_data,
