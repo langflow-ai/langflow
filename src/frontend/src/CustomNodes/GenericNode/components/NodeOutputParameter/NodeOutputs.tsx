@@ -1,4 +1,3 @@
-// NodeOutputs.tsx
 import { NodeDataType } from "@/types/flow";
 import { OutputParameter } from ".";
 
@@ -25,17 +24,14 @@ export default function NodeOutputs({
   selectedOutput: any;
   handleSelectOutput: any;
 }) {
-  // Check if any output has allows_loop, group_outputs flag, or if it's a ConditionalRouter component
   const hasLoopOutput = outputs.some((output) => output.allows_loop);
   const hasGroupOutputs = outputs.some((output) => output.group_outputs);
-  const isConditionalRouter = data.type === "ConditionalRouter"; // Keep as fallback for existing components
+  const isConditionalRouter = data.type === "ConditionalRouter";
   const hasHiddenOutputs = outputs.some((output) => output.hidden);
 
-  // Components should show all outputs if they have loop outputs, group outputs, are ConditionalRouter, or have hidden outputs
   const shouldShowAllOutputs =
     hasLoopOutput || hasGroupOutputs || isConditionalRouter || hasHiddenOutputs;
 
-  // For components that should show all outputs (including those with hidden outputs)
   if (shouldShowAllOutputs) {
     const outputsToRender =
       keyPrefix === "hidden"
@@ -75,9 +71,7 @@ export default function NodeOutputs({
     );
   }
 
-  // For regular components, show only the selected output
   const getDisplayOutput = () => {
-    // Filter outputs based on keyPrefix first
     const filteredOutputs =
       keyPrefix === "hidden"
         ? outputs.filter((output) => output.hidden)
