@@ -64,7 +64,7 @@ class TypeConverterComponent(Component):
             name="converted_message",
             display_name="Converted Message",
             value=value,
-            input_types=["Message", "DataFrame", "Data"]
+            input_types=["Message", "DataFrame", "Data"],
         ).value
 
     def convert_to_data(self) -> Data:
@@ -76,7 +76,7 @@ class TypeConverterComponent(Component):
             name="converted_data",
             display_name="Converted Data",
             value=value,
-            input_types=["Data", "DataFrame", "Message"]
+            input_types=["Data", "DataFrame", "Message"],
         ).value
 
     def convert_to_dataframe(self) -> DataFrame:
@@ -88,5 +88,5 @@ class TypeConverterComponent(Component):
             name="converted_dataframe",
             display_name="Converted DataFrame",
             value=value,
-            input_types=["DataFrame", "Data", "Message"]
+            input_types=["DataFrame", "Data", "Message"],
         ).value
