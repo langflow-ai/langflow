@@ -299,10 +299,8 @@ async def install_mcp_config(
         args = ["mcp-proxy", sse_url]
 
         # Check if running on WSL (will appear as Linux but with Microsoft in release info)
-        is_wsl = False
         if os_type == "Linux" and "microsoft" in platform.uname().release.lower():
             logger.debug("WSL detected, using Windows-specific configuration")
-            is_wsl = True
 
             # If we're in WSL and the host is localhost, we might need to adjust the URL
             # so Windows applications can reach the WSL service
@@ -331,10 +329,6 @@ async def install_mcp_config(
             command = "cmd"
             args = ["/c", "uvx", "mcp-proxy", sse_url]
             logger.debug("Windows detected, using cmd command")
-        elif is_wsl:
-            # For WSL, we keep the default uvx command as we're on Linux
-            logger.debug("WSL environment detected, using URL: %s", sse_url)
-        # Keep the default for macOS and standard Linux
 
         # Create the MCP configuration
         mcp_config = {
