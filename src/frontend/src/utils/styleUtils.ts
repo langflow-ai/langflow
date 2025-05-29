@@ -285,7 +285,7 @@ export const SIDEBAR_BUNDLES = [
 
 export const categoryIcons: Record<string, string> = {
   saved_components: "GradientSave",
-  io: "Cable",
+  input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
   prompts: "TerminalSquare",
@@ -313,7 +313,7 @@ export const categoryIcons: Record<string, string> = {
 
 export const nodeIconToDisplayIconMap: Record<string, string> = {
   //Category Icons
-  io: "Cable",
+  input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
   prompts: "TerminalSquare",
