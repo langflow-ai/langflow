@@ -13,14 +13,12 @@ from langflow.base.mcp.util import (
 )
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, TableInput
-from langflow.inputs.inputs import InputTypes
+from langflow.inputs.inputs import DefaultPromptField, InputTypes
 from langflow.io import MessageTextInput, MultilineInput, Output, TabInput
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
-from langflow.schema import DataFrame, Message
+from langflow.schema import DataFrame
 
-from langflow.utils.payload import extract_input_variables
-from langflow.inputs.inputs import DefaultPromptField
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
     """If any key looks nested (contains a dot or “[index]”), rebuild the.
@@ -265,7 +263,6 @@ class MCPToolsComponent(Component):
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
         try:
-
             if field_name == "mode":
                 # Mode-specific field visibility
                 if field_value == "Stdio":
@@ -299,7 +296,7 @@ class MCPToolsComponent(Component):
 
                 # Update tool and prompt options
                 build_config["tool"]["options"] = self.tool_names
-                build_config["prompt"]["options"] = [prompt for prompt in self.prompts]
+                build_config["prompt"]["options"] = list(self.prompts)
 
             elif field_name in ["command", "sse_url", "env", "headers_input"]:
                 # Update tools and prompts when connection params change
@@ -311,7 +308,7 @@ class MCPToolsComponent(Component):
                     headers=build_config["headers_input"]["value"],
                 )
                 build_config["tool"]["options"] = self.tool_names
-                build_config["prompt"]["options"] = [prompt for prompt in self.prompts]
+                build_config["prompt"]["options"] = list(self.prompts)
 
             elif field_name == "prompt":
                 if len(self.prompts) == 0:
@@ -324,7 +321,7 @@ class MCPToolsComponent(Component):
                     )
 
                 # Remove any existing prompt variables
-                keys_to_remove = [k for k in build_config.keys() if k.startswith("prompt_var_")]
+                keys_to_remove = [k for k in build_config if k.startswith("prompt_var_")]
                 for key in keys_to_remove:
                     del build_config[key]
 
@@ -338,18 +335,16 @@ class MCPToolsComponent(Component):
 
                     # Extract variables from the prompt arguments
                     variables = []
-                    if hasattr(prompt_obj, 'arguments') and prompt_obj.arguments:
+                    if hasattr(prompt_obj, "arguments") and prompt_obj.arguments:
                         # Handle both string arguments and object arguments
                         for arg in prompt_obj.arguments:
                             if isinstance(arg, str):
                                 variables.append(arg)
-                            elif hasattr(arg, 'name'):
+                            elif hasattr(arg, "name"):
                                 variables.append(arg.name)
 
-                    if not variables:
-                        # Try to get a description or other text that might contain variables
-                        if hasattr(prompt_obj, 'description') and prompt_obj.description:
-                            variables = re.findall(r"\{(.*?)\}", prompt_obj.description)
+                    if not variables and hasattr(prompt_obj, "description") and prompt_obj.description:
+                        variables = re.findall(r"\{(.*?)\}", prompt_obj.description)
 
                     if not variables:
                         return build_config
@@ -377,7 +372,7 @@ class MCPToolsComponent(Component):
                             field_name = f"prompt_var_{variable}"
                             new_build_config[field_name] = DefaultPromptField(
                                 name=field_name,
-                                display_name="Prompt: "+variable,
+                                display_name="Prompt: " + variable,
                                 info=f"Value for {{{variable}}} in the prompt",
                                 advanced=False,
                                 multiline=True,
@@ -398,7 +393,8 @@ class MCPToolsComponent(Component):
                     self.remove_non_default_keys(build_config)
                     await self._update_tool_config(build_config, field_value)
 
-            return build_config
+            # always return build_config
+            return build_config  # noqa: TRY300
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
             logger.exception(msg)
@@ -435,14 +431,12 @@ class MCPToolsComponent(Component):
 
     def remove_non_default_keys(self, build_config: dict) -> None:
         """Remove non-default keys from the build config."""
-        keys_to_remove = []
-        for key in build_config.keys():
-            if key not in self.default_keys and not key.startswith("prompt_var_"):
-                keys_to_remove.append(key)
+        keys_to_remove = [
+            key for key in build_config if key not in self.default_keys and not key.startswith("prompt_var_")
+        ]
 
         for key in keys_to_remove:
             build_config.pop(key)
-
 
     async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
         """Update tool configuration with proper error handling."""
@@ -487,7 +481,7 @@ class MCPToolsComponent(Component):
                     # Prefix the input name with tool_var_ to avoid conflicts
                     original_name = schema_input.name
                     schema_input.name = f"tool_var_{original_name}"
-                    
+
                     # Also update the display name to indicate it's a tool variable
                     if hasattr(schema_input, "display_name"):
                         schema_input.display_name = f"Tool: {schema_input.display_name}"
@@ -535,7 +529,7 @@ class MCPToolsComponent(Component):
                     prompt_content.append(item_dict)
                 return DataFrame(data=prompt_content)
             return DataFrame(data=[{"error": "You must select a prompt"}])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return DataFrame(data=[{"error": f"Error fetching prompt output: {e!s}"}])
 
     async def build_tool_output(self) -> DataFrame:
@@ -565,7 +559,7 @@ class MCPToolsComponent(Component):
                     tool_content.append(item_dict)
                 return DataFrame(data=tool_content)
             return DataFrame(data=[{"error": "You must select a tool"}])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return DataFrame(data=[{"error": f"Error fetching tool output: {e!s}"}])
 
     async def update_tools_and_prompts(
@@ -641,7 +635,7 @@ class MCPToolsComponent(Component):
                         prompts.append(prompt.name)
                         self._prompt_cache[prompt.name] = prompt
                     self.prompts = prompts
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     logger.warning(f"Could not fetch prompts: {e}")
 
             if not self.tools:
@@ -690,6 +684,7 @@ class MCPToolsComponent(Component):
             raise ValueError(msg) from e
         else:
             return tool_list
+
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
         # if not self.tools:
@@ -707,16 +702,13 @@ class MCPToolsComponent(Component):
         try:
             # First, ensure we have prompts loaded
             if not self.prompts:
-                try:
-                    await self.update_tools_and_prompts(
-                        mode=build_config["mode"]["value"],
-                        command=build_config["command"]["value"],
-                        url=build_config["sse_url"]["value"],
-                        env=build_config["env"]["value"],
-                        headers=build_config["headers_input"]["value"],
-                    )
-                except Exception as e:
-                    raise
+                await self.update_tools_and_prompts(
+                    mode=build_config["mode"]["value"],
+                    command=build_config["command"]["value"],
+                    url=build_config["sse_url"]["value"],
+                    env=build_config["env"]["value"],
+                    headers=build_config["headers_input"]["value"],
+                )
 
             # Check if prompt exists in cache
             if prompt_name not in self._prompt_cache:
@@ -731,13 +723,11 @@ class MCPToolsComponent(Component):
 
             # Extract variables from the prompt arguments
             variables = []
-            if hasattr(prompt_obj, 'arguments') and prompt_obj.arguments:
-                variables = [arg.name for arg in prompt_obj.arguments if hasattr(arg, 'name')]
+            if hasattr(prompt_obj, "arguments") and prompt_obj.arguments:
+                variables = [arg.name for arg in prompt_obj.arguments if hasattr(arg, "name")]
 
-            if not variables:
-                # Try to get a description or other text that might contain variables
-                if hasattr(prompt_obj, 'description') and prompt_obj.description:
-                    variables = re.findall(r"\{(.*?)\}", prompt_obj.description)
+            if not variables and hasattr(prompt_obj, "description") and prompt_obj.description:
+                variables = re.findall(r"\{(.*?)\}", prompt_obj.description)
 
             if not variables:
                 msg = f"No variables found for prompt '{prompt_name}'"
