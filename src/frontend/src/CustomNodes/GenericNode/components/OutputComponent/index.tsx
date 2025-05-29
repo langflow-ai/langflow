@@ -62,11 +62,10 @@ export default function OutputComponent({
   const hasLoopOutput = outputs?.some?.((output) => output.allows_loop);
   const hasGroupOutputs = outputs?.some?.((output) => output.group_outputs);
   const isConditionalRouter = nodeType === "ConditionalRouter"; // Keep as fallback
+  const hasOutputs = outputs.length > 1;
+
   const shouldShowDropdown =
-    outputs.length > 1 &&
-    !hasLoopOutput &&
-    !hasGroupOutputs &&
-    !isConditionalRouter;
+    hasOutputs && !hasLoopOutput && !hasGroupOutputs && !isConditionalRouter;
 
   return (
     <div>

@@ -261,13 +261,7 @@ function GenericNode({
 
   // Initialize selectedOutput from persisted data
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
-    () => {
-      // Find the output that has a selected property
-      const outputWithSelection = data.node?.outputs?.find(
-        (output) => output.selected,
-      );
-      return outputWithSelection || null;
-    },
+    () => data.node?.outputs?.find((output) => output.selected) || null,
   );
 
   const handleSelectOutput = useCallback(
