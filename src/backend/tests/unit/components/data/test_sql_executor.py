@@ -89,11 +89,11 @@ class TestSQLComponent(ComponentTestBaseWithoutClient):
         assert "Error:" in result.text
         assert "Query: SELECT * FROM non_existent_table" in result.text
 
-    def test_sql_query_results(self, component_class: type[SQLComponent], default_kwargs):
+    def test_run_sql_query(self, component_class: type[SQLComponent], default_kwargs):
         """Test building a DataFrame from a SQL query."""
         component = component_class(**default_kwargs)
 
-        result = component.sql_query_results()
+        result = component.run_sql_query()
 
         assert isinstance(result, DataFrame)
         assert len(result) == 1
