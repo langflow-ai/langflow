@@ -620,6 +620,7 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -949,6 +950,7 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1718,7 +1720,8 @@
                 "display_name": "File Path",
                 "group_outputs": false,
                 "method": "save_to_file",
-                "name": "result",
+                "name": "confirmation",
+                "required_inputs": [],
                 "selected": "Text",
                 "tool_mode": true,
                 "types": [
@@ -1882,6 +1885,9 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

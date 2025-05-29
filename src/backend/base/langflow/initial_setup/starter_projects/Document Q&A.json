@@ -183,6 +183,7 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -475,6 +476,9 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -806,6 +810,20 @@
                 "display_name": "Loaded Files",
                 "group_outputs": false,
                 "method": "load_files",
+                "name": "data",
+                "required_inputs": [],
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "method": "load_dataframe",
                 "name": "dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
@@ -1095,6 +1113,7 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1275,6 +1294,9 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [

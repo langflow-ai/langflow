@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "AnthropicModel-Te07A",
+            "id": "AnthropicModel-tZx4n",
             "inputTypes": [
               "Message"
             ],
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-GJfDv",
+            "id": "StructuredOutput-tWLRa",
             "inputTypes": [
               "LanguageModel"
             ],
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-GJfDv",
+            "id": "StructuredOutput-tWLRa",
             "inputTypes": [
               "Message"
             ],
@@ -99,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-FPw08",
+            "id": "ParserComponent-wrPyP",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -128,7 +128,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-XN5RE",
+            "id": "ChatOutput-iLekZ",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -139,10 +139,39 @@
         },
         "id": "reactflow__edge-AnthropicModel-Te07A{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-Te07Aœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XN5RE{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XN5REœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "AnthropicModel-Te07A",
-        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-Te07Aœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-XN5RE",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XN5REœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "AnthropicModel-tZx4n",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-tZx4nœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-iLekZ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-iLekZœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "StructuredOutput",
+            "id": "StructuredOutput-tWLRa",
+            "name": "structured_output_dataframe",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "parser-ifKFs",
+            "inputTypes": [
+              "DataFrame",
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__StructuredOutput-tWLRa{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-tWLRaœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-ifKFs{œfieldNameœ:œinput_dataœ,œidœ:œparser-ifKFsœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "StructuredOutput-tWLRa",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-tWLRaœ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "parser-ifKFs",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-ifKFsœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -158,7 +187,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "AnthropicModel-Te07A",
+            "id": "AnthropicModel-tZx4n",
             "inputTypes": [
               "Message"
             ],
@@ -236,6 +265,7 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -375,6 +405,9 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -714,6 +747,9 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1030,6 +1066,9 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1482,10 +1521,35 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
+                "required_inputs": [
+                  "input_value",
+                  "llm",
+                  "output_schema",
+                  "system_prompt"
+                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
                   "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "method": "as_dataframe",
+                "name": "structured_output_dataframe",
+                "required_inputs": [
+                  "input_value",
+                  "llm",
+                  "output_schema",
+                  "system_prompt"
+                ],
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1821,6 +1885,20 @@
                 "display_name": "Loaded Files",
                 "group_outputs": false,
                 "method": "load_files",
+                "name": "data",
+                "required_inputs": [],
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "method": "load_dataframe",
                 "name": "dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
@@ -2115,6 +2193,10 @@
                 "group_outputs": false,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
+                "required_inputs": [
+                  "input_data",
+                  "pattern"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

@@ -269,6 +269,7 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -581,10 +582,35 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
+                "required_inputs": [
+                  "input_value",
+                  "llm",
+                  "output_schema",
+                  "system_prompt"
+                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
                   "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "method": "as_dataframe",
+                "name": "structured_output_dataframe",
+                "required_inputs": [
+                  "input_value",
+                  "llm",
+                  "output_schema",
+                  "system_prompt"
+                ],
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1298,6 +1324,7 @@
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
+                "required_inputs": [],
                 "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
@@ -2027,6 +2054,10 @@
                 "group_outputs": false,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
+                "required_inputs": [
+                  "input_data",
+                  "pattern"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2207,6 +2238,9 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2509,6 +2543,10 @@
                 "group_outputs": false,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
+                "required_inputs": [
+                  "input_data",
+                  "pattern"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
