@@ -1973,7 +1973,7 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Message",
+                "display_name": "Model Response",
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
