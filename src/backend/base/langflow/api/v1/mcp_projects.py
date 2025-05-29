@@ -55,7 +55,7 @@ def get_project_sse(project_id: UUID) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
-@router.get("/{project_id}", response_model=list[MCPSettings], dependencies=[Depends(get_current_user)])
+@router.get("/{project_id}", response_model=list[MCPSettings])
 async def list_project_tools(
     project_id: UUID,
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -122,292 +122,6 @@ async def list_project_tools(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return tools
-
-
-# Project-specific MCP server instance for handling project-specific tools
-class ProjectMCPServer:
-    def __init__(self, project_id: UUID):
-        self.project_id = project_id
-        self.server = Server(f"langflow-mcp-project-{project_id}")
-
-        # Register handlers that filter by project
-        @self.server.list_tools()
-        @handle_mcp_errors
-        async def handle_list_project_tools():
-            """Handle listing tools for this specific project."""
-            tools = []
-            try:
-                db_service = get_db_service()
-                async with db_service.with_session() as session:
-                    # Get flows with mcp_enabled flag set to True and in this project
-                    flows = (
-                        await session.exec(
-                            select(Flow).where(Flow.mcp_enabled == True, Flow.folder_id == self.project_id)  # noqa: E712
-                        )
-                    ).all()
-
-                    for flow in flows:
-                        if flow.user_id is None:
-                            continue
-
-                        # Use action_name if available, otherwise construct from flow name
-                        name = flow.action_name or "_".join(flow.name.lower().split())
-
-                        # Use action_description if available, otherwise use defaults
-                        description = flow.action_description or (
-                            flow.description if flow.description else f"Tool generated from flow: {name}"
-                        )
-
-                        tool = types.Tool(
-                            name=name,
-                            description=description,
-                            inputSchema=json_schema_from_flow(flow),
-                        )
-                        tools.append(tool)
-            except Exception as e:  # noqa: BLE001
-                msg = f"Error in listing project tools: {e!s} from flow: {name}"
-                logger.warning(msg)
-            return tools
-
-        @self.server.list_prompts()
-        async def handle_list_prompts():
-            return []
-
-        @self.server.list_resources()
-        async def handle_list_resources():
-            resources = []
-            try:
-                db_service = get_db_service()
-                storage_service = get_storage_service()
-                settings_service = get_settings_service()
-
-                # Build full URL from settings
-                host = getattr(settings_service.settings, "host", "localhost")
-                port = getattr(settings_service.settings, "port", 3000)
-
-                base_url = f"http://{host}:{port}".rstrip("/")
-
-                async with db_service.with_session() as session:
-                    flows = (await session.exec(select(Flow))).all()
-
-                    for flow in flows:
-                        if flow.id:
-                            try:
-                                files = await storage_service.list_files(flow_id=str(flow.id))
-                                for file_name in files:
-                                    # URL encode the filename
-                                    safe_filename = quote(file_name)
-                                    resource = types.Resource(
-                                        uri=f"{base_url}/api/v1/files/{flow.id}/{safe_filename}",
-                                        name=file_name,
-                                        description=f"File in flow: {flow.name}",
-                                        mimeType=build_content_type_from_extension(file_name),
-                                    )
-                                    resources.append(resource)
-                            except FileNotFoundError as e:
-                                msg = f"Error listing files for flow {flow.id}: {e}"
-                                logger.debug(msg)
-                                continue
-            except Exception as e:
-                msg = f"Error in listing resources: {e!s}"
-                logger.exception(msg)
-                raise
-            return resources
-
-        @self.server.read_resource()
-        async def handle_read_resource(uri: str) -> bytes:
-            """Handle resource read requests."""
-            try:
-                # Parse the URI properly
-                parsed_uri = urlparse(str(uri))
-                # Path will be like /api/v1/files/{flow_id}/{filename}
-                path_parts = parsed_uri.path.split("/")
-                # Remove empty strings from split
-                path_parts = [p for p in path_parts if p]
-
-                # The flow_id and filename should be the last two parts
-                two = 2
-                if len(path_parts) < two:
-                    msg = f"Invalid URI format: {uri}"
-                    raise ValueError(msg)
-
-                flow_id = path_parts[-2]
-                filename = unquote(path_parts[-1])  # URL decode the filename
-
-                storage_service = get_storage_service()
-
-                # Read the file content
-                content = await storage_service.get_file(flow_id=flow_id, file_name=filename)
-                if not content:
-                    msg = f"File {filename} not found in flow {flow_id}"
-                    raise ValueError(msg)
-
-                # Ensure content is base64 encoded
-                if isinstance(content, str):
-                    content = content.encode()
-                return base64.b64encode(content)
-            except Exception as e:
-                msg = f"Error reading resource {uri}: {e!s}"
-                logger.exception(msg)
-                raise
-
-        @self.server.call_tool()
-        @handle_mcp_errors
-        async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
-            """Handle tool execution requests."""
-            mcp_config = get_mcp_config()
-            if mcp_config.enable_progress_notifications is None:
-                settings_service = get_settings_service()
-                mcp_config.enable_progress_notifications = (
-                    settings_service.settings.mcp_server_enable_progress_notifications
-                )
-
-            background_tasks = BackgroundTasks()
-            current_user = current_user_ctx.get()
-
-            async def execute_tool(session):
-                # get flow id from name
-                flow = await get_flow_snake_case(name, current_user.id, session, is_action=True)
-                if not flow:
-                    msg = f"Flow with name '{name}' not found"
-                    raise ValueError(msg)
-                flow_id = flow.id
-
-                # Process inputs
-                processed_inputs = dict(arguments)
-
-                # Initial progress notification
-                if mcp_config.enable_progress_notifications and (
-                    progress_token := self.server.request_context.meta.progressToken
-                ):
-                    await self.server.request_context.session.send_progress_notification(
-                        progress_token=progress_token, progress=0.0, total=1.0
-                    )
-
-                conversation_id = str(uuid4())
-                input_request = InputValueRequest(
-                    input_value=processed_inputs.get("input_value", ""),
-                    components=[],
-                    type="chat",
-                    session=conversation_id,
-                )
-
-                async def send_progress_updates():
-                    if not (
-                        mcp_config.enable_progress_notifications and self.server.request_context.meta.progressToken
-                    ):
-                        return
-
-                    try:
-                        progress = 0.0
-                        while True:
-                            await self.server.request_context.session.send_progress_notification(
-                                progress_token=progress_token, progress=min(0.9, progress), total=1.0
-                            )
-                            progress += 0.1
-                            await asyncio.sleep(1.0)
-                    except asyncio.CancelledError:
-                        if mcp_config.enable_progress_notifications:
-                            await self.server.request_context.session.send_progress_notification(
-                                progress_token=progress_token, progress=1.0, total=1.0
-                            )
-                        raise
-
-                collected_results = []
-                try:
-                    progress_task = asyncio.create_task(send_progress_updates())
-
-                    try:
-                        response = await build_flow_and_stream(
-                            flow_id=flow_id,
-                            inputs=input_request,
-                            background_tasks=background_tasks,
-                            current_user=current_user,
-                        )
-
-                        async for line in response.body_iterator:
-                            if not line:
-                                continue
-                            try:
-                                event_data = json.loads(line)
-                                if event_data.get("event") == "end_vertex":
-                                    message = (
-                                        event_data.get("data", {})
-                                        .get("build_data", {})
-                                        .get("data", {})
-                                        .get("results", {})
-                                        .get("message", {})
-                                        .get("text", "")
-                                    )
-                                    if message:
-                                        collected_results.append(types.TextContent(type="text", text=str(message)))
-                                if event_data.get("event") == "error":
-                                    content_blocks = event_data.get("data", {}).get("content_blocks", [])
-                                    text = event_data.get("data", {}).get("text", "")
-                                    error_msg = (
-                                        f"Error Executing the {flow.name} tool. Error: {text} Details: {content_blocks}"
-                                    )
-                                    collected_results.append(types.TextContent(type="text", text=error_msg))
-                            except json.JSONDecodeError:
-                                msg = f"Failed to parse event data: {line}"
-                                logger.warning(msg)
-                                continue
-
-                        return collected_results
-                    finally:
-                        progress_task.cancel()
-                        await asyncio.wait([progress_task])
-                        if not progress_task.cancelled() and (exc := progress_task.exception()) is not None:
-                            raise exc
-
-                except Exception:
-                    if mcp_config.enable_progress_notifications and (
-                        progress_token := self.server.request_context.meta.progressToken
-                    ):
-                        await self.server.request_context.session.send_progress_notification(
-                            progress_token=progress_token, progress=1.0, total=1.0
-                        )
-                    raise
-
-            try:
-                return await with_db_session(execute_tool)
-            except Exception as e:
-                msg = f"Error executing tool {name}: {e!s}"
-                logger.exception(msg)
-                raise
-
-
-# Cache of project MCP servers
-project_mcp_servers = {}
-
-
-def get_project_mcp_server(project_id: UUID) -> ProjectMCPServer:
-    """Get or create an MCP server for a specific project."""
-    project_id_str = str(project_id)
-    if project_id_str not in project_mcp_servers:
-        project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
-    return project_mcp_servers[project_id_str]
-
-
-async def init_mcp_servers():
-    """Initialize MCP servers for all projects."""
-    try:
-        db_service = get_db_service()
-        async with db_service.with_session() as session:
-            projects = (await session.exec(select(Folder))).all()
-
-            for project in projects:
-                try:
-                    get_project_sse(project.id)
-                    get_project_mcp_server(project.id)
-                except Exception as e:
-                    msg = f"Failed to initialize MCP server for project {project.id}: {e}"
-                    logger.exception(msg)
-                    # Continue to next project even if this one fails
-
-    except Exception as e:
-        msg = f"Failed to initialize MCP servers: {e}"
-        logger.exception(msg)
 
 
 @router.head("/{project_id}/sse", response_class=HTMLResponse, include_in_schema=False)
@@ -734,3 +448,289 @@ async def check_installed_mcp_servers(
         logger.exception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
     return results
+
+
+# Project-specific MCP server instance for handling project-specific tools
+class ProjectMCPServer:
+    def __init__(self, project_id: UUID):
+        self.project_id = project_id
+        self.server = Server(f"langflow-mcp-project-{project_id}")
+
+        # Register handlers that filter by project
+        @self.server.list_tools()
+        @handle_mcp_errors
+        async def handle_list_project_tools():
+            """Handle listing tools for this specific project."""
+            tools = []
+            try:
+                db_service = get_db_service()
+                async with db_service.with_session() as session:
+                    # Get flows with mcp_enabled flag set to True and in this project
+                    flows = (
+                        await session.exec(
+                            select(Flow).where(Flow.mcp_enabled == True, Flow.folder_id == self.project_id)  # noqa: E712
+                        )
+                    ).all()
+
+                    for flow in flows:
+                        if flow.user_id is None:
+                            continue
+
+                        # Use action_name if available, otherwise construct from flow name
+                        name = flow.action_name or "_".join(flow.name.lower().split())
+
+                        # Use action_description if available, otherwise use defaults
+                        description = flow.action_description or (
+                            flow.description if flow.description else f"Tool generated from flow: {name}"
+                        )
+
+                        tool = types.Tool(
+                            name=name,
+                            description=description,
+                            inputSchema=json_schema_from_flow(flow),
+                        )
+                        tools.append(tool)
+            except Exception as e:  # noqa: BLE001
+                msg = f"Error in listing project tools: {e!s} from flow: {name}"
+                logger.warning(msg)
+            return tools
+
+        @self.server.list_prompts()
+        async def handle_list_prompts():
+            return []
+
+        @self.server.list_resources()
+        async def handle_list_resources():
+            resources = []
+            try:
+                db_service = get_db_service()
+                storage_service = get_storage_service()
+                settings_service = get_settings_service()
+
+                # Build full URL from settings
+                host = getattr(settings_service.settings, "host", "localhost")
+                port = getattr(settings_service.settings, "port", 3000)
+
+                base_url = f"http://{host}:{port}".rstrip("/")
+
+                async with db_service.with_session() as session:
+                    flows = (await session.exec(select(Flow))).all()
+
+                    for flow in flows:
+                        if flow.id:
+                            try:
+                                files = await storage_service.list_files(flow_id=str(flow.id))
+                                for file_name in files:
+                                    # URL encode the filename
+                                    safe_filename = quote(file_name)
+                                    resource = types.Resource(
+                                        uri=f"{base_url}/api/v1/files/{flow.id}/{safe_filename}",
+                                        name=file_name,
+                                        description=f"File in flow: {flow.name}",
+                                        mimeType=build_content_type_from_extension(file_name),
+                                    )
+                                    resources.append(resource)
+                            except FileNotFoundError as e:
+                                msg = f"Error listing files for flow {flow.id}: {e}"
+                                logger.debug(msg)
+                                continue
+            except Exception as e:
+                msg = f"Error in listing resources: {e!s}"
+                logger.exception(msg)
+                raise
+            return resources
+
+        @self.server.read_resource()
+        async def handle_read_resource(uri: str) -> bytes:
+            """Handle resource read requests."""
+            try:
+                # Parse the URI properly
+                parsed_uri = urlparse(str(uri))
+                # Path will be like /api/v1/files/{flow_id}/{filename}
+                path_parts = parsed_uri.path.split("/")
+                # Remove empty strings from split
+                path_parts = [p for p in path_parts if p]
+
+                # The flow_id and filename should be the last two parts
+                two = 2
+                if len(path_parts) < two:
+                    msg = f"Invalid URI format: {uri}"
+                    raise ValueError(msg)
+
+                flow_id = path_parts[-2]
+                filename = unquote(path_parts[-1])  # URL decode the filename
+
+                storage_service = get_storage_service()
+
+                # Read the file content
+                content = await storage_service.get_file(flow_id=flow_id, file_name=filename)
+                if not content:
+                    msg = f"File {filename} not found in flow {flow_id}"
+                    raise ValueError(msg)
+
+                # Ensure content is base64 encoded
+                if isinstance(content, str):
+                    content = content.encode()
+                return base64.b64encode(content)
+            except Exception as e:
+                msg = f"Error reading resource {uri}: {e!s}"
+                logger.exception(msg)
+                raise
+
+        @self.server.call_tool()
+        @handle_mcp_errors
+        async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
+            """Handle tool execution requests."""
+            mcp_config = get_mcp_config()
+            if mcp_config.enable_progress_notifications is None:
+                settings_service = get_settings_service()
+                mcp_config.enable_progress_notifications = (
+                    settings_service.settings.mcp_server_enable_progress_notifications
+                )
+
+            background_tasks = BackgroundTasks()
+            current_user = current_user_ctx.get()
+
+            async def execute_tool(session):
+                # get flow id from name
+                flow = await get_flow_snake_case(name, current_user.id, session, is_action=True)
+                if not flow:
+                    msg = f"Flow with name '{name}' not found"
+                    raise ValueError(msg)
+                flow_id = flow.id
+
+                # Process inputs
+                processed_inputs = dict(arguments)
+
+                # Initial progress notification
+                if mcp_config.enable_progress_notifications and (
+                    progress_token := self.server.request_context.meta.progressToken
+                ):
+                    await self.server.request_context.session.send_progress_notification(
+                        progress_token=progress_token, progress=0.0, total=1.0
+                    )
+
+                conversation_id = str(uuid4())
+                input_request = InputValueRequest(
+                    input_value=processed_inputs.get("input_value", ""),
+                    components=[],
+                    type="chat",
+                    session=conversation_id,
+                )
+
+                async def send_progress_updates():
+                    if not (
+                        mcp_config.enable_progress_notifications and self.server.request_context.meta.progressToken
+                    ):
+                        return
+
+                    try:
+                        progress = 0.0
+                        while True:
+                            await self.server.request_context.session.send_progress_notification(
+                                progress_token=progress_token, progress=min(0.9, progress), total=1.0
+                            )
+                            progress += 0.1
+                            await asyncio.sleep(1.0)
+                    except asyncio.CancelledError:
+                        if mcp_config.enable_progress_notifications:
+                            await self.server.request_context.session.send_progress_notification(
+                                progress_token=progress_token, progress=1.0, total=1.0
+                            )
+                        raise
+
+                collected_results = []
+                try:
+                    progress_task = asyncio.create_task(send_progress_updates())
+
+                    try:
+                        response = await build_flow_and_stream(
+                            flow_id=flow_id,
+                            inputs=input_request,
+                            background_tasks=background_tasks,
+                            current_user=current_user,
+                        )
+
+                        async for line in response.body_iterator:
+                            if not line:
+                                continue
+                            try:
+                                event_data = json.loads(line)
+                                if event_data.get("event") == "end_vertex":
+                                    message = (
+                                        event_data.get("data", {})
+                                        .get("build_data", {})
+                                        .get("data", {})
+                                        .get("results", {})
+                                        .get("message", {})
+                                        .get("text", "")
+                                    )
+                                    if message:
+                                        collected_results.append(types.TextContent(type="text", text=str(message)))
+                                if event_data.get("event") == "error":
+                                    content_blocks = event_data.get("data", {}).get("content_blocks", [])
+                                    text = event_data.get("data", {}).get("text", "")
+                                    error_msg = (
+                                        f"Error Executing the {flow.name} tool. Error: {text} Details: {content_blocks}"
+                                    )
+                                    collected_results.append(types.TextContent(type="text", text=error_msg))
+                            except json.JSONDecodeError:
+                                msg = f"Failed to parse event data: {line}"
+                                logger.warning(msg)
+                                continue
+
+                        return collected_results
+                    finally:
+                        progress_task.cancel()
+                        await asyncio.wait([progress_task])
+                        if not progress_task.cancelled() and (exc := progress_task.exception()) is not None:
+                            raise exc
+
+                except Exception:
+                    if mcp_config.enable_progress_notifications and (
+                        progress_token := self.server.request_context.meta.progressToken
+                    ):
+                        await self.server.request_context.session.send_progress_notification(
+                            progress_token=progress_token, progress=1.0, total=1.0
+                        )
+                    raise
+
+            try:
+                return await with_db_session(execute_tool)
+            except Exception as e:
+                msg = f"Error executing tool {name}: {e!s}"
+                logger.exception(msg)
+                raise
+
+
+# Cache of project MCP servers
+project_mcp_servers = {}
+
+
+def get_project_mcp_server(project_id: UUID) -> ProjectMCPServer:
+    """Get or create an MCP server for a specific project."""
+    project_id_str = str(project_id)
+    if project_id_str not in project_mcp_servers:
+        project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
+    return project_mcp_servers[project_id_str]
+
+
+async def init_mcp_servers():
+    """Initialize MCP servers for all projects."""
+    try:
+        db_service = get_db_service()
+        async with db_service.with_session() as session:
+            projects = (await session.exec(select(Folder))).all()
+
+            for project in projects:
+                try:
+                    get_project_sse(project.id)
+                    get_project_mcp_server(project.id)
+                except Exception as e:
+                    msg = f"Failed to initialize MCP server for project {project.id}: {e}"
+                    logger.exception(msg)
+                    # Continue to next project even if this one fails
+
+    except Exception as e:
+        msg = f"Failed to initialize MCP servers: {e}"
+        logger.exception(msg)
