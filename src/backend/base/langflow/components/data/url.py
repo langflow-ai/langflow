@@ -163,7 +163,7 @@ class URLComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Result", name="page_results", method="as_dataframe"),
+        Output(display_name="Result", name="page_results", method="fetch_content"),
         Output(display_name="Raw Result", name="raw_results", method="as_message"),
     ]
 
@@ -287,7 +287,7 @@ class URLComponent(Component):
             raise ValueError(msg) from e
         return data
 
-    def as_dataframe(self) -> DataFrame:
+    def fetch_content(self) -> DataFrame:
         """Convert the documents to a DataFrame."""
         return DataFrame(data=self.fetch_url_contents())
 
