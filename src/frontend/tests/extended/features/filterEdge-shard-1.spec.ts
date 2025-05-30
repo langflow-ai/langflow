@@ -72,7 +72,7 @@ test(
     ];
 
     const elementTestIds = [
-      "outputsChat Output",
+      "input_outputChat Output",
       "dataAPI Request",
       "vectorstoresAstra DB",
       "langchain_utilitiesTool Calling Agent",

@@ -13,12 +13,12 @@ test(
     });
 
     await page.getByTestId("disclosure-inputs").click();
-    await page.waitForSelector('[data-testid="inputsText Input"]', {
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 3000,
       state: "visible",
     });
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-text-input").click();
