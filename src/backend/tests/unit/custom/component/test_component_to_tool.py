@@ -13,7 +13,7 @@ async def test_component_to_toolkit():
     assert len(tools) == 1
     tool = tools[0]
 
-    assert tool.name == "Agent"
+    assert tool.name == "Call_Agent"
 
     assert tool.description == DEFAULT_TOOLS_DESCRIPTION, tool.description
 
