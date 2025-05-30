@@ -2,6 +2,7 @@ from typing import Any, cast
 
 import requests
 from loguru import logger
+from pydantic import ValidationError
 
 from langflow.base.models.anthropic_constants import (
     ANTHROPIC_MODELS,
@@ -88,11 +89,13 @@ class AnthropicModelComponent(LCModelComponent):
             output = ChatAnthropic(
                 model=self.model_name,
                 anthropic_api_key=self.api_key,
-                max_tokens_to_sample=self.max_tokens,
+                max_tokens=self.max_tokens or 4096,
                 temperature=self.temperature,
                 anthropic_api_url=DEFAULT_ANTHROPIC_API_URL,
                 streaming=self.stream,
             )
+        except ValidationError:
+            raise
         except Exception as e:
             msg = "Could not connect to Anthropic API."
             raise ValueError(msg) from e
