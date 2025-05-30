@@ -53,7 +53,7 @@ dependencies = [
     "dspy-ai==2.5.41",
     "datasets>2.14.7",
     "assemblyai==0.35.1",
-    "litellm==1.60.2",
+    "litellm==1.61.15",
     "chromadb==0.5.23",
     "zep-python==2.0.2",
     "youtube-transcript-api==0.6.3",
