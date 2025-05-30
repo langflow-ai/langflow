@@ -1,5 +1,6 @@
-from typing import cast
+from typing import Any, cast
 
+from langflow.schema.message import Message
 import pandas as pd
 from langchain_core.documents import Document
 from pandas import DataFrame as pandas_DataFrame
@@ -178,3 +179,22 @@ class DataFrame(pandas_DataFrame):
         if not isinstance(other, DataFrame | pd.DataFrame):  # Non-DataFrame case
             return False
         return super().__eq__(other)
+
+    def to_data(self, v: Any) -> Data:
+        # Convert DataFrame to a list of dictionaries and wrap in a Data object
+        dict_list = v.to_dict(orient="records")
+        return Data(data={"results": dict_list})
+
+    def to_message(self, v: Any) -> Message:
+        # Process DataFrame similar to the _safe_convert method
+        # Remove empty rows
+        processed_df = v.dropna(how="all")
+        # Remove empty lines in each cell
+        processed_df = processed_df.replace(r"^\s*$", "", regex=True)
+        # Replace multiple newlines with a single newline
+        processed_df = processed_df.replace(r"\n+", "\n", regex=True)
+        # Replace pipe characters to avoid markdown table issues
+        processed_df = processed_df.replace(r"\|", r"\\|", regex=True)
+        processed_df = processed_df.map(lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x)
+        # Convert to markdown and wrap in a Message
+        return Message(text=processed_df.to_markdown(index=False))
