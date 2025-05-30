@@ -1,48 +1,108 @@
-AWS_MODEL_IDs = [
+from .model_metadata import create_model_metadata
+
+# Unified model metadata - single source of truth
+AWS_MODELS_DETAILED = [
     # Amazon Titan Models
-    "amazon.titan-text-express-v1",
-    "amazon.titan-text-lite-v1",
-    "amazon.titan-text-premier-v1:0",
+    create_model_metadata(
+        provider="Amazon Bedrock", name="amazon.titan-text-express-v1", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="amazon.titan-text-lite-v1", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="amazon.titan-text-premier-v1:0", icon="Amazon", tool_calling=True
+    ),
     # Anthropic Models
-    "anthropic.claude-v2",
-    "anthropic.claude-v2:1",
-    "anthropic.claude-3-sonnet-20240229-v1:0",
-    "anthropic.claude-3-5-sonnet-20240620-v1:0",
-    "anthropic.claude-3-5-sonnet-20241022-v2:0",
-    "anthropic.claude-3-haiku-20240307-v1:0",
-    "anthropic.claude-3-5-haiku-20241022-v1:0",
-    "anthropic.claude-3-opus-20240229-v1:0",
-    "anthropic.claude-instant-v1",
+    create_model_metadata(provider="Amazon Bedrock", name="anthropic.claude-v2", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="anthropic.claude-v2:1", icon="Amazon", tool_calling=True),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-3-sonnet-20240229-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-3-5-sonnet-20240620-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-3-5-sonnet-20241022-v2:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-3-haiku-20240307-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-3-5-haiku-20241022-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-3-opus-20240229-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="anthropic.claude-instant-v1", icon="Amazon", tool_calling=True
+    ),
     # AI21 Labs Models
-    "ai21.jamba-instruct-v1:0",
-    "ai21.j2-mid-v1",
-    "ai21.j2-ultra-v1",
-    "ai21.jamba-1-5-large-v1:0",
-    "ai21.jamba-1-5-mini-v1:0",
+    create_model_metadata(provider="Amazon Bedrock", name="ai21.jamba-instruct-v1:0", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="ai21.j2-mid-v1", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="ai21.j2-ultra-v1", icon="Amazon", tool_calling=True),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="ai21.jamba-1-5-large-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(provider="Amazon Bedrock", name="ai21.jamba-1-5-mini-v1:0", icon="Amazon", tool_calling=True),
     # Cohere Models
-    "cohere.command-text-v14",
-    "cohere.command-light-text-v14",
-    "cohere.command-r-v1:0",
-    "cohere.command-r-plus-v1:0",
+    create_model_metadata(provider="Amazon Bedrock", name="cohere.command-text-v14", icon="Amazon", tool_calling=True),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="cohere.command-light-text-v14", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(provider="Amazon Bedrock", name="cohere.command-r-v1:0", icon="Amazon", tool_calling=True),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="cohere.command-r-plus-v1:0", icon="Amazon", tool_calling=True
+    ),
     # Meta Models
-    "meta.llama2-13b-chat-v1",
-    "meta.llama2-70b-chat-v1",
-    "meta.llama3-8b-instruct-v1:0",
-    "meta.llama3-70b-instruct-v1:0",
-    "meta.llama3-1-8b-instruct-v1:0",
-    "meta.llama3-1-70b-instruct-v1:0",
-    "meta.llama3-1-405b-instruct-v1:0",
-    "meta.llama3-2-1b-instruct-v1:0",
-    "meta.llama3-2-3b-instruct-v1:0",
-    "meta.llama3-2-11b-instruct-v1:0",
-    "meta.llama3-2-90b-instruct-v1:0",
+    create_model_metadata(provider="Amazon Bedrock", name="meta.llama2-13b-chat-v1", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="meta.llama2-70b-chat-v1", icon="Amazon", tool_calling=True),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="meta.llama3-8b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="meta.llama3-70b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="meta.llama3-1-8b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="meta.llama3-1-70b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="meta.llama3-1-405b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="meta.llama3-2-1b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="meta.llama3-2-3b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="meta.llama3-2-11b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="meta.llama3-2-90b-instruct-v1:0", icon="Amazon", tool_calling=True
+    ),
     # Mistral AI Models
-    "mistral.mistral-7b-instruct-v0:2",
-    "mistral.mixtral-8x7b-instruct-v0:1",
-    "mistral.mistral-large-2402-v1:0",
-    "mistral.mistral-large-2407-v1:0",
-    "mistral.mistral-small-2402-v1:0",
+    create_model_metadata(
+        provider="Amazon Bedrock", name="mistral.mistral-7b-instruct-v0:2", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="mistral.mixtral-8x7b-instruct-v0:1", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="mistral.mistral-large-2402-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="mistral.mistral-large-2407-v1:0", icon="Amazon", tool_calling=True
+    ),
+    create_model_metadata(
+        provider="Amazon Bedrock", name="mistral.mistral-small-2402-v1:0", icon="Amazon", tool_calling=True
+    ),
 ]
+
+# Generate backwards-compatible list from the metadata
+AWS_MODEL_IDs = [metadata["name"] for metadata in AWS_MODELS_DETAILED]
 
 AWS_EMBEDDING_MODEL_IDS = [
     # Amazon Titan Embedding Models
