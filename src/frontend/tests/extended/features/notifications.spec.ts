@@ -7,12 +7,12 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="disclosure-inputs"]', {
+    await page.waitForSelector('[data-testid="disclosure-i/o"]', {
       timeout: 3000,
       state: "visible",
     });
 
-    await page.getByTestId("disclosure-inputs").click();
+    await page.getByTestId("disclosure-i/o").click();
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 3000,
       state: "visible",
