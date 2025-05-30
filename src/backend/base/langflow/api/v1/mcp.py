@@ -257,7 +257,9 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
 
         collected_results = []
         try:
-            progress_task = asyncio.create_task(send_progress_updates())
+            progress_task = None
+            if mcp_config.enable_progress_notifications and server.request_context.meta.progressToken:
+                progress_task = asyncio.create_task(send_progress_updates())
 
             try:
                 try:
@@ -287,10 +289,11 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
 
                 return collected_results
             finally:
-                progress_task.cancel()
-                await asyncio.wait([progress_task])
-                if not progress_task.cancelled() and (exc := progress_task.exception()) is not None:
-                    raise exc
+                if progress_task:
+                    progress_task.cancel()
+                    await asyncio.wait([progress_task])
+                    if not progress_task.cancelled() and (exc := progress_task.exception()) is not None:
+                        raise exc
 
         except Exception:
             if mcp_config.enable_progress_notifications and (
