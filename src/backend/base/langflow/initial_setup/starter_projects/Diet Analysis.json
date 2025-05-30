@@ -559,7 +559,14 @@
             "icon": "Novita",
             "legacy": false,
             "lf_version": "1.1.4.post1",
-            "metadata": {},
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

@@ -1399,7 +1399,14 @@
             "icon": "Anthropic",
             "key": "AnthropicModel",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1549,12 +1556,13 @@
                 "info": "",
                 "name": "model_name",
                 "options": [
+                  "claude-opus-4-20250514",
+                  "claude-sonnet-4-20250514",
                   "claude-3-7-sonnet-latest",
                   "claude-3-5-sonnet-latest",
                   "claude-3-5-haiku-latest",
                   "claude-3-opus-latest",
-                  "claude-3-sonnet-20240229",
-                  "claude-3-haiku-20240307"
+                  "claude-3-sonnet-20240229"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
