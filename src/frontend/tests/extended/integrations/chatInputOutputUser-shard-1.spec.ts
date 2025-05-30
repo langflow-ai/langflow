@@ -103,9 +103,7 @@ test(
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
 
-    await page
-      .getByTestId("handle-urlcomponent-shownode-page results-right")
-      .click();
+    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
 
     await page.waitForTimeout(600);
 
@@ -130,9 +128,7 @@ test(
       exact: true,
     });
     await page.getByText("Close").first().click();
-    await page
-      .getByTestId("handle-urlcomponent-shownode-page results-right")
-      .click();
+    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
     await page
       .getByTestId("handle-chatoutput-noshownode-text-target")
       .nth(1)
@@ -145,13 +141,9 @@ test(
       timeout: 30000 * 3,
     });
 
-    await page
-      .getByTestId("handle-urlcomponent-shownode-page results-right")
-      .click();
+    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
     await page.waitForTimeout(600);
-    await page
-      .getByTestId("handle-urlcomponent-shownode-page results-right")
-      .click();
+    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
 
     await page
       .getByTestId("output-inspection-page results-urlcomponent")
@@ -169,7 +161,7 @@ test(
     await page.waitForTimeout(600);
 
     await page
-      .getByTestId("handle-urlcomponent-shownode-page results-right")
+      .getByTestId("handle-urlcomponent-shownode-result-right")
       .nth(0)
       .click();
 
