@@ -260,21 +260,25 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
             progress_task = asyncio.create_task(send_progress_updates())
 
             try:
-                result = await simple_run_flow(
-                    flow=flow,
-                    input_request=input_request,
-                    stream=False,
-                    api_key_user=current_user,
-                )
-                if result.outputs[0].outputs[0].messages:
-                    collected_results.append(
-                        types.TextContent(type="text", text=result.outputs[0].outputs[0].messages[0].message)
+                try:
+                    result = await simple_run_flow(
+                        flow=flow,
+                        input_request=input_request,
+                        stream=False,
+                        api_key_user=current_user,
                     )
-                elif result.outputs[0].outputs[0].results:
-                    for value in result.outputs[0].outputs[0].results.values():
-                        if isinstance(value, Message):
-                            text_content = types.TextContent(type="text", text=value.get_text())
-                            collected_results.append(text_content)
+                    if result.outputs[0].outputs[0].messages:
+                        collected_results.append(
+                            types.TextContent(type="text", text=result.outputs[0].outputs[0].messages[0].message)
+                        )
+                    elif result.outputs[0].outputs[0].results:
+                        for value in result.outputs[0].outputs[0].results.values():
+                            if isinstance(value, Message):
+                                text_content = types.TextContent(type="text", text=value.get_text())
+                                collected_results.append(text_content)
+                except Exception as e:  # noqa: BLE001
+                    msg = f"Error executing tool {name}: {e!s}"
+                    collected_results.append(types.TextContent(type="text", text=msg))
 
                 return collected_results
             finally:
