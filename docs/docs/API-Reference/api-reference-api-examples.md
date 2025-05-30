@@ -2384,9 +2384,14 @@ curl -X GET \
 
 Use the `/users` endpoint to manage user accounts in Langflow.
 
+The `user_id` value is specifically for Langflow's user system, which is stored in the Langflow database and managed at the `/users` API endpoint.
+The `user_id` primary key in the Langflow database is mapped to the `id` value in the API.
+
 ### Add user
 
 Create a new user account with a username and password.
+
+This creates a new UUID for the users `id`, which is the same as `user_id`.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
