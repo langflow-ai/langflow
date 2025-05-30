@@ -12,6 +12,7 @@ class MessageToDataComponent(Component):
     icon = "message-square-share"
     beta = True
     name = "MessagetoData"
+    legacy = True
 
     inputs = [
         MessageInput(

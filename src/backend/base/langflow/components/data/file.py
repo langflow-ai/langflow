@@ -12,7 +12,7 @@ class FileComponent(BaseFileComponent):
     """
 
     display_name = "File"
-    description = "Load a file to be used in your project."
+    description = "Loads content from one or more files as a DataFrame."
     icon = "file-text"
     name = "File"
 

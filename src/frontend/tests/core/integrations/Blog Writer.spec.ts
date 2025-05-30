@@ -31,6 +31,9 @@ withEventDeliveryModes(
       .fill(
         "https://www.natgeokids.com/uk/discover/animals/sea-life/turtle-facts/",
       );
+
+    await page.getByTestId("input-list-plus-btn_urls-0").click();
+
     await page
       .getByTestId("inputlist_str_urls_1")
       .nth(0)
