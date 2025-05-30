@@ -712,7 +712,7 @@
             "frozen": false,
             "icon": "message-square-share",
             "key": "MessagetoData",
-            "legacy": false,
+            "legacy": true,
             "lf_version": "1.1.5",
             "metadata": {},
             "minimized": false,
@@ -752,7 +752,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import MessageInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass MessageToDataComponent(Component):\n    display_name = \"Message to Data\"\n    description = \"Convert a Message object to a Data object\"\n    icon = \"message-square-share\"\n    beta = True\n    name = \"MessagetoData\"\n\n    inputs = [\n        MessageInput(\n            name=\"message\",\n            display_name=\"Message\",\n            info=\"The Message object to convert to a Data object\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"convert_message_to_data\"),\n    ]\n\n    def convert_message_to_data(self) -> Data:\n        if isinstance(self.message, Message):\n            # Convert Message to Data\n            return Data(data=self.message.data)\n\n        msg = \"Error converting Message to Data: Input must be a Message object\"\n        logger.opt(exception=True).debug(msg)\n        self.status = msg\n        return Data(data={\"error\": msg})\n"
+                "value": "from loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import MessageInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass MessageToDataComponent(Component):\n    display_name = \"Message to Data\"\n    description = \"Convert a Message object to a Data object\"\n    icon = \"message-square-share\"\n    beta = True\n    name = \"MessagetoData\"\n    legacy = True\n\n    inputs = [\n        MessageInput(\n            name=\"message\",\n            display_name=\"Message\",\n            info=\"The Message object to convert to a Data object\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"convert_message_to_data\"),\n    ]\n\n    def convert_message_to_data(self) -> Data:\n        if isinstance(self.message, Message):\n            # Convert Message to Data\n            return Data(data=self.message.data)\n\n        msg = \"Error converting Message to Data: Input must be a Message object\"\n        logger.opt(exception=True).debug(msg)\n        self.status = msg\n        return Data(data={\"error\": msg})\n"
               },
               "message": {
                 "_input_type": "MessageInput",
