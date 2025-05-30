@@ -236,6 +236,7 @@
                 "display_name": "Message",
                 "method": "text_response",
                 "name": "text",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1030,6 +1031,9 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1481,6 +1485,12 @@
                 "display_name": "Structured Output",
                 "method": "build_structured_output",
                 "name": "structured_output",
+                "required_inputs": [
+                  "input_value",
+                  "llm",
+                  "output_schema",
+                  "system_prompt"
+                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1494,6 +1504,12 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "structured_output_dataframe",
+                "required_inputs": [
+                  "input_value",
+                  "llm",
+                  "output_schema",
+                  "system_prompt"
+                ],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -2156,6 +2172,10 @@
                 "display_name": "Parsed Text",
                 "method": "parse_combined_text",
                 "name": "parsed_text",
+                "required_inputs": [
+                  "input_data",
+                  "pattern"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

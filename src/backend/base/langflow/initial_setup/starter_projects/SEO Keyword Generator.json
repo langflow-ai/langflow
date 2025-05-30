@@ -130,6 +130,7 @@
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -430,6 +431,7 @@
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -563,6 +565,9 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

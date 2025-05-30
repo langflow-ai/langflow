@@ -319,6 +319,10 @@
                 "display_name": "Transcription Result",
                 "method": "poll_transcription_job",
                 "name": "transcription_result",
+                "required_inputs": [
+                  "api_key",
+                  "transcript_id"
+                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -861,6 +865,7 @@
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1011,6 +1016,9 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1312,6 +1320,9 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2003,6 +2014,9 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2306,6 +2320,7 @@
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2476,6 +2491,7 @@
                 "display_name": "Data",
                 "method": "retrieve_messages",
                 "name": "messages",
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -2489,6 +2505,7 @@
                 "display_name": "Message",
                 "method": "retrieve_messages_as_text",
                 "name": "messages_text",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2502,6 +2519,7 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -2743,6 +2761,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3156,6 +3175,10 @@
                 "display_name": "Transcript ID",
                 "method": "create_transcription_job",
                 "name": "transcript_id",
+                "required_inputs": [
+                  "api_key",
+                  "audio_file"
+                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [

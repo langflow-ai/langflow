@@ -38,8 +38,8 @@ async def get_and_cache_all_types_dict(
             # Traditional full loading
             component_cache.all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
 
-        # Log loading stats
-        component_count = sum(len(comps) for comps in component_cache.all_types_dict.get("components", {}).values())
+        # Log loading stats - optimized component count calculation
+        component_count = sum(map(len, component_cache.all_types_dict.values()))
         logger.debug(f"Loaded {component_count} components")
 
     return component_cache.all_types_dict

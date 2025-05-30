@@ -348,6 +348,10 @@
                 "display_name": "DataFrame",
                 "method": "run_batch",
                 "name": "batch_results",
+                "required_inputs": [
+                  "df",
+                  "model"
+                ],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -561,6 +565,10 @@
                 "display_name": "Comments",
                 "method": "get_video_comments",
                 "name": "comments",
+                "required_inputs": [
+                  "api_key",
+                  "video_url"
+                ],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -1828,6 +1836,7 @@
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2002,6 +2011,9 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2593,6 +2605,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2990,6 +3003,10 @@
                 "display_name": "True",
                 "method": "true_response",
                 "name": "true_result",
+                "required_inputs": [
+                  "input_text",
+                  "match_text"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3003,6 +3020,10 @@
                 "display_name": "False",
                 "method": "false_response",
                 "name": "false_result",
+                "required_inputs": [
+                  "input_text",
+                  "match_text"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

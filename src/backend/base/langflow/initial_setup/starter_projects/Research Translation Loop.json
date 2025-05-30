@@ -236,6 +236,7 @@
                 "display_name": "DataFrame",
                 "method": "search_papers_dataframe",
                 "name": "dataframe",
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -724,6 +725,7 @@
                 "display_name": "Data",
                 "method": "convert_message_to_data",
                 "name": "data",
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -835,6 +837,9 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [
+                  "input_value"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1144,6 +1149,7 @@
                 "display_name": "Message",
                 "method": "message_response",
                 "name": "message",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1505,6 +1511,10 @@
                 "display_name": "Parsed Text",
                 "method": "parse_combined_text",
                 "name": "parsed_text",
+                "required_inputs": [
+                  "input_data",
+                  "pattern"
+                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1678,6 +1688,7 @@
                 "display_name": "Item",
                 "method": "item_output",
                 "name": "item",
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1691,6 +1702,7 @@
                 "display_name": "Done",
                 "method": "done_output",
                 "name": "done",
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [

@@ -494,7 +494,6 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
             try:
                 project = orjson.loads(content)
                 starter_projects.append((file, project))
-                logger.debug(f"Loaded starter project {file}")
                 break  # Break if load is successful
             except orjson.JSONDecodeError as e:
                 attempt += 1
@@ -559,8 +558,6 @@ async def copy_profile_pictures() -> None:
             if str(rel_path) not in target_files:
                 dst_file = target / rel_path
                 tasks.append(copy_file(src_file, dst_file, rel_path))
-            else:
-                logger.debug(f"Skipped existing file: '{rel_path}'")
 
         if tasks:
             await asyncio.gather(*tasks)
@@ -639,7 +636,6 @@ def create_new_project(
     project_icon_bg_color,
     new_folder_id,
 ) -> None:
-    logger.debug(f"Creating starter project {project_name}")
     new_project = FlowCreate(
         name=project_name,
         description=project_description,

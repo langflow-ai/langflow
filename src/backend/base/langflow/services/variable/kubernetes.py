@@ -38,7 +38,6 @@ class KubernetesSecretService(VariableService, Service):
             variables = {}
             for var in self.settings_service.settings.variables_to_get_from_environment:
                 if var in os.environ:
-                    logger.debug(f"Creating {var} variable from environment.")
                     value = os.environ[var]
                     if isinstance(value, str):
                         value = value.strip()
