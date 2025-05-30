@@ -106,7 +106,7 @@ test(
     await page.waitForTimeout(1000);
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 940, y: 100 },
       });
