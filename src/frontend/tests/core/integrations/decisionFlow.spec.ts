@@ -281,7 +281,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-prompt-shownode-prompt message-right")
+      .getByTestId("handle-prompt-shownode-prompt-right")
       .first()
       .click();
     await page
