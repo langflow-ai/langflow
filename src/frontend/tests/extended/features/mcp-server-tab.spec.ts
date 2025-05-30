@@ -149,7 +149,7 @@ test(
 
         await page.getByText("JSON", { exact: true }).last().click();
 
-        await page.waitForTimeout(500);
+        await page.waitForSelector("pre", { state: "visible", timeout: 3000 });
 
         // Generate API key if not in auto login mode
         const isAutoLogin = await page
@@ -179,7 +179,7 @@ test(
 
         await page.getByText("macOS/Linux", { exact: true }).click();
 
-        await page.waitForTimeout(500);
+        await page.waitForSelector("pre", { state: "visible", timeout: 3000 });
 
         const configJsonLinux = await page.locator("pre").textContent();
 
