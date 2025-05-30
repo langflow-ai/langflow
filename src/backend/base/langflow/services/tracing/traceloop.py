@@ -177,6 +177,8 @@ class TraceloopTracer(BaseTracer):
             context=span_context,
             start_time=self._get_current_timestamp(),
         )
+        # Keep reference so we can finish it later
+        self.child_spans[trace_id] = child_span
 
         # Map trace types to OpenTelemetry span kinds
         if trace_type == "prompt":

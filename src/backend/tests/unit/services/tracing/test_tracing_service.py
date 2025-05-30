@@ -303,7 +303,8 @@ async def test_get_langchain_callbacks(tracing_service):
         assert tracer.get_langchain_callback_called
 
     # Verify returned callbacks list length
-    assert len(callbacks) == 6  # Six tracers
+    expected = len(trace_context_var.get().tracers)
+    assert len(callbacks) == expected
 
     # Cleanup
     await tracing_service.end_tracers({})
