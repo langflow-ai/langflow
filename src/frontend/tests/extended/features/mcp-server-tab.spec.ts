@@ -149,6 +149,8 @@ test(
 
         await page.getByText("JSON", { exact: true }).last().click();
 
+        await page.waitForTimeout(500);
+
         // Generate API key if not in auto login mode
         const isAutoLogin = await page
           .getByText("Generate API key")
@@ -170,10 +172,21 @@ test(
 
         // Extract the SSE URL from the configuration
         const sseUrlMatch = configJson?.match(
-          /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
+          /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
         );
         expect(sseUrlMatch).not.toBeNull();
         const sseUrl = sseUrlMatch![1];
+
+        await page.getByText("macOS/Linux", { exact: true }).click();
+
+        await page.waitForTimeout(500);
+
+        const configJsonLinux = await page.locator("pre").textContent();
+
+        const sseUrlMatchLinux = configJsonLinux?.match(
+          /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
+        );
+        expect(sseUrlMatchLinux).not.toBeNull();
 
         // Verify setup guide link
         await expect(page.getByText("setup guide")).toBeVisible();
