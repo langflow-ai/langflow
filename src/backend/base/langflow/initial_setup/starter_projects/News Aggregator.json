@@ -1618,7 +1618,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Save DataFrames, Data, or Messages to various file formats.",
+            "description": "Save data to a local file in the selected format.",
             "display_name": "Save to File",
             "documentation": "",
             "edited": false,
@@ -1719,16 +1719,19 @@
               },
               "file_format": {
                 "_input_type": "DropdownInput",
-                "advanced": false,
+                "advanced": true,
                 "combobox": false,
                 "dialog_inputs": {},
                 "display_name": "File Format",
                 "dynamic": false,
-                "info": "Select the file format to save the input.",
+                "info": "Select the file format to save the input. If not provided, the default format will be used.",
                 "name": "file_format",
                 "options": [
                   "csv",
                   "excel",
+                  "json",
+                  "markdown",
+                  "txt",
                   "json",
                   "markdown"
                 ],
@@ -1743,18 +1746,18 @@
                 "type": "str",
                 "value": "json"
               },
-              "file_path": {
+              "file_name": {
                 "_input_type": "StrInput",
                 "advanced": false,
-                "display_name": "File Path (including filename)",
+                "display_name": "File Name",
                 "dynamic": false,
-                "info": "The full file path (including filename and extension).",
+                "info": "Name file will be saved as (without extension).",
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
-                "name": "file_path",
+                "name": "file_name",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
@@ -1762,8 +1765,8 @@
                 "type": "str",
                 "value": "./output"
               },
-              "input_type": {
-                "_input_type": "DropdownInput",
+              "input": {
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "combobox": false,
                 "dialog_inputs": {},
@@ -1793,22 +1796,21 @@
                 "advanced": false,
                 "display_name": "Message",
                 "dynamic": true,
-                "info": "The Message to save.",
+                "info": "The input to save.",
                 "input_types": [
+                  "Data",
+                  "DataFrame",
                   "Message"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "message",
+                "name": "input",
                 "placeholder": "",
                 "required": false,
                 "show": false,
                 "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               }
             },
