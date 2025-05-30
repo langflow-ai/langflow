@@ -5,7 +5,6 @@ from langflow.base.models.chat_result import get_chat_result
 from langflow.custom import Component
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.io import (
-    BoolInput,
     HandleInput,
     MessageTextInput,
     MultilineInput,
