@@ -170,21 +170,30 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
         input_value = "What is 2 + 2?"
 
         # Iterate over all Anthropic models
-        failed_models = []
+        failed_models = {}
+
         for model_name in ANTHROPIC_MODELS:
-            # Initialize the AgentComponent with mocked inputs
-            tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
-            agent = AgentComponent(
-                tools=tools,
-                input_value=input_value,
-                api_key=api_key,
-                model_name=model_name,
-                agent_llm="Anthropic",
-                _session_id=str(uuid4()),
-            )
+            try:
+                # Initialize the AgentComponent with mocked inputs
+                tools = [CalculatorToolComponent().build_tool()]
+                agent = AgentComponent(
+                    tools=tools,
+                    input_value=input_value,
+                    api_key=api_key,
+                    model_name=model_name,
+                    agent_llm="Anthropic",
+                    _session_id=str(uuid4()),
+                )
 
-            response = await agent.message_response()
-            if "4" not in response.data.get("text"):
-                failed_models.append(model_name)
+                response = await agent.message_response()
+                response_text = response.data.get("text", "")
 
-        assert not failed_models, f"The following models failed the test: {failed_models}"
+                if "4" not in response_text:
+                    failed_models[model_name] = f"Expected '4' in response but got: {response_text}"
+
+            except Exception as e:  # noqa: BLE001
+                failed_models[model_name] = f"Exception occurred: {e!s}"
+
+        assert not failed_models, "The following models failed the test:\n" + "\n".join(
+            f"{model}: {error}" for model, error in failed_models.items()
+        )
