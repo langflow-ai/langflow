@@ -2391,7 +2391,7 @@ The `user_id` primary key in the Langflow database is mapped to the `id` value i
 
 Create a new user account with a username and password.
 
-This creates a new UUID for the users `id`, which is the same as `user_id`.
+This creates a new UUID for the user's `id`, which is mapped to `user_id` in the Langflow database.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
