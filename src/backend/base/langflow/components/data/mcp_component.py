@@ -400,6 +400,14 @@ class MCPToolsComponent(Component):
             logger.exception(msg)
             raise ValueError(msg) from e
 
+    # TODO: this bit doesn't work yet because of a bug
+    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
+        for key in frontend_node["template"]:
+            if key not in frontend_node["field_order"] and key != "code" and key != "_type":
+                frontend_node["field_order"].append(key)
+        return frontend_node
+
+
     def get_inputs_for_all_tools(self, tools: list) -> dict:
         """Get input schemas for all tools."""
         inputs = {}
