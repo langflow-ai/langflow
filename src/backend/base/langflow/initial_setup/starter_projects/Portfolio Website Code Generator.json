@@ -152,9 +152,7 @@
             "dataType": "StructuredOutput",
             "id": "StructuredOutput-tWLRa",
             "name": "structured_output_dataframe",
-            "output_types": [
-              "DataFrame"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "input_data",
@@ -1485,19 +1483,6 @@
                 "tool_mode": true,
                 "types": [
                   "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "DataFrame",
-                "method": "as_dataframe",
-                "name": "structured_output_dataframe",
-                "selected": "DataFrame",
-                "tool_mode": true,
-                "types": [
-                  "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
               }
