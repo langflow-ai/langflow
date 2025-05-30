@@ -96,6 +96,14 @@ class StructuredOutputComponent(Component):
                     "options": ["str", "int", "float", "bool", "dict"],
                     "default": "str",
                 },
+                {
+                    "name": "multiple",
+                    "display_name": "As List",
+                    "type": "boolean",
+                    "description": "Set to True if this output field should be a list of the specified type.",
+                    "default": "False",
+                    "edit_mode": EditMode.INLINE,
+                },
             ],
             value=[
                 {
@@ -106,13 +114,6 @@ class StructuredOutputComponent(Component):
                 }
             ],
         ),
-        BoolInput(
-            name="multiple",
-            advanced=True,
-            display_name="Generate Multiple",
-            info="[Deprecated] Always set to True",
-            value=True,
-        ),
     ]
 
     outputs = [
@@ -120,11 +121,6 @@ class StructuredOutputComponent(Component):
             name="structured_output",
             display_name="Structured Output",
             method="build_structured_output",
-        ),
-        Output(
-            name="structured_output_dataframe",
-            display_name="DataFrame",
-            method="as_dataframe",
         ),
     ]
 
@@ -175,9 +171,3 @@ class StructuredOutputComponent(Component):
         output = self.build_structured_output_base()
 
         return Data(text_key="results", data={"results": output})
-
-    def as_dataframe(self) -> DataFrame:
-        output = self.build_structured_output_base()
-        if isinstance(output, list):
-            return DataFrame(data=output)
-        return DataFrame(data=[output])
