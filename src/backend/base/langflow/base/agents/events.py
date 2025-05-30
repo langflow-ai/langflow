@@ -112,8 +112,6 @@ def _extract_output_text(output: str | list) -> str:
             return ""
     msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
     raise TypeError(msg)
-    msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
-    raise TypeError(msg)
 
 
 async def handle_on_chain_end(
