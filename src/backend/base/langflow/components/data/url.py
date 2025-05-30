@@ -110,8 +110,8 @@ class URLComponent(Component):
 
     outputs = [
         Output(display_name="Data", name="data", method="fetch_content"),
-        Output(display_name="Message", name="text", method="fetch_content_text"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Message", name="text", method="fetch_content_text", tool_mode=False),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe", tool_mode=False),
     ]
 
     def validate_url(self, string: str) -> bool:

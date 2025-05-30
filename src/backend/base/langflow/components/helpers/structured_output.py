@@ -125,6 +125,7 @@ class StructuredOutputComponent(Component):
             name="structured_output_dataframe",
             display_name="DataFrame",
             method="as_dataframe",
+            tool_mode=False,
         ),
     ]
 
