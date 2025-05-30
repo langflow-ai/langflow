@@ -95,7 +95,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "asgi-lifespan>=2.1.0",
-    "pytest-codspeed>=3.0.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
     "types-aiofiles>=24.1.0.20240626",
     "types-redis>=4.6.0.5",
