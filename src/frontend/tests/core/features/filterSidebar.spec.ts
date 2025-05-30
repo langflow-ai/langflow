@@ -96,8 +96,8 @@ test(
 
     await page.getByTestId("sidebar-filter-reset").click();
 
-    await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
-    await expect(page.getByTestId("outputsChat Output")).not.toBeVisible();
+    await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
+    await expect(page.getByTestId("input_outputChat Output")).not.toBeVisible();
     await expect(page.getByTestId("promptsPrompt")).not.toBeVisible();
     await expect(page.getByTestId("helpersMessage History")).not.toBeVisible();
     await expect(
