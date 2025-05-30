@@ -267,15 +267,20 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                         stream=False,
                         api_key_user=current_user,
                     )
-                    if result.outputs[0].outputs[0].messages:
-                        collected_results.append(
-                            types.TextContent(type="text", text=result.outputs[0].outputs[0].messages[0].message)
-                        )
-                    elif result.outputs[0].outputs[0].results:
-                        for value in result.outputs[0].outputs[0].results.values():
-                            if isinstance(value, Message):
-                                text_content = types.TextContent(type="text", text=value.get_text())
+                    # Process all outputs and messages
+                    for run_output in result.outputs:
+                        for component_output in run_output.outputs:
+                            # Handle messages
+                            for msg in component_output.messages or []:
+                                text_content = types.TextContent(type="text", text=msg.message)
                                 collected_results.append(text_content)
+                            # Handle results
+                            for value in (component_output.results or {}).values():
+                                if isinstance(value, Message):
+                                    text_content = types.TextContent(type="text", text=value.get_text())
+                                    collected_results.append(text_content)
+                                else:
+                                    collected_results.append(types.TextContent(type="text", text=str(value)))
                 except Exception as e:  # noqa: BLE001
                     error_msg = f"Error Executing the {flow.name} tool. Error: {e!s}"
                     collected_results.append(types.TextContent(type="text", text=error_msg))
