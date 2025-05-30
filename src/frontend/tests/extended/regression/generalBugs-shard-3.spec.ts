@@ -33,20 +33,20 @@ test(
     await page.getByTestId("sidebar-search-input").fill("chat output");
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 0, y: 0 },
       });
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
 
     await page
-      .getByTestId("inputsChat Input")
+      .getByTestId("input_outputChat Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -137,11 +137,11 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
 
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 30000,
     });
     await page
-      .locator('//*[@id="outputsChat Output"]')
+      .locator('//*[@id="input_outputChat Output"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();

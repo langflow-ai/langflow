@@ -205,6 +205,7 @@ export const FILE_ICONS = {
 
 export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
+  { display_name: "I/O", name: "input_output", icon: "Cable" },
   { display_name: "Inputs", name: "inputs", icon: "Download" },
   { display_name: "Outputs", name: "outputs", icon: "Upload" },
   { display_name: "Prompts", name: "prompts", icon: "TerminalSquare" },
@@ -284,6 +285,7 @@ export const SIDEBAR_BUNDLES = [
 
 export const categoryIcons: Record<string, string> = {
   saved_components: "GradientSave",
+  input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
   prompts: "TerminalSquare",
@@ -311,6 +313,7 @@ export const categoryIcons: Record<string, string> = {
 
 export const nodeIconToDisplayIconMap: Record<string, string> = {
   //Category Icons
+  input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
   prompts: "TerminalSquare",

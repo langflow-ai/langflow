@@ -74,18 +74,18 @@ test(
     // Add two chat outputs
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 700, y: 200 },
       });
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 700, y: 400 },
       });

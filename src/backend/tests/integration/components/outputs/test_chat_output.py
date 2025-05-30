@@ -1,4 +1,4 @@
-from langflow.components.outputs import ChatOutput
+from langflow.components.input_output import ChatOutput
 from langflow.memory import aget_messages
 from langflow.schema.message import Message
 

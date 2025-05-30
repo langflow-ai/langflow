@@ -26,7 +26,7 @@ test.skip(
     await page.getByTestId("sidebar-search-input").fill("text input");
     await page.waitForTimeout(1000);
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -72,7 +72,7 @@ test.skip(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text output");
     await page
-      .getByTestId("outputsText Output")
+      .getByTestId("input_outputText Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
