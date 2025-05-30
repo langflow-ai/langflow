@@ -20,7 +20,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("text input");
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 0, y: 0 },
       });
@@ -66,7 +66,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("chat output");
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 600, y: 300 },
       });

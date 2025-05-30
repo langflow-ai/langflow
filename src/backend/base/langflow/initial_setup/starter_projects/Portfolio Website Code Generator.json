@@ -152,7 +152,9 @@
             "dataType": "StructuredOutput",
             "id": "StructuredOutput-tWLRa",
             "name": "structured_output_dataframe",
-            "output_types": []
+            "output_types": [
+              "DataFrame"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_data",
@@ -497,12 +499,13 @@
                 "info": "",
                 "name": "model_name",
                 "options": [
+                  "claude-opus-4-20250514",
+                  "claude-sonnet-4-20250514",
                   "claude-3-7-sonnet-latest",
                   "claude-3-5-sonnet-latest",
                   "claude-3-5-haiku-latest",
                   "claude-3-opus-latest",
-                  "claude-3-sonnet-20240229",
-                  "claude-3-haiku-20240307"
+                  "claude-3-sonnet-20240229"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -836,12 +839,13 @@
                 "info": "",
                 "name": "model_name",
                 "options": [
+                  "claude-opus-4-20250514",
+                  "claude-sonnet-4-20250514",
                   "claude-3-7-sonnet-latest",
                   "claude-3-5-sonnet-latest",
                   "claude-3-5-haiku-latest",
                   "claude-3-opus-latest",
-                  "claude-3-sonnet-20240229",
-                  "claude-3-haiku-20240307"
+                  "claude-3-sonnet-20240229"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -1481,6 +1485,19 @@
                 "tool_mode": true,
                 "types": [
                   "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "method": "as_dataframe",
+                "name": "structured_output_dataframe",
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
               }

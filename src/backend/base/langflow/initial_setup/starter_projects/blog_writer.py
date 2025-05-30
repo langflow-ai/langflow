@@ -1,9 +1,8 @@
 from textwrap import dedent
 
 from langflow.components.data import URLComponent
-from langflow.components.inputs import TextInputComponent
-from langflow.components.models import OpenAIModelComponent
-from langflow.components.outputs import ChatOutput
+from langflow.components.input_output import ChatOutput, TextInputComponent
+from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.processing import ParseDataComponent
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
