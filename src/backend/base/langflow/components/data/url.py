@@ -9,7 +9,7 @@ from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.data import safe_convert
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
-from langflow.schema import DataFrame
+from langflow.schema import DataFrame, Message
 from langflow.services.deps import get_settings_service
 
 # Constants
@@ -163,7 +163,8 @@ class URLComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Page Results", name="page_results", method="fetch_content"),
+        Output(display_name="Result", name="page_results", method="as_dataframe"),
+        Output(display_name="Raw Result", name="raw_results", method="as_message"),
     ]
 
     @staticmethod
@@ -286,6 +287,14 @@ class URLComponent(Component):
             raise ValueError(msg) from e
         return data
 
-    def fetch_content(self) -> DataFrame:
+    def as_dataframe(self) -> DataFrame:
         """Convert the documents to a DataFrame."""
         return DataFrame(data=self.fetch_url_contents())
+
+    def as_message(self) -> Message:
+        """Convert the documents to a Message."""
+        url_contents = self.fetch_url_contents()
+        return Message(
+            text = "\n\n".join([x["text"] for x in url_contents]),
+            data = {"data": url_contents}
+        )
