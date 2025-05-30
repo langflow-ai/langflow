@@ -413,7 +413,7 @@ async def install_mcp_config(
         existing_config = {}
         if config_path.exists():
             try:
-                with Path.open(config_path) as f:
+                with config_path.open("r") as f:
                     existing_config = json.load(f)
             except json.JSONDecodeError:
                 # If file exists but is invalid JSON, start fresh
@@ -425,7 +425,7 @@ async def install_mcp_config(
         existing_config["mcpServers"].update(mcp_config["mcpServers"])
 
         # Write the updated config
-        with Path.open(config_path, "w") as f:
+        with config_path.open("w") as f:
             json.dump(existing_config, f, indent=2)
 
     except Exception as e:
@@ -464,7 +464,7 @@ async def check_installed_mcp_servers(
         cursor_config_path = Path.home() / ".cursor" / "mcp.json"
         if cursor_config_path.exists():
             try:
-                with Path.open(cursor_config_path) as f:
+                with cursor_config_path.open("r") as f:
                     cursor_config = json.load(f)
                     if "mcpServers" in cursor_config and project_server_name in cursor_config["mcpServers"]:
                         results.append("cursor")
@@ -482,7 +482,7 @@ async def check_installed_mcp_servers(
 
         if claude_config_path and claude_config_path.exists():
             try:
-                with Path.open(claude_config_path) as f:
+                with claude_config_path.open("r") as f:
                     claude_config = json.load(f)
                     if "mcpServers" in claude_config and project_server_name in claude_config["mcpServers"]:
                         results.append("claude")
