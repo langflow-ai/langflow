@@ -2,7 +2,7 @@ import copy
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 from uuid import UUID
 
 from langchain_core.documents import Document

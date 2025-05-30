@@ -186,6 +186,7 @@ class DataFrame(pandas_DataFrame):
 
     def to_message(self, v: Any) -> "Message":
         from langflow.schema.message import Message  # Local import to avoid circular import
+
         # Process DataFrame similar to the _safe_convert method
         # Remove empty rows
         processed_df = v.dropna(how="all")
