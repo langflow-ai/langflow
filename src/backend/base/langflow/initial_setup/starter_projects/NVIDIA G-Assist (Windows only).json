@@ -1453,8 +1453,8 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Prompts NVIDIA System-Assist to interact with the NVIDIA GPU Driver. The user may query GPU specifications, state, and ask the NV-API to perform several GPU-editing acations. The prompt must be human-readable language.(Windows only)",
-            "display_name": "NVIDIA System-Assist",
+            "description": "Prompts NVIDIA G-Assist to interact with the NVIDIA GPU Driver. The user may query GPU specifications, state, and ask the NV-API to perform several GPU-editing acations. The prompt must be human-readable language.(Windows only)",
+            "display_name": "NVIDIA G-Assist",
             "documentation": "https://docs.langflow.org/components-custom-components",
             "edited": false,
             "field_order": [
@@ -1503,14 +1503,14 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import asyncio\nimport contextlib\n\nfrom langflow.custom.custom_component.component_with_cache import ComponentWithCache\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema import Message\nfrom langflow.services.cache.utils import CacheMiss\n\n\nclass NvidiaSystemAssistComponent(ComponentWithCache):\n    display_name = \"NVIDIA System-Assist\"\n    description = (\n        \"Prompts NVIDIA System-Assist to interact with the NVIDIA GPU Driver. \"\n        \"The user may query GPU specifications, state, and ask the NV-API to perform \"\n        \"several GPU-editing acations. The prompt must be human-readable language.\"\n        \"(Windows only)\"\n    )\n    documentation = \"https://docs.langflow.org/components-custom-components\"\n    icon = \"NVIDIA\"\n    rise_initialized = False\n\n    def maybe_register_rise_client(self):\n        rise_initialized = self._shared_component_cache.get(\"rise_initialized\")\n        if not isinstance(rise_initialized, CacheMiss) and rise_initialized:\n            return\n        self.log(\"Initializing Rise Client\")\n        try:\n            register_rise_client()\n            self._shared_component_cache.set(key=\"rise_initialized\", value=True)\n        except NameError as e:\n            msg = \"NVIDIA System-Assist is Windows only and not supported on this platform\"\n            raise ValueError(msg) from e\n        except Exception as e:\n            msg = f\"An error occurred initializing NVIDIA System-Assist: {e}\"\n            raise ValueError(msg) from e\n\n    inputs = [\n        MessageTextInput(\n            name=\"prompt\",\n            display_name=\"System-Assist Prompt\",\n            info=\"Enter a prompt for NVIDIA System-Assist to process.\",\n            value=\"\",\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Response\", name=\"response\", method=\"sys_assist_prompt\"),\n    ]\n\n    async def sys_assist_prompt(self) -> Message:\n        with contextlib.suppress(ImportError):\n            from gassist.rise import send_rise_command\n\n        self.maybe_register_rise_client()\n\n        response = await asyncio.to_thread(send_rise_command, self.prompt)\n\n        return Message(text=response[\"completed_response\"]) if response is not None else Message(text=None)\n"
+                "value": "import asyncio\nimport contextlib\n\nfrom langflow.custom.custom_component.component_with_cache import ComponentWithCache\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema import Message\nfrom langflow.services.cache.utils import CacheMiss\n\n\nclass NvidiaSystemAssistComponent(ComponentWithCache):\n    display_name = \"NVIDIA G-Assist\"\n    description = (\n        \"Prompts NVIDIA G-Assist to interact with the NVIDIA GPU Driver. \"\n        \"The user may query GPU specifications, state, and ask the NV-API to perform \"\n        \"several GPU-editing acations. The prompt must be human-readable language.\"\n        \"(Windows only)\"\n    )\n    documentation = \"https://docs.langflow.org/components-custom-components\"\n    icon = \"NVIDIA\"\n    rise_initialized = False\n\n    def maybe_register_rise_client(self):\n        with contextlib.suppress(ImportError):\n            from gassist.rise import register_rise_client\n        rise_initialized = self._shared_component_cache.get(\"rise_initialized\")\n        if not isinstance(rise_initialized, CacheMiss) and rise_initialized:\n            return\n        self.log(\"Initializing Rise Client\")\n        try:\n            register_rise_client()\n            self._shared_component_cache.set(key=\"rise_initialized\", value=True)\n        except NameError as e:\n            msg = \"NVIDIA G-Assist is Windows only and not supported on this platform\"\n            raise ValueError(msg) from e\n        except Exception as e:\n            msg = f\"An error occurred initializing NVIDIA G-Assist: {e}\"\n            raise ValueError(msg) from e\n\n    inputs = [\n        MessageTextInput(\n            name=\"prompt\",\n            display_name=\"G-Assist Prompt\",\n            info=\"Enter a prompt for NVIDIA G-Assist to process.\",\n            value=\"\",\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Response\", name=\"response\", method=\"sys_assist_prompt\"),\n    ]\n\n    async def sys_assist_prompt(self) -> Message:\n        with contextlib.suppress(ImportError):\n            from gassist.rise import send_rise_command\n\n        self.maybe_register_rise_client()\n\n        response = await asyncio.to_thread(send_rise_command, self.prompt)\n\n        return Message(text=response[\"completed_response\"]) if response is not None else Message(text=None)\n"
               },
               "prompt": {
                 "_input_type": "MessageTextInput",
                 "advanced": false,
-                "display_name": "System-Assist Prompt",
+                "display_name": "G-Assist Prompt",
                 "dynamic": false,
-                "info": "Enter a prompt for NVIDIA System-Assist to process.",
+                "info": "Enter a prompt for NVIDIA G-Assist to process.",
                 "input_types": [
                   "Message"
                 ],
@@ -1550,13 +1550,13 @@
                     "args": {
                       "prompt": {
                         "default": "",
-                        "description": "Enter a prompt for NVIDIA System-Assist to process.",
+                        "description": "Enter a prompt for NVIDIA G-Assist to process.",
                         "title": "Prompt",
                         "type": "string"
                       }
                     },
-                    "description": "NvidiaSystemAssistComponent. sys_assist_prompt - Prompts NVIDIA System-Assist to interact with the NVIDIA GPU Driver. The user may query GPU specifications, state, and ask the NV-API to perform several GPU-editing actions. The prompt must be human-readable language.(Windows only)",
-                    "display_description": "NvidiaSystemAssistComponent. sys_assist_prompt - Prompts NVIDIA System-Assist to interact with the NVIDIA GPU Driver. The user may query GPU specifications, state, and ask the NV-API to perform several GPU-editing actions. The prompt must be human-readable language.(Windows only)",
+                    "description": "NvidiaSystemAssistComponent. sys_assist_prompt - Prompts NVIDIA G-Assist to interact with the NVIDIA GPU Driver. The user may query GPU specifications, state, and ask the NV-API to perform several GPU-editing actions. The prompt must be human-readable language.(Windows only)",
+                    "display_description": "NvidiaSystemAssistComponent. sys_assist_prompt - Prompts NVIDIA G-Assist to interact with the NVIDIA GPU Driver. The user may query GPU specifications, state, and ask the NV-API to perform several GPU-editing actions. The prompt must be human-readable language.(Windows only)",
                     "display_name": "sys_assist_prompt",
                     "name": "sys_assist_prompt",
                     "readonly": false,
@@ -1590,7 +1590,7 @@
         "data": {
           "id": "note-pGRtw",
           "node": {
-            "description": "# NVIDIA System-Assist\n\nUse the **NVIDIA System Assist** component to prompt your NVIDIA GPU with natural language.\n\n## Prerequisites\n* Windows\n* An OpenAI API key\n* An NVIDIA GPU\n\n## Quickstart\n\n1. To open the Project R2X application, click **Share**, and then click **Project R2X**.\n2. Copy your `flow_ID` into the app.\n3. Generate a Langflow API key, and add it to the R2X application.\n4. Add your OpenAI API key to the Agent.\n5. Click **Playground**, and ask your Agent a question. The agent decides which of the connected tools to use to solve a problem.\n\n## Learn more\n\n[Github](https://github.com/NVIDIA/G-Assist)\n\n[Nvidia ACE docs](https://docs.nvidia.com/ace/overview/latest/index.html)\n\n[Langflow docs](https://docs.langflow.org/integrations-nvidia-system-assist)\n\n",
+            "description": "# NVIDIA G-Assist\n\nUse the **NVIDIA G-Assist** component to prompt your NVIDIA GPU with natural language.\n\n## Prerequisites\n* Windows\n* An OpenAI API key\n* An NVIDIA GPU\n\n## Quickstart\n\n1. To open the Project R2X application, click **Share**, and then click **Project R2X**.\n2. Copy your `flow_ID` into the app.\n3. Generate a Langflow API key, and add it to the R2X application.\n4. Add your OpenAI API key to the Agent.\n5. Click **Playground**, and ask your Agent a question. The agent decides which of the connected tools to use to solve a problem.\n\n## Learn more\n\n[Github](https://github.com/NVIDIA/G-Assist)\n\n[Nvidia ACE docs](https://docs.nvidia.com/ace/overview/latest/index.html)\n\n[Langflow docs](https://docs.langflow.org/integrations-nvidia-system-assist)\n\n",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1975,11 +1975,11 @@
       "zoom": 0.7050447909272739
     }
   },
-  "description": "Interact with your NVIDIA GPU using System-Assist.",
+  "description": "Interact with your NVIDIA GPU using G-Assist.",
   "endpoint_name": null,
   "id": "4c600dba-73f3-49a4-b072-416065b32532",
   "is_component": false,
   "last_tested_version": "1.4.2",
-  "name": "NVIDIA System-Assist (Windows only)",
+  "name": "NVIDIA G-Assist (Windows only)",
   "tags": []
 }
