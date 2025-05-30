@@ -137,26 +137,23 @@ def build_output_setter(method: Callable, *, validate: bool = True) -> Callable:
 
 
 def create_state_model(model_name: str = "State", *, validate: bool = True, **kwargs) -> type:
-    """Create a dynamic Pydantic state model based on the provided keyword arguments.
-
-    This function generates a Pydantic model class with fields corresponding to the
-    provided keyword arguments. It can handle various types of field definitions,
-    including callable methods (which are converted to properties), FieldInfo objects,
-    and type-default value tuples.
-
+    """
+    Dynamically creates a Pydantic state model class with fields defined by keyword arguments.
+    
+    Each keyword argument specifies a model field, which can be a callable (converted to a property), a FieldInfo object, or a (type, default) tuple. Callable methods are validated and wrapped as computed properties if possible. The resulting model supports dynamic field definitions for use in graph-based or component-driven workflows.
+    
     Args:
-        model_name (str, optional): The name of the model. Defaults to "State".
-        validate (bool, optional): Whether to validate the methods when converting
-                                   them to properties. Defaults to True.
-        **kwargs: Keyword arguments representing the fields of the model. Each argument
-                  can be a callable method, a FieldInfo object, or a tuple of (type, default).
-
+        model_name: Name of the generated model class.
+        validate: If True, validates callable methods before converting them to properties.
+        **kwargs: Field definitions as callables, FieldInfo objects, or (type, default) tuples.
+    
     Returns:
-        type: The dynamically created Pydantic state model class.
-
+        The dynamically created Pydantic model class.
+    
     Raises:
-        ValueError: If the provided field value is invalid or cannot be processed.
-
+        ValueError: If a field definition is invalid or unsupported.
+        TypeError: If a tuple-based field definition does not start with a valid type.
+    
     Examples:
         >>> from langflow.components.io import ChatInput
         >>> from langflow.components.io.ChatOutput import ChatOutput
@@ -165,14 +162,12 @@ def create_state_model(model_name: str = "State", *, validate: bool = True, **kw
         >>> chat_input = ChatInput()
         >>> chat_output = ChatOutput()
         >>>
-        >>> # Create a model with a method from a component
         >>> StateModel = create_state_model(method_one=chat_input.message_response)
         >>> state = StateModel()
         >>> assert state.method_one is UNDEFINED
         >>> chat_input.set_output_value("message", "test")
         >>> assert state.method_one == "test"
         >>>
-        >>> # Create a model with multiple components and a Pydantic Field
         >>> NewStateModel = create_state_model(
         ...     model_name="NewStateModel",
         ...     first_method=chat_input.message_response,
@@ -185,18 +180,15 @@ def create_state_model(model_name: str = "State", *, validate: bool = True, **kw
         >>> assert new_state.first_method == "test"
         >>> assert new_state.my_attribute == 123
         >>>
-        >>> # Create a model with tuple-based field definitions
         >>> TupleStateModel = create_state_model(field_one=(str, "default"), field_two=(int, 123))
         >>> tuple_state = TupleStateModel()
         >>> assert tuple_state.field_one == "default"
         >>> assert tuple_state.field_two == 123
-
+    
     Notes:
-        - The function handles empty keyword arguments gracefully.
-        - For tuple-based field definitions, the first element must be a valid Python type.
-        - Unsupported value types in keyword arguments will raise a ValueError.
-        - Callable methods must have proper return type annotations and belong to a class
-          with a 'get_output_by_method' attribute when validate is True.
+        - Callable methods must have return type annotations and belong to a class with a 'get_output_by_method' attribute if validation is enabled.
+        - Tuple-based field definitions require the first element to be a valid type.
+        - Unsupported field definitions raise a ValueError or TypeError.
     """
     fields = {}
 
