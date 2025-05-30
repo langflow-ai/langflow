@@ -42,7 +42,7 @@ pnpm add @datastax/langflow-client
 
 1. Import the client into your code.
 
-```typescript
+```tsx
 import { LangflowClient } from "@datastax/langflow-client";
 ```
 
@@ -53,20 +53,20 @@ Replace `BASE_URL` and `API_KEY` with values from your deployment.
 The default Langflow base URL is `http://localhost:7860`.
 To create an API key, see [API keys](/configuration-api-keys).
 
-```typescript
+```tsx
 const baseUrl = "BASE_URL";
 const apiKey = "API_KEY";
 const client = new LangflowClient({ baseUrl, apiKey });
 ```
 
-## Run a flow with the Langflow TypeScript client
+## Langflow TypeScript client quickstart
 
 1. With your Langflow client initialized, submit a message to your Langflow server and receive a response.
 This example uses the minimum values for sending a message and running your flow on a Langflow server, with no API keys.
 Replace `baseUrl` and `flowId` with values from your deployment.
 The `input` string is the message you're sending to your flow.
 
-```typescript
+```tsx
 import { LangflowClient } from "@datastax/langflow-client";
 
 const baseUrl = "http://127.0.0.1:7860";
@@ -102,7 +102,7 @@ This confirms your client is connecting to Langflow.
 
 2. To get the full response objects from your server, change the `console.log` code to stringify the returned JSON object:
 
-```typescript
+```tsx
 console.log(JSON.stringify(response, null, 2));
 ```
 
@@ -110,24 +110,24 @@ The exact structure of the returned `inputs` and `outputs` depends on how your f
 
 3. To get the first chat message returned from the chat output component, change `console.log` to use the `chatOutputText` convenience function.
 
-```typescript
+```tsx
 console.log(response.chatOutputText());
 ```
 
-## Extend the starter example
+## Extend the Langflow TypeScript client quickstart
 
 The TypeScript client can do more than just connect to your server and run a flow.
 
-This example adds additional features for interacting with Langflow.
+This example builds on the quickstart with additional features for interacting with Langflow.
 
 1. Pass tweaks to your code as an object with the request.
 Tweaks change values within components for all calls to your flow.
 This example tweaks the Open-AI model component to enforce using the `gpt-4o-mini` model.
-```typescript
+```tsx
 const tweaks = { model_name: "gpt-4o-mini" };
 ```
 2. Pass a session ID with the request to maintain the same conversation with the LLM from this application.
-```typescript
+```tsx
 const session_id = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
 ```
 3. Instead of calling `run` on the Flow object, call `stream` with the same arguments.
@@ -142,8 +142,6 @@ for await (const event of response) {
 ```
 4. Run the completed TypeScript application to call your server with `tweaks` and `session_id`, and stream the response back.
 Replace `baseUrl` and `flowId` with values from your deployment.
-
-<TabItem value="TypeScript" label="TypeScript" default>
 
 ```tsx
 import { LangflowClient } from "@datastax/langflow-client";
@@ -169,7 +167,6 @@ async function runFlow() {
 }
 runFlow().catch(console.error);
 ```
-</TabItem>
 
 <details>
 <summary>Response</summary>
@@ -249,7 +246,7 @@ runFlow().catch(console.error);
 
 ## Retrieve logs from Langflow
 
-To retrieve Langflow logs, you must enable log retrieval on your Langflow server by including these values in your server's `.env` file:
+To retrieve Langflow logs, you must enable log retrieval on your Langflow server by including the following values in your server's `.env` file:
 
 ```text
 LANGFLOW_ENABLE_LOG_RETRIEVAL=true
@@ -262,7 +259,7 @@ For more information, see [API examples](/api-reference-api-examples#logs).
 This complete example starts streaming logs in the background, and then runs a flow so you can see how a flow executes.
 Replace `baseUrl` and `flowId` with values from your deployment.
 
-```typescript
+```tsx
 import { LangflowClient } from "@datastax/langflow-client";
 
 const baseUrl = "http://127.0.0.1:7863";
