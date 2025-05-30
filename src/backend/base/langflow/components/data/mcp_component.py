@@ -177,8 +177,8 @@ class MCPToolsComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Tools", name="prompts", method="build_tool_output"),
-        Output(display_name="Prompts", name="tools", method="build_prompt_output"),
+        Output(display_name="Tools", name="tools", method="build_tool_output"),
+        Output(display_name="Prompts", name="prompts", method="build_prompt_output"),
     ]
 
     async def _validate_connection_params(self, mode: str, command: str | None = None, url: str | None = None) -> None:
