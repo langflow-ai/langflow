@@ -15,9 +15,8 @@ if TYPE_CHECKING:
 
 class BatchRunComponent(Component):
     display_name = "Batch Run"
-    description = "Runs an LLM over each row of a DataFrame's column. If no column is set, the entire row is passed."
+    description = "Runs an LLM on each row of a DataFrame column. If no column is specified, all columns are used."
     icon = "List"
-    beta = True
 
     inputs = [
         HandleInput(
@@ -69,7 +68,7 @@ class BatchRunComponent(Component):
 
     outputs = [
         Output(
-            display_name="DataFrame",
+            display_name="LLM Results",
             name="batch_results",
             method="run_batch",
             info="A DataFrame with all original columns plus the model's response column.",
