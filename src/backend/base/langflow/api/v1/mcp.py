@@ -277,8 +277,8 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                                 text_content = types.TextContent(type="text", text=value.get_text())
                                 collected_results.append(text_content)
                 except Exception as e:  # noqa: BLE001
-                    msg = f"Error executing tool {name}: {e!s}"
-                    collected_results.append(types.TextContent(type="text", text=msg))
+                    error_msg = f"Error Executing the {flow.name} tool. Error: {e!s}"
+                    collected_results.append(types.TextContent(type="text", text=error_msg))
 
                 return collected_results
             finally:
