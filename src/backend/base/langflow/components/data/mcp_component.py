@@ -407,7 +407,6 @@ class MCPToolsComponent(Component):
                 frontend_node["field_order"].append(key)
         return frontend_node
 
-
     def get_inputs_for_all_tools(self, tools: list) -> dict:
         """Get input schemas for all tools."""
         inputs = {}
