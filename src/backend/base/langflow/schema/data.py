@@ -2,13 +2,11 @@ import copy
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langflow.schema.dataframe import DataFrame
-from langflow.schema.message import Message
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
@@ -250,12 +248,16 @@ class Data(BaseModel):
 
         return apply_json_filter(self.data, filter_str)
 
-    def to_message(self, v: Any) -> Message:
+    def to_message(self, v: Any) -> "Message":
+        from langflow.schema.message import Message  # Local import to avoid circular import
+
         if self.text_key in v.data:
             return Message(text=v.get_text())
         return Message(text=str(v.data))
 
-    def to_dataframe(self, v: Any) -> DataFrame:
+    def to_dataframe(self, v: Any) -> "DataFrame":
+        from langflow.schema.dataframe import DataFrame  # Local import to avoid circular import
+
         data_dict = v.data
         # If data contains only one key and the value is a list of dictionaries, convert to DataFrame
         if (

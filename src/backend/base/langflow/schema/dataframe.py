@@ -1,6 +1,5 @@
 from typing import Any, cast
 
-from langflow.schema.message import Message
 import pandas as pd
 from langchain_core.documents import Document
 from pandas import DataFrame as pandas_DataFrame
@@ -185,7 +184,8 @@ class DataFrame(pandas_DataFrame):
         dict_list = v.to_dict(orient="records")
         return Data(data={"results": dict_list})
 
-    def to_message(self, v: Any) -> Message:
+    def to_message(self, v: Any) -> "Message":
+        from langflow.schema.message import Message  # Local import to avoid circular import
         # Process DataFrame similar to the _safe_convert method
         # Remove empty rows
         processed_df = v.dropna(how="all")

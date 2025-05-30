@@ -13,7 +13,6 @@ from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
-from langflow.schema.dataframe import DataFrame
 from langflow.services.database.models.message.model import MessageBase
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
@@ -281,7 +280,8 @@ class Message(Data):
     def to_data(self, v: Any) -> Data:
         return  Data(data=v.data)
 
-    def to_dataframe(self, v: Any) -> DataFrame:
+    def to_dataframe(self, v: Any) -> "DataFrame":
+        from langflow.schema.dataframe import DataFrame  # Local import to avoid circular import
         return DataFrame(data=[v])
 
 
