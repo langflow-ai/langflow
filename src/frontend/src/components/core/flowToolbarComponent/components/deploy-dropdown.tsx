@@ -96,7 +96,7 @@ export default function PublishDropdown() {
           sideOffset={7}
           alignOffset={-2}
           align="end"
-          className="w-full"
+          className="w-full min-w-[275px]"
         >
           <DropdownMenuItem
             className="deploy-dropdown-item group"
