@@ -137,23 +137,22 @@ def build_output_setter(method: Callable, *, validate: bool = True) -> Callable:
 
 
 def create_state_model(model_name: str = "State", *, validate: bool = True, **kwargs) -> type:
-    """
-    Dynamically creates a Pydantic state model class with fields defined by keyword arguments.
-    
+    """Dynamically creates a Pydantic state model class with fields defined by keyword arguments.
+
     Each keyword argument specifies a model field, which can be a callable (converted to a property), a FieldInfo object, or a (type, default) tuple. Callable methods are validated and wrapped as computed properties if possible. The resulting model supports dynamic field definitions for use in graph-based or component-driven workflows.
-    
+
     Args:
         model_name: Name of the generated model class.
         validate: If True, validates callable methods before converting them to properties.
         **kwargs: Field definitions as callables, FieldInfo objects, or (type, default) tuples.
-    
+
     Returns:
         The dynamically created Pydantic model class.
-    
+
     Raises:
         ValueError: If a field definition is invalid or unsupported.
         TypeError: If a tuple-based field definition does not start with a valid type.
-    
+
     Examples:
         >>> from langflow.components.io import ChatInput
         >>> from langflow.components.io.ChatOutput import ChatOutput
@@ -184,7 +183,7 @@ def create_state_model(model_name: str = "State", *, validate: bool = True, **kw
         >>> tuple_state = TupleStateModel()
         >>> assert tuple_state.field_one == "default"
         >>> assert tuple_state.field_two == 123
-    
+
     Notes:
         - Callable methods must have return type annotations and belong to a class with a 'get_output_by_method' attribute if validation is enabled.
         - Tuple-based field definitions require the first element to be a valid type.

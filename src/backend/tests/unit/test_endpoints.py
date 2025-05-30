@@ -111,9 +111,8 @@ PROMPT_REQUEST = {
 
 @pytest.mark.benchmark
 async def test_get_all(client: AsyncClient, logged_in_headers):
-    """
-    Tests the GET /api/v1/all endpoint for correct component listing.
-    
+    """Tests the GET /api/v1/all endpoint for correct component listing.
+
     Asserts that the response includes expected component names in the appropriate categories and that the total number of components does not exceed the number of files in the components directory.
     """
     response = await client.get("api/v1/all", headers=logged_in_headers)
