@@ -31,21 +31,46 @@ class FirecrawlCrawlApi(Component):
             name="timeout",
             display_name="Timeout",
             info="Timeout in milliseconds for the request.",
+            advanced=True,
+        ),
+        IntInput(
+            name="poll_interval",
+            display_name="Poll Interval",
+            info="Interval in seconds to poll for crawl status.",
+            default=30,
+            advanced=True,
+        ),
+        IntInput(
+            name="max_depth",
+            display_name="Max Depth",
+            info="Maximum link depth to crawl.",
+            default=2,
+            advanced=True,
+        ),
+        IntInput(
+            name="limit",
+            display_name="Limit",
+            info="Maximum number of pages to crawl.",
+            default=100,
+            advanced=True,
         ),
         StrInput(
             name="idempotency_key",
             display_name="Idempotency Key",
             info="Optional idempotency key to ensure unique requests.",
+            advanced=True,
         ),
         DataInput(
             name="crawlerOptions",
             display_name="Crawler Options",
             info="The crawler options to send with the request.",
+            advanced=True,
         ),
         DataInput(
             name="scrapeOptions",
             display_name="Scrape Options",
             info="The page options to send with the request.",
+            advanced=True,
         ),
     ]
 
@@ -53,6 +78,9 @@ class FirecrawlCrawlApi(Component):
         Output(display_name="Data", name="data", method="crawl"),
     ]
     idempotency_key: str | None = None
+    poll_interval: int = 30
+    max_depth: int = 2
+    limit: int = 100
 
     def crawl(self) -> Data:
         try:
@@ -61,10 +89,18 @@ class FirecrawlCrawlApi(Component):
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
 
-        params = self.crawlerOptions.__dict__["data"] if self.crawlerOptions else {}
-        scrape_options_dict = self.scrapeOptions.__dict__["data"] if self.scrapeOptions else {}
-        if scrape_options_dict:
-            params["scrapeOptions"] = scrape_options_dict
+        params = {
+            "maxDepth": self.max_depth,
+            "limit": self.limit,
+        }
+
+        if self.crawlerOptions:
+            params.update(self.crawlerOptions.__dict__["data"])
+
+        if self.scrapeOptions:
+            scrape_options = self.scrapeOptions.__dict__["data"]
+            if scrape_options:
+                params["scrapeOptions"] = scrape_options
 
         # Set default values for new parameters in v1
         params.setdefault("maxDepth", 2)
@@ -84,5 +120,7 @@ class FirecrawlCrawlApi(Component):
             self.idempotency_key = str(uuid.uuid4())
 
         app = FirecrawlApp(api_key=self.api_key)
-        crawl_result = app.crawl_url(self.url, params=params, idempotency_key=self.idempotency_key)
-        return Data(data={"results": crawl_result})
+        crawl_status = app.crawl_url(
+            self.url, params=params, idempotency_key=self.idempotency_key, poll_interval=self.poll_interval
+        )
+        return Data(data={"results": crawl_status})
