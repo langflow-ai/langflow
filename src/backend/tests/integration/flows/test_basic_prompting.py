@@ -1,5 +1,4 @@
-from langflow.components.inputs import ChatInput
-from langflow.components.outputs import ChatOutput
+from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
 from langflow.schema.message import Message
