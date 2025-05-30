@@ -98,6 +98,8 @@ test(
 
         await element.scrollIntoViewIfNeeded();
 
+        await page.waitForTimeout(500);
+
         let count = 0;
 
         while (
@@ -144,6 +146,8 @@ test(
 
         // Verify the selected action is visible in the tab
         await expect(page.getByTestId("div-mcp-server-tools")).toBeVisible();
+
+        await page.getByText("JSON", { exact: true }).last().click();
 
         // Generate API key if not in auto login mode
         const isAutoLogin = await page
