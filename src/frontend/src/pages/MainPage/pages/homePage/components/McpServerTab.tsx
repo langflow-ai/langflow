@@ -12,6 +12,7 @@ import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-instal
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
+import { useIsLocalConnection } from "@/hooks/useIsLocalConnection";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -134,13 +135,19 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const { data: installedMCP } = useGetInstalledMCP({ projectId });
 
-  const [selectedMode, setSelectedMode] = useState("Auto install");
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) => tab.name.includes(getOS() || "windows"))
       ?.name,
   );
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
+
+  // Check if the current connection is local
+  const isLocalConnection = useIsLocalConnection();
+
+  const [selectedMode, setSelectedMode] = useState(
+    isLocalConnection ? "Auto install" : "JSON",
+  );
 
   const handleOnNewValue = (value) => {
     const flowsMCPData: MCPSettingsType[] = value.value.map((flow) => ({
@@ -363,11 +370,28 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
           )}
           {selectedMode === "Auto install" && (
             <div className="flex flex-col gap-1">
+              {!isLocalConnection && (
+                <div className="mb-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                  <div className="flex items-center gap-3">
+                    <ForwardedIconComponent
+                      name="AlertTriangle"
+                      className="h-4 w-4 shrink-0"
+                    />
+                    <span>
+                      One-click install is disabled because the Langflow server
+                      is not running on your local machine. Use the JSON tab to
+                      configure your client manually.
+                    </span>
+                  </div>
+                </div>
+              )}
               {autoInstallers.map((installer) => (
                 <Button
                   variant="ghost"
                   className="flex items-center justify-between disabled:text-foreground disabled:opacity-50"
-                  disabled={installedMCP?.includes(installer.name)}
+                  disabled={
+                    installedMCP?.includes(installer.name) || !isLocalConnection
+                  }
                   loading={loadingMCP.includes(installer.name)}
                   onClick={() => {
                     setLoadingMCP([...loadingMCP, installer.name]);
