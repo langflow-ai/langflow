@@ -1,7 +1,5 @@
-import json
-from typing import Any
-
 from langflow.custom import Component
+from langflow.helpers.data import safe_convert
 from langflow.io import (
     BoolInput,
     HandleInput,
@@ -16,13 +14,17 @@ from langflow.schema.message import Message
 
 class ParserComponent(Component):
     display_name = "Parser"
-    description = (
-        "Format a DataFrame or Data object into text using a template. "
-        "Enable 'Stringify' to convert input into a readable string instead."
-    )
+    description = "Extracts text using a template."
     icon = "braces"
 
     inputs = [
+        HandleInput(
+            name="input_data",
+            display_name="Data or DataFrame",
+            input_types=["DataFrame", "Data"],
+            info="Accepts either a DataFrame or a Data object.",
+            required=True,
+        ),
         TabInput(
             name="mode",
             display_name="Mode",
@@ -42,13 +44,6 @@ class ParserComponent(Component):
             value="Text: {text}",  # Example default
             dynamic=True,
             show=True,
-            required=True,
-        ),
-        HandleInput(
-            name="input_data",
-            display_name="Data or DataFrame",
-            input_types=["DataFrame", "Data"],
-            info="Accepts either a DataFrame or a Data object.",
             required=True,
         ),
         MessageTextInput(
@@ -138,36 +133,13 @@ class ParserComponent(Component):
         self.status = combined_text
         return Message(text=combined_text)
 
-    def _safe_convert(self, data: Any) -> str:
-        """Safely convert input data to string."""
-        try:
-            if isinstance(data, str):
-                return data
-            if isinstance(data, Message):
-                return data.get_text()
-            if isinstance(data, Data):
-                return json.dumps(data.data)
-            if isinstance(data, DataFrame):
-                if hasattr(self, "clean_data") and self.clean_data:
-                    # Remove empty rows
-                    data = data.dropna(how="all")
-                    # Remove empty lines in each cell
-                    data = data.replace(r"^\s*$", "", regex=True)
-                    # Replace multiple newlines with a single newline
-                    data = data.replace(r"\n+", "\n", regex=True)
-                return data.to_markdown(index=False)
-            return str(data)
-        except (ValueError, TypeError, AttributeError) as e:
-            msg = f"Error converting data: {e!s}"
-            raise ValueError(msg) from e
-
     def convert_to_string(self) -> Message:
         """Convert input data to string with proper error handling."""
         result = ""
         if isinstance(self.input_data, list):
-            result = "\n".join([self._safe_convert(item) for item in self.input_data])
+            result = "\n".join([safe_convert(item, clean_data=self.clean_data or False) for item in self.input_data])
         else:
-            result = self._safe_convert(self.input_data)
+            result = safe_convert(self.input_data or False)
         self.log(f"Converted to string with length: {len(result)}")
 
         message = Message(text=result)
