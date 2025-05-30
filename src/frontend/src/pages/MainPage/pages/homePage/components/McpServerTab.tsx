@@ -126,6 +126,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [apiKey, setApiKey] = useState<string>("");
   const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const { data: flowsMCP } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
@@ -390,9 +391,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   variant="ghost"
                   className="flex items-center justify-between disabled:text-foreground disabled:opacity-50"
                   disabled={
-                    installedMCP?.includes(installer.name) || !isLocalConnection
+                    installedMCP?.includes(installer.name) ||
+                    loadingMCP.includes(installer.name) ||
+                    !isLocalConnection
                   }
-                  loading={loadingMCP.includes(installer.name)}
                   onClick={() => {
                     setLoadingMCP([...loadingMCP, installer.name]);
                     patchInstallMCP(
@@ -403,6 +405,17 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         onSuccess: () => {
                           setSuccessData({
                             title: `MCP Server installed successfully on ${installer.title}`,
+                          });
+                          setLoadingMCP(
+                            loadingMCP.filter(
+                              (name) => name !== installer.name,
+                            ),
+                          );
+                        },
+                        onError: (e) => {
+                          setErrorData({
+                            title: `Failed to install MCP Server on ${installer.title}`,
+                            list: [e.message],
                           });
                           setLoadingMCP(
                             loadingMCP.filter(
@@ -425,9 +438,16 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
                   <ForwardedIconComponent
                     name={
-                      installedMCP?.includes(installer.name) ? "Check" : "Plus"
+                      installedMCP?.includes(installer.name)
+                        ? "Check"
+                        : loadingMCP.includes(installer.name)
+                          ? "Loader2"
+                          : "Plus"
                     }
-                    className="h-4 w-4"
+                    className={cn(
+                      "h-4 w-4",
+                      loadingMCP.includes(installer.name) && "animate-spin",
+                    )}
                   />
                 </Button>
               ))}
