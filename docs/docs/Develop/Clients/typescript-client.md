@@ -259,35 +259,108 @@ LANGFLOW_LOG_LEVEL=DEBUG
 
 For more information, see [API examples](/api-reference-api-examples#logs).
 
-This complete example streams runs a flow and streams the logs.
+This complete example starts streaming logs in the background, and then runs a flow so you can see how a flow executes.
+Replace `baseUrl` and `flowId` with values from your deployment.
 
 ```typescript
 import { LangflowClient } from "@datastax/langflow-client";
 
-async function runFlow(client: LangflowClient) {
-    const flowId = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
-    const input = "Is anyone there?";
+const baseUrl = "http://127.0.0.1:7863";
+const flowId = "86f0bf45-0544-4e88-b0b1-8e622da7a7f0";
 
+async function runFlow(client: LangflowClient) {
+    const input = "Is anyone there?";
     const response = await client.flow(flowId).run(input);
     console.log('Flow response:', response);
 }
 
 async function main() {
-    const baseUrl = "http://127.0.0.1:7860";
-    const client = new LangflowClient({ baseUrl });
+    const client = new LangflowClient({ baseUrl: baseUrl });
 
-    // First run the flow
-    await runFlow(client);
-
-    // Then start streaming logs (this will run indefinitely)
+    // Start streaming logs
     console.log('Starting log stream...');
     for await (const log of await client.logs.stream()) {
         console.log('Log:', log);
     }
+
+    // Run the flow
+    await runFlow(client);
+
 }
 
 main().catch(console.error);
 ```
+
+Logs begin streaming indefinitely, and the flow runs once.
+
+The logs below are abbreviated, but you can monitor how the flow instantiates its components, configures its model, and processes the outputs.
+
+<details>
+<summary>Response</summary>
+
+```text
+Starting log stream...
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.006Z,
+  message: '2025-05-30T07:49:16.006127-0400 DEBUG Instantiating ChatInput of type component\n'
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.029Z,
+  message: '2025-05-30T07:49:16.029957-0400 DEBUG Instantiating Prompt of type component\n'
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.049Z,
+  message: '2025-05-30T07:49:16.049520-0400 DEBUG Instantiating ChatOutput of type component\n'
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.069Z,
+  message: '2025-05-30T07:49:16.069359-0400 DEBUG Instantiating OpenAIModel of type component\n'
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.086Z,
+  message: "2025-05-30T07:49:16.086426-0400 DEBUG Running layer 0 with 2 tasks, ['ChatInput-xjucM', 'Prompt-I3pxU']\n"
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.101Z,
+  message: '2025-05-30T07:49:16.101766-0400 DEBUG Building Chat Input\n'
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.113Z,
+  message: '2025-05-30T07:49:16.113343-0400 DEBUG Building Prompt\n'
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.131Z,
+  message: '2025-05-30T07:49:16.131423-0400 DEBUG Logged vertex build: 6bd9fe9c-5eea-4f05-a96d-f6de9dc77e3c\n'
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.143Z,
+  message: '2025-05-30T07:49:16.143295-0400 DEBUG Logged vertex build: 39c68ec9-3859-4fff-9b14-80b3271f8fbf\n'
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.188Z,
+  message: "2025-05-30T07:49:16.188730-0400 DEBUG Running layer 1 with 1 tasks, ['OpenAIModel-RtlZm']\n"
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.201Z,
+  message: '2025-05-30T07:49:16.201946-0400 DEBUG Building OpenAI\n'
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:16.216Z,
+  message: '2025-05-30T07:49:16.216622-0400 INFO Model name: gpt-4.1-mini\n'
+}
+Flow response: FlowResponse {
+  sessionId: '86f0bf45-0544-4e88-b0b1-8e622da7a7f0',
+  outputs: [ { inputs: [Object], outputs: [Array] } ]
+}
+Log: Log {
+  timestamp: 2025-05-30T11:49:18.094Z,
+  message: `2025-05-30T07:49:18.094364-0400 DEBUG Vertex OpenAIModel-RtlZm, result: <langflow.graph.utils.UnbuiltResult object at 0x364d24dd0>, object: {'text_output': "Hey there! I'm here and ready to help you build something awesome with AI. What are you thinking about creating today?"}\n`
+}
+```
+
+</details>
+
+The `FlowResponse` object is returned to the client, with the `outputs` array including your flow result.
 
 ## Langflow TypeScript project repository
 
