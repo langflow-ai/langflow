@@ -64,7 +64,7 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.46b0,<1.0.0",
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
-    "setuptools>=70,<76.0.0",
+    "setuptools>=78.1.0,<79.0.0",
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=3.15.4,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
@@ -240,20 +240,12 @@ postgresql = [
     "sqlalchemy[postgresql_psycopg]",
 
 ]
-deploy = [
-    "celery>=5.3.1",
-    "redis>=4.6.0",
-    "flower>=1.0.0"
-]
 local = [
     "llama-cpp-python>=0.2.0",
     "sentence-transformers>=2.0.0",
     "ctransformers>=0.2"
 ]
 all = [
-    "celery>=5.3.1",
-    "redis>=4.6.0",
-    "flower>=1.0.0",
     "llama-cpp-python>=0.2.0",
     "sentence-transformers>=2.0.0",
     "ctransformers>=0.2"
