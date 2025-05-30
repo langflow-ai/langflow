@@ -45,7 +45,7 @@ load_dotenv()
 
 @pytest.fixture(autouse=True)
 def blockbuster(request):
-    if "benchmark" in request.keywords:
+    if "benchmark" in request.keywords or "no_blockbuster" in request.keywords:
         yield
     else:
         with blockbuster_ctx() as bb:
@@ -78,6 +78,7 @@ def blockbuster(request):
 
             for func in ["os.stat", "os.path.abspath", "os.scandir"]:
                 bb.functions[func].can_block_in("alembic/util/pyfiles.py", "load_python_file")
+                bb.functions[func].can_block_in("dotenv/main.py", "find_dotenv")
 
             for func in ["os.path.abspath", "os.scandir"]:
                 bb.functions[func].can_block_in("alembic/script/base.py", "_load_revisions")
