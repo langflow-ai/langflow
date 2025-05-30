@@ -298,7 +298,7 @@ class MCPToolsComponent(Component):
                 build_config["tool"]["options"] = self.tool_names
                 build_config["prompt"]["options"] = list(self.prompts)
 
-            elif field_name in ["command", "sse_url", "env", "headers_input"]:
+            if field_name in ["command", "sse_url", "env", "headers_input"]:
                 # Update tools and prompts when connection params change
                 await self.update_tools_and_prompts(
                     mode=build_config["mode"]["value"],
@@ -310,7 +310,7 @@ class MCPToolsComponent(Component):
                 build_config["tool"]["options"] = self.tool_names
                 build_config["prompt"]["options"] = list(self.prompts)
 
-            elif field_name == "prompt":
+            if field_name == "prompt":
                 if len(self.prompts) == 0:
                     await self.update_tools_and_prompts(
                         mode=build_config["mode"]["value"],
