@@ -86,12 +86,14 @@ class AnthropicModelComponent(LCModelComponent):
             msg = "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
             raise ImportError(msg) from e
         try:
+            if self.max_tokens == "":  # type: ignore[has-type]
+                self.max_tokens = 4096
             output = ChatAnthropic(
                 model=self.model_name,
                 anthropic_api_key=self.api_key,
-                max_tokens=self.max_tokens or 4096,
+                max_tokens=int(self.max_tokens),
                 temperature=self.temperature,
-                anthropic_api_url=DEFAULT_ANTHROPIC_API_URL,
+                anthropic_api_url=self.base_url or DEFAULT_ANTHROPIC_API_URL,
                 streaming=self.stream,
             )
         except ValidationError:
