@@ -1709,7 +1709,7 @@
                 "name": "df",
                 "placeholder": "",
                 "required": false,
-                "show": false,
+                "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -1760,7 +1760,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "./news-aggregated.json"
+                "value": "./output"
               },
               "input_type": {
                 "_input_type": "DropdownInput",
@@ -1782,10 +1782,11 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "Message"
+                "value": "DataFrame"
               },
               "message": {
                 "_input_type": "MessageInput",
@@ -1802,7 +1803,7 @@
                 "name": "message",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
