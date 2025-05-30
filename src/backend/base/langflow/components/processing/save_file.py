@@ -17,7 +17,7 @@ from langflow.services.deps import get_session, get_settings_service, get_storag
 
 
 class SaveToFileComponent(Component):
-    display_name = "Save to File"
+    display_name = "Save File"
     description = "Save data to a local file in the selected format."
     icon = "save"
     name = "SaveToFile"
