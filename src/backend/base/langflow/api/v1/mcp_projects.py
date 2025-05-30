@@ -7,6 +7,7 @@ import platform
 from asyncio.subprocess import create_subprocess_exec
 from contextvars import ContextVar
 from datetime import datetime, timezone
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote, unquote, urlparse
@@ -269,13 +270,70 @@ async def update_project_mcp_settings(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+def is_local_ip(ip_str: str) -> bool:
+    """Check if an IP address is a loopback address (same machine).
+
+    Args:
+        ip_str: String representation of an IP address
+
+    Returns:
+        bool: True if the IP is a loopback address, False otherwise
+    """
+    # Check if it's exactly "localhost"
+    if ip_str == "localhost":
+        return True
+
+    # Check if it's exactly "0.0.0.0" (which binds to all interfaces)
+    if ip_str == "0.0.0.0":  # noqa: S104
+        return True
+
+    try:
+        # Convert string to IP address object
+        ip = ip_address(ip_str)
+
+        # Check if it's a loopback address (127.0.0.0/8 for IPv4, ::1 for IPv6)
+        return bool(ip.is_loopback)
+    except ValueError:
+        # If the IP address is invalid, default to False
+        return False
+
+
+def get_client_ip(request: Request) -> str:
+    """Extract the client IP address from a FastAPI request.
+
+    Args:
+        request: FastAPI Request object
+
+    Returns:
+        str: The client's IP address
+    """
+    # Check for X-Forwarded-For header (common when behind proxies)
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # The client IP is the first one in the list
+        return forwarded_for.split(",")[0].strip()
+
+    # If no proxy headers, use the client's direct IP
+    if request.client:
+        return request.client.host
+
+    # Fallback if we can't determine the IP - use a non-local IP
+    return "255.255.255.255"  # Non-routable IP that will never be local
+
+
 @router.post("/{project_id}/install")
 async def install_mcp_config(
     project_id: UUID,
     body: MCPInstallRequest,
+    request: Request,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """Install MCP server configuration for Cursor or Claude."""
+    # Check if the request is coming from a local IP address
+    client_ip = get_client_ip(request)
+    if not is_local_ip(client_ip):
+        raise HTTPException(status_code=500, detail="MCP configuration can only be installed from a local connection")
+
     try:
         # Verify project exists and user has access
         async with session_scope() as session:

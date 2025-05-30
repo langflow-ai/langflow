@@ -23,12 +23,24 @@ export const usePatchInstallMCP: useMutationFunctionType<
 > = (params, options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  async function patchInstallMCP(body: PatchInstallMCPBody): Promise<any> {
-    const res = await api.post(
-      `${getURL("MCP")}/${params.project_id}/install`,
-      body,
-    );
-    return res.data.message;
+  async function patchInstallMCP(
+    body: PatchInstallMCPBody,
+  ): Promise<PatchInstallMCPResponse> {
+    try {
+      const res = await api.post(
+        `${getURL("MCP")}/${params.project_id}/install`,
+        body,
+      );
+
+      return { message: res.data?.message || "MCP installed successfully" };
+    } catch (error: any) {
+      // Transform the error to include a message that can be handled by the UI
+      const errorMessage =
+        error.response?.data?.detail ||
+        error.message ||
+        "Failed to install MCP";
+      throw new Error(errorMessage);
+    }
   }
 
   const mutation: UseMutationResult<
