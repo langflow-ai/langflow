@@ -164,11 +164,14 @@ test(
     //---------------------------------- OPENAI
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
-    await page.waitForSelector('[data-testid="modelsOpenAI"]', {
-      timeout: 2000,
-    });
+    await page.waitForSelector(
+      '[data-testid="languagemodels_openai_draggable"]',
+      {
+        timeout: 2000,
+      },
+    );
     await page
-      .getByTestId("modelsOpenAI")
+      .getByTestId("languagemodelsOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 300 },
       });
@@ -310,6 +313,7 @@ test(
       .fill("You're Sad! 🥲");
     await page.getByTestId("showignored_message").last().click();
     await page.getByText("Close").last().click();
+
     await page
       .getByTestId("handle-conditionalrouter-shownode-true-right")
       .nth(0)
@@ -318,6 +322,12 @@ test(
       .getByTestId("handle-pass-shownode-ignored message-left")
       .nth(1)
       .click();
+
+    await page.getByTestId("dropdown-output-conditionalrouter").click();
+    await page
+      .getByTestId("dropdown-item-output-conditionalrouter-false")
+      .click();
+
     await page
       .getByTestId("handle-conditionalrouter-shownode-false-right")
       .nth(0)

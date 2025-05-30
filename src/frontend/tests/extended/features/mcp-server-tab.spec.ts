@@ -64,7 +64,7 @@ test(
         expect(cellsCount).toBeGreaterThan(0);
 
         await page.getByRole("gridcell").first().click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(1000);
 
         const isChecked = await page
           .locator('input[data-ref="eInput"]')
@@ -73,7 +73,7 @@ test(
 
         if (!isChecked) {
           await page.locator('input[data-ref="eInput"]').first().click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(1000);
         }
         const isCheckedAgain = await page
           .locator('input[data-ref="eInput"]')
@@ -82,7 +82,7 @@ test(
 
         if (isCheckedAgain) {
           await page.locator('input[data-ref="eInput"]').first().click();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(1000);
         }
 
         const isCheckedAgainAgain = await page
@@ -93,35 +93,54 @@ test(
         expect(isCheckedAgainAgain).toBeFalsy();
 
         // Select first action
-        await page
+        let element = page.locator('input[data-ref="eInput"]').last();
+        let elementText = await element.getAttribute("id");
+
+        await element.scrollIntoViewIfNeeded();
+
+        let count = 0;
+
+        while (
+          elementText !==
+            (await page
+              .locator('input[data-ref="eInput"]')
+              .last()
+              .getAttribute("id")) &&
+          count < 20
+        ) {
+          element = page.locator('input[data-ref="eInput"]').last();
+          elementText = await element.getAttribute("id");
+          await element.scrollIntoViewIfNeeded();
+          await page.waitForTimeout(500);
+        }
+
+        await page.locator('input[data-ref="eInput"]').last().click();
+
+        await page.waitForTimeout(1000);
+
+        const isLastChecked = await page
           .locator('input[data-ref="eInput"]')
-          .nth(rowsCount + 1)
-          .click();
-        await page.waitForTimeout(500);
+          .last()
+          .isChecked();
+
+        expect(isLastChecked).toBeTruthy();
 
         await page
           .getByRole("gridcell")
           .nth(cellsCount - 1)
           .click();
-        await page.waitForTimeout(500);
-
-        const isLastChecked = await page
-          .locator('input[data-ref="eInput"]')
-          .nth(rowsCount + 1)
-          .isChecked();
-
-        expect(isLastChecked).toBeTruthy();
+        await page.waitForTimeout(1000);
 
         expect(
           await page.locator('[data-testid="input_update_name"]').isVisible(),
         ).toBe(true);
 
         await page.getByTestId("input_update_name").fill("mcp test name");
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(2000);
 
         // Close the modal
         await page.getByText("Close").last().click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(2000);
 
         // Verify the selected action is visible in the tab
         await expect(page.getByTestId("div-mcp-server-tools")).toBeVisible();
@@ -167,12 +186,12 @@ test(
         await page.getByTestId("sidebar-search-input").click();
         await page.getByTestId("sidebar-search-input").fill("mcp connection");
 
-        await page.waitForSelector('[data-testid="toolsMCP Connection"]', {
+        await page.waitForSelector('[data-testid="dataMCP Connection"]', {
           timeout: 30000,
         });
 
         await page
-          .getByTestId("toolsMCP Connection")
+          .getByTestId("dataMCP Connection")
           .dragTo(page.locator('//*[@id="react-flow-id"]'), {
             targetPosition: { x: 0, y: 0 },
           });
@@ -224,8 +243,9 @@ test(
         }
 
         // Verify tools are available
+        await page.waitForTimeout(3000);
         await page.getByTestId("dropdown_str_tool").click();
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(3000);
 
         const fetchOptionCount = await page.getByText("mcp_test_name").count();
         expect(fetchOptionCount).toBeGreaterThan(0);
