@@ -146,7 +146,7 @@ test(
     await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
 
     await page
-      .getByTestId("output-inspection-results-urlcomponent")
+      .getByTestId("output-inspection-result-urlcomponent")
       .nth(0)
       .click();
 
@@ -176,7 +176,7 @@ test(
       timeout: 30000 * 3,
     });
     await page.waitForTimeout(600);
-    await page.getByTestId("output-inspection-results-urlcomponent").click();
+    await page.getByTestId("output-inspection-result-urlcomponent").click();
     await page.getByText(`Inspect the output of the component below.`, {
       exact: true,
     });
