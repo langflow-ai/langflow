@@ -892,7 +892,7 @@ export function getOS() {
 
   let os: string | null = null;
 
-  if (platform.includes("mac")) {
+  if (platform.includes("mac") || platform.includes("darwin")) {
     os = "macos";
   } else if (platform.includes("win")) {
     os = "windows";
