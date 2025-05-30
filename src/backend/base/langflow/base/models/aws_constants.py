@@ -13,12 +13,8 @@ AWS_MODELS_DETAILED = [
         provider="Amazon Bedrock", name="amazon.titan-text-premier-v1:0", icon="Amazon", tool_calling=True
     ),
     # Anthropic Models
-    create_model_metadata(
-        provider="Amazon Bedrock", name="anthropic.claude-v2", icon="Amazon", tool_calling=True
-    ),
-    create_model_metadata(
-        provider="Amazon Bedrock", name="anthropic.claude-v2:1", icon="Amazon", tool_calling=True
-    ),
+    create_model_metadata(provider="Amazon Bedrock", name="anthropic.claude-v2", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="anthropic.claude-v2:1", icon="Amazon", tool_calling=True),
     create_model_metadata(
         provider="Amazon Bedrock", name="anthropic.claude-3-sonnet-20240229-v1:0", icon="Amazon", tool_calling=True
     ),
@@ -41,41 +37,25 @@ AWS_MODELS_DETAILED = [
         provider="Amazon Bedrock", name="anthropic.claude-instant-v1", icon="Amazon", tool_calling=True
     ),
     # AI21 Labs Models
-    create_model_metadata(
-        provider="Amazon Bedrock", name="ai21.jamba-instruct-v1:0", icon="Amazon", tool_calling=True
-    ),
-    create_model_metadata(
-        provider="Amazon Bedrock", name="ai21.j2-mid-v1", icon="Amazon", tool_calling=True
-    ),
-    create_model_metadata(
-        provider="Amazon Bedrock", name="ai21.j2-ultra-v1", icon="Amazon", tool_calling=True
-    ),
+    create_model_metadata(provider="Amazon Bedrock", name="ai21.jamba-instruct-v1:0", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="ai21.j2-mid-v1", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="ai21.j2-ultra-v1", icon="Amazon", tool_calling=True),
     create_model_metadata(
         provider="Amazon Bedrock", name="ai21.jamba-1-5-large-v1:0", icon="Amazon", tool_calling=True
     ),
-    create_model_metadata(
-        provider="Amazon Bedrock", name="ai21.jamba-1-5-mini-v1:0", icon="Amazon", tool_calling=True
-    ),
+    create_model_metadata(provider="Amazon Bedrock", name="ai21.jamba-1-5-mini-v1:0", icon="Amazon", tool_calling=True),
     # Cohere Models
-    create_model_metadata(
-        provider="Amazon Bedrock", name="cohere.command-text-v14", icon="Amazon", tool_calling=True
-    ),
+    create_model_metadata(provider="Amazon Bedrock", name="cohere.command-text-v14", icon="Amazon", tool_calling=True),
     create_model_metadata(
         provider="Amazon Bedrock", name="cohere.command-light-text-v14", icon="Amazon", tool_calling=True
     ),
-    create_model_metadata(
-        provider="Amazon Bedrock", name="cohere.command-r-v1:0", icon="Amazon", tool_calling=True
-    ),
+    create_model_metadata(provider="Amazon Bedrock", name="cohere.command-r-v1:0", icon="Amazon", tool_calling=True),
     create_model_metadata(
         provider="Amazon Bedrock", name="cohere.command-r-plus-v1:0", icon="Amazon", tool_calling=True
     ),
     # Meta Models
-    create_model_metadata(
-        provider="Amazon Bedrock", name="meta.llama2-13b-chat-v1", icon="Amazon", tool_calling=True
-    ),
-    create_model_metadata(
-        provider="Amazon Bedrock", name="meta.llama2-70b-chat-v1", icon="Amazon", tool_calling=True
-    ),
+    create_model_metadata(provider="Amazon Bedrock", name="meta.llama2-13b-chat-v1", icon="Amazon", tool_calling=True),
+    create_model_metadata(provider="Amazon Bedrock", name="meta.llama2-70b-chat-v1", icon="Amazon", tool_calling=True),
     create_model_metadata(
         provider="Amazon Bedrock", name="meta.llama3-8b-instruct-v1:0", icon="Amazon", tool_calling=True
     ),

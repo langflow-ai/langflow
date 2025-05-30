@@ -111,13 +111,9 @@ GROQ_PRODUCTION_MODELS = [
     and not metadata.get("not_supported", False)
 ]
 
-GROQ_PREVIEW_MODELS = [
-    metadata["name"] for metadata in GROQ_MODELS_DETAILED if metadata.get("preview", False)
-]
+GROQ_PREVIEW_MODELS = [metadata["name"] for metadata in GROQ_MODELS_DETAILED if metadata.get("preview", False)]
 
-DEPRECATED_GROQ_MODELS = [
-    metadata["name"] for metadata in GROQ_MODELS_DETAILED if metadata.get("deprecated", False)
-]
+DEPRECATED_GROQ_MODELS = [metadata["name"] for metadata in GROQ_MODELS_DETAILED if metadata.get("deprecated", False)]
 
 UNSUPPORTED_GROQ_MODELS = [
     metadata["name"] for metadata in GROQ_MODELS_DETAILED if metadata.get("not_supported", False)

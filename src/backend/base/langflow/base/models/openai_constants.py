@@ -8,9 +8,7 @@ OPENAI_MODELS_DETAILED = [
     create_model_metadata(provider="OpenAI", name="gpt-4.1", icon="OpenAI", tool_calling=True),
     create_model_metadata(provider="OpenAI", name="gpt-4.1-mini", icon="OpenAI", tool_calling=True),
     create_model_metadata(provider="OpenAI", name="gpt-4.1-nano", icon="OpenAI", tool_calling=True),
-    create_model_metadata(
-        provider="OpenAI", name="gpt-4.5-preview", icon="OpenAI", tool_calling=True, preview=True
-    ),
+    create_model_metadata(provider="OpenAI", name="gpt-4.5-preview", icon="OpenAI", tool_calling=True, preview=True),
     create_model_metadata(provider="OpenAI", name="gpt-4-turbo", icon="OpenAI", tool_calling=True),
     create_model_metadata(
         provider="OpenAI", name="gpt-4-turbo-preview", icon="OpenAI", tool_calling=True, preview=True
@@ -47,12 +45,8 @@ OPENAI_MODELS_DETAILED = [
     create_model_metadata(
         provider="OpenAI", name="gpt-4o-mini-realtime-preview", icon="OpenAI", not_supported=True, preview=True
     ),
-    create_model_metadata(
-        provider="OpenAI", name="o3-mini", icon="OpenAI", reasoning=True, not_supported=True
-    ),
-    create_model_metadata(
-        provider="OpenAI", name="o1-mini", icon="OpenAI", reasoning=True, not_supported=True
-    ),
+    create_model_metadata(provider="OpenAI", name="o3-mini", icon="OpenAI", reasoning=True, not_supported=True),
+    create_model_metadata(provider="OpenAI", name="o1-mini", icon="OpenAI", reasoning=True, not_supported=True),
 ]
 
 OPENAI_MODEL_NAMES = [
@@ -75,9 +69,7 @@ OPENAI_SEARCH_MODEL_NAMES = [
     if metadata.get("search", False) and not metadata.get("not_supported", False)
 ]
 
-NOT_SUPPORTED_MODELS = [
-    metadata["name"] for metadata in OPENAI_MODELS_DETAILED if metadata.get("not_supported", False)
-]
+NOT_SUPPORTED_MODELS = [metadata["name"] for metadata in OPENAI_MODELS_DETAILED if metadata.get("not_supported", False)]
 
 OPENAI_EMBEDDING_MODEL_NAMES = [
     "text-embedding-3-small",
