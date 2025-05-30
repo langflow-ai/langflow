@@ -889,7 +889,6 @@ export function getOS() {
   const platform = (
     window.navigator?.userAgentData?.platform || window.navigator.platform
   ).toLowerCase();
-  console.log(platform);
 
   let os: string | null = null;
 
