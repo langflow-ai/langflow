@@ -294,4 +294,4 @@ class URLComponent(Component):
     def as_message(self) -> Message:
         """Convert the documents to a Message."""
         url_contents = self.fetch_url_contents()
-        return Message(text = "\n\n".join([x["text"] for x in url_contents]), data = {"data": url_contents})
+        return Message(text="\n\n".join([x["text"] for x in url_contents]), data={"data": url_contents})
