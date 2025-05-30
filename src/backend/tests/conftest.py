@@ -647,7 +647,7 @@ async def get_simple_api_test(client, logged_in_headers, json_simple_api_test):
     # Just create a new flow with the simple api test
     flow = orjson.loads(json_simple_api_test)
     data = flow["data"]
-    flow = FlowCreate(name="Simple API Test", data=data, description="Simple API Test")
+    flow = FlowCreate(name="Simple API Test", data=data, description="Simple API Test", endpoint_name="simple_api_test")
     response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     yield response.json()
