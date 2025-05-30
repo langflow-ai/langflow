@@ -304,6 +304,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     isUserChange: boolean = true,
     callback?: () => void,
   ) => {
+    if (!get().nodes.find((node) => node.id === id)) {
+      throw new Error("Node not found");
+    }
+
     let newChange =
       typeof change === "function"
         ? change(get().nodes.find((node) => node.id === id)!)
