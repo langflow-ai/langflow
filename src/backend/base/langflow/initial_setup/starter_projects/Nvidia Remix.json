@@ -5155,5 +5155,5 @@
   "is_component": false,
   "last_tested_version": "1.4.2",
   "name": "RTX Remix Template",
-  "tags": []
+  "tags": ["agents"]
 }
