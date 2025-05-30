@@ -128,7 +128,7 @@ test(
 
     // URL -> Loop Data
     await page
-      .getByTestId("handle-urlcomponent-shownode-page results-right")
+      .getByTestId("handle-urlcomponent-shownode-result-right")
       .first()
       .click();
     await page
