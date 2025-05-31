@@ -244,6 +244,7 @@ export const SIDEBAR_BUNDLES = [
     name: "googlecalendar",
     icon: "Googlecalendar",
   },
+  { display_name: "Googlemeet", name: "googlemeet", icon: "Googlemeet" },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
