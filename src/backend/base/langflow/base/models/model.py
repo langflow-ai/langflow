@@ -50,7 +50,7 @@ class LCModelComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Message", name="text_output", method="text_response"),
+        Output(display_name="Model Response", name="text_output", method="text_response"),
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
