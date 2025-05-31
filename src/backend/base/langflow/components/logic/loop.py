@@ -21,8 +21,8 @@ class LoopComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Item", name="item", method="item_output", allows_loop=True),
-        Output(display_name="Done", name="done", method="done_output"),
+        Output(display_name="Item", name="item", method="item_output", allows_loop=True, group_outputs=True),
+        Output(display_name="Done", name="done", method="done_output", group_outputs=True),
     ]
 
     def initialize_data(self) -> None:

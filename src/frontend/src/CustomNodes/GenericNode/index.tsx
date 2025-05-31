@@ -54,13 +54,12 @@ const HiddenOutputsButton = memo(
   }) => (
     <Button
       unstyled
-      className="group flex h-[1.75rem] w-[1.75rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
+      className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
       onClick={onClick}
     >
       <ForwardedIconComponent
         name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        strokeWidth={ICON_STROKE_WIDTH}
-        className="icon-size text-placeholder-foreground group-hover:text-foreground"
+        className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
       />
     </Button>
   ),
@@ -219,7 +218,6 @@ function GenericNode({
   const update = useShortcutsStore((state) => state.update);
   useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault: true });
 
-  // Memoized values
   const isToolMode = useMemo(
     () =>
       data.node?.outputs?.some(
@@ -261,35 +259,47 @@ function GenericNode({
   }, [data.node?.outputs]);
 
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
-    null,
+    () => data.node?.outputs?.find((output) => output.selected) || null,
   );
 
   const handleSelectOutput = useCallback(
     (output) => {
       setSelectedOutput(output);
-      // Remove any edges connected to this output handle
-      const sourceHandleId = scapedJSONStringfy({
-        output_types: [output.selected ?? output.types[0]],
-        id: data.id,
-        dataType: data.type,
-        name: output.name,
-      });
 
-      setEdges((eds) =>
-        eds.filter((edge) => edge.sourceHandle !== sourceHandleId),
-      );
+      setEdges((eds) => {
+        return eds.map((edge) => {
+          if (edge.source === data.id && edge.data?.sourceHandle) {
+            const sourceHandle = edge.data.sourceHandle;
+            if (sourceHandle.name === output.name) {
+              const newSourceHandle = {
+                ...sourceHandle,
+                output_types: [output.selected ?? output.types[0]],
+              };
+              const newSourceHandleId = scapedJSONStringfy(newSourceHandle);
+
+              return {
+                ...edge,
+                sourceHandle: newSourceHandleId,
+                data: {
+                  ...edge.data,
+                  sourceHandle: newSourceHandle,
+                },
+              };
+            }
+          }
+          return edge;
+        });
+      });
 
       setNode(data.id, (oldNode) => {
         const newNode = cloneDeep(oldNode);
         if (newNode.data.node?.outputs) {
-          // First, clear any previous selections
           newNode.data.node.outputs.forEach((out) => {
             if (out.selected) {
               out.selected = undefined;
             }
           });
 
-          // Then set the new selection
           const outputIndex = newNode.data.node.outputs.findIndex(
             (o) => o.name === output.name,
           );
@@ -566,38 +576,32 @@ function GenericNode({
               >
                 {" "}
               </div>
-              {!showHiddenOutputs && shownOutputs && (
+              <MemoizedNodeOutputs
+                outputs={shownOutputs}
+                keyPrefix={"shown"}
+                data={data}
+                types={types}
+                selected={selected ?? false}
+                showNode={showNode}
+                isToolMode={isToolMode}
+                showHiddenOutputs={showHiddenOutputs}
+                selectedOutput={selectedOutput}
+                handleSelectOutput={handleSelectOutput}
+              />
+              {showHiddenOutputs && (
                 <MemoizedNodeOutputs
-                  outputs={showHiddenOutputs ? hiddenOutputs : shownOutputs}
-                  keyPrefix="shown"
+                  outputs={hiddenOutputs}
+                  keyPrefix="hidden"
                   data={data}
                   types={types}
                   selected={selected ?? false}
                   showNode={showNode}
                   isToolMode={isToolMode}
-                  showHiddenOutputs={showHiddenOutputs}
+                  showHiddenOutputs={true}
                   selectedOutput={selectedOutput}
                   handleSelectOutput={handleSelectOutput}
                 />
               )}
-              <div
-                className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
-              >
-                <div className="block">
-                  <MemoizedNodeOutputs
-                    outputs={data.node!.outputs}
-                    keyPrefix="hidden"
-                    data={data}
-                    types={types}
-                    selected={selected ?? false}
-                    showNode={showNode}
-                    isToolMode={isToolMode}
-                    showHiddenOutputs={showHiddenOutputs}
-                    selectedOutput={selectedOutput}
-                    handleSelectOutput={handleSelectOutput}
-                  />
-                </div>
-              </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
                 <ShadTooltip
                   content={
