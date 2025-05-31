@@ -276,6 +276,14 @@ class Message(Data):
             return await asyncio.to_thread(cls, **kwargs)
         return cls(**kwargs)
 
+    def to_data(self, v: Any) -> Data:
+        return Data(data=v.data)
+
+    def to_dataframe(self, v: Any) -> DataFrame:
+        from langflow.schema.dataframe import DataFrame  # Local import to avoid circular import
+
+        return DataFrame(data=[v])
+
 
 class DefaultModel(BaseModel):
     class Config:
