@@ -15,14 +15,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <label className={cn("relative block w-full", className)}>
           <ForwardedIconComponent
             name={icon}
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground"
           />
           <input
             autoComplete="off"
             data-testid=""
             type={type}
             className={cn(
-              "nopan nodelete nodrag noflow form-input border-border bg-background placeholder:text-muted-foreground block w-full appearance-none truncate rounded-md px-3 pl-9 text-left text-sm focus:border-black focus:placeholder-transparent focus:ring-zinc-300 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:border-white dark:focus:ring-zinc-800",
+              "nopan nodelete nodrag noflow form-input block w-full appearance-none truncate rounded-md border-border bg-background px-3 pl-9 text-left text-sm placeholder:text-muted-foreground focus:border-black focus:placeholder-transparent focus:ring-zinc-300 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:border-white dark:focus:ring-zinc-800",
               inputClassName,
             )}
             ref={ref}

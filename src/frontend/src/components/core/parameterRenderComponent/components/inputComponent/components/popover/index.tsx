@@ -56,13 +56,8 @@ const OptionBadge = ({
     className={cn("flex items-center gap-1 truncate", className)}
   >
     <div className="truncate">{option}</div>
-<<<<<<< HEAD
-    <X
-      className="hover:text-destructive h-3 w-3 cursor-pointer bg-transparent"
-=======
     <div
       data-testid="remove-icon-badge"
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
       onClick={(e) =>
         onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
       }
@@ -113,14 +108,14 @@ const SelectionIndicator = ({ isSelected }: { isSelected: boolean }) => (
     <div className="absolute opacity-100 transition-all group-hover:opacity-0">
       <ForwardedIconComponent
         name="Check"
-        className="text-primary mr-2 h-4 w-4"
+        className="mr-2 h-4 w-4 text-primary"
         aria-hidden="true"
       />
     </div>
     <div className="absolute opacity-0 transition-all group-hover:opacity-100">
       <ForwardedIconComponent
         name="X"
-        className="text-status-red mr-2 h-4 w-4"
+        className="mr-2 h-4 w-4 text-status-red"
         aria-hidden="true"
       />
     </div>

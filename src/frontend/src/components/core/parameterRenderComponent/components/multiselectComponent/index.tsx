@@ -145,7 +145,7 @@ export default function MultiselectComponent({
           setSearchValue(event.target.value);
         }}
         placeholder="Search options..."
-        className="placeholder:text-muted-foreground flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
       />
       <Button
         unstyled
@@ -170,7 +170,7 @@ export default function MultiselectComponent({
               <CommandItem
                 value={option}
                 onSelect={handleOptionSelect}
-                className="items-center truncate overflow-hidden"
+                className="items-center overflow-hidden truncate"
                 data-testid={`${option}-${id ?? ""}-option`}
               >
                 {(customValues.includes(option) || searchValue === option) && (
@@ -180,7 +180,7 @@ export default function MultiselectComponent({
                 <ForwardedIconComponent
                   name="Check"
                   className={cn(
-                    "text-primary ml-auto h-4 w-4 shrink-0",
+                    "ml-auto h-4 w-4 shrink-0 text-primary",
                     treatedValue.includes(option) ? "opacity-100" : "opacity-0",
                   )}
                 />

@@ -14,35 +14,6 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
   const handleFileDrop = useFileDrop(undefined);
 
   return (
-<<<<<<< HEAD
-    <div className="bg-secondary m-0 h-full w-full p-0">
-      <div className="text-container">
-        <div className="relative z-20 flex w-full flex-col items-center justify-center gap-2">
-          <LangflowLogo className="h-7 w-8" />
-          <h3
-            className="font-chivo text-foreground pt-5 text-2xl font-semibold"
-            data-testid="mainpage_title"
-          >
-            {folders?.length > 1 ? "Empty folder" : "Start building"}
-          </h3>
-          <p className="text-secondary-foreground pb-5 text-sm">
-            Begin with a template, or start from scratch.
-          </p>
-          <Button
-            variant="default"
-            onClick={() => setOpenModal(true)}
-            id="new-project-btn"
-          >
-            <ForwardedIconComponent
-              name="Plus"
-              aria-hidden="true"
-              className="h-4 w-4"
-            />
-            <span className="hidden font-semibold whitespace-nowrap md:inline">
-              New Flow
-            </span>
-          </Button>
-=======
     <CardsWrapComponent
       dragMessage={`Drop your flows or components here`}
       onFileDrop={handleFileDrop}
@@ -114,7 +85,6 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
             <div className="g5" />
             <div className="g6" />
           </div>
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
         </div>
       </div>
     </CardsWrapComponent>

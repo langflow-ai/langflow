@@ -14,20 +14,18 @@ export default function SingleAlert({
 
   return type === "error" ? (
     <div
-      className="bg-error-background mx-2 mb-2 flex rounded-md p-3"
+      className="mx-2 mb-2 flex rounded-md bg-error-background p-3"
       key={dropItem.id}
     >
       <div className="flex-shrink-0">
-
         <IconComponent name="XCircle" className="h-5 w-5 text-status-red" />
-
       </div>
       <div className="ml-3">
-        <h3 className="text-error-foreground word-break-break-word text-sm font-medium">
+        <h3 className="text-sm font-medium text-error-foreground word-break-break-word">
           {dropItem.title}
         </h3>
         {dropItem.list ? (
-          <div className="text-error-foreground mt-2 text-sm">
+          <div className="mt-2 text-sm text-error-foreground">
             <ul className="list-disc space-y-1 pl-5 align-top">
               {dropItem.list.map((item, idx) => (
                 <li className="word-break-break-word" key={idx}>
@@ -75,35 +73,32 @@ export default function SingleAlert({
                 removeAlert(dropItem.id);
               }, 500);
             }}
-            className="text-status-red inline-flex rounded-md p-1.5"
+            className="inline-flex rounded-md p-1.5 text-status-red"
           >
             <span className="sr-only">Dismiss</span>
 
             <IconComponent name="X" className="h-4 w-4 text-error-foreground" />
-
           </button>
         </div>
       </div>
     </div>
   ) : type === "notice" ? (
     <div
-      className="bg-info-background mx-2 mb-2 flex rounded-md p-3"
+      className="mx-2 mb-2 flex rounded-md bg-info-background p-3"
       key={dropItem.id}
     >
       <div className="flex-shrink-0 cursor-help">
-
         <IconComponent name="Info" className="h-5 w-5 text-status-blue" />
-
       </div>
       <div className="ml-3 flex-1 md:flex md:justify-between">
-        <p className="text-info-foreground text-sm font-medium">
+        <p className="text-sm font-medium text-info-foreground">
           {dropItem.title}
         </p>
-        <p className="mt-3 text-sm md:mt-0 md:ml-6">
+        <p className="mt-3 text-sm md:ml-6 md:mt-0">
           {dropItem.link ? (
             <CustomLink
               to={dropItem.link}
-              className="text-info-foreground hover:text-accent-foreground font-medium whitespace-nowrap"
+              className="whitespace-nowrap font-medium text-info-foreground hover:text-accent-foreground"
             >
               Details
             </CustomLink>
@@ -122,31 +117,28 @@ export default function SingleAlert({
                 removeAlert(dropItem.id);
               }, 500);
             }}
-            className="text-info-foreground inline-flex rounded-md p-1.5"
+            className="inline-flex rounded-md p-1.5 text-info-foreground"
           >
             <span className="sr-only">Dismiss</span>
 
             <IconComponent name="X" className="h-4 w-4 text-info-foreground" />
-
           </button>
         </div>
       </div>
     </div>
   ) : (
     <div
-      className="bg-success-background mx-2 mb-2 flex rounded-md p-3"
+      className="mx-2 mb-2 flex rounded-md bg-success-background p-3"
       key={dropItem.id}
     >
       <div className="flex-shrink-0">
         <IconComponent
           name="CheckCircle2"
-
           className="h-5 w-5 text-status-green"
-
         />
       </div>
       <div className="ml-3">
-        <p className="text-success-foreground text-sm font-medium">
+        <p className="text-sm font-medium text-success-foreground">
           {dropItem.title}
         </p>
       </div>
@@ -160,14 +152,12 @@ export default function SingleAlert({
                 removeAlert(dropItem.id);
               }, 500);
             }}
-            className="text-status-green inline-flex rounded-md p-1.5"
+            className="inline-flex rounded-md p-1.5 text-status-green"
           >
             <span className="sr-only">Dismiss</span>
             <IconComponent
               name="X"
-
               className="h-4 w-4 text-success-foreground"
-
             />
           </button>
         </div>

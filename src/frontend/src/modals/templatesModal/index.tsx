@@ -80,7 +80,7 @@ export default function TemplatesModal({
                 <div className="flex w-full flex-col justify-between gap-4 pb-4 sm:flex-row sm:items-center">
                   <div className="flex flex-col items-start justify-center">
                     <div className="font-semibold">Start from scratch</div>
-                    <div className="text-muted-foreground text-sm">
+                    <div className="text-sm text-muted-foreground">
                       Begin with a fresh flow to build from scratch.
                     </div>
                   </div>

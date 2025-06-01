@@ -169,7 +169,7 @@ export default function StorePage(): JSX.Element {
           data-testid="api-key-button-store"
           disabled={loading}
           className={cn(
-            `${!validApiKey ? "border-error animate-pulse" : ""}`,
+            `${!validApiKey ? "animate-pulse border-error" : ""}`,
             loading ? "cursor-not-allowed" : "",
           )}
           variant="primary"
@@ -199,7 +199,7 @@ export default function StorePage(): JSX.Element {
                 setSearchNow(uniqueId());
               }}
             />
-            <div className="border-border ml-4 flex w-full gap-2 border-b">
+            <div className="ml-4 flex w-full gap-2 border-b border-border">
               <button
                 data-testid="all-button-store"
                 disabled={loading}
@@ -208,8 +208,8 @@ export default function StorePage(): JSX.Element {
                 }}
                 className={
                   (tabActive === "All"
-                    ? "border-primary border-b-2 p-3"
-                    : "text-muted-foreground hover:text-primary border-b-2 border-transparent p-3") +
+                    ? "border-b-2 border-primary p-3"
+                    : "border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
                   (loading ? " cursor-not-allowed" : "")
                 }
               >
@@ -224,8 +224,8 @@ export default function StorePage(): JSX.Element {
                 }}
                 className={
                   (tabActive === "Flows"
-                    ? "border-primary border-b-2 p-3"
-                    : "text-muted-foreground hover:text-primary border-b-2 border-transparent p-3") +
+                    ? "border-b-2 border-primary p-3"
+                    : "border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
                   (loading ? " cursor-not-allowed" : "")
                 }
               >
@@ -240,15 +240,15 @@ export default function StorePage(): JSX.Element {
                 }}
                 className={
                   (tabActive === "Components"
-                    ? "border-primary border-b-2 p-3"
-                    : "text-muted-foreground hover:text-primary border-b-2 border-transparent p-3") +
+                    ? "border-b-2 border-primary p-3"
+                    : "border-b-2 border-transparent p-3 text-muted-foreground hover:text-primary") +
                   (loading ? " cursor-not-allowed" : "")
                 }
               >
                 Components
               </button>
               <ShadTooltip content="Coming Soon">
-                <button className="text-muted-foreground cursor-not-allowed p-3">
+                <button className="cursor-not-allowed p-3 text-muted-foreground">
                   Bundles
                 </button>
               </ShadTooltip>
@@ -295,7 +295,7 @@ export default function StorePage(): JSX.Element {
                 key="id"
                 variant="outline"
                 size="sq"
-                className="bg-beta-foreground text-background hover:bg-beta-foreground gap-2"
+                className="gap-2 bg-beta-foreground text-background hover:bg-beta-foreground"
               >
                 <CustomLink to={"/store"} className="cursor-pointer">
                   <IconComponent name="X" className="h-4 w-4" />
@@ -305,7 +305,7 @@ export default function StorePage(): JSX.Element {
             )}
           </div>
           <div className="flex items-end justify-between">
-            <span className="text-muted-foreground px-0.5 text-sm">
+            <span className="px-0.5 text-sm text-muted-foreground">
               {(!loading || searchData.length !== 0) && (
                 <>
                   {totalRowsCount} {totalRowsCount !== 1 ? "results" : "result"}

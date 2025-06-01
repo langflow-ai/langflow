@@ -54,7 +54,7 @@ export default function TableNodeCellRender({
 
   return (
     parameter && (
-      <div className="group custom-scroll mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto px-1 py-2.5">
+      <div className="group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto px-1 py-2.5 custom-scroll">
         <ParameterRenderComponent
           nodeId={nodeId}
           handleOnNewValue={handleOnNewValue}

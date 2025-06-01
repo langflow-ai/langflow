@@ -11,14 +11,14 @@ const StatusMessage = ({ children, className = "text-foreground" }) => (
 );
 
 const TimeStamp = ({ prefix, time }) => (
-  <div className="text-secondary-foreground flex items-center text-sm">
+  <div className="flex items-center text-sm text-secondary-foreground">
     <div>{prefix}</div>
-    <div className="text-secondary-foreground ml-1">{time}</div>
+    <div className="ml-1 text-secondary-foreground">{time}</div>
   </div>
 );
 
 const Duration = ({ duration }) => (
-  <div className="text-secondary-foreground flex items-center">
+  <div className="flex items-center text-secondary-foreground">
     <div>Duration:</div>
     <div className="ml-1">{duration}</div>
   </div>
@@ -32,7 +32,7 @@ const ValidationDetails = ({
   <div className="max-h-100 px-1 py-2.5">
     <div className="flex max-h-80 flex-col gap-2 overflow-auto">
       {validationString && (
-        <div className="text-foreground text-sm">{validationString}</div>
+        <div className="text-sm text-foreground">{validationString}</div>
       )}
       {lastRunTime && (
         <TimeStamp prefix={RUN_TIMESTAMP_PREFIX} time={lastRunTime} />

@@ -54,7 +54,7 @@ export default function FolderAccordionComponent({
             {options!.map((option, index) => (
               <div
                 key={index}
-                className="hover:bg-muted-foreground/10 flex cursor-pointer px-2 py-1"
+                className="flex cursor-pointer px-2 py-1 hover:bg-muted-foreground/10"
               >
                 <IconComponent
                   name={option.icon}

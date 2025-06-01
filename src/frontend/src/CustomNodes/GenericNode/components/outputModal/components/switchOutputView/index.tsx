@@ -119,7 +119,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
           <Alert variant={"default"} className="w-fit">
             <ForwardedIconComponent
               name="AlertCircle"
-              className="text-primary h-5 w-5"
+              className="h-5 w-5 text-primary"
             />
             <AlertTitle>{"Streaming is not supported"}</AlertTitle>
             <AlertDescription>

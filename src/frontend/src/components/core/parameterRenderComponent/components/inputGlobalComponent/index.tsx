@@ -108,7 +108,7 @@ export default function InputGlobalComponent({
           <CommandItem value="doNotFilter-addNewVariable">
             <ForwardedIconComponent
               name="Plus"
-              className={cn("text-primary mr-2 h-4 w-4")}
+              className={cn("mr-2 h-4 w-4 text-primary")}
               aria-hidden="true"
             />
             <span>Add New Variable</span>
@@ -116,37 +116,10 @@ export default function InputGlobalComponent({
         </GlobalVariableModal>
       }
       optionButton={(option) => (
-<<<<<<< HEAD
-        <DeleteConfirmationModal
-          onConfirm={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            handleDelete(option);
-          }}
-          description={'variable "' + option + '"'}
-          asChild
-        >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-            className="pr-1"
-          >
-            <ForwardedIconComponent
-              name="Trash2"
-              className={cn(
-                "text-primary hover:text-status-red h-4 w-4 opacity-0 group-hover:opacity-100",
-              )}
-              aria-hidden="true"
-            />
-          </button>
-        </DeleteConfirmationModal>
-=======
         <GeneralDeleteConfirmationModal
           option={option}
           onConfirmDelete={() => handleDelete(option)}
         />
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
       )}
       selectedOption={load_from_db && valueExists ? value : ""}
       setSelectedOption={(value) => {

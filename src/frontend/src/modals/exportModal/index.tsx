@@ -79,7 +79,7 @@ const ExportModal = forwardRef(
           <span className="pr-2">Export</span>
           <IconComponent
             name="Download"
-            className="text-foreground h-6 w-6 pl-1"
+            className="h-6 w-6 pl-1 text-foreground"
             aria-hidden="true"
           />
         </BaseModal.Header>
@@ -102,7 +102,7 @@ const ExportModal = forwardRef(
               {SAVE_WITH_API_CHECKBOX}
             </label>
           </div>
-          <span className="text-destructive mt-1 text-xs">
+          <span className="mt-1 text-xs text-destructive">
             {ALERT_SAVE_WITH_API}
           </span>
         </BaseModal.Content>

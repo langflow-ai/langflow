@@ -17,7 +17,7 @@ export default function ToolbarSelectItem({
         name={icon}
         className={`mr-2 ${
           icon === "Share3"
-            ? "absolute top-[0.25em] left-2 h-6 w-6"
+            ? "absolute left-2 top-[0.25em] h-6 w-6"
             : "mt-[0.15em] h-4 w-4"
         } ${ping && "animate-pulse text-green-500"}`}
       />
@@ -25,7 +25,7 @@ export default function ToolbarSelectItem({
         {value}
       </span>
       <span
-        className={`bg-muted text-muted-foreground absolute top-[0.43em] right-2 flex items-center rounded-sm px-1.5 py-[0.1em]`}
+        className={`absolute right-2 top-[0.43em] flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-muted-foreground`}
       >
         <RenderIcons filteredShortcut={fixedShortcut} />
       </span>

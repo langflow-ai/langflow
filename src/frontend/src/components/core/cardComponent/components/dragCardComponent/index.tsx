@@ -10,7 +10,7 @@ export default function DragCardComponent({ data }: { data: FlowType }) {
         draggable
         //TODO check color schema
         className={cn(
-          "group hover:bg-muted/50 relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-md hover:dark:bg-[#ffffff10]",
+          "group relative flex flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
         )}
       >
         <div>
@@ -21,8 +21,8 @@ export default function DragCardComponent({ data }: { data: FlowType }) {
                   className={cn(
                     "visible flex-shrink-0",
                     data.is_component
-                      ? "text-component-icon mx-0.5 h-6 w-6"
-                      : "text-flow-icon h-7 w-7 flex-shrink-0",
+                      ? "mx-0.5 h-6 w-6 text-component-icon"
+                      : "h-7 w-7 flex-shrink-0 text-flow-icon",
                   )}
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />

@@ -143,7 +143,7 @@ export default function TextAreaComponent({
         dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
         name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
         className={cn(
-          "bg-background cursor-pointer",
+          "cursor-pointer bg-background",
           externalLinkIconClasses.icon,
           editNode
             ? externalLinkIconClasses.editNodeTop

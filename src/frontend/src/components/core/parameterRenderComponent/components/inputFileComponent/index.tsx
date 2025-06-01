@@ -199,45 +199,6 @@ export default function InputFileComponent({
     <div className="w-full">
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-2.5">
-<<<<<<< HEAD
-          <div className="relative flex w-full">
-            <div className="w-full">
-              <input
-                data-testid="input-file-component"
-                type="text"
-                className={cn(
-                  "primary-input focus:border-border h-9 w-full cursor-pointer rounded-r-none text-sm focus:ring-0 focus:outline-none",
-                  !value && "text-placeholder-foreground",
-                  editNode && "h-6",
-                )}
-                value={value || "Upload a file..."}
-                readOnly
-                disabled={isDisabled}
-                onClick={handleButtonClick}
-              />
-            </div>
-            <div>
-              <Button
-                className={cn(
-                  "h-9 w-9 rounded-l-none",
-                  value &&
-                    "bg-accent-emerald-foreground ring-accent-emerald-foreground hover:bg-accent-emerald-foreground",
-                  isDisabled &&
-                    "ring-border hover:ring-border relative top-[1px] h-9 ring-1 ring-offset-0",
-                  editNode && "h-6",
-                )}
-                onClick={handleButtonClick}
-                disabled={isDisabled}
-                size="icon"
-                data-testid="button_upload_file"
-              >
-                <IconComponent
-                  name={value ? "CircleCheckBig" : "Upload"}
-                  className={cn(
-                    value && "text-background",
-                    isDisabled && "text-muted-foreground",
-                    "h-4 w-4",
-=======
           {ENABLE_FILE_MANAGEMENT && !tempFile ? (
             files && (
               <div className="relative flex w-full flex-col gap-2">
@@ -311,7 +272,6 @@ export default function InputFileComponent({
                         )}
                       </Button>
                     </div>
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
                   )}
                 </FileManagerModal>
               </div>
@@ -348,7 +308,7 @@ export default function InputFileComponent({
                   size="icon"
                   data-testid="button_upload_file"
                 >
-                  <IconComponent
+                  <ForwardedIconComponent
                     name={value ? "CircleCheckBig" : "Upload"}
                     className={cn(
                       value && "text-background",

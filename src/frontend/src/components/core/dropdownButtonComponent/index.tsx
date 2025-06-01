@@ -27,7 +27,7 @@ export default function DropdownButton({
             id="new-project-btn"
             variant="primary"
             className={
-              "relative" + dropdownOptions ? "pl-[12px]" : "pr-10 pl-[12px]"
+              "relative" + dropdownOptions ? "pl-[12px]" : "pl-[12px] pr-10"
             }
             onClick={(event) => {
               event.stopPropagation();
@@ -42,7 +42,7 @@ export default function DropdownButton({
             {firstButtonName}
             {dropdownOptions && (
               <div
-                className="text-muted-foreground absolute right-2 items-center"
+                className="absolute right-2 items-center text-muted-foreground"
                 onClick={(event) => {
                   event.stopPropagation();
                   event.preventDefault();

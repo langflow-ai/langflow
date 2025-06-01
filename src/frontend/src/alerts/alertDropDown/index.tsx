@@ -43,7 +43,6 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
           }
         }}
       >
-
         <PopoverTrigger asChild>{children}</PopoverTrigger>
         <PopoverContent
           ref={notificationRef}

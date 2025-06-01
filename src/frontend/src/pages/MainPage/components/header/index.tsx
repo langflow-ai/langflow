@@ -71,7 +71,7 @@ const HeaderComponent = ({
       {!isEmptyFolder && (
         <>
           <div className="flex flex-row-reverse pb-8">
-            <div className="dark:border-border w-full border-b" />
+            <div className="w-full border-b dark:border-border" />
             {["components", "flows"].map((type) => (
               <Button
                 key={type}
@@ -81,7 +81,7 @@ const HeaderComponent = ({
                 onClick={() => setFlowType(type as "flows" | "components")}
                 className={`border-b ${
                   flowType === type
-                    ? "border-foreground text-foreground border-b-2"
+                    ? "border-b-2 border-foreground text-foreground"
                     : "border-border text-muted-foreground hover:text-foreground"
                 } px-3 pb-2 text-sm`}
               >
@@ -103,10 +103,10 @@ const HeaderComponent = ({
                 value={debouncedSearch}
                 onChange={handleSearch}
               />
-              <div className="border-muted bg-muted relative mr-2 flex rounded-lg border">
+              <div className="relative mr-2 flex rounded-lg border border-muted bg-muted">
                 {/* Sliding Indicator */}
                 <div
-                  className={`bg-background absolute top-[3px] h-[33px] w-8 transform rounded-lg shadow-md transition-transform duration-300 ${
+                  className={`absolute top-[3px] h-[33px] w-8 transform rounded-lg bg-background shadow-md transition-transform duration-300 ${
                     view === "list"
                       ? "left-[2px] translate-x-0"
                       : "left-[6px] translate-x-full"
@@ -129,7 +129,7 @@ const HeaderComponent = ({
                     <ForwardedIconComponent
                       name={viewType === "list" ? "Menu" : "LayoutGrid"}
                       aria-hidden="true"
-                      className="group-hover:text-foreground h-4 w-4"
+                      className="h-4 w-4 group-hover:text-foreground"
                     />
                   </Button>
                 ))}
@@ -148,7 +148,7 @@ const HeaderComponent = ({
                   aria-hidden="true"
                   className="h-4 w-4"
                 />
-                <span className="hidden font-semibold whitespace-nowrap md:inline">
+                <span className="hidden whitespace-nowrap font-semibold md:inline">
                   New Flow
                 </span>
               </Button>

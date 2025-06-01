@@ -65,10 +65,10 @@ const StoreApiKeyPage = () => {
             Langflow Store
             <ForwardedIconComponent
               name="Store"
-              className="text-primary ml-2 h-5 w-5"
+              className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-muted-foreground">
             Manage access to the Langflow Store.
           </p>
         </div>

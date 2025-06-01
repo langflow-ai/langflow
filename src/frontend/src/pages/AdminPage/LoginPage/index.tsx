@@ -48,10 +48,10 @@ export default function LoginAdminPage() {
   }
 
   return (
-    <div className="bg-muted flex h-full w-full flex-col items-center justify-center">
+    <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
       <div className="flex w-72 flex-col items-center justify-center gap-2">
         <LangflowLogo title="Langflow logo" className="h-10 w-10 scale-[1.5]" />
-        <span className="text-primary mb-6 text-2xl font-semibold">Admin</span>
+        <span className="mb-6 text-2xl font-semibold text-primary">Admin</span>
         <Input
           onChange={({ target: { value } }) => {
             handleInput({ target: { name: "username", value } });

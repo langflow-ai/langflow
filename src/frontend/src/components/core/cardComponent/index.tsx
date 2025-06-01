@@ -92,7 +92,7 @@ export default function CollectionCardComponent({
             "hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
-          isSelectedCard ? "border-selected border" : "",
+          isSelectedCard ? "border border-selected" : "",
         )}
         onClick={onClick}
       >
@@ -104,8 +104,8 @@ export default function CollectionCardComponent({
                   className={cn(
                     "visible flex-shrink-0",
                     data.is_component
-                      ? "text-component-icon mx-0.5 h-6 w-6"
-                      : "text-flow-icon h-7 w-7 flex-shrink-0",
+                      ? "mx-0.5 h-6 w-6 text-component-icon"
+                      : "h-7 w-7 flex-shrink-0 text-flow-icon",
                   )}
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />
@@ -130,7 +130,7 @@ export default function CollectionCardComponent({
                             aria-label="checkbox-component"
                             checked={field.value}
                             onCheckedChange={field.onChange}
-                            className="border-ring data-[state=checked]:border-selected data-[state=checked]:bg-selected h-5 w-5 border"
+                            className="h-5 w-5 border border-ring data-[state=checked]:border-selected data-[state=checked]:bg-selected"
                           />
                         </FormControl>
                       )}
@@ -142,7 +142,7 @@ export default function CollectionCardComponent({
             <div className="flex gap-2">
               <div className="flex w-full flex-1 flex-wrap gap-2"></div>
             </div>
-            <CardDescription className="pt-2 pb-2">
+            <CardDescription className="pb-2 pt-2">
               <div className="truncate-doubleline">{data.description}</div>
             </CardDescription>
           </CardHeader>

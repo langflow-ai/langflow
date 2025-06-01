@@ -71,7 +71,7 @@ const StoreApiKeyFormComponent = ({
                   </Form.Message>
                 </Form.Field>
               </div>
-              <span className="text-muted-foreground pr-1 text-xs">
+              <span className="pr-1 text-xs text-muted-foreground">
                 {CREATE_API_KEY}{" "}
                 <a
                   className="text-high-indigo underline"

@@ -32,7 +32,7 @@ export default function TableOptions({
               <Button data-testid="add-row-button" unstyled onClick={addRow}>
                 <IconComponent
                   name="Plus"
-                  className={cn("text-primary h-5 w-5 transition-all")}
+                  className={cn("h-5 w-5 text-primary transition-all")}
                 />
               </Button>
             </ShadTooltip>
@@ -61,7 +61,7 @@ export default function TableOptions({
                     "h-5 w-5 transition-all",
                     hasSelection
                       ? "text-primary"
-                      : "text-placeholder-foreground cursor-not-allowed",
+                      : "cursor-not-allowed text-placeholder-foreground",
                   )}
                 />
               </Button>
@@ -90,7 +90,7 @@ export default function TableOptions({
                   className={cn(
                     "h-5 w-5 transition-all",
                     !hasSelection
-                      ? "text-placeholder-foreground cursor-not-allowed"
+                      ? "cursor-not-allowed text-placeholder-foreground"
                       : "text-primary hover:text-status-red",
                   )}
                 />
@@ -114,7 +114,7 @@ export default function TableOptions({
                 className={cn(
                   "h-5 w-5 transition-all",
                   !stateChange
-                    ? "text-placeholder-foreground cursor-not-allowed"
+                    ? "cursor-not-allowed text-placeholder-foreground"
                     : "text-primary",
                 )}
               />

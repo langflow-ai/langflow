@@ -31,10 +31,10 @@ export default function SimplifiedCodeTabComponent({
 
   return (
     <div
-      className="dark mt-2 flex w-full flex-col overflow-hidden rounded-md text-left"
+      className="mt-2 flex w-full flex-col overflow-hidden rounded-md text-left dark"
       data-testid="chat-code-tab"
     >
-      <div className="border-border bg-muted flex w-full items-center justify-between rounded-t-md border border-b-0 px-4 py-2">
+      <div className="flex w-full items-center justify-between rounded-t-md border border-b-0 border-border bg-muted px-4 py-2">
         <span className="dar text-sm font-semibold text-white">{language}</span>
         <Button
           variant="ghost"
@@ -53,7 +53,7 @@ export default function SimplifiedCodeTabComponent({
       <SyntaxHighlighter
         language={language.toLowerCase()}
         style={tomorrow}
-        className="border-border !custom-scroll !mt-0 h-full w-full overflow-scroll !rounded-t-none !rounded-b-md border text-left"
+        className="!mt-0 h-full w-full overflow-scroll !rounded-b-md !rounded-t-none border border-border text-left !custom-scroll"
       >
         {code}
       </SyntaxHighlighter>

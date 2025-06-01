@@ -16,13 +16,13 @@ export default function DeleteAccountPage() {
   };
 
   return (
-    <div className="bg-muted flex h-full w-full flex-col items-center justify-center">
+    <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
       <div className="flex w-72 flex-col items-center justify-center gap-2">
         <LangflowLogo
           title="Langflow logo"
           className="mb-4 h-10 w-10 scale-[1.5]"
         />
-        <span className="text-primary mb-4 text-center text-2xl font-semibold">
+        <span className="mb-4 text-center text-2xl font-semibold text-primary">
           Delete your account
         </span>
         <Input className="bg-background" placeholder="Confirm password" />
@@ -38,7 +38,7 @@ export default function DeleteAccountPage() {
           <BaseModal.Trigger>
             <Button
               variant="default"
-              className="hover:bg-status-red w-full"
+              className="w-full hover:bg-status-red"
               onClick={() => setShowConfirmation(true)}
             >
               Delete account
@@ -48,7 +48,7 @@ export default function DeleteAccountPage() {
             <div className="flex h-full w-full flex-col justify-end">
               <Button
                 variant="default"
-                className="hover:bg-status-red w-full"
+                className="w-full hover:bg-status-red"
                 onClick={() => handleDeleteAccount()}
               >
                 Delete account

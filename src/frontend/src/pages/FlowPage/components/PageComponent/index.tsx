@@ -543,9 +543,9 @@ export default function Page({
   const componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
 
   return (
-    <div className="bg-canvas h-full w-full" ref={reactFlowWrapper}>
+    <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
-        <div id="react-flow-id" className="bg-canvas h-full w-full">
+        <div id="react-flow-id" className="h-full w-full bg-canvas">
           <ReactFlow<AllNodeType, EdgeType>
             nodes={nodes}
             edges={edges}
@@ -612,7 +612,7 @@ export default function Page({
             )}
             <Panel
               className={cn(
-                "react-flow__controls border-secondary-hover bg-background fill-foreground stroke-foreground text-primary [&>button]:bg-background hover:[&>button]:bg-accent !m-2 flex gap-1.5 rounded-md border p-1.5 shadow transition-all duration-300 [&>button]:border-0",
+                "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
                 "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
               )}
               position="top-left"

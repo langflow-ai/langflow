@@ -208,123 +208,75 @@ export default function PromptModal({
 
   return (
     <BaseModal
-      onChangeOpenModal={(open) => {}}
       open={modalOpen}
       setOpen={setModalOpen}
       size="x-large"
+      className="prompt-modal"
     >
       <BaseModal.Trigger disable={disabled} asChild>
         {children}
       </BaseModal.Trigger>
       <BaseModal.Header>
         <div className="flex w-full items-start gap-3">
-          <div className="flex">
-            <IconComponent
-              name="TerminalSquare"
-<<<<<<< HEAD
-              className="text-primary h-6 w-6 pl-1"
-=======
-              className="h-6 w-6 pr-1 text-primary"
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
-              aria-hidden="true"
-            />
-            <span className="pl-2" data-testid="modal-title">
-              Edit Prompt
-            </span>
-          </div>
+          <IconComponent
+            name="FileText"
+            className="h-6 w-6 pr-1 text-primary"
+            aria-hidden="true"
+          />
+          <span className="w-full break-all pl-2" data-testid="modal-title">
+            Prompt
+            {field_name.length > 0 ? ": " + field_name : null}
+          </span>
         </div>
       </BaseModal.Header>
-      <BaseModal.Content overflowHidden>
-        <div className={classNames("flex h-full w-full rounded-lg border")}>
-          {isEdit && !readonly ? (
-            <Textarea
-              id={"modal-" + id}
-              data-testid={"modal-" + id}
-              ref={textareaRef}
-              className="form-input custom-scroll h-full w-full resize-none rounded-lg border-0 focus-visible:ring-1"
-              value={inputValue}
-              onBlur={() => {
-                setScrollPosition(textareaRef.current?.scrollTop || 0);
-                setIsEdit(false);
-              }}
-              autoFocus
-              onChange={(event) => {
-                setInputValue(event.target.value);
-                checkVariables(event.target.value);
-              }}
-              placeholder={EDIT_TEXT_PLACEHOLDER}
-              onKeyDown={(e) => {
-                handleKeyDown(e, inputValue, "");
-              }}
-            />
-          ) : (
-            <SanitizedHTMLWrapper
-              ref={previewRef}
-              className={getClassByNumberLength() + " m-0"}
-              onClick={handlePreviewClick}
-              content={coloredContent}
-              suppressWarning={true}
-            />
+      <BaseModal.Content>
+        <div
+          className={classNames(
+            "flex h-full w-full rounded-lg border",
+            isEdit ? "" : "pointer-events-none",
           )}
+        >
+          <Textarea
+            ref={textareaRef}
+            className="form-input h-full w-full resize-none overflow-auto rounded-lg focus-visible:ring-1"
+            value={inputValue}
+            onChange={(event) => {
+              setInputValue(event.target.value);
+            }}
+            placeholder={EDIT_TEXT_PLACEHOLDER}
+            onKeyDown={(e) => {
+              handleKeyDown(e, value, "");
+            }}
+            readOnly={readonly}
+            id={"textarea-modal"}
+            data-testid={"textarea-modal"}
+          />
         </div>
+        {!isEdit &&
+          !readonly && ( // Only show prompt preview if not in edit mode
+            <div
+              ref={previewRef}
+              onClick={handlePreviewClick}
+              className={classNames(
+                getClassByNumberLength(),
+                "form-modal-prompt-view no-scrollbar overflow-auto custom-scroll",
+              )}
+              data-testid="prompt-preview"
+            >
+              <SanitizedHTMLWrapper content={coloredContent} />
+            </div>
+          )}
       </BaseModal.Content>
       <BaseModal.Footer>
-        <div className="flex w-full shrink-0 items-end justify-between">
-          <div className="mb-auto flex-1">
-            <div className="mr-2">
-              <div
-                ref={divRef}
-                className="custom-scroll max-h-20 overflow-y-auto"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <IconComponent
-                    name="Braces"
-                    className="text-primary flex h-4 w-4"
-                  />
-                  <span className="text-md text-primary font-semibold">
-                    Prompt Variables:
-                  </span>
-
-                  {Array.from(wordsHighlight).map((word, index) => (
-                    <ShadTooltip
-                      key={index}
-                      content={word.replace(/[{}]/g, "")}
-                      asChild={false}
-                    >
-                      <Badge
-                        key={index}
-                        variant="gray"
-                        size="md"
-                        className="max-w-[40vw] cursor-default truncate p-1 text-sm"
-                      >
-                        <div className="relative bottom-[1px]">
-                          <span id={"badge" + index.toString()}>
-                            {word.replace(/[{}]/g, "").length > 59
-                              ? word.replace(/[{}]/g, "").slice(0, 56) + "..."
-                              : word.replace(/[{}]/g, "")}
-                          </span>
-                        </div>
-                      </Badge>
-                    </ShadTooltip>
-                  ))}
-                </div>
-              </div>
-              <span className="text-muted-foreground mt-2 text-xs">
-                Prompt variables can be created with any chosen name inside
-                curly brackets, e.g. {"{variable_name}"}
-              </span>
-            </div>
-          </div>
+        <div className="flex w-full shrink-0 items-end justify-end">
           <Button
             data-testid="genericModalBtnSave"
             id="genericModalBtnSave"
             disabled={readonly}
-            onClick={() => {
-              validatePrompt(false);
-            }}
+            onClick={() => validatePrompt(true)}
             type="submit"
           >
-            Check & Save
+            Finish Editing
           </Button>
         </div>
       </BaseModal.Footer>

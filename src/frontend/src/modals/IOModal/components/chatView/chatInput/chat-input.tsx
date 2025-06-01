@@ -189,108 +189,15 @@ export default function ChatInput({
 
   if (noInput) {
     return (
-<<<<<<< HEAD
-      <div className="flex h-full w-full flex-col items-center justify-center">
-        <div className="border-input bg-muted flex w-full flex-col items-center justify-center gap-3 rounded-md border p-2 py-4">
-          {!isBuilding ? (
-            <Button
-              data-testid="button-send"
-              className="font-semibold"
-              onClick={() => {
-                sendMessage({
-                  repeat: 1,
-                });
-              }}
-            >
-              Run Flow
-            </Button>
-          ) : (
-            <Button
-              onClick={stopBuilding}
-              data-testid="button-stop"
-              unstyled
-              className="form-modal-send-button bg-muted text-foreground hover:bg-secondary-hover dark:hover:bg-input cursor-pointer"
-            >
-              <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">
-                Stop
-                <Loading className="h-[16px] w-[16px]" />
-              </div>
-            </Button>
-          )}
-
-          <p className="text-muted-foreground">
-            Add a{" "}
-            <a
-              className="underline underline-offset-4"
-              target="_blank"
-              href="https://docs.langflow.org/components-io#chat-input"
-            >
-              Chat Input
-            </a>{" "}
-            component to your flow to send messages.
-          </p>
-        </div>
-      </div>
-=======
       <NoInputView
         isBuilding={isBuilding}
         sendMessage={sendMessage}
         stopBuilding={stopBuilding}
       />
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
     );
   }
 
   return (
-<<<<<<< HEAD
-    <div className="flex w-full flex-col-reverse">
-      <div className="border-input hover:border-muted-foreground has-[:focus]:border-primary flex w-full flex-col rounded-md border p-4 focus:border-[1.75px]">
-        <TextAreaWrapper
-          isBuilding={isBuilding}
-          checkSendingOk={checkSendingOk}
-          send={send}
-          noInput={noInput}
-          chatValue={chatValue}
-          CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
-          CHAT_INPUT_PLACEHOLDER_SEND={CHAT_INPUT_PLACEHOLDER_SEND}
-          inputRef={inputRef}
-          files={files}
-          isDragging={isDragging}
-        />
-        <div className={classNameFilePreview}>
-          {files.map((file) => (
-            <FilePreview
-              error={file.error}
-              file={file.file}
-              loading={file.loading}
-              key={file.id}
-              onDelete={() => {
-                handleDeleteFile(file);
-              }}
-            />
-          ))}
-        </div>
-        <div className="flex w-full items-end justify-between">
-          <div className={isBuilding ? "cursor-not-allowed" : ""}>
-            <UploadFileButton
-              isBuilding={isBuilding}
-              fileInputRef={fileInputRef}
-              handleFileChange={handleFileChange}
-              handleButtonClick={handleButtonClick}
-            />
-          </div>
-          <div className="">
-            <ButtonSendWrapper
-              send={send}
-              noInput={noInput}
-              chatValue={chatValue}
-              files={files}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-=======
     <AnimatePresence mode="wait">
       {showAudioInput && !newSessionCloseVoiceAssistant ? (
         <motion.div
@@ -333,6 +240,5 @@ export default function ChatInput({
         </motion.div>
       )}
     </AnimatePresence>
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
   );
 }

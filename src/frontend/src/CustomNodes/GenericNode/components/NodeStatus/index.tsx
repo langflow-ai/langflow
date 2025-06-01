@@ -369,7 +369,7 @@ export default function NodeStatus({
           >
             <div className="cursor-help">
               {conditionSuccess && validationStatus?.data?.duration ? (
-                <div className="font-jetbrains bg-accent-emerald text-accent-emerald-foreground mr-1 flex gap-1 rounded-sm px-1 text-[11px] font-bold">
+                <div className="font-jetbrains mr-1 flex gap-1 rounded-sm bg-accent-emerald px-1 text-[11px] font-bold text-accent-emerald-foreground">
                   <Check className="h-4 w-4 items-center self-center" />
                   <span>
                     {normalizeTimeString(validationStatus?.data?.duration)}
@@ -386,7 +386,7 @@ export default function NodeStatus({
           {data.node?.beta && showNode && (
             <Badge
               size="sq"
-              className="bg-accent-pink text-accent-pink-foreground pointer-events-none mr-1 flex h-[22px] w-10 justify-center rounded-[8px]"
+              className="pointer-events-none mr-1 flex h-[22px] w-10 justify-center rounded-[8px] bg-accent-pink text-accent-pink-foreground"
             >
               <span className="text-[11px]">Beta</span>
             </Badge>
@@ -465,7 +465,7 @@ export default function NodeStatus({
         {dismissAll && isOutdated && !isUserEdited && (
           <ShadTooltip content="Update component">
             <div
-              className="button-run-bg hit-area-icon bg-warning hover:bg-warning/80 ml-1"
+              className="button-run-bg hit-area-icon ml-1 bg-warning hover:bg-warning/80"
               onClick={(e) => {
                 e.stopPropagation();
                 handleUpdateComponent();

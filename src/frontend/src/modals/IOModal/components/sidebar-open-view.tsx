@@ -26,7 +26,7 @@ export const SidebarOpenView = ({
             <div className="flex items-center gap-2">
               <IconComponent
                 name="MessagesSquare"
-                className="text-ring h-[18px] w-[18px]"
+                className="h-[18px] w-[18px] text-ring"
               />
               <div className="text-[13px] font-normal">Chat</div>
             </div>
@@ -35,7 +35,7 @@ export const SidebarOpenView = ({
                 <Button
                   data-testid="new-chat"
                   variant="ghost"
-                  className="hover:bg-secondary-hover flex h-8 w-8 items-center justify-center !p-0"
+                  className="flex h-8 w-8 items-center justify-center !p-0 hover:bg-secondary-hover"
                   onClick={(_) => {
                     setvisibleSession(undefined);
                     setSelectedViewField(undefined);
@@ -44,7 +44,7 @@ export const SidebarOpenView = ({
                 >
                   <IconComponent
                     name="Plus"
-                    className="text-ring h-[18px] w-[18px]"
+                    className="h-[18px] w-[18px] text-ring"
                   />
                 </Button>
               </div>

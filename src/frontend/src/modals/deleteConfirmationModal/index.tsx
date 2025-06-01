@@ -38,7 +38,7 @@ export default function DeleteConfirmationModal({
             <div className="flex items-center">
               <span className="pr-2">Delete</span>
               <Trash2
-                className="text-foreground h-6 w-6 pl-1"
+                className="h-6 w-6 pl-1 text-foreground"
                 strokeWidth={1.5}
               />
             </div>

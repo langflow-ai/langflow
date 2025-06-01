@@ -23,10 +23,10 @@ const ApiKeyHeaderComponent = ({
             Langflow API Keys
             <ForwardedIconComponent
               name="Key"
-              className="text-primary ml-2 h-5 w-5"
+              className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
-          <p className="text-muted-foreground text-sm">{API_PAGE_PARAGRAPH}</p>
+          <p className="text-sm text-muted-foreground">{API_PAGE_PARAGRAPH}</p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
           <SecretKeyModal

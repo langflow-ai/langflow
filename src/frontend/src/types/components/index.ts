@@ -633,6 +633,7 @@ export type chatMessagePropsType = {
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
+  sidebarOpen?: boolean;
 };
 
 export type genericModalPropsType = {

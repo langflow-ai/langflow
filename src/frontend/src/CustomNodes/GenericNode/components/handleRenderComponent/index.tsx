@@ -143,7 +143,7 @@ const HandleContent = memo(function HandleContent({
       data-testid={`div-handle-${testIdComplement}-${title.toLowerCase()}-${
         !showNode ? (left ? "target" : "source") : left ? "left" : "right"
       }`}
-      className="noflow nowheel nopan noselect pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full"
+      className="noflow nowheel nopan noselect pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full"
       style={contentStyle}
     />
   );

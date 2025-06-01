@@ -73,7 +73,7 @@ export default function IOFieldView({
           case IOInputTypes.TEXT:
             return (
               <Textarea
-                className={`custom-scroll w-full ${
+                className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Enter text..."}
@@ -153,7 +153,7 @@ export default function IOFieldView({
           default:
             return (
               <Textarea
-                className={`custom-scroll w-full ${
+                className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Enter text..."}
@@ -174,11 +174,20 @@ export default function IOFieldView({
         switch (fieldType) {
           case IOOutputTypes.TEXT:
             return <TextOutputView left={left} value={textOutputValue} />;
-          case IOOutputTypes.PDF:
+          case IOOutputTypes.IMAGE:
             return left ? (
-              <div>{PDFViewConstant}</div>
+              <div>Expand the view to see the image</div>
             ) : (
-              <PdfViewer pdf={flowPoolNode?.params ?? ""} />
+              <ImageViewer image={flowPoolNode?.params ?? ""} />
+            );
+          case IOOutputTypes.JSON:
+            return (
+              <IoJsonInput
+                value={flowPoolNode?.data?.results?.json ?? ""}
+                onChange={() => {}}
+                left={left}
+                output={true}
+              />
             );
           case IOOutputTypes.CSV:
             return left ? (
@@ -193,102 +202,32 @@ export default function IOFieldView({
                 <CsvOutputComponent csvNode={node} flowPool={flowPoolNode} />
               </>
             );
-          case IOOutputTypes.IMAGE:
+          case IOOutputTypes.PDF:
             return left ? (
-              <div>Expand the view to see the image</div>
+              <div>{PDFViewConstant}</div>
             ) : (
-              <ImageViewer
-                image={
-                  (flowPool[node.id] ?? [])[
-                    (flowPool[node.id]?.length ?? 1) - 1
-                  ]?.params ?? ""
-                }
-              />
-            );
-
-          case IOOutputTypes.JSON:
-            return (
-              <IoJsonInput
-                value={node.data.node!.template["input_value"]?.value}
-                onChange={(e) => {
-                  if (node) {
-                    let newNode = cloneDeep(node);
-                    newNode.data.node!.template["input_value"].value = e;
-                    setNode(node.id, newNode);
-                  }
-                }}
-                left={left}
-                output
-              />
-            );
-
-          case IOOutputTypes.KEY_PAIR:
-            return (
-              <IOKeyPairInput
-                value={node.data.node!.template["input_value"]?.value}
-                onChange={(e) => {
-                  if (node) {
-                    let newNode = cloneDeep(node);
-                    newNode.data.node!.template["input_value"].value = e;
-                    setNode(node.id, newNode);
-                  }
-                  const valueToNumbers = convertValuesToNumbers(e);
-                  setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
-                }}
-                duplicateKey={errorDuplicateKey}
-                isList={node.data.node!.template["input_value"]?.list ?? false}
-              />
-            );
-
-          case IOOutputTypes.STRING_LIST:
-            return (
-              <>
-                <InputListComponent
-                  id={`playground_${node.id}_output_list`}
-                  editNode={false}
-                  value={node.data.node!.template["input_value"]?.value}
-                  handleOnNewValue={handleOnNewValue}
-                  disabled={true}
-                />
-              </>
+              <PdfViewer pdf={flowPoolNode?.params ?? ""} />
             );
           case IOOutputTypes.DATA:
             return (
-              <div className={left ? "h-56" : "h-full"}>
-                <DataOutputComponent
-                  pagination={!left}
-                  rows={
-                    Array.isArray(flowPoolNode?.data?.artifacts)
-                      ? (flowPoolNode?.data?.artifacts?.map(
-                          (artifact) => artifact.data,
-                        ) ?? [])
-                      : [flowPoolNode?.data?.artifacts]
-                  }
-                  columnMode="union"
-                />
-              </div>
-            );
-
-          default:
-            return (
-              <Textarea
-                className={`custom-scroll w-full ${
-                  left ? "min-h-32" : "h-full"
-                }`}
-                placeholder={"Empty"}
-                // update to real value on flowPool
-                value={
-                  (flowPool[node.id] ?? [])[
-                    (flowPool[node.id]?.length ?? 1) - 1
-                  ]?.data.results.result ?? ""
+              <DataOutputComponent
+                pagination={!left}
+                rows={
+                  Array.isArray(flowPoolNode?.data?.artifacts)
+                    ? (flowPoolNode?.data?.artifacts?.map(
+                        (artifact) => artifact.data,
+                      ) ?? [])
+                    : [flowPoolNode?.data?.artifacts]
                 }
-                readOnly
+                columnMode="union"
               />
             );
+          default:
+            return <TextOutputView left={left} value={textOutputValue} />;
         }
       default:
         break;
     }
   }
-  return handleOutputType();
+  return <div className="h-full w-full">{handleOutputType()}</div>;
 }

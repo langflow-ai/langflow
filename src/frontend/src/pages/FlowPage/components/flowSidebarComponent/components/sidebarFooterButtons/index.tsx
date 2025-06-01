@@ -22,7 +22,7 @@ const SidebarMenuButtons = ({
             <div className="flex w-full items-center gap-2">
               <ForwardedIconComponent
                 name="Store"
-                className="text-muted-foreground h-4 w-4"
+                className="h-4 w-4 text-muted-foreground"
               />
               <span className="flex-1 group-data-[state=open]/collapsible:font-semibold">
                 Discover more components
@@ -49,7 +49,7 @@ const SidebarMenuButtons = ({
         >
           <ForwardedIconComponent
             name="Plus"
-            className="text-muted-foreground h-4 w-4"
+            className="h-4 w-4 text-muted-foreground"
           />
           <span className="group-data-[state=open]/collapsible:font-semibold">
             New Custom Component

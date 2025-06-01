@@ -48,7 +48,7 @@ export default function AppHeader(): JSX.Element {
 
   return (
     <div
-      className="dark:bg-background flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5"
+      className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background"
       data-testid="app-header"
     >
       {/* Left Section */}
@@ -90,7 +90,7 @@ export default function AppHeader(): JSX.Element {
           <>
             <Button
               unstyled
-              className="hidden items-center pr-2 whitespace-nowrap 2xl:inline"
+              className="hidden items-center whitespace-nowrap pr-2 2xl:inline"
               onClick={() =>
                 window.open("https://github.com/langflow-ai/langflow", "_blank")
               }
@@ -123,7 +123,7 @@ export default function AppHeader(): JSX.Element {
                 <span
                   className={
                     notificationCenter
-                      ? `bg-destructive absolute top-[10px] left-[31px] h-1 w-1 rounded-full`
+                      ? `absolute left-[31px] top-[10px] h-1 w-1 rounded-full bg-destructive`
                       : "hidden"
                   }
                 />

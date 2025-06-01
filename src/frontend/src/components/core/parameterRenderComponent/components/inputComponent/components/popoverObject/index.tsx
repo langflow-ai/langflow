@@ -142,14 +142,14 @@ const CustomInputPopoverObject = ({
                         <div className="absolute opacity-100 transition-all group-hover:opacity-0">
                           <ForwardedIconComponent
                             name="Check"
-                            className="text-primary mr-2 h-4 w-4"
+                            className="mr-2 h-4 w-4 text-primary"
                             aria-hidden="true"
                           />
                         </div>
                         <div className="absolute opacity-0 transition-all group-hover:opacity-100">
                           <ForwardedIconComponent
                             name="X"
-                            className="text-status-red mr-2 h-4 w-4"
+                            className="mr-2 h-4 w-4 text-status-red"
                             aria-hidden="true"
                           />
                         </div>

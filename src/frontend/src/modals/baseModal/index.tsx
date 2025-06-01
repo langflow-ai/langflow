@@ -17,6 +17,7 @@ import {
 
 import { DialogClose } from "@radix-ui/react-dialog";
 import * as Form from "@radix-ui/react-form";
+import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
@@ -207,87 +208,61 @@ function BaseModal({
   onEscapeKeyDown,
   closeButtonClassName,
 }: BaseModalProps) {
-  const headerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Header,
-  );
-  const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger,
-  );
-  const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content,
-  );
-  const ContentFooter = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Footer,
-  );
-
-  let { minWidth, height } = switchCaseModalSize(size);
-
   useEffect(() => {
     if (onChangeOpenModal) {
       onChangeOpenModal(open);
     }
-  }, [open]);
+  }, [open, onChangeOpenModal]);
 
-  const modalContent = (
-    <>
-      {headerChild && headerChild}
-      {ContentChild}
-      {ContentFooter && ContentFooter}
-    </>
-  );
+  const isFullScreen = type === "full-screen";
+  const isModal = type === "modal";
+  const Wrapper = isModal ? Modal : Dialog;
+  const ContentWrapper = isModal ? ModalContent : DialogContent;
 
-  const contentClasses = cn(
-    minWidth,
-    height,
-    "flex flex-col flex-1 overflow-hidden max-h-[98dvh]",
-    className,
-  );
-
-<<<<<<< HEAD
-  //UPDATE COLORS AND STYLE CLASSES
-=======
-  const formClasses = "flex flex-col flex-1 gap-6 overflow-hidden";
-
-  //UPDATE COLORS AND STYLE CLASSSES
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
   return (
-    <>
-      {type === "modal" ? (
-        <Modal open={open} onOpenChange={setOpen}>
-          {triggerChild}
-          <ModalContent className={contentClasses}>{modalContent}</ModalContent>
-        </Modal>
-      ) : type === "full-screen" ? (
-        <div className="min-h-full w-full flex-1 overflow-hidden">
-          {modalContent}
-        </div>
-      ) : (
-        <Dialog open={open} onOpenChange={setOpen}>
-          {triggerChild}
-          <DialogContent
-            onClick={(e) => e.stopPropagation()}
-            onOpenAutoFocus={(event) => event.preventDefault()}
-            onEscapeKeyDown={onEscapeKeyDown}
-            className={contentClasses}
-            closeButtonClassName={closeButtonClassName}
-          >
-            {onSubmit ? (
-              <Form.Root
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  onSubmit();
-                }}
-                className={formClasses}
-              >
-                {modalContent}
-              </Form.Root>
-            ) : (
-              modalContent
-            )}
-          </DialogContent>
-        </Dialog>
-      )}
-    </>
+    <Wrapper
+      open={open}
+      onOpenChange={setOpen}
+      onEscapeKeyDown={onEscapeKeyDown}
+    >
+      <ContentWrapper
+        className={cn(
+          isFullScreen ? "h-full w-full" : switchCaseModalSize(size),
+          className,
+          isFullScreen ? "rounded-none" : "",
+          isModal ? "p-0" : "",
+        )}
+        onPointerDownOutside={(e) => {
+          if (isModal) e.preventDefault();
+        }}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (onSubmit) onSubmit();
+          }}
+          className={cn(
+            "flex h-full w-full flex-col",
+            isModal ? "max-h-full" : "",
+          )}
+        >
+          {children}
+          <DialogClose asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className={cn(
+                "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+                closeButtonClassName,
+              )}
+            >
+              <IconComponent name="X" className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </Button>
+          </DialogClose>
+        </form>
+      </ContentWrapper>
+    </Wrapper>
   );
 }
 
@@ -295,4 +270,5 @@ BaseModal.Content = Content;
 BaseModal.Header = Header;
 BaseModal.Trigger = Trigger;
 BaseModal.Footer = Footer;
+
 export default BaseModal;

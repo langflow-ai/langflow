@@ -24,7 +24,7 @@ export const ErrorView = ({
 }) => {
   return (
     <>
-      <div className="word-break-break-word w-5/6 max-w-[768px] py-4">
+      <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
         <AnimatePresence mode="wait">
           {!showError && lastMessage ? (
             <motion.div
@@ -52,7 +52,7 @@ export const ErrorView = ({
               {blocks.map((block, blockIndex) => (
                 <div
                   key={blockIndex}
-                  className="border-error-red-border bg-error-red text-foreground w-full rounded-xl border p-4 text-[14px]"
+                  className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-[14px] text-foreground"
                 >
                   {block.contents.map((content, contentIndex) => {
                     if (content.type === "error") {
@@ -60,7 +60,7 @@ export const ErrorView = ({
                         <div className="" key={contentIndex}>
                           <div className="mb-2 flex items-center">
                             <ForwardedIconComponent
-                              className="text-destructive mr-2 h-[18px] w-[18px]"
+                              className="mr-2 h-[18px] w-[18px] text-destructive"
                               name="OctagonAlert"
                             />
                             {content.component && (

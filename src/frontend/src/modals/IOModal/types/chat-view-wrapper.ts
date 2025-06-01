@@ -18,4 +18,6 @@ export type ChatViewWrapperProps = {
   setOpen: (open: boolean) => void;
   playgroundTitle: string;
   playgroundPage?: boolean;
+  chatInput?: { type: string; id: string; displayName: string } | undefined;
+  chatOutput?: { type: string; id: string; displayName: string } | undefined;
 };

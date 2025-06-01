@@ -88,9 +88,9 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`bg-background my-2 flex flex-row ${
+        className={`my-2 flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
-        } group border-border hover:border-placeholder-foreground justify-between rounded-lg border p-4 hover:shadow-sm`}
+        } group justify-between rounded-lg border border-border p-4 hover:border-placeholder-foreground hover:shadow-sm`}
         data-testid="list-card"
       >
         <div
@@ -116,11 +116,11 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
               <div className="text-md flex truncate pr-2 font-semibold max-md:w-full">
                 <span className="truncate">{flowData.name}</span>
               </div>
-              <div className="item-baseline text-muted-foreground flex text-xs">
+              <div className="item-baseline flex text-xs text-muted-foreground">
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
-            <div className="text-primary overflow-hidden text-sm">
+            <div className="overflow-hidden text-sm text-primary">
               <span className="block max-w-[110ch] truncate">
                 {flowData.description}
               </span>
@@ -140,7 +140,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
                 <ForwardedIconComponent
                   name="Ellipsis"
                   aria-hidden="true"
-                  className="text-muted-foreground group-hover:text-foreground h-5 w-5"
+                  className="h-5 w-5 text-muted-foreground group-hover:text-foreground"
                 />
               </Button>
             </DropdownMenuTrigger>

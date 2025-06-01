@@ -137,15 +137,15 @@ export default function UndrawCardComponent({
   return (
     <Card
       onClick={() => handleFlowCardClick(flow, folderIdUrl!)}
-      className="bg-background h-64 w-80 cursor-pointer pt-4"
+      className="h-64 w-80 cursor-pointer bg-background pt-4"
     >
       <CardContent className="h-full w-full">
-        <div className="bg-muted flex h-full w-full flex-col items-center justify-center rounded-md p-1 align-middle">
+        <div className="flex h-full w-full flex-col items-center justify-center rounded-md bg-muted p-1 align-middle">
           {selectImage()}
         </div>
       </CardContent>
       <CardDescription className="px-6 pb-4">
-        <CardTitle className="text-primary text-lg">{flow.name}</CardTitle>
+        <CardTitle className="text-lg text-primary">{flow.name}</CardTitle>
       </CardDescription>
     </Card>
   );

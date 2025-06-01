@@ -93,7 +93,7 @@ export default function NodeName({
       <div
         data-testid={"title-" + display_name}
         className={cn(
-          "nodoubleclick text-primary w-full truncate font-medium",
+          "nodoubleclick w-full truncate font-medium text-primary",
           showNode ? "cursor-text" : "cursor-default",
         )}
       >

@@ -80,7 +80,7 @@ export default function RenameLabel({
       ref={inputRef}
       onInput={resizeInput}
       className={cn(
-        "nopan nodelete nodrag noflow outline-ring rounded-md bg-transparent px-2 hover:outline focus:border-none focus:outline active:outline",
+        "nopan nodelete nodrag noflow rounded-md bg-transparent px-2 outline-ring hover:outline focus:border-none focus:outline active:outline",
         className,
       )}
       onBlur={handleBlur}

@@ -109,7 +109,7 @@ export default function TableAutoCellRender({
   }
 
   return (
-    <div className="group text-align-last-left flex h-full w-full items-center truncate">
+    <div className="group flex h-full w-full items-center truncate text-align-last-left">
       {getCellType()}
     </div>
   );

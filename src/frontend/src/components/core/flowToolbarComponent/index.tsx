@@ -74,9 +74,9 @@ export default function FlowToolbar(): JSX.Element {
           <button
             disabled={!hasApiKey || !validApiKey || !hasStore}
             className={classNames(
-              "text-foreground relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition-all duration-150 ease-in-out",
+              "relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out",
               !hasApiKey || !validApiKey || !hasStore
-                ? "text-muted-foreground cursor-not-allowed"
+                ? "cursor-not-allowed text-muted-foreground"
                 : "hover:bg-accent",
             )}
             data-testid="shared-button-flow"
@@ -114,70 +114,11 @@ export default function FlowToolbar(): JSX.Element {
     <>
       <Panel className="!m-2" position="top-right">
         <div
-<<<<<<< HEAD
-          className={
-            "hover:shadow-round-btn-shadow bg-background flex items-center justify-center gap-7 rounded-md border p-1.5 shadow transition-all"
-          }
-        >
-          <div className="flex gap-1.5">
-            <div className="flex h-full w-full gap-1.5 rounded-sm transition-all">
-              <PlaygroundButton
-                hasIO={hasIO}
-                open={open}
-                setOpen={setOpen}
-                canvasOpen
-              />
-            </div>
-            {ENABLE_API && (
-              <>
-                <div
-                  className="flex cursor-pointer items-center gap-2"
-                  data-testid="api_button_modal"
-                  id="api_button_modal"
-                >
-                  {currentFlow && currentFlow.data && (
-                    <ApiModal
-                      flow={currentFlow}
-                      open={openCodeModal}
-                      setOpen={setOpenCodeModal}
-                    >
-                      <div
-                        className={classNames(
-                          "text-foreground hover:bg-accent relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition-all duration-150 ease-in-out",
-                        )}
-                      >
-                        <ForwardedIconComponent
-                          name="Code2"
-                          className={"h-4 w-4"}
-                        />
-                        <span className="hidden md:block">API</span>
-                      </div>
-                    </ApiModal>
-                  )}
-                </div>
-              </>
-            )}
-            {ENABLE_LANGFLOW_STORE && (
-              <div className="flex items-center gap-2">
-                <div
-                  className={`side-bar-button ${
-                    !hasApiKey || !validApiKey || !hasStore
-                      ? "cursor-not-allowed"
-                      : "cursor-pointer"
-                  }`}
-                >
-                  {ModalMemo}
-                </div>
-              </div>
-            )}
-          </div>
-=======
           className={cn(
             "hover:shadow-round-btn-shadow flex h-11 items-center justify-center gap-7 rounded-md border bg-background px-1.5 shadow transition-all",
           )}
         >
           <FlowToolbarOptions />
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
         </div>
       </Panel>
     </>

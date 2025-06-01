@@ -47,7 +47,7 @@ export const ChatViewWrapper = ({
             >
               <IconComponent
                 name="PanelLeftOpen"
-                className="text-ring h-[18px] w-[18px]"
+                className="h-[18px] w-[18px] text-ring"
               />
             </Button>
           </div>
@@ -68,18 +68,13 @@ export const ChatViewWrapper = ({
         <div
           className={cn(
             sidebarOpen ? "pointer-events-none opacity-0" : "",
-<<<<<<< HEAD
-            "ring-offset-background focus:ring-ring absolute flex h-8 items-center justify-center rounded-sm transition-opacity focus:ring-2 focus:ring-offset-2 focus:outline-none",
-            isPlayground ? "top-4 right-2" : "top-2 right-12",
-=======
             "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
             playgroundPage ? "right-2 top-4" : "absolute right-12 top-2 h-8",
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
           )}
         >
           <ShadTooltip side="bottom" styleClasses="z-50" content="New Chat">
             <Button
-              className="hover:bg-secondary-hover mr-2 h-[32px] w-[32px]"
+              className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
               variant="ghost"
               size="icon"
               onClick={() => {
@@ -89,38 +84,13 @@ export const ChatViewWrapper = ({
             >
               <IconComponent
                 name="Plus"
-                className="text-ring !h-[18px] !w-[18px]"
+                className="!h-[18px] !w-[18px] text-ring"
               />
             </Button>
           </ShadTooltip>
           {!playgroundPage && <Separator orientation="vertical" />}
         </div>
       </div>
-<<<<<<< HEAD
-      <div
-        className={cn(
-          visibleSession ? "h-[95%]" : "h-full",
-          sidebarOpen
-            ? "lg:blur-0 pointer-events-none blur-sm lg:pointer-events-auto"
-            : "",
-        )}
-      >
-        {messagesFetched && (
-          <ChatView
-            focusChat={sessionId}
-            sendMessage={sendMessage}
-            visibleSession={visibleSession}
-            closeChat={
-              !canvasOpen
-                ? undefined
-                : () => {
-                    setOpen(false);
-                  }
-            }
-          />
-        )}
-      </div>
-=======
 
       {messagesFetched && (
         <ChatView
@@ -138,7 +108,6 @@ export const ChatViewWrapper = ({
           sidebarOpen={sidebarOpen}
         />
       )}
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
     </div>
   );
 };

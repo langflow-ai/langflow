@@ -203,7 +203,7 @@ export default function ExtraSidebar(): JSX.Element {
         >
           <IconComponent
             name={search ? "X" : "Search"}
-            className={`text-primary h-5 w-5 stroke-[1.5] ${
+            className={`h-5 w-5 stroke-[1.5] text-primary ${
               search ? "cursor-pointer" : "cursor-default"
             }`}
             aria-hidden="true"
@@ -318,7 +318,7 @@ export default function ExtraSidebar(): JSX.Element {
                 <IconComponent
                   name="Sparkles"
                   strokeWidth={1.5}
-                  className="text-primary w-[22px]"
+                  className="w-[22px] text-primary"
                 />
 
                 <span className="components-disclosure-title">
@@ -329,7 +329,7 @@ export default function ExtraSidebar(): JSX.Element {
                 <div>
                   <IconComponent
                     name="Link"
-                    className="text-foreground h-4 w-4"
+                    className="h-4 w-4 text-foreground"
                   />
                 </div>
               </div>

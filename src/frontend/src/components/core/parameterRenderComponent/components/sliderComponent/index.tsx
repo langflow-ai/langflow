@@ -216,7 +216,7 @@ export default function SliderComponent({
                 onChange={handleInputChange}
                 onBlur={handleInputBlur}
                 onKeyDown={handleKeyDown}
-                className="arrow-hide relative bottom-[1px] w-full cursor-text rounded-sm bg-transparent text-center font-mono text-sm"
+                className="relative bottom-[1px] w-full cursor-text rounded-sm bg-transparent text-center font-mono text-sm arrow-hide"
                 autoFocus
                 data-testid="slider_input"
               />
@@ -248,7 +248,7 @@ export default function SliderComponent({
 
       <div className="flex cursor-default items-center justify-center">
         <SliderPrimitive.Root
-          className="relative flex h-5 w-full touch-none items-center select-none"
+          className="relative flex h-5 w-full touch-none select-none items-center"
           value={[valueAsNumber]}
           onValueChange={handleChange}
           min={min}
@@ -264,7 +264,7 @@ export default function SliderComponent({
             )}
           >
             <SliderPrimitive.Range
-              className="from-accent-indigo-foreground to-accent-pink-foreground absolute h-full rounded-full bg-gradient-to-r"
+              className="absolute h-full rounded-full bg-gradient-to-r from-accent-indigo-foreground to-accent-pink-foreground"
               style={{
                 width: `${percentage}%`,
                 background: `linear-gradient(to right, rgb(79, 70, 229) 0%, ${getThumbColor(percentage)} ${percentage}%)`,
@@ -274,7 +274,7 @@ export default function SliderComponent({
           <SliderPrimitive.Thumb
             data-testid={`slider_thumb${editNode ? "_advanced" : ""}`}
             className={clsx(
-              "border-background block h-6 w-6 rounded-full border-2 shadow-lg",
+              "block h-6 w-6 rounded-full border-2 border-background shadow-lg",
               isGrabbing ? "cursor-grabbing" : "cursor-grab",
               valueAsNumber === max && "relative left-1",
             )}
@@ -289,7 +289,7 @@ export default function SliderComponent({
 
       {sliderButtons && (
         <div className="my-3">
-          <div className={clsx("bg-background flex rounded-md")}>
+          <div className={clsx("flex rounded-md bg-background")}>
             {sliderButtonsOptions?.map((option) => (
               <button
                 key={option.id}

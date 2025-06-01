@@ -211,7 +211,7 @@ export default function ChatMessage({
   };
 
   const editedFlag = chat.edit ? (
-    <div className="text-muted-foreground text-sm">(Edited)</div>
+    <div className="text-sm text-muted-foreground">(Edited)</div>
   ) : null;
 
   if (chat.category === "error") {
@@ -231,7 +231,7 @@ export default function ChatMessage({
 
   return (
     <>
-      <div className="word-break-break-word w-5/6 max-w-[768px] py-4">
+      <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
         <div
           className={cn(
             "group relative flex w-full gap-4 rounded-md p-2",
@@ -243,7 +243,7 @@ export default function ChatMessage({
               "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
               !chat.isSend
                 ? "bg-muted"
-                : "border-border hover:border-input border",
+                : "border border-border hover:border-input",
             )}
             style={
               chat.properties?.background_color
@@ -304,11 +304,6 @@ export default function ChatMessage({
                   "sender_name_" + chat.sender_name?.toLocaleLowerCase()
                 }
               >
-<<<<<<< HEAD
-                {chat.sender_name}
-                {chat.properties?.source && (
-                  <div className="text-muted-foreground text-[13px] font-normal">
-=======
                 <span className="flex items-center gap-2">
                   {chat.sender_name}
                   {isAudioMessage && (
@@ -322,7 +317,6 @@ export default function ChatMessage({
                 </span>
                 {chat.properties?.source && !playgroundPage && (
                   <div className="text-[13px] font-normal text-muted-foreground">
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
                     {chat.properties?.source.source}
                   </div>
                 )}
@@ -422,16 +416,10 @@ export default function ChatMessage({
                   ) : (
                     <>
                       <div
-<<<<<<< HEAD
-                        className={`w-full items-baseline text-[14px] font-normal break-words whitespace-pre-wrap ${
-                          isEmpty ? "text-muted-foreground" : "text-primary"
-                        }`}
-=======
                         className={cn(
                           "w-full items-baseline whitespace-pre-wrap break-words text-[14px] font-normal",
                           isEmpty ? "text-muted-foreground" : "text-primary",
                         )}
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
                         data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                       >
                         {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}

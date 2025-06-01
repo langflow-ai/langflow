@@ -11,11 +11,11 @@ export default function DownloadButton({
   if (isHovered) {
     return (
       <div
-        className={`bg-muted text-foreground absolute top-1 right-1 rounded-md text-sm font-bold`}
+        className={`absolute right-1 top-1 rounded-md bg-muted text-sm font-bold text-foreground`}
       >
         <Button
           unstyled
-          className="text-ring bg-transparent px-2 py-1"
+          className="bg-transparent px-2 py-1 text-ring"
           onClick={handleDownload}
         >
           <ForwardedIconComponent

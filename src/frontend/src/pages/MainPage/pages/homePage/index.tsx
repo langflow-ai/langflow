@@ -148,7 +148,7 @@ const HomePage = ({ type }) => {
                       </div>
                     )
                   ) : flowType === "flows" ? (
-                    <div className="text-secondary-foreground pt-2 text-center text-sm">
+                    <div className="pt-2 text-center text-sm text-secondary-foreground">
                       No flows in this folder.{" "}
                       <a
                         onClick={() => setNewProjectModal(true)}
@@ -159,7 +159,7 @@ const HomePage = ({ type }) => {
                       , or browse the store.
                     </div>
                   ) : (
-                    <div className="text-secondary-foreground pt-2 text-center text-sm">
+                    <div className="pt-2 text-center text-sm text-secondary-foreground">
                       No saved or custom components. Learn more about{" "}
                       <a
                         href="https://docs.langflow.org/components-custom-components"

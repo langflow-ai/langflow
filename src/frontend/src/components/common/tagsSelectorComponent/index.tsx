@@ -49,7 +49,7 @@ export function TagsSelector({
                 size="sq"
                 className={cn(
                   selectedTags.some((category) => category === tag.name)
-                    ? "bg-beta-foreground text-background hover:bg-beta-foreground min-w-min"
+                    ? "min-w-min bg-beta-foreground text-background hover:bg-beta-foreground"
                     : "",
                 )}
               >

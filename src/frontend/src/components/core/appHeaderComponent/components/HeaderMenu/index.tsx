@@ -20,7 +20,7 @@ export const HeaderMenuToggle = ({ children }) => (
     data-testid="user_menu_button"
     id="user_menu_button"
   >
-    <div className="group-hover:bg-muted flex items-center gap-1 rounded-lg px-2 py-1.5">
+    <div className="flex items-center gap-1 rounded-lg px-2 py-1.5 group-hover:bg-muted">
       {children}
       <ChevronsUpDown
         className="text-muted-foreground group-hover:text-foreground"

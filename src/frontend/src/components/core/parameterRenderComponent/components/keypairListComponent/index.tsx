@@ -100,7 +100,7 @@ const KeypairListComponent = ({
         className={cn(
           "hit-area-icon group flex items-center justify-center",
           disabled
-            ? "bg-background hover:bg-background pointer-events-none"
+            ? "pointer-events-none bg-background hover:bg-background"
             : "",
           isFirstItem ? "bg-background hover:bg-muted" : "hover:bg-smooth-red",
         )}
@@ -108,8 +108,8 @@ const KeypairListComponent = ({
         <IconComponent
           name={iconName}
           className={cn(
-            "icon-size text-muted-foreground justify-self-center",
-            !disabled && "hover:text-foreground hover:cursor-pointer",
+            "icon-size justify-self-center text-muted-foreground",
+            !disabled && "hover:cursor-pointer hover:text-foreground",
             isFirstItem
               ? "group-hover:text-foreground"
               : "group-hover:text-destructive",

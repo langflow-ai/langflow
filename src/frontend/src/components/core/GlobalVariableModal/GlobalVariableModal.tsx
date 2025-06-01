@@ -139,7 +139,7 @@ export default function GlobalVariableModal({
       <BaseModal.Header description="This variable will be available for use across your flows.">
         <ForwardedIconComponent
           name="Globe"
-          className="text-primary h-6 w-6 pr-1"
+          className="h-6 w-6 pr-1 text-primary"
           aria-hidden="true"
         />
         {initialData ? "Update Variable" : "Create Variable"}
@@ -215,7 +215,7 @@ export default function GlobalVariableModal({
               popoverWidth="29rem"
               optionsPlaceholder="Fields"
             />
-            <div className="text-muted-foreground text-xs">
+            <div className="text-xs text-muted-foreground">
               Selected fields will auto-apply the variable as a default value.
             </div>
           </div>

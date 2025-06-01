@@ -74,7 +74,7 @@ export default function InputComponent({
             required={required}
             className={classNames(
               password && !pwdVisible && value !== ""
-                ? "password text-clip"
+                ? "text-clip password"
                 : "",
               editNode ? "input-edit-node" : "",
               password && editNode ? "pr-8" : "",
@@ -180,15 +180,12 @@ export default function InputComponent({
                 e.stopPropagation();
               }}
               className={cn(
-<<<<<<< HEAD
-                disabled ? "text-placeholder cursor-grab" : "cursor-pointer",
+                disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
                 "icon-size",
-=======
                 onChange && setSelectedOption && selectedOption !== ""
                   ? "text-accent-emerald-foreground"
                   : "text-placeholder-foreground",
                 !disabled && "hover:text-foreground",
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
               )}
             >
               <ForwardedIconComponent
@@ -217,7 +214,7 @@ export default function InputComponent({
           type="button"
           tabIndex={-1}
           className={classNames(
-            "mr-3 mb-px p-0",
+            "mb-px mr-3 p-0",
             editNode
               ? "input-component-true-button"
               : "input-component-false-button",
@@ -230,12 +227,12 @@ export default function InputComponent({
           {pwdVisible ? (
             <ForwardedIconComponent
               name="Eye"
-              className="text-placeholder-foreground hover:text-foreground relative top-[1px] h-5 w-5"
+              className="relative top-[1px] h-5 w-5 text-placeholder-foreground hover:text-foreground"
             />
           ) : (
             <ForwardedIconComponent
               name="EyeOff"
-              className="text-placeholder-foreground hover:text-foreground relative top-[1px] h-5 w-5"
+              className="relative top-[1px] h-5 w-5 text-placeholder-foreground hover:text-foreground"
             />
           )}
         </button>

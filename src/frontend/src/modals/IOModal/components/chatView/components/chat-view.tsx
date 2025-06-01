@@ -195,83 +195,33 @@ export default function ChatView({
                   updateChat={updateChat}
                   closeChat={closeChat}
                   playgroundPage={playgroundPage}
+                  sidebarOpen={sidebarOpen}
                 />
               ))}
             </>
           ) : (
-<<<<<<< HEAD:src/frontend/src/modals/IOModal/components/chatView/chat-view.tsx
             <div className="flex h-full w-full flex-col items-center justify-center">
-              <div className="flex flex-col items-center justify-center gap-4 p-8">
-                <LangflowLogo
-                  title="Langflow logo"
-                  className="h-10 w-10 scale-[1.5]"
-                />
-                <div className="flex flex-col items-center justify-center">
-                  <h3 className="text-primary mt-2 pb-2 text-2xl font-semibold">
-                    New chat
-                  </h3>
-                  <p
-                    className="text-muted-foreground text-lg"
-                    data-testid="new-chat-text"
-                  >
-                    <TextEffectPerChar>
-                      Test your flow with a chat prompt
-                    </TextEffectPerChar>
-                  </p>
-=======
-            <>
-              <div className="flex h-full w-full flex-col items-center justify-center">
-                <div className="flex flex-col items-center justify-center gap-4 p-8">
-                  <LangflowLogo
-                    title="Langflow logo"
-                    className="h-10 w-10 scale-[1.5]"
-                  />
-                  <div className="flex flex-col items-center justify-center">
-                    <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
-                      New chat
-                    </h3>
-                    <p
-                      className="text-lg text-muted-foreground"
-                      data-testid="new-chat-text"
-                    >
-                      <TextEffectPerChar>
-                        Test your flow with a chat prompt
-                      </TextEffectPerChar>
-                    </p>
-                  </div>
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b:src/frontend/src/modals/IOModal/components/chatView/components/chat-view.tsx
-                </div>
+              <LangflowLogo className="mb-2 h-10 w-10" />
+              <div className="mx-auto w-full text-center text-2xl font-semibold text-primary">
+                <TextEffectPerChar text="Type to start the flow" />
               </div>
-            </>
+            </div>
           ))}
-        <div
-          className={
-            displayLoadingMessage
-              ? "word-break-break-word w-full max-w-[768px] py-4 md:w-5/6"
-              : ""
-          }
-          ref={ref}
-        >
-          {displayLoadingMessage &&
-            !(chatHistory?.[chatHistory.length - 1]?.category === "error") &&
-            flowRunningSkeletonMemo}
+        {isBuilding && displayLoadingMessage && flowRunningSkeletonMemo}
+      </div>
+      {chatInput && ( // Only show chat input if there is a chat input node
+        <div className="w-full pt-2">
+          <ChatInput
+            isDragging={isDragging}
+            files={files}
+            setFiles={setFiles}
+            sendMessage={sendMessage}
+            inputRef={ref}
+            noInput={!chatInput}
+            playgroundPage={playgroundPage}
+          />
         </div>
-      </div>
-
-      <div className="m-auto w-full max-w-[768px] md:w-5/6">
-        <ChatInput
-          playgroundPage={!!playgroundPage}
-          noInput={!inputTypes.includes("ChatInput")}
-          sendMessage={({ repeat, files }) => {
-            sendMessage({ repeat, files });
-            track("Playground Message Sent");
-          }}
-          inputRef={ref}
-          files={files}
-          setFiles={setFiles}
-          isDragging={isDragging}
-        />
-      </div>
+      )}
     </div>
   );
 }

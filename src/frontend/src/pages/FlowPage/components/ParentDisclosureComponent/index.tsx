@@ -20,7 +20,7 @@ export default function ParentDisclosureComponent({
               <div className="flex items-baseline gap-1 align-baseline">
                 <span className="text-sm font-medium">{title}</span>
                 {beta && (
-                  <div className="bg-beta-background text-beta-foreground-soft h-fit rounded-full px-2 py-1 text-xs/3 font-semibold">
+                  <div className="h-fit rounded-full bg-beta-background px-2 py-1 text-xs/3 font-semibold text-beta-foreground-soft">
                     Beta
                   </div>
                 )}
@@ -37,7 +37,7 @@ export default function ParentDisclosureComponent({
                     name={open ? "chevron-down" : "chevron-right"}
                     className={`${
                       open || defaultOpen ? "" : ""
-                    } text-foreground h-4 w-4`}
+                    } h-4 w-4 text-foreground`}
                   />
                 </div>
               </div>

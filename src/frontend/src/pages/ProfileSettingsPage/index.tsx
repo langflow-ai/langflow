@@ -184,7 +184,7 @@ export default function ProfileSettingsPage(): JSX.Element {
           <div className="flex w-full justify-end">
             <div className="w-32">
               <Form.Submit asChild>
-                <Button className="mt-6 mr-3 w-full" type="submit">
+                <Button className="mr-3 mt-6 w-full" type="submit">
                   Save
                 </Button>
               </Form.Submit>

@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const ListSkeleton = () => {
   return (
-    <Card className="border-border bg-background my-2 flex flex-row justify-between rounded-lg border p-4">
+    <Card className="my-2 flex flex-row justify-between rounded-lg border border-border bg-background p-4">
       {/* left side */}
       <div className="flex min-w-0 items-center gap-4">
         {/* Icon skeleton */}

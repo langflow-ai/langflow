@@ -73,7 +73,7 @@ export const DropdownMenuInputList = ({
           asChild
           tabIndex={index}
           className={cn(
-            "bg-background absolute transition-opacity peer-focus:opacity-0",
+            "absolute bg-background transition-opacity peer-focus:opacity-0",
             editNode ? "translate-x-[14rem]" : "translate-x-60",
           )}
         >
@@ -109,7 +109,7 @@ export const DropdownMenuInputList = ({
 
             <div className="flex grow content-end justify-end self-center text-[12px]">
               <span
-                className={`bg-muted text-muted-foreground flex content-end items-center rounded-sm px-1.5 py-[0.1em]`}
+                className={`flex content-end items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-muted-foreground`}
               >
                 <RenderIcons
                   filteredShortcut={shortcuts
@@ -125,7 +125,7 @@ export const DropdownMenuInputList = ({
                 removeInput(index, e);
                 e.stopPropagation();
               }}
-              className="text-destructive cursor-pointer"
+              className="cursor-pointer text-destructive"
               data-testid={`input-list-dropdown-menu-${index}-delete`}
             >
               <ForwardedIconComponent
@@ -137,7 +137,7 @@ export const DropdownMenuInputList = ({
 
               <div className="flex grow content-end justify-end self-center text-[12px]">
                 <span
-                  className={`text-muted-foreground flex content-end items-center rounded-sm px-1.5 py-[0.1em]`}
+                  className={`flex content-end items-center rounded-sm px-1.5 py-[0.1em] text-muted-foreground`}
                 >
                   <ForwardedIconComponent
                     name="Delete"

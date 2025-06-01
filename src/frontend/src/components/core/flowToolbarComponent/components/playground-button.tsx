@@ -23,17 +23,6 @@ const ButtonLabel = () => (
   <span className="hidden md:block">{PLAYGROUND_BUTTON_NAME}</span>
 );
 
-<<<<<<< HEAD
-  const DisabledButton = () => (
-    <div
-      className="playground-btn-flow-toolbar text-muted-foreground cursor-not-allowed duration-150"
-      data-testid="playground-btn-flow"
-    >
-      <PlayIcon />
-      <ButtonLabel />
-    </div>
-  );
-=======
 const ActiveButton = () => (
   <div
     data-testid="playground-btn-flow-io"
@@ -43,7 +32,6 @@ const ActiveButton = () => (
     <ButtonLabel />
   </div>
 );
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
 
 const DisabledButton = () => (
   <div

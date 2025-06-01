@@ -38,7 +38,7 @@ const InputSearchComponent = ({
           data-testid="search-store-input"
           disabled={loading}
           placeholder={getSearchPlaceholder()}
-          className="absolute h-12 pr-12 pl-5"
+          className="absolute h-12 pl-5 pr-12"
           onChange={onChange}
           onKeyDown={onKeyDown}
           value={value}
@@ -46,7 +46,7 @@ const InputSearchComponent = ({
         <button
           onClick={onClick}
           disabled={loading}
-          className="text-muted-foreground absolute top-0 right-4 bottom-0 my-auto h-6 cursor-pointer stroke-1"
+          className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
           data-testid="search-store-button"
         >
           <ForwardedIconComponent

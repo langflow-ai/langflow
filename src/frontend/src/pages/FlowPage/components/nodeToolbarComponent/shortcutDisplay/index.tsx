@@ -18,7 +18,7 @@ export default function ShortcutDisplay({
           {display_name && <span> {display_name} </span>}
           <span
             className={cn(
-              "bg-muted text-muted-foreground flex h-[16px] w-[16px] items-center justify-center rounded-sm",
+              "flex h-[16px] w-[16px] items-center justify-center rounded-sm bg-muted text-muted-foreground",
               display_name && "ml-3",
             )}
           >
@@ -29,7 +29,7 @@ export default function ShortcutDisplay({
         <div className="flex content-center items-center justify-center self-center text-[12px]">
           <span> {display_name} </span>
           <span
-            className={`bg-primary-hover text-muted ml-3 flex items-center rounded-sm px-1.5 py-[0.1em]`}
+            className={`ml-3 flex items-center rounded-sm bg-primary-hover px-1.5 py-[0.1em] text-muted`}
           >
             <RenderIcons filteredShortcut={fixedShortcut} />
           </span>

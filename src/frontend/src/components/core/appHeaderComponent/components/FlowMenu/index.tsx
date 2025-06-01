@@ -143,7 +143,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
       <div
         data-testid="menu_status_saved_flow_button"
         id="menu_status_saved_flow_button"
-        className="text-accent-emerald-foreground shrink-0 text-xs font-medium"
+        className="shrink-0 text-xs font-medium text-accent-emerald-foreground"
       >
         Saved
       </div>
@@ -268,7 +268,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
-              className="text-muted-foreground hover:text-primary cursor-pointer truncate pr-1"
+              className="cursor-pointer truncate pr-1 text-muted-foreground hover:text-primary"
               onClick={() => {
                 navigate(
                   currentFolder?.id
@@ -283,7 +283,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         )}
       </div>
       <div
-        className="text-muted-foreground hidden w-fit shrink-0 font-normal select-none md:flex"
+        className="hidden w-fit shrink-0 select-none font-normal text-muted-foreground md:flex"
         data-testid="menu_bar_separator"
       >
         /
@@ -313,7 +313,6 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               <Input
                 className={cn(
-
                   "h-6 w-full shrink-0 cursor-text font-semibold",
                   "bg-transparent pl-1 pr-0 transition-colors duration-200",
 
@@ -335,9 +334,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               />
               <span
                 ref={measureRef}
-
                 className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre font-semibold"
-
                 aria-hidden="true"
                 data-testid="flow_name"
               >
@@ -352,10 +349,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               <IconComponent
                 name="ChevronDown"
-                className="text-muted-foreground hover:text-primary flex h-5 w-5"
+                className="flex h-5 w-5 text-muted-foreground hover:text-primary"
               />
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="dark:bg-background w-44 bg-white">
+            <DropdownMenuContent className="w-44 bg-white dark:bg-background">
               <DropdownMenuLabel>Options</DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => {
@@ -550,7 +547,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
           side="bottom"
           styleClasses="cursor-default z-10"
         >
-          <div className="text-muted-foreground flex cursor-default items-center gap-2 truncate text-sm">
+          <div className="flex cursor-default items-center gap-2 truncate text-sm text-muted-foreground">
             <div className="flex cursor-default items-center gap-2 truncate text-sm">
               <div className="w-full truncate text-xs">
                 {printByBuildStatus()}
@@ -566,7 +563,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "text-status-red hidden items-center gap-1.5 text-xs sm:flex"
+                  ? "hidden items-center gap-1.5 text-xs text-status-red sm:flex"
                   : "hidden"
               }
             >

@@ -18,16 +18,12 @@ class URLComponent(Component):
     """A component that loads and parses child links from a root URL recursively."""
 
     display_name = "URL"
-<<<<<<< HEAD
 
     description = (
         "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, "
         "or JSON, with options for cleaning and separating multiple outputs."
     )
 
-=======
-    description = "Load and parse child links from a root URL recursively"
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
     icon = "layout-template"
     name = "URLComponent"
 

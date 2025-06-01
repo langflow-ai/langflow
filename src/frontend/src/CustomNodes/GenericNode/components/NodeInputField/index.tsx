@@ -176,16 +176,18 @@ export default function NodeInputField({
             <div>
               {info !== "" && (
                 <ShadTooltip content={<NodeInputInfo info={info} />}>
-                  {/* put div to avoid bug that does not display tooltip */}
                   <div className="cursor-help">
                     <IconComponent
                       name="Info"
                       strokeWidth={ICON_STROKE_WIDTH}
-<<<<<<< HEAD
-                      className="text-placeholder relative bottom-px ml-1 h-3 w-3"
-=======
-                      className="relative ml-1 h-3 w-3 text-placeholder"
->>>>>>> dc35b4ec9ed058b980c89065484fdbfc1fd4cc9b
+                      className={cn(
+                        "relative",
+                        "bottom-px",
+                        "ml-1",
+                        "h-3",
+                        "w-3",
+                        "text-placeholder",
+                      )}
                     />
                   </div>
                 </ShadTooltip>

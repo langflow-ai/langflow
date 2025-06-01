@@ -24,7 +24,7 @@ const useIconStatus = (buildStatus: BuildStatus | undefined) => {
         icon: (
           <Xmark
             isVisible={true}
-            className="text-destructive h-4 w-4 fill-current stroke-2"
+            className="h-4 w-4 fill-current stroke-2 text-destructive"
           />
         ),
       },
@@ -33,7 +33,7 @@ const useIconStatus = (buildStatus: BuildStatus | undefined) => {
         icon: (
           <ForwardedIconComponent
             name="CircleOff"
-            className="text-muted-foreground h-4 w-4"
+            className="h-4 w-4 text-muted-foreground"
           />
         ),
       },

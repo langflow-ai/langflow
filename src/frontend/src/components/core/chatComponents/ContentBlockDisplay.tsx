@@ -60,7 +60,7 @@ export function ContentBlockDisplay({
           ease: "easeOut",
         }}
         className={cn(
-          "border-border bg-background relative rounded-lg border",
+          "relative rounded-lg border border-border bg-background",
           "overflow-hidden",
         )}
       >
@@ -101,7 +101,7 @@ export function ContentBlockDisplay({
                 <Markdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeMathjax]}
-                  className="text-primary inline-block w-fit max-w-full text-[14px] font-semibold"
+                  className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
                 >
                   {headerTitle}
                 </Markdown>
@@ -141,7 +141,7 @@ export function ContentBlockDisplay({
                   opacity: { duration: 0.1 },
                 },
               }}
-              className="border-border relative border-t"
+              className="relative border-t border-border"
             >
               {contentBlocks.map((block, index) => (
                 <motion.div
@@ -152,7 +152,7 @@ export function ContentBlockDisplay({
                   className={cn(
                     "relative",
                     index !== contentBlocks.length - 1 &&
-                      "border-border border-b",
+                      "border-b border-border",
                   )}
                 >
                   <AnimatePresence>
@@ -166,10 +166,10 @@ export function ContentBlockDisplay({
                         }}
                         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="overflow-hidden pt-[16px] pl-4 font-medium"
+                        className="overflow-hidden pl-4 pt-[16px] font-medium"
                       >
                         <Markdown
-                          className="text-foreground text-[14px] font-semibold"
+                          className="text-[14px] font-semibold text-foreground"
                           remarkPlugins={[remarkGfm]}
                           linkTarget="_blank"
                           rehypePlugins={[rehypeMathjax]}
@@ -186,7 +186,7 @@ export function ContentBlockDisplay({
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  <div className="text-muted-foreground text-sm">
+                  <div className="text-sm text-muted-foreground">
                     {block.contents.map((content, index) => (
                       <motion.div key={index}>
                         <AnimatePresence>

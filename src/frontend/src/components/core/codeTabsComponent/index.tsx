@@ -74,7 +74,7 @@ export default function CodeTabsComponent({
       {tabs.map((tab, idx) => (
         <TabsContent
           value={idx.toString()}
-          className="api-modal-tabs-content dark overflow-hidden"
+          className="api-modal-tabs-content overflow-hidden dark"
           key={idx} // Remember to add a unique key prop
         >
           {tab.name.toLowerCase() !== "tweaks" ? (
@@ -85,7 +85,7 @@ export default function CodeTabsComponent({
                   dangerouslySetInnerHTML={{ __html: tab.description }}
                 ></div>
               )}
-              <div className="border-border bg-muted flex w-full items-center justify-end gap-4 rounded-t-md border px-4 py-2">
+              <div className="flex w-full items-center justify-end gap-4 rounded-t-md border border-border bg-muted px-4 py-2">
                 {nodes.length > 0 &&
                   tabs.find((tab) => tab.name.toLowerCase() === "tweaks") &&
                   tabs[activeTab].hasTweaks && (
@@ -100,7 +100,7 @@ export default function CodeTabsComponent({
                           </Label>
                           <IconComponent
                             name="info"
-                            className="text-placeholder-foreground h-3.5 w-3.5"
+                            className="h-3.5 w-3.5 text-placeholder-foreground"
                           />
                         </div>
                       </ShadTooltip>
@@ -113,7 +113,7 @@ export default function CodeTabsComponent({
                         checked={activeTweaks}
                         autoFocus={false}
                       />
-                      <span className="text-accent text-lg">|</span>
+                      <span className="text-lg text-accent">|</span>
                     </div>
                   )}
 
@@ -128,12 +128,12 @@ export default function CodeTabsComponent({
                       {isCopied ? (
                         <IconComponent
                           name="Check"
-                          className="text-muted-foreground h-4 w-4"
+                          className="h-4 w-4 text-muted-foreground"
                         />
                       ) : (
                         <IconComponent
                           name="Copy"
-                          className="text-muted-foreground h-4 w-4"
+                          className="h-4 w-4 text-muted-foreground"
                         />
                       )}
                     </Button>
@@ -143,7 +143,7 @@ export default function CodeTabsComponent({
               <SyntaxHighlighter
                 language={tab.language}
                 style={oneDark}
-                className="border-border custom-scroll !my-0 h-full overflow-auto rounded-sm !rounded-t-none border border-t-0 text-left"
+                className="!my-0 h-full overflow-auto rounded-sm !rounded-t-none border border-t-0 border-border text-left custom-scroll"
               >
                 {tab.code}
               </SyntaxHighlighter>

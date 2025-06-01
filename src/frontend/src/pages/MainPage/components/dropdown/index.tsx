@@ -92,7 +92,7 @@ const DropdownComponent = ({
           e.stopPropagation();
           setOpenDelete(true);
         }}
-        className="text-destructive cursor-pointer"
+        className="cursor-pointer text-destructive"
       >
         <ForwardedIconComponent
           name="Trash2"
