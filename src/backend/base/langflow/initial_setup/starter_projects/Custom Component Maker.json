@@ -202,7 +202,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Data",
-                "group_outputs": false,
+
                 "method": "retrieve_messages",
                 "name": "messages",
                 "selected": "Data",
@@ -214,7 +214,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "retrieve_messages_as_text",
                 "name": "messages_text",
                 "selected": "Message",
@@ -226,7 +226,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "DataFrame",
-                "group_outputs": false,
+
                 "method": "as_dataframe",
                 "name": "dataframe",
                 "selected": "DataFrame",
@@ -1278,7 +1278,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
@@ -1291,7 +1291,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
-                "group_outputs": false,
+
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": ["api_key"],
@@ -1594,7 +1594,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -1890,7 +1890,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",

@@ -9,16 +9,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-buyiB",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-BxJm3",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -37,18 +33,12 @@
             "dataType": "Agent",
             "id": "Agent-BxJm3",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-pZ2AW",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "str"
           }
         },
@@ -67,16 +57,12 @@
             "dataType": "GmailAPI",
             "id": "GmailAPI-J65iP",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-BxJm3",
-            "inputTypes": [
-              "Tool"
-            ],
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
@@ -93,9 +79,7 @@
         "data": {
           "id": "Agent-BxJm3",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "agents",
             "conditional_paths": [],
@@ -150,9 +134,7 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -184,9 +166,7 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -293,9 +273,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -394,9 +372,7 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": [
-                  "Memory"
-                ],
+                "input_types": ["Memory"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "memory",
@@ -505,10 +481,7 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": [
-                  "Ascending",
-                  "Descending"
-                ],
+                "options": ["Ascending", "Descending"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -546,11 +519,7 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
+                "options": ["Machine", "User", "Machine and User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -567,9 +536,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -590,9 +557,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -613,9 +578,7 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -665,9 +628,7 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -707,9 +668,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -762,9 +721,7 @@
         "data": {
           "id": "ChatInput-buyiB",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "inputs",
             "conditional_paths": [],
@@ -797,14 +754,12 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -818,9 +773,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -841,9 +794,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -951,10 +902,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -971,9 +919,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -994,9 +940,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1035,9 +979,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1075,9 +1017,7 @@
         "data": {
           "id": "ChatOutput-pZ2AW",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "outputs",
             "conditional_paths": [],
@@ -1110,14 +1050,12 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1131,9 +1069,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1154,9 +1090,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1213,9 +1147,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1236,11 +1168,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1264,10 +1192,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1284,9 +1209,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1307,9 +1230,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1348,9 +1269,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1415,9 +1334,7 @@
         "data": {
           "id": "GmailAPI-J65iP",
           "node": {
-            "base_classes": [
-              "DataFrame"
-            ],
+            "base_classes": ["DataFrame"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1474,9 +1391,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1567,9 +1482,7 @@
                 "display_name": "Attachment ID",
                 "dynamic": false,
                 "info": "Id of the attachment",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1605,9 +1518,7 @@
                 "display_name": "BCC",
                 "dynamic": false,
                 "info": "Email addresses to BCC (Blind Carbon Copy) in the email, separated by commas",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1628,9 +1539,7 @@
                 "display_name": "Body",
                 "dynamic": false,
                 "info": "Content of the email",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1651,9 +1560,7 @@
                 "display_name": "CC",
                 "dynamic": false,
                 "info": "Email addresses to CC (Carbon Copy) in the email, separated by commas",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1692,9 +1599,7 @@
                 "display_name": "Entity ID",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1715,9 +1620,7 @@
                 "display_name": "File name",
                 "dynamic": false,
                 "info": "File name of the attachment file",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1738,9 +1641,7 @@
                 "display_name": "Format",
                 "dynamic": false,
                 "info": "The format to return the message in. Possible values: minimal, full, raw, metadata",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1761,9 +1662,7 @@
                 "display_name": "User ID",
                 "dynamic": false,
                 "info": "The user's email address or 'me' for the authenticated user",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1820,9 +1719,7 @@
                 "display_name": "Label ID",
                 "dynamic": false,
                 "info": "The ID of the Gmail label",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1843,9 +1740,7 @@
                 "display_name": "Label Ids",
                 "dynamic": false,
                 "info": "Comma-separated list of label IDs to filter messages",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1866,9 +1761,7 @@
                 "display_name": "Label List Visibility",
                 "dynamic": false,
                 "info": "The visibility of the label in the label list in the Gmail web interface",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1889,9 +1782,7 @@
                 "display_name": "Label Name",
                 "dynamic": false,
                 "info": "Name of the Gmail label to create, modify, or filter by",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1930,9 +1821,7 @@
                 "display_name": "Message Body",
                 "dynamic": false,
                 "info": "The body content of the message to be sent",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1953,9 +1842,7 @@
                 "display_name": "Message ID",
                 "dynamic": false,
                 "info": "The ID of the specific email message",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1976,9 +1863,7 @@
                 "display_name": "Message List Visibility",
                 "dynamic": false,
                 "info": "The visibility of the label in the message list in the Gmail web interface",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1999,9 +1884,7 @@
                 "display_name": "Page Token",
                 "dynamic": false,
                 "info": "Token for retrieving the next page of results",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2022,9 +1905,7 @@
                 "display_name": "Person fields",
                 "dynamic": false,
                 "info": "Fields to return for the person. Multiple fields can be specified by separating them with commas",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2045,9 +1926,7 @@
                 "display_name": "Query",
                 "dynamic": false,
                 "info": "Search query to filter emails (e.g., 'from:someone@email.com' or 'subject:hello')",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2068,9 +1947,7 @@
                 "display_name": "Recipient Email",
                 "dynamic": false,
                 "info": "Email address of the recipient",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2091,9 +1968,7 @@
                 "display_name": "Resource Name",
                 "dynamic": false,
                 "info": "The resource name of the person to provide information about",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2114,9 +1989,7 @@
                 "display_name": "Subject",
                 "dynamic": false,
                 "info": "Subject of the email",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2137,9 +2010,7 @@
                 "display_name": "Thread ID",
                 "dynamic": false,
                 "info": "The ID of the email thread",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2184,12 +2055,7 @@
                       "bcc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a blind carbon copy (BCC).",
-                        "examples": [
-                          [
-                            "john@doe.com",
-                            "jane@doe.com"
-                          ]
-                        ],
+                        "examples": [["john@doe.com", "jane@doe.com"]],
                         "items": {
                           "type": "string"
                         },
@@ -2207,12 +2073,7 @@
                       "cc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a carbon copy (CC).",
-                        "examples": [
-                          [
-                            "john@doe.com",
-                            "jane@doe.com"
-                          ]
-                        ],
+                        "examples": [["john@doe.com", "jane@doe.com"]],
                         "items": {
                           "type": "string"
                         },
@@ -2222,12 +2083,7 @@
                       "extra_recipients": {
                         "default": [],
                         "description": "Extra email addresses of the recipients to be added.These will be treated as regular recipients, not CC or BCC.",
-                        "examples": [
-                          [
-                            "john@doe.com",
-                            "jane@doe.com"
-                          ]
-                        ],
+                        "examples": [["john@doe.com", "jane@doe.com"]],
                         "items": {
                           "type": "string"
                         },
@@ -2243,17 +2099,13 @@
                       },
                       "recipient_email": {
                         "description": "Email address of the recipient. Please provide a value of type string. This parameter is required.",
-                        "examples": [
-                          "john@doe.com"
-                        ],
+                        "examples": ["john@doe.com"],
                         "title": "Recipient Email",
                         "type": "string"
                       },
                       "subject": {
                         "description": "Subject of the email. Please provide a value of type string. This parameter is required.",
-                        "examples": [
-                          "meeting"
-                        ],
+                        "examples": ["meeting"],
                         "title": "Subject",
                         "type": "string"
                       },
@@ -2278,9 +2130,7 @@
                     "name": "gmail_create_email_draft",
                     "readonly": true,
                     "status": true,
-                    "tags": [
-                      "GMAIL_CREATE_EMAIL_DRAFT"
-                    ]
+                    "tags": ["GMAIL_CREATE_EMAIL_DRAFT"]
                   },
                   {
                     "args": {
@@ -2318,9 +2168,7 @@
                     "name": "gmail_create_label",
                     "readonly": true,
                     "status": false,
-                    "tags": [
-                      "GMAIL_CREATE_LABEL"
-                    ]
+                    "tags": ["GMAIL_CREATE_LABEL"]
                   },
                   {
                     "args": {
@@ -2383,9 +2231,7 @@
                     "name": "gmail_fetch_emails",
                     "readonly": true,
                     "status": true,
-                    "tags": [
-                      "GMAIL_FETCH_EMAILS"
-                    ]
+                    "tags": ["GMAIL_FETCH_EMAILS"]
                   },
                   {
                     "args": {
@@ -2398,9 +2244,7 @@
                       },
                       "message_id": {
                         "description": "ID of the message to fetch, you can find the 'message_id' in the response of the 'fetchEmails' action. Please provide a value of type string. This parameter is required.",
-                        "examples": [
-                          "xsdfe3264vrfw"
-                        ],
+                        "examples": ["xsdfe3264vrfw"],
                         "title": "Message Id",
                         "type": "string"
                       },
@@ -2418,9 +2262,7 @@
                     "name": "gmail_fetch_message_by_message_id",
                     "readonly": true,
                     "status": false,
-                    "tags": [
-                      "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID"
-                    ]
+                    "tags": ["GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID"]
                   },
                   {
                     "args": {
@@ -2433,9 +2275,7 @@
                       },
                       "thread_id": {
                         "description": "ID of the thread containing the message to fetch, you can find the 'thread_id' in the response of the 'fetchEmails' action or 'listThreads' actions. Please provide a value of type string. This parameter is required.",
-                        "examples": [
-                          "xsdfe3264vrfw"
-                        ],
+                        "examples": ["xsdfe3264vrfw"],
                         "title": "Thread Id",
                         "type": "string"
                       },
@@ -2453,9 +2293,7 @@
                     "name": "gmail_fetch_message_by_thread_id",
                     "readonly": true,
                     "status": false,
-                    "tags": [
-                      "GMAIL_FETCH_MESSAGE_BY_THREAD_ID"
-                    ]
+                    "tags": ["GMAIL_FETCH_MESSAGE_BY_THREAD_ID"]
                   },
                   {
                     "args": {
@@ -2491,9 +2329,7 @@
                     "name": "gmail_get_attachment",
                     "readonly": true,
                     "status": false,
-                    "tags": [
-                      "GMAIL_GET_ATTACHMENT"
-                    ]
+                    "tags": ["GMAIL_GET_ATTACHMENT"]
                   },
                   {
                     "args": {
@@ -2546,9 +2382,7 @@
                     "name": "gmail_get_people",
                     "readonly": true,
                     "status": false,
-                    "tags": [
-                      "GMAIL_GET_PEOPLE"
-                    ]
+                    "tags": ["GMAIL_GET_PEOPLE"]
                   },
                   {
                     "args": {
@@ -2566,9 +2400,7 @@
                     "name": "gmail_get_profile",
                     "readonly": true,
                     "status": false,
-                    "tags": [
-                      "GMAIL_GET_PROFILE"
-                    ]
+                    "tags": ["GMAIL_GET_PROFILE"]
                   },
                   {
                     "args": {
@@ -2586,20 +2418,14 @@
                     "name": "gmail_list_labels",
                     "readonly": true,
                     "status": false,
-                    "tags": [
-                      "GMAIL_LIST_LABELS"
-                    ]
+                    "tags": ["GMAIL_LIST_LABELS"]
                   },
                   {
                     "args": {
                       "max_results": {
                         "default": 10,
                         "description": "Maximum number of threads to return. Please provide a value of type integer.",
-                        "examples": [
-                          10,
-                          50,
-                          100
-                        ],
+                        "examples": [10, 50, 100],
                         "title": "Max Results",
                         "type": "integer"
                       },
@@ -2613,19 +2439,14 @@
                       "query": {
                         "default": "",
                         "description": "Only return threads matching the specified query. Please provide a value of type string.",
-                        "examples": [
-                          "is:unread",
-                          "from:john.doe@example.com"
-                        ],
+                        "examples": ["is:unread", "from:john.doe@example.com"],
                         "title": "Query",
                         "type": "string"
                       },
                       "user_id": {
                         "default": "me",
                         "description": "The user's email address or 'me' for the authenticated users. Please provide a value of type string.",
-                        "examples": [
-                          "me"
-                        ],
+                        "examples": ["me"],
                         "title": "User Id",
                         "type": "string"
                       }
@@ -2636,9 +2457,7 @@
                     "name": "gmail_list_threads",
                     "readonly": true,
                     "status": false,
-                    "tags": [
-                      "GMAIL_LIST_THREADS"
-                    ]
+                    "tags": ["GMAIL_LIST_THREADS"]
                   },
                   {
                     "args": {
@@ -2662,21 +2481,14 @@
                     "name": "gmail_remove_label",
                     "readonly": true,
                     "status": false,
-                    "tags": [
-                      "GMAIL_REMOVE_LABEL"
-                    ]
+                    "tags": ["GMAIL_REMOVE_LABEL"]
                   },
                   {
                     "args": {
                       "bcc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a blind carbon copy (BCC).",
-                        "examples": [
-                          [
-                            "john@doe.com",
-                            "jane@doe.com"
-                          ]
-                        ],
+                        "examples": [["john@doe.com", "jane@doe.com"]],
                         "items": {
                           "type": "string"
                         },
@@ -2686,12 +2498,7 @@
                       "cc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a carbon copy (CC).",
-                        "examples": [
-                          [
-                            "john@doe.com",
-                            "jane@doe.com"
-                          ]
-                        ],
+                        "examples": [["john@doe.com", "jane@doe.com"]],
                         "items": {
                           "type": "string"
                         },
@@ -2701,12 +2508,7 @@
                       "extra_recipients": {
                         "default": [],
                         "description": "Extra email addresses of the recipients to be added.These will be treated as regular recipients, not CC or BCC.",
-                        "examples": [
-                          [
-                            "john@doe.com",
-                            "jane@doe.com"
-                          ]
-                        ],
+                        "examples": [["john@doe.com", "jane@doe.com"]],
                         "items": {
                           "type": "string"
                         },
@@ -2730,17 +2532,13 @@
                       },
                       "recipient_email": {
                         "description": "Email address of the recipient. Please provide a value of type string. This parameter is required.",
-                        "examples": [
-                          "John@doe.com"
-                        ],
+                        "examples": ["John@doe.com"],
                         "title": "Recipient Email",
                         "type": "string"
                       },
                       "thread_id": {
                         "description": "ID of the thread to reply to. Please provide a value of type string. This parameter is required.",
-                        "examples": [
-                          "x53r3vdevff"
-                        ],
+                        "examples": ["x53r3vdevff"],
                         "title": "Thread Id",
                         "type": "string"
                       },
@@ -2758,9 +2556,7 @@
                     "name": "gmail_reply_to_thread",
                     "readonly": true,
                     "status": false,
-                    "tags": [
-                      "GMAIL_REPLY_TO_THREAD"
-                    ]
+                    "tags": ["GMAIL_REPLY_TO_THREAD"]
                   },
                   {
                     "args": {
@@ -2774,12 +2570,7 @@
                       "bcc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a blind carbon copy (BCC).",
-                        "examples": [
-                          [
-                            "john@doe.com",
-                            "jane@doe.com"
-                          ]
-                        ],
+                        "examples": [["john@doe.com", "jane@doe.com"]],
                         "items": {
                           "type": "string"
                         },
@@ -2797,12 +2588,7 @@
                       "cc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a carbon copy (CC).",
-                        "examples": [
-                          [
-                            "john@doe.com",
-                            "jane@doe.com"
-                          ]
-                        ],
+                        "examples": [["john@doe.com", "jane@doe.com"]],
                         "items": {
                           "type": "string"
                         },
@@ -2812,12 +2598,7 @@
                       "extra_recipients": {
                         "default": [],
                         "description": "Extra email addresses of the recipients to be added.These will be treated as regular recipients, not CC or BCC.",
-                        "examples": [
-                          [
-                            "john@doe.com",
-                            "jane@doe.com"
-                          ]
-                        ],
+                        "examples": [["john@doe.com", "jane@doe.com"]],
                         "items": {
                           "type": "string"
                         },
@@ -2833,18 +2614,14 @@
                       },
                       "recipient_email": {
                         "description": "Email address of the recipient. Please provide a value of type string. This parameter is required.",
-                        "examples": [
-                          "john@doe.com"
-                        ],
+                        "examples": ["john@doe.com"],
                         "title": "Recipient Email",
                         "type": "string"
                       },
                       "subject": {
                         "default": null,
                         "description": "Subject of the email. Please provide a value of type string.",
-                        "examples": [
-                          "Job Application"
-                        ],
+                        "examples": ["Job Application"],
                         "title": "Subject",
                         "type": "string"
                       },
@@ -2862,9 +2639,7 @@
                     "name": "gmail_send_email",
                     "readonly": true,
                     "status": true,
-                    "tags": [
-                      "GMAIL_SEND_EMAIL"
-                    ]
+                    "tags": ["GMAIL_SEND_EMAIL"]
                   }
                 ]
               }
@@ -2900,7 +2675,5 @@
   "is_component": false,
   "last_tested_version": "1.4.0",
   "name": "Gmail Agent",
-  "tags": [
-    "agents"
-  ]
+  "tags": ["agents"]
 }

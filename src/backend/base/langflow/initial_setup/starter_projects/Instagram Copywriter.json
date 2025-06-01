@@ -277,7 +277,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -704,7 +704,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "text_response",
                 "name": "text",
                 "selected": "Message",
@@ -951,7 +951,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -1248,7 +1248,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
@@ -2596,7 +2596,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
@@ -2609,7 +2609,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
-                "group_outputs": false,
+
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": ["api_key"],
@@ -2976,7 +2976,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
@@ -2989,7 +2989,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
-                "group_outputs": false,
+
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": ["api_key"],

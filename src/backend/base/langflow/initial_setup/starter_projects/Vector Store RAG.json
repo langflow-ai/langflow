@@ -300,7 +300,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -731,7 +731,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Chunks",
-                "group_outputs": false,
+
                 "method": "split_text",
                 "name": "chunks",
                 "selected": "Data",
@@ -743,7 +743,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "DataFrame",
-                "group_outputs": false,
+
                 "method": "as_dataframe",
                 "name": "dataframe",
                 "selected": "DataFrame",
@@ -1011,7 +1011,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -1302,7 +1302,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Embeddings",
-                "group_outputs": false,
+
                 "method": "build_embeddings",
                 "name": "embeddings",
                 "required_inputs": ["openai_api_key"],
@@ -1815,7 +1815,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Embeddings",
-                "group_outputs": false,
+
                 "method": "build_embeddings",
                 "name": "embeddings",
                 "required_inputs": ["openai_api_key"],
@@ -2274,7 +2274,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Data",
-                "group_outputs": false,
+
                 "method": "load_files",
                 "name": "data",
                 "required_inputs": [],
@@ -2287,7 +2287,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "DataFrame",
-                "group_outputs": false,
+
                 "method": "load_dataframe",
                 "name": "dataframe",
                 "required_inputs": [],
@@ -2300,7 +2300,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "load_message",
                 "name": "message",
                 "required_inputs": [],
@@ -2671,7 +2671,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
@@ -2684,7 +2684,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
-                "group_outputs": false,
+
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": ["api_key"],
@@ -3209,7 +3209,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Search Results",
-                "group_outputs": false,
+
                 "method": "search_documents",
                 "name": "search_results",
                 "required_inputs": [
@@ -3226,7 +3226,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "DataFrame",
-                "group_outputs": false,
+
                 "method": "as_dataframe",
                 "name": "dataframe",
                 "required_inputs": [],
@@ -3239,7 +3239,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Vector Store Connection",
-                "group_outputs": false,
+
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
@@ -3945,7 +3945,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Search Results",
-                "group_outputs": false,
+
                 "method": "search_documents",
                 "name": "search_results",
                 "required_inputs": [
@@ -3962,7 +3962,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "DataFrame",
-                "group_outputs": false,
+
                 "method": "as_dataframe",
                 "name": "dataframe",
                 "required_inputs": [],
@@ -3975,7 +3975,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Vector Store Connection",
-                "group_outputs": false,
+
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",

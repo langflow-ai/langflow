@@ -320,7 +320,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
@@ -916,7 +916,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
@@ -1908,7 +1908,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -2285,7 +2285,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
@@ -3824,7 +3824,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "group_outputs": false,
+
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
