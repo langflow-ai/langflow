@@ -9,12 +9,16 @@
             "dataType": "AgentQL",
             "id": "AgentQL-reBlu",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-oRYZX",
-            "inputTypes": ["Tool"],
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
@@ -33,12 +37,18 @@
             "dataType": "Agent",
             "id": "Agent-oRYZX",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-hdvqT",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -57,12 +67,16 @@
             "dataType": "TavilySearchComponent",
             "id": "TavilySearchComponent-STQC5",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-oRYZX",
-            "inputTypes": ["Tool"],
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
@@ -81,12 +95,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-DwzkZ",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-oRYZX",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -103,7 +121,9 @@
         "data": {
           "id": "ChatInput-DwzkZ",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "inputs",
             "conditional_paths": [],
@@ -136,12 +156,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -155,7 +176,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -176,7 +199,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -283,7 +308,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -300,7 +328,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -321,7 +351,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -360,7 +392,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -398,7 +432,9 @@
         "data": {
           "id": "ChatOutput-hdvqT",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "outputs",
             "conditional_paths": [],
@@ -431,12 +467,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -450,7 +487,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -471,7 +510,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -528,7 +569,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -549,7 +592,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -573,7 +620,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -590,7 +640,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -611,7 +663,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -650,7 +704,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -688,7 +744,10 @@
         "data": {
           "id": "TavilySearchComponent-STQC5",
           "node": {
-            "base_classes": ["Data", "Message"],
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -724,7 +783,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -808,7 +869,9 @@
                 "display_name": "Exclude Domains",
                 "dynamic": false,
                 "info": "Comma-separated list of domains to exclude from the search results.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -847,7 +910,9 @@
                 "display_name": "Include Domains",
                 "dynamic": false,
                 "info": "Comma-separated list of domains to include in the search results.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -922,7 +987,9 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "The search query you want to execute with Tavily.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -946,7 +1013,10 @@
                 "dynamic": false,
                 "info": "The depth of the search.",
                 "name": "search_depth",
-                "options": ["basic", "advanced"],
+                "options": [
+                  "basic",
+                  "advanced"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -966,7 +1036,12 @@
                 "dynamic": false,
                 "info": "The time range back from the current date to filter results.",
                 "name": "time_range",
-                "options": ["day", "week", "month", "year"],
+                "options": [
+                  "day",
+                  "week",
+                  "month",
+                  "year"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1001,7 +1076,10 @@
                   "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
                     "commands": "commands",
-                    "name": ["snake_case", "no_blank"]
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
                   },
                   "hide_options": true
                 },
@@ -1058,12 +1136,16 @@
                   {
                     "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
                     "name": "TavilySearchComponent-fetch_content",
-                    "tags": ["TavilySearchComponent-fetch_content"]
+                    "tags": [
+                      "TavilySearchComponent-fetch_content"
+                    ]
                   },
                   {
                     "description": "fetch_content_text(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
                     "name": "TavilySearchComponent-fetch_content_text",
-                    "tags": ["TavilySearchComponent-fetch_content_text"]
+                    "tags": [
+                      "TavilySearchComponent-fetch_content_text"
+                    ]
                   }
                 ]
               },
@@ -1076,7 +1158,10 @@
                 "dynamic": false,
                 "info": "The category of the search.",
                 "name": "topic",
-                "options": ["general", "news"],
+                "options": [
+                  "general",
+                  "news"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1112,7 +1197,9 @@
           "display_name": "AgentQL Query Data",
           "id": "AgentQL-reBlu",
           "node": {
-            "base_classes": ["Data"],
+            "base_classes": [
+              "Data"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1151,7 +1238,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1256,7 +1345,10 @@
                 "dynamic": false,
                 "info": "'standard' uses deep data analysis, while 'fast' trades some depth of analysis for speed.",
                 "name": "mode",
-                "options": ["fast", "standard"],
+                "options": [
+                  "fast",
+                  "standard"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1274,7 +1366,9 @@
                 "display_name": "Prompt",
                 "dynamic": false,
                 "info": "A Natural Language description of the data to extract from the page. Alternative to AgentQL query.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1297,7 +1391,9 @@
                 "display_name": "AgentQL Query",
                 "dynamic": false,
                 "info": "The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1356,7 +1452,10 @@
                   "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
                     "commands": "commands",
-                    "name": ["snake_case", "no_blank"]
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
                   },
                   "hide_options": true
                 },
@@ -1427,7 +1526,9 @@
                     "description": "build_output(api_key: Message, url: Message) - Extracts structured data from a web page using an AgentQL query or a Natural Language description.",
                     "name": "AgentQL-build_output",
                     "status": true,
-                    "tags": ["AgentQL-build_output"]
+                    "tags": [
+                      "AgentQL-build_output"
+                    ]
                   }
                 ]
               },
@@ -1437,7 +1538,9 @@
                 "display_name": "URL",
                 "dynamic": false,
                 "info": "The URL of the public web page you want to extract data from.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1499,7 +1602,9 @@
         "data": {
           "id": "Agent-oRYZX",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1547,12 +1652,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1583,7 +1689,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1690,7 +1798,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1789,7 +1899,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "memory",
@@ -1898,7 +2010,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1936,7 +2051,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1953,7 +2072,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1974,7 +2095,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1995,7 +2118,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2045,7 +2170,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2085,7 +2212,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -2257,5 +2386,8 @@
   "is_component": false,
   "last_tested_version": "1.3.2",
   "name": "Price Deal Finder",
-  "tags": ["web-scraping", "agents"]
+  "tags": [
+    "web-scraping",
+    "agents"
+  ]
 }

@@ -9,12 +9,16 @@
             "dataType": "SearchComponent",
             "id": "SearchComponent-kgsWf",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-H916j",
-            "inputTypes": ["Tool"],
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
@@ -33,12 +37,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-6dlgJ",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-H916j",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -57,12 +65,16 @@
             "dataType": "Agent",
             "id": "Agent-H916j",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-zFKST",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -81,12 +93,16 @@
             "dataType": "Agent",
             "id": "Agent-zFKST",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-3tuWs",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -105,12 +121,18 @@
             "dataType": "Agent",
             "id": "Agent-3tuWs",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-n7Oik",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -128,12 +150,16 @@
             "dataType": "URL",
             "id": "URL-4LSRv",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-zFKST",
-            "inputTypes": ["Tool"],
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
@@ -151,12 +177,16 @@
             "dataType": "CalculatorComponent",
             "id": "CalculatorComponent-hlWP4",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-3tuWs",
-            "inputTypes": ["Tool"],
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
@@ -173,7 +203,9 @@
         "data": {
           "id": "ChatInput-6dlgJ",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -200,12 +232,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -218,7 +251,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -237,7 +272,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -339,7 +376,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -354,7 +394,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -373,7 +415,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -408,7 +452,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -450,7 +496,9 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-n7Oik",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -480,12 +528,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -498,7 +547,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -518,7 +569,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -574,7 +627,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -594,7 +649,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -615,7 +674,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -631,7 +693,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -651,7 +715,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -687,7 +753,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -910,7 +978,11 @@
           "display_name": "URL",
           "id": "URL-4LSRv",
           "node": {
-            "base_classes": ["Data", "DataFrame", "Message"],
+            "base_classes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -943,7 +1015,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -995,7 +1069,11 @@
                 "dynamic": false,
                 "info": "Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML content, or 'JSON' to extract JSON from the HTML.",
                 "name": "format",
-                "options": ["Text", "Raw HTML", "JSON"],
+                "options": [
+                  "Text",
+                  "Raw HTML",
+                  "JSON"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -1061,7 +1139,9 @@
                     "display_name": "fetch_content",
                     "name": "fetch_content",
                     "status": true,
-                    "tags": ["fetch_content"]
+                    "tags": [
+                      "fetch_content"
+                    ]
                   },
                   {
                     "args": {
@@ -1080,7 +1160,9 @@
                     "display_name": "fetch_content_text",
                     "name": "fetch_content_text",
                     "status": true,
-                    "tags": ["fetch_content_text"]
+                    "tags": [
+                      "fetch_content_text"
+                    ]
                   },
                   {
                     "args": {
@@ -1099,7 +1181,9 @@
                     "display_name": "as_dataframe",
                     "name": "as_dataframe",
                     "status": true,
-                    "tags": ["as_dataframe"]
+                    "tags": [
+                      "as_dataframe"
+                    ]
                   }
                 ]
               },
@@ -1109,7 +1193,9 @@
                 "display_name": "URLs",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": true,
                 "list_add_label": "Add URL",
                 "load_from_db": false,
@@ -1147,7 +1233,9 @@
         "data": {
           "id": "CalculatorComponent-hlWP4",
           "node": {
-            "base_classes": ["Data"],
+            "base_classes": [
+              "Data"
+            ],
             "beta": false,
             "category": "tools",
             "conditional_paths": [],
@@ -1156,7 +1244,9 @@
             "display_name": "Calculator",
             "documentation": "",
             "edited": false,
-            "field_order": ["expression"],
+            "field_order": [
+              "expression"
+            ],
             "frozen": false,
             "icon": "calculator",
             "key": "CalculatorComponent",
@@ -1177,7 +1267,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1209,7 +1301,9 @@
                 "display_name": "Expression",
                 "dynamic": false,
                 "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1256,7 +1350,9 @@
                     "display_name": "evaluate_expression",
                     "name": "evaluate_expression",
                     "status": true,
-                    "tags": ["evaluate_expression"]
+                    "tags": [
+                      "evaluate_expression"
+                    ]
                   }
                 ]
               }
@@ -1285,7 +1381,11 @@
           "display_name": "Search API",
           "id": "SearchComponent-kgsWf",
           "node": {
-            "base_classes": ["Data", "DataFrame", "Message"],
+            "base_classes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1320,7 +1420,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1371,7 +1473,11 @@
                 "dynamic": false,
                 "info": "",
                 "name": "engine",
-                "options": ["google", "bing", "duckduckgo"],
+                "options": [
+                  "google",
+                  "bing",
+                  "duckduckgo"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1389,7 +1495,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1484,7 +1592,9 @@
                     "display_name": "fetch_content",
                     "name": "fetch_content",
                     "status": true,
-                    "tags": ["fetch_content"]
+                    "tags": [
+                      "fetch_content"
+                    ]
                   },
                   {
                     "args": {},
@@ -1493,7 +1603,9 @@
                     "display_name": "fetch_content_text",
                     "name": "fetch_content_text",
                     "status": true,
-                    "tags": ["fetch_content_text"]
+                    "tags": [
+                      "fetch_content_text"
+                    ]
                   },
                   {
                     "args": {},
@@ -1502,7 +1614,9 @@
                     "display_name": "as_dataframe",
                     "name": "as_dataframe",
                     "status": true,
-                    "tags": ["as_dataframe"]
+                    "tags": [
+                      "as_dataframe"
+                    ]
                   }
                 ]
               }
@@ -1529,7 +1643,9 @@
         "data": {
           "id": "Agent-H916j",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "agents",
             "conditional_paths": [],
@@ -1583,7 +1699,9 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1616,7 +1734,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1751,7 +1871,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1850,7 +1972,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "memory",
@@ -1959,7 +2083,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1997,7 +2124,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2014,7 +2145,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2035,7 +2168,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2057,7 +2192,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2108,7 +2245,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2148,7 +2287,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -2201,7 +2342,9 @@
         "data": {
           "id": "Agent-zFKST",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "agents",
             "conditional_paths": [],
@@ -2255,7 +2398,9 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2288,7 +2433,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2423,7 +2570,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2522,7 +2671,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "memory",
@@ -2631,7 +2782,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2669,7 +2823,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2686,7 +2844,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2707,7 +2867,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2729,7 +2891,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2780,7 +2944,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2820,7 +2986,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -2873,7 +3041,9 @@
         "data": {
           "id": "Agent-3tuWs",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "agents",
             "conditional_paths": [],
@@ -2927,7 +3097,9 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2960,7 +3132,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3095,7 +3269,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3194,7 +3370,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "memory",
@@ -3303,7 +3481,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -3341,7 +3522,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -3358,7 +3543,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3379,7 +3566,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3401,7 +3590,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3452,7 +3643,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3492,7 +3685,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -3554,5 +3749,8 @@
   "is_component": false,
   "last_tested_version": "1.3.4",
   "name": "Travel Planning Agents",
-  "tags": ["agents", "openai"]
+  "tags": [
+    "agents",
+    "openai"
+  ]
 }

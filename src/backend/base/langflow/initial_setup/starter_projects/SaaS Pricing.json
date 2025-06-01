@@ -9,12 +9,18 @@
             "dataType": "Agent",
             "id": "Agent-GgGua",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-SplPb",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -32,12 +38,16 @@
             "dataType": "Prompt",
             "id": "Prompt-tqP9Q",
             "name": "prompt",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-GgGua",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -54,12 +64,16 @@
             "dataType": "CalculatorComponent",
             "id": "CalculatorComponent-LyoFm",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-GgGua",
-            "inputTypes": ["Tool"],
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
@@ -77,7 +91,9 @@
           "display_name": "Prompt",
           "id": "Prompt-tqP9Q",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -93,7 +109,9 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": ["template"],
+            "field_order": [
+              "template"
+            ],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -109,7 +127,9 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -142,7 +162,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -162,7 +185,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -182,7 +208,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -202,7 +231,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -222,7 +254,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -258,7 +293,9 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -302,7 +339,9 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-SplPb",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -332,12 +371,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -350,7 +390,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -370,7 +412,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -426,7 +470,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -446,7 +492,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -467,7 +517,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -483,7 +536,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -503,7 +558,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -539,7 +596,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -618,7 +677,9 @@
           "display_name": "Agent",
           "id": "Agent-GgGua",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -665,12 +726,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -699,7 +761,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -801,7 +865,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -893,7 +959,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "name": "memory",
                 "placeholder": "",
@@ -991,7 +1059,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1025,7 +1096,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1041,7 +1116,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1061,7 +1138,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1081,7 +1160,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1118,7 +1199,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1157,7 +1240,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
@@ -1212,7 +1297,9 @@
         "data": {
           "id": "CalculatorComponent-LyoFm",
           "node": {
-            "base_classes": ["Data"],
+            "base_classes": [
+              "Data"
+            ],
             "beta": false,
             "category": "tools",
             "conditional_paths": [],
@@ -1221,7 +1308,9 @@
             "display_name": "Calculator",
             "documentation": "",
             "edited": false,
-            "field_order": ["expression"],
+            "field_order": [
+              "expression"
+            ],
             "frozen": false,
             "icon": "calculator",
             "key": "CalculatorComponent",
@@ -1239,7 +1328,9 @@
                 "name": "component_as_tool",
                 "required_inputs": null,
                 "selected": "Tool",
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1271,7 +1362,9 @@
                 "display_name": "Expression",
                 "dynamic": false,
                 "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1311,7 +1404,10 @@
                   "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
                     "commands": "commands",
-                    "name": ["snake_case", "no_blank"]
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
                   },
                   "hide_options": true
                 },
@@ -1362,7 +1458,9 @@
                   {
                     "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
                     "name": "None-evaluate_expression",
-                    "tags": ["None-evaluate_expression"]
+                    "tags": [
+                      "None-evaluate_expression"
+                    ]
                   }
                 ]
               }
@@ -1400,5 +1498,8 @@
   "is_component": false,
   "last_tested_version": "1.1.1",
   "name": "SaaS Pricing",
-  "tags": ["agents", "assistants"]
+  "tags": [
+    "agents",
+    "assistants"
+  ]
 }

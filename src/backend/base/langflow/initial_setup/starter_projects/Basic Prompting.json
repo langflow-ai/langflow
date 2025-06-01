@@ -8,12 +8,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-jFwUm",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-OcXkl",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -30,12 +34,16 @@
             "dataType": "Prompt",
             "id": "Prompt-3SM2g",
             "name": "prompt",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "system_message",
             "id": "OpenAIModel-OcXkl",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -52,12 +60,18 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-OcXkl",
             "name": "text_output",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-gDYiJ",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -75,7 +89,9 @@
           "display_name": "Chat Input",
           "id": "ChatInput-jFwUm",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -102,12 +118,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -120,7 +137,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -139,7 +158,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -237,7 +258,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -251,7 +275,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -269,7 +295,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -304,7 +332,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -346,7 +376,9 @@
           "display_name": "Prompt",
           "id": "Prompt-3SM2g",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -356,7 +388,9 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": ["template"],
+            "field_order": [
+              "template"
+            ],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -371,7 +405,9 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -420,7 +456,9 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -535,7 +573,9 @@
         "data": {
           "id": "ChatOutput-gDYiJ",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -564,12 +604,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -582,7 +623,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -602,7 +645,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -658,7 +703,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -678,7 +725,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -699,7 +750,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -715,7 +769,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -735,7 +791,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -771,7 +829,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -813,7 +873,10 @@
         "data": {
           "id": "OpenAIModel-OcXkl",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -854,26 +917,30 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
-
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": ["api_key"],
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -921,7 +988,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1107,7 +1176,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1204,5 +1275,7 @@
   "is_component": false,
   "last_tested_version": "1.0.19.post2",
   "name": "Basic Prompting",
-  "tags": ["chatbots"]
+  "tags": [
+    "chatbots"
+  ]
 }

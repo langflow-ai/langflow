@@ -9,12 +9,17 @@
             "dataType": "Memory",
             "id": "Memory-80v92",
             "name": "messages_text",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "CHAT_HISTORY",
             "id": "Prompt-TBdwC",
-            "inputTypes": ["Message", "Text"],
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -33,12 +38,17 @@
             "dataType": "URL",
             "id": "URL-VNBsH",
             "name": "text",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "EXAMPLE_COMPONENTS",
             "id": "Prompt-TBdwC",
-            "inputTypes": ["Message", "Text"],
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -57,12 +67,17 @@
             "dataType": "URL",
             "id": "URL-7lpSF",
             "name": "text",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "BASE_COMPONENT_CODE",
             "id": "Prompt-TBdwC",
-            "inputTypes": ["Message", "Text"],
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -81,12 +96,17 @@
             "dataType": "URL",
             "id": "URL-V6Rnb",
             "name": "text",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "CUSTOM_COMPONENT_CODE",
             "id": "Prompt-TBdwC",
-            "inputTypes": ["Message", "Text"],
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -105,12 +125,16 @@
             "dataType": "Prompt",
             "id": "Prompt-TBdwC",
             "name": "prompt",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "AnthropicModel-Ud197",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -129,12 +153,18 @@
             "dataType": "AnthropicModel",
             "id": "AnthropicModel-Ud197",
             "name": "text_output",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-lY6GY",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "other"
           }
         },
@@ -151,12 +181,17 @@
             "dataType": "ChatInput",
             "id": "ChatInput-1jL7Z",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "USER_INPUT",
             "id": "Prompt-TBdwC",
-            "inputTypes": ["Message", "Text"],
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -174,7 +209,10 @@
           "display_name": "Chat Memory",
           "id": "Memory-80v92",
           "node": {
-            "base_classes": ["Data", "Message"],
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -202,36 +240,39 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Data",
-
                 "method": "retrieve_messages",
                 "name": "messages",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "retrieve_messages_as_text",
                 "name": "messages_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "DataFrame",
-
                 "method": "as_dataframe",
                 "name": "dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["DataFrame"],
+                "types": [
+                  "DataFrame"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -262,7 +303,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "name": "memory",
                 "placeholder": "",
@@ -297,7 +340,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -315,7 +361,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -331,7 +381,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -351,7 +403,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -371,7 +425,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -416,7 +472,9 @@
           "display_name": "Prompt",
           "id": "Prompt-TBdwC",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -432,7 +490,9 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": ["template"],
+            "field_order": [
+              "template"
+            ],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -448,7 +508,9 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -462,7 +524,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -482,7 +547,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -502,7 +570,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -522,7 +593,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -542,7 +616,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -597,7 +674,9 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -704,7 +783,10 @@
         "data": {
           "id": "URL-7lpSF",
           "node": {
-            "base_classes": ["Data", "Message"],
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -712,7 +794,10 @@
             "display_name": "URL",
             "documentation": "",
             "edited": false,
-            "field_order": ["urls", "format"],
+            "field_order": [
+              "urls",
+              "format"
+            ],
             "frozen": false,
             "icon": "layout-template",
             "legacy": false,
@@ -728,7 +813,9 @@
                 "name": "data",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -739,7 +826,9 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -750,7 +839,9 @@
                 "name": "dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["DataFrame"],
+                "types": [
+                  "DataFrame"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -801,7 +892,11 @@
                 "dynamic": false,
                 "info": "Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML content, or 'JSON' to extract JSON from the HTML.",
                 "name": "format",
-                "options": ["Text", "Raw HTML", "JSON"],
+                "options": [
+                  "Text",
+                  "Raw HTML",
+                  "JSON"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -836,7 +931,9 @@
                 "display_name": "URLs",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "name": "urls",
@@ -880,7 +977,10 @@
         "data": {
           "id": "URL-VNBsH",
           "node": {
-            "base_classes": ["Data", "Message"],
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -888,7 +988,10 @@
             "display_name": "URL",
             "documentation": "",
             "edited": false,
-            "field_order": ["urls", "format"],
+            "field_order": [
+              "urls",
+              "format"
+            ],
             "frozen": false,
             "icon": "layout-template",
             "legacy": false,
@@ -904,7 +1007,9 @@
                 "name": "data",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -915,7 +1020,9 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -926,7 +1033,9 @@
                 "name": "dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["DataFrame"],
+                "types": [
+                  "DataFrame"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -977,7 +1086,11 @@
                 "dynamic": false,
                 "info": "Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML content, or 'JSON' to extract JSON from the HTML.",
                 "name": "format",
-                "options": ["Text", "Raw HTML", "JSON"],
+                "options": [
+                  "Text",
+                  "Raw HTML",
+                  "JSON"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1012,7 +1125,9 @@
                 "display_name": "URLs",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "name": "urls",
@@ -1062,7 +1177,10 @@
         "data": {
           "id": "URL-V6Rnb",
           "node": {
-            "base_classes": ["Data", "Message"],
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1070,7 +1188,10 @@
             "display_name": "URL",
             "documentation": "",
             "edited": false,
-            "field_order": ["urls", "format"],
+            "field_order": [
+              "urls",
+              "format"
+            ],
             "frozen": false,
             "icon": "layout-template",
             "legacy": false,
@@ -1086,7 +1207,9 @@
                 "name": "data",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1097,7 +1220,9 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1108,7 +1233,9 @@
                 "name": "dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["DataFrame"],
+                "types": [
+                  "DataFrame"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1159,7 +1286,11 @@
                 "dynamic": false,
                 "info": "Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML content, or 'JSON' to extract JSON from the HTML.",
                 "name": "format",
-                "options": ["Text", "Raw HTML", "JSON"],
+                "options": [
+                  "Text",
+                  "Raw HTML",
+                  "JSON"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1194,7 +1325,9 @@
                 "display_name": "URLs",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "name": "urls",
@@ -1238,7 +1371,10 @@
         "data": {
           "id": "AnthropicModel-Ud197",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -1278,26 +1414,30 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
-
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": ["api_key"],
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1329,7 +1469,9 @@
                 "display_name": "Anthropic API URL",
                 "dynamic": false,
                 "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1369,7 +1511,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1437,7 +1581,9 @@
                 "display_name": "Prefill",
                 "dynamic": false,
                 "info": "Prefill text to guide the model's response.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1476,7 +1622,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1562,7 +1710,9 @@
         "data": {
           "id": "ChatInput-1jL7Z",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "inputs",
             "conditional_paths": [],
@@ -1594,12 +1744,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1613,7 +1764,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1634,7 +1787,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1742,7 +1897,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1759,7 +1917,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1780,7 +1940,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1819,7 +1981,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1857,7 +2021,9 @@
         "data": {
           "id": "ChatOutput-lY6GY",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "outputs",
             "conditional_paths": [],
@@ -1890,12 +2056,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1909,7 +2076,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1930,7 +2099,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1987,7 +2158,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2008,7 +2181,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_value",
@@ -2029,7 +2206,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2046,7 +2226,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2067,7 +2249,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2106,7 +2290,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2153,5 +2339,8 @@
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Custom Component Generator",
-  "tags": ["coding", "web-scraping"]
+  "tags": [
+    "coding",
+    "web-scraping"
+  ]
 }
