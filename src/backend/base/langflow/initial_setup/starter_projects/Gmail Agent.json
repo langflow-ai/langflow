@@ -9,12 +9,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-buyiB",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-BxJm3",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -33,12 +37,18 @@
             "dataType": "Agent",
             "id": "Agent-BxJm3",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-pZ2AW",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -57,12 +67,16 @@
             "dataType": "GmailAPI",
             "id": "GmailAPI-J65iP",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-BxJm3",
-            "inputTypes": ["Tool"],
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
@@ -79,7 +93,9 @@
         "data": {
           "id": "Agent-BxJm3",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "agents",
             "conditional_paths": [],
@@ -134,7 +150,9 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -166,7 +184,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -247,7 +267,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.agents.events import ExceptionWithMessageError\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS_DICT,\n    MODELS_METADATA,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.custom.custom_component.component import _get_component_toolkit\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.field_typing import Tool\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{\"icon\": \"brain\"}],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            # Get LLM model and validate\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected. Please choose a model to proceed.\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n\n            # Get memory data\n            self.chat_history = await self.get_memory_data()\n\n            # Add current date tool if enabled\n            if self.add_current_date_tool:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n                if not isinstance(current_date_tool, StructuredTool):\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n                self.tools.append(current_date_tool)\n\n            # Validate tools\n            if not self.tools:\n                msg = \"Tools are required to run the agent. Please add at least one tool.\"\n                raise ValueError(msg)\n\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools,\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            return await self.run_agent(agent)\n\n        except (ValueError, TypeError, KeyError) as e:\n            logger.error(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            logger.error(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        except Exception as e:\n            logger.error(f\"Unexpected error: {e!s}\")\n            raise\n\n    async def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n        # filter out empty values\n        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}\n\n        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if not isinstance(self.agent_llm, str):\n            return self.agent_llm, None\n\n        try:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if not provider_info:\n                msg = f\"Invalid model provider: {self.agent_llm}\"\n                raise ValueError(msg)\n\n            component_class = provider_info.get(\"component_class\")\n            display_name = component_class.display_name\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\", \"\")\n\n            return self._build_llm_model(component_class, inputs, prefix), display_name\n\n        except Exception as e:\n            logger.error(f\"Error building {self.agent_llm} language model: {e!s}\")\n            msg = f\"Failed to initialize language model: {e!s}\"\n            raise ValueError(msg) from e\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]\n                    + [{\"icon\": \"brain\"}],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n\n    async def _get_tools(self) -> list[Tool]:\n        component_toolkit = _get_component_toolkit()\n        tools_names = self._build_tools_names()\n        agent_description = self.get_tool_description()\n        # TODO: Agent Description Depreciated Feature to be removed\n        description = f\"{agent_description}{tools_names}\"\n        tools = component_toolkit(component=self).get_tools(\n            tool_name=\"Call_Agent\", tool_description=description, callbacks=self.get_langchain_callbacks()\n        )\n        if hasattr(self, \"tools_metadata\"):\n            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)\n        return tools\n"
+                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.agents.events import ExceptionWithMessageError\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS_DICT,\n    MODELS_METADATA,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{\"icon\": \"brain\"}],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            # Get LLM model and validate\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected. Please choose a model to proceed.\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n\n            # Get memory data\n            self.chat_history = await self.get_memory_data()\n\n            # Add current date tool if enabled\n            if self.add_current_date_tool:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n                if not isinstance(current_date_tool, StructuredTool):\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n                self.tools.append(current_date_tool)\n\n            # Validate tools\n            if not self.tools:\n                msg = \"Tools are required to run the agent. Please add at least one tool.\"\n                raise ValueError(msg)\n\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools,\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            return await self.run_agent(agent)\n\n        except (ValueError, TypeError, KeyError) as e:\n            logger.error(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            logger.error(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        except Exception as e:\n            logger.error(f\"Unexpected error: {e!s}\")\n            raise\n\n    async def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n        # filter out empty values\n        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}\n\n        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if not isinstance(self.agent_llm, str):\n            return self.agent_llm, None\n\n        try:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if not provider_info:\n                msg = f\"Invalid model provider: {self.agent_llm}\"\n                raise ValueError(msg)\n\n            component_class = provider_info.get(\"component_class\")\n            display_name = component_class.display_name\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\", \"\")\n\n            return self._build_llm_model(component_class, inputs, prefix), display_name\n\n        except Exception as e:\n            logger.error(f\"Error building {self.agent_llm} language model: {e!s}\")\n            msg = f\"Failed to initialize language model: {e!s}\"\n            raise ValueError(msg) from e\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]\n                    + [{\"icon\": \"brain\"}],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n"
               },
               "handle_parsing_errors": {
                 "_input_type": "BoolInput",
@@ -273,7 +293,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -372,7 +394,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "memory",
@@ -481,7 +505,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -519,7 +546,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -536,7 +567,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -557,7 +590,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -578,7 +613,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -628,7 +665,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -668,7 +707,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -721,7 +762,9 @@
         "data": {
           "id": "ChatInput-buyiB",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "inputs",
             "conditional_paths": [],
@@ -754,12 +797,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -773,7 +817,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -794,7 +840,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -902,7 +950,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -919,7 +970,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -940,7 +993,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -979,7 +1034,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1017,7 +1074,9 @@
         "data": {
           "id": "ChatOutput-pZ2AW",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "outputs",
             "conditional_paths": [],
@@ -1050,12 +1109,13 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1069,7 +1129,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1090,7 +1152,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1139,7 +1203,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.helpers.data import safe_convert\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([safe_convert(item, clean_data=self.clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                return self._serialize_data(data)\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n\n                # Replace pipe characters to avoid markdown table issues\n                processed_data = data.replace(r\"\\|\", r\"\\\\|\", regex=True)\n\n                processed_data = processed_data.map(\n                    lambda x: str(x).replace(\"\\n\", \"<br/>\") if isinstance(x, str) else x\n                )\n\n                return processed_data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
               },
               "data_template": {
                 "_input_type": "MessageTextInput",
@@ -1147,7 +1211,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1168,7 +1234,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1192,7 +1262,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1209,7 +1282,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1230,7 +1305,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1269,7 +1346,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1334,7 +1413,9 @@
         "data": {
           "id": "GmailAPI-J65iP",
           "node": {
-            "base_classes": ["DataFrame"],
+            "base_classes": [
+              "DataFrame"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1391,7 +1472,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1482,7 +1565,9 @@
                 "display_name": "Attachment ID",
                 "dynamic": false,
                 "info": "Id of the attachment",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1518,7 +1603,9 @@
                 "display_name": "BCC",
                 "dynamic": false,
                 "info": "Email addresses to BCC (Blind Carbon Copy) in the email, separated by commas",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1539,7 +1626,9 @@
                 "display_name": "Body",
                 "dynamic": false,
                 "info": "Content of the email",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1560,7 +1649,9 @@
                 "display_name": "CC",
                 "dynamic": false,
                 "info": "Email addresses to CC (Carbon Copy) in the email, separated by commas",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1599,7 +1690,9 @@
                 "display_name": "Entity ID",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1620,7 +1713,9 @@
                 "display_name": "File name",
                 "dynamic": false,
                 "info": "File name of the attachment file",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1641,7 +1736,9 @@
                 "display_name": "Format",
                 "dynamic": false,
                 "info": "The format to return the message in. Possible values: minimal, full, raw, metadata",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1662,7 +1759,9 @@
                 "display_name": "User ID",
                 "dynamic": false,
                 "info": "The user's email address or 'me' for the authenticated user",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1719,7 +1818,9 @@
                 "display_name": "Label ID",
                 "dynamic": false,
                 "info": "The ID of the Gmail label",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1740,7 +1841,9 @@
                 "display_name": "Label Ids",
                 "dynamic": false,
                 "info": "Comma-separated list of label IDs to filter messages",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1761,7 +1864,9 @@
                 "display_name": "Label List Visibility",
                 "dynamic": false,
                 "info": "The visibility of the label in the label list in the Gmail web interface",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1782,7 +1887,9 @@
                 "display_name": "Label Name",
                 "dynamic": false,
                 "info": "Name of the Gmail label to create, modify, or filter by",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1821,7 +1928,9 @@
                 "display_name": "Message Body",
                 "dynamic": false,
                 "info": "The body content of the message to be sent",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1842,7 +1951,9 @@
                 "display_name": "Message ID",
                 "dynamic": false,
                 "info": "The ID of the specific email message",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1863,7 +1974,9 @@
                 "display_name": "Message List Visibility",
                 "dynamic": false,
                 "info": "The visibility of the label in the message list in the Gmail web interface",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1884,7 +1997,9 @@
                 "display_name": "Page Token",
                 "dynamic": false,
                 "info": "Token for retrieving the next page of results",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1905,7 +2020,9 @@
                 "display_name": "Person fields",
                 "dynamic": false,
                 "info": "Fields to return for the person. Multiple fields can be specified by separating them with commas",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1926,7 +2043,9 @@
                 "display_name": "Query",
                 "dynamic": false,
                 "info": "Search query to filter emails (e.g., 'from:someone@email.com' or 'subject:hello')",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1947,7 +2066,9 @@
                 "display_name": "Recipient Email",
                 "dynamic": false,
                 "info": "Email address of the recipient",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1968,7 +2089,9 @@
                 "display_name": "Resource Name",
                 "dynamic": false,
                 "info": "The resource name of the person to provide information about",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1989,7 +2112,9 @@
                 "display_name": "Subject",
                 "dynamic": false,
                 "info": "Subject of the email",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2010,7 +2135,9 @@
                 "display_name": "Thread ID",
                 "dynamic": false,
                 "info": "The ID of the email thread",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2055,7 +2182,12 @@
                       "bcc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a blind carbon copy (BCC).",
-                        "examples": [["john@doe.com", "jane@doe.com"]],
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
                         "items": {
                           "type": "string"
                         },
@@ -2073,7 +2205,12 @@
                       "cc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a carbon copy (CC).",
-                        "examples": [["john@doe.com", "jane@doe.com"]],
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
                         "items": {
                           "type": "string"
                         },
@@ -2083,7 +2220,12 @@
                       "extra_recipients": {
                         "default": [],
                         "description": "Extra email addresses of the recipients to be added.These will be treated as regular recipients, not CC or BCC.",
-                        "examples": [["john@doe.com", "jane@doe.com"]],
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
                         "items": {
                           "type": "string"
                         },
@@ -2099,13 +2241,17 @@
                       },
                       "recipient_email": {
                         "description": "Email address of the recipient. Please provide a value of type string. This parameter is required.",
-                        "examples": ["john@doe.com"],
+                        "examples": [
+                          "john@doe.com"
+                        ],
                         "title": "Recipient Email",
                         "type": "string"
                       },
                       "subject": {
                         "description": "Subject of the email. Please provide a value of type string. This parameter is required.",
-                        "examples": ["meeting"],
+                        "examples": [
+                          "meeting"
+                        ],
                         "title": "Subject",
                         "type": "string"
                       },
@@ -2130,7 +2276,9 @@
                     "name": "gmail_create_email_draft",
                     "readonly": true,
                     "status": true,
-                    "tags": ["GMAIL_CREATE_EMAIL_DRAFT"]
+                    "tags": [
+                      "GMAIL_CREATE_EMAIL_DRAFT"
+                    ]
                   },
                   {
                     "args": {
@@ -2168,7 +2316,9 @@
                     "name": "gmail_create_label",
                     "readonly": true,
                     "status": false,
-                    "tags": ["GMAIL_CREATE_LABEL"]
+                    "tags": [
+                      "GMAIL_CREATE_LABEL"
+                    ]
                   },
                   {
                     "args": {
@@ -2231,7 +2381,9 @@
                     "name": "gmail_fetch_emails",
                     "readonly": true,
                     "status": true,
-                    "tags": ["GMAIL_FETCH_EMAILS"]
+                    "tags": [
+                      "GMAIL_FETCH_EMAILS"
+                    ]
                   },
                   {
                     "args": {
@@ -2244,7 +2396,9 @@
                       },
                       "message_id": {
                         "description": "ID of the message to fetch, you can find the 'message_id' in the response of the 'fetchEmails' action. Please provide a value of type string. This parameter is required.",
-                        "examples": ["xsdfe3264vrfw"],
+                        "examples": [
+                          "xsdfe3264vrfw"
+                        ],
                         "title": "Message Id",
                         "type": "string"
                       },
@@ -2262,7 +2416,9 @@
                     "name": "gmail_fetch_message_by_message_id",
                     "readonly": true,
                     "status": false,
-                    "tags": ["GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID"]
+                    "tags": [
+                      "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID"
+                    ]
                   },
                   {
                     "args": {
@@ -2275,7 +2431,9 @@
                       },
                       "thread_id": {
                         "description": "ID of the thread containing the message to fetch, you can find the 'thread_id' in the response of the 'fetchEmails' action or 'listThreads' actions. Please provide a value of type string. This parameter is required.",
-                        "examples": ["xsdfe3264vrfw"],
+                        "examples": [
+                          "xsdfe3264vrfw"
+                        ],
                         "title": "Thread Id",
                         "type": "string"
                       },
@@ -2293,7 +2451,9 @@
                     "name": "gmail_fetch_message_by_thread_id",
                     "readonly": true,
                     "status": false,
-                    "tags": ["GMAIL_FETCH_MESSAGE_BY_THREAD_ID"]
+                    "tags": [
+                      "GMAIL_FETCH_MESSAGE_BY_THREAD_ID"
+                    ]
                   },
                   {
                     "args": {
@@ -2329,7 +2489,9 @@
                     "name": "gmail_get_attachment",
                     "readonly": true,
                     "status": false,
-                    "tags": ["GMAIL_GET_ATTACHMENT"]
+                    "tags": [
+                      "GMAIL_GET_ATTACHMENT"
+                    ]
                   },
                   {
                     "args": {
@@ -2382,7 +2544,9 @@
                     "name": "gmail_get_people",
                     "readonly": true,
                     "status": false,
-                    "tags": ["GMAIL_GET_PEOPLE"]
+                    "tags": [
+                      "GMAIL_GET_PEOPLE"
+                    ]
                   },
                   {
                     "args": {
@@ -2400,7 +2564,9 @@
                     "name": "gmail_get_profile",
                     "readonly": true,
                     "status": false,
-                    "tags": ["GMAIL_GET_PROFILE"]
+                    "tags": [
+                      "GMAIL_GET_PROFILE"
+                    ]
                   },
                   {
                     "args": {
@@ -2418,14 +2584,20 @@
                     "name": "gmail_list_labels",
                     "readonly": true,
                     "status": false,
-                    "tags": ["GMAIL_LIST_LABELS"]
+                    "tags": [
+                      "GMAIL_LIST_LABELS"
+                    ]
                   },
                   {
                     "args": {
                       "max_results": {
                         "default": 10,
                         "description": "Maximum number of threads to return. Please provide a value of type integer.",
-                        "examples": [10, 50, 100],
+                        "examples": [
+                          10,
+                          50,
+                          100
+                        ],
                         "title": "Max Results",
                         "type": "integer"
                       },
@@ -2439,14 +2611,19 @@
                       "query": {
                         "default": "",
                         "description": "Only return threads matching the specified query. Please provide a value of type string.",
-                        "examples": ["is:unread", "from:john.doe@example.com"],
+                        "examples": [
+                          "is:unread",
+                          "from:john.doe@example.com"
+                        ],
                         "title": "Query",
                         "type": "string"
                       },
                       "user_id": {
                         "default": "me",
                         "description": "The user's email address or 'me' for the authenticated users. Please provide a value of type string.",
-                        "examples": ["me"],
+                        "examples": [
+                          "me"
+                        ],
                         "title": "User Id",
                         "type": "string"
                       }
@@ -2457,7 +2634,9 @@
                     "name": "gmail_list_threads",
                     "readonly": true,
                     "status": false,
-                    "tags": ["GMAIL_LIST_THREADS"]
+                    "tags": [
+                      "GMAIL_LIST_THREADS"
+                    ]
                   },
                   {
                     "args": {
@@ -2481,14 +2660,21 @@
                     "name": "gmail_remove_label",
                     "readonly": true,
                     "status": false,
-                    "tags": ["GMAIL_REMOVE_LABEL"]
+                    "tags": [
+                      "GMAIL_REMOVE_LABEL"
+                    ]
                   },
                   {
                     "args": {
                       "bcc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a blind carbon copy (BCC).",
-                        "examples": [["john@doe.com", "jane@doe.com"]],
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
                         "items": {
                           "type": "string"
                         },
@@ -2498,7 +2684,12 @@
                       "cc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a carbon copy (CC).",
-                        "examples": [["john@doe.com", "jane@doe.com"]],
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
                         "items": {
                           "type": "string"
                         },
@@ -2508,7 +2699,12 @@
                       "extra_recipients": {
                         "default": [],
                         "description": "Extra email addresses of the recipients to be added.These will be treated as regular recipients, not CC or BCC.",
-                        "examples": [["john@doe.com", "jane@doe.com"]],
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
                         "items": {
                           "type": "string"
                         },
@@ -2532,13 +2728,17 @@
                       },
                       "recipient_email": {
                         "description": "Email address of the recipient. Please provide a value of type string. This parameter is required.",
-                        "examples": ["John@doe.com"],
+                        "examples": [
+                          "John@doe.com"
+                        ],
                         "title": "Recipient Email",
                         "type": "string"
                       },
                       "thread_id": {
                         "description": "ID of the thread to reply to. Please provide a value of type string. This parameter is required.",
-                        "examples": ["x53r3vdevff"],
+                        "examples": [
+                          "x53r3vdevff"
+                        ],
                         "title": "Thread Id",
                         "type": "string"
                       },
@@ -2556,7 +2756,9 @@
                     "name": "gmail_reply_to_thread",
                     "readonly": true,
                     "status": false,
-                    "tags": ["GMAIL_REPLY_TO_THREAD"]
+                    "tags": [
+                      "GMAIL_REPLY_TO_THREAD"
+                    ]
                   },
                   {
                     "args": {
@@ -2570,7 +2772,12 @@
                       "bcc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a blind carbon copy (BCC).",
-                        "examples": [["john@doe.com", "jane@doe.com"]],
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
                         "items": {
                           "type": "string"
                         },
@@ -2588,7 +2795,12 @@
                       "cc": {
                         "default": [],
                         "description": "Email addresses of the recipients to be added as a carbon copy (CC).",
-                        "examples": [["john@doe.com", "jane@doe.com"]],
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
                         "items": {
                           "type": "string"
                         },
@@ -2598,7 +2810,12 @@
                       "extra_recipients": {
                         "default": [],
                         "description": "Extra email addresses of the recipients to be added.These will be treated as regular recipients, not CC or BCC.",
-                        "examples": [["john@doe.com", "jane@doe.com"]],
+                        "examples": [
+                          [
+                            "john@doe.com",
+                            "jane@doe.com"
+                          ]
+                        ],
                         "items": {
                           "type": "string"
                         },
@@ -2614,14 +2831,18 @@
                       },
                       "recipient_email": {
                         "description": "Email address of the recipient. Please provide a value of type string. This parameter is required.",
-                        "examples": ["john@doe.com"],
+                        "examples": [
+                          "john@doe.com"
+                        ],
                         "title": "Recipient Email",
                         "type": "string"
                       },
                       "subject": {
                         "default": null,
                         "description": "Subject of the email. Please provide a value of type string.",
-                        "examples": ["Job Application"],
+                        "examples": [
+                          "Job Application"
+                        ],
                         "title": "Subject",
                         "type": "string"
                       },
@@ -2639,7 +2860,9 @@
                     "name": "gmail_send_email",
                     "readonly": true,
                     "status": true,
-                    "tags": ["GMAIL_SEND_EMAIL"]
+                    "tags": [
+                      "GMAIL_SEND_EMAIL"
+                    ]
                   }
                 ]
               }
@@ -2675,5 +2898,7 @@
   "is_component": false,
   "last_tested_version": "1.4.0",
   "name": "Gmail Agent",
-  "tags": ["agents"]
+  "tags": [
+    "agents"
+  ]
 }
