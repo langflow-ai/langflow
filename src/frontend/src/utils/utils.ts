@@ -589,7 +589,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       ) {
         if (col.options && col.formatter === FormatterType.text) {
           newCol.cellEditor = TableDropdownCellEditor;
-          newCol.cellEditorPopup = false;
+          newCol.cellEditorPopup = true;
           newCol.cellEditorParams = {
             values: col.options,
           };
@@ -871,4 +871,16 @@ export function testIdCase(str: string): string {
 export const convertUTCToLocalTimezone = (timestamp: string) => {
   const localTimezone = moment.tz.guess();
   return moment.utc(timestamp).tz(localTimezone).format("MM/DD/YYYY HH:mm:ss");
+};
+
+export const formatNumber = (num: number | undefined): string => {
+  if (num === undefined) return "0";
+
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(0) + "M";
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(0) + "k";
+  }
+  return num?.toString();
 };

@@ -92,8 +92,8 @@ export interface TextContent extends BaseContent {
 
 export interface MediaContent extends BaseContent {
   type: "media";
-  urls: string[];
-  caption?: string;
+  media_url: string;
+  media_alt?: string;
 }
 
 export interface JSONContent extends BaseContent {
@@ -111,7 +111,9 @@ export interface CodeContent extends BaseContent {
 export interface ToolContent extends BaseContent {
   type: "tool_use";
   name?: string;
-  tool_input: Record<string, any>;
+  tool_input?: Record<string, any>;
+  tool_code?: string;
+  tool_output?: any;
   output?: any;
   error?: any;
 }

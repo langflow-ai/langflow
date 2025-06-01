@@ -6,12 +6,13 @@ import {
 } from "@/components/ui/popover";
 import { Select, SelectTrigger } from "@/components/ui/select-custom";
 import { COLOR_OPTIONS } from "@/constants/constants";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { NoteDataType } from "@/types/flow";
-import { classNames, cn, openInNewTab } from "@/utils/utils";
+import { classNames, cn } from "@/utils/utils";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useMemo } from "react";
 import IconComponent from "../../../components/common/genericIconComponent";
@@ -47,7 +48,7 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
 
   const openDocs = useCallback(() => {
     if (data.node?.documentation) {
-      return openInNewTab(data.node?.documentation);
+      return customOpenNewTab(data.node?.documentation);
     }
     setNoticeData({
       title: `${data.id} docs is not available at the moment.`,

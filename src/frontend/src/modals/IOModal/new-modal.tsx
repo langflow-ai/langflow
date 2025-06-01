@@ -8,11 +8,13 @@ import {
 } from "@/controllers/API/queries/messages";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
 import { useCallback, useEffect, useState } from "react";
 import { v5 as uuidv5 } from "uuid";
+import { useShallow } from "zustand/react/shallow";
 import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
@@ -27,6 +29,7 @@ import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
+
 export default function IOModal({
   children,
   open,
@@ -36,29 +39,33 @@ export default function IOModal({
   canvasOpen,
   playgroundPage,
 }: IOModalPropsType): JSX.Element {
-  const allNodes = useFlowStore((state) => state.nodes);
   const setIOModalOpen = useFlowsManagerStore((state) => state.setIOModalOpen);
-  const inputs = useFlowStore((state) => state.inputs).filter(
-    (input) => input.type !== "ChatInput",
+  const inputs = useFlowStore((state) => state.inputs);
+  const outputs = useFlowStore((state) => state.outputs);
+  const nodes = useFlowStore((state) => state.nodes);
+  const buildFlow = useFlowStore((state) => state.buildFlow);
+  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const { flowIcon, flowId, flowGradient, flowName } = useFlowStore(
+    useShallow((state) => ({
+      flowIcon: state.currentFlow?.icon,
+      flowId: state.currentFlow?.id,
+      flowGradient: state.currentFlow?.gradient,
+      flowName: state.currentFlow?.name,
+    })),
   );
-  const chatInput = useFlowStore((state) => state.inputs).find(
-    (input) => input.type === "ChatInput",
-  );
-  const outputs = useFlowStore((state) => state.outputs).filter(
+  const filteredInputs = inputs.filter((input) => input.type !== "ChatInput");
+  const chatInput = inputs.find((input) => input.type === "ChatInput");
+  const filteredOutputs = outputs.filter(
     (output) => output.type !== "ChatOutput",
   );
-  const chatOutput = useFlowStore((state) => state.outputs).find(
-    (output) => output.type === "ChatOutput",
-  );
-  const nodes = useFlowStore((state) => state.nodes).filter(
+  const chatOutput = outputs.find((output) => output.type === "ChatOutput");
+  const filteredNodes = nodes.filter(
     (node) =>
       inputs.some((input) => input.id === node.id) ||
-      outputs.some((output) => output.id === node.id),
+      filteredOutputs.some((output) => output.id === node.id),
   );
   const haveChat = chatInput || chatOutput;
-  const [selectedTab, setSelectedTab] = useState(
-    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0,
-  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
@@ -67,14 +74,13 @@ export default function IOModal({
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
-  const currentFlow = useFlowStore((state) => state.currentFlow);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedTab, setSelectedTab] = useState(1);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
     currentFlowId,
   );
-  const flowName = useFlowStore((state) => state.currentFlow?.name);
   const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
 
   useEffect(() => {
@@ -112,10 +118,10 @@ export default function IOModal({
 
   function startView() {
     if (!chatInput && !chatOutput) {
-      if (inputs.length > 0) {
-        return inputs[0];
+      if (filteredInputs.length > 0) {
+        return filteredInputs[0];
       } else {
-        return outputs[0];
+        return filteredOutputs[0];
       }
     } else {
       return undefined;
@@ -126,10 +132,6 @@ export default function IOModal({
     { type: string; id: string } | undefined
   >(startView());
 
-  const buildFlow = useFlowStore((state) => state.buildFlow);
-  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
-
-  const isBuilding = useFlowStore((state) => state.isBuilding);
   const messages = useMessagesStore((state) => state.messages);
   const [sessions, setSessions] = useState<string[]>(
     Array.from(
@@ -180,12 +182,16 @@ export default function IOModal({
         });
       }
     },
-    [isBuilding, setIsBuilding, chatValue, chatInput?.id, sessionId, buildFlow],
+    [
+      isBuilding,
+      setIsBuilding,
+      chatValue,
+      chatInput?.id,
+      sessionId,
+      buildFlow,
+      eventDeliveryConfig,
+    ],
   );
-
-  useEffect(() => {
-    setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
-  }, [allNodes.length]);
 
   useEffect(() => {
     const sessions = new Set<string>();
@@ -218,7 +224,7 @@ export default function IOModal({
       setSessionId(visibleSession);
       setCurrentSessionId(visibleSession);
     }
-  }, [messages, currentFlowId, visibleSession]);
+  }, [messages, currentFlowId, visibleSession, setCurrentSessionId]);
 
   const { data: config } = useGetConfig();
 
@@ -243,35 +249,47 @@ export default function IOModal({
         document.removeEventListener("mouseup", onMouseUp);
       };
 
-      handleElement.addEventListener("mousedown", (e: MouseEvent) => {
+      const onMouseDown = (e: MouseEvent) => {
         startX = e.clientX;
         startWidth = handleElement.offsetWidth;
         document.addEventListener("mousemove", onMouseMove);
         document.addEventListener("mouseup", onMouseUp);
-      });
+      };
+
+      handleElement.addEventListener("mousedown", onMouseDown);
     }
   }, []);
 
-  useEffect(() => {
-    handleResize();
-  }, [handleResize]);
-
   const LangflowButtonClick = () => {
-    track("Langflow Button Clicked");
-    window.open(LangflowButtonRedirectTarget(), "_blank");
+    track("LangflowButtonClick");
+    customOpenNewTab(LangflowButtonRedirectTarget());
   };
+
+  useEffect(() => {
+    if (playgroundPage && messages.length > 0) {
+      window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
+    }
+  }, [playgroundPage, messages, currentFlowId]);
+
+  const swatchIndex =
+    (flowGradient && !isNaN(parseInt(flowGradient))
+      ? parseInt(flowGradient)
+      : getNumberFromString(flowGradient ?? flowId ?? "")) %
+    swatchColors.length;
 
   return (
     <BaseModal
       open={open}
       setOpen={setOpen}
-      className={
-        "h-[80vh] w-[80vw] dark:bg-muted-foreground dark:text-primary-foreground"
-      }
+      className={cn(
+        "h-[80vh] w-[80vw] dark:bg-muted-foreground dark:text-primary-foreground",
+      )}
       disable={disable}
     >
-      <BaseModal.Header className={cn("w-full", "justify-between")}>
-        <div className="flex w-full items-start gap-3">
+      <BaseModal.Header>
+        <div
+          className={cn("w-full", "justify-between", "flex items-start gap-3")}
+        >
           <div className="flex">
             {isPlayground && !playgroundPage && (
               <ShadTooltip content="Langflow">
@@ -294,7 +312,7 @@ export default function IOModal({
             )}
 
             {!isPlayground && (
-              <ShadTooltip content={currentFlow?.name}>
+              <ShadTooltip content={flowName}>
                 <IconComponent
                   name="FileText"
                   className="h-6 w-6 text-primary"
@@ -302,7 +320,7 @@ export default function IOModal({
               </ShadTooltip>
             )}
             <span className="pl-2 pt-1" data-testid="modal-title">
-              {isPlayground ? PlaygroundTitle : currentFlow?.name}
+              {isPlayground ? PlaygroundTitle : flowName}
             </span>
             <span className="pl-2 pt-1 font-normal text-muted-foreground">
               {currentFlowId?.slice(0, 4) + "..." + currentFlowId?.slice(-4)}
@@ -368,129 +386,163 @@ export default function IOModal({
           </div>
         </div>
       </BaseModal.Header>
-      <BaseModal.Content>
-        <div className="flex h-full w-full">
-          <div
-            id="sized-box"
-            className={cn("relative flex h-full", sidebarOpen ? "w-56" : "w-0")}
-          >
-            <SidebarOpenView
-              playgroundPage={!!playgroundPage}
-              currentFlowId={currentFlowId}
-              setSelectedTab={setSelectedTab}
-              selectedTab={selectedTab}
-              sessions={sessions}
-              handleDeleteSession={handleDeleteSession}
-              sessionId={sessionId}
-              setSessionId={setSessionId}
-              visibleSession={visibleSession}
-            />
-            <div className="flex w-full items-center justify-center">
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
+      <BaseModal.Content overflowHidden className="h-full">
+        {open && (
+          <div className="flex-max-width h-full">
+            <div
+              className={cn(
+                "flex h-full flex-shrink-0 flex-col justify-start overflow-hidden transition-all duration-300",
+                sidebarOpen
+                  ? "absolute z-50 lg:relative lg:w-1/5 lg:max-w-[280px]"
+                  : "w-0",
+              )}
+            >
               <div
-                className="absolute right-0 top-1/2 z-10 flex h-full cursor-e-resize items-center bg-transparent p-2"
-                onMouseDown={(e) => {
+                className={cn(
+                  "relative flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas",
+                  playgroundPage ? "pt-[15px]" : "pt-3.5",
+                )}
+              >
+                <div className="flex items-center justify-between gap-2 pb-8 align-middle">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        `flex rounded p-1`,
+                        swatchColors[swatchIndex],
+                      )}
+                    >
+                      <IconComponent
+                        name={flowIcon ?? "Workflow"}
+                        className="h-3.5 w-3.5"
+                      />
+                    </div>
+                    {sidebarOpen && (
+                      <div className="truncate font-semibold">
+                        {PlaygroundTitle}
+                      </div>
+                    )}
+                  </div>
+                  <ShadTooltip
+                    styleClasses="z-50"
+                    side="right"
+                    content="Hide sidebar"
+                  >
+                    <Button
+                      variant="ghost"
+                      className="flex h-8 w-8 items-center justify-center !p-0"
+                      onClick={() => setSidebarOpen(!sidebarOpen)}
+                    >
+                      <IconComponent
+                        name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
+                        className="h-[18px] w-[18px] text-ring"
+                      />
+                    </Button>
+                  </ShadTooltip>
+                </div>
+                {sidebarOpen && (
+                  <SidebarOpenView
+                    sessions={sessions}
+                    setSelectedViewField={setSelectedViewField}
+                    setvisibleSession={setvisibleSession}
+                    handleDeleteSession={handleDeleteSession}
+                    visibleSession={visibleSession}
+                    selectedViewField={selectedViewField}
+                    playgroundPage={!!playgroundPage}
+                  />
+                )}
+              </div>
+            </div>
+            <div
+              id="container-sized-box"
+              className={
+                "relative flex h-full w-full flex-col lg:flex-row lg:overflow-hidden"
+              }
+            >
+              {selectedViewField ? (
+                <SelectedViewField
+                  selectedViewField={selectedViewField}
+                  setSelectedViewField={setSelectedViewField}
+                  open={open}
+                  closeModal={() => setOpen(false)}
+                  chatOutput={chatOutput}
+                  chatInput={chatInput}
+                  messages={messages}
+                  messagesFetched={messagesFetched}
+                  sessionId={sessionId}
+                  setSessionId={setSessionId}
+                  sendMessage={sendMessage}
+                  disabled={isBuilding || disable}
+                  setChatValue={setChatValue}
+                  chatValue={chatValue}
+                  isPlayground={isPlayground}
+                  currentFlowId={currentFlowId}
+                  nodes={filteredNodes}
+                />
+              ) : (
+                <ChatViewWrapper
+                  sendMessage={sendMessage}
+                  chatOutput={chatOutput}
+                  chatInput={chatInput}
+                  messages={messages}
+                  messagesFetched={messagesFetched}
+                  sessionId={sessionId}
+                  setSessionId={setSessionId}
+                  disabled={isBuilding || disable}
+                  setChatValue={setChatValue}
+                  chatValue={chatValue}
+                  open={open}
+                  isPlayground={isPlayground}
+                  currentFlowId={currentFlowId}
+                  playgroundTitle={PlaygroundTitle}
+                />
+              )}
+            </div>
+          </div>
+        )}
+      </BaseModal.Content>
+      <BaseModal.Footer>
+        <div className="flex w-full justify-between">
+          <div className="flex items-center gap-2">
+            {isPlayground && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
                   handleResize();
                 }}
               >
                 <IconComponent
-                  name="ChevronsLeft"
-                  className={
-                    "h-4 w-4 fill-foreground text-foreground opacity-50 hover:opacity-100"
-                  }
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  name="PanelLeft"
+                  className={cn(
+                    "h-4 w-4 fill-foreground text-foreground opacity-50 hover:opacity-100",
+                    sidebarOpen ? "rotate-180" : "rotate-0",
+                  )}
                 />
-              </div>
-            </div>
+              </Button>
+            )}
+            <span className="text-sm font-normal text-muted-foreground">
+              {config?.frontend_timeout ? `v${config?.frontend_timeout}` : ""}
+            </span>
           </div>
-          <div className="flex w-full flex-col" id="container-sized-box">
-            <div className="flex h-full flex-col">
-              {haveChat ? (
-                <ChatViewWrapper
-                  sendMessage={sendMessage}
-                  chatInput={chatInput}
-                  chatOutput={chatOutput}
-                  playgroundPage={!!playgroundPage}
-                  selectedViewField={selectedViewField}
-                  visibleSession={visibleSession}
-                  sessions={sessions}
-                  sidebarOpen={sidebarOpen}
-                  currentFlowId={currentFlowId}
-                  setSidebarOpen={setSidebarOpen}
-                  isPlayground={isPlayground}
-                  setvisibleSession={setvisibleSession}
-                  setSelectedViewField={setSelectedViewField}
-                  haveChat={haveChat}
-                  messagesFetched={messagesFetched}
-                  sessionId={sessionId}
-                  canvasOpen={canvasOpen}
-                  setOpen={setOpen}
-                  playgroundTitle={PlaygroundTitle}
-                />
-              ) : (
-                // If no chat, render IOFieldView
-                <SelectedViewField
-                  selectedViewField={selectedViewField}
-                  setSelectedViewField={setSelectedViewField}
-                  nodes={nodes}
-                  haveChat={haveChat}
-                  inputs={inputs}
-                  outputs={outputs}
-                  sessions={sessions}
-                  currentFlowId={currentFlowId}
-                />
-              )}
+          <div className="flex items-center gap-2">
+            <ThemeButtons />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  track("Langflow Button Clicked");
+                  window.open(LangflowButtonRedirectTarget(), "_blank");
+                }}
+              >
+                <LangflowLogoColor className="h-6 w-6" />
+              </Button>
             </div>
-            <BaseModal.Footer>
-              {isBuilding || !config?.open_ai_key ? (
-                <div className="flex w-full items-center justify-between">
-                  <div className="flex w-full flex-row">
-                    <span className="ml-auto flex shrink-0 justify-end text-sm text-muted-foreground">
-                      {isBuilding && currentFlow?.name === "New Flow"
-                        ? "New Flow"
-                        : isBuilding
-                          ? "Building Flow"
-                          : "Ready"}
-                      {isBuilding && (
-                        <IconComponent
-                          name="Loader2"
-                          className="ml-2 h-4 w-4 animate-spin"
-                        />
-                      )}
-                    </span>
-                    {config?.open_ai_key ? (
-                      <div className="w-full flex-row text-right text-sm text-muted-foreground">
-                        <span className="text-loading-gradient animate-pulse">
-                          Type some text to start the flow
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="w-full flex-row text-right text-sm text-muted-foreground">
-                        <span>
-                          <a
-                            className="underline"
-                            href="/settings"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Set your OpenAI Key
-                          </a>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex w-full items-end justify-between">
-                  <ThemeButtons />
-                  <span className="ml-auto flex shrink-0 justify-end text-sm text-muted-foreground">
-                    Ready
-                  </span>
-                </div>
-              )}
-            </BaseModal.Footer>
           </div>
         </div>
-      </BaseModal.Content>
+      </BaseModal.Footer>
     </BaseModal>
   );
 }

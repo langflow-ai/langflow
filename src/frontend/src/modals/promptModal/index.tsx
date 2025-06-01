@@ -245,7 +245,7 @@ export default function PromptModal({
             }}
             placeholder={EDIT_TEXT_PLACEHOLDER}
             onKeyDown={(e) => {
-              handleKeyDown(e, value, "");
+              handleKeyDown(e, inputValue, "");
             }}
             readOnly={readonly}
             id={"textarea-modal"}

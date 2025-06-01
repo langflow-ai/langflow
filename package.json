@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@smakss/react-scroll-direction": "^4.2.0"
+  }
+}

@@ -1,19 +1,16 @@
-import logging
 from typing import Any
 
 import requests
 from ibm_watsonx_ai import APIClient, Credentials
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
+from loguru import logger
 from pydantic.v1 import SecretStr
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.io import BoolInput, DropdownInput, IntInput, SecretStrInput, StrInput
 from langflow.schema.dotdict import dotdict
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
@@ -49,6 +46,8 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
         StrInput(
             name="project_id",
             display_name="watsonx project id",
+            info="The project ID or deployment space ID that is associated with the foundation model.",
+            required=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -92,7 +91,7 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
             data = response.json()
             models = [model["model_id"] for model in data.get("resources", [])]
             return sorted(models)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Error fetching models")
             return WatsonxEmbeddingsComponent._default_models
 
@@ -112,7 +111,7 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
                     build_config.model_name.value = models[0]
                 info_message = f"Updated model options: {len(models)} models found in {build_config.url.value}"
                 logger.info(info_message)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Error updating model options.")
 
     def build_embeddings(self) -> Embeddings:

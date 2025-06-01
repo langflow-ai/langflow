@@ -1,6 +1,6 @@
-import ForwardedIconComponent from "components/common/genericIconComponent";
-import DurationDisplay from "components/core/chatComponents/DurationDisplay";
-import SimplifiedCodeTabComponent from "components/core/codeTabsComponent/ChatCodeTabComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import DurationDisplay from "@/components/core/chatComponents/DurationDisplay";
+import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { ReactNode } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
@@ -14,8 +14,6 @@ import {
   TextContent,
   ToolContent,
 } from "types/chat";
-
-const ICON_SIZE = 16;
 
 export default function ContentDisplay({
   content,
@@ -42,7 +40,7 @@ export default function ContentDisplay({
             <Markdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeMathjax]}
-              className="inline-block w-fit max-w-full text-[14px] font-semibold text-foreground"
+              className="inline-block w-fit max-w-full text-sm font-semibold text-foreground"
             >
               {content.header.title}
             </Markdown>
@@ -67,7 +65,7 @@ export default function ContentDisplay({
             remarkPlugins={[remarkGfm]}
             linkTarget="_blank"
             rehypePlugins={[rehypeMathjax]}
-            className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+            className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
             components={{
               p({ node, ...props }) {
                 return (
@@ -168,7 +166,7 @@ export default function ContentDisplay({
             <Markdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeMathjax]}
-              className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+              className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
               components={{
                 pre({ node, ...props }) {
                   return <>{props.children}</>;
@@ -200,58 +198,25 @@ export default function ContentDisplay({
         }
 
         // For objects/arrays, format as JSON
-        try {
-          return (
-            <SimplifiedCodeTabComponent
-              language="json"
-              code={JSON.stringify(output, null, 2)}
-            />
-          );
-        } catch {
-          return String(output);
-        }
+        return (
+          <SimplifiedCodeTabComponent
+            language="json"
+            code={JSON.stringify(output, null, 2)}
+          />
+        );
       };
 
       contentData = (
-        <div className="flex flex-col gap-2">
-          <Markdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeMathjax]}
-            className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
-          >
-            **Input:**
-          </Markdown>
-          <SimplifiedCodeTabComponent
-            language="json"
-            code={JSON.stringify((content as ToolContent).tool_input, null, 2)}
-          />
-          {(content as ToolContent).output && (
-            <>
-              <Markdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeMathjax]}
-                className="markdown max_w-full prose text-[14px] font-normal dark:prose-invert"
-              >
-                **Output:**
-              </Markdown>
-              <div className="mt-1">
-                {formatToolOutput((content as ToolContent).output)}
-              </div>
-            </>
+        <div>
+          {(content as ToolContent).tool_code && (
+            <SimplifiedCodeTabComponent
+              language="python"
+              code={(content as ToolContent).tool_code}
+            />
           )}
-          {(content as ToolContent).error && (
-            <div className="text-red-500">
-              <Markdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeMathjax]}
-                className="markdown max_w-full prose text-[14px] font-normal dark:prose-invert"
-              >
-                **Error:**
-              </Markdown>
-              <SimplifiedCodeTabComponent
-                language="json"
-                code={JSON.stringify((content as ToolContent).error, null, 2)}
-              />
+          {(content as ToolContent).tool_output && (
+            <div className="mt-2">
+              {formatToolOutput((content as ToolContent).tool_output)}
             </div>
           )}
         </div>
@@ -260,24 +225,37 @@ export default function ContentDisplay({
 
     case "media":
       contentData = (
-        <div>
-          {(content as MediaContent).urls.map((url, index) => (
-            <img
-              key={index}
-              src={url}
-              alt={(content as MediaContent).caption || `Media ${index}`}
-            />
-          ))}
-          {(content as MediaContent).caption && (
-            <div>{(content as MediaContent).caption}</div>
-          )}
+        <div className="flex w-full justify-center">
+          <img
+            className="max-h-[300px] max-w-full rounded-md object-contain"
+            src={(content as MediaContent).media_url}
+            alt={(content as MediaContent).media_alt}
+          />
         </div>
       );
       break;
+
+    case "link":
+      contentData = (
+        <div className="flex w-full justify-center">
+          <a
+            href={(content as MediaContent).media_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 underline"
+          >
+            {(content as MediaContent).media_url}
+          </a>
+        </div>
+      );
+      break;
+
+    default:
+      contentData = null;
   }
 
   return (
-    <div className="relative p-[16px]">
+    <div>
       {renderHeader}
       {renderDuration}
       {contentData}

@@ -4,6 +4,7 @@ import React from "react";
 import {
   Dialog,
   DialogContent,
+  DialogContentWithouFixed,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -168,10 +169,12 @@ interface BaseModalProps {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   size?:
+    | "notice"
     | "x-small"
     | "retangular"
     | "smaller"
     | "small"
+    | "small-update"
     | "small-query"
     | "medium"
     | "medium-tall"
@@ -195,6 +198,7 @@ interface BaseModalProps {
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
   closeButtonClassName?: string;
+  dialogContentWithouFixed?: boolean;
 }
 function BaseModal({
   className,
@@ -207,6 +211,7 @@ function BaseModal({
   onSubmit,
   onEscapeKeyDown,
   closeButtonClassName,
+  dialogContentWithouFixed = false,
 }: BaseModalProps) {
   useEffect(() => {
     if (onChangeOpenModal) {
@@ -216,53 +221,86 @@ function BaseModal({
 
   const isFullScreen = type === "full-screen";
   const isModal = type === "modal";
-  const Wrapper = isModal ? Modal : Dialog;
-  const ContentWrapper = isModal ? ModalContent : DialogContent;
+
+  const [triggerChild, modalContent] = React.Children.toArray(children);
+  const contentClasses = cn(
+    isFullScreen
+      ? "h-full w-full"
+      : (() => {
+          const { minWidth, height } = switchCaseModalSize(size);
+          return cn(minWidth, height);
+        })(),
+    className,
+    isFullScreen ? "rounded-none" : "",
+    isModal ? "p-0" : "",
+    dialogContentWithouFixed ? "" : "fixed",
+  );
+
+  const formClasses = cn(
+    "flex h-full w-full flex-col",
+    isModal ? "max-h-full" : "",
+  );
 
   return (
-    <Wrapper
-      open={open}
-      onOpenChange={setOpen}
-      onEscapeKeyDown={onEscapeKeyDown}
-    >
-      <ContentWrapper
-        className={cn(
-          isFullScreen ? "h-full w-full" : switchCaseModalSize(size),
-          className,
-          isFullScreen ? "rounded-none" : "",
-          isModal ? "p-0" : "",
-        )}
-        onPointerDownOutside={(e) => {
-          if (isModal) e.preventDefault();
-        }}
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (onSubmit) onSubmit();
-          }}
-          className={cn(
-            "flex h-full w-full flex-col",
-            isModal ? "max-h-full" : "",
-          )}
-        >
-          {children}
-          <DialogClose asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              className={cn(
-                "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
-                closeButtonClassName,
-              )}
+    <>
+      {type === "modal" ? (
+        <Modal open={open} onOpenChange={setOpen}>
+          {triggerChild}
+          <ModalContent className={contentClasses}>{modalContent}</ModalContent>
+        </Modal>
+      ) : type === "full-screen" ? (
+        <div className="min-h-full w-full flex-1 overflow-hidden">
+          {modalContent}
+        </div>
+      ) : (
+        <Dialog open={open} onOpenChange={setOpen}>
+          {triggerChild}
+          {dialogContentWithouFixed ? (
+            <DialogContentWithouFixed
+              onClick={(e) => e.stopPropagation()}
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              className={contentClasses}
+              closeButtonClassName={closeButtonClassName}
             >
-              <IconComponent name="X" className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </Button>
-          </DialogClose>
-        </form>
-      </ContentWrapper>
-    </Wrapper>
+              {onSubmit ? (
+                <Form.Root
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    onSubmit();
+                  }}
+                  className={formClasses}
+                >
+                  {modalContent}
+                </Form.Root>
+              ) : (
+                modalContent
+              )}
+            </DialogContentWithouFixed>
+          ) : (
+            <DialogContent
+              onClick={(e) => e.stopPropagation()}
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              className={contentClasses}
+              closeButtonClassName={closeButtonClassName}
+            >
+              {onSubmit ? (
+                <Form.Root
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    onSubmit();
+                  }}
+                  className={formClasses}
+                >
+                  {modalContent}
+                </Form.Root>
+              ) : (
+                modalContent
+              )}
+            </DialogContent>
+          )}
+        </Dialog>
+      )}
+    </>
   );
 }
 

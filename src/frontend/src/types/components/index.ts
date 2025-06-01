@@ -1,3 +1,4 @@
+import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ReactFlowJsonObject } from "@xyflow/react";
 import { ReactElement, ReactNode } from "react";
 import { InputOutput } from "../../constants/enums";
@@ -109,6 +110,8 @@ export type NodeOutputFieldComponentType = {
   isToolMode?: boolean;
   showHiddenOutputs?: boolean;
   hidden?: boolean;
+  outputs?: any;
+  handleSelectOutput?: (output: any) => void;
 };
 
 export type NodeInputFieldComponentType = {
@@ -144,6 +147,9 @@ export type outputComponentType = {
   name: string;
   proxy?: OutputFieldProxyType;
   isToolMode?: boolean;
+  outputs?: any;
+  handleSelectOutput?: (output: any) => void;
+  outputName?: string;
 };
 
 export type DisclosureComponentType = {
@@ -302,6 +308,8 @@ export type InputProps = {
   description: string | null;
   endpointName?: string | null;
   maxLength?: number;
+  descriptionMaxLength?: number;
+  minLength?: number;
   setName?: (name: string) => void;
   setDescription?: (description: string) => void;
   setEndpointName?: (endpointName: string) => void;
@@ -582,9 +590,12 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
+  isUserEdited: boolean;
+  hasBreakingChange: boolean;
   updateNode: () => void;
   closeToolbar?: () => void;
   setOpenShowMoreOptions?: (open: boolean) => void;
+  selected?: boolean;
 };
 
 export type parsedDataType = {
@@ -677,6 +688,21 @@ export type textModalPropsType = {
   setOpen?: (open: boolean) => void;
   onCloseModal?: () => void;
 };
+
+export interface ToolsModalProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  description: string;
+  rows: {
+    name: string;
+    tags: string[];
+    description: string;
+    status: boolean;
+  }[];
+  handleOnNewValue: handleOnNewValueType;
+  title: string;
+  icon: string;
+}
 export type queryModalPropsType = {
   setValue: (value: string) => void;
   value: string;
@@ -719,7 +745,6 @@ export type buttonBoxPropsType = {
 export type FlowSettingsPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
-  details?: boolean;
   flowData?: FlowType;
 };
 

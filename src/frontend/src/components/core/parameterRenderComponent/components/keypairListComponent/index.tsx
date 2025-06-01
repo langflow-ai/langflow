@@ -124,8 +124,8 @@ const KeypairListComponent = ({
     Object.keys(obj).map((key, idx) => (
       <div key={idx} className="flex w-full items-center gap-2">
         <Input
-          data-testid={getTestId("key pair", index)}
-          id={getTestId("key pair", index)}
+          data-testid={getTestId("key_pair", index)}
+          id={getTestId("key_pair", index)}
           type="text"
           value={key.trim()}
           className={getInputClassName(editNode, duplicateKey)}
@@ -133,8 +133,8 @@ const KeypairListComponent = ({
           onChange={(event) => handleChangeKey(event, index)}
         />
         <Input
-          data-testid={getTestId("key pair", index + 100)}
-          id={getTestId("key pair", index + 100)}
+          data-testid={getTestId("key_pair", index + 100)}
+          id={getTestId("key_pair", index + 100)}
           type="text"
           disabled={disabled}
           value={obj[key]}
