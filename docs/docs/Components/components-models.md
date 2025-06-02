@@ -5,9 +5,53 @@ slug: /components-models
 
 import Icon from "@site/src/components/icon";
 
-# Model components in Langflow
+Model components in Langflow generate text or text embeddings using the selected Large Language Model.
 
-Model components generate text using large language models.
+Prior to Langflow 1.5, each LLM provider had its own component in the Components menu.
+
+Most use cases can be performed with the **Language Model** and **Embeddings Model** components.
+If you want to try additional providers, the single-provider LLM components of both the **Model** and **Embedding Model** types are now found in **Bundles**, and are still available to use.
+
+## Language model
+
+This component generates text using either OpenAI or Anthropic language models.
+
+Use this component as a drop-in replacement for LLM models to switch between different model providers and models.
+
+
+
+Instead of swapping out model components when you want to try a different provider, like switching between OpenAI and Anthropic components, change the provider dropdown in this single component. This makes it easier to experiment with and compare different models while keeping the rest of your flow intact.
+
+For more information, see the [OpenAI documentation](https://platform.openai.com/docs) and [Anthropic documentation](https://docs.anthropic.com/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| provider | String | The model provider to use. Options: "OpenAI", "Anthropic". Default: "OpenAI". |
+| model_name | String | The name of the model to use. Options depend on the selected provider. |
+| api_key | SecretString | The API Key for authentication with the selected provider. |
+| input_value | String | The input text to send to the model. |
+| system_message | String | A system message that helps set the behavior of the assistant (advanced). |
+| stream | Boolean | Whether to stream the response. Default: `False` (advanced). |
+| temperature | Float | Controls randomness in responses. Range: `[0.0, 1.0]`. Default: `0.1` (advanced). |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of ChatOpenAI or ChatAnthropic configured with the specified parameters. |
+
+</details>
+
+## Embedding model component
+
+
+
+
 
 Refer to your specific component's documentation for more information on parameters.
 
@@ -21,7 +65,16 @@ This example has the OpenAI model in a chatbot flow. For more information, see t
 
 ![](/img/starter-flow-basic-prompting.png)
 
-## AIML
+
+## Language model bundles
+
+As of Langflow 1.5 the following components are now part of **Bundles**.
+
+**Bundles** are third-party components grouped by provider.
+
+For more information on bundled components, see the component provider's documentation.
+
+### AIML
 
 This component creates a ChatOpenAI model instance using the AIML API.
 
@@ -49,7 +102,7 @@ For more information, see [AIML documentation](https://docs.aimlapi.com/).
 
 </details>
 
-## Amazon Bedrock
+### Amazon Bedrock
 
 This component generates text using Amazon Bedrock LLMs.
 
@@ -79,7 +132,7 @@ For more information, see [Amazon Bedrock documentation](https://docs.aws.amazon
 
 </details>
 
-## Anthropic
+### Anthropic
 
 This component allows the generation of text using Anthropic Chat and Language models.
 
@@ -107,7 +160,7 @@ For more information, see the [Anthropic documentation](https://docs.anthropic.c
 
 </details>
 
-## Azure OpenAI
+### Azure OpenAI
 
 This component generates text using Azure OpenAI LLM.
 
@@ -138,7 +191,7 @@ For more information, see the [Azure OpenAI documentation](https://learn.microso
 
 </details>
 
-## Cohere
+### Cohere
 
 This component generates text using Cohere's language models.
 
@@ -164,7 +217,7 @@ For more information, see the [Cohere documentation](https://cohere.ai/).
 
 </details>
 
-## DeepSeek
+### DeepSeek
 
 This component generates text using DeepSeek's language models.
 
@@ -194,7 +247,7 @@ For more information, see the [DeepSeek documentation](https://api-docs.deepseek
 
 </details>
 
-## Google Generative AI
+### Google Generative AI
 
 This component generates text using Google's Generative AI models.
 
@@ -223,7 +276,7 @@ For more information, see the [Google Generative AI documentation](https://cloud
 
 </details>
 
-## Groq
+### Groq
 
 This component generates text using Groq's language models.
 
@@ -268,7 +321,7 @@ For more information, see the [Groq documentation](https://groq.com/).
 
 </details>
 
-## Hugging Face API
+### Hugging Face API
 
 This component sends requests to the Hugging Face API to generate text using the model specified in the **Model ID** field.
 
@@ -311,7 +364,7 @@ For more information, see the [Hugging Face documentation](https://huggingface.c
 
 </details>
 
-## IBM watsonx.ai
+### IBM watsonx.ai
 
 This component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx) foundation models.
 
@@ -354,40 +407,9 @@ For more information, see the [Langchain documentation](https://python.langchain
 
 </details>
 
-## Language model
 
-This component generates text using either OpenAI or Anthropic language models.
 
-Use this component as a drop-in replacement for LLM models to switch between different model providers and models.
-
-Instead of swapping out model components when you want to try a different provider, like switching between OpenAI and Anthropic components, change the provider dropdown in this single component. This makes it easier to experiment with and compare different models while keeping the rest of your flow intact.
-
-For more information, see the [OpenAI documentation](https://platform.openai.com/docs) and [Anthropic documentation](https://docs.anthropic.com/).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| provider | String | The model provider to use. Options: "OpenAI", "Anthropic". Default: "OpenAI". |
-| model_name | String | The name of the model to use. Options depend on the selected provider. |
-| api_key | SecretString | The API Key for authentication with the selected provider. |
-| input_value | String | The input text to send to the model. |
-| system_message | String | A system message that helps set the behavior of the assistant (advanced). |
-| stream | Boolean | Whether to stream the response. Default: `False` (advanced). |
-| temperature | Float | Controls randomness in responses. Range: `[0.0, 1.0]`. Default: `0.1` (advanced). |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| model | LanguageModel | An instance of ChatOpenAI or ChatAnthropic configured with the specified parameters. |
-
-</details>
-
-## LMStudio
+### LMStudio
 
 This component generates text using LM Studio's local language models.
 
@@ -417,7 +439,7 @@ For more information, see [LM Studio documentation](https://lmstudio.ai/).
 
 </details>
 
-## Maritalk
+### Maritalk
 
 This component generates text using Maritalk LLMs.
 
@@ -444,7 +466,7 @@ For more information, see [Maritalk documentation](https://www.maritalk.com/).
 
 </details>
 
-## Mistral
+### Mistral
 
 This component generates text using MistralAI LLMs.
 
@@ -477,7 +499,7 @@ For more information, see [Mistral AI documentation](https://docs.mistral.ai/).
 
 </details>
 
-## Novita AI
+### Novita AI
 
 This component generates text using Novita AI's language models.
 
@@ -506,7 +528,7 @@ For more information, see [Novita AI documentation](https://novita.ai/docs/model
 
 </details>
 
-## NVIDIA
+### NVIDIA
 
 This component generates text using NVIDIA LLMs.
 
@@ -534,7 +556,7 @@ For more information, see [NVIDIA AI documentation](https://developer.nvidia.com
 
 </details>
 
-## Ollama
+### Ollama
 
 This component generates text using Ollama's language models.
 
@@ -570,7 +592,7 @@ For more information, see the [Ollama documentation](https://ollama.com/).
 
 </details>
 
-## OpenAI
+### OpenAI
 
 This component generates text using OpenAI's language models.
 
@@ -599,7 +621,7 @@ For more information, see [OpenAI documentation](https://beta.openai.com/docs/).
 
 </details>
 
-## OpenRouter
+### OpenRouter
 
 This component generates text using OpenRouter's unified API for multiple AI models from different providers.
 
@@ -628,7 +650,7 @@ For more information, see [OpenRouter documentation](https://openrouter.ai/docs)
 
 </details>
 
-## Perplexity
+### Perplexity
 
 This component generates text using Perplexity's language models.
 
@@ -657,13 +679,13 @@ For more information, see [Perplexity documentation](https://perplexity.ai/).
 
 </details>
 
-## Qianfan
+### Qianfan
 
 This component generates text using Qianfan's language models.
 
 For more information, see [Qianfan documentation](https://github.com/baidubce/bce-qianfan-sdk).
 
-## SambaNova
+### SambaNova
 
 This component generates text using SambaNova LLMs.
 
@@ -690,7 +712,7 @@ For more information, see [Sambanova Cloud documentation](https://cloud.sambanov
 
 </details>
 
-## VertexAI
+### VertexAI
 
 This component generates text using Vertex AI LLMs.
 
@@ -722,7 +744,7 @@ For more information, see [Google Vertex AI documentation](https://cloud.google.
 
 </details>
 
-## xAI
+### xAI
 
 This component generates text using xAI models like [Grok](https://x.ai/grok).
 
