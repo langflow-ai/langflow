@@ -14,7 +14,7 @@ def convert_to_message(v) -> Message:
     Returns:
         Message: Converted Message object
     """
-    return v if isinstance(v, Message) else v.to_message(v)
+    return v if isinstance(v, Message) else v.to_message()
 
 
 def convert_to_data(v: DataFrame | Data | Message | dict) -> Data:
@@ -28,7 +28,7 @@ def convert_to_data(v: DataFrame | Data | Message | dict) -> Data:
     """
     if isinstance(v, dict):
         return Data(v)
-    return v if isinstance(v, Data) else v.to_data(v)
+    return v if isinstance(v, Data) else v.to_data()
 
 
 def convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:
@@ -40,7 +40,7 @@ def convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:
     Returns:
         DataFrame: Converted DataFrame object
     """
-    return v if isinstance(v, DataFrame) else v.to_dataframe(v)
+    return v if isinstance(v, DataFrame) else v.to_dataframe()
 
 
 class TypeConverterComponent(Component):
