@@ -5,7 +5,7 @@ from langflow.io import HandleInput, Output, TabInput
 from langflow.schema import Data, DataFrame, Message
 
 
-def get_message_converter(v) -> Message:
+def convert_to_message(v) -> Message:
     """Convert input to Message type.
 
     Args:
@@ -17,7 +17,7 @@ def get_message_converter(v) -> Message:
     return v if isinstance(v, Message) else v.to_message(v)
 
 
-def get_data_converter(v: DataFrame | Data | Message | dict) -> Data:
+def convert_to_data(v: DataFrame | Data | Message | dict) -> Data:
     """Convert input to Data type.
 
     Args:
@@ -26,10 +26,12 @@ def get_data_converter(v: DataFrame | Data | Message | dict) -> Data:
     Returns:
         Data: Converted Data object
     """
+    if isinstance(v, dict):
+        return Data(v)
     return v if isinstance(v, Data) else v.to_data(v)
 
 
-def get_dataframe_converter(v: DataFrame | Data | Message | dict) -> DataFrame:
+def convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:
     """Convert input to DataFrame type.
 
     Args:
@@ -92,12 +94,12 @@ class TypeConverterComponent(Component):
 
     def convert_to_message(self) -> Message:
         """Convert input to Message type."""
-        return get_message_converter(self.input_data[0] if isinstance(self.input_data, list) else self.input_data)
+        return convert_to_message(self.input_data[0] if isinstance(self.input_data, list) else self.input_data)
 
     def convert_to_data(self) -> Data:
         """Convert input to Data type."""
-        return get_data_converter(self.input_data[0] if isinstance(self.input_data, list) else self.input_data)
+        return convert_to_data(self.input_data[0] if isinstance(self.input_data, list) else self.input_data)
 
     def convert_to_dataframe(self) -> DataFrame:
         """Convert input to DataFrame type."""
-        return get_dataframe_converter(self.input_data[0] if isinstance(self.input_data, list) else self.input_data)
+        return convert_to_dataframe(self.input_data[0] if isinstance(self.input_data, list) else self.input_data)
