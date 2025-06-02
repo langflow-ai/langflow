@@ -269,10 +269,10 @@
                 "method": "load_files",
                 "name": "dataframe",
                 "required_inputs": [],
-                "selected": "Data",
+                "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
               }
