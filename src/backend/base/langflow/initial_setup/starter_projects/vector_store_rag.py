@@ -2,10 +2,9 @@ from textwrap import dedent
 
 from langflow.components.data import FileComponent
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
-from langflow.components.inputs import ChatInput
+from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.languagemodels import OpenAIModelComponent
-from langflow.components.outputs import ChatOutput
-from langflow.components.processing import ParseDataComponent
+from langflow.components.processing import ParserComponent
 from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.prompts import PromptComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
@@ -16,7 +15,7 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent()
     text_splitter = SplitTextComponent()
-    text_splitter.set(data_inputs=file_component.load_files)
+    text_splitter.set(data_inputs=file_component.load_dataframe)
     openai_embeddings = OpenAIEmbeddingsComponent()
     vector_store = AstraDBVectorStoreComponent()
     vector_store.set(
@@ -37,8 +36,8 @@ def rag_graph():
         embedding_model=openai_embeddings.build_embeddings,
     )
 
-    parse_data = ParseDataComponent()
-    parse_data.set(data=rag_vector_store.search_documents)
+    parse_data = ParserComponent()
+    parse_data.set(input_data=rag_vector_store.search_documents)
     prompt_component = PromptComponent()
     prompt_component.set(
         template=dedent("""Given the following context, answer the question.
@@ -46,7 +45,7 @@ def rag_graph():
 
                          Question: {question}
                          Answer:"""),
-        context=parse_data.parse_data,
+        context=parse_data.parse_combined_text,
         question=chat_input.message_response,
     )
 
