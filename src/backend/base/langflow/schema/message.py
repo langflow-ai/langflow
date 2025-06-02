@@ -6,7 +6,7 @@ import re
 import traceback
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
@@ -30,6 +30,9 @@ from langflow.utils.constants import (
     MESSAGE_SENDER_USER,
 )
 from langflow.utils.image import create_data_url
+
+if TYPE_CHECKING:
+    from langflow.schema.dataframe import DataFrame
 
 
 class Message(Data):
