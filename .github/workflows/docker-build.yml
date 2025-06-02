@@ -206,7 +206,7 @@ jobs:
           version: latest
           driver: docker-container
           driver-opts: |
-            image=moby/buildkit:master
+            image=moby/buildkit:v0.22.0
             network=host
 
       - name: Login to Docker Hub
@@ -286,7 +286,7 @@ jobs:
           version: latest
           driver: docker-container
           driver-opts: |
-            image=moby/buildkit:master
+            image=moby/buildkit:v0.22.0
             network=host
 
 
