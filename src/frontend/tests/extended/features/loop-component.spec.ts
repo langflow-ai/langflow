@@ -228,13 +228,13 @@ test(
 
     // Verify output
     await page.waitForSelector(
-      '[data-testid="output-inspection-message-chatoutput"]',
+      '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
       },
     );
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 

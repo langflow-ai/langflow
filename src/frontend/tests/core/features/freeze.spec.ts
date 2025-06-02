@@ -156,14 +156,14 @@ test(
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page.waitForSelector(
-      '[data-testid="output-inspection-message-chatoutput"]',
+      '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
       },
     );
 
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -180,14 +180,14 @@ test(
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page.waitForSelector(
-      '[data-testid="output-inspection-message-chatoutput"]',
+      '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
       },
     );
 
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -233,14 +233,14 @@ test(
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page.waitForSelector(
-      '[data-testid="output-inspection-message-chatoutput"]',
+      '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
       },
     );
 
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -265,14 +265,14 @@ test(
     });
 
     await page.waitForSelector(
-      '[data-testid="output-inspection-message-chatoutput"]',
+      '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
       },
     );
 
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 

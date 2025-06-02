@@ -146,7 +146,7 @@ test.skip(
     await page.getByTestId("button_run_text_output").click();
     await page
       .getByTestId(/^rf__node-TextOutput-[a-zA-Z0-9]+$/)
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .click();
     await page.getByText("Run Flow", { exact: true }).click();
     await page.waitForTimeout(5000);
