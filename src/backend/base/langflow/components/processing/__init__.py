@@ -1,6 +1,7 @@
 from .alter_metadata import AlterMetadataComponent
 from .batch_run import BatchRunComponent
 from .combine_text import CombineTextComponent
+from .converter import TypeConverterComponent
 from .create_data import CreateDataComponent
 from .data_operations import DataOperationsComponent
 from .extract_key import ExtractDataKeyComponent
@@ -42,5 +43,6 @@ __all__ = [
     "SelectDataComponent",
     "SplitTextComponent",
     "StructuredOutputComponent",
+    "TypeConverterComponent",
     "UpdateDataComponent",
 ]
