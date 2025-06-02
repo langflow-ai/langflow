@@ -111,7 +111,7 @@ class NvidiaIngestComponent(BaseFileComponent):
             display_name="Filter Images",
             info="Filter images (see advanced options for filtering criteria).",
             advanced=True,
-            value=True,
+            value=False,
         ),
         IntInput(
             name="min_image_size",
@@ -175,6 +175,14 @@ class NvidiaIngestComponent(BaseFileComponent):
             err_msg = "No files to process."
             self.log(err_msg)
             raise ValueError(err_msg)
+
+        # Check if all files are PDFs when high resolution mode is enabled
+        if self.high_resolution:
+            non_pdf_files = [file for file in file_list if not str(file.path).lower().endswith('.pdf')]
+            if non_pdf_files:
+                error_msg = "High resolution mode only supports PDF files."
+                self.log(error_msg)
+                raise ValueError(error_msg)
 
         file_paths = [str(file.path) for file in file_list]
 
