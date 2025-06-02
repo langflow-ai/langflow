@@ -118,5 +118,5 @@ For more information, see the [Python Developer's Guide](https://devguide.python
 
 - [Contributing Bundles](./contributing-bundles.md)
 - [Contributing Components](./contributing-components.md)
-- [Contributing Tests](./contributing-tests.md)
+- [Contributing Tests](./contributing-component-tests.md)
 - [Contributing Templates](./contributing-templates.md)
