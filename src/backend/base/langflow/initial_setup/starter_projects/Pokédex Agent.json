@@ -1757,7 +1757,7 @@
                 ],
                 "options_metadata": [],
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "toggle": false,

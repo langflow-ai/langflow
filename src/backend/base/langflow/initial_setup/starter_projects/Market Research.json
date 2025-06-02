@@ -1610,7 +1610,7 @@
                   "Descending"
                 ],
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
