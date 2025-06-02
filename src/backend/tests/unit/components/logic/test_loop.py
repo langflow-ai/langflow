@@ -1,3 +1,4 @@
+import json
 from uuid import UUID
 
 import orjson
@@ -52,15 +53,12 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
 
     async def check_messages(self, flow_id):
         messages = await aget_messages(flow_id=UUID(flow_id), order="ASC")
-        assert len(messages) == 2
+        assert len(messages) == 1
         assert messages[0].session_id == flow_id
-        assert messages[0].sender == "User"
-        assert messages[0].sender_name == "User"
-        assert messages[0].text != ""
-        assert messages[1].session_id == flow_id
-        assert messages[1].sender == "Machine"
-        assert messages[1].sender_name == "AI"
-        assert len(messages[1].text) > 0
+        assert messages[0].sender == "Machine"
+        assert messages[0].sender_name == "AI"
+        assert len(messages[0].text) > 0
+        return messages
 
     async def test_build_flow_loop(self, client, json_loop_test, logged_in_headers):
         """Test building a flow with a loop component."""
@@ -77,13 +75,31 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert events_response.status_code == 200
 
         # Process the events stream
+        chat_output = None
+        lines = []
         async for line in events_response.aiter_lines():
             if not line:  # Skip empty lines
                 continue
+            lines.append(line)
+            if "ChatOutput" in line:
+                chat_output = json.loads(line)
             # Process events if needed
             # We could add specific assertions here for loop-related events
+        assert chat_output is not None
+        messages = await self.check_messages(flow_id)
+        ai_message = messages[0].text
+        json_data = orjson.loads(ai_message)
 
-        await self.check_messages(flow_id)
+        # Use a for loop for better debugging
+        found = []
+        json_data = [(data["text"], q_dict) for data, q_dict in json_data]
+        for text, q_dict in json_data:
+            expected_text = f"==> {q_dict['q']}"
+            assert expected_text in text, (
+                f"Found {found} until now, but expected '{expected_text}' not found in '{text}',"
+                f"and the json_data is {json_data}"
+            )
+            found.append(expected_text)
 
     async def test_run_flow_loop(self, client: AsyncClient, created_api_key, json_loop_test, logged_in_headers):
         flow_id = await self._create_flow(client, json_loop_test, logged_in_headers)
