@@ -551,8 +551,12 @@ class Graph:
                 # So we need to get all edges of the vertex and successors
                 # and run self.build_adjacency_maps(edges) to get the new predecessor map
                 # that is not complete but we can use to update the run_predecessors
+                successors_predecessors = set()
+                for sucessor in successors:
+                    successors_predecessors.update(self.get_all_predecessors(sucessor))
+
                 edges_set = set()
-                for _vertex in [vertex, *successors]:
+                for _vertex in [vertex, *successors, *successors_predecessors]:
                     edges_set.update(_vertex.edges)
                     if _vertex.state == VertexStates.INACTIVE:
                         _vertex.set_state("ACTIVE")
@@ -1777,6 +1781,17 @@ class Graph:
     def get_successors(self, vertex: Vertex) -> list[Vertex]:
         """Returns the successors of a vertex."""
         return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, set())]
+
+    def get_all_predecessors(self, vertex: Vertex, *, recursive: bool = True) -> list[Vertex]:
+        """Returns all predecessors of a vertex."""
+        _predecessors = self.predecessor_map.get(vertex.id, [])
+        predecessors = [self.get_vertex(v_id) for v_id in _predecessors]
+        if recursive:
+            for predecessor in _predecessors:
+                predecessors.extend(self.get_all_predecessors(self.get_vertex(predecessor), recursive=recursive))
+        else:
+            predecessors.extend([self.get_vertex(predecessor) for predecessor in _predecessors])
+        return predecessors
 
     def get_vertex_neighbors(self, vertex: Vertex) -> dict[Vertex, int]:
         """Returns the neighbors of a vertex."""
