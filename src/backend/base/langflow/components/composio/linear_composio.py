@@ -18,15 +18,6 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
     app_name = "linear"
 
     _actions_data: dict = {
-        "LINEAR_CREATE_LINEAR_ATTACHMENT": {
-            "display_name": "Create Linear Attachment",
-            "action_fields": [
-                "LINEAR_CREATE_LINEAR_ATTACHMENT_issue_id",
-                "LINEAR_CREATE_LINEAR_ATTACHMENT_subtitle",
-                "LINEAR_CREATE_LINEAR_ATTACHMENT_title",
-                "LINEAR_CREATE_LINEAR_ATTACHMENT_url",
-            ],
-        },
         "LINEAR_CREATE_LINEAR_COMMENT": {
             "display_name": "Create Linear Comment",
             "action_fields": ["LINEAR_CREATE_LINEAR_COMMENT_body", "LINEAR_CREATE_LINEAR_COMMENT_issue_id"],
@@ -50,6 +41,8 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
         "LINEAR_CREATE_LINEAR_ISSUE_DETAILS": {
             "display_name": "Get Create Issue Default Params",
             "action_fields": ["LINEAR_CREATE_LINEAR_ISSUE_DETAILS_team_id"],
+            "get_result_field": True,
+            "result_field": "team",
         },
         "LINEAR_CREATE_LINEAR_LABEL": {
             "display_name": "Create Label",
@@ -64,23 +57,24 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             "display_name": "Delete Issue",
             "action_fields": ["LINEAR_DELETE_LINEAR_ISSUE_issue_id"],
         },
-        "LINEAR_GET_ATTACHMENTS": {
-            "display_name": "Donwload Issue Attachments",
-            "action_fields": [
-                "LINEAR_GET_ATTACHMENTS_attachment_id",
-                "LINEAR_GET_ATTACHMENTS_file_name",
-                "LINEAR_GET_ATTACHMENTS_issue_id",
-            ],
-        },
         "LINEAR_GET_CYCLES_BY_TEAM_ID": {
             "display_name": "Get Cycles By Team",
             "action_fields": ["LINEAR_GET_CYCLES_BY_TEAM_ID_team_id"],
+            "get_result_field": True,
+            "result_field": "cycles",
         },
         "LINEAR_GET_LINEAR_ISSUE": {
             "display_name": "Get Linear Issue",
             "action_fields": ["LINEAR_GET_LINEAR_ISSUE_issue_id"],
+            "get_result_field": True,
+            "result_field": "issue",
         },
-        "LINEAR_LIST_LINEAR_CYCLES": {"display_name": "Get All Cycles", "action_fields": []},
+        "LINEAR_LIST_LINEAR_CYCLES": {
+            "display_name": "Get All Cycles",
+            "action_fields": [],
+            "get_result_field": True,
+            "result_field": "cycles",
+        },
         "LINEAR_LIST_LINEAR_ISSUES": {
             "display_name": "Get Issues By Project",
             "action_fields": [
@@ -92,15 +86,26 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
         "LINEAR_LIST_LINEAR_LABELS": {
             "display_name": "Get Labels By Team",
             "action_fields": ["LINEAR_LIST_LINEAR_LABELS_team_id"],
+            "get_result_field": True,
+            "result_field": "labels",
         },
-        "LINEAR_LIST_LINEAR_PROJECTS": {"display_name": "List Linear Projects", "action_fields": []},
+        "LINEAR_LIST_LINEAR_PROJECTS": {
+            "display_name": "List Linear Projects",
+            "action_fields": [],
+            "get_result_field": True,
+            "result_field": "projects",
+        },
         "LINEAR_LIST_LINEAR_STATES": {
             "display_name": "Get States By Team",
             "action_fields": ["LINEAR_LIST_LINEAR_STATES_team_id"],
+            "get_result_field": True,
+            "result_field": "states",
         },
         "LINEAR_LIST_LINEAR_TEAMS": {
             "display_name": "Get Teams By Project",
             "action_fields": ["LINEAR_LIST_LINEAR_TEAMS_project_id"],
+            "get_result_field": True,
+            "result_field": "teams",
         },
         "LINEAR_REMOVE_ISSUE_LABEL": {
             "display_name": "Remove Label From Linear Issue",
@@ -130,34 +135,6 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
     inputs = [
         *ComposioBaseComponent._base_inputs,
         MessageTextInput(
-            name="LINEAR_CREATE_LINEAR_ATTACHMENT_issue_id",
-            display_name="Issue Id",
-            info="ID of the issue to attach to",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="LINEAR_CREATE_LINEAR_ATTACHMENT_subtitle",
-            display_name="Subtitle",
-            info="Subtitle of the attachment",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="LINEAR_CREATE_LINEAR_ATTACHMENT_title",
-            display_name="Title",
-            info="Title of the attachment",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="LINEAR_CREATE_LINEAR_ATTACHMENT_url",
-            display_name="Url",
-            info="URL of the attachment",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
             name="LINEAR_CREATE_LINEAR_COMMENT_body",
             display_name="Body",
             info="Content of the comment",
@@ -176,6 +153,7 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             display_name="Assignee Id",
             info="ID of the assignee",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="LINEAR_CREATE_LINEAR_ISSUE_description",
@@ -189,6 +167,7 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             display_name="Due Date",
             info="Due date of the issue in the comma separated format YYYY,MM,DD,hh,mm,ss. For example, 2024,10,27,12,58,00.",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         IntInput(
             name="LINEAR_CREATE_LINEAR_ISSUE_estimate",
@@ -196,18 +175,21 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             info="The Int scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.",  # noqa: E501
             show=False,
             value=0,
+            advanced=True,
         ),
         MessageTextInput(
             name="LINEAR_CREATE_LINEAR_ISSUE_label_ids",
             display_name="Label Ids",
             info="List of label IDs",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="LINEAR_CREATE_LINEAR_ISSUE_parent_id",
             display_name="Parent Id",
             info="ID of the parent issue",
             show=False,
+            advanced=True,
         ),
         IntInput(
             name="LINEAR_CREATE_LINEAR_ISSUE_priority",
@@ -215,6 +197,7 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             info="The priority of the issue. 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.",
             show=False,
             value=0,
+            advanced=True,
         ),
         MessageTextInput(
             name="LINEAR_CREATE_LINEAR_ISSUE_project_id",
@@ -228,6 +211,7 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             display_name="State Id",
             info="ID of the issue state",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="LINEAR_CREATE_LINEAR_ISSUE_team_id",
@@ -285,27 +269,6 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             required=True,
         ),
         MessageTextInput(
-            name="LINEAR_GET_ATTACHMENTS_attachment_id",
-            display_name="Attachment Id",
-            info="ID of the attachment to be fetched",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="LINEAR_GET_ATTACHMENTS_file_name",
-            display_name="File Name",
-            info="Name of the file to be saved by. The file downloaded will be saved with this name. Make sure to include the file extension.",  # noqa: E501
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="LINEAR_GET_ATTACHMENTS_issue_id",
-            display_name="Issue Id",
-            info="ID of the issue for which to fetch details",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
             name="LINEAR_GET_CYCLES_BY_TEAM_ID_team_id",
             display_name="Team Id",
             info="ID of the team for which to list cycles",
@@ -337,6 +300,7 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             display_name="Project Id",
             info="ID of the project for which to list issues. If this is provided the issues returned will be filtered by the given project ID.",  # noqa: E501
             show=False,
+            required=True,
         ),
         MessageTextInput(
             name="LINEAR_LIST_LINEAR_LABELS_team_id",
@@ -392,6 +356,7 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             display_name="Assignee Id",
             info="ID of the assignee",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="LINEAR_UPDATE_ISSUE_description",
@@ -404,12 +369,14 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             display_name="Due Date",
             info="Due date of the issue in the comma separated format YYYY,MM,DD,hh,mm,ss. For example, 2024,10,27,12,58,00.",  # noqa: E501
             show=False,
+            advanced=True,
         ),
         IntInput(
             name="LINEAR_UPDATE_ISSUE_estimate",
             display_name="Estimate",
             info="Time estimate for the issue in minutes",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="LINEAR_UPDATE_ISSUE_issue_id",
@@ -423,24 +390,28 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             display_name="Label Ids",
             info="List of label IDs to assign to the issue",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="LINEAR_UPDATE_ISSUE_parent_id",
             display_name="Parent Id",
             info="ID of the parent issue",
             show=False,
+            advanced=True,
         ),
         IntInput(
             name="LINEAR_UPDATE_ISSUE_priority",
             display_name="Priority",
             info="The priority of the issue. 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="LINEAR_UPDATE_ISSUE_project_id",
             display_name="Project Id",
             info="ID of the project",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="LINEAR_UPDATE_ISSUE_state_id",
@@ -453,6 +424,7 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             display_name="Team Id",
             info="ID of the team",
             show=False,
+            advanced=True,
         ),
         MessageTextInput(
             name="LINEAR_UPDATE_ISSUE_title",
@@ -497,7 +469,16 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             if not result.get("successful"):
                 return {"error": result.get("error", "No response")}
 
-            return result.get("data", [])
+            result_data = result.get("data", [])
+            actions_data = self._actions_data.get(action_key, {})
+            # If 'get_result_field' is True and 'result_field' is specified, extract the data
+            # using 'result_field'. Otherwise, fall back to the entire 'data' field in the response.
+            if actions_data.get("get_result_field") and actions_data.get("result_field"):
+                result_data = result_data.get(actions_data.get("result_field"), result.get("data", []))
+            if len(result_data) != 1 and not actions_data.get("result_field") and actions_data.get("get_result_field"):
+                msg = f"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}"
+                raise ValueError(msg)
+            return result_data  # noqa: TRY300
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
