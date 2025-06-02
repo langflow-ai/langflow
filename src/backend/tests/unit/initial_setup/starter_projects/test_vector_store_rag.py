@@ -5,9 +5,8 @@ from textwrap import dedent
 import pytest
 from langflow.components.data import FileComponent
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
-from langflow.components.inputs import ChatInput
+from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.languagemodels import OpenAIModelComponent
-from langflow.components.outputs import ChatOutput
 from langflow.components.processing import ParseDataComponent
 from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.prompts import PromptComponent
@@ -23,9 +22,9 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent(_id="file-123")
     file_component.set(path="test.txt")
-    file_component.set_on_output(name="data", value=Data(text="This is a test file."), cache=True)
+    file_component.set_on_output(name="dataframe", value=Data(text="This is a test file."), cache=True)
     text_splitter = SplitTextComponent(_id="text-splitter-123")
-    text_splitter.set(data_inputs=file_component.load_files)
+    text_splitter.set(data_inputs=file_component.load_dataframe)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
     openai_embeddings.set(
         openai_api_key="sk-123", openai_api_base="https://api.openai.com/v1", openai_api_type="openai"

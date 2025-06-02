@@ -14,12 +14,12 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   });
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat output");
-  await page.waitForSelector('[data-testid="outputsChat Output"]', {
+  await page.waitForSelector('[data-testid="input_outputChat Output"]', {
     timeout: 2000,
   });
 
   await page
-    .getByTestId("outputsChat Output")
+    .getByTestId("input_outputChat Output")
     .hover()
     .then(async () => {
       await page.getByTestId("add-component-button-chat-output").click();
@@ -27,12 +27,12 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat input");
-  await page.waitForSelector('[data-testid="inputsChat Input"]', {
+  await page.waitForSelector('[data-testid="input_outputChat Input"]', {
     timeout: 2000,
   });
 
   await page
-    .getByTestId("inputsChat Input")
+    .getByTestId("input_outputChat Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'), {
       targetPosition: { x: 100, y: 100 },
     });
