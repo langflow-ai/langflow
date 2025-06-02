@@ -21,4 +21,10 @@ class ListenComponent(Component):
     outputs = [Output(name="data", display_name="Data", method="build", cache=False)]
 
     def build(self) -> Data:
+        """
+        Retrieves data from the component context using the specified context key.
+        
+        Returns:
+            The Data object associated with the context key, or an empty Data object if the key is not found.
+        """
         return self.ctx.get(self.context_key, Data(text=""))

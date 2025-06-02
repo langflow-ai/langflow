@@ -463,11 +463,23 @@ class InterfaceVertex(ComponentVertex):
 
 class StateVertex(ComponentVertex):
     def __init__(self, data: NodeData, graph):
+        """
+        Initializes a StateVertex with build steps and marks it as a state vertex.
+        
+        Args:
+            data: Node data used to initialize the vertex.
+            graph: The graph to which this vertex belongs.
+        """
         super().__init__(data, graph=graph)
         self.steps = [self._build]
         self.is_state = True
 
     def built_object_repr(self):
+        """
+        Returns a string representation of the built object from artifacts if available.
+        
+        If the artifacts dictionary contains a "repr" key, its value is returned (falling back to the superclass representation if the value is falsy). Returns None if no representation is available.
+        """
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super().built_object_repr()
         return None

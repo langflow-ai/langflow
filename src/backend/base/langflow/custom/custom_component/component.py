@@ -883,6 +883,12 @@ class Component(CustomComponent):
             params[input_.name] = input_.value
 
     def set_attributes(self, params: dict) -> None:
+        """
+        Sets component attributes based on provided parameters, ensuring no reserved words are used.
+        
+        Raises:
+            ValueError: If a parameter name conflicts with a reserved attribute not tracked in _attributes.
+        """
         self._validate_inputs(params)
         attributes = {}
         for key, value in params.items():
