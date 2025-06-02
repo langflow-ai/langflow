@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import copy
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, cast
+from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
 from langchain_core.documents import Document
@@ -12,6 +14,10 @@ from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from langflow.utils.image import create_data_url
+
+if TYPE_CHECKING:
+    from langflow.schema.dataframe import DataFrame
+    from langflow.schema.message import Message
 
 
 class Data(BaseModel):
@@ -81,7 +87,7 @@ class Data(BaseModel):
         return new_text
 
     @classmethod
-    def from_document(cls, document: Document) -> "Data":
+    def from_document(cls, document: Document) -> Data:
         """Converts a Document to a Data.
 
         Args:
@@ -95,7 +101,7 @@ class Data(BaseModel):
         return cls(data=data, text_key="text")
 
     @classmethod
-    def from_lc_message(cls, message: BaseMessage) -> "Data":
+    def from_lc_message(cls, message: BaseMessage) -> Data:
         """Converts a BaseMessage to a Data.
 
         Args:
@@ -108,7 +114,7 @@ class Data(BaseModel):
         data["metadata"] = cast("dict", message.to_json())
         return cls(data=data, text_key="text")
 
-    def __add__(self, other: "Data") -> "Data":
+    def __add__(self, other: Data) -> Data:
         """Combines the data of two data by attempting to add values for overlapping keys.
 
         Combines the data of two data by attempting to add values for overlapping keys
@@ -235,7 +241,7 @@ class Data(BaseModel):
     def __eq__(self, /, other):
         return isinstance(other, Data) and self.data == other.data
 
-    def filter_data(self, filter_str: str) -> "Data":
+    def filter_data(self, filter_str: str) -> Data:
         """Filters the data dictionary based on the filter string.
 
         Args:
@@ -248,17 +254,17 @@ class Data(BaseModel):
 
         return apply_json_filter(self.data, filter_str)
 
-    def to_message(self, v: Any) -> "Message":
+    def to_message(self) -> Message:
         from langflow.schema.message import Message  # Local import to avoid circular import
 
-        if self.text_key in v.data:
-            return Message(text=v.get_text())
-        return Message(text=str(v.data))
+        if self.text_key in self.data:
+            return Message(text=self.get_text())
+        return Message(text=str(self.data))
 
-    def to_dataframe(self, v: Any) -> "DataFrame":
+    def to_dataframe(self) -> DataFrame:
         from langflow.schema.dataframe import DataFrame  # Local import to avoid circular import
 
-        data_dict = v.data
+        data_dict = self.data
         # If data contains only one key and the value is a list of dictionaries, convert to DataFrame
         if (
             len(data_dict) == 1
@@ -266,7 +272,7 @@ class Data(BaseModel):
             and all(isinstance(item, dict) for item in next(iter(data_dict.values())))
         ):
             return DataFrame(data=next(iter(data_dict.values())))
-        return DataFrame(data=[v])
+        return DataFrame(data=[self])
 
 
 def custom_serializer(obj):
