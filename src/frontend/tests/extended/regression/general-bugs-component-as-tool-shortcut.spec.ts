@@ -20,7 +20,9 @@ test(
       .getByTestId("helpersStructured Output")
       .hover()
       .then(async () => {
-        await page.getByTestId("add-component-button-structured-output").click();
+        await page
+          .getByTestId("add-component-button-structured-output")
+          .click();
       });
 
     await page.waitForSelector('[data-testid="title-Structured Output"]', {
