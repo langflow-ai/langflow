@@ -540,12 +540,8 @@ class Graph:
             vertex = self.get_vertex(vertex_id)
             if vertex_id == caller or vertex.display_name == caller_vertex.display_name:
                 continue
-            if (
-                isinstance(vertex.raw_params["context_key"], str)
-                and name in vertex.raw_params["context_key"]
-                and vertex_id != caller
-                and isinstance(vertex, StateVertex)
-            ):
+            ctx_key = vertex.raw_params.get("context_key")
+            if isinstance(ctx_key, str) and name in ctx_key and vertex_id != caller and isinstance(vertex, StateVertex):
                 activated_vertices.append(vertex_id)
                 vertices_ids.add(vertex_id)
                 successors = self.get_all_successors(vertex, flat=True)
