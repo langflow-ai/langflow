@@ -70,7 +70,7 @@ test(
     await page.getByTestId("fit_view").click();
 
     await page
-      .getByTestId("handle-chatinput-noshownode-message-source")
+      .getByTestId("handle-chatinput-noshownode-chat message-source")
       .click();
     await page.getByTestId("handle-openaimodel-shownode-input-left").click();
 

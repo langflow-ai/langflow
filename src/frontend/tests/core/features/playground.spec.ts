@@ -63,7 +63,7 @@ test(
     await adjustScreenView(page);
 
     await page
-      .getByTestId("handle-chatinput-noshownode-message-source")
+      .getByTestId("handle-chatinput-noshownode-chat message-source")
       .click();
 
     await page.getByTestId("handle-textoutput-shownode-inputs-left").click();
