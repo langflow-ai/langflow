@@ -113,8 +113,6 @@ const NodeToolbarComponent = memo(
       [data.node],
     );
 
-    // Check if any of the data.node.template fields have tool_mode as True
-    // if so we can show the tool mode button
     const hasToolMode = useMemo(
       () => checkHasToolMode(data.node?.template ?? {}) && !isGroup,
       [data.node?.template, isGroup],
