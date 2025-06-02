@@ -67,6 +67,13 @@ class NvidiaIngestComponent(BaseFileComponent):
             info="Extract images from document",
             value=True,
         ),
+        BoolInput(
+            name="extract_infographics",
+            display_name="Extract Infographics",
+            info="Extract infographics from document",
+            value=False,
+            advanced=True,
+        ),
         DropdownInput(
             name="text_depth",
             display_name="Text Depth",
@@ -141,6 +148,13 @@ class NvidiaIngestComponent(BaseFileComponent):
             advanced=True,
             value=True,
         ),
+        BoolInput(
+            name="high_resolution",
+            display_name="High Resolution",
+            info="Process images in high resolution mode for better quality extraction.",
+            advanced=True,
+            value=False,
+        ),
     ]
 
     outputs = [
@@ -196,7 +210,9 @@ class NvidiaIngestComponent(BaseFileComponent):
                     extract_tables=self.extract_tables,
                     extract_charts=self.extract_charts,
                     extract_images=self.extract_images,
+                    extract_infographics=self.extract_infographics,
                     text_depth=self.text_depth,
+                    **({"extract_method": "nemoretriever_parse"} if self.high_resolution else {})
                 )
             )
 
