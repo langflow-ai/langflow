@@ -1847,21 +1847,7 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Data",
-                "method": "load_files",
-                "name": "data",
-                "required_inputs": [],
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "DataFrame",
+                "display_name": "Loaded Files",
                 "method": "load_dataframe",
                 "name": "dataframe",
                 "required_inputs": [],
@@ -1869,20 +1855,6 @@
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Message",
-                "method": "load_message",
-                "name": "message",
-                "required_inputs": [],
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
                 ],
                 "value": "__UNDEFINED__"
               }
