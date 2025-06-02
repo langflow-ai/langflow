@@ -140,7 +140,7 @@ test(
       .getByTestId("handle-parsedata-shownode-message-right")
       .nth(0)
       .click();
-    await page.getByTestId("handle-chatoutput-shownode-text-left").click();
+    await page.getByTestId("handle-chatoutput-shownode-inputs-left").click();
 
     await page
       .getByTestId("textarea_str_input_value")
