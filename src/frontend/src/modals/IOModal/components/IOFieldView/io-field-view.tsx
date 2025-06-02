@@ -218,7 +218,9 @@ export default function IOFieldView({
                     ? (flowPoolNode?.data?.artifacts?.map(
                         (artifact) => artifact.data,
                       ) ?? [])
-                    : [flowPoolNode?.data?.artifacts]
+                    : flowPoolNode?.data?.artifacts
+                      ? [flowPoolNode.data.artifacts]
+                      : []
                 }
                 columnMode="union"
               />

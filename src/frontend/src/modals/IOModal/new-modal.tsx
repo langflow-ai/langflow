@@ -228,7 +228,7 @@ export default function IOModal({
 
   const { data: config } = useGetConfig();
 
-  const handleResize = useCallback(() => {
+  useEffect(() => {
     const handleElement = document.getElementById("sized-box");
     const containerElement = document.getElementById("container-sized-box");
 
@@ -257,6 +257,10 @@ export default function IOModal({
       };
 
       handleElement.addEventListener("mousedown", onMouseDown);
+
+      return () => {
+        handleElement.removeEventListener("mousedown", onMouseDown);
+      };
     }
   }, []);
 
