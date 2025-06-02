@@ -220,7 +220,7 @@ class NvidiaIngestComponent(BaseFileComponent):
                     extract_images=self.extract_images,
                     extract_infographics=self.extract_infographics,
                     text_depth=self.text_depth,
-                    **({"extract_method": "nemoretriever_parse"} if self.high_resolution else {})
+                    **({"extract_method": "nemoretriever_parse"} if self.high_resolution else {}),
                 )
             )
 
