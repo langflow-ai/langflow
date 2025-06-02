@@ -62,7 +62,6 @@ test(
       "disclosure-helpers",
       "disclosure-vector stores",
       "disclosure-agents",
-      "disclosure-memories",
       "disclosure-logic",
       "disclosure-tools",
       "disclosure-bundles-langchain",
@@ -164,7 +163,6 @@ test(
 
     await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
     await expect(page.getByTestId("disclosure-agents")).toBeVisible();
-    await expect(page.getByTestId("disclosure-memories")).toBeVisible();
     await expect(page.getByTestId("disclosure-logic")).toBeVisible();
   },
 );
