@@ -998,6 +998,27 @@
                 "type": "str",
                 "value": ""
               },
+              "mode": {
+                "_input_type": "TabInput",
+                "advanced": true,
+                "display_name": "Mode",
+                "dynamic": false,
+                "info": "Operation mode: Store messages or Retrieve messages.",
+                "name": "mode",
+                "options": [
+                  "Store",
+                  "Retrieve"
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tab",
+                "value": "Store"
+              },
               "model_kwargs": {
                 "_input_type": "DictInput",
                 "advanced": true,
