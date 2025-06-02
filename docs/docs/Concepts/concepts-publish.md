@@ -4,6 +4,7 @@ slug: /concepts-publish
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import ChatWidget from '@site/src/components/ChatWidget';
 
 Langflow provides several ways to publish and integrate your flows into external applications. Whether you want to expose your flow as an API endpoint, embed it as a chat widget in your website, or share it as a public playground, this guide covers the options available for making your flows accessible to users.
 
@@ -194,3 +195,9 @@ The **Shareable playground** exposes your Langflow application's **Playground** 
 You can share this endpoint publicly using a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
 
 If you're using **Datastax Langflow**, you can share the URL with any users within your **Organization**.
+
+## Embed into site
+
+The **Embed into site** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
+
+For more information, see [Embedded chat widget](/embedded-chat-widget).

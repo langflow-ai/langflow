@@ -17,14 +17,14 @@ test(
     //first component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
-    await page.waitForSelector('[data-testid="inputsText Input"]', {
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 1000,
     });
 
     await zoomOut(page, 3);
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -75,12 +75,12 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 600, y: 200 },
       });
@@ -114,7 +114,7 @@ test(
 
     //connection 1
     await page
-      .getByTestId("handle-urlcomponent-shownode-data-right")
+      .getByTestId("handle-urlcomponent-shownode-result-right")
       .nth(0)
       .click();
     await page
