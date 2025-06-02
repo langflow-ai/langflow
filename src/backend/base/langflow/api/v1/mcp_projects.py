@@ -658,12 +658,7 @@ class ProjectMCPServer:
                     input_value=processed_inputs.get("input_value", ""), session_id=conversation_id
                 )
 
-                async def send_progress_updates():
-                    if not (
-                        mcp_config.enable_progress_notifications and self.server.request_context.meta.progressToken
-                    ):
-                        return
-
+                async def send_progress_updates(progress_token):
                     try:
                         progress = 0.0
                         while True:
@@ -683,7 +678,9 @@ class ProjectMCPServer:
                 try:
                     progress_task = None
                     if mcp_config.enable_progress_notifications and self.server.request_context.meta.progressToken:
-                        progress_task = asyncio.create_task(send_progress_updates())
+                        progress_task = asyncio.create_task(
+                            send_progress_updates(self.server.request_context.meta.progressToken)
+                        )
 
                     try:
                         try:
@@ -715,9 +712,7 @@ class ProjectMCPServer:
                     finally:
                         if progress_task:
                             progress_task.cancel()
-                            await asyncio.wait([progress_task])
-                            if not progress_task.cancelled() and (exc := progress_task.exception()) is not None:
-                                raise exc
+                            await asyncio.gather(progress_task, return_exceptions=True)
 
                 except Exception:
                     if mcp_config.enable_progress_notifications and (
