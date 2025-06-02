@@ -1470,8 +1470,8 @@
                 "info": "Operation mode: Store messages or Retrieve messages.",
                 "name": "mode",
                 "options": [
-                  "Store",
-                  "Retrieve"
+                  "Retrieve",
+                  "Store"
                 ],
                 "placeholder": "",
                 "real_time_refresh": true,
