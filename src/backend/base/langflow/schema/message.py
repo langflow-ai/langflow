@@ -279,13 +279,13 @@ class Message(Data):
             return await asyncio.to_thread(cls, **kwargs)
         return cls(**kwargs)
 
-    def to_data(self, v: Any) -> Data:
-        return Data(data=v.data)
+    def to_data(self) -> Data:
+        return Data(data=self.data)
 
-    def to_dataframe(self, v: Any) -> DataFrame:
+    def to_dataframe(self) -> DataFrame:
         from langflow.schema.dataframe import DataFrame  # Local import to avoid circular import
 
-        return DataFrame(data=[v])
+        return DataFrame(data=[self])
 
 
 class DefaultModel(BaseModel):
