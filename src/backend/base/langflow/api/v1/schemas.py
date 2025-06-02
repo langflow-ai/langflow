@@ -406,3 +406,7 @@ class MCPSettings(BaseModel):
     action_description: str | None = None
     name: str | None = None
     description: str | None = None
+
+
+class MCPInstallRequest(BaseModel):
+    client: str

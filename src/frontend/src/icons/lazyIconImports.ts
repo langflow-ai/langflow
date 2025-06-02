@@ -1,5 +1,3 @@
-import { TwelveLabsIcon } from "./TwelveLabs";
-
 // Export the lazy loading mapping for icons
 export const lazyIconsMapping = {
   "AI/ML": () =>
@@ -62,8 +60,12 @@ export const lazyIconsMapping = {
     })),
   Couchbase: () =>
     import("@/icons/Couchbase").then((mod) => ({ default: mod.CouchbaseIcon })),
+  Claude: () =>
+    import("@/icons/Claude").then((mod) => ({ default: mod.ClaudeIcon })),
   CrewAI: () =>
     import("@/icons/CrewAI").then((mod) => ({ default: mod.CrewAiIcon })),
+  Cursor: () =>
+    import("@/icons/Cursor").then((mod) => ({ default: mod.CursorIcon })),
   DeepSeek: () =>
     import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
   Dropbox: () =>
