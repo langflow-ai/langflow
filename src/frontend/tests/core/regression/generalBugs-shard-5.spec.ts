@@ -19,12 +19,12 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
-    await page.waitForSelector('[data-testid="inputsText Input"]', {
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {});
 
     await zoomOut(page, 4);
@@ -32,7 +32,7 @@ test(
     await page.waitForTimeout(500);
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 150 },
       });
@@ -40,7 +40,7 @@ test(
     await page.waitForTimeout(500);
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 670, y: 200 },
       });
@@ -75,12 +75,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text");
 
-    await page.waitForSelector('[data-testid="outputsText Output"]', {
+    await page.waitForSelector('[data-testid="input_outputText Output"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("outputsText Output")
+      .getByTestId("input_outputText Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 10, y: 400 },
       });

@@ -56,8 +56,7 @@ test(
     });
 
     const disclosureTestIds = [
-      "disclosure-inputs",
-      "disclosure-outputs",
+      "disclosure-i/o",
       "disclosure-data",
       "disclosure-models",
       "disclosure-helpers",
@@ -72,7 +71,7 @@ test(
     ];
 
     const elementTestIds = [
-      "outputsChat Output",
+      "input_outputChat Output",
       "dataAPI Request",
       "vectorstoresAstra DB",
       "langchain_utilitiesTool Calling Agent",
@@ -84,7 +83,12 @@ test(
     ];
 
     await Promise.all(
-      disclosureTestIds.map((id) => expect(page.getByTestId(id)).toBeVisible()),
+      disclosureTestIds.map((id) => {
+        if (!expect(page.getByTestId(id)).toBeVisible()) {
+          console.error(`${id} is not visible`);
+        }
+        return expect(page.getByTestId(id)).toBeVisible();
+      }),
     );
 
     await Promise.all(
@@ -118,9 +122,12 @@ test(
     ];
 
     await Promise.all(
-      visibleModelSpecsTestIds.map((id) =>
-        expect(page.getByTestId(id)).toBeVisible(),
-      ),
+      visibleModelSpecsTestIds.map((id) => {
+        if (!expect(page.getByTestId(id)).toBeVisible()) {
+          console.error(`${id} is not visible`);
+        }
+        return expect(page.getByTestId(id)).toBeVisible();
+      }),
     );
 
     const chainInputElements1 = await page
