@@ -117,18 +117,20 @@ class TestOutlookComponent(ComponentTestBaseWithoutClient):
                     "OUTLOOK_OUTLOOK_LIST_MESSAGES_select",
                     "OUTLOOK_OUTLOOK_LIST_MESSAGES_orderby",
                 ],
+                "get_result_field": True,
+                "result_field": "value",
             },
         }
 
         mock_toolset = MagicMock()
         mock_toolset.execute_action.return_value = {
             "successful": True,
-            "data": {"response_data": {"messages": "mocked response"}},
+            "data": {"response_data": {"value": [{"subject": "Test Email", "from": "test@example.com"}]}},
         }
 
         with patch.object(component, "_build_wrapper", return_value=mock_toolset):
             result = component.execute_action()
-            assert result == {"messages": "mocked response"}
+            assert result == [{"subject": "Test Email", "from": "test@example.com"}]
 
     def test_execute_action_invalid_action(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)

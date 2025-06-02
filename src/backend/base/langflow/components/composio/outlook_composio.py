@@ -25,10 +25,13 @@ class ComposioOutlookAPIComponent(ComposioBaseComponent):
                 "OUTLOOK_OUTLOOK_REPLY_EMAIL_cc_emails",
                 "OUTLOOK_OUTLOOK_REPLY_EMAIL_bcc_emails",
             ],
+            "get_result_field": False,
         },
         "OUTLOOK_OUTLOOK_GET_PROFILE": {
             "display_name": "Get Profile",
             "action_fields": ["OUTLOOK_OUTLOOK_GET_PROFILE_user_id"],
+            "get_result_field": True,
+            "result_field": "response_data",
         },
         "OUTLOOK_OUTLOOK_SEND_EMAIL": {
             "display_name": "Send Email",
@@ -44,6 +47,7 @@ class ComposioOutlookAPIComponent(ComposioBaseComponent):
                 "OUTLOOK_OUTLOOK_SEND_EMAIL_save_to_sent_items",
                 "OUTLOOK_OUTLOOK_SEND_EMAIL_attachment",
             ],
+            "get_result_field": False,
         },
         "OUTLOOK_OUTLOOK_LIST_MESSAGES": {
             "display_name": "List Messages",
@@ -71,6 +75,8 @@ class ComposioOutlookAPIComponent(ComposioBaseComponent):
                 "OUTLOOK_OUTLOOK_LIST_MESSAGES_select",
                 "OUTLOOK_OUTLOOK_LIST_MESSAGES_orderby",
             ],
+            "get_result_field": True,
+            "result_field": "value",
         },
         "OUTLOOK_OUTLOOK_LIST_EVENTS": {
             "display_name": "List Events",
@@ -83,6 +89,8 @@ class ComposioOutlookAPIComponent(ComposioBaseComponent):
                 "OUTLOOK_OUTLOOK_LIST_EVENTS_orderby",
                 "OUTLOOK_OUTLOOK_LIST_EVENTS_timezone",
             ],
+            "get_result_field": True,
+            "result_field": "value",
         },
         "OUTLOOK_OUTLOOK_CALENDAR_CREATE_EVENT": {
             "display_name": "Create Calendar Event",
@@ -101,10 +109,14 @@ class ComposioOutlookAPIComponent(ComposioBaseComponent):
                 "OUTLOOK_OUTLOOK_CALENDAR_CREATE_EVENT_show_as",
                 "OUTLOOK_OUTLOOK_CALENDAR_CREATE_EVENT_categories",
             ],
+            "get_result_field": True,
+            "result_field": "response_data",
         },
         "OUTLOOK_OUTLOOK_GET_EVENT": {
             "display_name": "Get Calendar Event",
             "action_fields": ["OUTLOOK_OUTLOOK_GET_EVENT_user_id", "OUTLOOK_OUTLOOK_GET_EVENT_event_id"],
+            "get_result_field": True,
+            "result_field": "response_data",
         },
         "OUTLOOK_OUTLOOK_CREATE_DRAFT": {
             "display_name": "Create Email Draft",
@@ -117,6 +129,8 @@ class ComposioOutlookAPIComponent(ComposioBaseComponent):
                 "OUTLOOK_OUTLOOK_CREATE_DRAFT_is_html",
                 "OUTLOOK_OUTLOOK_CREATE_DRAFT_attachment",
             ],
+            "get_result_field": True,
+            "result_field": "response_data",
         },
     }
 
@@ -722,9 +736,19 @@ class ComposioOutlookAPIComponent(ComposioBaseComponent):
                         return {"error": error_message, "status_code": error_data.get("status_code", 400)}
 
                 return error_message
-            if action_key in ["OUTLOOK_OUTLOOK_SEND_EMAIL", "OUTLOOK_OUTLOOK_REPLY_EMAIL"]:
-                return result.get("data", [])
-            return result.get("data", []).get("response_data", [])
+
+            result_data = result.get("data", {})
+            actions_data = self._actions_data.get(action_key, {})
+            if actions_data.get("get_result_field") and actions_data.get("result_field"):
+                response_data = result_data.get("response_data", {})
+                if response_data and actions_data.get("result_field") in response_data:
+                    result_data = response_data.get(actions_data.get("result_field"), result.get("data", []))
+                else:
+                    result_data = result_data.get(actions_data.get("result_field"), result.get("data", []))
+            if len(result_data) != 1 and not actions_data.get("result_field") and actions_data.get("get_result_field"):
+                msg = f"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}"
+                raise ValueError(msg)
+            return result_data  # noqa: TRY300
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
