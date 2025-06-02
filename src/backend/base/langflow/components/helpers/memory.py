@@ -27,8 +27,8 @@ class MemoryComponent(Component):
         TabInput(
             name="mode",
             display_name="Mode",
-            options=["Store", "Retrieve"],
-            value="Store",
+            options=["Retrieve", "Store"],
+            value="Retrieve",
             info="Operation mode: Store messages or Retrieve messages.",
             real_time_refresh=True,
         ),
