@@ -160,9 +160,9 @@ async def test_handle_project_messages_success(
 
 async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, mock_project, logged_in_headers):
     """Test updating MCP settings with invalid JSON."""
-    with patch("langflow.api.v1.mcp_projects.get_db_service") as mock_db:
+    with patch("langflow.api.v1.mcp_projects.session_scope") as mock_db:
         mock_session = AsyncMock()
-        mock_db.return_value.with_session.return_value.__aenter__.return_value = mock_session
+        mock_db.return_value.__aenter__.return_value = mock_session
         mock_session.exec.return_value.first.return_value = mock_project
 
         response = await client.patch(
