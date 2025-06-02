@@ -5,6 +5,8 @@ from langflow.io import MessageTextInput, Output
 from langflow.schema import Message
 from langflow.services.cache.utils import CacheMiss
 
+RISE_INITIALIZED_KEY = "rise_initialized"
+
 
 class NvidiaSystemAssistComponent(ComponentWithCache):
     display_name = "NVIDIA System-Assist"
@@ -35,13 +37,13 @@ class NvidiaSystemAssistComponent(ComponentWithCache):
         try:
             from gassist.rise import register_rise_client
 
-            rise_initialized = self._shared_component_cache.get("rise_initialized")
+            rise_initialized = self._shared_component_cache.get(RISE_INITIALIZED_KEY)
             if not isinstance(rise_initialized, CacheMiss) and rise_initialized:
                 return
             self.log("Initializing Rise Client")
 
             register_rise_client()
-            self._shared_component_cache.set(key="rise_initialized", value=True)
+            self._shared_component_cache.set(key=RISE_INITIALIZED_KEY, value=True)
         except ImportError as e:
             msg = "NVIDIA System-Assist is Windows only and not supported on this platform"
             raise ValueError(msg) from e
