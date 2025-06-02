@@ -3,7 +3,7 @@ import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
-test.skip(
+test(
   "should be able to see output preview from grouped components and connect components with a single click",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
@@ -168,16 +168,12 @@ test.skip(
 
     await page.getByTitle("fit view").click();
 
-    await page.waitForTimeout(3000);
-
     await zoomOut(page, 2);
 
-    await page.waitForTimeout(3000);
-
-    await page.keyboard.down("ControlOrMeta");
-    await page.getByTestId("title-Combine Text").nth(0).click();
-    await page.getByTestId("title-Combine Text").nth(1).click();
-    await page.keyboard.up("ControlOrMeta");
+    await page
+      .getByTestId("title-Combine Text")
+      .first()
+      .click({ modifiers: ["ControlOrMeta"] });
 
     await page.waitForSelector('[data-testid="group-node"]', {
       timeout: 3000,

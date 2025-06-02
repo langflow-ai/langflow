@@ -3,7 +3,7 @@ import { DISCORD_URL, GITHUB_URL } from "../../../src/constants/constants";
 import { addNewUserAndLogin } from "../../utils/add-new-user-and-loggin";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test.skip(
+test(
   "admin user must be able to track their progress in getting started",
   { tag: ["@release", "@api"] },
   async ({ page, context }) => {
