@@ -94,7 +94,7 @@
             "id": "File-v8ouW",
             "name": "dataframe",
             "output_types": [
-              "DataFrame"
+              "Data"
             ]
           },
           "targetHandle": {
@@ -110,7 +110,7 @@
         "id": "reactflow__edge-File-v8ouW{œdataTypeœ:œFileœ,œidœ:œFile-v8ouWœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-wrPyP{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-wrPyPœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-v8ouW",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-v8ouWœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-v8ouWœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParserComponent-wrPyP",
         "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-wrPyPœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
@@ -1857,13 +1857,13 @@
                 "cache": true,
                 "display_name": "Loaded Files",
                 "group_outputs": false,
-                "method": "load_dataframe",
+                "method": "load_files",
                 "name": "dataframe",
                 "required_inputs": [],
-                "selected": "DataFrame",
+                "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Data"
                 ],
                 "value": "__UNDEFINED__"
               }

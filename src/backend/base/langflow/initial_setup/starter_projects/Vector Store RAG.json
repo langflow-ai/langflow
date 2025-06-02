@@ -268,7 +268,7 @@
             "id": "File-EO8pn",
             "name": "dataframe",
             "output_types": [
-              "DataFrame"
+              "Data"
             ]
           },
           "targetHandle": {
@@ -284,7 +284,7 @@
         "id": "xy-edge__File-EO8pn{œdataTypeœ:œFileœ,œidœ:œFile-EO8pnœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-aHhAi{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-aHhAiœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-EO8pn",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-EO8pnœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-EO8pnœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataœ]}",
         "target": "SplitText-aHhAi",
         "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-aHhAiœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       }
@@ -2420,13 +2420,13 @@
                 "cache": true,
                 "display_name": "Loaded Files",
                 "group_outputs": false,
-                "method": "load_dataframe",
+                "method": "load_files",
                 "name": "dataframe",
                 "required_inputs": [],
-                "selected": "DataFrame",
+                "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Data"
                 ],
                 "value": "__UNDEFINED__"
               }

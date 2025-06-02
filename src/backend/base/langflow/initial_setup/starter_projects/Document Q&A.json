@@ -95,7 +95,7 @@
             "id": "File-3BeiJ",
             "name": "dataframe",
             "output_types": [
-              "DataFrame"
+              "Data"
             ]
           },
           "targetHandle": {
@@ -111,7 +111,7 @@
         "id": "xy-edge__File-3BeiJ{œdataTypeœ:œFileœ,œidœ:œFile-3BeiJœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-mO32W{œfieldNameœ:œinput_dataœ,œidœ:œparser-mO32Wœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-3BeiJ",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-3BeiJœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-3BeiJœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataœ]}",
         "target": "parser-mO32W",
         "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-mO32Wœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
@@ -804,13 +804,13 @@
                 "cache": true,
                 "display_name": "Loaded Files",
                 "group_outputs": false,
-                "method": "load_dataframe",
+                "method": "load_files",
                 "name": "dataframe",
                 "required_inputs": [],
-                "selected": "DataFrame",
+                "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Data"
                 ],
                 "value": "__UNDEFINED__"
               }
