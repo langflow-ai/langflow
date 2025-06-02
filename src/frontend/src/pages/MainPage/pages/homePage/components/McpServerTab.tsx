@@ -192,7 +192,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-              ? `"wsl",
+              ? `"uvx",
         `
               : ""
         }"mcp-proxy",${
