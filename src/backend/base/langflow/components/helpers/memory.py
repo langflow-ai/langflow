@@ -1,13 +1,14 @@
-from typing import cast
+from typing import Any, cast
 
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput
-from langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output
+from langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, TabInput
 from langflow.memory import aget_messages, astore_message
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+from langflow.utils.component_utils import set_current_fields, set_field_display
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER
 
 
@@ -16,8 +17,21 @@ class MemoryComponent(Component):
     description = "Stores or retrieves stored chat messages from Langflow tables or an external memory."
     icon = "message-square-more"
     name = "Memory"
+    default_keys = ["mode","memory"]
+    mode_config = {
+        "Store": ["message", "memory", "sender", "sender_name", "session_id"],
+        "Retrieve": ["n_messages", "order", "template","memory"],
+    }
 
     inputs = [
+        TabInput(
+            name="mode",
+            display_name="Mode",
+            options=["Store", "Retrieve"],
+            value="Store",
+            info="Operation mode: Store messages or Retrieve messages.",
+            real_time_refresh=True,
+        ),
         MessageTextInput(
             name="message", display_name="Message", info="The chat message to be stored.", tool_mode=True, dynamic=True
         ),
@@ -40,6 +54,7 @@ class MemoryComponent(Component):
             display_name="Sender Name",
             info="Filter by sender name.",
             advanced=True,
+            show=False,
         ),
         IntInput(
             name="n_messages",
@@ -47,6 +62,7 @@ class MemoryComponent(Component):
             value=100,
             info="Number of messages to retrieve.",
             advanced=True,
+            show=False,
         ),
         MessageTextInput(
             name="session_id",
@@ -62,6 +78,7 @@ class MemoryComponent(Component):
             info="Order of the messages.",
             advanced=True,
             tool_mode=True,
+            show=False,
         ),
         MultilineInput(
             name="template",
@@ -70,15 +87,34 @@ class MemoryComponent(Component):
             "It can contain the keys {text}, {sender} or any other key in the message data.",
             value="{sender_name}: {text}",
             advanced=True,
+            show=False,
         ),
     ]
 
-    outputs = [
-        Output(display_name="Messages", name="dataframe", method="retrieve_messages_dataframe", dynamic=True),
-        Output(
-            display_name="Stored Messages", name="stored_messages", method="store_message", hidden=True, dynamic=True
-        ),
-    ]
+    outputs = []
+
+    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
+        """Dynamically show only the relevant output based on the selected output type."""
+        if field_name == "mode":
+            # Start with empty outputs
+            frontend_node["outputs"] = []
+            if field_value == "Store":
+                frontend_node["outputs"] = [
+                    Output(
+                        display_name="Stored Messages",
+                        name="stored_messages",
+                        method="store_message",
+                        hidden=True,
+                        dynamic=True,
+                    )
+                ]
+            if field_value == "Retrieve":
+                frontend_node["outputs"] = [
+                    Output(
+                        display_name="Messages", name="dataframe", method="retrieve_messages_dataframe", dynamic=True
+                    )
+                ]
+        return frontend_node
 
     async def retrieve_messages(self) -> Data:
         sender = self.sender
@@ -172,3 +208,12 @@ class MemoryComponent(Component):
         stored_message = stored_messages[0]
         self.status = stored_message
         return stored_message
+
+    def update_build_config(self, build_config: dict, field_name: str, field_value: Any) -> dict:
+        build_config=set_current_fields(
+                build_config=build_config,
+                action_fields=self.mode_config,
+                selected_action=build_config["mode"]["value"],
+                default_fields=self.default_keys,
+                func=set_field_display,
+            )
