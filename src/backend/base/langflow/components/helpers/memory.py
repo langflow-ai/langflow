@@ -17,10 +17,10 @@ class MemoryComponent(Component):
     description = "Stores or retrieves stored chat messages from Langflow tables or an external memory."
     icon = "message-square-more"
     name = "Memory"
-    default_keys = ["mode","memory"]
+    default_keys = ["mode", "memory"]
     mode_config = {
         "Store": ["message", "memory", "sender", "sender_name", "session_id"],
-        "Retrieve": ["n_messages", "order", "template","memory"],
+        "Retrieve": ["n_messages", "order", "template", "memory"],
     }
 
     inputs = [
@@ -210,10 +210,10 @@ class MemoryComponent(Component):
         return stored_message
 
     def update_build_config(self, build_config: dict, field_name: str, field_value: Any) -> dict:
-        build_config=set_current_fields(
-                build_config=build_config,
-                action_fields=self.mode_config,
-                selected_action=build_config["mode"]["value"],
-                default_fields=self.default_keys,
-                func=set_field_display,
-            )
+        build_config = set_current_fields(
+            build_config=build_config,
+            action_fields=self.mode_config,
+            selected_action=build_config["mode"]["value"],
+            default_fields=self.default_keys,
+            func=set_field_display,
+        )
