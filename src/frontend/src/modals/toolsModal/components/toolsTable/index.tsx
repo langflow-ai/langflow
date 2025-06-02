@@ -80,18 +80,31 @@ export default function ToolsTable({
     if (!open && selectedRows) {
       handleOnNewValue({
         value: data.map((row) => {
+          const name = parseString(row.name, [
+            "snake_case",
+            "no_blank",
+            "lowercase",
+          ]);
+          const display_name = parseString(row.display_name, [
+            "snake_case",
+            "no_blank",
+            "lowercase",
+          ]);
           const processedValue = (
-            row.name !== ""
-              ? parseString(row.name, ["snake_case", "no_blank", "lowercase"])
-              : parseString(row.display_name, [
-                  "snake_case",
-                  "no_blank",
-                  "lowercase",
-                ])
+            name !== "" && name !== display_name
+              ? name
+              : isAction
+                ? ""
+                : display_name
           ).slice(0, 46);
 
           const processedDescription =
-            row.description !== "" ? row.description : row.display_description;
+            row.description !== "" &&
+            row.description !== row.display_description
+              ? row.description
+              : isAction
+                ? ""
+                : row.display_description;
 
           return selectedRows?.some(
             (selected) =>
