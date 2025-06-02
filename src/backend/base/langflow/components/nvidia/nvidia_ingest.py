@@ -178,10 +178,7 @@ class NvidiaIngestComponent(BaseFileComponent):
 
         # Check if all files are PDFs when high resolution mode is enabled
         if self.high_resolution:
-            non_pdf_files = [
-                file for file in file_list 
-                if not str(file.path).lower().endswith(".pdf")
-            ]
+            non_pdf_files = [file for file in file_list if not str(file.path).lower().endswith(".pdf")]
             if non_pdf_files:
                 error_msg = "High resolution mode only supports PDF files."
                 self.log(error_msg)
