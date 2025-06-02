@@ -14,13 +14,17 @@ from langflow.schema.message import Message
 
 class ParserComponent(Component):
     display_name = "Parser"
-    description = (
-        "Format a DataFrame or Data object into text using a template. "
-        "Enable 'Stringify' to convert input into a readable string instead."
-    )
+    description = "Extracts text using a template."
     icon = "braces"
 
     inputs = [
+        HandleInput(
+            name="input_data",
+            display_name="Data or DataFrame",
+            input_types=["DataFrame", "Data"],
+            info="Accepts either a DataFrame or a Data object.",
+            required=True,
+        ),
         TabInput(
             name="mode",
             display_name="Mode",
@@ -40,13 +44,6 @@ class ParserComponent(Component):
             value="Text: {text}",  # Example default
             dynamic=True,
             show=True,
-            required=True,
-        ),
-        HandleInput(
-            name="input_data",
-            display_name="Data or DataFrame",
-            input_types=["DataFrame", "Data"],
-            info="Accepts either a DataFrame or a Data object.",
             required=True,
         ),
         MessageTextInput(
