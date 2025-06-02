@@ -69,7 +69,7 @@ test(
     await page.getByTestId("handle-textoutput-shownode-text-left").click();
 
     await page.getByTestId("handle-textoutput-shownode-message-right").click();
-    await page.getByTestId("handle-chatoutput-noshownode-text-target").click();
+    await page.getByTestId("handle-chatoutput-noshownode-inputs-target").click();
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {

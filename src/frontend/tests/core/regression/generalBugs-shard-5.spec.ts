@@ -91,7 +91,7 @@ test(
     await elementCombineTextOutput0.click();
 
     const blockedHandle = page
-      .getByTestId("div-handle-textinput-shownode-message-right")
+      .getByTestId("div-handle-textinput-shownode-output text-right")
       .first();
     const secondBlockedHandle = page
       .getByTestId("div-handle-combinetext-shownode-combined text-right")
