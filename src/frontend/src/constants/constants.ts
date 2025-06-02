@@ -991,6 +991,7 @@ export const COLOR_OPTIONS = {
 
 export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes
 export const MAX_TEXT_LENGTH = 99999;
+export const MAX_ITEMS_LENGTH = 100;
 
 export const SEARCH_TABS = ["All", "Flows", "Components"];
 export const PAGINATION_SIZE = 12;
