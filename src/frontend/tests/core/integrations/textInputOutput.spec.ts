@@ -41,7 +41,7 @@ test.skip(
     await adjustScreenView(page);
     let visibleElementHandle;
     const elementsTextInputOutput = await page
-      .getByTestId("handle-textinput-shownode-text-right")
+      .getByTestId("handle-textinput-shownode-output text-right")
       .all();
     for (const element of elementsTextInputOutput) {
       if (await element.isVisible()) {
