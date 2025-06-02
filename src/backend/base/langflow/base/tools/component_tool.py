@@ -40,7 +40,7 @@ def _get_input_type(input_: InputTypes):
 
 def build_description(component: Component, output: Output) -> str:
     name = component.name or component.__class__.__name__
-    return f"{name}. {output.method} - {component.description}"
+    return f"{component.description} ({name}.{output.method})"
 
 
 async def send_message_noop(
