@@ -1,5 +1,4 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
 import UpdateComponentModal from "@/modals/updateComponentModal";
@@ -11,11 +10,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "../../components/ui/button";
-import {
-  ICON_STROKE_WIDTH,
-  TOOLTIP_HIDDEN_OUTPUTS,
-  TOOLTIP_OPEN_HIDDEN_OUTPUTS,
-} from "../../constants/constants";
+import { ICON_STROKE_WIDTH } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
