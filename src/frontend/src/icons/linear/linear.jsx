@@ -6,6 +6,8 @@ const Icon = (props) => (
     height="23px"
     viewBox="0 0 23 23"
     version="1.1"
+    fill="currentColor"
+    {...props}
   >
     <g id="surface1">
       <path
