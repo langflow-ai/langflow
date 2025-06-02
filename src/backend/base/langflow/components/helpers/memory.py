@@ -78,6 +78,7 @@ class MemoryComponent(Component):
             info="Order of the messages.",
             advanced=True,
             tool_mode=True,
+            required=True,
             show=False,
         ),
         MultilineInput(
@@ -91,7 +92,9 @@ class MemoryComponent(Component):
         ),
     ]
 
-    outputs = []
+    outputs = [Output(
+                        display_name="Messages", name="dataframe", method="retrieve_messages_dataframe", dynamic=True
+                    )]
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Dynamically show only the relevant output based on the selected output type."""
@@ -210,10 +213,12 @@ class MemoryComponent(Component):
         return stored_message
 
     def update_build_config(self, build_config: dict, field_name: str, field_value: Any) -> dict:
-        build_config = set_current_fields(
-            build_config=build_config,
-            action_fields=self.mode_config,
-            selected_action=build_config["mode"]["value"],
-            default_fields=self.default_keys,
-            func=set_field_display,
-        )
+        if field_name == "mode":
+            build_config = set_current_fields(
+                build_config=build_config,
+                action_fields=self.mode_config,
+                selected_action=field_value,
+                default_fields=self.default_keys,
+                func=set_field_display,
+            )
+        return build_config
