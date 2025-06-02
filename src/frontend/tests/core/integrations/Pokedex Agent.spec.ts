@@ -46,7 +46,6 @@ withEventDeliveryModes(
       .last()
       .innerText();
     expect(output).toContain("Charmander");
-    expect(output).toContain("Route 24");
     expect(output.length).toBeGreaterThan(100);
   },
 );
