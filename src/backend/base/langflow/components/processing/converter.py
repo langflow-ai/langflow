@@ -40,6 +40,8 @@ def convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:
     Returns:
         DataFrame: Converted DataFrame object
     """
+    if isinstance(v, dict):
+        return DataFrame([v])
     return v if isinstance(v, DataFrame) else v.to_dataframe()
 
 
