@@ -38,7 +38,6 @@ import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
 
-// Memoize IconComponent instances
 const EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
     <IconComponent
@@ -53,7 +52,6 @@ const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
 ));
 
-// Memoize Button components
 const HideShowButton = memo(
   ({
     disabled,
@@ -178,14 +176,12 @@ function NodeOutputField({
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
 
-  // Use selective store subscriptions
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const flowPool = useFlowStore((state) => state.flowPool);
   const myData = useTypesStore((state) => state.data);
 
-  // Memoize computed values
   const { flowPoolId, internalOutputName } = useMemo(() => {
     if (data.node?.flow && outputProxy) {
       const realOutput = getGroupOutputNodeId(
@@ -450,9 +446,7 @@ function NodeOutputField({
                   errorOutput={errorOutput ?? false}
                   isToolMode={isToolMode}
                   title={title}
-                  onClick={() => {
-                    //just to trigger the memoization
-                  }}
+                  onClick={() => {}}
                   id={data?.type}
                 />
               </OutputModal>
