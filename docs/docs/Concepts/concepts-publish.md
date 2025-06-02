@@ -60,27 +60,48 @@ The response content depends on your flow. Make sure the endpoint returns a succ
 
 ### Input schema
 
-The **Input schema** pane displays the available input parameters for your flow, and allows modifications to the listed parameters.
+The **Input schema** pane displays the available input parameters for your flow.
+Enable individual input parameters in the pane to add a parameters and its default value to the JSON payloads of the code snippets.
+Enabling parameters in the **Input schema** pane does now allow modifications to the listed parameters.
+Instead, copy the code snippet from the **API access** pane into the text editor of your choice, and modify
 
 The **Endpoint name** field changes the endpoint name for your flow from the default UUID to the name you specify here.
 
 The components and their parameters listed in the pane are available to be modified. Modifying the parameters changes the code parameters across all of the code examples.
 
-For example, to change the model that the **Embeddings Provider** component is using:
+For example, to change the LLM that the **OpenAI** model component uses for your request, do the following.
 
-1. Select **Enable Input**.
+1. In the **Input schema** pane, select **Enable Input**.
 2. Select **Model Name**.
-3. Select **gpt-4.1-mini**.
 
 In the **API access** pane, inspect the code snippets.
-The `model_name` parameter for the **OpenAI** model is changed for all requests to your flow.
+The `model_name` parameter for the **OpenAI** model is added to the request payload as a tweak.
 
 ```
-"OpenAIModel-G3haJ":
-{
-"model_name":
-"gpt-4.1-mini"
+"OpenAIModel-G3haJ":  {
+  "model_name": "gpt-4.1-mini"
 }
+```
+
+3. To change the `model_name` parameter, copy and paste the code snippet from the **API access** pane into the text editor of your choice.
+For example, to modify the code snippet to use a different **OpenAI** model, change the value in your text editor:
+```
+curl --request POST \
+  --url 'http://127.0.0.1:7860/api/v1/run/e32f3f61-008f-4a2a-ad1d-d6688966ed56?stream=false' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "input_value": "Hello",
+  "output_type": "chat",
+  "input_type": "chat",
+  "tweaks": {
+    "ChatInput-ahcL3": {
+      "files": ""
+    },
+    "OpenAIModel-G3haJ": {
+      "model_name": "gpt-4o"
+    }
+  }
+}'
 ```
 
 ## Export
