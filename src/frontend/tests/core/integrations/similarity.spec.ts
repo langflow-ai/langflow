@@ -238,7 +238,7 @@ test(
     await parseDataOutput.hover();
     await page.mouse.down();
     const textOutputInput = await page
-      .getByTestId("handle-textoutput-shownode-text-left")
+      .getByTestId("handle-textoutput-shownode-inputs-left")
       .nth(0);
     await textOutputInput.hover();
     await page.mouse.up();

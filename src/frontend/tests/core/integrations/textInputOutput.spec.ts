@@ -102,7 +102,7 @@ test.skip(
     await visibleElementHandle.hover();
     await page.mouse.down();
     const elementTextOutputInput = await page
-      .getByTestId("handle-textoutput-shownode-text-left")
+      .getByTestId("handle-textoutput-shownode-inputs-left")
       .all();
     for (const element of elementTextOutputInput) {
       if (await element.isVisible()) {

@@ -97,7 +97,7 @@ test(
       .getByTestId("div-handle-combinetext-shownode-combined text-right")
       .nth(1);
     const thirdBlockedHandle = page
-      .getByTestId("div-handle-textoutput-shownode-message-right")
+      .getByTestId("div-handle-textoutput-shownode-output text-right")
       .first();
 
     const hasGradient = await blockedHandle?.evaluate((el) => {
@@ -129,7 +129,7 @@ test(
       .getByTestId("div-handle-combinetext-shownode-second text-left")
       .first();
     const fourthUnlockedHandle = page
-      .getByTestId("div-handle-textoutput-shownode-text-left")
+      .getByTestId("div-handle-textoutput-shownode-inputs-left")
       .first();
 
     const hasGradientUnlocked = await unlockedHandle?.evaluate((el) => {
@@ -220,7 +220,7 @@ test(
       .nth(0);
     await elementGroupOutput.click();
     const elementTextOutputInput = page
-      .getByTestId("handle-textoutput-shownode-text-left")
+      .getByTestId("handle-textoutput-shownode-inputs-left")
       .nth(0);
 
     await elementTextOutputInput.click();

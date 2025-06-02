@@ -66,9 +66,9 @@ test(
       .getByTestId("handle-chatinput-noshownode-message-source")
       .click();
 
-    await page.getByTestId("handle-textoutput-shownode-text-left").click();
+    await page.getByTestId("handle-textoutput-shownode-inputs-left").click();
 
-    await page.getByTestId("handle-textoutput-shownode-message-right").click();
+    await page.getByTestId("handle-textoutput-shownode-output text-right").click();
     await page.getByTestId("handle-chatoutput-noshownode-inputs-target").click();
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
