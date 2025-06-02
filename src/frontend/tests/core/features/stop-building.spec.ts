@@ -85,7 +85,7 @@ test(
       .click();
 
     //connection 2
-    await page.getByTestId("handle-textinput-shownode-message-right").click();
+    await page.getByTestId("handle-textinput-shownode-output text-right").click();
     await page.getByTestId("handle-splittext-shownode-separator-left").click();
 
     //connection 3

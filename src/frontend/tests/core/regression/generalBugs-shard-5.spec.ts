@@ -184,7 +184,7 @@ test(
 
     //connection 1
     const elementTextOutput0 = page
-      .getByTestId("handle-textinput-shownode-message-right")
+      .getByTestId("handle-textinput-shownode-output text-right")
       .nth(0);
     await elementTextOutput0.click();
     const elementGroupInput0 = page.getByTestId(
@@ -194,7 +194,7 @@ test(
 
     //connection 2
     const elementTextOutput1 = page
-      .getByTestId("handle-textinput-shownode-message-right")
+      .getByTestId("handle-textinput-shownode-output text-right")
       .nth(2);
     await elementTextOutput1.click();
     const elementGroupInput1 = page
@@ -204,7 +204,7 @@ test(
 
     //connection 3
     const elementTextOutput2 = page
-      .getByTestId("handle-textinput-shownode-message-right")
+      .getByTestId("handle-textinput-shownode-output text-right")
       .nth(1);
     await elementTextOutput2.click();
 

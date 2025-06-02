@@ -123,7 +123,7 @@ test(
 
     //connection 2
     await page
-      .getByTestId("handle-textinput-shownode-message-right")
+      .getByTestId("handle-textinput-shownode-output text-right")
       .nth(0)
       .click();
     await page.getByTestId("handle-splittext-shownode-separator-left").click();
