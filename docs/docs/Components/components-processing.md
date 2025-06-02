@@ -15,33 +15,6 @@ The component offers control over chunk size, overlap, and separator, which affe
 
 ![](/img/vector-store-document-ingestion.png)
 
-## Combine data
-
-:::important
-Prior to Langflow version 1.1.3, this component was named **Merge Data**.
-:::
-
-This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
-
-The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | A list of data objects to be merged. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
-
-</details>
-
 ## DataFrame operations
 
 This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
@@ -287,59 +260,6 @@ curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
 | Name | Display Name | Info |
 |------|--------------|------|
 | dataframe | DataFrame | A DataFrame built from each Data object's fields plus a text column. |
-
-</details>
-
-## Filter data
-
-:::important
-This component is in **Beta** as of Langflow version 1.1.3, and is not yet fully supported.
-:::
-
-This component filters a [Data](/concepts-objects#data-object) object based on a list of keys.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The Data object to filter. |
-| filter_criteria | Filter Criteria | A list of keys to filter by. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| filtered_data | Filtered Data | A new Data object containing only the key-value pairs that match the filter criteria. |
-
-</details>
-
-## Filter values
-
-:::important
-This component is in **Beta** as of Langflow version 1.1.3, and is not yet fully supported.
-:::
-
-The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_data | Input data | The list of data items to filter. |
-| filter_key | Filter Key | The key to filter on. |
-| filter_value | Filter Value | The value to filter by. |
-| operator | Comparison Operator | The operator to apply for comparing the values. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| filtered_data | Filtered data | The resulting list of filtered data items. |
 
 </details>
 
@@ -688,6 +608,11 @@ This component dynamically updates or appends data with specified fields.
 
 ### Alter metadata
 
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+Instead, use the [Data operations](#data-operations) component.
+:::
+
 This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects#data-object) objects, and can also create a new Data object from user-provided text.
 
 <details>
@@ -697,24 +622,52 @@ This component modifies metadata of input objects. It can add new metadata, upda
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_value | Input | Objects to which Metadata should be added |
+| input_value | Input | Objects to which Metadata should be added. |
 | text_in | User Text | Text input; the value is contained in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
-| metadata | Metadata | Metadata to add to each object |
-| remove_fields | Fields to Remove | Metadata fields to remove |
+| metadata | Metadata | Metadata to add to each object. |
+| remove_fields | Fields to Remove | Metadata fields to remove. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | List of Input objects, each with added metadata |
+| data | Data | List of Input objects, each with added metadata. |
 
 </details>
+
+### Combine data
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+Prior to Langflow version 1.1.3, this component was named **Merge Data**.
+:::
+
+This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
+
+The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | A list of data objects to be merged. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
+
+</details>
+
 
 ### Combine text
 
 :::important
-This component is in **Legacy**, which means it is no longer in active development.
-Instead, use the [Combine data](#combine-data) component.
+This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
 This component concatenates two text sources into a single text chunk using a specified delimiter.
@@ -760,7 +713,7 @@ Here's the second part. We'll see how combining text works.
 ### Create data
 
 :::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
 This component dynamically creates a [Data](/concepts-objects#data-object) object with a specified number of fields.
@@ -783,7 +736,67 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 
 </details>
 
+
+### Filter data
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+Instead, use the [Data operations](#data-operations) component.
+:::
+
+This component filters a [Data](/concepts-objects#data-object) object based on a list of keys.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The Data object to filter. |
+| filter_criteria | Filter Criteria | A list of keys to filter by. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| filtered_data | Filtered Data | A new Data object containing only the key-value pairs that match the filter criteria. |
+
+</details>
+
+### Filter values
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+Instead, use the [Data operations](#data-operations) component.
+:::
+
+The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_data | Input data | The list of data items to filter. |
+| filter_key | Filter Key | The key to filter on. |
+| filter_value | Filter Value | The value to filter by. |
+| operator | Comparison Operator | The operator to apply for comparing the values. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| filtered_data | Filtered data | The resulting list of filtered data items. |
+
+</details>
+
 ### JSON cleaner
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
 
 The JSON cleaner component cleans JSON strings to ensure they are fully compliant with the JSON specification.
 
@@ -810,7 +823,7 @@ The JSON cleaner component cleans JSON strings to ensure they are fully complian
 ### Parse DataFrame
 
 :::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+This component is in **Legacy**, which means it is available for use but no longer in active development.
 Instead, use the [Parser](#parser) component.
 :::
 
@@ -838,7 +851,7 @@ This component converts DataFrames into plain text using templates.
 ### Parse JSON
 
 :::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
 This component converts and extracts JSON fields using JQ queries.
@@ -864,7 +877,7 @@ This component converts and extracts JSON fields using JQ queries.
 ### Select data
 
 :::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
 This component selects a single [Data](/concepts-objects#data-object) item from a list.

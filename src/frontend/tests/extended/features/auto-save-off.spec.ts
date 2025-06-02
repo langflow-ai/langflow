@@ -31,12 +31,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="languagemodelsNVIDIA"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsNVIDIA")
+      .getByTestId("languagemodelsNVIDIA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -85,7 +85,7 @@ test(
     await page.keyboard.press("Escape");
     await page.locator('//*[@id="react-flow-id"]').click();
 
-    const lastNvidiaModel = page.getByTestId("modelsNVIDIA").last();
+    const lastNvidiaModel = page.getByTestId("languagemodelsNVIDIA").last();
     await lastNvidiaModel.scrollIntoViewIfNeeded();
 
     try {
@@ -128,12 +128,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="languagemodelsNVIDIA"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsNVIDIA")
+      .getByTestId("languagemodelsNVIDIA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();

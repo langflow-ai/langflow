@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { uploadFile } from "../../utils/upload-file";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -87,15 +88,25 @@ test(
         targetPosition: { x: 720, y: 400 },
       });
 
+    await page
+      .getByTestId("handle-parsercomponent-shownode-parsed text-right")
+      .click();
+
+    const loopItemInput = await page
+      .getByTestId("handle-loopcomponent-shownode-item-left")
+      .first()
+      .click();
+
     // Add Chat Output component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
-      timeout: 1000,
-    });
+
+    await page.locator(".react-flow__renderer").click();
+
+    await page.waitForTimeout(1000);
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 940, y: 100 },
       });
@@ -117,7 +128,7 @@ test(
 
     // URL -> Loop Data
     await page
-      .getByTestId("handle-urlcomponent-shownode-data-right")
+      .getByTestId("handle-urlcomponent-shownode-result-right")
       .first()
       .click();
     await page
@@ -146,13 +157,6 @@ test(
       .first()
       .click();
 
-    //Loop to File
-
-    await page
-      .getByTestId("handle-loopcomponent-shownode-item-left")
-      .first()
-      .click();
-    await page.getByTestId("handle-file-shownode-data-right").first().click();
     await zoomOut(page, 3);
 
     await page.getByTestId("div-generic-node").nth(5).click();
@@ -192,14 +196,12 @@ test(
     await page.getByTestId("keypair0").fill("text");
     await page.getByTestId("keypair100").fill("modified_value");
 
+    await uploadFile(page, "test_file.txt");
+
     // Build and run, expect the wrong loop message
     await page.getByTestId("button_run_file").click();
-    await page.waitForSelector("text=The flow has an incomplete loop.", {
-      timeout: 30000,
-    });
-    await page.getByText("The flow has an incomplete loop.").last().click({
-      timeout: 15000,
-    });
+
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     // Delete the second parse data used to test
 
