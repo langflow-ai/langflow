@@ -94,7 +94,9 @@ test(
 
     //connection 4
     await page.getByTestId("handle-parsedata-shownode-message-right").click();
-    await page.getByTestId("handle-chatoutput-noshownode-inputs-target").click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
+      .click();
 
     await page.getByTestId("fit_view").click();
 
