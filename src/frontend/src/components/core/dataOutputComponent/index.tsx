@@ -1,5 +1,5 @@
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
-import { MAX_ITEMS_LENGTH } from "@/constants/constants";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied to the grid
@@ -15,12 +15,15 @@ function DataOutputComponent({
   rows: any[];
   columnMode?: "intersection" | "union";
 }) {
+  const maxItemsLength = useUtilityStore(
+    (state) => state.serializationMaxItemsLength,
+  );
   const [rowsInternal, setRowsInternal] = useState(
-    rows.slice(0, MAX_ITEMS_LENGTH),
+    rows.slice(0, maxItemsLength),
   );
 
   useEffect(() => {
-    const rowsSliced = rows.slice(0, MAX_ITEMS_LENGTH);
+    const rowsSliced = rows.slice(0, maxItemsLength);
     if (rowsSliced.some((row) => typeof row !== "object")) {
       setRowsInternal(rowsSliced.map((row) => ({ data: row })));
     } else {
@@ -39,12 +42,12 @@ function DataOutputComponent({
     <TableComponent
       autoSizeStrategy={{
         type: "fitGridWidth",
-        defaultMinWidth: MAX_ITEMS_LENGTH,
+        defaultMinWidth: maxItemsLength,
       }}
       key={"dataOutputComponent"}
       overlayNoRowsTemplate="No data available"
       paginationInfo={
-        rows.length > MAX_ITEMS_LENGTH ? rows[MAX_ITEMS_LENGTH] : undefined
+        rows.length > maxItemsLength ? rows[maxItemsLength] : undefined
       }
       suppressRowClickSelection={true}
       pagination={pagination}
