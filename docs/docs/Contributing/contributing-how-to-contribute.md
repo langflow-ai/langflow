@@ -22,9 +22,10 @@ Develop Langflow locally with [uv](https://docs.astral.sh/uv/getting-started/ins
 1. Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow), and then click **Fork**.
 
 2. Add the new remote to your local repository on your local machine:
-
+Replace `YOUR_FORK_NAME` with a name for your fork.
+Replace `YOUR_GIT_USERNAME` with your Git username.
 ```bash
-git remote add <your-fork-name> https://github.com/<your-git-username>/langflow.git
+git remote add YOUR_FORK_NAME https://github.com/YOUR_GIT_USERNAME/langflow.git
 ```
 
 ### Prepare the development environment
