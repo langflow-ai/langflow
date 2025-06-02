@@ -114,7 +114,7 @@ Some additional guidance on pull request titles:
 
 For more information, see the [Python Developer's Guide](https://devguide.python.org/getting-started/pull-request-lifecycle/index.html#making-good-commits).
 
-## Additional contributing guides
+## Additional contribution guides
 
 - [Contributing Bundles](./contributing-bundles.md)
 - [Contributing Components](./contributing-components.md)
