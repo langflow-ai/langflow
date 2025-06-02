@@ -238,7 +238,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         assert "param1=value1" in result
         assert "param2=value2" in result
 
-    async def test_make_api_requests(self, component):
+    async def test_make_api_request(self, component):
         # Test making API requests
         url = "https://example.com/api/test"
         response_data = {"key": "value"}
@@ -246,7 +246,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         with respx.mock:
             respx.get(url).mock(return_value=Response(200, json=response_data))
 
-            result = await component.make_api_requests()
+            result = await component.make_api_request()
 
             assert isinstance(result, Data)
             assert result.data["source"] == url
@@ -256,7 +256,7 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         # Test invalid URL handling
         component.url_input = "not_a_valid_url"
         with pytest.raises(ValueError, match="Invalid URL provided"):
-            await component.make_api_requests()
+            await component.make_api_request()
 
     async def test_update_build_config(self, component):
         # Test build config updates

@@ -169,7 +169,7 @@ class APIRequestComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="API Response", name="data", method="make_api_requests"),
+        Output(display_name="API Response", name="data", method="make_api_request"),
     ]
 
     def _parse_json_value(self, value: Any) -> Any:
@@ -403,7 +403,7 @@ class APIRequestComponent(Component):
             return {item["key"]: item["value"] for item in headers if self._is_valid_key_value_item(item)}
         return {}
 
-    async def make_api_requests(self) -> Data:
+    async def make_api_request(self) -> Data:
         """Make HTTP request with optimized parameter handling."""
         method = self.method
         url = self.url_input.strip() if isinstance(self.url_input, str) else ""
