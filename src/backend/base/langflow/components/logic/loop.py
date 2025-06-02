@@ -14,7 +14,7 @@ class LoopComponent(Component):
     inputs = [
         HandleInput(
             name="data",
-            display_name="DataFrame",
+            display_name="Inputs",
             info="The initial list of Data objects or DataFrame to iterate over.",
             input_types=["DataFrame"],
         ),
