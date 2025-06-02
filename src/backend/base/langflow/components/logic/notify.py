@@ -43,9 +43,8 @@ class NotifyComponent(Component):
     ]
 
     async def build(self) -> Data:
-        """
-        Processes and stores a notification in the context, optionally appending to existing records.
-        
+        """Processes and stores a notification in the context, optionally appending to existing records.
+
         If `append` is True, adds the input value to a list of notifications under the specified context key; otherwise, replaces the existing value. Converts input values to `Data` objects as needed and updates the component's status and state. Returns the processed `Data` object.
         """
         if self.input_value and not isinstance(self.input_value, Data):

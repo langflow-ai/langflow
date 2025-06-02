@@ -69,9 +69,8 @@ class Graph:
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
     ) -> None:
-        """
-        Initializes a new Graph instance with optional start and end components, flow metadata, logging configuration, and context.
-        
+        """Initializes a new Graph instance with optional start and end components, flow metadata, logging configuration, and context.
+
         Raises:
             TypeError: If the provided context is not a dictionary.
             ValueError: If only one of start or end components is provided.
@@ -498,9 +497,8 @@ class Graph:
         return self.state_manager.get_state(name, run_id=self._run_id)
 
     def update_state(self, name: str, record: str | Data, caller: str | None = None) -> None:
-        """
-        Updates the graph's state for a given name and notifies relevant state vertices.
-        
+        """Updates the graph's state for a given name and notifies relevant state vertices.
+
         If a caller vertex is specified, activates all state vertices (except the caller) associated with the state name and their successors. Then updates the state in the state manager.
         """
         if caller:
@@ -514,9 +512,8 @@ class Graph:
 
     @property
     def is_state_vertices(self) -> list[str]:
-        """
-        Returns a cached list of vertex IDs that are marked as state vertices.
-        
+        """Returns a cached list of vertex IDs that are marked as state vertices.
+
         The list is computed lazily by filtering all vertices for those with `is_state` set to True and is cached for subsequent calls.
         """
         if self._is_state_vertices is None:
@@ -524,9 +521,8 @@ class Graph:
         return self._is_state_vertices
 
     def activate_state_vertices(self, name: str, caller: str) -> None:
-        """
-        Activates state vertices associated with a given state name, excluding the caller.
-        
+        """Activates state vertices associated with a given state name, excluding the caller.
+
         Finds all state vertices whose context key contains the specified name (excluding the caller), marks them and their related predecessors and successors as active, and updates the run manager and vertices-to-run set accordingly.
         """
         vertices_ids = set()
@@ -692,9 +688,8 @@ class Graph:
         return self._sorted_vertices_layers
 
     def define_vertices_lists(self) -> None:
-        """
-        Initializes internal lists of input, output, session ID, and state vertex IDs.
-        
+        """Initializes internal lists of input, output, session ID, and state vertex IDs.
+
         This method populates the corresponding attributes with the IDs of vertices that are classified as input, output, have a session ID, or are state vertices.
         """
         for vertex in self.vertices:
@@ -710,9 +705,8 @@ class Graph:
                 self._is_state_vertices.append(vertex.id)
 
     def _set_inputs(self, input_components: list[str], inputs: dict[str, str], input_type: InputType | None) -> None:
-        """
-        Updates input vertices with provided input values based on component and type filters.
-        
+        """Updates input vertices with provided input values based on component and type filters.
+
         Iterates over input vertices, updating their parameters with the given inputs if they match the specified component list and input type.
         """
         for vertex_id in self._is_input_vertices:
@@ -1582,16 +1576,15 @@ class Graph:
         return sorted(next_runnable_vertices)
 
     async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: Vertex, *, cache: bool = True) -> list[str]:
-        """
-        Determines and returns the list of next runnable vertex IDs after a given vertex completes.
-        
+        """Determines and returns the list of next runnable vertex IDs after a given vertex completes.
+
         If the current vertex is a state vertex, also includes any recently activated state vertices. Updates the run manager and optionally caches the graph state.
-        
+
         Args:
             lock: An asyncio lock to ensure thread-safe updates.
             vertex: The vertex that has just completed execution.
             cache: Whether to cache the updated graph state (default: True).
-        
+
         Returns:
             A list of vertex IDs that are ready to be executed next.
         """
@@ -1615,9 +1608,8 @@ class Graph:
         return next_runnable_vertices
 
     async def _log_vertex_build_from_exception(self, vertex_id: str, result: Exception) -> None:
-        """
-        Logs details of a vertex build failure caused by an exception.
-        
+        """Logs details of a vertex build failure caused by an exception.
+
         Formats the exception, constructs an error output, and records the failure using the vertex build logging mechanism.
         """
         if isinstance(result, ComponentBuildError):
@@ -1786,21 +1778,19 @@ class Graph:
         return successors_result
 
     def get_successors(self, vertex: Vertex) -> list[Vertex]:
-        """
-        Returns the immediate successor vertices of the given vertex.
-        
+        """Returns the immediate successor vertices of the given vertex.
+
         Args:
             vertex: The vertex whose successors are to be retrieved.
-        
+
         Returns:
             A list of vertices that are direct successors of the specified vertex.
         """
         return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, set())]
 
     def get_all_predecessors(self, vertex: Vertex, *, recursive: bool = True) -> list[Vertex]:
-        """
-        Returns all predecessor vertices of the given vertex.
-        
+        """Returns all predecessor vertices of the given vertex.
+
         If `recursive` is True, retrieves all direct and indirect predecessors recursively; otherwise, returns only the immediate predecessors.
         """
         _predecessors = self.predecessor_map.get(vertex.id, [])
@@ -1813,9 +1803,8 @@ class Graph:
         return predecessors
 
     def get_vertex_neighbors(self, vertex: Vertex) -> dict[Vertex, int]:
-        """
-        Returns a mapping of neighboring vertices to the number of connecting edges.
-        
+        """Returns a mapping of neighboring vertices to the number of connecting edges.
+
         Each neighbor is a vertex directly connected to the given vertex, either as a source or target. The returned dictionary maps each neighbor to the count of edges connecting them to the input vertex.
         """
         neighbors: dict[Vertex, int] = {}
