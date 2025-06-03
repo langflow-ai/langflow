@@ -150,7 +150,7 @@ class AstraDBToolComponent(LCToolComponent):
         ),
         DictInput(
             name="static_filters",
-            info="Attributes to filter and correspoding value",
+            info="Attributes to filter and corresponding value",
             display_name="Static filters",
             advanced=True,
             is_list=True,

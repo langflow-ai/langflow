@@ -238,6 +238,7 @@ export default function ChatView({
                   updateChat={updateChat}
                   closeChat={closeChat}
                   playgroundPage={playgroundPage}
+                  sidebarOpen={sidebarOpen}
                 />
               ))}
               {chatHistory?.length > 0 && (
@@ -248,42 +249,14 @@ export default function ChatView({
               )}
             </>
           ) : (
-            <>
-              <div className="flex h-full w-full flex-col items-center justify-center">
-                <div className="flex flex-col items-center justify-center gap-4 p-8">
-                  <LangflowLogo
-                    title="Langflow logo"
-                    className="h-10 w-10 scale-[1.5]"
-                  />
-                  <div className="flex flex-col items-center justify-center">
-                    <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
-                      New chat
-                    </h3>
-                    <p
-                      className="text-lg text-muted-foreground"
-                      data-testid="new-chat-text"
-                    >
-                      <TextEffectPerChar>
-                        Test your flow with a chat prompt
-                      </TextEffectPerChar>
-                    </p>
-                  </div>
-                </div>
+            <div className="flex h-full w-full flex-col items-center justify-center">
+              <LangflowLogo className="mb-2 h-10 w-10" />
+              <div className="mx-auto w-full text-center text-2xl font-semibold text-primary">
+                <TextEffectPerChar>Type to start the flow</TextEffectPerChar>
               </div>
-            </>
+            </div>
           ))}
-        <div
-          className={
-            displayLoadingMessage
-              ? "w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
-              : ""
-          }
-          ref={ref}
-        >
-          {displayLoadingMessage &&
-            !(chatHistory?.[chatHistory.length - 1]?.category === "error") &&
-            flowRunningSkeletonMemo}
-        </div>
+        {isBuilding && displayLoadingMessage && flowRunningSkeletonMemo}
       </div>
 
       <div className="m-auto w-full max-w-[768px] md:w-5/6">

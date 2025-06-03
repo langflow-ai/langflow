@@ -308,7 +308,7 @@ export default function InputFileComponent({
                   size="icon"
                   data-testid="button_upload_file"
                 >
-                  <IconComponent
+                  <ForwardedIconComponent
                     name={value ? "CircleCheckBig" : "Upload"}
                     className={cn(
                       value && "text-background",

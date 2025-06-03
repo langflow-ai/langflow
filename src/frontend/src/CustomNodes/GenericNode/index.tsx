@@ -1,5 +1,6 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { BuildStatus } from "@/constants/enums";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
 import UpdateComponentModal from "@/modals/updateComponentModal";
@@ -439,124 +440,73 @@ function GenericNode({
   );
 
   return (
-    <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
+    <>
+      {memoizedNodeToolbarComponent}
+      {isOutdated && (data.node?.template?.code?.show ?? true) && (
+        <NodeUpdateComponent
+          isOutdated={isOutdated}
+          loadingUpdate={loadingUpdate}
+          handleUpdateCode={handleUpdateCode}
+          hasBreakingChange={hasBreakingChange}
+          openUpdateModal={openUpdateModal}
+          setOpenUpdateModal={setOpenUpdateModal}
+        />
+      )}
+      {(buildStatus || data.node?.beta) && (
+        <MemoizedNodeStatus
+          nodeId={data.id}
+          display_name={data.node?.display_name ?? ""}
+          selected={selected}
+          setBorderColor={setBorderColor}
+          frozen={data.node?.frozen}
+          showNode={showNode}
+          data={data}
+          buildStatus={buildStatus}
+          dismissAll={dismissAll}
+          isOutdated={isOutdated}
+          isUserEdited={isUserEdited}
+          isBreakingChange={hasBreakingChange}
+          getValidationStatus={getValidationStatus}
+          beta={data.node?.beta ?? false}
+        />
+      )}
+
       <div
         className={cn(
-          borderColor,
-          showNode ? "w-80" : `w-48`,
-          "generic-node-div group/node relative rounded-xl border shadow-sm hover:shadow-md",
-          !hasOutputs && "pb-4",
+          "generic-node-div",
+          selected && "selected",
+          !showNode && "hidden",
+          data.node?.selected && "selected-node",
+          buildStatus === BuildStatus.BUILDING && "animate-pulse",
         )}
+        style={{
+          borderColor: borderColor,
+        }}
       >
-        {openUpdateModal && (
-          <UpdateComponentModal
-            open={openUpdateModal}
-            setOpen={setOpenUpdateModal}
-            onUpdateNode={memoizedOnUpdateNode}
-            components={componentUpdate ? [componentUpdate] : []}
-          />
-        )}
-        {memoizedNodeToolbarComponent}
-        {shouldShowUpdateComponent && (
-          <NodeUpdateComponent
-            hasBreakingChange={hasBreakingChange}
+        <div className="generic-node-div-header">
+          <MemoizedNodeIcon data={data} />
+          <MemoizedNodeName
+            display_name={data.node?.display_name}
+            nodeId={data.id}
+            selected={selected}
             showNode={showNode}
-            handleUpdateCode={() => handleUpdateCode()}
-            loadingUpdate={loadingUpdate}
-            setDismissAll={memoizedSetDismissAll}
+            beta={data.node?.beta ?? false}
+            editNameDescription={editNameDescription}
+            toggleEditNameDescription={toggleEditNameDescription}
+            setHasChangedNodeDescription={setHasChangedNodeDescription}
           />
-        )}
-        <div
-          data-testid={`${data.id}-main-node`}
-          className={cn(
-            "grid text-wrap leading-5",
-            showNode ? "border-b" : "relative",
-          )}
-        >
-          <div
-            data-testid={"div-generic-node"}
-            className={cn(
-              "flex w-full flex-1 items-center justify-between gap-2 overflow-hidden px-4 py-3",
-            )}
-          >
-            <div
-              className="flex-max-width items-center overflow-hidden"
-              data-testid="generic-node-title-arrangement"
-            >
-              <MemoizedNodeIcon
-                dataType={data.type}
-                icon={data.node?.icon}
-                isGroup={!!data.node?.flow}
-              />
-              <div className="ml-3 flex flex-1 overflow-hidden">
-                <MemoizedNodeName
-                  display_name={data.node?.display_name}
-                  nodeId={data.id}
-                  selected={selected}
-                  showNode={showNode}
-                  beta={data.node?.beta || false}
-                  editNameDescription={editNameDescription}
-                  toggleEditNameDescription={toggleEditNameDescription}
-                  setHasChangedNodeDescription={setHasChangedNodeDescription}
-                />
-              </div>
-            </div>
-            {!showNode && (
-              <>
-                <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
-                  <MemoizedRenderInputParameters
-                    data={data}
-                    types={types}
-                    isToolMode={isToolMode}
-                    showNode={showNode}
-                    shownOutputs={shownOutputs}
-                    showHiddenOutputs={showHiddenOutputs}
-                  />
-                  <MemoizedNodeOutputs
-                    outputs={shownOutputs ?? []}
-                    keyPrefix="render-outputs"
-                    data={data}
-                    types={types}
-                    selected={selected ?? false}
-                    showNode={showNode}
-                    isToolMode={isToolMode}
-                    showHiddenOutputs={showHiddenOutputs}
-                    selectedOutput={selectedOutput}
-                    handleSelectOutput={handleSelectOutput}
-                  />
-                </div>
-              </>
-            )}
-            <MemoizedNodeStatus
-              data={data}
-              frozen={data.node?.frozen}
-              showNode={showNode}
-              display_name={data.node?.display_name!}
-              nodeId={data.id}
-              selected={selected}
-              setBorderColor={setBorderColor}
-              buildStatus={buildStatus}
-              dismissAll={dismissAll}
-              isOutdated={isOutdated}
-              isUserEdited={isUserEdited}
-              isBreakingChange={hasBreakingChange}
-              getValidationStatus={getValidationStatus}
-            />
-          </div>
-          {showNode && (hasDescription || editNameDescription) && (
-            <div className="px-4 pb-3">
+          {data.node?.description &&
+            (data.node.description.length > 0 || editNameDescription) && (
               <MemoizedNodeDescription
-                description={data.node?.description}
-                mdClassName={"dark:prose-invert"}
-                nodeId={data.id}
+                description={data.node.description}
                 selected={selected}
+                nodeId={data.id}
                 editNameDescription={editNameDescription}
                 setEditNameDescription={set}
-                setHasChangedNodeDescription={setHasChangedNodeDescription}
               />
-            </div>
-          )}
+            )}
         </div>
+
         {showNode && (
           <div className="nopan nodelete nodrag noflow relative cursor-auto">
             <>
@@ -592,15 +542,20 @@ function GenericNode({
                 <MemoizedNodeOutputs
                   outputs={hiddenOutputs}
                   keyPrefix="hidden"
+
                   data={data}
-                  types={types}
-                  selected={selected ?? false}
+                  selected={!!selected}
                   showNode={showNode}
                   isToolMode={isToolMode}
+
                   showHiddenOutputs={true}
                   selectedOutput={selectedOutput}
+
                   handleSelectOutput={handleSelectOutput}
+                  keyPrefix="node-outputs"
+                  selectedOutput={selectedOutput}
                 />
+
               )}
               {hiddenOutputs && hiddenOutputs.length > 0 && (
                 <ShadTooltip
@@ -621,16 +576,15 @@ function GenericNode({
                   >
                     <HiddenOutputsButton
                       showHiddenOutputs={showHiddenOutputs}
-                      onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
+                      onClick={() => setShowHiddenOutputs((prev) => !prev)}
                     />
-                  </div>
-                </ShadTooltip>
-              )}
-            </>
-          </div>
-        )}
+                  </ShadTooltip>
+                )}
+              </div>
+            )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

@@ -180,6 +180,8 @@ export default function InputComponent({
                 e.stopPropagation();
               }}
               className={cn(
+                disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
+                "icon-size",
                 onChange && setSelectedOption && selectedOption !== ""
                   ? "text-accent-emerald-foreground"
                   : "text-placeholder-foreground",

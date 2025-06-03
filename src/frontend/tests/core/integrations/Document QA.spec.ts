@@ -46,7 +46,7 @@ withEventDeliveryModes(
     await page
       .getByTestId("input-chat-playground")
       .last()
-      .fill("whats the text in the file?");
+      .fill("what's the text in the file?");
     await page.getByTestId("button-send").last().click();
 
     await page.waitForSelector("text=this is a test file", {

@@ -1,3 +1,6 @@
+import { ChatMessageType } from "@/types/chat";
+import { Message } from "@/types/messages";
+
 export type ChatViewWrapperProps = {
   selectedViewField: { type: string; id: string } | undefined;
   visibleSession: string | undefined;
@@ -18,4 +21,7 @@ export type ChatViewWrapperProps = {
   setOpen: (open: boolean) => void;
   playgroundTitle: string;
   playgroundPage?: boolean;
+  chatInput?: { type: string; id: string; displayName: string } | undefined;
+  chatOutput?: { type: string; id: string; displayName: string } | undefined;
+  messages: Message[];
 };

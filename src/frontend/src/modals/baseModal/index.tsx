@@ -18,6 +18,7 @@ import {
 
 import { DialogClose } from "@radix-ui/react-dialog";
 import * as Form from "@radix-ui/react-form";
+import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
@@ -212,45 +213,34 @@ function BaseModal({
   closeButtonClassName,
   dialogContentWithouFixed = false,
 }: BaseModalProps) {
-  const headerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Header,
-  );
-  const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger,
-  );
-  const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content,
-  );
-  const ContentFooter = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Footer,
-  );
-
-  let { minWidth, height } = switchCaseModalSize(size);
-
   useEffect(() => {
     if (onChangeOpenModal) {
       onChangeOpenModal(open);
     }
-  }, [open]);
+  }, [open, onChangeOpenModal]);
 
-  const modalContent = (
-    <>
-      {headerChild && headerChild}
-      {ContentChild}
-      {ContentFooter && ContentFooter}
-    </>
-  );
+  const isFullScreen = type === "full-screen";
+  const isModal = type === "modal";
 
+  const [triggerChild, modalContent] = React.Children.toArray(children);
   const contentClasses = cn(
-    minWidth,
-    height,
-    "flex flex-col flex-1 overflow-hidden max-h-[98dvh]",
+    isFullScreen
+      ? "h-full w-full"
+      : (() => {
+          const { minWidth, height } = switchCaseModalSize(size);
+          return cn(minWidth, height);
+        })(),
     className,
+    isFullScreen ? "rounded-none" : "",
+    isModal ? "p-0" : "",
+    dialogContentWithouFixed ? "" : "fixed",
   );
 
-  const formClasses = "flex flex-col flex-1 gap-6 overflow-hidden";
+  const formClasses = cn(
+    "flex h-full w-full flex-col",
+    isModal ? "max-h-full" : "",
+  );
 
-  //UPDATE COLORS AND STYLE CLASSSES
   return (
     <>
       {type === "modal" ? (
@@ -269,7 +259,6 @@ function BaseModal({
             <DialogContentWithouFixed
               onClick={(e) => e.stopPropagation()}
               onOpenAutoFocus={(event) => event.preventDefault()}
-              onEscapeKeyDown={onEscapeKeyDown}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
             >
@@ -291,7 +280,6 @@ function BaseModal({
             <DialogContent
               onClick={(e) => e.stopPropagation()}
               onOpenAutoFocus={(event) => event.preventDefault()}
-              onEscapeKeyDown={onEscapeKeyDown}
               className={contentClasses}
               closeButtonClassName={closeButtonClassName}
             >
@@ -320,4 +308,5 @@ BaseModal.Content = Content;
 BaseModal.Header = Header;
 BaseModal.Trigger = Trigger;
 BaseModal.Footer = Footer;
+
 export default BaseModal;

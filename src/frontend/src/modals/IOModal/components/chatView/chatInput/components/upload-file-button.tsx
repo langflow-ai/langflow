@@ -1,4 +1,5 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../../components/ui/button";
 
@@ -24,11 +25,13 @@ const UploadFileButton = ({
         />
         <Button
           disabled={isBuilding}
-          className={`btn-playground-actions ${
+          className={cn(
+            "btn-playground-actions",
+            `flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all`,
             isBuilding
               ? "cursor-not-allowed"
-              : "text-muted-foreground hover:text-primary"
-          }`}
+              : "text-muted-foreground hover:text-primary",
+          )}
           onClick={handleButtonClick}
           unstyled
         >

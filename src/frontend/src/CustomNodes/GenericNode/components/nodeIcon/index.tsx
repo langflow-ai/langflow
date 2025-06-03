@@ -1,4 +1,5 @@
 import { useTypesStore } from "@/stores/typesStore";
+import { NodeDataType } from "@/types/flow";
 import { iconExists, nodeColors } from "@/utils/styleUtils";
 import emojiRegex from "emoji-regex";
 import { useEffect, useState } from "react";
@@ -7,33 +8,26 @@ import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { checkLucideIcons } from "@/CustomNodes/helpers/check-lucide-icons";
 import IconComponent from "../../../../components/common/genericIconComponent";
 
-export function NodeIcon({
-  icon,
-  dataType,
-  isGroup,
-}: {
-  icon?: string;
-  dataType: string;
-  isGroup?: boolean;
-}) {
+export function NodeIcon({ data }: { data: NodeDataType }) {
   const types = useTypesStore((state) => state.types);
-  const [name, setName] = useState(types[dataType]);
+  const [name, setName] = useState(types[data.type]);
 
   useEffect(() => {
-    iconExists(dataType).then((exists) => {
-      setName(exists ? dataType : types[dataType]);
+    iconExists(data.type).then((exists) => {
+      setName(exists ? data.type : types[data.type]);
     });
-  }, [dataType, types]);
+  }, [data.type, types]);
 
-  const isEmoji = emojiRegex().test(icon ?? "");
-  const iconColor = nodeColors[types[dataType]];
-  const iconName = icon || (isGroup ? "group_components" : name);
+  const isEmoji = emojiRegex().test(data.node?.icon ?? "");
+  const iconColor = nodeColors[types[data.type]];
+  const iconName =
+    data.node?.icon || (data.node?.flow ? "group_components" : name);
 
   const isLucideIcon = checkLucideIcons(iconName);
 
   const renderIcon = () => {
-    if (icon && isEmoji) {
-      return <span className="text-lg">{icon}</span>;
+    if (data.node?.icon && isEmoji) {
+      return <span className="text-lg">{data.node?.icon}</span>;
     }
 
     return (

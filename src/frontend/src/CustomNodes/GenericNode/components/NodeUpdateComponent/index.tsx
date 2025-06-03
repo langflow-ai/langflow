@@ -5,16 +5,18 @@ import { cn } from "@/utils/utils";
 
 export default function NodeUpdateComponent({
   hasBreakingChange,
-  showNode,
   handleUpdateCode,
   loadingUpdate,
-  setDismissAll,
+  isOutdated,
+  openUpdateModal,
+  setOpenUpdateModal,
 }: {
   hasBreakingChange: boolean;
-  showNode: boolean;
   handleUpdateCode: () => void;
   loadingUpdate: boolean;
-  setDismissAll: (value: boolean) => void;
+  isOutdated: boolean;
+  openUpdateModal: boolean;
+  setOpenUpdateModal: (value: boolean) => void;
 }) {
   return (
     <div
@@ -29,7 +31,8 @@ export default function NodeUpdateComponent({
         )}
       />
       <div className="mb-px flex-1 truncate text-mmd font-medium">
-        {showNode && (hasBreakingChange ? "Update available" : "Update ready")}
+        {isOutdated &&
+          (hasBreakingChange ? "Update available" : "Update ready")}
       </div>
 
       <Button
@@ -38,7 +41,7 @@ export default function NodeUpdateComponent({
         className="shrink-0 !text-mmd"
         onClick={(e) => {
           e.stopPropagation();
-          setDismissAll(true);
+          setOpenUpdateModal(false);
         }}
         aria-label="Dismiss warning bar"
         data-testid="dismiss-warning-bar"

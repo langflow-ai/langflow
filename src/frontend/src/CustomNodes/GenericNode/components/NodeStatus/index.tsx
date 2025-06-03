@@ -41,6 +41,7 @@ export default function NodeStatus({
   isUserEdited,
   isBreakingChange,
   getValidationStatus,
+  beta,
 }: {
   nodeId: string;
   display_name: string;
@@ -55,6 +56,7 @@ export default function NodeStatus({
   isUserEdited: boolean;
   isBreakingChange: boolean;
   getValidationStatus: (data) => VertexBuildTypeAPI | null;
+  beta?: boolean;
 }) {
   const nodeId_ = data.node?.flow?.data
     ? (findLastNode(data.node?.flow.data!)?.id ?? nodeId)

@@ -595,6 +595,7 @@ export type nodeToolbarPropsType = {
   updateNode: () => void;
   closeToolbar?: () => void;
   setOpenShowMoreOptions?: (open: boolean) => void;
+  selected?: boolean;
 };
 
 export type parsedDataType = {
@@ -643,6 +644,7 @@ export type chatMessagePropsType = {
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
+  sidebarOpen?: boolean;
 };
 
 export type genericModalPropsType = {

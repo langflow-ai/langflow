@@ -1,11 +1,19 @@
-import { ContentType } from "@/types/chat";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import DurationDisplay from "@/components/core/chatComponents/DurationDisplay";
+import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { ReactNode } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
-import ForwardedIconComponent from "../../common/genericIconComponent";
-import SimplifiedCodeTabComponent from "../codeTabsComponent";
-import DurationDisplay from "./DurationDisplay";
+import {
+  CodeContent,
+  ContentType,
+  ErrorContent,
+  JSONContent,
+  MediaContent,
+  TextContent,
+  ToolContent,
+} from "types/chat";
 
 export default function ContentDisplay({
   content,
@@ -101,7 +109,7 @@ export default function ContentDisplay({
               },
             }}
           >
-            {String(content.text)}
+            {String((content as TextContent).text)}
           </Markdown>
         </div>
       );
@@ -111,8 +119,8 @@ export default function ContentDisplay({
       contentData = (
         <div className="pr-20">
           <SimplifiedCodeTabComponent
-            language={content.language}
-            code={content.code}
+            language={(content as CodeContent).language}
+            code={(content as CodeContent).code}
           />
         </div>
       );
@@ -123,7 +131,7 @@ export default function ContentDisplay({
         <div className="pr-20">
           <SimplifiedCodeTabComponent
             language="json"
-            code={JSON.stringify(content.data, null, 2)}
+            code={JSON.stringify((content as JSONContent).data, null, 2)}
           />
         </div>
       );
@@ -132,12 +140,16 @@ export default function ContentDisplay({
     case "error":
       contentData = (
         <div className="text-red-500">
-          {content.reason && <div>Reason: {content.reason}</div>}
-          {content.solution && <div>Solution: {content.solution}</div>}
-          {content.traceback && (
+          {(content as ErrorContent).reason && (
+            <div>Reason: {(content as ErrorContent).reason}</div>
+          )}
+          {(content as ErrorContent).solution && (
+            <div>Solution: {(content as ErrorContent).solution}</div>
+          )}
+          {(content as ErrorContent).traceback && (
             <SimplifiedCodeTabComponent
               language="text"
-              code={content.traceback}
+              code={(content as ErrorContent).traceback || ""}
             />
           )}
         </div>
@@ -186,56 +198,25 @@ export default function ContentDisplay({
         }
 
         // For objects/arrays, format as JSON
-        try {
-          return (
-            <SimplifiedCodeTabComponent
-              language="json"
-              code={JSON.stringify(output, null, 2)}
-            />
-          );
-        } catch {
-          return String(output);
-        }
+        return (
+          <SimplifiedCodeTabComponent
+            language="json"
+            code={JSON.stringify(output, null, 2)}
+          />
+        );
       };
 
       contentData = (
-        <div className="flex flex-col gap-2">
-          <Markdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeMathjax]}
-            className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
-          >
-            **Input:**
-          </Markdown>
-          <SimplifiedCodeTabComponent
-            language="json"
-            code={JSON.stringify(content.tool_input, null, 2)}
-          />
-          {content.output && (
-            <>
-              <Markdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeMathjax]}
-                className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
-              >
-                **Output:**
-              </Markdown>
-              <div className="mt-1">{formatToolOutput(content.output)}</div>
-            </>
+        <div>
+          {(content as ToolContent).tool_code && (
+            <SimplifiedCodeTabComponent
+              language="python"
+              code={(content as ToolContent).tool_code}
+            />
           )}
-          {content.error && (
-            <div className="text-red-500">
-              <Markdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeMathjax]}
-                className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
-              >
-                **Error:**
-              </Markdown>
-              <SimplifiedCodeTabComponent
-                language="json"
-                code={JSON.stringify(content.error, null, 2)}
-              />
+          {(content as ToolContent).tool_output && (
+            <div className="mt-2">
+              {formatToolOutput((content as ToolContent).tool_output)}
             </div>
           )}
         </div>
@@ -244,22 +225,37 @@ export default function ContentDisplay({
 
     case "media":
       contentData = (
-        <div>
-          {content.urls.map((url, index) => (
-            <img
-              key={index}
-              src={url}
-              alt={content.caption || `Media ${index}`}
-            />
-          ))}
-          {content.caption && <div>{content.caption}</div>}
+        <div className="flex w-full justify-center">
+          <img
+            className="max-h-[300px] max-w-full rounded-md object-contain"
+            src={(content as MediaContent).media_url}
+            alt={(content as MediaContent).media_alt}
+          />
         </div>
       );
       break;
+
+    case "link":
+      contentData = (
+        <div className="flex w-full justify-center">
+          <a
+            href={(content as MediaContent).media_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 underline"
+          >
+            {(content as MediaContent).media_url}
+          </a>
+        </div>
+      );
+      break;
+
+    default:
+      contentData = null;
   }
 
   return (
-    <div className="relative p-[16px]">
+    <div>
       {renderHeader}
       {renderDuration}
       {contentData}

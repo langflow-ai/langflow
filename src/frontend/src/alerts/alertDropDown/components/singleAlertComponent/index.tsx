@@ -76,6 +76,7 @@ export default function SingleAlert({
             className="inline-flex rounded-md p-1.5 text-status-red"
           >
             <span className="sr-only">Dismiss</span>
+
             <IconComponent name="X" className="h-4 w-4 text-error-foreground" />
           </button>
         </div>
@@ -119,6 +120,7 @@ export default function SingleAlert({
             className="inline-flex rounded-md p-1.5 text-info-foreground"
           >
             <span className="sr-only">Dismiss</span>
+
             <IconComponent name="X" className="h-4 w-4 text-info-foreground" />
           </button>
         </div>

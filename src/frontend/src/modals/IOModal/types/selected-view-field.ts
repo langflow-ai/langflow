@@ -1,4 +1,5 @@
 import { Node } from "reactflow";
+
 export type SelectedViewFieldProps = {
   selectedViewField: { type: string; id: string } | undefined;
   setSelectedViewField: (
@@ -18,4 +19,8 @@ export type SelectedViewFieldProps = {
   sessions: string[];
   currentFlowId: string;
   nodes: Node[];
+  open?: boolean;
+  closeModal: () => void;
+  chatInput?: { type: string; id: string; displayName: string } | undefined;
+  chatOutput?: { type: string; id: string; displayName: string } | undefined;
 };

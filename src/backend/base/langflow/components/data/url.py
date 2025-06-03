@@ -34,7 +34,12 @@ class URLComponent(Component):
     """
 
     display_name = "URL"
-    description = "Fetch content from one or more web pages, following links recursively."
+
+    description = (
+        "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, "
+        "or JSON, with options for cleaning and separating multiple outputs."
+    )
+
     icon = "layout-template"
     name = "URLComponent"
 
