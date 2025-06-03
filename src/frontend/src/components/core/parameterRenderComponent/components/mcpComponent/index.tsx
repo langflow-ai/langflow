@@ -1,3 +1,4 @@
+import AddMcpServerModal from "@/modals/addMcpServerModal";
 import { useEffect, useRef, useState } from "react";
 import ListSelectionComponent from "../../../../../CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "../../../../../utils/utils";
@@ -27,6 +28,7 @@ export default function McpComponent({
   // Example options, replace with real options as needed
 
   const [open, setOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
 
   // Initialize selected item from value on mount or value/options change
@@ -46,43 +48,53 @@ export default function McpComponent({
     setOpen(false);
   };
 
+  const handleAddButtonClick = () => {
+    setAddOpen(true);
+  };
+
   const handleOpenListSelectionDialog = () => setOpen(true);
   const handleCloseListSelectionDialog = () => setOpen(false);
 
   return (
     <div className="flex w-full flex-col gap-2">
-      <Button
-        variant="primary"
-        size="xs"
-        role="combobox"
-        onClick={handleOpenListSelectionDialog}
-        className="dropdown-component-outline input-edit-node w-full py-2"
-        disabled={disabled}
-      >
-        <div
-          className={cn(
-            "flex w-full items-center justify-start text-sm font-normal",
-          )}
+      {options.length > 0 ? (
+        <Button
+          variant="primary"
+          size="xs"
+          role="combobox"
+          onClick={handleOpenListSelectionDialog}
+          className="dropdown-component-outline input-edit-node w-full py-2"
+          disabled={disabled}
         >
-          <span className="truncate">
-            {selectedItem[0]?.name ? (
-              <span className="flex items-center gap-2">
-                <ForwardedIconComponent
-                  name="Box"
-                  className="h-4 w-4 text-muted-foreground"
-                />
-                {selectedItem[0]?.name}
-              </span>
-            ) : (
-              "Select a server..."
+          <div
+            className={cn(
+              "flex w-full items-center justify-start text-sm font-normal",
             )}
-          </span>
-          <ForwardedIconComponent
-            name="ChevronsUpDown"
-            className="ml-auto h-5 w-5 text-muted-foreground"
-          />
-        </div>
-      </Button>
+          >
+            <span className="truncate">
+              {selectedItem[0]?.name ? (
+                <span className="flex items-center gap-2">
+                  <ForwardedIconComponent
+                    name="Box"
+                    className="h-4 w-4 text-muted-foreground"
+                  />
+                  {selectedItem[0]?.name}
+                </span>
+              ) : (
+                "Select a server..."
+              )}
+            </span>
+            <ForwardedIconComponent
+              name="ChevronsUpDown"
+              className="ml-auto h-5 w-5 text-muted-foreground"
+            />
+          </div>
+        </Button>
+      ) : (
+        <Button size="sm" onClick={handleAddButtonClick}>
+          <span>Add MCP Server</span>
+        </Button>
+      )}
       <ListSelectionComponent
         open={open}
         onClose={handleCloseListSelectionDialog}
@@ -97,7 +109,10 @@ export default function McpComponent({
         headerSearchPlaceholder="Search MCP Servers..."
         handleOnNewValue={handleOnNewValue}
         disabled={disabled}
+        addButtonText="Add MCP Server"
+        onAddButtonClick={handleAddButtonClick}
       />
+      <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
     </div>
   );
 }

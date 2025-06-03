@@ -1,7 +1,8 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
 import { InputProps } from "@/components/core/parameterRenderComponent/types";
-import { DialogHeader } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { DialogFooter, DialogHeader } from "@/components/ui/dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
 import { Input } from "@/components/ui/input";
 import { cn, testIdCase } from "@/utils/utils";
@@ -19,6 +20,8 @@ interface ListSelectionComponentProps {
   onSelection?: (action: any) => void;
   limit?: number;
   headerSearchPlaceholder?: string;
+  addButtonText?: string;
+  onAddButtonClick?: () => void;
 }
 
 const ListSelectionComponent = ({
@@ -31,6 +34,8 @@ const ListSelectionComponent = ({
   options,
   limit = 1,
   headerSearchPlaceholder = "Search...",
+  addButtonText,
+  onAddButtonClick,
   ...baseInputProps
 }: InputProps<any, ListSelectionComponentProps>) => {
   const { nodeClass } = baseInputProps;
@@ -167,7 +172,7 @@ const ListSelectionComponent = ({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent
-        className="flex max-h-[65vh] min-h-[15vh] flex-col rounded-xl p-0"
+        className="flex max-h-[65vh] min-h-[15vh] flex-col overflow-hidden rounded-xl p-0"
         onKeyDown={handleKeyDown}
       >
         <DialogHeader className="flex w-full justify-between border-b p-2">
@@ -243,6 +248,16 @@ const ListSelectionComponent = ({
             </div>
           )}
         </div>
+        <DialogFooter>
+          <Button
+            className="flex w-full items-center gap-2 border-t px-4 py-3 !text-mmd hover:bg-muted"
+            unstyled
+            onClick={onAddButtonClick}
+          >
+            <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+            {addButtonText}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
