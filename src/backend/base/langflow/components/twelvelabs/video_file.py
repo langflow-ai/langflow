@@ -141,7 +141,7 @@ class VideoFileComponent(BaseFileComponent):
             self.log("DEBUG: Starting video file load")
             if not hasattr(self, "file_path") or not self.file_path:
                 self.log("DEBUG: No video file path provided")
-                return []
+                return DataFrame()
 
             self.log(f"DEBUG: Loading video from path: {self.file_path}")
 
@@ -149,7 +149,7 @@ class VideoFileComponent(BaseFileComponent):
             file_path_obj = Path(self.file_path)
             if not file_path_obj.exists():
                 self.log(f"DEBUG: Video file not found at path: {self.file_path}")
-                return []
+                return DataFrame()
 
             # Verify file size
             file_size = file_path_obj.stat().st_size
