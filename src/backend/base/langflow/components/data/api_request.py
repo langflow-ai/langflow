@@ -464,8 +464,8 @@ class APIRequestComponent(Component):
         # print(f"Current mode: {field_value}")
         if field_value == "cURL":
             set_field_display(build_config, "curl_input", value=True)
-            if self.curl_input:
-                build_config = self.parse_curl(self.curl_input, build_config)
+            if build_config["curl_input"]["value"]:
+                build_config = self.parse_curl(build_config["curl_input"]["value"], build_config)
         else:
             set_field_display(build_config, "curl_input", value=False)
 
