@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Nxx77",
+            "id": "ChatInput-XaYqD",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-cyeTd",
+            "id": "StructuredOutput-OUIin",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Nxx77{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Nxx77œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-cyeTd{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-cyeTdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-XaYqD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-XaYqDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-OUIin{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-OUIinœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-Nxx77",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Nxx77œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "StructuredOutput-cyeTd",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-cyeTdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "source": "ChatInput-XaYqD",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-XaYqDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutput-OUIin",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-OUIinœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-Ihs8L",
+            "id": "parser-YY3Qp",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-pQlnw",
+            "id": "ChatOutput-xBwkk",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-Ihs8L{œdataTypeœ:œparserœ,œidœ:œparser-Ihs8Lœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-pQlnw{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-pQlnwœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-YY3Qp{œdataTypeœ:œparserœ,œidœ:œparser-YY3Qpœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-xBwkk{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-xBwkkœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-Ihs8L",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-Ihs8Lœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-pQlnw",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-pQlnwœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "source": "parser-YY3Qp",
+        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-YY3Qpœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-xBwkk",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-xBwkkœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-cyeTd",
+            "id": "StructuredOutput-OUIin",
             "name": "structured_output",
             "output_types": [
               "Data"
@@ -73,7 +73,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-Ihs8L",
+            "id": "parser-YY3Qp",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -81,12 +81,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__StructuredOutput-cyeTd{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-cyeTdœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-Ihs8L{œfieldNameœ:œinput_dataœ,œidœ:œparser-Ihs8Lœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-OUIin{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-OUIinœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-YY3Qp{œfieldNameœ:œinput_dataœ,œidœ:œparser-YY3Qpœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-cyeTd",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-cyeTdœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
-        "target": "parser-Ihs8L",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-Ihs8Lœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "source": "StructuredOutput-OUIin",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-OUIinœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "target": "parser-YY3Qp",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-YY3Qpœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -94,7 +94,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-rkcP3",
+            "id": "OpenAIModel-KS2eL",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -102,25 +102,25 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-cyeTd",
+            "id": "StructuredOutput-OUIin",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__OpenAIModel-rkcP3{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-rkcP3œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-cyeTd{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-cyeTdœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-KS2eL{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KS2eLœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-OUIin{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-OUIinœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-rkcP3",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-rkcP3œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-        "target": "StructuredOutput-cyeTd",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-cyeTdœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "source": "OpenAIModel-KS2eL",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KS2eLœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "StructuredOutput-OUIin",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-OUIinœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "OpenAIModel-rkcP3",
+          "id": "OpenAIModel-KS2eL",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -501,7 +501,7 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-rkcP3",
+        "id": "OpenAIModel-KS2eL",
         "measured": {
           "height": 539,
           "width": 320
@@ -515,174 +515,7 @@
       },
       {
         "data": {
-          "id": "ParseData-hLbU0",
-          "node": {
-            "base_classes": [
-              "Data",
-              "Message"
-            ],
-            "beta": false,
-            "category": "processing",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Convert Data objects into Messages using any {field_name} from input data.",
-            "display_name": "Data to Message",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "data",
-              "template",
-              "sep"
-            ],
-            "frozen": false,
-            "icon": "message-square",
-            "key": "ParseData",
-            "legacy": true,
-            "lf_version": "1.1.5",
-            "metadata": {
-              "legacy_name": "Parse Data"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Message",
-                "group_outputs": false,
-                "method": "parse_data",
-                "name": "text",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Data List",
-                "group_outputs": false,
-                "method": "parse_data_as_list",
-                "name": "data_list",
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.23285358167685585,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text, data_to_text_list\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Data to Message\"\n    description = \"Convert Data objects into Messages using any {field_name} from input data.\"\n    icon = \"message-square\"\n    name = \"ParseData\"\n    legacy = True\n    metadata = {\n        \"legacy_name\": \"Parse Data\",\n    }\n\n    inputs = [\n        DataInput(\n            name=\"data\",\n            display_name=\"Data\",\n            info=\"The data to convert to text.\",\n            is_list=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n            required=True,\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n"
-              },
-              "data": {
-                "_input_type": "DataInput",
-                "advanced": false,
-                "display_name": "Data",
-                "dynamic": false,
-                "info": "The data to convert to text.",
-                "input_types": [
-                  "Data"
-                ],
-                "list": true,
-                "list_add_label": "Add More",
-                "name": "data",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "sep": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "Separator",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sep",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "\n"
-              },
-              "template": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "template",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "EBITIDA: {EBITIDA}  , \nNet Income: {NET_INCOME} ,\nGROSS_PROFIT: {GROSS_PROFIT}"
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "ParseData"
-        },
-        "dragging": false,
-        "id": "ParseData-hLbU0",
-        "measured": {
-          "height": 342,
-          "width": 320
-        },
-        "position": {
-          "x": 1788.8753184818502,
-          "y": 247.15776278878775
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "ChatOutput-ZtLkt",
+          "id": "ChatOutput-xBwkk",
           "node": {
             "base_classes": [
               "Message"
@@ -980,7 +813,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-pQlnw",
+        "id": "ChatOutput-xBwkk",
         "measured": {
           "height": 48,
           "width": 192
@@ -994,7 +827,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-Nxx77",
+          "id": "ChatInput-XaYqD",
           "node": {
             "base_classes": [
               "Message"
@@ -1293,7 +1126,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-Nxx77",
+        "id": "ChatInput-XaYqD",
         "measured": {
           "height": 48,
           "width": 192
@@ -1307,7 +1140,7 @@
       },
       {
         "data": {
-          "id": "note-RDdQe",
+          "id": "note-LKJJL",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -1319,7 +1152,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-RDdQe",
+        "id": "note-LKJJL",
         "measured": {
           "height": 324,
           "width": 324
@@ -1333,7 +1166,7 @@
       },
       {
         "data": {
-          "id": "note-5me56",
+          "id": "note-XHS7X",
           "node": {
             "description": "\n# Financial Report Parser\n\nThis template extracts key financial metrics from a given financial report text using OpenAI's GPT-4o-mini model. The extracted data is structured and formatted for chat consumption.\n\n## Prerequisites\n\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your OpenAI API key to the OpenAI model.\n2. To run the flow, click **Playground**.\nThe **Chat Input** component in this template is pre-loaded with a sample financial report for demonstrating how structured data is extracted.\n\n* The **OpenAI** model component identifies and retrieves Gross Profit, EBITDA, Net Income, and Operating Expenses from the financial report.\n* The **Structured Output** component formats extracted data into a structured format for better readability and further processing.\n* The **Parser** component converts extracted data into formatted messages for chat consumption.\n\n\n\n\n\n",
             "display_name": "",
@@ -1344,7 +1177,7 @@
         },
         "dragging": false,
         "height": 688,
-        "id": "note-5me56",
+        "id": "note-XHS7X",
         "measured": {
           "height": 688,
           "width": 620
@@ -1360,7 +1193,7 @@
       },
       {
         "data": {
-          "id": "StructuredOutput-cyeTd",
+          "id": "StructuredOutput-OUIin",
           "node": {
             "base_classes": [
               "Data",
@@ -1392,7 +1225,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Structured Output",
-                "hidden": false,
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
@@ -1619,7 +1451,7 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-cyeTd",
+        "id": "StructuredOutput-OUIin",
         "measured": {
           "height": 348,
           "width": 320
@@ -1633,7 +1465,7 @@
       },
       {
         "data": {
-          "id": "parser-Ihs8L",
+          "id": "parser-YY3Qp",
           "node": {
             "base_classes": [
               "Message"
@@ -1794,7 +1626,7 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-Ihs8L",
+        "id": "parser-YY3Qp",
         "measured": {
           "height": 360,
           "width": 320
@@ -1808,17 +1640,17 @@
       }
     ],
     "viewport": {
-      "x": -40.44400577912347,
-      "y": 339.8517842832397,
-      "zoom": 0.5874068801037157
+      "x": -234.08229698659375,
+      "y": 285.65346951591044,
+      "zoom": 0.6423907280538087
     }
   },
   "description": "Extracts key financial metrics like Gross Profit, EBITDA, and Net Income from financial reports and structures them for easy analysis, using Structured Output Component",
   "endpoint_name": null,
-  "id": "b1baf64b-8ba6-4ac7-b704-393a4a22ea05",
+  "id": "5e867fb1-2ce2-481c-9114-aa381cdf1a79",
   "is_component": false,
   "last_tested_version": "1.4.2",
-  "name": "Financial Report Parser",
+  "name": "Financial Report Parser (1)",
   "tags": [
     "chatbots",
     "content-generation"

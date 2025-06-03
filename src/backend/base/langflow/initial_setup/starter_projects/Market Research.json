@@ -852,20 +852,6 @@
                   "Data"
                 ],
                 "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "DataFrame",
-                "group_outputs": false,
-                "method": "as_dataframe",
-                "name": "structured_output_dataframe",
-                "selected": "DataFrame",
-                "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
-                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
