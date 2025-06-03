@@ -19,12 +19,3 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
-
-    - name: Restore uv cache
-      uses: actions/cache@v4
-      with:
-        path: /tmp/.uv-cache
-        key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-        restore-keys: |
-          uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-          uv-${{ runner.os }}

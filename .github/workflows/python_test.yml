@@ -33,8 +33,6 @@ jobs:
   build:
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
-    env:
-      UV_CACHE_DIR: /tmp/.uv-cache
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
