@@ -74,7 +74,8 @@ test(
       .click();
     await page.getByTestId("handle-openaimodel-shownode-input-left").click();
 
-    await page.getByTestId("handle-openaimodel-shownode-model response-right").click();
+    await page.getByTestId("handle-openaimodel-shownode-model response-right")
+      .click();
     await page
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .last()
