@@ -4,7 +4,7 @@ slug: /integrations-nvidia-g-assist
 ---
 
 :::important
-This component is only available for Langflow users with NVIDIA GPUs on Windows systems.
+This component is available only for Langflow users with NVIDIA GPUs on Windows systems.
 :::
 
 The **NVIDIA G-Assist** component enables interaction with NVIDIA GPU drivers through natural language prompts.
@@ -22,7 +22,7 @@ For more information, see the [NVIDIA G-assist project repository](https://githu
 ## Use the G-Assist component in a flow
 1. Create a flow with a **Chat input** component, a **G-Assist** component, and a **Chat output** component.
 2. Connect the **Chat input** component to the **G-Assist** component's **Prompt** input, and then connect the **G-Assist** component's output to the **Chat output** component.
-3. Open the **Playground**, and then ask "What is my current GPU temperature?".
+3. Open the **Playground**, and then ask a question about your GPU. For example, "What is my current GPU temperature?".
 The **G-Assist** component queries your GPU, and the response appears in the **Playground**.
 
 ### Inputs
