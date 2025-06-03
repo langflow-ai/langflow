@@ -42,7 +42,7 @@
     "dotenv": "^16.4.5",
     "elkjs": "^0.9.3",
     "emoji-regex": "^10.3.0",
-    "esbuild": "^0.21.5",
+    "esbuild": "^0.25.0",
     "fetch-intercept": "^2.4.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^11.2.10",
