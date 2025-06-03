@@ -275,8 +275,9 @@ class TracingService(Service):
     @staticmethod
     def _cleanup_inputs(inputs: dict[str, Any]):
         inputs = inputs.copy()
+        sensitive_keywords = ["api_key", "password", "server_url"]
         for key in inputs:
-            if "api_key" in key:
+            if any(sensitive_word in key for sensitive_word in sensitive_keywords):
                 inputs[key] = "*****"  # avoid logging api_keys for security reasons
         return inputs
 
@@ -344,6 +345,7 @@ class TracingService(Service):
         if component._vertex:
             trace_id = component._vertex.id
         trace_type = component.trace_type
+        inputs = self._cleanup_inputs(inputs)
         component_trace_context = ComponentTraceContext(
             trace_id, trace_name, trace_type, component._vertex, inputs, metadata
         )
