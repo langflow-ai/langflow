@@ -753,11 +753,16 @@ class FileManipulation(Component):
             context_after: str | None = None,
             line_number: int | None = None,
             occurrence: int = 1,
+            *,
             dry_run: bool = False,
         ) -> str:
-            """Replaces text in a file with advanced options for targeting specific occurrences.
+            """Performs text replacement in a file with advanced pattern matching capabilities.
 
-            Supports plain text or regular expression search, context constraints, line restriction, and dry-run preview. Can replace a specific occurrence or all matches, with optional context before and after the match to refine targeting. Returns a summary of the operation and a preview of the affected file region.
+            Supports plain text or regular expression search, context constraints,
+            line restriction, and dry-run preview. Can replace a specific occurrence
+            or all matches, with optional context before and after the match to refine
+            targeting. Returns a summary of the operation and a preview of the affected
+            file region.
             """
             return self._edit_file(
                 path=path,
@@ -774,7 +779,13 @@ class FileManipulation(Component):
             )
 
         @tool
-        def insert_at_line(path: str, line_number: int, new_str: str, dry_run: bool = False) -> str:
+        def insert_at_line(
+            path: str,
+            line_number: int,
+            new_str: str,
+            *,
+            dry_run: bool = False
+        ) -> str:
             """Inserts text at a specified line number in a file.
 
             Args:
@@ -795,7 +806,13 @@ class FileManipulation(Component):
             )
 
         @tool
-        def remove_lines(path: str, start_line: int, end_line: int, dry_run: bool = False) -> str:
+        def remove_lines(
+            path: str,
+            start_line: int,
+            end_line: int,
+            *,
+            dry_run: bool = False
+        ) -> str:
             """Removes a range of lines from a file.
 
             Args:
@@ -816,7 +833,14 @@ class FileManipulation(Component):
             )
 
         @tool
-        def move_code_block(path: str, start_line: int, end_line: int, target_line: int, dry_run: bool = False) -> str:
+        def move_code_block(
+            path: str,
+            start_line: int,
+            end_line: int,
+            target_line: int,
+            *,
+            dry_run: bool = False
+        ) -> str:
             """Moves a block of lines from one location to another within the same file.
 
             Args:
@@ -846,7 +870,8 @@ class FileManipulation(Component):
                 path: Path to the file relative to the workspace.
 
             Returns:
-                A message indicating the result of the undo operation, including a preview of the restored file version.
+                A message indicating the result of the undo operation, including a
+                preview of the restored file version.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
@@ -870,16 +895,17 @@ class FileManipulation(Component):
                         result += "You can redo this operation.\n"
 
                 result += f"\nPreview:\n{file_preview}"
-                return result
-
             except Exception as e:
                 return f"Error undoing edit: {e!s}"
+            else:
+                return result
 
         @tool
         def redo_edit(path: str) -> str:
             """Redoes the last undone edit for a file, restoring it to a newer backup version if available.
 
-            Returns a message indicating the result of the redo operation along with a preview of the file's current content.
+            Returns a message indicating the result of the redo operation along with
+            a preview of the file's current content.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
@@ -907,38 +933,41 @@ class FileManipulation(Component):
                         result += f"You can redo {info['position']} more time(s).\n"
 
                 result += f"\nPreview:\n{file_preview}"
-                return result
-
             except Exception as e:
                 return f"Error redoing edit: {e!s}"
+            else:
+                return result
 
         @tool
         def create_file(path: str, file_text: str) -> str:
             """Creates or overwrites a file with the specified content, backing up any existing file.
 
-            If the file already exists, a backup is created before overwriting. Returns a message indicating the result and a preview of the file's contents.
+            If the file already exists, a backup is created before overwriting.
+            Returns a message indicating the result and a preview of the file's contents.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path, must_exist=False)
 
                 # Create directories if they don't exist
-                os.makedirs(os.path.dirname(os.path.abspath(resolved_path)), exist_ok=True)
+                from pathlib import Path
+                parent_dir = Path(resolved_path).parent
+                parent_dir.mkdir(parents=True, exist_ok=True)
 
                 # Check if file exists
                 action = "Created"
-                if os.path.exists(resolved_path):
+                if Path(resolved_path).exists():
                     self.backup_manager.backup_file(resolved_path)
                     action = "Updated"
 
-                with open(resolved_path, "w", encoding="utf-8") as f:
+                with Path(resolved_path).open("w", encoding="utf-8") as f:
                     f.write(file_text)
 
                 # Get preview
                 file_preview = self._get_file_preview(path)
-                return f"Successfully {action} file: {path}\n\nPreview:\n{file_preview}"
-
             except Exception as e:
                 return f"Error creating file: {e!s}"
+            else:
+                return f"Successfully {action} file: {path}\n\nPreview:\n{file_preview}"
 
         @tool
         def create_directory(directory_path: str) -> str:
@@ -952,57 +981,66 @@ class FileManipulation(Component):
             """
             try:
                 resolved_path = self.path_handler.resolve_path(directory_path, must_exist=False)
+                from pathlib import Path
+                path_obj = Path(resolved_path)
 
                 # Check if path already exists
-                if os.path.exists(resolved_path):
-                    if os.path.isdir(resolved_path):
+                if path_obj.exists():
+                    if path_obj.is_dir():
                         return f"Directory already exists: {directory_path}"
                     return f"Error: Path exists but is not a directory: {directory_path}"
 
                 # Create the directory
-                os.makedirs(resolved_path, exist_ok=True)
-                return f"Successfully created directory: {directory_path}"
-
+                path_obj.mkdir(parents=True, exist_ok=True)
             except Exception as e:
                 return f"Error creating directory: {e!s}"
+            else:
+                return f"Successfully created directory: {directory_path}"
 
         @tool
         def list_directory(directory_path: str = ".") -> str:
             """Returns a detailed listing of files and directories within a specified directory.
 
             Args:
-                directory_path: Relative path to the directory within the workspace (defaults to workspace root).
+                directory_path: Relative path to the directory within the workspace
+                    (defaults to workspace root).
 
             Returns:
-                A formatted string listing directories and files with type indicators and file sizes, or an error message if the path is invalid.
+                A formatted string listing directories and files with type indicators
+                and file sizes, or an error message if the path is invalid.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(directory_path)
+                from pathlib import Path
+                path_obj = Path(resolved_path)
 
-                if not os.path.isdir(resolved_path):
+                if not path_obj.is_dir():
                     return f"Error: Not a directory: {directory_path}"
 
                 # List directory contents
-                entries = os.listdir(resolved_path)
+                entries = list(path_obj.iterdir())
                 result = f"Contents of {directory_path}:\n"
 
                 # Add directories first, then files
                 dirs = []
                 files = []
 
+                # File size constants
+                KB_SIZE = 1024
+                MB_SIZE = KB_SIZE * 1024
+
                 for entry in entries:
-                    entry_path = os.path.join(resolved_path, entry)
-                    if os.path.isdir(entry_path):
-                        dirs.append((entry, "directory"))
+                    if entry.is_dir():
+                        dirs.append((entry.name, "directory"))
                     else:
                         # Get file size
-                        size = os.path.getsize(entry_path)
+                        size = entry.stat().st_size
                         size_str = f"{size} bytes"
-                        if size > 1024:
-                            size_str = f"{size / 1024:.1f} KB"
-                        if size > 1024 * 1024:
-                            size_str = f"{size / (1024 * 1024):.1f} MB"
-                        files.append((entry, "file", size_str))
+                        if size > KB_SIZE:
+                            size_str = f"{size / KB_SIZE:.1f} KB"
+                        if size > MB_SIZE:
+                            size_str = f"{size / MB_SIZE:.1f} MB"
+                        files.append((entry.name, "file", size_str))
 
                 # Format and add to result
                 for name, type_ in sorted(dirs):
@@ -1013,10 +1051,10 @@ class FileManipulation(Component):
                 if not dirs and not files:
                     result += "Directory is empty."
 
-                return result
-
-            except Exception as e:
+            except OSError as e:
                 return f"Error listing directory: {e!s}"
+            else:
+                return result
 
         @tool
         def move_file(source_path: str, destination_path: str) -> str:
@@ -1032,27 +1070,30 @@ class FileManipulation(Component):
             try:
                 resolved_source = self.path_handler.resolve_path(source_path)
                 resolved_dest = self.path_handler.resolve_path(destination_path, must_exist=False)
+                from pathlib import Path
+
+                source_obj = Path(resolved_source)
+                dest_obj = Path(resolved_dest)
 
                 # Create backup for the source if it's a file
-                if os.path.isfile(resolved_source):
+                if source_obj.is_file():
                     self.backup_manager.backup_file(resolved_source)
 
                 # Create backup for the destination if it exists and is a file
-                if os.path.isfile(resolved_dest) and os.path.exists(resolved_dest):
+                if dest_obj.is_file() and dest_obj.exists():
                     self.backup_manager.backup_file(resolved_dest)
 
                 # Create destination directory if it doesn't exist
-                dest_dir = os.path.dirname(resolved_dest)
-                os.makedirs(dest_dir, exist_ok=True)
+                dest_obj.parent.mkdir(parents=True, exist_ok=True)
 
                 # Move/rename the file or directory
                 shutil.move(resolved_source, resolved_dest)
 
-                source_type = "directory" if os.path.isdir(resolved_dest) else "file"
-                return f"Successfully moved {source_type} from {source_path} to {destination_path}"
-
+                source_type = "directory" if dest_obj.is_dir() else "file"
             except Exception as e:
                 return f"Error moving file: {e!s}"
+            else:
+                return f"Successfully moved {source_type} from {source_path} to {destination_path}"
 
         @tool
         def search_files(search_pattern: str, directory_path: str = ".") -> str:
@@ -1060,15 +1101,19 @@ class FileManipulation(Component):
 
             Args:
                 search_pattern: Substring to match in filenames (case-insensitive).
-                directory_path: Directory to search within, relative to the workspace root (default is current directory).
+                directory_path: Directory to search within, relative to the workspace root
+                    (default is current directory).
 
             Returns:
-                A formatted string listing all matching file paths, or an error message if no matches are found or the directory is invalid.
+                A formatted string listing all matching file paths, or an error message
+                if no matches are found or the directory is invalid.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(directory_path)
+                from pathlib import Path
+                path_obj = Path(resolved_path)
 
-                if not os.path.isdir(resolved_path):
+                if not path_obj.is_dir():
                     return f"Error: Not a directory: {directory_path}"
 
                 # Search for matching files
@@ -1078,7 +1123,11 @@ class FileManipulation(Component):
                 for root, _dirs, files in os.walk(resolved_path):
                     for name in files:
                         if fnmatch.fnmatch(name.lower(), pattern.lower()):
-                            rel_path = os.path.relpath(os.path.join(root, name), self.workspace_folder)
+                            from pathlib import Path
+                            rel_path = os.path.relpath(
+                                Path(root) / name,
+                                self.workspace_folder
+                            )
                             matches.append(rel_path)
 
                 if not matches:
@@ -1088,10 +1137,10 @@ class FileManipulation(Component):
                 for match in sorted(matches):
                     result += f"- {match}\n"
 
-                return result
-
             except Exception as e:
                 return f"Error searching files: {e!s}"
+            else:
+                return result
 
         @tool
         def search_code(search_pattern: str, file_pattern: str = "*", directory_path: str = ".") -> str:
@@ -1103,12 +1152,15 @@ class FileManipulation(Component):
                 directory_path: Directory to search in, relative to the workspace root.
 
             Returns:
-                A formatted string listing each match with file path and line number, or a message if no matches are found.
+                A formatted string listing each match with file path and line number,
+                or a message if no matches are found.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(directory_path)
+                from pathlib import Path
+                path_obj = Path(resolved_path)
 
-                if not os.path.isdir(resolved_path):
+                if not path_obj.is_dir():
                     return f"Error: Not a directory: {directory_path}"
 
                 # Python-based search
@@ -1117,14 +1169,14 @@ class FileManipulation(Component):
                 for root, _dirs, files in os.walk(resolved_path):
                     for name in files:
                         if fnmatch.fnmatch(name, file_pattern):
-                            file_path = os.path.join(root, name)
+                            file_path = Path(root) / name
                             try:
-                                with open(file_path, encoding="utf-8") as f:
+                                with file_path.open(encoding="utf-8") as f:
                                     for i, line in enumerate(f, 1):
                                         if search_pattern in line:
                                             rel_path = os.path.relpath(file_path, self.workspace_folder)
                                             matches.append((rel_path, i, line.strip()))
-                            except:
+                            except (UnicodeDecodeError, OSError):
                                 # Skip files that can't be read as text
                                 pass
 
@@ -1136,23 +1188,26 @@ class FileManipulation(Component):
                 for file_path, line_num, content in matches:
                     result += f"{file_path}:{line_num}: {content}\n"
 
-                return result
-
             except Exception as e:
                 return f"Error searching code: {e!s}"
+            else:
+                return result
 
         @tool
         def generate_patch(path: str, old_content: str | None = None, new_content: str | None = None) -> str:
             """Generates a unified diff patch between the original and new content of a file.
 
-            If the original content is not provided, it is read from the specified file. Returns the unified diff as a string, or a message if there are no differences or if an error occurs.
+            If the original content is not provided, it is read from the specified file.
+            Returns the unified diff as a string, or a message if there are no differences
+            or if an error occurs.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
+                from pathlib import Path
 
                 # If old_content not provided, read from file
                 if old_content is None:
-                    with open(resolved_path, encoding="utf-8") as f:
+                    with Path(resolved_path).open(encoding="utf-8") as f:
                         old_content = f.read()
 
                 # New content must be provided
@@ -1166,10 +1221,10 @@ class FileManipulation(Component):
                 diff = difflib.unified_diff(old_lines, new_lines, lineterm="", n=3)
 
                 diff_text = "\n".join(diff)
-                return diff_text if diff_text else "No differences found."
-
             except Exception as e:
                 return f"Error generating patch: {e!s}"
+            else:
+                return diff_text if diff_text else "No differences found."
 
         @tool
         def find_code_structure(path: str, item_type: str = "all") -> str:
@@ -1177,29 +1232,36 @@ class FileManipulation(Component):
 
             Args:
                 path: Relative path to the file within the workspace.
-                item_type: Type of code elements to find ("function", "class", "method", or "all").
+                item_type: Type of code elements to find
+                    ("function", "class", "method", or "all").
 
             Returns:
-                A formatted string listing the names and line ranges of the specified code elements, or an error message if the file is not found, empty, not a Python file, or contains syntax errors.
+                A formatted string listing the names and line ranges of the specified
+                code elements, or an error message if the file is not found, empty,
+                not a Python file, or contains syntax errors.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
+                from pathlib import Path
+                path_obj = Path(resolved_path)
 
                 # Check file existence first
-                if not os.path.exists(resolved_path):
+                if not path_obj.exists():
                     return f"Error: File not found: {path}"
 
                 # Check file size, handle empty files gracefully
-                if os.path.getsize(resolved_path) == 0:
+                if path_obj.stat().st_size == 0:
                     return f"File {path} is empty."
 
                 # Only supporting Python files for now
-                file_ext = os.path.splitext(resolved_path)[1].lower()
-                if file_ext != ".py":
-                    return f"Note: Code structure analysis is currently only supported for Python (.py) files. File {path} has extension {file_ext}."
+                if path_obj.suffix.lower() != ".py":
+                    return (
+                        f"Note: Code structure analysis is currently only supported for "
+                        f"Python (.py) files. File {path} has extension {path_obj.suffix}."
+                    )
 
                 # Read file content
-                with open(resolved_path, encoding="utf-8") as f:
+                with path_obj.open(encoding="utf-8") as f:
                     content = f.read()
 
                 # Parse the Python code
@@ -1207,20 +1269,24 @@ class FileManipulation(Component):
                     tree = ast.parse(content)
                 except SyntaxError as e:
                     return (
-                        f"Error: Could not parse {path} - syntax error at line {e.lineno}, column {e.offset}: {e.msg}"
+                        f"Error: Could not parse {path} - syntax error at line {e.lineno}, "
+                        f"column {e.offset}: {e.msg}"
                     )
 
                 # Helper function to extract line range for a node
                 def get_line_range(node):
                     """Returns the start and end line numbers for an AST node.
 
-                    The start line is taken from the node's 'lineno' attribute, and the end line is determined by traversing all child nodes to find the maximum line number present.
+                    The start line is taken from the node's 'lineno' attribute, and the
+                    end line is determined by traversing all child nodes to find the
+                    maximum line number present.
 
                     Args:
                         node: An AST node with a 'lineno' attribute.
 
                     Returns:
-                        A tuple (start_line, end_line) indicating the range of lines spanned by the node.
+                        A tuple (start_line, end_line) indicating the range of lines
+                        spanned by the node.
                     """
                     start_line = getattr(node, "lineno", 0)
                     end_line = start_line
@@ -1258,25 +1324,27 @@ class FileManipulation(Component):
                         has_content = True
                         result += "Classes:\n"
                         for cls in classes:
-                            cls_start, cls_end = get_line_range(cls)
-                            result += f"- {cls.name} (lines {cls_start}-{cls_end})\n"
+                            start, end = get_line_range(cls)
+                            result += f"- {cls.name} (lines {start}-{end})\n"
 
+                            # Show methods if requested
                             if item_type in ["method", "all"]:
-                                methods = [node for node in ast.walk(cls) if isinstance(node, ast.FunctionDef)]
-                                for method in methods:
-                                    method.parent_class = cls.name  # Mark as a method
-                                    method_start, method_end = get_line_range(method)
-                                    result += f"  - {method.name} (lines {method_start}-{method_end})\n"
+                                methods = [
+                                    node for node in cls.body if isinstance(node, ast.FunctionDef)
+                                ]
+                                if methods:
+                                    for method in methods:
+                                        start, end = get_line_range(method)
+                                        result += f"  - {method.name} (lines {start}-{end})\n"
                         result += "\n"
 
-                # Check if we found anything
                 if not has_content:
                     result += f"No {item_type} items found in {path}."
 
-                return result
-
-            except Exception as e:
+            except OSError as e:
                 return f"Error analyzing code structure: {e!s}"
+            else:
+                return result
 
         # Return all tools
         return [
