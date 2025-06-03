@@ -39,7 +39,7 @@ export function getNewPythonApiCode({
     tweaksObject,
     activeTweaks,
     "python",
-    8,
+    4,
   );
 
   // Generate payload entries with proper Python formatting
