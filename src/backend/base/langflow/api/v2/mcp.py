@@ -111,19 +111,19 @@ async def get_server_endpoint(
     """Get a specific server."""
     return await get_server(server_name, current_user, session, storage_service)
 
-@router.post("/servers/{server_name}")
-async def add_server(
+async def update_server(
     server_name: str,
     server_config: dict,
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service=Depends(get_storage_service),
     settings_service=Depends(get_settings_service),
+    *,
+    check_existing: bool = False
 ):
-    """Add a new server configuration."""
     server_list = await get_server_list(current_user, session, storage_service, settings_service)
 
-    if server_name in server_list["mcpServers"]:
+    if check_existing and server_name in server_list["mcpServers"]:
         return {"error": "Server already exists."}
 
     # Remove the existing file
@@ -140,3 +140,40 @@ async def add_server(
     )
 
     return await get_server(server_name, current_user, session, storage_service)
+
+@router.post("/servers/{server_name}")
+async def add_server(
+    server_name: str,
+    server_config: dict,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    storage_service=Depends(get_storage_service),
+    settings_service=Depends(get_settings_service),
+):
+    return await update_server(
+        server_name,
+        server_config,
+        current_user,
+        session,
+        storage_service,
+        settings_service,
+        check_existing=True,
+    )
+
+@router.patch("/servers/{server_name}")
+async def update_server_endpoint(
+    server_name: str,
+    server_config: dict,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    storage_service=Depends(get_storage_service),
+    settings_service=Depends(get_settings_service),
+):
+    return await update_server(
+        server_name,
+        server_config,
+        current_user,
+        session,
+        storage_service,
+        settings_service,
+    )
