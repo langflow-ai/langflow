@@ -415,7 +415,7 @@ def print_banner(host: str, port: int, protocol: str) -> None:
             "To contribute, set: [bold]DO_NOT_TRACK=false[/bold] in your environment."
         )
     )
-    access_host = host if host != "0.0.0.0" else "localhost"
+    access_host = host if host != "0.0.0.0" else "localhost"  # noqa: S104
     access_link = f"[bold]🟢 Open Langflow →[/bold] [link={protocol}://{access_host}:{port}]{protocol}://{access_host}:{port}[/link]"
 
     message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
