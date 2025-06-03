@@ -79,7 +79,7 @@ dependencies = [
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
     "langchain-cohere==0.3.3",
-    "langchain-anthropic==0.3.0",
+    "langchain-anthropic==0.3.14",
     "langchain-astradb~=0.6.0",
     "langchain-openai==0.2.12",
     "langchain-google-vertexai==2.0.7",
@@ -236,7 +236,7 @@ filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-markers = ["async_test", "api_key_required"]
+markers = ["async_test", "api_key_required", "no_blockbuster", "benchmark"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
