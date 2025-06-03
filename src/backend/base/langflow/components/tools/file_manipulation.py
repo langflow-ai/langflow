@@ -176,9 +176,12 @@ class PathHandler:
         full_path = (workspace_path / relative_path).resolve()
 
         # Security check: ensure path is within workspace
-        if not str(full_path).startswith(str(workspace_path.resolve())):
+        # Use Path.relative_to() for robust, OS-aware boundary validation
+        try:
+            full_path.relative_to(workspace_path.resolve())
+        except ValueError:
             msg = f"Path must be within workspace: {relative_path}"
-            raise ValueError(msg)
+            raise ValueError(msg) from None
 
         # Check existence if required
         if must_exist and not full_path.exists():
@@ -196,9 +199,15 @@ class PathHandler:
         Returns:
             True if the path is within the workspace; otherwise, False.
         """
-        abs_path = Path(path).resolve()
-        abs_workspace = Path(self.workspace_folder).resolve()
-        return str(abs_path).startswith(str(abs_workspace))
+        try:
+            abs_path = Path(path).resolve()
+            abs_workspace = Path(self.workspace_folder).resolve()
+            # Use Path.relative_to() for robust, OS-aware boundary validation
+            abs_path.relative_to(abs_workspace)
+        except ValueError:
+            return False
+        else:
+            return True
 
     def ensure_directory_exists(self, path: str) -> None:
         """Ensures that the parent directory of the specified path exists, creating it if necessary."""
@@ -259,8 +268,13 @@ class FileManipulation(Component):
             if path_obj.stat().st_size == 0:
                 return f"File is empty: {file_path}"
 
-            with path_obj.open(encoding="utf-8") as f:
-                lines = f.readlines()
+            try:
+                with path_obj.open(encoding="utf-8") as f:
+                    lines = f.readlines()
+            except UnicodeDecodeError:
+                return (
+                    f"Error: Cannot decode file as UTF-8: {file_path}. File may be binary or use a different encoding."
+                )
 
             # Determine the range of lines to show
             total_lines = len(lines)
@@ -344,6 +358,10 @@ class FileManipulation(Component):
                     with path_obj.open(encoding="utf-8") as f:
                         content = f.read()
                         lines = content.splitlines(keepends=True)
+                except UnicodeDecodeError:
+                    return (
+                        f"Error: Cannot decode file as UTF-8: {path}. File may be binary or use a different encoding."
+                    )
                 except OSError as e:
                     return f"Error reading file: {e!s}"
 
@@ -544,7 +562,7 @@ class FileManipulation(Component):
         # Plain string search
         elif context_before or context_after:
             # Context-aware search
-
+            pattern_str = ""
             try:
                 if context_before and context_after:
                     pattern_str = f"(?<={re.escape(context_before)})({re.escape(search)})(?={re.escape(context_after)})"
@@ -686,6 +704,8 @@ class FileManipulation(Component):
 
             except FileNotFoundError:
                 return f"Error: File not found: {path}"
+            except UnicodeDecodeError:
+                return f"Error: Cannot decode file as UTF-8: {path}. File may be binary or use a different encoding."
             except OSError as e:
                 return f"Error viewing file: {e!s}"
             else:
@@ -1147,6 +1167,8 @@ class FileManipulation(Component):
                 diff = difflib.unified_diff(old_lines, new_lines, lineterm="", n=3)
 
                 diff_text = "\n".join(diff)
+            except UnicodeDecodeError:
+                return f"Error: Cannot decode file as UTF-8: {path}. File may be binary or use a different encoding."
             except OSError as e:
                 return f"Error generating patch: {e!s}"
             else:
@@ -1264,6 +1286,8 @@ class FileManipulation(Component):
                 if not has_content:
                     result += f"No {item_type} items found in {path}."
 
+            except UnicodeDecodeError:
+                return f"Error: Cannot decode file as UTF-8: {path}. File may be binary or use a different encoding."
             except OSError as e:
                 return f"Error analyzing code structure: {e!s}"
             else:
