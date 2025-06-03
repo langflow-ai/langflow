@@ -6,7 +6,7 @@ slug: /typescript-client
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-The Langflow TypeScript client integrates Langflow's capabilities into your TypeScript applications.
+The Langflow TypeScript client allows your TypeScript applications to programatically interact with the Langflow API.
 
 For more information, see the [langflow-client-ts](https://github.com/datastax/langflow-client-ts/) repository.
 
@@ -114,7 +114,7 @@ The exact structure of the returned `inputs` and `outputs` depends on how your f
 console.log(response.chatOutputText());
 ```
 
-## Extend the Langflow TypeScript client quickstart
+## Use advanced TypeScript client features
 
 The TypeScript client can do more than just connect to your server and run a flow.
 
