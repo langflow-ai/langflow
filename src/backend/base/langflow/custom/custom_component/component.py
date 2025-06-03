@@ -35,6 +35,7 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
+from langflow.services.deps import get_db_service
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -162,6 +163,8 @@ class Component(CustomComponent):
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
+        self._set_output_required_inputs()
+        self._database_available: bool | None = None
 
     def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
         source_dict = {}
@@ -1460,6 +1463,10 @@ class Component(CustomComponent):
 
         return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
 
+    def _is_database_available(self) -> bool:
+        """Check if the database is available."""
+        return get_db_service().database_available
+
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type."""
         return (
@@ -1467,7 +1474,7 @@ class Component(CustomComponent):
             and not (self._vertex.is_output or self._vertex.is_input)
             and not self.is_connected_to_chat_output()
             and not isinstance(message, ErrorMessage)
-        )
+        ) or not self._is_database_available()
 
     async def send_message(self, message: Message, id_: str | None = None):
         if self._should_skip_message(message):
