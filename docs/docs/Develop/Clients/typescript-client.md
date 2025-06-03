@@ -244,7 +244,7 @@ runFlow().catch(console.error);
 
 </details>
 
-## Retrieve logs from Langflow
+## Retrieve Langflow logs with the TypeScript client
 
 To retrieve Langflow logs, you must enable log retrieval on your Langflow server by including the following values in your server's `.env` file:
 
