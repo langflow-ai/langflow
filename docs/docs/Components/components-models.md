@@ -31,7 +31,7 @@ Model components receive inputs and prompts for generating text, and the generat
 This example has the OpenAI model in a chatbot flow. For more information, see the [Basic prompting flow](/starter-projects-basic-prompting).
 
 1. Add the **Language Model** component to your flow.
-The default model is OpenAI's GPT-4.1 mini model. Based on [Open AI's recommendations](https://platform.openai.com/docs/models/gpt-4.1-mini), this model is a good, balanced starter model.
+The default model is OpenAI's GPT-4.1 mini model. Based on [OpenAI's recommendations](https://platform.openai.com/docs/models/gpt-4.1-mini), this model is a good, balanced starter model.
 2. In the **OpenAI API Key** field, enter your OpenAI API key.
 3. Add a [Prompt](/components-prompts) component to your flow.
 4. To connect the [Prompt](/components-prompts) component to the **Language Model** component, on the **Language Model** component, click **Controls**.
