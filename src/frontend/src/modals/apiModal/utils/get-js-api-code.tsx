@@ -1,4 +1,9 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
+import {
+  buildBasePayload,
+  collectTweaksKeys,
+  getFormattedTweaksString,
+} from "./payload-utils";
 
 /**
  * Generates JavaScript code for making API calls to a Langflow endpoint.
@@ -35,8 +40,51 @@ export function getNewJsApiCode({
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
-  const tweaksString =
-    tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
+  // Use shared utilities for consistent payload handling
+  const tweaksKeys = collectTweaksKeys(tweaksObject, activeTweaks);
+  const basePayload = buildBasePayload(
+    tweaksKeys,
+    input_value,
+    input_type,
+    output_type,
+    true,
+  ); // Include session_id for JS
+  const tweaksString = getFormattedTweaksString(
+    tweaksObject,
+    activeTweaks,
+    "javascript",
+    4,
+  );
+
+  // Generate payload entries for JavaScript object
+  const payloadEntries = Object.entries(basePayload).map(([key, value]) => {
+    const comment =
+      key === "input_value"
+        ? " // The input value to be processed by the flow"
+        : key === "output_type"
+          ? " // Specifies the expected output format"
+          : key === "input_type"
+            ? " // Specifies the input format"
+            : key === "session_id"
+              ? " // Optional: Use session tracking if needed"
+              : "";
+    return `    "${key}": "${value}"${comment}`;
+  });
+
+  const hasTweaks = activeTweaks && tweaksObject;
+  const payloadString =
+    payloadEntries.length > 0
+      ? payloadEntries
+          .map((entry, index) => {
+            const needsComma = hasTweaks || index < payloadEntries.length - 1;
+            return `${entry}${needsComma ? "," : ""}`;
+          })
+          .join("\n")
+      : "";
+
+  const tweaksLine = hasTweaks
+    ? `${payloadEntries.length > 0 ? ",\n" : ""}    "tweaks": ${tweaksString}`
+    : "";
 
   return `${
     isAuthenticated
@@ -47,16 +95,7 @@ if (!process.env.LANGFLOW_API_KEY) {
 `
       : ""
   }const payload = {
-    "input_value": "${input_value}",
-    "output_type": "${output_type}",
-    "input_type": "${input_type}",
-    // Optional: Use session tracking if needed
-    "session_id": "user_1"${
-      activeTweaks && tweaksObject
-        ? `,
-    "tweaks": ${tweaksString}`
-        : ""
-    }
+${payloadString}${tweaksLine}
 };
 
 const options = {

@@ -1,4 +1,9 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
+import {
+  buildBasePayload,
+  collectTweaksKeys,
+  getFormattedTweaksString,
+} from "./payload-utils";
 
 export function getNewPythonApiCode({
   flowId,
@@ -22,46 +27,95 @@ export function getNewPythonApiCode({
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
-  const tweaksString =
-    tweaksObject && activeTweaks
-      ? JSON.stringify(tweaksObject, null, 4)
-          .replace(/true/g, "True")
-          .replace(/false/g, "False")
-          .replace(/null/g, "None")
-      : "{}";
+  // Use shared utilities for consistent payload handling
+  const tweaksKeys = collectTweaksKeys(tweaksObject, activeTweaks);
+  const basePayload = buildBasePayload(
+    tweaksKeys,
+    input_value,
+    input_type,
+    output_type,
+  );
+  const tweaksString = getFormattedTweaksString(
+    tweaksObject,
+    activeTweaks,
+    "python",
+    8,
+  );
+
+  // Generate payload entries with proper Python formatting
+  const payloadEntries = Object.entries(basePayload).map(([key, value]) => {
+    const comment =
+      key === "input_value"
+        ? "  # The input value to be processed by the flow"
+        : key === "output_type"
+          ? "  # Specifies the expected output format"
+          : key === "input_type"
+            ? "  # Specifies the input format"
+            : "";
+    return `    "${key}": "${value}"${comment}`;
+  });
+
+  const hasPayloadEntries = payloadEntries.length > 0;
+  const hasTweaks = activeTweaks && tweaksObject;
+
+  // Build payload string with proper comma placement
+  const payloadString = hasPayloadEntries
+    ? payloadEntries
+        .map((entry, index) => {
+          const isLastPayloadEntry = index === payloadEntries.length - 1;
+          const needsComma = hasTweaks || !isLastPayloadEntry;
+          if (needsComma) {
+            const commentIndex = entry.indexOf("  #");
+            if (commentIndex !== -1) {
+              return (
+                entry.slice(0, commentIndex) + "," + entry.slice(commentIndex)
+              );
+            } else {
+              return entry + ",";
+            }
+          }
+          return entry;
+        })
+        .join("\n")
+    : "";
+
+  const tweaksLine = hasTweaks
+    ? `${hasPayloadEntries ? "\n" : ""}    "tweaks": ${tweaksString} # Custom tweaks to modify flow behavior`
+    : "";
 
   return `import requests
 ${
   isAuthenticated
     ? `import os
+
 # API Configuration
 try:
     api_key = os.environ["LANGFLOW_API_KEY"]
 except KeyError:
-    raise ValueError("LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.")\n`
+    raise ValueError("LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.")
+
+`
     : ""
 }url = "${apiUrl}"  # The complete API endpoint URL for this flow
 
 # Request payload configuration
 payload = {
-    "input_value": "${input_value}",  # The input value to be processed by the flow
-    "output_type": "${output_type}",  # Specifies the expected output format
-    "input_type": "${input_type}"  # Specifies the input format${
-      activeTweaks && tweaksObject
-        ? `,
-    "tweaks": ${tweaksString}  # Custom tweaks to modify flow behavior`
-        : ""
-    }
+${payloadString}${tweaksLine}
 }
 
 # Request headers
 headers = {
-    "Content-Type": "application/json"${isAuthenticated ? ',\n    "x-api-key": api_key  # Authentication key from environment variable' : ""}
+    "Content-Type": "application/json"${
+      isAuthenticated
+        ? `,
+    "x-api-key": api_key  # Authentication key from environment variable`
+        : ""
+    }
 }
 
 try:
     # Send API request
-    response = requests.request("POST", url, json=payload, headers=headers)
+    response = requests.post(url, json=payload, headers=headers)
     response.raise_for_status()  # Raise exception for bad status codes
 
     # Print response
@@ -71,5 +125,5 @@ except requests.exceptions.RequestException as e:
     print(f"Error making API request: {e}")
 except ValueError as e:
     print(f"Error parsing response: {e}")
-    `;
+`;
 }
