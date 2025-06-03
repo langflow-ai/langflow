@@ -218,10 +218,10 @@ class MemoryComponent(Component):
 
     def update_build_config(self, build_config: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
         build_config = set_current_fields(
-                build_config=build_config,
-                action_fields=self.mode_config,
-                selected_action=build_config["mode"]["value"],
-                default_fields=self.default_keys,
-                func=set_field_display,
-            )
+            build_config=build_config,
+            action_fields=self.mode_config,
+            selected_action=build_config["mode"]["value"],
+            default_fields=self.default_keys,
+            func=set_field_display,
+        )
         return build_config
