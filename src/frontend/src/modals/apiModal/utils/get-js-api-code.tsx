@@ -1,9 +1,5 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
-import {
-  buildBasePayload,
-  collectTweaksKeys,
-  getFormattedTweaksString,
-} from "./payload-utils";
+import { buildBasePayload, getFormattedTweaksString } from "./payload-utils";
 
 /**
  * Generates JavaScript code for making API calls to a Langflow endpoint.
@@ -40,15 +36,15 @@ export function getNewJsApiCode({
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
-  // Use shared utilities for consistent payload handling
-  const tweaksKeys = collectTweaksKeys(tweaksObject, activeTweaks);
+  // Use improved payload building logic that considers node types
   const basePayload = buildBasePayload(
-    tweaksKeys,
+    tweaksObject,
+    activeTweaks,
     input_value,
     input_type,
     output_type,
-    true,
-  ); // Include session_id for JS
+    true, // Include session_id for JS
+  );
   const tweaksString = getFormattedTweaksString(
     tweaksObject,
     activeTweaks,
