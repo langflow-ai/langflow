@@ -256,7 +256,6 @@ jobs:
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
       TAVILY_API_KEY: "${{ secrets.TAVILY_API_KEY }}"
       LANGFLOW_DEACTIVE_TRACING: "true"
-      UV_CACHE_DIR: /tmp/.uv-cache
     outputs:
       failed: ${{ steps.check-failure.outputs.failed }}
     steps:
