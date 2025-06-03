@@ -71,9 +71,9 @@ export default function SettingsPage(): JSX.Element {
     },
   );
 
+  // TODO: Remove this on cleanup
   if (!ENABLE_DATASTAX_LANGFLOW) {
     const langflowItems = CustomStoreSidebar(true, ENABLE_LANGFLOW_STORE);
-
     sidebarNavItems.splice(2, 0, ...langflowItems);
   }
 
