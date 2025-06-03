@@ -1,10 +1,10 @@
-const Icon = (props) => (
+const OutlookIconSVG = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    xmlns:xlink="http://www.w3.org/1999/xlink"
     viewBox="0 0 48 48"
     width="23px"
     height="23px"
+    {...props}
   >
     <path
       fill="#03A9F4"
@@ -21,4 +21,4 @@ const Icon = (props) => (
     />
   </svg>
 );
-export default Icon;
+export default OutlookIconSVG;
