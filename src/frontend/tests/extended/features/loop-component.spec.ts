@@ -132,7 +132,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-loopcomponent-shownode-dataframe-left")
+      .getByTestId("handle-loopcomponent-shownode-inputs-left")
       .first()
       .click();
 
