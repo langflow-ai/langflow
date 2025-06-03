@@ -27,6 +27,7 @@ import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_MCP_NOTICE,
+  ENABLE_STORE_REFERENCE,
 } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
@@ -473,7 +474,9 @@ const SideBarFoldersButtonsComponent = ({
       {ENABLE_FILE_MANAGEMENT && (
         <SidebarFooter className="border-t">
           <div className="grid w-full items-center gap-2 p-2">
-            {!ENABLE_DATASTAX_LANGFLOW && <CustomStoreButton />}
+            {!ENABLE_DATASTAX_LANGFLOW && ENABLE_STORE_REFERENCE && (
+              <CustomStoreButton />
+            )}
             <SidebarMenuButton
               isActive={checkPathFiles}
               onClick={() => handleFilesClick?.()}

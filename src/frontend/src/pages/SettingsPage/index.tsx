@@ -4,6 +4,7 @@ import { CustomStoreSidebar } from "@/customization/components/custom-store-side
 import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_PROFILE_ICONS,
+  ENABLE_STORE_REFERENCE,
 } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
@@ -71,7 +72,7 @@ export default function SettingsPage(): JSX.Element {
   );
 
   if (!ENABLE_DATASTAX_LANGFLOW) {
-    const langflowItems = CustomStoreSidebar();
+    const langflowItems = CustomStoreSidebar(true, ENABLE_STORE_REFERENCE);
 
     sidebarNavItems.splice(2, 0, ...langflowItems);
   }
