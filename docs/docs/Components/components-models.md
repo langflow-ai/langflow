@@ -7,46 +7,22 @@ import Icon from "@site/src/components/icon";
 
 :::important
 Components in the **Language models** category are moved to **Bundles** as of Langflow 1.5.
-Instead, use an [Language model](/components-models) component.
+Instead, use the [Language model](/components-models#language-model) component.
 :::
 
 Model components in Langflow generate text or text embeddings using the selected Large Language Model.
 
-Prior to Langflow 1.5, each LLM provider had its own component in the Components menu.
+Prior to Langflow 1.5, each LLM and embedding model provider had its own component in the Components menu.
 
 Most use cases can be performed with the **Language Model** and **Embeddings Model** components.
-If you want to try additional providers, the single-provider LLM components of both the **Model** and **Embedding Model** types are now found in **Bundles**, and are still available to use.
+
+If you want to try additional providers not supported by the new components, the single-provider LLM components of both the **Model** and **Embedding Model** types are now found in **Bundles**, and are still available to use.
 
 ## Language model
 
 This component generates text using language models selected within the dropdown menu.
 
 Instead of swapping out model components when you want to try a different provider, like switching between OpenAI and Anthropic components, change the provider dropdown in this single component. This makes it easier to experiment with and compare different models while keeping the rest of your flow intact.
-
-For more information, see the [OpenAI documentation](https://platform.openai.com/docs) and [Anthropic documentation](https://docs.anthropic.com/).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| provider | String | The model provider to use. Options: "OpenAI", "Anthropic". Default: "OpenAI". |
-| model_name | String | The name of the model to use. Options depend on the selected provider. |
-| api_key | SecretString | The API Key for authentication with the selected provider. |
-| input_value | String | The input text to send to the model. |
-| system_message | String | A system message that helps set the behavior of the assistant (advanced). |
-| stream | Boolean | Whether to stream the response. Default: `False` (advanced). |
-| temperature | Float | Controls randomness in responses. Range: `[0.0, 1.0]`. Default: `0.1` (advanced). |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| model | LanguageModel | An instance of ChatOpenAI or ChatAnthropic configured with the specified parameters. |
-
-</details>
 
 ### Use a Language Model component in a flow
 
@@ -81,7 +57,7 @@ The capital of Utah is Salt Lake City. It is not only the largest city in the st
 In the **Language Model** component, in the **Model Provider** field, select **Anthropic**.
 10. In the **Model Name** field, select your Anthropic model.
 This model uses Claude 3.5 Haiku, based on [Anthropic's recommendation](https://docs.anthropic.com/en/docs/about-claude/models/choosing-a-model) for a fast and cost-effective model.
-12. In the **Anthropic API Key** field, enter your Anthropic API key.
+11. In the **Anthropic API Key** field, enter your Anthropic API key.
 12. Open the **Playground**, and ask the same question as you did before.
 The response from the Anthropic model is less verbose, and lists its sources outside of the informative paragraph.
 
@@ -98,7 +74,32 @@ U.S. Census Bureau
 Encyclopedia Britannica
 ```
 
-## Language model bundled
+For more information, see the [OpenAI documentation](https://platform.openai.com/docs) and [Anthropic documentation](https://docs.anthropic.com/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| provider | String | The model provider to use. |
+| model_name | String | The name of the model to use. Options depend on the selected provider. |
+| api_key | SecretString | The API Key for authentication with the selected provider. |
+| input_value | String | The input text to send to the model. |
+| system_message | String | A system message that helps set the behavior of the assistant. |
+| stream | Boolean | Whether to stream the response. Default: `False`. |
+| temperature | Float | Controls randomness in responses. Range: `[0.0, 1.0]`. Default: `0.1`. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of ChatOpenAI or ChatAnthropic configured with the specified parameters. |
+
+</details>
+
+## Language model bundles
 
 As of Langflow 1.5 the following components are now part of **Bundles**.
 

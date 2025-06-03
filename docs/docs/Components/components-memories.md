@@ -7,6 +7,10 @@ slug: /components-memories
 
 Components in the **Memories** category are moved to **Bundles** as of Langflow 1.5.
 
+**Bundles** are third-party components grouped by provider.
+
+For more information on bundled components, see the component provider's documentation.
+
 ## Use a memory component in a flow
 
 Memory components store and retrieve chat messages by `session_id`.

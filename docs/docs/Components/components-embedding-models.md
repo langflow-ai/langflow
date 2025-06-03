@@ -5,36 +5,56 @@ slug: /components-embedding-models
 
 import Icon from "@site/src/components/icon";
 
-# Embedding models in Langflow
+# Embedding model components in Langflow
 
 :::important
 Components in the **Embedding models** category are moved to **Bundles** as of Langflow 1.5.
-Instead, use an [Embedding model](/components-models) component.
+Instead, use the [Embedding model](/components-embedding-models#embedding-model) component.
 :::
 
-Model components in Langflow generate text or text embeddings using the selected Large Language Model.
+Embedding model components in Langflow generate text embeddings using the selected Large Language Model.
 
-Prior to Langflow 1.5, each LLM provider had its own component in the **Components** menu and **Playground**.
+Prior to Langflow 1.5, each embedding model provider had its own component in the **Components** menu and **Playground**.
 
 Most use cases can be performed with the **Language Model** and **Embedding Model** components.
-If you want to try additional providers, the single-provider LLM components of both the **Model** and **Embedding Model** types are now found in **Bundles**, and are still available for use.
 
-## Use an embedding model component in a flow
+If you want to try additional providers not supported by the new components, the single-provider LLM components of both the **Language Model** and **Embedding Model** types are now found in **Bundles**, and are still available for use.
+
+## Embedding model
 
 Embedding models convert text into numerical vectors. These embeddings capture the semantic meaning of the input text, and allow LLMs to understand context.
 
-In this example of a document ingestion pipeline, the **OpenAI** embeddings model is connected to a vector database. The component converts the text chunks into vectors and stores them in the vector database. The vectorized data can be used to inform AI workloads like chatbots, similarity searches, and agents.
+This embeddings component uses an OpenAI API key for authentication.
 
-This embeddings component uses an OpenAI API key for authentication. Refer to your specific embeddings component's documentation for more information on authentication.
+## Use an Embedding Model component in a flow
 
-![URL component in a data ingestion pipeline](/img/component-chroma-db.png)
+Create a semantic search system with the **Embedding model** component.
 
-## Embeddings Model
+1. Add the **Embedding model** component to your flow.
+   The default model is OpenAI's `text-embedding-3-small`. Based on [OpenAI's recommendations](https://platform.openai.com/docs/guides/embeddings#embedding-models), this model is a good balance of performance and cost.
+2. In the **OpenAI API Key** field, enter your OpenAI API key.
+3. Add a [Split text](/components-processing#text-splitter) component to your flow.
+   This component splits your input text into smaller chunks to be processed into embeddings.
+4. Add a [Chroma DB](/components-vector-stores#chroma-db) vector store component to your flow.
+   This component stores your text embeddings for later retrieval.
+5. Connect the **Text Splitter** component's **Chunks** output to the **Chroma DB** component's **Ingest Data** input.
+6. Connect the **Embedding model** component's **Embeddings** output to the **Chroma DB** component's **Embeddings** input.
 
+This flow embeds the split text into the local Chroma vector store using the `text-embedding-3-small` model.
+Your flow looks like this:
 
-### Use an Embedding Model component in a flow
+![Embedding to vector store](/img/component-embedding-models.png)
 
-This component provides a flexible way to generate embeddings using various providers. Currently, it supports OpenAI as a provider, with more providers planned for future releases.
+To query the your vector store, include [Chat Input](/components-io#chat-input) and [Chat Output](/components-io#chat-output) components.
+
+7. Connect a [Chat Input](/components-io#chat-input) component to the **Search Query** input of the Chroma DB vector store.
+8. Connect a [Chat Output](/components-io#chat-output) component to the **Search Results** port of the Chroma DB vector store.
+
+Your flow looks like this:
+![A simple semantic search flow using Embedding model](/img/component-embedding-models-add-chat.png)
+
+9. Open the **Playground** and enter a search query.
+The Playground returns the most semantically similar text chunks.
 
 <details>
 <summary>Parameters</summary>
@@ -43,26 +63,34 @@ This component provides a flexible way to generate embeddings using various prov
 
 | Name | Display Name | Type | Description |
 |------|--------------|------|-------------|
-| provider | Model Provider | Dropdown | Select the embedding model provider (currently only OpenAI is supported) |
-| model | Model Name | Dropdown | Select the embedding model to use (e.g., text-embedding-3-small) |
-| api_key | OpenAI API Key | SecretString | The API key required for authenticating with the provider |
-| api_base | API Base URL | String | Base URL for the API. Leave empty for default |
-| dimensions | Dimensions | Integer | The number of dimensions for the output embeddings (only supported by certain models) |
-| chunk_size | Chunk Size | Integer | The size of text chunks to process (default: 1000) |
+| provider | Model Provider | Dropdown | Select the embedding model provider. |
+| model | Model Name | Dropdown | Select the embedding model to use.|
+| api_key | OpenAI API Key | SecretString | The API key required for authenticating with the provider. |
+| api_base | API Base URL | String | Base URL for the API. Leave empty for default. |
+| dimensions | Dimensions | Integer | The number of dimensions for the output embeddings. |
+| chunk_size | Chunk Size | Integer | The size of text chunks to process. Default: `1000`. |
 | request_timeout | Request Timeout | Float | Timeout for API requests |
-| max_retries | Max Retries | Integer | Maximum number of retry attempts (default: 3) |
-| show_progress_bar | Show Progress Bar | Boolean | Whether to display a progress bar during embedding generation |
-| model_kwargs | Model Kwargs | Dictionary | Additional keyword arguments to pass to the model |
+| max_retries | Max Retries | Integer | Maximum number of retry attempts. Default: `3`. |
+| show_progress_bar | Show Progress Bar | Boolean | Whether to display a progress bar during embedding generation. |
+| model_kwargs | Model Kwargs | Dictionary | Additional keyword arguments to pass to the model. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| embeddings | Embeddings | An instance for generating embeddings using the selected provider |
+| embeddings | Embeddings | An instance for generating embeddings using the selected provider. |
 
 </details>
 
-## AI/ML
+## Embedding models bundles
+
+As of Langflow 1.5 the following components are now part of **Bundles**.
+
+**Bundles** are third-party components grouped by provider.
+
+For more information on bundled components, see the component provider's documentation.
+
+### AI/ML
 
 This component generates embeddings using the [AI/ML API](https://docs.aimlapi.com/api-overview/embeddings).
 
@@ -84,7 +112,7 @@ This component generates embeddings using the [AI/ML API](https://docs.aimlapi.c
 
 </details>
 
-## Amazon Bedrock Embeddings
+### Amazon Bedrock Embeddings
 
 This component is used to load embedding models from [Amazon Bedrock](https://aws.amazon.com/bedrock/).
 
@@ -108,7 +136,7 @@ This component is used to load embedding models from [Amazon Bedrock](https://aw
 
 </details>
 
-## Astra DB vectorize
+### Astra DB vectorize
 
 :::important
 This component is deprecated as of Langflow version 1.1.2.
@@ -141,7 +169,7 @@ For more information and instructions, see [Embedding Generation](https://docs.d
 
 </details>
 
-## Azure OpenAI Embeddings
+### Azure OpenAI Embeddings
 
 This component generates embeddings using Azure OpenAI models.
 
@@ -166,7 +194,7 @@ This component generates embeddings using Azure OpenAI models.
 
 </details>
 
-## Cloudflare Workers AI Embeddings
+### Cloudflare Workers AI Embeddings
 
 This component generates embeddings using [Cloudflare Workers AI models](https://developers.cloudflare.com/workers-ai/).
 
@@ -193,7 +221,7 @@ This component generates embeddings using [Cloudflare Workers AI models](https:/
 
 </details>
 
-## Cohere Embeddings
+### Cohere Embeddings
 
 This component is used to load embedding models from [Cohere](https://cohere.com/).
 
@@ -216,7 +244,7 @@ This component is used to load embedding models from [Cohere](https://cohere.com
 
 </details>
 
-## Embedding similarity
+### Embedding similarity
 
 This component computes selected forms of similarity between two embedding vectors.
 
@@ -238,7 +266,7 @@ This component computes selected forms of similarity between two embedding vecto
 
 </details>
 
-## Google generative AI embeddings
+### Google generative AI embeddings
 
 This component connects to Google's generative AI embedding service using the GoogleGenerativeAIEmbeddings class from the `langchain-google-genai` package.
 
@@ -260,7 +288,7 @@ This component connects to Google's generative AI embedding service using the Go
 
 </details>
 
-## Hugging Face Embeddings
+### Hugging Face Embeddings
 
 :::note
 This component is deprecated as of Langflow version 1.0.18.
@@ -292,7 +320,7 @@ Use this component to generate embeddings using locally downloaded Hugging Face 
 
 </details>
 
-## Hugging Face embeddings inference
+### Hugging Face embeddings inference
 
 This component generates embeddings using [Hugging Face Inference API models](https://huggingface.co/) and requires a [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) to authenticate. Local inference models do not require an API key.
 
@@ -317,7 +345,7 @@ Use this component to create embeddings with Hugging Face's hosted models, or to
 
 </details>
 
-### Connect the Hugging Face component to a local embeddings model
+#### Connect the Hugging Face component to a local embeddings model
 
 To run an embeddings inference locally, see the [HuggingFace documentation](https://huggingface.co/docs/text-embeddings-inference/local_cpu).
 
@@ -330,7 +358,7 @@ There are two embeddings models in this flow that you can replace with **Hugging
 4. In the **Hugging Face** components, set the **Inference Endpoint** field to the URL of your local inference model. **The **API Key** field is not required for local inference.**
 5. Run the flow. The local inference models generate embeddings for the input text.
 
-## IBM watsonx embeddings
+### IBM watsonx embeddings
 
 This component generates text using [IBM watsonx.ai](https://www.ibm.com/watsonx) foundation models.
 
@@ -347,7 +375,7 @@ The **IBM watsonx** embeddings component converts the text chunks into embedding
 The values for **API endpoint**, **Project ID**, **API key**, and **Model Name** are found in your IBM watsonx.ai deployment.
 For more information, see the [Langchain documentation](https://python.langchain.com/docs/integrations/text_embedding/ibm_watsonx/).
 
-### Default models
+#### Default models
 
 The component supports several default models with the following vector dimensions:
 
@@ -380,7 +408,7 @@ The component automatically fetches and updates the list of available models fro
 
 </details>
 
-## LM Studio Embeddings
+### LM Studio Embeddings
 
 This component generates embeddings using [LM Studio](https://lmstudio.ai/docs) models.
 
@@ -404,7 +432,7 @@ This component generates embeddings using [LM Studio](https://lmstudio.ai/docs) 
 
 </details>
 
-## MistralAI
+### MistralAI
 
 This component generates embeddings using [MistralAI](https://docs.mistral.ai/) models.
 
@@ -430,7 +458,7 @@ This component generates embeddings using [MistralAI](https://docs.mistral.ai/) 
 
 </details>
 
-## NVIDIA
+### NVIDIA
 
 This component generates embeddings using [NVIDIA models](https://docs.nvidia.com).
 
@@ -454,7 +482,7 @@ This component generates embeddings using [NVIDIA models](https://docs.nvidia.co
 
 </details>
 
-## Ollama embeddings
+### Ollama embeddings
 
 This component generates embeddings using [Ollama models](https://ollama.com/).
 
@@ -492,7 +520,7 @@ For more information, see the [Ollama documentation](https://ollama.com/).
 
 </details>
 
-## OpenAI Embeddings
+### OpenAI Embeddings
 
 This component is used to load embedding models from [OpenAI](https://openai.com/).
 
@@ -534,7 +562,7 @@ This component is used to load embedding models from [OpenAI](https://openai.com
 
 </details>
 
-## Text embedder
+### Text embedder
 
 This component generates embeddings for a given message using a specified embedding model.
 
@@ -556,7 +584,7 @@ This component generates embeddings for a given message using a specified embedd
 
 </details>
 
-## VertexAI Embeddings
+### VertexAI Embeddings
 
 This component is a wrapper around [Google Vertex AI](https://cloud.google.com/vertex-ai) [Embeddings API](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings).
 

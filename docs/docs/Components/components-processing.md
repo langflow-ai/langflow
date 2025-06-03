@@ -623,6 +623,9 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 
 ### Data to DataFrame
 
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
 This component converts one or multiple [Data](/concepts-objects#data-object) objects into a [DataFrame](/concepts-objects#dataframe-object). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
 
 1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data to Dataframe** component's input.
