@@ -19,6 +19,11 @@ class BackupManager:
     """Simple backup system for file operations."""
     
     def __init__(self, workspace_folder: str):
+        """
+        Initializes the BackupManager with a workspace folder and prepares the backup system.
+        
+        Creates a `.backups` directory within the workspace if it does not exist, and sets up internal registries for tracking file backups and undo/redo positions.
+        """
         self.workspace_folder = workspace_folder
         self.backup_folder = os.path.join(workspace_folder, ".backups")
         self.backup_registry = {}  # file_path -> [backup_ids]
@@ -28,7 +33,11 @@ class BackupManager:
             os.makedirs(self.backup_folder)
     
     def backup_file(self, file_path: str) -> Optional[str]:
-        """Create a backup of a file before modifying it."""
+        """
+        Creates a timestamped backup of the specified file and updates the backup registry.
+        
+        If the file does not exist or the backup fails, returns None. On success, returns the backup ID.
+        """
         if not os.path.exists(file_path):
             return None
             
@@ -57,11 +66,23 @@ class BackupManager:
             return None
     
     def get_backups(self, file_path: str) -> List[str]:
-        """Get list of backups for a file."""
+        """
+        Returns a list of backup IDs for the specified file.
+        
+        Args:
+            file_path: The path to the file whose backups are requested.
+        
+        Returns:
+            A list of backup IDs associated with the file, or an empty list if none exist.
+        """
         return self.backup_registry.get(file_path, [])
     
     def get_backup_info(self, file_path: str) -> Dict[str, Any]:
-        """Get information about backup history."""
+        """
+        Returns backup history information for a given file.
+        
+        The returned dictionary includes the total number of backups, the current backup position, and booleans indicating whether undo or redo operations are possible.
+        """
         if file_path not in self.backup_registry:
             return {
                 "count": 0, 
@@ -81,7 +102,16 @@ class BackupManager:
         }
     
     def restore(self, file_path: str, direction: str = "undo") -> Tuple[bool, Optional[str], str]:
-        """Restore a file to a previous or newer version."""
+        """
+        Restores a file to a previous ("undo") or newer ("redo") backup version.
+        
+        Args:
+            file_path: Path to the file to restore.
+            direction: "undo" to revert to an earlier backup, "redo" to move to a newer backup.
+        
+        Returns:
+            A tuple containing a boolean indicating success, the backup ID or "current" if restored to the latest version, and a message describing the result.
+        """
         if file_path not in self.backup_registry:
             return False, None, "No backup history for this file"
             
@@ -129,11 +159,30 @@ class PathHandler:
     """Handle path operations safely."""
     
     def __init__(self, workspace_folder: str):
+        """
+        Initializes the PathHandler with the specified workspace folder.
+        
+        Args:
+            workspace_folder: The root directory for all path operations, used to enforce workspace boundaries.
+        """
         self.workspace_folder = workspace_folder
         self.platform = platform.system()
     
     def resolve_path(self, relative_path: str, must_exist: bool = True) -> str:
-        """Resolve a path relative to the workspace and check security constraints."""
+        """
+        Resolves a relative path to an absolute path within the workspace, enforcing security constraints.
+        
+        Args:
+            relative_path: The path relative to the workspace folder.
+            must_exist: If True, raises an error if the resolved path does not exist.
+        
+        Returns:
+            The absolute, normalized path within the workspace.
+        
+        Raises:
+            ValueError: If the path is absolute or outside the workspace.
+            FileNotFoundError: If must_exist is True and the path does not exist.
+        """
         # Check if absolute
         if os.path.isabs(relative_path):
             raise ValueError(f"Path must be relative to workspace: {relative_path}")
@@ -158,13 +207,23 @@ class PathHandler:
         return full_path
         
     def is_within_workspace(self, path: str) -> bool:
-        """Check if a path is within the workspace."""
+        """
+        Determines whether the given path is located inside the workspace directory.
+        
+        Args:
+            path: The file or directory path to check.
+        
+        Returns:
+            True if the path is within the workspace; otherwise, False.
+        """
         abs_path = os.path.abspath(path)
         abs_workspace = os.path.abspath(self.workspace_folder)
         return abs_path.startswith(abs_workspace)
     
     def ensure_directory_exists(self, path: str) -> None:
-        """Ensure that the directory for the given path exists."""
+        """
+        Ensures that the parent directory of the specified path exists, creating it if necessary.
+        """
         directory = os.path.dirname(path)
         if not os.path.exists(directory):
             os.makedirs(directory, exist_ok=True)
@@ -198,12 +257,19 @@ class FileManipulation(Component):
     ]
     
     def __init__(self, *args, **kwargs):
+        """
+        Initializes the FileManipulation component and sets up placeholders for backup and path handlers.
+        """
         super().__init__(*args, **kwargs)
         self.backup_manager = None
         self.path_handler = None
         
     def _get_file_preview(self, file_path: str, line_number: Optional[int] = None, context_lines: int = 5) -> str:
-        """Get a preview of file content with line numbers."""
+        """
+        Returns a formatted preview of a file's contents with line numbers.
+        
+        If a line number is specified, shows lines around that line with context and highlights the target line. If no line number is given, displays the first few lines of the file. Handles empty or missing files and reports errors as messages.
+        """
         try:
             resolved_path = self.path_handler.resolve_path(file_path)
             
@@ -256,7 +322,29 @@ class FileManipulation(Component):
         occurrence: int = 1,
         dry_run: bool = False
     ) -> str:
-        """Unified method for file editing operations."""
+        """
+        Performs a unified file editing operation such as replace, insert, remove, or move.
+        
+        Depending on the specified operation, this method modifies the file at the given path by replacing text, inserting new content at a specific line, removing a range of lines, or moving a block of lines to a new location. It supports dry-run mode, regex-based replacements, occurrence selection, and context constraints. The method ensures the file exists or creates it for insert operations, backs up the file before modification (unless dry run), and returns a message describing the action along with a preview of the affected file region.
+        
+        Args:
+            path: Relative path to the file to edit.
+            operation: The file editing operation to perform (replace, insert, remove, move).
+            search: Text or pattern to search for (used in replace).
+            replacement: Replacement text (used in replace and insert).
+            line_number: Starting line number for insert, remove, or move operations.
+            end_line: Ending line number for remove or move operations.
+            target_line: Target line number for move operations.
+            use_regex: Whether to interpret the search string as a regular expression.
+            replace_all: Whether to replace all occurrences (for replace).
+            context_before: Required context before the match (for replace).
+            context_after: Required context after the match (for replace).
+            occurrence: Which occurrence to replace (for replace).
+            dry_run: If True, shows the result without modifying the file.
+        
+        Returns:
+            A message describing the result of the operation and a preview of the affected file region. Returns an error message if the operation fails or is invalid.
+        """
         try:
             resolved_path = self.path_handler.resolve_path(path, must_exist=False)
             
@@ -472,7 +560,28 @@ class FileManipulation(Component):
         line_number: Optional[int], 
         occurrence: int
     ) -> Tuple[str, List[Tuple[int, int, int]]]:
-        """Find and replace content with various targeting options."""
+        """
+        Performs targeted find-and-replace operations within the provided content.
+        
+        Supports plain text or regular expression search, with options for context-aware matching, line number restriction, occurrence selection, and replacing all matches. Returns the modified content and a list of replaced locations as (start, end, line number) tuples.
+        
+        Args:
+            content: The text to search and modify.
+            search: The string or regex pattern to find.
+            replacement: The text to insert in place of each match.
+            use_regex: If True, interprets `search` as a regular expression.
+            replace_all: If True, replaces all matches; otherwise, only the specified occurrence.
+            context_before: Optional string that must precede a match.
+            context_after: Optional string that must follow a match.
+            line_number: If provided, restricts search to this line.
+            occurrence: The 1-based index of the match to replace if not replacing all.
+        
+        Returns:
+            A tuple containing the modified content and a list of (start, end, line number) for each replacement made.
+        
+        Raises:
+            ValueError: If an invalid regular expression is provided.
+        """
         lines = content.split('\n')
         occurrences = []
         
@@ -589,7 +698,11 @@ class FileManipulation(Component):
         return new_content, to_replace
     
     def build_toolkit(self) -> Tool:
-        """Build and return file system tools."""
+        """
+        Initializes and returns a suite of file system manipulation and inspection tools.
+        
+        This method sets up the backup and path handling infrastructure, then defines and returns a collection of tools for file and directory operations within the workspace. The toolkit includes functions for viewing and editing files, undoing and redoing changes, creating files, listing directories, moving files or directories, searching files and code, generating diff patches, and analyzing Python code structure. Each tool is decorated for integration and provides detailed results or previews, with built-in error handling and workspace boundary enforcement.
+        """
         # Initialize components
         self.backup_manager = BackupManager(self.workspace_folder)
         self.path_handler = PathHandler(self.workspace_folder)
@@ -598,14 +711,17 @@ class FileManipulation(Component):
         
         @tool
         def view_file(path: str, view_range: Optional[List[int]] = None) -> str:
-            """View file contents with line numbers.
+            """
+            Displays the contents of a file with line numbers.
+            
+            If a line range is provided, only those lines are shown; otherwise, the entire file is displayed. Returns an error message if the file does not exist or is empty.
             
             Args:
-                path: Path to the file relative to workspace
-                view_range: Optional [start_line, end_line] to view specific lines (use -1 for end of file)
-                
+                path: Relative path to the file within the workspace.
+                view_range: Optional two-element list [start_line, end_line] specifying the range of lines to display (use -1 for end of file).
+            
             Returns:
-                File contents with line numbers
+                A string containing the file contents with line numbers, or an error message if the file is not found or empty.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
@@ -656,22 +772,10 @@ class FileManipulation(Component):
             occurrence: int = 1,
             dry_run: bool = False
         ) -> str:
-            """Replace text in a file with enhanced targeting options.
+            """
+            Replaces text in a file with advanced options for targeting specific occurrences.
             
-            Args:
-                path: Path to the file relative to workspace
-                old_str: Text or regex pattern to search for
-                new_str: Text to replace with
-                use_regex: Whether to interpret old_str as a regular expression
-                replace_all: If True, replace all occurrences
-                context_before: Text that must appear before the replacement
-                context_after: Text that must appear after the replacement
-                line_number: Line number to narrow search
-                occurrence: Which occurrence to replace (1-based, ignored if replace_all=True)
-                dry_run: If True, only show what would change without making changes
-                
-            Returns:
-                Result of the operation with preview of changed content
+            Supports plain text or regular expression search, context constraints, line restriction, and dry-run preview. Can replace a specific occurrence or all matches, with optional context before and after the match to refine targeting. Returns a summary of the operation and a preview of the affected file region.
             """
             return self._edit_file(
                 path=path,
@@ -689,16 +793,17 @@ class FileManipulation(Component):
         
         @tool
         def insert_at_line(path: str, line_number: int, new_str: str, dry_run: bool = False) -> str:
-            """Insert text at a specific line number in a file.
+            """
+            Inserts text at a specified line number in a file.
             
             Args:
-                path: Path to the file relative to workspace
-                line_number: Line number where to insert text (1-based). For empty files, use line 1.
-                new_str: Text to insert
-                dry_run: If True, only show what would change without making changes
-                
+                path: Relative path to the target file within the workspace.
+                line_number: 1-based line number at which to insert the text. For empty files, use 1.
+                new_str: The text to insert.
+                dry_run: If True, displays the changes without modifying the file.
+            
             Returns:
-                Result of the operation with preview of changed content
+                A message describing the result and a preview of the affected file content.
             """
             return self._edit_file(
                 path=path,
@@ -710,16 +815,17 @@ class FileManipulation(Component):
         
         @tool
         def remove_lines(path: str, start_line: int, end_line: int, dry_run: bool = False) -> str:
-            """Remove a range of lines from a file.
+            """
+            Removes a range of lines from a file.
             
             Args:
-                path: Path to the file relative to workspace
-                start_line: First line to remove (1-based)
-                end_line: Last line to remove (1-based)
-                dry_run: If True, only show what would change without making changes
-                
+                path: Relative path to the file within the workspace.
+                start_line: The first line to remove (1-based index).
+                end_line: The last line to remove (1-based index).
+                dry_run: If True, displays the changes without modifying the file.
+            
             Returns:
-                Result of the operation with preview
+                A message describing the result of the operation and a preview of the affected file region.
             """
             return self._edit_file(
                 path=path,
@@ -731,17 +837,18 @@ class FileManipulation(Component):
         
         @tool
         def move_code_block(path: str, start_line: int, end_line: int, target_line: int, dry_run: bool = False) -> str:
-            """Move a block of code from one location to another in the same file.
+            """
+            Moves a block of lines from one location to another within the same file.
             
             Args:
-                path: Path to the file relative to workspace
-                start_line: First line of block to move (1-based)
-                end_line: Last line of block to move (1-based)
-                target_line: Line number where to insert the block (1-based)
-                dry_run: If True, only show what would change without making changes
-                
+                path: Relative path to the file within the workspace.
+                start_line: The first line of the block to move (1-based).
+                end_line: The last line of the block to move (1-based).
+                target_line: The line number where the block should be inserted (1-based).
+                dry_run: If True, displays the changes without modifying the file.
+            
             Returns:
-                Result of the operation with preview
+                A message describing the result of the move operation, including a preview of the affected file region.
             """
             return self._edit_file(
                 path=path,
@@ -754,13 +861,14 @@ class FileManipulation(Component):
         
         @tool
         def undo_edit(path: str) -> str:
-            """Undo the last edit made to a file.
+            """
+            Undoes the last edit made to a file by restoring it to the previous backup version.
             
             Args:
-                path: Path to the file relative to workspace
-                
+                path: Path to the file relative to the workspace.
+            
             Returns:
-                Result of the operation with preview of the previous version
+                A message indicating the result of the undo operation, including a preview of the restored file version.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
@@ -791,13 +899,10 @@ class FileManipulation(Component):
         
         @tool
         def redo_edit(path: str) -> str:
-            """Redo a previously undone edit to a file.
+            """
+            Redoes the last undone edit for a file, restoring it to a newer backup version if available.
             
-            Args:
-                path: Path to the file relative to workspace
-                
-            Returns:
-                Result of the operation with preview of the newer version
+            Returns a message indicating the result of the redo operation along with a preview of the file's current content.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
@@ -832,14 +937,10 @@ class FileManipulation(Component):
         
         @tool
         def create_file(path: str, file_text: str) -> str:
-            """Create a new file with content.
+            """
+            Creates or overwrites a file with the specified content, backing up any existing file.
             
-            Args:
-                path: Path to the file relative to workspace
-                file_text: Text content to write to the file
-                
-            Returns:
-                Result of the operation with preview
+            If the file already exists, a backup is created before overwriting. Returns a message indicating the result and a preview of the file's contents.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path, must_exist=False)
@@ -865,13 +966,14 @@ class FileManipulation(Component):
         
         @tool
         def list_directory(directory_path: str = ".") -> str:
-            """Get detailed listing of files and directories.
+            """
+            Returns a detailed listing of files and directories within a specified directory.
             
             Args:
-                directory_path: Path to the directory relative to workspace (default: workspace root)
-                
+                directory_path: Relative path to the directory within the workspace (defaults to workspace root).
+            
             Returns:
-                Listing of files and directories with details
+                A formatted string listing directories and files with type indicators and file sizes, or an error message if the path is invalid.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(directory_path)
@@ -917,14 +1019,15 @@ class FileManipulation(Component):
         
         @tool
         def move_file(source_path: str, destination_path: str) -> str:
-            """Move or rename files and directories.
+            """
+            Moves or renames a file or directory within the workspace, creating backups if applicable.
             
             Args:
-                source_path: Path to the source file/directory relative to workspace
-                destination_path: Path to the destination relative to workspace
-                
+                source_path: Relative path to the source file or directory.
+                destination_path: Relative path to the destination location.
+            
             Returns:
-                Result of the operation
+                A message indicating the result of the move or rename operation.
             """
             try:
                 resolved_source = self.path_handler.resolve_path(source_path)
@@ -953,14 +1056,15 @@ class FileManipulation(Component):
         
         @tool
         def search_files(search_pattern: str, directory_path: str = ".") -> str:
-            """Find files by name using case-insensitive substring matching.
+            """
+            Searches for files whose names contain the given pattern, case-insensitively, within a directory.
             
             Args:
-                search_pattern: Pattern to search for in filenames
-                directory_path: Path to the directory to search in (default: workspace root)
-                
+                search_pattern: Substring to match in filenames (case-insensitive).
+                directory_path: Directory to search within, relative to the workspace root (default is current directory).
+            
             Returns:
-                List of matching files
+                A formatted string listing all matching file paths, or an error message if no matches are found or the directory is invalid.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(directory_path)
@@ -992,15 +1096,16 @@ class FileManipulation(Component):
         
         @tool
         def search_code(search_pattern: str, file_pattern: str = "*", directory_path: str = ".") -> str:
-            """Search for text/code patterns within file contents.
+            """
+            Searches for a text pattern within the contents of files in a directory tree.
             
             Args:
-                search_pattern: Text pattern to search for in file contents
-                file_pattern: Filter for file types (e.g., "*.py" for Python files)
-                directory_path: Path to the directory to search in (default: workspace root)
-                
+                search_pattern: The text to search for within file contents.
+                file_pattern: A glob pattern to filter files by name (e.g., "*.py").
+                directory_path: Directory to search in, relative to the workspace root.
+            
             Returns:
-                Search results with file locations and line numbers
+                A formatted string listing each match with file path and line number, or a message if no matches are found.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(directory_path)
@@ -1040,15 +1145,10 @@ class FileManipulation(Component):
         
         @tool
         def generate_patch(path: str, old_content: Optional[str] = None, new_content: Optional[str] = None) -> str:
-            """Generate a unified diff patch from old and new content.
+            """
+            Generates a unified diff patch between the original and new content of a file.
             
-            Args:
-                path: Path to the target file
-                old_content: Original content (if None, reads from file)
-                new_content: New content
-                
-            Returns:
-                A unified diff patch
+            If the original content is not provided, it is read from the specified file. Returns the unified diff as a string, or a message if there are no differences or if an error occurs.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
@@ -1081,14 +1181,15 @@ class FileManipulation(Component):
         
         @tool
         def find_code_structure(path: str, item_type: str = "all") -> str:
-            """Analyze a file to find code structure elements like functions, classes, methods.
+            """
+            Analyzes a Python file to identify functions, classes, and methods with their line ranges.
             
             Args:
-                path: Path to the file relative to workspace
-                item_type: Type of items to find ("function", "class", "method", "all")
-                
+                path: Relative path to the file within the workspace.
+                item_type: Type of code elements to find ("function", "class", "method", or "all").
+            
             Returns:
-                Structured information about code elements with line ranges
+                A formatted string listing the names and line ranges of the specified code elements, or an error message if the file is not found, empty, not a Python file, or contains syntax errors.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
@@ -1118,6 +1219,17 @@ class FileManipulation(Component):
                 
                 # Helper function to extract line range for a node
                 def get_line_range(node):
+                    """
+                    Returns the start and end line numbers for an AST node.
+                    
+                    The start line is taken from the node's 'lineno' attribute, and the end line is determined by traversing all child nodes to find the maximum line number present.
+                    
+                    Args:
+                        node: An AST node with a 'lineno' attribute.
+                    
+                    Returns:
+                        A tuple (start_line, end_line) indicating the range of lines spanned by the node.
+                    """
                     start_line = getattr(node, "lineno", 0)
                     end_line = start_line
                     
