@@ -22,6 +22,7 @@ export default function FlowSettingsModal({
         <FlowSettingsComponent
           flowData={flowData}
           close={() => setOpen(false)}
+          open={open}
         />
       </BaseModal.Content>
     </BaseModal>

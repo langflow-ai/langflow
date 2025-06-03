@@ -12,9 +12,11 @@ import EditFlowSettings from "../editFlowSettingsComponent";
 export default function FlowSettingsComponent({
   flowData,
   close,
+  open,
 }: {
   flowData?: FlowType;
   close: () => void;
+  open: boolean;
 }): JSX.Element {
   const saveFlow = useSaveFlow();
   const currentFlow = useFlowStore((state) =>
