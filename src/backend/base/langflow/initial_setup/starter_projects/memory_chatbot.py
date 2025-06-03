@@ -1,6 +1,7 @@
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.languagemodels import OpenAIModelComponent
+from langflow.components.processing.converter import convert_to_message
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
 
@@ -14,11 +15,10 @@ def memory_chatbot_graph(template: str | None = None):
     memory_component = MemoryComponent()
     chat_input = ChatInput()
     prompt_component = PromptComponent()
-    # write a convert to text function that converts the dataframe to a text string
     prompt_component.set(
         template=template,
         user_message=chat_input.message_response,
-        context=memory_component.retrieve_messages_dataframe,
+        context=convert_to_message(memory_component.retrieve_messages_dataframe),
     )
     openai_component = OpenAIModelComponent()
     openai_component.set(input_value=prompt_component.build_prompt)

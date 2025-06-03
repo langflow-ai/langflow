@@ -4,6 +4,7 @@ import pytest
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.languagemodels import OpenAIModelComponent
+from langflow.components.processing.converter import convert_to_message
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
@@ -26,7 +27,7 @@ AI: """
     prompt_component.set(
         template=template,
         user_message=chat_input.message_response,
-        context=memory_component.retrieve_messages_dataframe,
+        context=convert_to_message(memory_component.retrieve_messages_dataframe),
     )
     openai_component = OpenAIModelComponent(_id="openai")
     openai_component.set(
