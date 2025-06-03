@@ -182,12 +182,10 @@ tests: ## run unit, integration, coverage tests
 ######################
 
 codespell: ## run codespell to check spelling
-	@uv pip install codespell
-	uv run -- codespell --toml pyproject.toml
+	@uvx codespell --toml pyproject.toml
 
 fix_codespell: ## run codespell to fix spelling errors
-	@uv pip install codespell
-	uv run -- codespell --toml pyproject.toml --write
+	@uvx codespell --toml pyproject.toml --write
 
 format_backend: ## backend code formatters
 	@uv run ruff check . --fix --ignore EXE002 --ignore A005
