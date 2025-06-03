@@ -9,7 +9,7 @@ import Icon from "@site/src/components/icon";
 
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) as both an MCP server and an MCP client.
 This page describes how to use Langflow as an *MCP server*.
-For information about using Langflow as an *MCP client*, see the [MCP connection component](/components-tools#mcp-connection).
+For information about using Langflow as an *MCP client*, see the [MCP connection component](/components-data#mcp-connection).
 
 As an MCP server, Langflow exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use use to take actions.
 
@@ -91,7 +91,7 @@ For example:
     ```
 
     The **MCP Server** tab automatically includes the correct `PROJECT_NAME`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` values.
-    The default Langflow server address is `http://127.0.0.1:7860` (`http://127.0.0.1:7868` if using Langflow for Desktop).
+    The default Langflow server address is `http://127.0.0.1:7860`.
 
     :::important
     If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
@@ -235,7 +235,7 @@ By default, Langflow isn't exposed to the public internet.
 However, you can forward Langflow server traffic with a forwarding platform like [ngrok](https://ngrok.com/docs/getting-started/) or [zrok](https://docs.zrok.io/docs/getting-started).
 
 The following procedure uses ngrok, but you can use any similar reverse proxy or forwarding platform.
-This procedure also assumes that you're using the default Langflow listening address `http://127.0.0.1:7860` (`http://127.0.0.1:7868` if using Langflow for Desktop).
+This procedure also assumes that you're using the default Langflow listening address `http://127.0.0.1:7860`.
 
 1. Sign up for an [ngrok account](https://dashboard.ngrok.com/signup).
 

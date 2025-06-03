@@ -7,6 +7,24 @@ import Icon from "@site/src/components/icon";
 
 # Tool components in Langflow
 
+The **Tools** category in Langflow is removed as of Langflow 1.5.
+
+All components in the **Tools** category are now **Legacy**, except the following:
+
+* The [MCP Connection](/components-data#mcp-connection) component is available in **Data components**.
+* The [calculator](/components-helpers#calculator)  component is available in **Helpers**.
+* The [Astra DB JSON](/#astra-db-tool) and [Astra DB CQL](#astra-db-cql-tool) tools are available in the **DataStax** bundle.
+* The Python REPL tool is available in **Processing** and re-named the [Python Interpreter](/components-processing#python-interpreter) component.
+
+The remaining tools are **Legacy**.
+Legacy components are available for use but are no longer supported.
+
+To replace legacy search components like Bing Search and Google, use the [Web search component](/components-data#web-search) component.
+
+To replace legacy news aggregation components, use the [News search](/components-data#news-search) component.
+
+## Use a tool in a flow
+
 Tools are typically connected to agent components at the **Tools** port. Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
 
 Tools in agentic functions are, essentially, functions that the agent can call to perform tasks or access external resources.
@@ -14,10 +32,6 @@ A function is wrapped as a `Tool` object, with a common interface the agent unde
 Agents become aware of tools through tool registration, where the agent is provided a list of available tools, typically at agent initialization. The `Tool` object's description tells the agent what the tool can do.
 
 The agent then uses a connected LLM to reason through the problem to decide which tool is best for the job.
-
-## Use a tool in a flow
-
-Tools are typically connected to agent components at the **Tools** port.
 
 The [simple agent starter project](/starter-projects-simple-agent) uses URL and Calculator tools connected to an [agent component](/components-agents#agent-component) to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use.
 
@@ -28,6 +42,10 @@ If the component you want to connect to an agent doesn't have a **Tool mode** op
 For an example, see [Make any component a tool](/agents-tool-calling-agent-component#make-any-component-a-tool).
 
 ## arXiv
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
 
 This component searches and retrieves papers from [arXiv.org](https://arXiv.org).
 
@@ -162,6 +180,10 @@ The `Astra DB CQL Tool` allows agents to query data from CQL tables in Astra DB.
 
 ## Bing Search API
 
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
 This component allows you to call the Bing Search API.
 
 <details>
@@ -186,6 +208,10 @@ This component allows you to call the Bing Search API.
 </details>
 
 ## Combinatorial Reasoner
+
+:::important
+This component is available in the **Components** menu under **Bundles**.
+:::
 
 This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. For more information, see [Icosa computing](https://www.icosacomputing.com/).
 
@@ -213,6 +239,10 @@ This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to
 
 ## DuckDuckGo search
 
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
 This component performs web searches using the [DuckDuckGo](https://www.duckduckgo.com) search engine with result-limiting capabilities.
 
 <details>
@@ -237,6 +267,10 @@ This component performs web searches using the [DuckDuckGo](https://www.duckduck
 
 ## Exa Search
 
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
 This component provides an [Exa Search](https://exa.ai/) toolkit for search and content retrieval.
 
 <details>
@@ -260,6 +294,10 @@ This component provides an [Exa Search](https://exa.ai/) toolkit for search and 
 </details>
 
 ## Glean Search API
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
 
 This component allows you to call the Glean Search API.
 
@@ -287,6 +325,10 @@ This component allows you to call the Glean Search API.
 
 ## Google Serper API
 
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
 This component allows you to call the Serper.dev Google Search API.
 
 <details>
@@ -309,96 +351,12 @@ This component allows you to call the Serper.dev Google Search API.
 
 </details>
 
-## MCP connection
-
-The **MCP connection** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
-
-In addition to being an MCP client that can leverage MCP servers, the **MCP connection** component's [SSE mode](#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-overview#projects) as tools within a flow.
-
-To use the **MCP connection** component with an agent component, follow these steps:
-
-1. Add the **MCP connection** component to your workflow.
-
-2. In the **MCP connection** component, in the **MCP Command** field, enter the command to start your MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
-
-    ```bash
-    uvx mcp-server-fetch
-    ```
-
-    `uvx` is included with `uv` in the Langflow package.
-    To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
-    For an example of starting `npx` MCP servers, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
-
-    To include environment variables with your server command, add them to the **Env** field like this:
-
-    ```bash
-    ASTRA_DB_APPLICATION_TOKEN=AstraCS:...
-    ```
-
-    :::important
-    Langflow passes environment variables from the `.env` file to MCP, but not global variables declared in the UI.
-    To add a value for an environment variable as a global variable, add it to Langflow's `.env` file at startup.
-    For more information, see [global variables](/configuration-global-variables).
-    :::
-
-3. Click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
-
-4. In the **Tool** field, select the server tool you want the component to use.
-The available fields change based on the selected tool.
-For information on the parameters, see the MCP server's documentation.
-
-5. In the **MCP connection** component, enable **Tool mode**.
-Connect the **MCP connection** component's **Toolset** port to an **Agent** component's **Tools** port.
-
-    The flow looks similar to this:
-    ![MCP connection component](/img/component-mcp-stdio.png)
-
-6. Open the **Playground**.
-Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
-This confirms the MCP server is connected, and its tools are being used in Langflow.
-
-For more information, see [MCP server](/mcp-server).
-
-### MCP Server-Sent Events (SSE) mode {#mcp-sse-mode}
-
-:::important
-If you're using **Langflow for Desktop**, the default address is `http://127.0.0.1:7868/`.
-:::
-
-The MCP component's SSE mode connects your flow to the Langflow MCP server through the component.
-This allows you to use all flows within your [project](/concepts-overview#projects) as tools within a flow.
-
-1. In the **MCP connection** component, select **SSE**.
-A default address appears in the **MCP SSE URL** field.
-2. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
-The default value is `http://localhost:7860/api/v1/mcp/sse`.
-3. In the **MCP connection** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to retrieve the server's list of **Tools**.
-4. Click the **Tools** field.
-All of your flows are listed as tools.
-5. Enable **Tool Mode**, and then connect the **MCP connection** component to an agent component's tool port.
-The flow looks like this:
-![MCP component with SSE mode enabled](/img/component-mcp-sse-mode.png)
-6. Open the **Playground** and chat with your tool.
-The agent chooses the correct tool based on your query.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| command | String | The MCP command. Default: `uvx mcp-sse-shim@latest`. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| tools | List[Tool] | A list of tools exposed by the MCP server. |
-
-</details>
 
 ## Wikidata
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
 
 This component performs a search using the Wikidata API.
 
@@ -426,6 +384,9 @@ Legacy components are available for use but are no longer supported.
 
 ### Calculator Tool
 
+:::important
+This component is now available in [Helper components](/components-helpers#calculator).
+:::
 This component allows you to evaluate basic arithmetic expressions. It supports addition, subtraction, multiplication, division, and exponentiation.
 
 <details>
@@ -446,6 +407,10 @@ This component allows you to evaluate basic arithmetic expressions. It supports 
 </details>
 
 ### Google Search API
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
 
 This component allows you to call the Google Search API.
 
@@ -471,6 +436,10 @@ This component allows you to call the Google Search API.
 </details>
 
 ### Python Code Structured Tool
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
 
 This component creates a structured tool from Python code using a dataclass.
 
@@ -500,6 +469,10 @@ The component dynamically updates its configuration based on the provided Python
 
 ### Python REPL Tool
 
+:::important
+The Python REPL tool is available in **Processing** and re-named the [Python Interpreter](/components-processing#python-interpreter)
+:::
+
 This component creates a Python REPL (Read-Eval-Print Loop) tool for executing Python code.
 
 <details>
@@ -523,6 +496,10 @@ This component creates a Python REPL (Read-Eval-Print Loop) tool for executing P
 
 ### Retriever Tool
 
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
 This component creates a tool for interacting with a retriever in LangChain.
 
 <details>
@@ -545,6 +522,10 @@ This component creates a tool for interacting with a retriever in LangChain.
 </details>
 
 ### Search API
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
 
 This component calls the `searchapi.io` API. It can be used to search the web for information.
 
@@ -573,6 +554,10 @@ For more information, see the [SearchAPI documentation](https://www.searchapi.io
 
 ### SearXNG Search Tool
 
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
 This component creates a tool for searching using SearXNG, a metasearch engine.
 
 <details>
@@ -596,6 +581,10 @@ This component creates a tool for searching using SearXNG, a metasearch engine.
 </details>
 
 ### Wikipedia API
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
 
 This component creates a tool for searching and retrieving information from Wikipedia.
 
@@ -628,13 +617,13 @@ Deprecated components have been replaced by newer alternatives and should not be
 ### MCP Tools (stdio)
 :::important
 This component is deprecated as of Langflow version 1.3.
-Instead, use the [MCP connection component](/components-tools#mcp-connection)
+Instead, use the [MCP connection component](/components-data#mcp-connection)
 :::
 
 
 ### MCP Tools (SSE)
 :::important
 This component is deprecated as of Langflow version 1.3.
-Instead, use the [MCP connection component](/components-tools#mcp-connection)
+Instead, use the [MCP connection component](/components-data#mcp-connection)
 :::
 

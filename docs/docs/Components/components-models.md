@@ -1,9 +1,14 @@
 ---
-title: Models
+title: Language models
 slug: /components-models
 ---
 
 import Icon from "@site/src/components/icon";
+
+:::important
+Components in the **Language models** category are moved to **Bundles** as of Langflow 1.5.
+Instead, use an [Language model](/components-models) component.
+:::
 
 Model components in Langflow generate text or text embeddings using the selected Large Language Model.
 
@@ -14,11 +19,7 @@ If you want to try additional providers, the single-provider LLM components of b
 
 ## Language model
 
-This component generates text using either OpenAI or Anthropic language models.
-
-Use this component as a drop-in replacement for LLM models to switch between different model providers and models.
-
-
+This component generates text using language models selected within the dropdown menu.
 
 Instead of swapping out model components when you want to try a different provider, like switching between OpenAI and Anthropic components, change the provider dropdown in this single component. This makes it easier to experiment with and compare different models while keeping the rest of your flow intact.
 
@@ -47,26 +48,57 @@ For more information, see the [OpenAI documentation](https://platform.openai.com
 
 </details>
 
-## Embedding model component
-
-
-
-
-
-Refer to your specific component's documentation for more information on parameters.
-
-## Use a model component in a flow
+### Use a Language Model component in a flow
 
 Model components receive inputs and prompts for generating text, and the generated text is sent to an output component.
 
-The model output can also be sent to the **Language Model** port and on to a **Parse Data** component, where the output can be parsed into structured [Data](/concepts-objects) objects.
-
 This example has the OpenAI model in a chatbot flow. For more information, see the [Basic prompting flow](/starter-projects-basic-prompting).
 
-![](/img/starter-flow-basic-prompting.png)
+1. Add the **Language Model** component to your flow.
+The default model is OpenAI's GPT-4.1 mini model. Based on [Open AI's recommendations](https://platform.openai.com/docs/models/gpt-4.1-mini), this model is a good, balanced starter model.
+2. In the **OpenAI API Key** field, enter your OpenAI API key.
+3. Add a [Prompt](/components-prompts) component to your flow.
+4. To connect the [Prompt](/components-prompts) component to the **Language Model** component, on the **Language Model** component, click **Controls**.
+5. Enable the **System Message** setting.
+On the **Language Model** component, a new **System Message** port opens.
+6. Connect the **Prompt** port to the **System Message** port.
+7. Add [Chat input](/components-io#chat-input) and [Chat output](/components-io#chat-output) components to your flow.
+Your flow looks like this:
+![A Language Model component for basic prompting](/img/component-language-model.png)
 
+8. Open the **Playground**, and ask a question.
+The bot responds to your question with sources.
 
-## Language model bundles
+```
+What is the capital of Utah?
+
+AI
+gpt-4o-mini
+The capital of Utah is Salt Lake City. It is not only the largest city in the state but also serves as the cultural and economic center of Utah. Salt Lake City was founded in 1847 by Mormon pioneers and is known for its proximity to the Great Salt Lake and its role in the history of the Church of Jesus Christ of Latter-day Saints. For more information, you can refer to sources such as the U.S. Geological Survey or the official state website of Utah.
+```
+
+9. Try an alternate model provider, and test how the response differs.
+In the **Language Model** component, in the **Model Provider** field, select **Anthropic**.
+10. In the **Model Name** field, select your Anthropic model.
+This model uses Claude 3.5 Haiku, based on [Anthropic's recommendation](https://docs.anthropic.com/en/docs/about-claude/models/choosing-a-model) for a fast and cost-effective model.
+12. In the **Anthropic API Key** field, enter your Anthropic API key.
+12. Open the **Playground**, and ask the same question as you did before.
+The response from the Anthropic model is less verbose, and lists its sources outside of the informative paragraph.
+
+```
+User
+What is the capital of Utah?
+
+AI
+claude-3-5-haiku-latest
+The capital of Utah is Salt Lake City. It is also the most populous city in the state. Salt Lake City has been the capital of Utah since 1896, when Utah became a state.
+Sources:
+Utah State Government Official Website (utah.gov)
+U.S. Census Bureau
+Encyclopedia Britannica
+```
+
+## Language model bundled
 
 As of Langflow 1.5 the following components are now part of **Bundles**.
 
@@ -406,8 +438,6 @@ For more information, see the [Langchain documentation](https://python.langchain
 | model | LanguageModel | An instance of [ChatWatsonx](https://python.langchain.com/docs/integrations/chat/ibm_watsonx/) configured with the specified parameters. |
 
 </details>
-
-
 
 ### LMStudio
 
@@ -773,5 +803,4 @@ For more information, see the [xAI documentation](https://x.ai/).
 | model | LanguageModel | An instance of ChatOpenAI configured with the specified parameters. |
 
 </details>
-
 

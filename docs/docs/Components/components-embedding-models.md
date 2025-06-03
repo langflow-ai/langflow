@@ -1,23 +1,66 @@
 ---
-title: Embeddings
+title: Embedding models
 slug: /components-embedding-models
 ---
 
 import Icon from "@site/src/components/icon";
 
-# Embeddings models in Langflow
+# Embedding models in Langflow
 
-Embeddings models convert text into numerical vectors. These embeddings capture the semantic meaning of the input text, and allow LLMs to understand context.
+:::important
+Components in the **Embedding models** category are moved to **Bundles** as of Langflow 1.5.
+Instead, use an [Embedding model](/components-models) component.
+:::
 
-Refer to your specific component's documentation for more information on parameters.
+Model components in Langflow generate text or text embeddings using the selected Large Language Model.
 
-## Use an embeddings model component in a flow
+Prior to Langflow 1.5, each LLM provider had its own component in the **Components** menu and **Playground**.
+
+Most use cases can be performed with the **Language Model** and **Embedding Model** components.
+If you want to try additional providers, the single-provider LLM components of both the **Model** and **Embedding Model** types are now found in **Bundles**, and are still available for use.
+
+## Use an embedding model component in a flow
+
+Embedding models convert text into numerical vectors. These embeddings capture the semantic meaning of the input text, and allow LLMs to understand context.
 
 In this example of a document ingestion pipeline, the **OpenAI** embeddings model is connected to a vector database. The component converts the text chunks into vectors and stores them in the vector database. The vectorized data can be used to inform AI workloads like chatbots, similarity searches, and agents.
 
 This embeddings component uses an OpenAI API key for authentication. Refer to your specific embeddings component's documentation for more information on authentication.
 
-![URL component in a data ingestion pipeline](/img/url-component.png)
+![URL component in a data ingestion pipeline](/img/component-chroma-db.png)
+
+## Embeddings Model
+
+
+### Use an Embedding Model component in a flow
+
+This component provides a flexible way to generate embeddings using various providers. Currently, it supports OpenAI as a provider, with more providers planned for future releases.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Type | Description |
+|------|--------------|------|-------------|
+| provider | Model Provider | Dropdown | Select the embedding model provider (currently only OpenAI is supported) |
+| model | Model Name | Dropdown | Select the embedding model to use (e.g., text-embedding-3-small) |
+| api_key | OpenAI API Key | SecretString | The API key required for authenticating with the provider |
+| api_base | API Base URL | String | Base URL for the API. Leave empty for default |
+| dimensions | Dimensions | Integer | The number of dimensions for the output embeddings (only supported by certain models) |
+| chunk_size | Chunk Size | Integer | The size of text chunks to process (default: 1000) |
+| request_timeout | Request Timeout | Float | Timeout for API requests |
+| max_retries | Max Retries | Integer | Maximum number of retry attempts (default: 3) |
+| show_progress_bar | Show Progress Bar | Boolean | Whether to display a progress bar during embedding generation |
+| model_kwargs | Model Kwargs | Dictionary | Additional keyword arguments to pass to the model |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| embeddings | Embeddings | An instance for generating embeddings using the selected provider |
+
+</details>
 
 ## AI/ML
 

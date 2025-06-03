@@ -74,6 +74,27 @@ record_number: {batch_index}, name: {text_input}, summary: {model_response}
 
 </details>
 
+## Calculator
+
+The Calculator component performs basic arithmetic operations on mathematical expressions. It supports addition, subtraction, multiplication, division, and exponentiation operations.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| expression | String | The arithmetic expression to evaluate, such as `4*4*(33/22)+12-20'`. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| result | Data | The calculation result as a Data object containing the evaluated expression. |
+
+</details>
+
 ## Current date
 
 The Current Date component returns the current date and time in a selected timezone. This component provides a flexible way to obtain timezone-specific date and time information within a Langflow pipeline.
@@ -92,27 +113,6 @@ The Current Date component returns the current date and time in a selected timez
 | Name | Type | Description |
 |------|------|-------------|
 | current_date | String | The resulting current date and time in the selected timezone. |
-
-</details>
-
-## ID Generator
-
-This component generates a unique ID.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| unique_id | String | The generated unique ID. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| id | String | The generated unique ID. |
 
 </details>
 
@@ -236,6 +236,10 @@ Legacy components are available for use but are no longer supported.
 
 ### Create List
 
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
 This component dynamically creates a record with a specified number of fields.
 
 <details>
@@ -256,7 +260,36 @@ This component dynamically creates a record with a specified number of fields.
 
 </details>
 
+### ID Generator
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
+This component generates a unique ID.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| unique_id | String | The generated unique ID. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | String | The generated unique ID. |
+
+</details>
+
 ### Output Parser
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
 
 This component transforms the output of a language model into a specified format. It supports CSV format parsing, which converts LLM responses into comma-separated lists using Langchain's `CommaSeparatedListOutputParser`.
 

@@ -15,93 +15,6 @@ The component offers control over chunk size, overlap, and separator, which affe
 
 ![](/img/vector-store-document-ingestion.png)
 
-## DataFrame operations
-
-This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
-
-To use this component in a flow, connect a component that outputs [DataFrame](/concepts-objects#dataframe-object) to the **DataFrame Operations** component.
-
-This example fetches JSON data from an API. The **Lambda filter** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
-
-![Dataframe operations with flattened dataframe](/img/component-dataframe-operations.png)
-
-1. The **API Request** component retrieves data with only `source` and `result` fields.
-For this example, the desired data is nested within the `result` field.
-2. Connect a **Lambda Filter** to the API request component, and a **Language model** to the **Lambda Filter**. This example connects a **Groq** model component.
-3. In the **Groq** model component, add your **Groq** API key.
-4. To filter the data, in the **Lambda filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
-For this example, enter:
-```
-I want to explode the result column out into a Data object
-```
-:::tip
-Avoid punctuation in the **Instructions** field, as it can cause errors.
-:::
-5. To run the flow, in the **Lambda Filter** component, click <Icon name="Play" aria-label="Play icon" />.
-6. To inspect the filtered data, in the **Lambda Filter** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
-The result is a structured DataFrame.
-```text
-id | name             | company               | username        | email                              | address           | zip
----|------------------|----------------------|-----------------|------------------------------------|-------------------|-------
-1  | Emily Johnson    | ABC Corporation      | emily_johnson   | emily.johnson@abccorporation.com   | 123 Main St       | 12345
-2  | Michael Williams | XYZ Corp             | michael_williams| michael.williams@xyzcorp.com       | 456 Elm Ave       | 67890
-```
-7. Add the **DataFrame Operations** component, and a **Chat Output** component to the flow.
-8. In the **DataFrame Operations** component, in the **Operation** field, select **Filter**.
-9. To apply a filter, in the **Column Name** field, enter a column to filter on. This example filters by `name`.
-10. Click **Playground**, and then click **Run Flow**.
-The flow extracts the values from the `name` column.
-```text
-name
-Emily Johnson
-Michael Williams
-John Smith
-...
-```
-
-### Operations
-
-This component can perform the following operations on Pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html).
-
-| Operation | Required Inputs | Info |
-|-----------|----------------|-------------|
-| Add Column | new_column_name, new_column_value | Adds a new column with a constant value. |
-| Drop Column | column_name | Removes a specified column. |
-| Filter | column_name, filter_value | Filters rows based on column value. |
-| Head | num_rows | Returns first `n` rows. |
-| Rename Column | column_name, new_column_name | Renames an existing column. |
-| Replace Value | column_name, replace_value, replacement_value | Replaces values in a column. |
-| Select Columns | columns_to_select | Selects specific columns. |
-| Sort | column_name, ascending | Sorts DataFrame by column. |
-| Tail | num_rows | Returns last `n` rows. |
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| df | DataFrame | The input DataFrame to operate on. |
-| operation | Operation | The DataFrame operation to perform. Options include Add Column, Drop Column, Filter, Head, Rename Column, Replace Value, Select Columns, Sort, and Tail. |
-| column_name | Column Name | The column name to use for the operation. |
-| filter_value | Filter Value | The value to filter rows by. |
-| ascending | Sort Ascending | Whether to sort in ascending order. |
-| new_column_name | New Column Name | The new column name when renaming or adding a column. |
-| new_column_value | New Column Value | The value to populate the new column with. |
-| columns_to_select | Columns to Select | A list of column names to select. |
-| num_rows | Number of Rows | The number of rows to return for head/tail operations. The default is 5. |
-| replace_value | Value to Replace | The value to replace in the column. |
-| replacement_value | Replacement Value | The value to replace with. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| output | DataFrame | The resulting DataFrame after the operation. |
-
-</details>
-
 ## Data operations
 
 This component performs operations on [Data](/concepts-objects#data-object) objects, including selecting keys, evaluating literals, combining data, filtering values, appending/updating data, removing keys, and renaming keys.
@@ -191,60 +104,65 @@ All operations in the **Data operations** component require at least one [Data](
 
 </details>
 
-## Data to DataFrame
+## DataFrame operations
 
-This component converts one or multiple [Data](/concepts-objects#data-object) objects into a [DataFrame](/concepts-objects#dataframe-object). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
+This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
 
-1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data to Dataframe** component's input.
-This example connects a **Webhook** component to convert `text` and `data` into a DataFrame.
-2. To view the flow's output, connect a **Chat Output** component to the **Data to Dataframe** component.
+To use this component in a flow, connect a component that outputs [DataFrame](/concepts-objects#dataframe-object) to the **DataFrame Operations** component.
 
-![A webhook and data to dataframe](/img/component-data-to-dataframe.png)
+This example fetches JSON data from an API. The **Lambda filter** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
 
-3. Send a POST request to the **Webhook** containing your JSON data.
-Replace `YOUR_FLOW_ID` with your flow ID.
-This example uses the default Langflow server address.
+![Dataframe operations with flattened dataframe](/img/component-dataframe-operations.png)
+
+1. The **API Request** component retrieves data with only `source` and `result` fields.
+For this example, the desired data is nested within the `result` field.
+2. Connect a **Lambda Filter** to the API request component, and a **Language model** to the **Lambda Filter**. This example connects a **Groq** model component.
+3. In the **Groq** model component, add your **Groq** API key.
+4. To filter the data, in the **Lambda filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
+For this example, enter:
+```
+I want to explode the result column out into a Data object
+```
+:::tip
+Avoid punctuation in the **Instructions** field, as it can cause errors.
+:::
+5. To run the flow, in the **Lambda Filter** component, click <Icon name="Play" aria-label="Play icon" />.
+6. To inspect the filtered data, in the **Lambda Filter** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+The result is a structured DataFrame.
 ```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
--H 'Content-Type: application/json' \
--d '{
-    "text": "Alex Cruz - Employee Profile",
-    "data": {
-        "Name": "Alex Cruz",
-        "Role": "Developer",
-        "Department": "Engineering"
-    }
-}'
+id | name             | company               | username        | email                              | address           | zip
+---|------------------|----------------------|-----------------|------------------------------------|-------------------|-------
+1  | Emily Johnson    | ABC Corporation      | emily_johnson   | emily.johnson@abccorporation.com   | 123 Main St       | 12345
+2  | Michael Williams | XYZ Corp             | michael_williams| michael.williams@xyzcorp.com       | 456 Elm Ave       | 67890
+```
+7. Add the **DataFrame Operations** component, and a **Chat Output** component to the flow.
+8. In the **DataFrame Operations** component, in the **Operation** field, select **Filter**.
+9. To apply a filter, in the **Column Name** field, enter a column to filter on. This example filters by `name`.
+10. Click **Playground**, and then click **Run Flow**.
+The flow extracts the values from the `name` column.
+```text
+name
+Emily Johnson
+Michael Williams
+John Smith
+...
 ```
 
-4. In the **Playground**, view the output of your flow.
-The **Data to DataFrame** component converts the webhook request into a `DataFrame`, with `text` and `data` fields as columns.
-```text
-| text                         | data                                                                    |
-|:-----------------------------|:------------------------------------------------------------------------|
-| Alex Cruz - Employee Profile | {'Name': 'Alex Cruz', 'Role': 'Developer', 'Department': 'Engineering'} |
-```
+### Operations
 
-5. Send another employee data object.
-```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
--H 'Content-Type: application/json' \
--d '{
-    "text": "Kalani Smith - Employee Profile",
-    "data": {
-        "Name": "Kalani Smith",
-        "Role": "Designer",
-        "Department": "Design"
-    }
-}'
-```
+This component can perform the following operations on Pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html).
 
-6. In the **Playground**, this request is also converted to `DataFrame`.
-```text
-| text                            | data                                                                 |
-|:--------------------------------|:---------------------------------------------------------------------|
-| Kalani Smith - Employee Profile | {'Name': 'Kalani Smith', 'Role': 'Designer', 'Department': 'Design'} |
-```
+| Operation | Required Inputs | Info |
+|-----------|----------------|-------------|
+| Add Column | new_column_name, new_column_value | Adds a new column with a constant value. |
+| Drop Column | column_name | Removes a specified column. |
+| Filter | column_name, filter_value | Filters rows based on column value. |
+| Head | num_rows | Returns first `n` rows. |
+| Rename Column | column_name, new_column_name | Renames an existing column. |
+| Replace Value | column_name, replace_value, replacement_value | Replaces values in a column. |
+| Select Columns | columns_to_select | Selects specific columns. |
+| Sort | column_name, ascending | Sorts DataFrame by column. |
+| Tail | num_rows | Returns last `n` rows. |
 
 <details>
 <summary>Parameters</summary>
@@ -253,13 +171,23 @@ curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data_list | Data or Data List | One or multiple Data objects to transform into a DataFrame. |
+| df | DataFrame | The input DataFrame to operate on. |
+| operation | Operation | The DataFrame operation to perform. Options include Add Column, Drop Column, Filter, Head, Rename Column, Replace Value, Select Columns, Sort, and Tail. |
+| column_name | Column Name | The column name to use for the operation. |
+| filter_value | Filter Value | The value to filter rows by. |
+| ascending | Sort Ascending | Whether to sort in ascending order. |
+| new_column_name | New Column Name | The new column name when renaming or adding a column. |
+| new_column_value | New Column Value | The value to populate the new column with. |
+| columns_to_select | Columns to Select | A list of column names to select. |
+| num_rows | Number of Rows | The number of rows to return for head/tail operations. The default is 5. |
+| replace_value | Value to Replace | The value to replace in the column. |
+| replacement_value | Replacement Value | The value to replace with. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| dataframe | DataFrame | A DataFrame built from each Data object's fields plus a text column. |
+| output | DataFrame | The resulting DataFrame after the operation. |
 
 </details>
 
@@ -401,28 +329,9 @@ For an additional example of using the **Parser** component to format a DataFram
 
 </details>
 
-## Regex extractor
+## Python interpreter
 
-This component extracts patterns from text using regular expressions. It can be used to find and extract specific patterns or information from text data.
-
-To use this component in a flow:
-
-1. Connect the **Regex Extractor** to a **URL** component and a **Chat Output** component.
-
-![Regex extractor connected to url component](/img/component-url-regex.png)
-
-2. In the **Regex Extractor** tool, enter a pattern to extract text from the **URL** component's raw output.
-This example extracts the first paragraph from the "In the News" section of `https://en.wikipedia.org/wiki/Main_Page`:
-```
-In the news\s*\n(.*?)(?=\n\n)
-```
-
-Result:
-```
-Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictured) dies at the age of 89.
-```
-
-## Save to File
+## Save file
 
 This component saves [DataFrames, Data, or Messages](/concepts-objects) to various file formats.
 
@@ -578,30 +487,6 @@ Third chunk:  "s of Artificial Intelligence and its applications"
 
 </details>
 
-## Update data
-
-This component dynamically updates or appends data with specified fields.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| old_data | Data | The records to update. |
-| number_of_fields | Number of Fields | The number of fields to add. The maximum is 15. |
-| text_key | Text Key | The key for text content. |
-| text_key_validator | Text Key Validator | Validates the text key presence. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The updated Data objects. |
-
-</details>
-
 ## Legacy components
 
 **Legacy** components are available for use but are no longer supported.
@@ -736,6 +621,77 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 
 </details>
 
+### Data to DataFrame
+
+This component converts one or multiple [Data](/concepts-objects#data-object) objects into a [DataFrame](/concepts-objects#dataframe-object). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
+
+1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data to Dataframe** component's input.
+This example connects a **Webhook** component to convert `text` and `data` into a DataFrame.
+2. To view the flow's output, connect a **Chat Output** component to the **Data to Dataframe** component.
+
+![A webhook and data to dataframe](/img/component-data-to-dataframe.png)
+
+3. Send a POST request to the **Webhook** containing your JSON data.
+Replace `YOUR_FLOW_ID` with your flow ID.
+This example uses the default Langflow server address.
+```text
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "text": "Alex Cruz - Employee Profile",
+    "data": {
+        "Name": "Alex Cruz",
+        "Role": "Developer",
+        "Department": "Engineering"
+    }
+}'
+```
+
+4. In the **Playground**, view the output of your flow.
+The **Data to DataFrame** component converts the webhook request into a `DataFrame`, with `text` and `data` fields as columns.
+```text
+| text                         | data                                                                    |
+|:-----------------------------|:------------------------------------------------------------------------|
+| Alex Cruz - Employee Profile | {'Name': 'Alex Cruz', 'Role': 'Developer', 'Department': 'Engineering'} |
+```
+
+5. Send another employee data object.
+```text
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+    "text": "Kalani Smith - Employee Profile",
+    "data": {
+        "Name": "Kalani Smith",
+        "Role": "Designer",
+        "Department": "Design"
+    }
+}'
+```
+
+6. In the **Playground**, this request is also converted to `DataFrame`.
+```text
+| text                            | data                                                                 |
+|:--------------------------------|:---------------------------------------------------------------------|
+| Kalani Smith - Employee Profile | {'Name': 'Kalani Smith', 'Role': 'Designer', 'Department': 'Design'} |
+```
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data_list | Data or Data List | One or multiple Data objects to transform into a DataFrame. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| dataframe | DataFrame | A DataFrame built from each Data object's fields plus a text column. |
+
+</details>
 
 ### Filter data
 
@@ -874,6 +830,31 @@ This component converts and extracts JSON fields using JQ queries.
 
 </details>
 
+### Regex extractor
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
+This component extracts patterns from text using regular expressions. It can be used to find and extract specific patterns or information from text data.
+
+To use this component in a flow:
+
+1. Connect the **Regex Extractor** to a **URL** component and a **Chat Output** component.
+
+![Regex extractor connected to url component](/img/component-url-regex.png)
+
+2. In the **Regex Extractor** tool, enter a pattern to extract text from the **URL** component's raw output.
+This example extracts the first paragraph from the "In the News" section of `https://en.wikipedia.org/wiki/Main_Page`:
+```
+In the news\s*\n(.*?)(?=\n\n)
+```
+
+Result:
+```
+Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictured) dies at the age of 89.
+```
+
 ### Select data
 
 :::important
@@ -899,3 +880,32 @@ This component selects a single [Data](/concepts-objects#data-object) item from 
 | selected_data | Selected Data | The selected [Data](/concepts-objects#data-object) object. |
 
 </details>
+
+### Update data
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
+This component dynamically updates or appends data with specified fields.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| old_data | Data | The records to update. |
+| number_of_fields | Number of Fields | The number of fields to add. The maximum is 15. |
+| text_key | Text Key | The key for text content. |
+| text_key_validator | Text Key Validator | Validates the text key presence. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The updated Data objects. |
+
+</details>
+

@@ -118,7 +118,7 @@ You can then **Import** the downloaded flow into another Langflow instance.
 
 For more information, see [MCP server](/mcp-server).
 
-For information about using Langflow as an *MCP client*, see the [MCP connection component](/components-tools#mcp-connection).
+For information about using Langflow as an *MCP client*, see the [MCP connection component](/components-data#mcp-connection).
 
 ## Embed into site
 

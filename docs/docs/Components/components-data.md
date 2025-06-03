@@ -168,9 +168,103 @@ Archive formats (for bundling multiple files):
 - `.bz2` - Bzip2 compressed files
 - `.gz` - Gzip compressed files
 
-## SQL Query
 
-This component executes SQL queries on a specified database.
+## MCP connection {#mcp-connection}
+
+The **MCP connection** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
+
+In addition to being an MCP client that can leverage MCP servers, the **MCP connection** component's [SSE mode](#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-overview#projects) as tools within a flow.
+
+To use the **MCP connection** component with an agent component, follow these steps:
+
+1. Add the **MCP connection** component to your workflow.
+
+2. In the **MCP connection** component, in the **MCP Command** field, enter the command to start your MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
+
+    ```bash
+    uvx mcp-server-fetch
+    ```
+
+    `uvx` is included with `uv` in the Langflow package.
+    To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+    For an example of starting `npx` MCP servers, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
+
+    To include environment variables with your server command, add them to the **Env** field like this:
+
+    ```bash
+    ASTRA_DB_APPLICATION_TOKEN=AstraCS:...
+    ```
+
+    :::important
+    Langflow passes environment variables from the `.env` file to MCP, but not global variables declared in the UI.
+    To add a value for an environment variable as a global variable, add it to Langflow's `.env` file at startup.
+    For more information, see [global variables](/configuration-global-variables).
+    :::
+
+3. Click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
+
+4. In the **Tool** field, select the server tool you want the component to use.
+The available fields change based on the selected tool.
+For information on the parameters, see the MCP server's documentation.
+
+5. In the **MCP connection** component, enable **Tool mode**.
+Connect the **MCP connection** component's **Toolset** port to an **Agent** component's **Tools** port.
+
+    The flow looks similar to this:
+    ![MCP connection component](/img/component-mcp-stdio.png)
+
+6. Open the **Playground**.
+Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
+This confirms the MCP server is connected, and its tools are being used in Langflow.
+
+For more information, see [MCP server](/mcp-server).
+
+### MCP Server-Sent Events (SSE) mode {#mcp-sse-mode}
+
+:::important
+If you're using **Langflow for Desktop**, the default address is `http://127.0.0.1:7868/`.
+:::
+
+The MCP component's SSE mode connects your flow to the Langflow MCP server through the component.
+This allows you to use all flows within your [project](/concepts-overview#projects) as tools within a flow.
+
+1. In the **MCP connection** component, select **SSE**.
+A default address appears in the **MCP SSE URL** field.
+2. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
+The default value is `http://localhost:7860/api/v1/mcp/sse`.
+3. In the **MCP connection** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to retrieve the server's list of **Tools**.
+4. Click the **Tools** field.
+All of your flows are listed as tools.
+5. Enable **Tool Mode**, and then connect the **MCP connection** component to an agent component's tool port.
+The flow looks like this:
+![MCP component with SSE mode enabled](/img/component-mcp-sse-mode.png)
+6. Open the **Playground** and chat with your tool.
+The agent chooses the correct tool based on your query.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| command | String | The MCP command. Default: `uvx mcp-sse-shim@latest`. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| tools | List[Tool] | A list of tools exposed by the MCP server. |
+
+</details>
+
+## News search
+
+## RSS reader
+
+## SQL database
+
+This component executes SQL queries on a specified SQL Alchemy-compatible database.
 
 <details>
 <summary>Parameters</summary>
@@ -202,10 +296,10 @@ In the component's **URLs** field, enter the URL you want to load. To add multip
 1. To use this component in a flow, connect the **DataFrame** output to a component that accepts the input.
 For example, connect the **URL** component to a **Chat Output** component.
 
-![URL request into a chat output component](/img/component-url.png)
+![URL component in a data ingestion pipeline](/img/component-chroma-db.png)
 
 2. In the URL component's **URLs** field, enter the URL for your request.
-This example uses `langflow.org`.
+This example uses `https://jsonplaceholder.typicode.com/users`.
 
 3. Optionally, in the **Max Depth** field, enter how many pages away from the initial URL you want to crawl.
 Select `1` to crawl only the page specified in the **URLs** field.
@@ -213,7 +307,7 @@ Select `2` to crawl all pages linked from that page.
 The component crawls by link traversal, not by URL path depth.
 
 4. Click **Playground**, and then click **Run Flow**.
-The text contents of the URL are returned to the Playground as a structured DataFrame.
+The text contents of the URL component are returned
 
 5. In the **URL** component, change the output port to **Message**, and then run the flow again.
 The text contents of the URL are returned as unstructured raw text, which you can extract patterns from with the **Regex Extractor** tool.
@@ -257,6 +351,8 @@ Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictu
 | dataframe | DataFrame | The content formatted as a [DataFrame](/concepts-objects#dataframe-object) object. |
 
 </details>
+
+## Web search
 
 ## Webhook
 
