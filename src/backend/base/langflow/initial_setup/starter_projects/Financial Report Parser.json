@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-XaYqD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-XaYqDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-OUIin{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-OUIinœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-XaYqD",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-XaYqDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-XaYqDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-OUIin",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-OUIinœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-OUIinœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-parser-YY3Qp{œdataTypeœ:œparserœ,œidœ:œparser-YY3Qpœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-xBwkk{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-xBwkkœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-YY3Qp",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-YY3Qpœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-YY3Qpœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-xBwkk",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-xBwkkœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-xBwkkœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-StructuredOutput-OUIin{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-OUIinœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-YY3Qp{œfieldNameœ:œinput_dataœ,œidœ:œparser-YY3Qpœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-OUIin",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-OUIinœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-OUIinœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "parser-YY3Qp",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-YY3Qpœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-YY3Qpœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-OpenAIModel-KS2eL{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KS2eLœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-OUIin{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-OUIinœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIModel-KS2eL",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-KS2eLœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-KS2eLœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-OUIin",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-OUIinœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-OUIinœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -173,6 +173,7 @@
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
+                "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"
