@@ -296,10 +296,10 @@ In the component's **URLs** field, enter the URL you want to load. To add multip
 1. To use this component in a flow, connect the **DataFrame** output to a component that accepts the input.
 For example, connect the **URL** component to a **Chat Output** component.
 
-![URL component in a data ingestion pipeline](/img/component-chroma-db.png)
+![URL request into a chat output component](/img/component-url.png)
 
 2. In the URL component's **URLs** field, enter the URL for your request.
-This example uses `https://jsonplaceholder.typicode.com/users`.
+This example uses `langflow.org`.
 
 3. Optionally, in the **Max Depth** field, enter how many pages away from the initial URL you want to crawl.
 Select `1` to crawl only the page specified in the **URLs** field.
@@ -307,7 +307,7 @@ Select `2` to crawl all pages linked from that page.
 The component crawls by link traversal, not by URL path depth.
 
 4. Click **Playground**, and then click **Run Flow**.
-The text contents of the URL component are returned
+The text contents of the URL are returned to the Playground as a structured DataFrame.
 
 5. In the **URL** component, change the output port to **Message**, and then run the flow again.
 The text contents of the URL are returned as unstructured raw text, which you can extract patterns from with the **Regex Extractor** tool.
