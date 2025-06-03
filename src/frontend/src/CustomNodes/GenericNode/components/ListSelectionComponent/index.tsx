@@ -3,7 +3,8 @@ import SearchBarComponent from "@/components/core/parameterRenderComponent/compo
 import { InputProps } from "@/components/core/parameterRenderComponent/types";
 import { DialogHeader } from "@/components/ui/dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
-import { testIdCase } from "@/utils/utils";
+import { Input } from "@/components/ui/input";
+import { cn, testIdCase } from "@/utils/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ListItem from "./ListItem";
 
@@ -17,6 +18,7 @@ interface ListSelectionComponentProps {
   searchCategories?: string[];
   onSelection?: (action: any) => void;
   limit?: number;
+  headerSearchPlaceholder?: string;
 }
 
 const ListSelectionComponent = ({
@@ -28,6 +30,7 @@ const ListSelectionComponent = ({
   selectedList = [],
   options,
   limit = 1,
+  headerSearchPlaceholder = "Search...",
   ...baseInputProps
 }: InputProps<any, ListSelectionComponentProps>) => {
   const { nodeClass } = baseInputProps;
@@ -167,26 +170,40 @@ const ListSelectionComponent = ({
         className="flex max-h-[65vh] min-h-[15vh] flex-col rounded-xl p-0"
         onKeyDown={handleKeyDown}
       >
-        <DialogHeader className="flex w-full justify-between border-b px-3 py-3">
-          <div className="flex items-center gap-2">
-            <ForwardedIconComponent
-              name={nodeClass?.icon || "unknown"}
-              className="h-[18px] w-[18px] text-muted-foreground"
-            />
-            <div className="text-[13px] font-semibold">
-              {nodeClass?.display_name}
+        <DialogHeader className="flex w-full justify-between border-b p-2">
+          {nodeClass ? (
+            <div className="flex items-center gap-2 p-1">
+              <ForwardedIconComponent
+                name={nodeClass?.icon || "unknown"}
+                className="h-[18px] w-[18px] text-muted-foreground"
+              />
+              <div className="text-[13px] font-semibold">
+                {nodeClass?.display_name}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="relative text-[13px] font-normal">
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="border-none focus:ring-0"
+                placeholder={headerSearchPlaceholder}
+                data-testid="search_bar_input"
+              />
+            </div>
+          )}
         </DialogHeader>
-        {(filteredList?.length > 20 || search) && (
-          <div className="flex w-full items-center justify-between px-3">
-            <SearchBarComponent
-              searchCategories={searchCategories}
-              search={search}
-              setSearch={setSearch}
-            />
-          </div>
-        )}
+        {(filteredList?.length > 20 || search) &&
+          !headerSearchPlaceholder &&
+          !nodeClass && (
+            <div className="flex w-full items-center justify-between px-3">
+              <SearchBarComponent
+                searchCategories={searchCategories}
+                search={search}
+                setSearch={setSearch}
+              />
+            </div>
+          )}
 
         <div
           ref={listContainerRef}

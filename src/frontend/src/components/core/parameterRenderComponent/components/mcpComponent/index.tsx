@@ -94,10 +94,10 @@ export default function McpComponent({
         selectedList={selectedItem}
         options={options}
         limit={1}
-        nodeClass={nodeClass}
         id={id}
         value={value}
         editNode={editNode}
+        headerSearchPlaceholder="Search MCP Servers..."
         handleOnNewValue={handleOnNewValue}
         disabled={disabled}
       />
