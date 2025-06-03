@@ -5,19 +5,19 @@ from langflow.schema.message import Message
 
 class TextOutputComponent(TextComponent):
     display_name = "Text Output"
-    description = "Display a text output in the Playground."
+    description = "Sends text output via API."
     icon = "type"
     name = "TextOutput"
 
     inputs = [
         MultilineInput(
             name="input_value",
-            display_name="Text",
+            display_name="Inputs",
             info="Text to be passed as output.",
         ),
     ]
     outputs = [
-        Output(display_name="Message", name="text", method="text_response"),
+        Output(display_name="Output Text", name="text", method="text_response"),
     ]
 
     def text_response(self) -> Message:

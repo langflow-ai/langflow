@@ -248,7 +248,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-chatinput-noshownode-message-source")
+      .getByTestId("handle-chatinput-noshownode-chat message-source")
       .nth(0)
       .click();
     await page
@@ -289,7 +289,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-message-right")
+      .getByTestId("handle-openaimodel-shownode-model response-right")
       .nth(0)
       .click();
     await page
@@ -335,7 +335,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(0)
       .click();
     await page
@@ -343,7 +343,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
       .click();
     const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");

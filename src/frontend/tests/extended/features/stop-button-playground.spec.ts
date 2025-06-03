@@ -98,7 +98,7 @@ class CustomComponent(Component):
     await elementCustomComponentOutput.hover();
     await page.mouse.down();
     const elementChatOutput = await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-shownode-inputs-left")
       .first();
     await elementChatOutput.hover();
     await page.mouse.up();

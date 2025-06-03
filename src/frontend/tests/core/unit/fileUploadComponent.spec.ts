@@ -278,7 +278,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .first()
       .click();
 

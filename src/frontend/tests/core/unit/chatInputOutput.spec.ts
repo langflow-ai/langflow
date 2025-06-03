@@ -43,8 +43,10 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page.getByTestId("fit_view").click();
 
-  await page.getByTestId("handle-chatinput-noshownode-message-source").click();
-  await page.getByTestId("handle-chatoutput-noshownode-text-target").click();
+  await page
+    .getByTestId("handle-chatinput-noshownode-chat message-source")
+    .click();
+  await page.getByTestId("handle-chatoutput-noshownode-inputs-target").click();
 
   await page.getByText("Playground", { exact: true }).last().click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
