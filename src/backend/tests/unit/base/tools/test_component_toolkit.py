@@ -2,9 +2,9 @@ import os
 
 import pytest
 from langflow.base.tools.component_tool import ComponentToolkit
+from langflow.components.input_output.chat_output import ChatOutput
 from langflow.components.langchain_utilities import ToolCallingAgentComponent
-from langflow.components.models import OpenAIModelComponent
-from langflow.components.outputs.chat import ChatOutput
+from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.graph import Graph
 from langflow.schema.data import Data

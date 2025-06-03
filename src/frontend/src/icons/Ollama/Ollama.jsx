@@ -1,10 +1,10 @@
 export const SvgOllama = (props) => (
   <svg
-    xmlnsXlink="http://www.w3.org/1999/xlink"
-    width="40"
-    height="40"
-    version="1"
-    viewBox="0 0 550 850"
+    width="646"
+    height="854"
+    viewBox="0 0 646 854"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
     {...props}
   >
     <path

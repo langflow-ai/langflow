@@ -35,7 +35,7 @@ test(
     //connection 1
 
     await page
-      .getByTestId("handle-prompt-shownode-prompt message-right")
+      .getByTestId("handle-prompt-shownode-prompt-right")
       .first()
       .click();
 

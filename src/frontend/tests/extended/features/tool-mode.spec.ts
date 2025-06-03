@@ -125,7 +125,7 @@ test(
     await page
       .getByTestId("agentsAgent")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 350, y: 100 },
+        targetPosition: { x: 0, y: 500 },
       });
 
     await page.getByTestId("fit_view").click();

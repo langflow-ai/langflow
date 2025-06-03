@@ -4,7 +4,7 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import ForwardedIconComponent from "../../common/genericIconComponent";
-import SimplifiedCodeTabComponent from "../codeTabsComponent/ChatCodeTabComponent";
+import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
 
 export default function ContentDisplay({

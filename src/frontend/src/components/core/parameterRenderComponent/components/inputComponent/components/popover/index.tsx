@@ -138,7 +138,7 @@ const getInputClassName = (
       "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
     password && "text-clip pr-14",
     blockAddNewGlobalVariable && "text-clip pr-8",
-    selectedOptions?.length >= 0 && "cursor-default",
+    selectedOptions?.length > 0 && "cursor-default",
   );
 };
 

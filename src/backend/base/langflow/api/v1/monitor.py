@@ -171,6 +171,12 @@ async def get_transactions(
             .where(TransactionTable.flow_id == flow_id)
             .order_by(col(TransactionTable.timestamp))
         )
-        return await apaginate(session, stmt, params=params, transformer=transform_transaction_table)
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
+            )
+            return await apaginate(session, stmt, params=params, transformer=transform_transaction_table)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

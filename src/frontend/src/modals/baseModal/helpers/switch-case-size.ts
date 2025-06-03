@@ -31,7 +31,7 @@ export const switchCaseModalSize = (size: string) => {
       height = "h-fit";
       break;
     case "medium-small-tall":
-      minWidth = "min-w-[50vw]";
+      minWidth = "w-[900px] max-w-[98vw]";
       height = "h-[70vh]";
       break;
     case "small-h-full":

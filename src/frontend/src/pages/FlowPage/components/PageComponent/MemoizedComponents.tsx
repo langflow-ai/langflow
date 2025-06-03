@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControls, {
   CustomControlButton,
 } from "@/components/core/canvasControlsComponent";
+import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
 import { Background, Panel } from "@xyflow/react";
@@ -17,6 +18,8 @@ interface MemoizedCanvasControlsProps {
   shadowBoxWidth: number;
   shadowBoxHeight: number;
 }
+
+export const MemoizedLogCanvasControls = memo(() => <LogCanvasControls />);
 
 export const MemoizedCanvasControls = memo(
   ({
@@ -38,7 +41,6 @@ export const MemoizedCanvasControls = memo(
             shadowBox.style.top = `${position.y - shadowBoxHeight / 2}px`;
           }
         }}
-        iconClasses="text-primary"
         testId="add_note"
       />
     </CanvasControls>
@@ -48,7 +50,7 @@ export const MemoizedCanvasControls = memo(
 export const MemoizedSidebarTrigger = memo(() => (
   <Panel
     className={cn(
-      "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+      "react-flow__controls !top-auto !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
       "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
     )}
     position="top-left"

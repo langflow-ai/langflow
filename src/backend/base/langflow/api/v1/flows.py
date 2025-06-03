@@ -247,7 +247,14 @@ async def read_flows(
             return compress_response(flows)
 
         stmt = stmt.where(Flow.folder_id == folder_id)
-        return await apaginate(session, stmt, params=params)
+
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
+            )
+            return await apaginate(session, stmt, params=params)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

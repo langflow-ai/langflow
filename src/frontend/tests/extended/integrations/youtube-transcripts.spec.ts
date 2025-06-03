@@ -16,13 +16,11 @@ test.skip(
 
     await page.getByTestId("fit_view").click();
 
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
+    let outdatedComponents = await page.getByTestId("update-button").count();
 
     while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+      await page.getByTestId("update-button").first().click();
+      outdatedComponents = await page.getByTestId("update-button").count();
     }
 
     await page

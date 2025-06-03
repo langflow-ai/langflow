@@ -132,7 +132,7 @@ class TracingService(Service):
                 trace_context.traces_queue.task_done()
 
     async def _start(self, trace_context: TraceContext) -> None:
-        if trace_context.running:
+        if trace_context.running or self.deactivated:
             return
         try:
             trace_context.running = True
@@ -150,6 +150,8 @@ class TracingService(Service):
         )
 
     def _initialize_langwatch_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
         if (
             "langwatch" not in trace_context.tracers
             or trace_context.tracers["langwatch"].trace_id != trace_context.run_id
@@ -163,6 +165,8 @@ class TracingService(Service):
             )
 
     def _initialize_langfuse_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
         langfuse_tracer = _get_langfuse_tracer()
         trace_context.tracers["langfuse"] = langfuse_tracer(
             trace_name=trace_context.run_name,
@@ -174,6 +178,8 @@ class TracingService(Service):
         )
 
     def _initialize_arize_phoenix_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
         arize_phoenix_tracer = _get_arize_phoenix_tracer()
         trace_context.tracers["arize_phoenix"] = arize_phoenix_tracer(
             trace_name=trace_context.run_name,
@@ -183,6 +189,8 @@ class TracingService(Service):
         )
 
     def _initialize_opik_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
         opik_tracer = _get_opik_tracer()
         trace_context.tracers["opik"] = opik_tracer(
             trace_name=trace_context.run_name,

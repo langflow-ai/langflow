@@ -31,6 +31,9 @@ withEventDeliveryModes(
       .fill(
         "https://www.natgeokids.com/uk/discover/animals/sea-life/turtle-facts/",
       );
+
+    await page.getByTestId("input-list-plus-btn_urls-0").click();
+
     await page
       .getByTestId("inputlist_str_urls_1")
       .nth(0)
@@ -46,11 +49,7 @@ withEventDeliveryModes(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
-    });
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
       .getByPlaceholder(
         "No chat input variables found. Click to run your flow.",

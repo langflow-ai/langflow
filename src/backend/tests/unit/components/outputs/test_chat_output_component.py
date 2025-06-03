@@ -1,5 +1,5 @@
 import pytest
-from langflow.components.outputs import ChatOutput
+from langflow.components.input_output import ChatOutput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
@@ -53,7 +53,7 @@ class TestChatOutput(ComponentTestBaseWithClient):
         data = Data(text="Test data message")
         component.input_value = data
         result = await component.message_response()
-        assert result.text == "Test data message"
+        assert result.text == '```json\n{\n  "text": "Test data message"\n}\n```'
         assert result.sender == MESSAGE_SENDER_AI
 
     async def test_process_dataframe_input(self, component_class, default_kwargs):

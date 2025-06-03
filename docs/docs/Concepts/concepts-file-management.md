@@ -3,6 +3,8 @@ title: Manage files
 slug: /concepts-file-management
 ---
 
+import Icon from "@site/src/components/icon";
+
 Upload, store, and manage files in Langflow's **File management** system.
 
 Uploading files to the **File management** system keeps your files in a central location, and allows you to re-use files across flows without repeated manual uploads.
@@ -17,9 +19,16 @@ To upload a file from your local machine:
 2. Select the file to upload.
    The file is uploaded to Langflow.
 
+You can upload multiple files in a single action.
+Files are available to flows stored in different projects.
+
 Files stored in **My Files** can be renamed, downloaded, duplicated, or deleted.
 
-Files are available to flows stored in different projects.
+To delete a file from your project, hover over a file's icon to click and select it, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+You can delete multiple files in a single action.
+
+To download a file from your project, hover over a file's icon to click and select it, and then click <Icon name="Download" aria-hidden="true"/> **Download**.
+You can download multiple files in a single action, but they will be saved together in a .ZIP file.
 
 ## Use uploaded files in a flow
 
