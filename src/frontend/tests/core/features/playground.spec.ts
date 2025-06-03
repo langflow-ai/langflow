@@ -63,13 +63,17 @@ test(
     await adjustScreenView(page);
 
     await page
-      .getByTestId("handle-chatinput-noshownode-message-source")
+      .getByTestId("handle-chatinput-noshownode-chat message-source")
       .click();
 
-    await page.getByTestId("handle-textoutput-shownode-text-left").click();
+    await page.getByTestId("handle-textoutput-shownode-inputs-left").click();
 
-    await page.getByTestId("handle-textoutput-shownode-message-right").click();
-    await page.getByTestId("handle-chatoutput-noshownode-text-target").click();
+    await page
+      .getByTestId("handle-textoutput-shownode-output text-right")
+      .click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
+      .click();
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
