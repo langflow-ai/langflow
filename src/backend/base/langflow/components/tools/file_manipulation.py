@@ -264,13 +264,13 @@ class FileManipulation(Component):
 
             # Determine the range of lines to show
             total_lines = len(lines)
+            preview_length = 10  # Default preview length
             if line_number is not None:
                 # Center around the specified line
                 start = max(0, line_number - context_lines - 1)
                 end = min(total_lines, line_number + context_lines)
             else:
                 # Show first few lines by default
-                preview_length = 10
                 start = 0
                 end = min(total_lines, preview_length)
 
@@ -279,8 +279,8 @@ class FileManipulation(Component):
                 line = lines[i].rstrip("\n")
                 result += f"{i + 1:4}: {line}\n"
 
-            # Add truncation notice if needed
-            if len(lines) > preview_length:
+            # Add truncation notice if needed (only for default preview mode)
+            if line_number is None and len(lines) > preview_length:
                 result += f"\n... and {len(lines) - preview_length} more lines"
         except OSError as e:
             return f"Error getting file preview: {e!s}"
@@ -357,12 +357,12 @@ class FileManipulation(Component):
                     content,
                     search,
                     replacement,
-                    use_regex,
-                    replace_all,
-                    context_before,
-                    context_after,
-                    line_number,
-                    occurrence,
+                    use_regex=use_regex,
+                    replace_all=replace_all,
+                    context_before=context_before,
+                    context_after=context_after,
+                    line_number=line_number,
+                    occurrence=occurrence,
                 )
 
                 if not replacements:
