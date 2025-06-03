@@ -249,7 +249,7 @@ test(
 
     await page
       .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)
-      .getByTestId("output-inspection-message-textoutput")
+      .getByTestId("output-inspection-output text-textoutput")
       .first()
       .click();
     const valueSimilarity = await page.getByTestId("textarea").textContent();
