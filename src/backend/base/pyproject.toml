@@ -10,7 +10,6 @@ maintainers = [
     { name = "Carlos Coelho", email = "carlos@langflow.org" },
     { name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com" },
     { name = "Gabriel Almeida", email = "gabriel@langflow.org" },
-    { name = "Igor Carvalho", email = "igorr.ackerman@gmail.com" },
     { name = "Lucas Eduoli", email = "lucaseduoli@gmail.com" },
     { name = "Otávio Anovazzi", email = "otavio2204@gmail.com" },
     { name = "Rodrigo Nader", email = "rodrigo@langflow.org" },
