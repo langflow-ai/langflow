@@ -55,13 +55,12 @@ const HiddenOutputsButton = memo(
   }) => (
     <Button
       unstyled
-      className="group flex h-[1.75rem] w-[1.75rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
+      className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
       onClick={onClick}
     >
       <ForwardedIconComponent
         name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        strokeWidth={ICON_STROKE_WIDTH}
-        className="icon-size text-placeholder-foreground group-hover:text-foreground"
+        className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
       />
     </Button>
   ),
@@ -220,7 +219,6 @@ function GenericNode({
   const update = useShortcutsStore((state) => state.update);
   useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault: true });
 
-  // Memoized values
   const isToolMode = useMemo(
     () =>
       data.node?.outputs?.some(
@@ -262,35 +260,47 @@ function GenericNode({
   }, [data.node?.outputs]);
 
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
-    null,
+    () => data.node?.outputs?.find((output) => output.selected) || null,
   );
 
   const handleSelectOutput = useCallback(
     (output) => {
       setSelectedOutput(output);
-      // Remove any edges connected to this output handle
-      const sourceHandleId = scapedJSONStringfy({
-        output_types: [output.selected ?? output.types[0]],
-        id: data.id,
-        dataType: data.type,
-        name: output.name,
-      });
 
-      setEdges((eds) =>
-        eds.filter((edge) => edge.sourceHandle !== sourceHandleId),
-      );
+      setEdges((eds) => {
+        return eds.map((edge) => {
+          if (edge.source === data.id && edge.data?.sourceHandle) {
+            const sourceHandle = edge.data.sourceHandle;
+            if (sourceHandle.name === output.name) {
+              const newSourceHandle = {
+                ...sourceHandle,
+                output_types: [output.selected ?? output.types[0]],
+              };
+              const newSourceHandleId = scapedJSONStringfy(newSourceHandle);
+
+              return {
+                ...edge,
+                sourceHandle: newSourceHandleId,
+                data: {
+                  ...edge.data,
+                  sourceHandle: newSourceHandle,
+                },
+              };
+            }
+          }
+          return edge;
+        });
+      });
 
       setNode(data.id, (oldNode) => {
         const newNode = cloneDeep(oldNode);
         if (newNode.data.node?.outputs) {
-          // First, clear any previous selections
           newNode.data.node.outputs.forEach((out) => {
             if (out.selected) {
               out.selected = undefined;
             }
           });
 
-          // Then set the new selection
           const outputIndex = newNode.data.node.outputs.findIndex(
             (o) => o.name === output.name,
           );
@@ -497,38 +507,72 @@ function GenericNode({
             )}
         </div>
 
-        <div className="generic-node-div-body">
-          <MemoizedRenderInputParameters
-            data={data}
-            types={types}
-            isToolMode={isToolMode}
-            showNode={showNode}
-            shownOutputs={shownOutputs}
-            showHiddenOutputs={showHiddenOutputs}
-          />
-        </div>
-        <div className="generic-node-div-footer">
-          {data.node?.template &&
-            Object.keys(data.node.template).length > 0 && (
-              <div className="generic-node-menu-options">
+        {showNode && (
+          <div className="nopan nodelete nodrag noflow relative cursor-auto">
+            <>
+              <MemoizedRenderInputParameters
+                data={data}
+                types={types}
+                isToolMode={isToolMode}
+                showNode={showNode}
+                shownOutputs={shownOutputs}
+                showHiddenOutputs={showHiddenOutputs}
+              />{" "}
+              <div
+                className={classNames(
+                  Object.keys(data.node!.template).length < 1 ? "hidden" : "",
+                  "flex-max-width justify-center",
+                )}
+              >
+                {" "}
+              </div>
+              <MemoizedNodeOutputs
+                outputs={shownOutputs}
+                keyPrefix={"shown"}
+                data={data}
+                types={types}
+                selected={selected ?? false}
+                showNode={showNode}
+                isToolMode={isToolMode}
+                showHiddenOutputs={showHiddenOutputs}
+                selectedOutput={selectedOutput}
+                handleSelectOutput={handleSelectOutput}
+              />
+              {showHiddenOutputs && (
                 <MemoizedNodeOutputs
+                  outputs={hiddenOutputs}
+                  keyPrefix="hidden"
+
                   data={data}
                   selected={!!selected}
                   showNode={showNode}
                   isToolMode={isToolMode}
-                  types={types}
-                  outputs={shownOutputs}
-                  showHiddenOutputs={showHiddenOutputs}
+
+                  showHiddenOutputs={true}
+                  selectedOutput={selectedOutput}
+
                   handleSelectOutput={handleSelectOutput}
                   keyPrefix="node-outputs"
                   selectedOutput={selectedOutput}
                 />
-                {Object.keys(data.node.template).some((e) =>
-                  TOOLTIP_HIDDEN_OUTPUTS.includes(e),
-                ) && (
-                  <ShadTooltip
-                    content={TOOLTIP_OPEN_HIDDEN_OUTPUTS}
-                    side="bottom"
+
+              )}
+              {hiddenOutputs && hiddenOutputs.length > 0 && (
+                <ShadTooltip
+                  content={
+                    showHiddenOutputs
+                      ? `${TOOLTIP_HIDDEN_OUTPUTS} (${hiddenOutputs?.length})`
+                      : `${TOOLTIP_OPEN_HIDDEN_OUTPUTS} (${hiddenOutputs?.length})`
+                  }
+                >
+                  <div
+                    className={cn(
+                      "absolute left-1/2 flex -translate-x-1/2 justify-center",
+                      (shownOutputs && shownOutputs.length > 0) ||
+                        showHiddenOutputs
+                        ? "bottom-[-0.8rem]"
+                        : "bottom-[-0.8rem]",
+                    )}
                   >
                     <HiddenOutputsButton
                       showHiddenOutputs={showHiddenOutputs}

@@ -160,6 +160,23 @@ class Component(CustomComponent):
         self.set_class_code()
         self._set_output_required_inputs()
 
+    def get_incoming_edge_by_target_param(self, target_param: str) -> str | None:
+        """Get the source vertex ID for an incoming edge that targets a specific parameter.
+
+        This method delegates to the underlying vertex to find an incoming edge that connects
+        to the specified target parameter.
+
+        Args:
+            target_param (str): The name of the target parameter to find an incoming edge for
+
+        Returns:
+            str | None: The ID of the source vertex if an incoming edge is found, None otherwise
+        """
+        if self._vertex is None:
+            msg = "Vertex not found. Please build the graph first."
+            raise ValueError(msg)
+        return self._vertex.get_incoming_edge_by_target_param(target_param)
+
     @property
     def enabled_tools(self) -> list[str] | None:
         """Dynamically determine which tools should be enabled.
@@ -450,7 +467,10 @@ class Component(CustomComponent):
             if input_.name is None:
                 msg = self.build_component_error_message("Input name cannot be None")
                 raise ValueError(msg)
-            self._inputs[input_.name] = deepcopy(input_)
+            try:
+                self._inputs[input_.name] = deepcopy(input_)
+            except TypeError:
+                self._inputs[input_.name] = input_
 
     def validate(self, params: dict) -> None:
         """Validates the component parameters.
