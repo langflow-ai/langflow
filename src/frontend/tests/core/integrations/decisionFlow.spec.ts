@@ -289,7 +289,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-message-right")
+      .getByTestId("handle-openaimodel-shownode-model response-right")
       .nth(0)
       .click();
     await page
