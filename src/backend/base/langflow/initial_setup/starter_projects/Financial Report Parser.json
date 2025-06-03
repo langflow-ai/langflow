@@ -6,36 +6,8 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-7hzeM",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "StructuredOutput-XPbNI",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-7hzeM{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-7hzeMœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-XPbNI{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-XPbNIœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "OpenAIModel-7hzeM",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-7hzeMœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-XPbNI",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-XPbNIœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-dKvV3",
+            "id": "ChatInput-Nxx77",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,51 +15,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-XPbNI",
+            "id": "StructuredOutput-cyeTd",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-dKvV3{œdataTypeœ:œChatInputœ,œidœ:œChatInput-dKvV3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-XPbNI{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-XPbNIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-Nxx77{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Nxx77œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-cyeTd{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-cyeTdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-dKvV3",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-dKvV3œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-XPbNI",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-XPbNIœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-Nxx77",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Nxx77œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutput-cyeTd",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-cyeTdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "StructuredOutput",
-            "id": "StructuredOutput-XPbNI",
-            "name": "structured_output_dataframe",
-            "output_types": []
-          },
-          "targetHandle": {
-            "fieldName": "input_data",
-            "id": "parser-s4Kz6",
-            "inputTypes": [
-              "DataFrame",
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__StructuredOutput-XPbNI{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-XPbNIœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-s4Kz6{œfieldNameœ:œinput_dataœ,œidœ:œparser-s4Kz6œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "StructuredOutput-XPbNI",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-XPbNIœ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: []}",
-        "target": "parser-s4Kz6",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-s4Kz6œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
-      },
-      {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-s4Kz6",
+            "id": "parser-Ihs8L",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -95,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-meCWe",
+            "id": "ChatOutput-pQlnw",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -104,17 +52,75 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__parser-s4Kz6{œdataTypeœ:œparserœ,œidœ:œparser-s4Kz6œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-meCWe{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-meCWeœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "source": "parser-s4Kz6",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-s4Kz6œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-meCWe",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-meCWeœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-parser-Ihs8L{œdataTypeœ:œparserœ,œidœ:œparser-Ihs8Lœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-pQlnw{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-pQlnwœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "parser-Ihs8L",
+        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-Ihs8Lœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-pQlnw",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-pQlnwœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "StructuredOutput",
+            "id": "StructuredOutput-cyeTd",
+            "name": "structured_output",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "parser-Ihs8L",
+            "inputTypes": [
+              "DataFrame",
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__StructuredOutput-cyeTd{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-cyeTdœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-Ihs8L{œfieldNameœ:œinput_dataœ,œidœ:œparser-Ihs8Lœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "StructuredOutput-cyeTd",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-cyeTdœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "target": "parser-Ihs8L",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-Ihs8Lœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-rkcP3",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "StructuredOutput-cyeTd",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__OpenAIModel-rkcP3{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-rkcP3œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-cyeTd{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-cyeTdœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "OpenAIModel-rkcP3",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-rkcP3œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "StructuredOutput-cyeTd",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-cyeTdœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "OpenAIModel-7hzeM",
+          "id": "OpenAIModel-rkcP3",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -166,7 +172,6 @@
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
-                "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"
@@ -177,6 +182,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
+                "hidden": false,
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
@@ -494,9 +500,9 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-7hzeM",
+        "id": "OpenAIModel-rkcP3",
         "measured": {
-          "height": 525,
+          "height": 539,
           "width": 320
         },
         "position": {
@@ -508,7 +514,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-meCWe",
+          "id": "ChatOutput-pQlnw",
           "node": {
             "base_classes": [
               "Message"
@@ -805,9 +811,9 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-meCWe",
+        "id": "ChatOutput-pQlnw",
         "measured": {
-          "height": 66,
+          "height": 48,
           "width": 192
         },
         "position": {
@@ -819,7 +825,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-dKvV3",
+          "id": "ChatInput-Nxx77",
           "node": {
             "base_classes": [
               "Message"
@@ -1117,9 +1123,9 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-dKvV3",
+        "id": "ChatInput-Nxx77",
         "measured": {
-          "height": 66,
+          "height": 48,
           "width": 192
         },
         "position": {
@@ -1131,7 +1137,7 @@
       },
       {
         "data": {
-          "id": "note-noWIg",
+          "id": "note-RDdQe",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -1143,7 +1149,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-noWIg",
+        "id": "note-RDdQe",
         "measured": {
           "height": 324,
           "width": 324
@@ -1157,7 +1163,7 @@
       },
       {
         "data": {
-          "id": "note-1vbDd",
+          "id": "note-5me56",
           "node": {
             "description": "\n# Financial Report Parser\n\nThis template extracts key financial metrics from a given financial report text using OpenAI's GPT-4o-mini model. The extracted data is structured and formatted for chat consumption.\n\n## Prerequisites\n\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your OpenAI API key to the OpenAI model.\n2. To run the flow, click **Playground**.\nThe **Chat Input** component in this template is pre-loaded with a sample financial report for demonstrating how structured data is extracted.\n\n* The **OpenAI** model component identifies and retrieves Gross Profit, EBITDA, Net Income, and Operating Expenses from the financial report.\n* The **Structured Output** component formats extracted data into a structured format for better readability and further processing.\n* The **Parser** component converts extracted data into formatted messages for chat consumption.\n\n\n\n\n\n",
             "display_name": "",
@@ -1168,7 +1174,7 @@
         },
         "dragging": false,
         "height": 688,
-        "id": "note-1vbDd",
+        "id": "note-5me56",
         "measured": {
           "height": 688,
           "width": 620
@@ -1184,7 +1190,7 @@
       },
       {
         "data": {
-          "id": "StructuredOutput-XPbNI",
+          "id": "StructuredOutput-cyeTd",
           "node": {
             "base_classes": [
               "Data",
@@ -1216,6 +1222,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Structured Output",
+                "hidden": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
                 "selected": "Data",
@@ -1441,9 +1448,9 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-XPbNI",
+        "id": "StructuredOutput-cyeTd",
         "measured": {
-          "height": 447,
+          "height": 348,
           "width": 320
         },
         "position": {
@@ -1455,7 +1462,7 @@
       },
       {
         "data": {
-          "id": "parser-s4Kz6",
+          "id": "parser-Ihs8L",
           "node": {
             "base_classes": [
               "Message"
@@ -1486,6 +1493,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
+                "hidden": false,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
                 "selected": "Message",
@@ -1615,30 +1623,30 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-s4Kz6",
+        "id": "parser-Ihs8L",
         "measured": {
-          "height": 395,
+          "height": 360,
           "width": 320
         },
         "position": {
           "x": 1765.290752395121,
           "y": 164.78283431885177
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -17.069750343754663,
-      "y": 450.3545210238955,
-      "zoom": 0.5500905440229726
+      "x": -40.44400577912347,
+      "y": 339.8517842832397,
+      "zoom": 0.5874068801037157
     }
   },
   "description": "Extracts key financial metrics like Gross Profit, EBITDA, and Net Income from financial reports and structures them for easy analysis, using Structured Output Component",
   "endpoint_name": null,
-  "id": "43308dc6-b08e-4366-8fac-18cee79db1c5",
+  "id": "b1baf64b-8ba6-4ac7-b704-393a4a22ea05",
   "is_component": false,
-  "last_tested_version": "1.2.0",
+  "last_tested_version": "1.4.2",
   "name": "Financial Report Parser",
   "tags": [
     "chatbots",
