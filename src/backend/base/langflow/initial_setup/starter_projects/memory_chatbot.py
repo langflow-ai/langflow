@@ -14,6 +14,7 @@ def memory_chatbot_graph(template: str | None = None):
     memory_component = MemoryComponent()
     chat_input = ChatInput()
     prompt_component = PromptComponent()
+    # write a convert to text function that converts the dataframe to a text string
     prompt_component.set(
         template=template,
         user_message=chat_input.message_response,

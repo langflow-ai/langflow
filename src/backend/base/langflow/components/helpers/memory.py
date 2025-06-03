@@ -1,11 +1,10 @@
 from typing import Any, cast
 
 from langflow.custom import Component
-from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput
 from langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, TabInput
 from langflow.memory import aget_messages, astore_message
-from langflow.schema import Data
+from langflow.schema import Data, dotdict
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.utils.component_utils import set_current_fields, set_field_display
@@ -165,11 +164,6 @@ class MemoryComponent(Component):
         self.status = stored
         return cast(Data, stored)
 
-    async def retrieve_messages_as_text(self) -> Message:
-        stored_text = data_to_text(self.template, await self.retrieve_messages())
-        self.status = stored_text
-        return Message(text=stored_text)
-
     async def retrieve_messages_dataframe(self) -> DataFrame:
         """Convert the retrieved messages into a DataFrame.
 
@@ -216,12 +210,16 @@ class MemoryComponent(Component):
         self.status = stored_message
         return stored_message
 
-    def update_build_config(self, build_config: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
-        build_config = set_current_fields(
+    def update_build_config(
+        self,
+        build_config: dotdict,
+        field_value: Any,  # noqa: ARG002
+        field_name: str | None = None,  # noqa: ARG002
+    ) -> dotdict:
+        return set_current_fields(
             build_config=build_config,
             action_fields=self.mode_config,
             selected_action=build_config["mode"]["value"],
             default_fields=self.default_keys,
             func=set_field_display,
         )
-        return build_config
