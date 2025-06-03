@@ -105,7 +105,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         >
           {loading ? (
             <span className="relative flex items-center justify-center">
-              <span className="invisible">{newChildren}</span>
+              <span
+                className={cn(
+                  className,
+                  "invisible flex items-center justify-center gap-2 !p-0",
+                )}
+              >
+                {newChildren}
+              </span>
               <span className="absolute inset-0 flex items-center justify-center">
                 <ForwardedIconComponent
                   name={"Loader2"}
