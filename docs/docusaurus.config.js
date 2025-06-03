@@ -292,8 +292,8 @@ const config = {
         hideOnScroll: true,
         logo: {
           alt: "Langflow",
-          src: "img/langflow-logo-black.svg",
-          srcDark: "img/langflow-logo-white.svg",
+          src: "img/lf-docs.svg",
+          srcDark: "img/lf-docs.svg",
         },
         items: [
           // right
@@ -346,8 +346,8 @@ const config = {
       footer: {
         logo: {
           alt: "Langflow",
-          src: "img/langflow-logo-black.svg",
-          srcDark: "img/langflow-logo-white.svg",
+          src: "img/lf-docs.svg",
+          srcDark: "img/lf-docs.svg",
           width: 160,
           height: 40,
         },
