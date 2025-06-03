@@ -139,7 +139,7 @@ class BackupManager:
         try:
             shutil.copy2(backup_path, file_path)
             self.current_positions[file_path] = new_position
-            return True, backup_id, f"Successfully restored {direction} to version {new_position+1} of {len(backups)}"
+            return True, backup_id, f"Successfully restored {direction} to version {new_position + 1} of {len(backups)}"
         except Exception as e:
             return False, None, f"Failed to restore: {e!s}"
 
@@ -285,7 +285,7 @@ class FileManipulation(Component):
             for i, line in enumerate(lines[:preview_length], start=1):
                 result += f"{i}: {line}"
             if len(lines) > preview_length:
-                result += f"\n... and {len(lines)-preview_length} more lines"
+                result += f"\n... and {len(lines) - preview_length} more lines"
             return result
 
         except Exception as e:
@@ -600,7 +600,6 @@ class FileManipulation(Component):
         # Plain string search
         elif context_before or context_after:
             # Context-aware search
-            import re
 
             try:
                 if context_before and context_after:
@@ -744,7 +743,7 @@ class FileManipulation(Component):
                 return f"Error viewing file: {e!s}"
 
         @tool
-        def edit_text(
+        def str_replace(
             path: str,
             old_str: str,
             new_str: str,
@@ -864,7 +863,7 @@ class FileManipulation(Component):
 
                 result = f"Successfully undid changes to {path}.\n"
                 if info["position"] >= 0:
-                    result += f"Restored to version {info['position']+1} of {info['count']}.\n"
+                    result += f"Restored to version {info['position'] + 1} of {info['count']}.\n"
                     if info["can_undo"]:
                         result += f"You can undo {info['count'] - info['position'] - 1} more time(s).\n"
                     if info["can_redo"]:
@@ -901,7 +900,7 @@ class FileManipulation(Component):
                     if info["can_undo"]:
                         result += "You can undo this operation.\n"
                 elif info["position"] >= 0:
-                    result += f"Restored to version {info['position']+1} of {info['count']}.\n"
+                    result += f"Restored to version {info['position'] + 1} of {info['count']}.\n"
                     if info["can_undo"]:
                         result += "You can undo this operation.\n"
                     if info["can_redo"]:
@@ -942,6 +941,32 @@ class FileManipulation(Component):
                 return f"Error creating file: {e!s}"
 
         @tool
+        def create_directory(directory_path: str) -> str:
+            """Creates a new directory in the workspace.
+
+            Args:
+                directory_path: Relative path to the directory to create.
+
+            Returns:
+                A message indicating the result of the operation.
+            """
+            try:
+                resolved_path = self.path_handler.resolve_path(directory_path, must_exist=False)
+
+                # Check if path already exists
+                if os.path.exists(resolved_path):
+                    if os.path.isdir(resolved_path):
+                        return f"Directory already exists: {directory_path}"
+                    return f"Error: Path exists but is not a directory: {directory_path}"
+
+                # Create the directory
+                os.makedirs(resolved_path, exist_ok=True)
+                return f"Successfully created directory: {directory_path}"
+
+            except Exception as e:
+                return f"Error creating directory: {e!s}"
+
+        @tool
         def list_directory(directory_path: str = ".") -> str:
             """Returns a detailed listing of files and directories within a specified directory.
 
@@ -974,9 +999,9 @@ class FileManipulation(Component):
                         size = os.path.getsize(entry_path)
                         size_str = f"{size} bytes"
                         if size > 1024:
-                            size_str = f"{size/1024:.1f} KB"
+                            size_str = f"{size / 1024:.1f} KB"
                         if size > 1024 * 1024:
-                            size_str = f"{size/(1024*1024):.1f} MB"
+                            size_str = f"{size / (1024 * 1024):.1f} MB"
                         files.append((entry, "file", size_str))
 
                 # Format and add to result
@@ -1256,13 +1281,14 @@ class FileManipulation(Component):
         # Return all tools
         return [
             view_file,
-            edit_text,
+            str_replace,
             insert_at_line,
             remove_lines,
             move_code_block,
             undo_edit,
             redo_edit,
             create_file,
+            create_directory,
             list_directory,
             move_file,
             search_files,
