@@ -1017,10 +1017,9 @@ async def flow_as_tool_websocket(
 
                         elif event_type == "response.output_item.added":
                             bot_speaking_flag[0] = True
-                            msg_handler.client_send({
-                                "type": "langflow.llm.response_started", 
-                                "response_id": response_id
-                            })
+                            msg_handler.client_send(
+                                {"type": "langflow.llm.response_started", "response_id": response_id}
+                            )
                             item = event.get("item", {})
                             if item.get("type") == "function_call" and (
                                 not function_call or (function_call and function_call.done)
@@ -1036,10 +1035,9 @@ async def flow_as_tool_websocket(
                                     is_prog_enabled=voice_config.progress_enabled,
                                 )
                         elif event_type == "response.output_item.done":
-                            msg_handler.client_send({
-                                "type": "langflow.llm.response_item_done", 
-                                "response_id": response_id
-                            })
+                            msg_handler.client_send(
+                                {"type": "langflow.llm.response_item_done", "response_id": response_id}
+                            )
                             try:
                                 transcript = extract_transcript(event)
                                 if transcript and transcript.strip():
@@ -1053,10 +1051,9 @@ async def flow_as_tool_websocket(
                                 logger.error(traceback.format_exc())
                             bot_speaking_flag[0] = False
                         elif event_type == "response.done":
-                            msg_handler.client_send({
-                                "type": "langflow.llm.response_completed", 
-                                "response_id": response_id
-                            })
+                            msg_handler.client_send(
+                                {"type": "langflow.llm.response_completed", "response_id": response_id}
+                            )
                             msg_handler.openai_unblock()
                         elif event_type == "response.function_call_arguments.delta":
                             if function_call and response_id not in (
