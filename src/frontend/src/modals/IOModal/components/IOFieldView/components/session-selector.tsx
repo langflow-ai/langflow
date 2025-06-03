@@ -8,9 +8,13 @@ import {
   SelectTrigger,
 } from "@/components/ui/select-custom";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import { useUtilityStore } from "@/stores/utilityStore";
+import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
 import React, { useEffect, useRef, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
 
 export default function SessionSelector({
   deleteSession,
@@ -21,6 +25,7 @@ export default function SessionSelector({
   updateVisibleSession,
   selectedView,
   setSelectedView,
+  playgroundPage,
 }: {
   deleteSession: (session: string) => void;
   session: string;
@@ -30,8 +35,13 @@ export default function SessionSelector({
   updateVisibleSession: (session: string) => void;
   selectedView?: { type: string; id: string };
   setSelectedView: (view: { type: string; id: string } | undefined) => void;
+  playgroundPage: boolean;
 }) {
-  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const clientId = useUtilityStore((state) => state.clientId);
+  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentFlowId = playgroundPage
+    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
+    : realFlowId;
   const [isEditing, setIsEditing] = useState(false);
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();
@@ -108,15 +118,20 @@ export default function SessionSelector({
     }
   };
 
+  const setNewSessionCloseVoiceAssistant = useVoiceStore(
+    (state) => state.setNewSessionCloseVoiceAssistant,
+  );
+
   return (
     <div
       data-testid="session-selector"
       onClick={(e) => {
+        setNewSessionCloseVoiceAssistant(true);
         if (isEditing) e.stopPropagation();
         else toggleVisibility();
       }}
       className={cn(
-        "file-component-accordion-div group cursor-pointer rounded-md text-left text-[13px] hover:bg-secondary-hover",
+        "file-component-accordion-div group cursor-pointer rounded-md text-left text-mmd hover:bg-secondary-hover",
         isVisible ? "bg-secondary-hover font-semibold" : "font-normal",
       )}
     >

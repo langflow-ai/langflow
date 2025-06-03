@@ -1,6 +1,7 @@
 {
   "name": "langflow-docs",
   "version": "0.0.0",
+  "license": "MIT",
   "private": false,
   "scripts": {
     "clear-docs": "rimraf ./docs/",
@@ -12,10 +13,10 @@
   },
   "dependencies": {
     "@code-hike/mdx": "^0.9.0",
-    "@docusaurus/core": "^3.7.0",
+    "@docusaurus/core": "3.7.0",
     "@docusaurus/plugin-client-redirects": "^3.7.0",
     "@docusaurus/plugin-google-tag-manager": "^3.7.0",
-    "@docusaurus/preset-classic": "^3.7.0",
+    "@docusaurus/preset-classic": "3.7.0",
     "@easyops-cn/docusaurus-search-local": "^0.45.0",
     "@mdx-js/react": "^3.0.1",
     "@mendable/search": "^0.0.206",

@@ -1,17 +1,13 @@
 import { expect, Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { addNewApiKeys } from "../../utils/add-new-api-keys";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
-import { selectGptModel } from "../../utils/select-gpt-model";
-import { updateOldComponents } from "../../utils/update-old-components";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Travel Planning Agent",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -71,11 +67,7 @@ test(
       timeout: 60000 * 3,
     });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector("text=default session", {
       timeout: 30000,
@@ -84,8 +76,8 @@ test(
     const output = await page.getByTestId("div-chat-message").allTextContents();
     const outputText = output.join("\n");
 
-    expect(outputText.toLowerCase()).toContain("weather");
-    expect(outputText.toLowerCase()).toContain("budget");
+    expect(outputText.toLowerCase()).toContain("travel");
+    expect(outputText.toLowerCase()).toContain("day");
 
     expect(outputText.toLowerCase()).toContain(randomCity.toLowerCase());
     expect(outputText.toLowerCase()).toContain(randomCity2.toLowerCase());

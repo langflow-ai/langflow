@@ -1,22 +1,23 @@
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
+import { IS_MAC } from "@/constants/constants";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
+import { CustomMcpServerTab } from "@/customization/components/custom-McpServerTab";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
+import { FlowType } from "@/types/flow";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import GridComponent from "../../components/grid";
-import GridSkeleton from "../../components/gridSkeleton";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
 import ListSkeleton from "../../components/listSkeleton";
+import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
-import ModalsComponent from "../../oldComponents/modalsComponent";
 import EmptyFolder from "../emptyFolder";
 
-const HomePage = ({ type }) => {
+const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const [view, setView] = useState<"grid" | "list">(() => {
     const savedView = localStorage.getItem("view");
     return savedView === "grid" || savedView === "list" ? savedView : "list";
@@ -26,8 +27,10 @@ const HomePage = ({ type }) => {
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
-  const handleFileDrop = useFileDrop("flows");
-  const [flowType, setFlowType] = useState<"flows" | "components">(type);
+
+  const [flowType, setFlowType] = useState<"flows" | "components" | "mcp">(
+    type,
+  );
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
   const folderName =
@@ -77,20 +80,150 @@ const HomePage = ({ type }) => {
     flows?.find((flow) => flow.folder_id === (folderId ?? myCollectionId)) ===
     undefined;
 
+  const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
+
+  useEffect(() => {
+    if (
+      !isEmptyFolder &&
+      flows?.find(
+        (flow) =>
+          flow.folder_id === (folderId ?? myCollectionId) &&
+          flow.is_component === (flowType === "components"),
+      ) === undefined
+    ) {
+      setFlowType(flowType === "flows" ? "components" : "flows");
+    }
+  }, [isEmptyFolder]);
+
+  const [selectedFlows, setSelectedFlows] = useState<string[]>([]);
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
+    null,
+  );
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only track these keys when we're in list/selection mode and not when a modal is open
+      // or when an input field is focused
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === "Shift") {
+        setIsShiftPressed(true);
+      } else if ((!IS_MAC && e.key === "Control") || e.key === "Meta") {
+        setIsCtrlPressed(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === "Shift") {
+        setIsShiftPressed(false);
+      } else if ((!IS_MAC && e.key === "Control") || e.key === "Meta") {
+        setIsCtrlPressed(false);
+      }
+    };
+
+    // Reset key states when window loses focus
+    const handleBlur = () => {
+      setIsShiftPressed(false);
+      setIsCtrlPressed(false);
+    };
+
+    // Only add listeners if we're in flows or components mode, not MCP mode
+    if (flowType === "flows" || flowType === "components") {
+      document.addEventListener("keydown", handleKeyDown);
+      document.addEventListener("keyup", handleKeyUp);
+      window.addEventListener("blur", handleBlur);
+    }
+
+    // Clean up event listeners when component unmounts
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
+
+      // Reset key states on unmount
+      setIsShiftPressed(false);
+      setIsCtrlPressed(false);
+    };
+  }, [flowType]);
+
+  const setSelectedFlow = useCallback(
+    (selected: boolean, flowId: string, index: number) => {
+      setLastSelectedIndex(index);
+      if (isShiftPressed && lastSelectedIndex !== null) {
+        // Find the indices of the last selected and current flow
+        const flows = data.flows;
+
+        // Determine the range to select
+        const start = Math.min(lastSelectedIndex, index);
+        const end = Math.max(lastSelectedIndex, index);
+        // Get all flow IDs in the range
+        const flowsToSelect = flows
+          .slice(start, end + 1)
+          .map((flow) => flow.id);
+
+        // Update selection
+        if (selected) {
+          setSelectedFlows((prev) =>
+            Array.from(new Set([...prev, ...flowsToSelect])),
+          );
+        } else {
+          setSelectedFlows((prev) =>
+            prev.filter((id) => !flowsToSelect.includes(id)),
+          );
+        }
+      } else {
+        if (selected) {
+          setSelectedFlows([...selectedFlows, flowId]);
+        } else {
+          setSelectedFlows(selectedFlows.filter((id) => id !== flowId));
+        }
+      }
+    },
+    [selectedFlows, lastSelectedIndex, data.flows, isShiftPressed],
+  );
+
+  useEffect(() => {
+    setSelectedFlows((old) =>
+      old.filter((id) => data.flows.some((flow) => flow.id === id)),
+    );
+  }, [data.flows]);
+
+  // Reset key states when navigating away
+  useEffect(() => {
+    return () => {
+      setIsShiftPressed(false);
+      setIsCtrlPressed(false);
+    };
+  }, [folderId]);
+
   return (
     <CardsWrapComponent
       onFileDrop={handleFileDrop}
-      dragMessage={`Drag your ${folderName} here`}
+      dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
     >
       <div
         className="flex h-full w-full flex-col overflow-y-auto"
         data-testid="cards-wrapper"
       >
-        <div className="flex h-full w-full flex-col xl:container">
+        <div className="flex h-full w-full flex-col 3xl:container">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
-
-          {/* mt-10 to mt-8 for Datastax LF */}
-          <div className="flex flex-1 flex-col justify-start px-5 pt-10">
+          <div className="flex flex-1 flex-col justify-start p-4">
             <div className="flex h-full flex-col justify-start">
               <HeaderComponent
                 folderName={folderName}
@@ -101,40 +234,61 @@ const HomePage = ({ type }) => {
                 setNewProjectModal={setNewProjectModal}
                 setSearch={onSearch}
                 isEmptyFolder={isEmptyFolder}
+                selectedFlows={selectedFlows}
               />
               {isEmptyFolder ? (
                 <EmptyFolder setOpenModal={setNewProjectModal} />
               ) : (
-                <div className="mt-6">
+                <div className="">
                   {isLoading ? (
                     view === "grid" ? (
-                      <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                        <GridSkeleton />
-                        <GridSkeleton />
+                      <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                        <ListSkeleton />
+                        <ListSkeleton />
                       </div>
                     ) : (
-                      <div className="flex flex-col">
+                      <div className="mt-4 flex flex-col gap-1">
                         <ListSkeleton />
                         <ListSkeleton />
                       </div>
                     )
-                  ) : data && data.pagination.total > 0 ? (
+                  ) : flowType === "mcp" ? (
+                    <CustomMcpServerTab folderName={folderName} />
+                  ) : (flowType === "flows" || flowType === "components") &&
+                    data &&
+                    data.pagination.total > 0 ? (
                     view === "grid" ? (
-                      <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                        {data.flows.map((flow) => (
-                          <GridComponent key={flow.id} flowData={flow} />
+                      <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                        {data.flows.map((flow, index) => (
+                          <ListComponent
+                            key={flow.id}
+                            flowData={flow}
+                            selected={selectedFlows.includes(flow.id)}
+                            setSelected={(selected) =>
+                              setSelectedFlow(selected, flow.id, index)
+                            }
+                            shiftPressed={isShiftPressed || isCtrlPressed}
+                          />
                         ))}
                       </div>
                     ) : (
-                      <div className="flex flex-col">
-                        {data.flows.map((flow) => (
-                          <ListComponent key={flow.id} flowData={flow} />
+                      <div className="mt-4 flex flex-col gap-1">
+                        {data.flows.map((flow, index) => (
+                          <ListComponent
+                            key={flow.id}
+                            flowData={flow}
+                            selected={selectedFlows.includes(flow.id)}
+                            setSelected={(selected) =>
+                              setSelectedFlow(selected, flow.id, index)
+                            }
+                            shiftPressed={isShiftPressed || isCtrlPressed}
+                          />
                         ))}
                       </div>
                     )
                   ) : flowType === "flows" ? (
                     <div className="pt-2 text-center text-sm text-secondary-foreground">
-                      No flows in this folder.{" "}
+                      No flows in this project.{" "}
                       <a
                         onClick={() => setNewProjectModal(true)}
                         className="cursor-pointer underline"
@@ -161,20 +315,22 @@ const HomePage = ({ type }) => {
               )}
             </div>
           </div>
-
-          {!isLoading && !isEmptyFolder && data.pagination.total >= 10 && (
-            <div className="flex justify-end px-3 py-4">
-              <PaginatorComponent
-                pageIndex={data.pagination.page}
-                pageSize={data.pagination.size}
-                rowsCount={[12, 24, 48, 96]}
-                totalRowsCount={data.pagination.total}
-                paginate={handlePageChange}
-                pages={data.pagination.pages}
-                isComponent={flowType === "components"}
-              />
-            </div>
-          )}
+          {(flowType === "flows" || flowType === "components") &&
+            !isLoading &&
+            !isEmptyFolder &&
+            data.pagination.total >= 10 && (
+              <div className="flex justify-end px-3 py-4">
+                <PaginatorComponent
+                  pageIndex={data.pagination.page}
+                  pageSize={data.pagination.size}
+                  rowsCount={[12, 24, 48, 96]}
+                  totalRowsCount={data.pagination.total}
+                  paginate={handlePageChange}
+                  pages={data.pagination.pages}
+                  isComponent={flowType === "components"}
+                />
+              </div>
+            )}
         </div>
       </div>
 

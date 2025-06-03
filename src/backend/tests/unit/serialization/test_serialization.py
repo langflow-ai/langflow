@@ -92,7 +92,7 @@ class TestSerializationHypothesis:
     @settings(max_examples=100)
     @given(lst=list_strategy)
     def test_list_truncation(self, lst: list) -> None:
-        result: list = serialize(lst)
+        result: list = serialize(lst, max_items=MAX_ITEMS_LENGTH)
         if len(lst) > MAX_ITEMS_LENGTH:
             assert len(result) == MAX_ITEMS_LENGTH + 1
             assert f"... [truncated {len(lst) - MAX_ITEMS_LENGTH} items]" in result
@@ -263,13 +263,13 @@ class TestSerializationHypothesis:
         assert isinstance(serialize(np.uint64(42)), int)
 
         # Test floats
-        assert serialize(np.float64(3.14)) == 3.14
-        assert isinstance(serialize(np.float64(3.14)), float)
+        assert serialize(np.float64(math.pi)) == math.pi
+        assert isinstance(serialize(np.float64(math.pi)), float)
 
         # Test float32 (need to account for precision differences)
-        float32_val = serialize(np.float32(3.14))
+        float32_val = serialize(np.float32(math.pi))
         assert isinstance(float32_val, float)
-        assert abs(float32_val - 3.14) < 1e-6  # Check if close enough
+        assert abs(float32_val - math.pi) < 1e-6  # Check if close enough
 
         # Test bool
         assert serialize(np.bool_(True)) is True  # noqa: FBT003

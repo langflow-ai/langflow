@@ -165,8 +165,15 @@ def get_default_factory(module: str, function: str):
     pattern = r"<function (\w+)>"
 
     if match := re.search(pattern, function):
-        imported_module = importlib.import_module(module)
-        return getattr(imported_module, match[1])()
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
+            )
+            warnings.filterwarnings("ignore", message="Valid config keys have changed in V2", category=UserWarning)
+            imported_module = importlib.import_module(module)
+            return getattr(imported_module, match[1])()
     return None
 
 
@@ -415,6 +422,7 @@ async def update_settings(
     auto_saving_interval: int = 1000,
     health_check_max_retries: int = 5,
     max_file_size_upload: int = 100,
+    webhook_polling_interval: int = 5000,
 ) -> None:
     """Update the settings from a config file."""
     # Check for database_url in the environment variables
@@ -448,6 +456,9 @@ async def update_settings(
     if max_file_size_upload is not None:
         logger.debug(f"Setting max_file_size_upload to {max_file_size_upload}")
         settings_service.settings.update_settings(max_file_size_upload=max_file_size_upload)
+    if webhook_polling_interval is not None:
+        logger.debug(f"Setting webhook_polling_interval to {webhook_polling_interval}")
+        settings_service.settings.update_settings(webhook_polling_interval=webhook_polling_interval)
 
 
 def is_class_method(func, cls):

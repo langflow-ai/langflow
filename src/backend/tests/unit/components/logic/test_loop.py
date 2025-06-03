@@ -1,14 +1,16 @@
+import json
 from uuid import UUID
 
+import orjson
 import pytest
 from httpx import AsyncClient
-from langflow.components.logic.loop import LoopComponent
+from langflow.components.logic import LoopComponent
 from langflow.memory import aget_messages
 from langflow.schema.data import Data
 from langflow.services.database.models.flow import FlowCreate
-from orjson import orjson
 
 from tests.base import ComponentTestBaseWithClient
+from tests.unit.build_utils import build_flow, get_build_events
 
 TEXT = (
     "lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet. "
@@ -36,9 +38,9 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
             "loop_input": [Data(text=TEXT)],
         }
 
-    def test_latest_version(self, default_kwargs) -> None:
+    def test_latest_version(self, component_class, default_kwargs) -> None:
         """Test that the component works with the latest version."""
-        result = LoopComponent(**default_kwargs)
+        result = component_class(**default_kwargs)
         assert result is not None, "Component returned None for the latest version."
 
     async def _create_flow(self, client, json_loop_test, logged_in_headers):
@@ -51,28 +53,53 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
 
     async def check_messages(self, flow_id):
         messages = await aget_messages(flow_id=UUID(flow_id), order="ASC")
-        assert len(messages) == 2
+        assert len(messages) == 1
         assert messages[0].session_id == flow_id
-        assert messages[0].sender == "User"
-        assert messages[0].sender_name == "User"
-        assert messages[0].text != ""
-        assert messages[1].session_id == flow_id
-        assert messages[1].sender == "Machine"
-        assert messages[1].sender_name == "AI"
-        assert len(messages[1].text) > 0
+        assert messages[0].sender == "Machine"
+        assert messages[0].sender_name == "AI"
+        assert len(messages[0].text) > 0
+        return messages
 
     async def test_build_flow_loop(self, client, json_loop_test, logged_in_headers):
-        # TODO: Add a test for the loop where the loop component gets updated even the component in json
+        """Test building a flow with a loop component."""
+        # Create the flow
         flow_id = await self._create_flow(client, json_loop_test, logged_in_headers)
 
-        async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
-            async for line in r.aiter_lines():
-                # httpx split by \n, but ndjson sends two \n for each line
-                if line:
-                    # Process the line if needed
-                    pass
+        # Start the build and get job_id
+        build_response = await build_flow(client, flow_id, logged_in_headers)
+        job_id = build_response["job_id"]
+        assert job_id is not None
 
-        await self.check_messages(flow_id)
+        # Get the events stream
+        events_response = await get_build_events(client, job_id, logged_in_headers)
+        assert events_response.status_code == 200
+
+        # Process the events stream
+        chat_output = None
+        lines = []
+        async for line in events_response.aiter_lines():
+            if not line:  # Skip empty lines
+                continue
+            lines.append(line)
+            if "ChatOutput" in line:
+                chat_output = json.loads(line)
+            # Process events if needed
+            # We could add specific assertions here for loop-related events
+        assert chat_output is not None
+        messages = await self.check_messages(flow_id)
+        ai_message = messages[0].text
+        json_data = orjson.loads(ai_message)
+
+        # Use a for loop for better debugging
+        found = []
+        json_data = [(data["text"], q_dict) for data, q_dict in json_data]
+        for text, q_dict in json_data:
+            expected_text = f"==> {q_dict['q']}"
+            assert expected_text in text, (
+                f"Found {found} until now, but expected '{expected_text}' not found in '{text}',"
+                f"and the json_data is {json_data}"
+            )
+            found.append(expected_text)
 
     async def test_run_flow_loop(self, client: AsyncClient, created_api_key, json_loop_test, logged_in_headers):
         flow_id = await self._create_flow(client, json_loop_test, logged_in_headers)

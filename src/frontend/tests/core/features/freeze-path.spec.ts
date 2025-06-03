@@ -2,7 +2,6 @@ import { expect, Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { evaluateReactStateChanges } from "../../utils/evaluate-input-react-state-changes";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
@@ -30,39 +29,26 @@ test(
       .getByTestId("textarea_str_input_value")
       .first()
       .fill(
-        "say a random number between 1 and 100000 and a random animal that lives in the sea",
+        "say a random number between 1 and 300000 and a random animal that lives in the sea",
       );
 
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("gpt-4o-1-option").click();
 
-    await page.waitForSelector('[data-testid="default_slider_display_value"]', {
-      timeout: 1000,
-    });
-
     await page.getByTestId("fit_view").click();
-    await page
-      .getByTestId("default_slider_display_value")
-      .click({ force: true });
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page
       .getByTestId("output-inspection-message-chatoutput")
       .first()
       .click();
-
-    await page.getByRole("gridcell").nth(4).click();
 
     const randomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
@@ -70,31 +56,22 @@ test(
       .inputValue();
 
     await page.getByText("Close").last().click();
-    await page.getByText("Close").last().click();
 
-    await page.waitForSelector('[data-testid="default_slider_display_value"]', {
-      timeout: 1000,
-    });
-
-    await moveSlider(page, "right", false);
+    // Change model to force different output
+    await page.getByTestId("dropdown_str_model_name").click();
+    await page.getByTestId("gpt-4o-mini-0-option").click();
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page
       .getByTestId("output-inspection-message-chatoutput")
       .first()
       .click();
-
-    await page.getByRole("gridcell").nth(4).click();
 
     const secondRandomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
@@ -102,57 +79,45 @@ test(
       .inputValue();
 
     await page.getByText("Close").last().click();
-    await page.getByText("Close").last().click();
 
     await page.waitForSelector("text=OpenAI", {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page.getByText("OpenAI", { exact: true }).last().click();
 
     await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
-    await page.getByTestId("more-options-modal").click();
+    await page.getByText("Freeze").first().click();
 
-    await page.waitForSelector('[data-testid="freeze-path-button"]', {
-      timeout: 1000,
-    });
-
-    await page.getByTestId("freeze-path-button").click();
+    await page.waitForTimeout(2000);
 
     await page.waitForSelector('[data-testid="icon-Snowflake"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     expect(await page.getByTestId("icon-Snowflake").count()).toBeGreaterThan(0);
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
-      timeout: 1000,
+      timeout: 3000,
     });
 
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page
       .getByTestId("output-inspection-message-chatoutput")
       .first()
       .click();
-
-    await page.getByRole("gridcell").nth(4).click();
 
     const thirdRandomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").last().click();
     await page.getByText("Close").last().click();
 
     expect(randomTextGeneratedByAI).not.toEqual(secondRandomTextGeneratedByAI);

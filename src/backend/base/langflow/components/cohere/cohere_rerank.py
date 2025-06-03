@@ -1,5 +1,6 @@
 from langflow.base.compressors.model import LCCompressorComponent
 from langflow.field_typing import BaseDocumentCompressor
+from langflow.inputs.inputs import SecretStrInput
 from langflow.io import DropdownInput
 from langflow.template.field.base import Output
 
@@ -12,6 +13,10 @@ class CohereRerankComponent(LCCompressorComponent):
 
     inputs = [
         *LCCompressorComponent.inputs,
+        SecretStrInput(
+            name="api_key",
+            display_name="Cohere API Key",
+        ),
         DropdownInput(
             name="model",
             display_name="Model",

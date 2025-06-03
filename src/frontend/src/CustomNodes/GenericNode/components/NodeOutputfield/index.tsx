@@ -1,9 +1,19 @@
 import { Badge } from "@/components/ui/badge";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useShortcutsStore } from "@/stores/shortcuts";
 import { targetHandleType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import ForwardedIconComponent, {
   default as IconComponent,
 } from "../../../../components/common/genericIconComponent";
@@ -19,6 +29,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import {
   cn,
+  logFirstMessage,
   logHasMessage,
   logTypeIsError,
   logTypeIsUnknown,
@@ -27,7 +38,6 @@ import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
 
-// Memoize IconComponent instances
 const EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
     <IconComponent
@@ -42,15 +52,6 @@ const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
 ));
 
-const ScanEyeIcon = memo(({ className }: { className: string }) => (
-  <IconComponent
-    className={className}
-    name="ScanEye"
-    strokeWidth={ICON_STROKE_WIDTH}
-  />
-));
-
-// Memoize Button components
 const HideShowButton = memo(
   ({
     disabled,
@@ -70,10 +71,15 @@ const HideShowButton = memo(
       unstyled
       onClick={onClick}
       data-testid={`input-inspection-${title.toLowerCase()}`}
-      className="cursor-pointer"
     >
       <ShadTooltip
-        content={disabled ? null : hidden ? "Show output" : "Hide output"}
+        content={
+          disabled
+            ? "Connected outputs can't be hidden."
+            : hidden
+              ? "Show output"
+              : "Hide output"
+        }
       >
         <div>
           <EyeIcon
@@ -81,9 +87,7 @@ const HideShowButton = memo(
             className={cn(
               "icon-size",
               disabled
-                ? isToolMode
-                  ? "text-placeholder-foreground opacity-60"
-                  : "text-placeholder-foreground hover:text-foreground"
+                ? "text-placeholder-foreground opacity-60"
                 : isToolMode
                   ? "text-background hover:text-secondary-hover"
                   : "text-placeholder-foreground hover:text-primary-hover",
@@ -96,49 +100,56 @@ const HideShowButton = memo(
 );
 
 const InspectButton = memo(
-  ({
-    disabled,
-    displayOutputPreview,
-    unknownOutput,
-    errorOutput,
-    isToolMode,
-    title,
-    onClick,
-    id,
-  }: {
-    disabled: boolean | undefined;
-    displayOutputPreview: boolean;
-    unknownOutput: boolean | undefined;
-    errorOutput: boolean;
-    isToolMode: boolean;
-    title: string;
-    onClick: () => void;
-    id: string;
-  }) => (
-    <Button
-      disabled={disabled}
-      data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
-      unstyled
-      onClick={onClick}
-    >
-      <IconComponent
-        name="TextSearchIcon"
-        strokeWidth={ICON_STROKE_WIDTH}
-        className={cn(
-          "icon-size",
-          isToolMode
-            ? displayOutputPreview && !unknownOutput
-              ? "text-background hover:text-secondary-hover"
-              : "cursor-not-allowed text-placeholder-foreground opacity-80"
-            : displayOutputPreview && !unknownOutput
-              ? "text-foreground hover:text-primary-hover"
-              : "cursor-not-allowed text-placeholder-foreground opacity-60",
-          errorOutput ? "text-destructive" : "",
-        )}
-      />
-    </Button>
+  forwardRef(
+    (
+      {
+        disabled,
+        displayOutputPreview,
+        unknownOutput,
+        errorOutput,
+        isToolMode,
+        title,
+        onClick,
+        id,
+      }: {
+        disabled: boolean | undefined;
+        displayOutputPreview: boolean;
+        unknownOutput: boolean | undefined;
+        errorOutput: boolean;
+        isToolMode: boolean;
+        title: string;
+        onClick: () => void;
+        id: string;
+      },
+      ref: React.ForwardedRef<HTMLButtonElement>,
+    ) => (
+      <Button
+        ref={ref}
+        disabled={disabled}
+        data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
+        unstyled
+        onClick={onClick}
+      >
+        <IconComponent
+          name="TextSearchIcon"
+          strokeWidth={ICON_STROKE_WIDTH}
+          className={cn(
+            "icon-size",
+            isToolMode
+              ? displayOutputPreview && !unknownOutput && !disabled
+                ? "text-background hover:text-secondary-hover"
+                : "cursor-not-allowed text-placeholder-foreground opacity-80"
+              : displayOutputPreview && !unknownOutput && !disabled
+                ? "text-foreground hover:text-primary-hover"
+                : "cursor-not-allowed text-placeholder-foreground opacity-60",
+            errorOutput ? "text-destructive" : "",
+          )}
+        />
+      </Button>
+    ),
   ),
 );
+InspectButton.displayName = "InspectButton";
 
 const MemoizedOutputComponent = memo(OutputComponent);
 
@@ -153,23 +164,24 @@ function NodeOutputField({
   index,
   type,
   outputName,
+  outputs,
   outputProxy,
   lastOutput,
   colorName,
   isToolMode = false,
+  showHiddenOutputs,
+  hidden,
+  handleSelectOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
 
-  // Use selective store subscriptions
-  const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const flowPool = useFlowStore((state) => state.flowPool);
   const myData = useTypesStore((state) => state.data);
 
-  // Memoize computed values
   const { flowPoolId, internalOutputName } = useMemo(() => {
     if (data.node?.flow && outputProxy) {
       const realOutput = getGroupOutputNodeId(
@@ -202,6 +214,12 @@ function NodeOutputField({
     }),
     [flowPool, flowPoolId, flowPoolNode?.data, internalOutputName],
   );
+
+  const emptyOutput = useMemo(() => {
+    return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
+      (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
+    );
+  }, [flowPoolNode?.data?.outputs]);
 
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),
@@ -245,21 +263,59 @@ function NodeOutputField({
   );
 
   useEffect(() => {
-    if (disabledOutput && data.node?.outputs![index].hidden) {
+    if (disabledOutput && hidden) {
       handleUpdateOutputHide(false);
     }
-  }, [disabledOutput, data.node?.outputs, handleUpdateOutputHide, index]);
+  }, [disabledOutput, handleUpdateOutputHide, hidden]);
+
+  const [openOutputModal, setOpenOutputModal] = useState(false);
+
+  const outputShortcutOpenable = useMemo(() => {
+    if (!displayOutputPreview || !selected) return;
+
+    const sortedEdges = edges
+      .filter((edge) => edge.source === data.id)
+      .toSorted((a, b) => {
+        const indexA =
+          data?.node?.outputs?.findIndex(
+            (output) => output.name === a.data?.sourceHandle?.name,
+          ) ?? 0;
+        const indexB =
+          data?.node?.outputs?.findIndex(
+            (output) => output.name === b.data?.sourceHandle?.name,
+          ) ?? 0;
+        return indexA - indexB;
+      });
+
+    const isFirstOutput =
+      sortedEdges[0]?.sourceHandle === scapedJSONStringfy(id);
+    const hasNoEdges = !edges.some((edge) => edge.source === data.id);
+    const isValidFirstMessage =
+      hasNoEdges && logFirstMessage(flowPoolNode?.data, internalOutputName);
+
+    if (isFirstOutput || isValidFirstMessage) {
+      return true;
+    }
+    return false;
+  }, [displayOutputPreview, edges, data.id, data?.node?.outputs, selected]);
+
+  const handleOpenOutputModal = () => {
+    if (outputShortcutOpenable) {
+      setOpenOutputModal(true);
+    }
+  };
+
+  const outputInspection = useShortcutsStore((state) => state.outputInspection);
+  useHotkeys(outputInspection, handleOpenOutputModal, { preventDefault: true });
 
   const LoopHandle = useMemo(() => {
     if (data.node?.outputs![index].allows_loop) {
       return (
         <HandleRenderComponent
           left={true}
-          nodes={nodes}
           tooltipTitle={tooltipTitle}
           id={id}
           title={title}
-          edges={edges}
           nodeId={data.id}
           myData={myData}
           colors={colors}
@@ -271,11 +327,9 @@ function NodeOutputField({
       );
     }
   }, [
-    nodes,
     tooltipTitle,
     id,
     title,
-    edges,
     data.id,
     myData,
     colors,
@@ -289,11 +343,9 @@ function NodeOutputField({
     () => (
       <HandleRenderComponent
         left={false}
-        nodes={nodes}
         tooltipTitle={tooltipTitle}
         id={id}
         title={title}
-        edges={edges}
         nodeId={data.id}
         myData={myData}
         colors={colors}
@@ -304,11 +356,9 @@ function NodeOutputField({
       />
     ),
     [
-      nodes,
       tooltipTitle,
       id,
       title,
-      edges,
       data.id,
       myData,
       colors,
@@ -319,13 +369,17 @@ function NodeOutputField({
     ],
   );
 
+  const disabledInspectButton =
+    !displayOutputPreview || unknownOutput || emptyOutput;
+
+  if (!showHiddenOutputs && hidden) return <></>;
   if (!showNode) return <>{Handle}</>;
 
   return (
     <div
       ref={ref}
       className={cn(
-        "relative mt-1 flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
+        "relative flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
         lastOutput ? "rounded-b-[0.69rem]" : "",
         isToolMode && "bg-primary",
       )}
@@ -338,13 +392,6 @@ function NodeOutputField({
               <ForwardedIconComponent name="Infinity" className="h-4 w-4" />
             </Badge>
           )}
-          <HideShowButton
-            disabled={disabledOutput}
-            onClick={() => handleUpdateOutputHide()}
-            hidden={!!data.node?.outputs![index].hidden}
-            isToolMode={isToolMode}
-            title={title}
-          />
         </div>
 
         {data.node?.frozen && (
@@ -357,6 +404,7 @@ function NodeOutputField({
           <span className={data.node?.frozen ? "text-ice" : ""}>
             <MemoizedOutputComponent
               proxy={outputProxy}
+              outputs={outputs}
               idx={index}
               types={type?.split("|") ?? []}
               selected={
@@ -368,13 +416,15 @@ function NodeOutputField({
               frozen={data.node?.frozen}
               name={title ?? type}
               isToolMode={isToolMode}
+              handleSelectOutput={handleSelectOutput}
+              outputName={data.node?.key as string}
             />
           </span>
 
           <ShadTooltip
             content={
               displayOutputPreview
-                ? unknownOutput
+                ? unknownOutput || emptyOutput
                   ? "Output can't be displayed"
                   : "Inspect output"
                 : "Please build the component first"
@@ -383,20 +433,20 @@ function NodeOutputField({
           >
             <div className="flex items-center gap-2">
               <OutputModal
-                disabled={!displayOutputPreview || unknownOutput}
+                open={openOutputModal}
+                setOpen={setOpenOutputModal}
+                disabled={disabledInspectButton}
                 nodeId={flowPoolId}
                 outputName={internalOutputName}
               >
                 <InspectButton
-                  disabled={!displayOutputPreview || unknownOutput}
+                  disabled={disabledInspectButton}
                   displayOutputPreview={displayOutputPreview}
                   unknownOutput={unknownOutput ?? false}
                   errorOutput={errorOutput ?? false}
                   isToolMode={isToolMode}
                   title={title}
-                  onClick={() => {
-                    //just to trigger the memoization
-                  }}
+                  onClick={() => {}}
                   id={data?.type}
                 />
               </OutputModal>

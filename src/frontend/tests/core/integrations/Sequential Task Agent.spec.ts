@@ -6,7 +6,7 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test.skip(
   "Sequential Task Agent",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -33,11 +33,7 @@ test.skip(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     expect(await page.locator(".markdown").count()).toBeGreaterThan(0);
 

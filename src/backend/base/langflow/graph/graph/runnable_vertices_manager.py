@@ -2,12 +2,13 @@ from collections import defaultdict
 
 
 class RunnableVerticesManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self.run_map: dict[str, list[str]] = defaultdict(list)  # Tracks successors of each vertex
-        self.run_predecessors: dict[str, set[str]] = defaultdict(set)  # Tracks predecessors for each vertex
+        self.run_predecessors: dict[str, list[str]] = defaultdict(list)  # Tracks predecessors for each vertex
         self.vertices_to_run: set[str] = set()  # Set of vertices that are ready to run
         self.vertices_being_run: set[str] = set()  # Set of vertices that are currently running
         self.cycle_vertices: set[str] = set()  # Set of vertices that are in a cycle
+        self.ran_at_least_once: set[str] = set()  # Set of vertices that have been run at least once
 
     def to_dict(self) -> dict:
         return {
@@ -15,6 +16,7 @@ class RunnableVerticesManager:
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
             "vertices_being_run": self.vertices_being_run,
+            "ran_at_least_once": self.ran_at_least_once,
         }
 
     @classmethod
@@ -24,6 +26,7 @@ class RunnableVerticesManager:
         instance.run_predecessors = data["run_predecessors"]
         instance.vertices_to_run = data["vertices_to_run"]
         instance.vertices_being_run = data["vertices_being_run"]
+        instance.ran_at_least_once = data.get("ran_at_least_once", set())
         return instance
 
     def __getstate__(self) -> object:
@@ -32,6 +35,7 @@ class RunnableVerticesManager:
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
             "vertices_being_run": self.vertices_being_run,
+            "ran_at_least_once": self.ran_at_least_once,
         }
 
     def __setstate__(self, state: dict) -> None:
@@ -39,6 +43,7 @@ class RunnableVerticesManager:
         self.run_predecessors = state["run_predecessors"]
         self.vertices_to_run = state["vertices_to_run"]
         self.vertices_being_run = state["vertices_being_run"]
+        self.ran_at_least_once = state["ran_at_least_once"]
 
     def all_predecessors_are_fulfilled(self) -> bool:
         return all(not value for value in self.run_predecessors.values())
@@ -48,18 +53,48 @@ class RunnableVerticesManager:
         self.vertices_to_run.update(vertices_to_run)
         self.build_run_map(self.run_predecessors, self.vertices_to_run)
 
-    def is_vertex_runnable(self, vertex_id: str, *, is_active: bool) -> bool:
-        """Determines if a vertex is runnable."""
+    def is_vertex_runnable(self, vertex_id: str, *, is_active: bool, is_loop: bool = False) -> bool:
+        """Determines if a vertex is runnable based on its active state and predecessor fulfillment."""
         if not is_active:
             return False
         if vertex_id in self.vertices_being_run:
             return False
         if vertex_id not in self.vertices_to_run:
             return False
-        return self.are_all_predecessors_fulfilled(vertex_id) or vertex_id in self.cycle_vertices
 
-    def are_all_predecessors_fulfilled(self, vertex_id: str) -> bool:
-        return not any(self.run_predecessors.get(vertex_id, []))
+        return self.are_all_predecessors_fulfilled(vertex_id, is_loop=is_loop)
+
+    def are_all_predecessors_fulfilled(self, vertex_id: str, *, is_loop: bool) -> bool:
+        """Determines if all predecessors for a vertex have been fulfilled.
+
+        This method checks if a vertex is ready to run by verifying that either:
+        1. It has no pending predecessors that need to complete first
+        2. For vertices in cycles, none of its pending predecessors are also cycle vertices
+           (which would create a circular dependency)
+
+        Args:
+            vertex_id (str): The ID of the vertex to check
+            is_loop (bool): Whether the vertex is a loop
+        Returns:
+            bool: True if all predecessor conditions are met, False otherwise
+        """
+        # Get pending predecessors, return True if none exist
+        pending = self.run_predecessors.get(vertex_id, [])
+        if not pending:
+            return True
+
+        # For cycle vertices, check if any pending predecessors are also in cycle
+        # Using set intersection is faster than iteration
+        if vertex_id in self.cycle_vertices:
+            # If this is a loop vertex that has run before and has no pending predecessors,
+            # it should not run again to prevent infinite loops
+            if is_loop and vertex_id in self.ran_at_least_once and bool(set(pending)):
+                return False
+            # For loop vertices, allow running if it's a loop or if none of its pending
+            # predecessors are also cycle vertices (preventing circular dependencies)
+            return is_loop or not bool(set(pending) & self.cycle_vertices)
+
+        return False
 
     def remove_from_predecessors(self, vertex_id: str) -> None:
         """Removes a vertex from the predecessor list of its successors."""

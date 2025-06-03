@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
-from fastapi_pagination.ext.sqlmodel import paginate
+from fastapi_pagination.ext.sqlmodel import apaginate
 from sqlalchemy import delete
 from sqlmodel import col, select
 
@@ -35,6 +35,7 @@ async def get_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSessio
 async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> None:
     try:
         await delete_vertex_builds_by_flow_id(session, flow_id)
+        await session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -170,6 +171,12 @@ async def get_transactions(
             .where(TransactionTable.flow_id == flow_id)
             .order_by(col(TransactionTable.timestamp))
         )
-        return await paginate(session, stmt, params=params, transformer=transform_transaction_table)
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
+            )
+            return await apaginate(session, stmt, params=params, transformer=transform_transaction_table)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

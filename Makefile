@@ -33,14 +33,6 @@ all: help
 # See https://code.visualstudio.com/remote/advancedcontainers/improve-performance
 CLEAR_DIRS = $(foreach dir,$1,$(shell mkdir -p $(dir) && find $(dir) -mindepth 1 -delete))
 
-# increment the patch version of the current package
-patch: ## bump the version in langflow and langflow-base
-	@echo 'Patching the version'
-	@poetry version patch
-	@echo 'Patching the version in langflow-base'
-	@cd src/backend/base && poetry version patch
-	@make lock
-
 # check for required tools
 check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
@@ -65,7 +57,7 @@ reinstall_backend: ## forces reinstall all dependencies (no caching)
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@uv sync --frozen
+	@uv sync --frozen --extra "postgresql" $(EXTRA_ARGS)
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
@@ -114,7 +106,7 @@ clean_npm_cache:
 clean_all: clean_python_cache clean_npm_cache # clean all caches and temporary directories
 	@echo "$(GREEN)All caches and temporary directories cleaned.$(NC)"
 
-setup_uv: ## install poetry using pipx
+setup_uv: ## install uv using pipx
 	pipx install uv
 
 add:
@@ -142,7 +134,7 @@ coverage: ## run the tests and generate a coverage report
 	@uv run coverage erase
 
 unit_tests: ## run unit tests
-	@uv sync --extra dev --frozen
+	@uv sync --frozen
 	@EXTRA_ARGS=""
 	@if [ "$(async)" = "true" ]; then \
 		EXTRA_ARGS="$$EXTRA_ARGS --instafail -n auto"; \
@@ -190,15 +182,13 @@ tests: ## run unit, integration, coverage tests
 ######################
 
 codespell: ## run codespell to check spelling
-	@poetry install --with spelling
-	poetry run codespell --toml pyproject.toml
+	@uvx codespell --toml pyproject.toml
 
 fix_codespell: ## run codespell to fix spelling errors
-	@poetry install --with spelling
-	poetry run codespell --toml pyproject.toml --write
+	@uvx codespell --toml pyproject.toml --write
 
 format_backend: ## backend code formatters
-	@uv run ruff check . --fix --ignore EXE002
+	@uv run ruff check . --fix
 	@uv run ruff format . --config pyproject.toml
 
 format_frontend: ## frontend code formatters
@@ -421,19 +411,6 @@ endif
 publish_testpypi: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
 
-ifdef base
-	#TODO: replace with uvx twine upload dist/*
-	poetry config repositories.test-pypi https://test.pypi.org/legacy/
-	make publish_base_testpypi
-endif
-
-ifdef main
-	#TODO: replace with uvx twine upload dist/*
-	poetry config repositories.test-pypi https://test.pypi.org/legacy/
-	make publish_langflow_testpypi
-endif
-
-
 # example make alembic-revision message="Add user table"
 alembic-revision: ## generate a new migration
 	@echo 'Generating a new Alembic revision'
@@ -463,3 +440,51 @@ alembic-check: ## check migration status
 alembic-stamp: ## stamp the database with a specific revision
 	@echo 'Stamping the database with revision $(revision)'
 	cd src/backend/base/langflow/ && uv run alembic stamp $(revision)
+
+######################
+# LOAD TESTING
+######################
+
+# Default values for locust configuration
+locust_users ?= 10
+locust_spawn_rate ?= 1
+locust_host ?= http://localhost:7860
+locust_headless ?= true
+locust_time ?= 300s
+locust_api_key ?= your-api-key
+locust_flow_id ?= your-flow-id
+locust_file ?= src/backend/tests/locust/locustfile.py
+locust_min_wait ?= 2000
+locust_max_wait ?= 5000
+locust_request_timeout ?= 30.0
+
+locust: ## run locust load tests (options: locust_users=10 locust_spawn_rate=1 locust_host=http://localhost:7860 locust_headless=true locust_time=300s locust_api_key=your-api-key locust_flow_id=your-flow-id locust_file=src/backend/tests/locust/locustfile.py locust_min_wait=2000 locust_max_wait=5000 locust_request_timeout=30.0)
+	@if [ ! -f "$(locust_file)" ]; then \
+		echo "$(RED)Error: Locustfile not found at $(locust_file)$(NC)"; \
+		exit 1; \
+	fi
+	@echo "Starting Locust with $(locust_users) users, spawn rate of $(locust_spawn_rate)"
+	@echo "Testing host: $(locust_host)"
+	@echo "Using locustfile: $(locust_file)"
+	@export API_KEY=$(locust_api_key) && \
+	export FLOW_ID=$(locust_flow_id) && \
+	export LANGFLOW_HOST=$(locust_host) && \
+	export MIN_WAIT=$(locust_min_wait) && \
+	export MAX_WAIT=$(locust_max_wait) && \
+	export REQUEST_TIMEOUT=$(locust_request_timeout) && \
+	cd $$(dirname "$(locust_file)") && \
+	if [ "$(locust_headless)" = "true" ]; then \
+		uv run locust \
+			--headless \
+			-u $(locust_users) \
+			-r $(locust_spawn_rate) \
+			--run-time $(locust_time) \
+			--host $(locust_host) \
+			-f $$(basename "$(locust_file)"); \
+	else \
+		uv run locust \
+			-u $(locust_users) \
+			-r $(locust_spawn_rate) \
+			--host $(locust_host) \
+			-f $$(basename "$(locust_file)"); \
+	fi

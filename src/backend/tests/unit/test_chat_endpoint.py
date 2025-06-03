@@ -1,42 +1,65 @@
+import asyncio
 import json
+import uuid
 from uuid import UUID
 
 import pytest
+from httpx import codes
 from langflow.memory import aget_messages
-from langflow.services.database.models.flow import FlowCreate, FlowUpdate
-from orjson import orjson
+from langflow.services.database.models.flow import FlowUpdate
+from loguru import logger
+
+from tests.unit.build_utils import build_flow, consume_and_assert_stream, create_flow, get_build_events
 
 
 @pytest.mark.benchmark
 async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
-    flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    """Test the build flow endpoint with the new two-step process."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
-    async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
-        await consume_and_assert_stream(r)
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+    assert job_id is not None
 
-    await check_messages(flow_id)
+    # Get the events stream
+    events_response = await get_build_events(client, job_id, logged_in_headers)
+    assert events_response.status_code == codes.OK
+
+    # Consume and verify the events
+    await consume_and_assert_stream(events_response, job_id)
 
 
 @pytest.mark.benchmark
 async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers):
-    flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
-    response = await client.get("api/v1/flows/" + str(flow_id), headers=logged_in_headers)
+    """Test building a flow from request data."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
     flow_data = response.json()
 
-    async with client.stream(
-        "POST", f"api/v1/build/{flow_id}/flow", json={"data": flow_data["data"]}, headers=logged_in_headers
-    ) as r:
-        await consume_and_assert_stream(r)
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers, json={"data": flow_data["data"]})
+    job_id = build_response["job_id"]
 
+    # Get the events stream
+    events_response = await get_build_events(client, job_id, logged_in_headers)
+    assert events_response.status_code == codes.OK
+
+    # Consume and verify the events
+    await consume_and_assert_stream(events_response, job_id)
     await check_messages(flow_id)
 
 
 async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
-    flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    """Test building a flow with a frozen path."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
-    response = await client.get("api/v1/flows/" + str(flow_id), headers=logged_in_headers)
+    response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
     flow_data = response.json()
     flow_data["data"]["nodes"][0]["data"]["node"]["frozen"] = True
+
+    # Update the flow with frozen path
     response = await client.patch(
         f"api/v1/flows/{flow_id}",
         json=FlowUpdate(name="Flow", description="description", data=flow_data["data"]).model_dump(),
@@ -44,151 +67,368 @@ async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, l
     )
     response.raise_for_status()
 
-    async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
-        await consume_and_assert_stream(r)
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
 
+    # Get the events stream
+    events_response = await get_build_events(client, job_id, logged_in_headers)
+    assert events_response.status_code == codes.OK
+
+    # Consume and verify the events
+    await consume_and_assert_stream(events_response, job_id)
     await check_messages(flow_id)
 
 
 async def check_messages(flow_id):
-    messages = await aget_messages(flow_id=UUID(flow_id), order="ASC")
+    if isinstance(flow_id, str):
+        flow_id = UUID(flow_id)
+    messages = await aget_messages(flow_id=flow_id, order="ASC")
+    flow_id_str = str(flow_id)
     assert len(messages) == 2
-    assert messages[0].session_id == flow_id
+    assert messages[0].session_id == flow_id_str
     assert messages[0].sender == "User"
     assert messages[0].sender_name == "User"
     assert messages[0].text == ""
-    assert messages[1].session_id == flow_id
+    assert messages[1].session_id == flow_id_str
     assert messages[1].sender == "Machine"
     assert messages[1].sender_name == "AI"
 
 
-async def consume_and_assert_stream(r):
-    count = 0
-    async for line in r.aiter_lines():
-        # httpx split by \n, but ndjson sends two \n for each line
-        if not line:
-            continue
-        parsed = json.loads(line)
-        if count == 0:
-            assert parsed["event"] == "vertices_sorted"
-            ids = parsed["data"]["ids"]
-            ids.sort()
-            assert ids == ["ChatInput-CIGht"]
-
-            to_run = parsed["data"]["to_run"]
-            to_run.sort()
-            assert to_run == ["ChatInput-CIGht", "ChatOutput-QA7ej", "Memory-amN4Z", "Prompt-iWbCC"]
-        elif count > 0 and count < 5:
-            assert parsed["event"] == "end_vertex"
-            assert parsed["data"]["build_data"] is not None
-        elif count == 5:
-            assert parsed["event"] == "end"
-        else:
-            msg = f"Unexpected line: {line}"
-            raise ValueError(msg)
-        count += 1
+@pytest.mark.benchmark
+async def test_build_flow_invalid_job_id(client, logged_in_headers):
+    """Test getting events for an invalid job ID."""
+    invalid_job_id = str(uuid.uuid4())
+    response = await get_build_events(client, invalid_job_id, logged_in_headers)
+    assert response.status_code == codes.NOT_FOUND
+    assert "Job not found" in response.json()["detail"]
 
 
-async def _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
-    vector_store = orjson.loads(json_memory_chatbot_no_llm)
-    data = vector_store["data"]
-    vector_store = FlowCreate(name="Flow", description="description", data=data, endpoint_name="f")
-    response = await client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
-    response.raise_for_status()
-    return response.json()["id"]
+@pytest.mark.benchmark
+async def test_build_flow_invalid_flow_id(client, logged_in_headers):
+    """Test starting a build with an invalid flow ID."""
+    invalid_flow_id = uuid.uuid4()
+    response = await client.post(f"api/v1/build/{invalid_flow_id}/flow", json={}, headers=logged_in_headers)
+    assert response.status_code == codes.NOT_FOUND
 
 
-# TODO: Fix this test
-# async def test_multiple_runs_with_no_payload_generate_max_vertex_builds(
-#     client, json_memory_chatbot_no_llm, logged_in_headers
-# ):
-#     """Test that multiple builds of a flow generate the correct number of vertex builds."""
-#     # Create the initial flow
-#     flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+@pytest.mark.benchmark
+async def test_build_flow_start_only(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test only the build flow start endpoint."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
-#     # Get the flow data to count nodes before making requests
-#     response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
-#     flow_data = response.json()
-#     num_nodes = len(flow_data["data"]["nodes"])
-#     max_vertex_builds = get_settings_service().settings.max_vertex_builds_per_vertex
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
 
-#     logger.debug(f"Starting test with {num_nodes} nodes, max_vertex_builds={max_vertex_builds}")
+    # Assert response structure
+    assert "job_id" in build_response
+    assert isinstance(build_response["job_id"], str)
+    # Verify it's a valid UUID
+    assert uuid.UUID(build_response["job_id"])
 
-#     # Make multiple build requests - ensure we exceed max_vertex_builds significantly
-#     num_requests = max_vertex_builds * 3  # Triple the max to ensure rotation
-#     for i in range(num_requests):
-#         # Generate a random session ID for each request
-#         session_id = session_id_generator()
-#         payload = {"inputs": {"session": session_id, "type": "chat", "input_value": f"Test message {i + 1}"}}
 
-#         async with client.stream("POST", f"api/v1/build/{flow_id}/flow",
-# json=payload, headers=logged_in_headers) as r:
-#             await consume_and_assert_stream(r)
+@pytest.mark.benchmark
+async def test_build_flow_start_with_inputs(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test the build flow start endpoint with input data."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
-#         # Add a small delay between requests to ensure proper ordering
-#         await asyncio.sleep(0.1)
+    # Start build with some input data
+    test_inputs = {"inputs": {"session": "test_session", "input_value": "test message"}}
 
-#         # Track builds after each request
-#         async with session_scope() as session:
-#             builds = await get_vertex_builds_by_flow_id(db=session, flow_id=flow_id)
-#             by_vertex = {}
-#             for build in builds:
-#                 build_dict = build.model_dump()
-#                 vertex_id = build_dict.get("id")
-#                 by_vertex.setdefault(vertex_id, []).append(build_dict)
+    build_response = await build_flow(client, flow_id, logged_in_headers, json=test_inputs)
 
-#             # Log state of each vertex with more details
-#             for vertex_id, vertex_builds in by_vertex.items():
-#                 vertex_builds.sort(key=lambda x: x.get("timestamp"))
-#                 logger.debug(
-#                     f"Request {i + 1} (session={session_id}) - Vertex {vertex_id}: {len(vertex_builds)} builds "
-#                     f"(max allowed: {max_vertex_builds}), "
-#                     f"build_ids: {[b.get('build_id') for b in vertex_builds]}"
-#                 )
+    assert "job_id" in build_response
+    assert isinstance(build_response["job_id"], str)
+    assert uuid.UUID(build_response["job_id"])
 
-#     # Wait a bit before final verification to ensure all DB operations complete
-#     await asyncio.sleep(0.5)
 
-#     # Final verification with detailed logging
-#     async with session_scope() as session:
-#         vertex_builds = await get_vertex_builds_by_flow_id(db=session, flow_id=flow_id)
-#         assert len(vertex_builds) > 0, "No vertex builds found"
+@pytest.mark.benchmark
+async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test the build flow endpoint with polling (non-streaming)."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
-#         builds_by_vertex = {}
-#         for build in vertex_builds:
-#             build_dict = build.model_dump()
-#             vertex_id = build_dict.get("id")
-#             builds_by_vertex.setdefault(vertex_id, []).append(build_dict)
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    assert "job_id" in build_response, f"Expected job_id in build_response, got {build_response}"
+    job_id = build_response["job_id"]
+    assert job_id is not None
 
-#         # Log detailed final state
-#         logger.debug(f"\nFinal state after {num_requests} requests:")
-#         for vertex_id, builds in builds_by_vertex.items():
-#             builds.sort(key=lambda x: x.get("timestamp"))
-#             logger.debug(
-#                 f"Vertex {vertex_id}: {len(builds)} builds "
-#                 f"(oldest: {builds[0].get('timestamp')}, "
-#                 f"newest: {builds[-1].get('timestamp')}), "
-#                 f"build_ids: {[b.get('build_id') for b in builds]}"
-#             )
+    # Create a response object that mimics a streaming response but uses polling
+    class PollingResponse:
+        def __init__(self, client, job_id, headers):
+            self.client = client
+            self.job_id = job_id
+            self.headers = headers
+            self.status_code = codes.OK
+            self.max_total_events = 50  # Limit to prevent infinite loops
+            self.max_empty_polls = 10  # Maximum number of empty polls before giving up
+            self.poll_timeout = 3.0  # Timeout for each polling request
+            self._closed = False
 
-#             # Log individual build details for debugging
-#             for build in builds:
-#                 logger.debug(
-#                     f"  - Build {build.get('build_id')}: timestamp={build.get('timestamp')}, "
-#                     f"valid={build.get('valid')}"
-#                 )
+        async def aiter_lines(self):
+            if self._closed:
+                return
 
-#         # Verify each vertex has correct number of builds
-#         for vertex_id, vertex_builds_list in builds_by_vertex.items():
-#             assert len(vertex_builds_list) == max_vertex_builds, (
-#                 f"Vertex {vertex_id} has {len(vertex_builds_list)} builds, expected {max_vertex_builds}"
-#             )
+            try:
+                empty_polls = 0
+                total_events = 0
+                end_event_found = False
 
-#         # Verify total number of builds
-#         total_builds = len(vertex_builds)
-#         expected_total = max_vertex_builds * num_nodes
-#         assert total_builds == expected_total, (
-#             f"Total builds ({total_builds}) doesn't match expected "
-#             f"({max_vertex_builds} builds/vertex * {num_nodes} nodes = {expected_total})"
-#         )
-#         assert all(vertex_build.get("valid") for vertex_build in vertex_builds)
+                while (
+                    empty_polls < self.max_empty_polls
+                    and total_events < self.max_total_events
+                    and not end_event_found
+                    and not self._closed
+                ):
+                    # Add Accept header for NDJSON
+                    headers = {**self.headers, "Accept": "application/x-ndjson"}
+
+                    try:
+                        # Set a timeout for the request
+                        response = await asyncio.wait_for(
+                            self.client.get(
+                                f"api/v1/build/{self.job_id}/events?event_delivery=polling",
+                                headers=headers,
+                            ),
+                            timeout=self.poll_timeout,
+                        )
+
+                        if response.status_code != codes.OK:
+                            break
+
+                        # Get the NDJSON response as text
+                        text = response.text
+
+                        # Skip if response is empty
+                        if not text.strip():
+                            empty_polls += 1
+                            await asyncio.sleep(0.1)
+                            continue
+
+                        # Reset empty polls counter since we got data
+                        empty_polls = 0
+
+                        # Process each line as an individual JSON object
+                        line_count = 0
+                        for line in text.splitlines():
+                            if not line.strip():
+                                continue
+
+                            line_count += 1
+                            total_events += 1
+
+                            # Check for end event with multiple possible formats
+                            if '"event":"end"' in line or '"event": "end"' in line:
+                                end_event_found = True
+
+                            # Validate it's proper JSON before yielding
+                            try:
+                                json.loads(line)  # Test parse to ensure it's valid JSON
+                                yield line
+                            except json.JSONDecodeError as e:
+                                logger.debug(f"WARNING: Skipping invalid JSON: {line}")
+                                logger.debug(f"Error: {e}")
+                                # Don't yield invalid JSON, but continue processing other lines
+
+                        # If we had no events in this batch, count as empty poll
+                        if line_count == 0:
+                            empty_polls += 1
+
+                        # Add a small delay to prevent tight polling
+                        await asyncio.sleep(0.1)
+
+                    except asyncio.TimeoutError:
+                        logger.debug(f"WARNING: Polling request timed out after {self.poll_timeout}s")
+                        empty_polls += 1
+                        continue
+
+                # If we hit the limit without finding the end event, log a warning
+                if total_events >= self.max_total_events:
+                    logger.debug(
+                        f"WARNING: Reached maximum event limit ({self.max_total_events}) without finding end event"
+                    )
+
+                if empty_polls >= self.max_empty_polls and not end_event_found:
+                    logger.debug(
+                        f"WARNING: Reached maximum empty polls ({self.max_empty_polls}) without finding end event"
+                    )
+
+            except Exception as e:
+                logger.debug(f"ERROR: Unexpected error during polling: {e!s}")
+                raise
+            finally:
+                self._closed = True
+
+        def close(self):
+            self._closed = True
+
+    polling_response = PollingResponse(client, job_id, logged_in_headers)
+
+    # Use the same consume_and_assert_stream function to verify the events
+    await consume_and_assert_stream(polling_response, job_id)
+
+
+@pytest.mark.benchmark
+async def test_cancel_build_unexpected_error(client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch):
+    """Test handling of unexpected exceptions during flow build cancellation."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+    assert job_id is not None
+
+    # Mock the cancel_flow_build function to raise an unexpected exception
+    import langflow.api.v1.chat
+
+    original_cancel_flow_build = langflow.api.v1.chat.cancel_flow_build
+
+    async def mock_cancel_flow_build_with_error(*_args, **_kwargs):
+        msg = "Unexpected error during cancellation"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", mock_cancel_flow_build_with_error)
+
+    try:
+        # Try to cancel the build - should return 500 Internal Server Error
+        cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=logged_in_headers)
+        assert cancel_response.status_code == codes.INTERNAL_SERVER_ERROR
+
+        # Verify the error message
+        response_data = cancel_response.json()
+        assert "detail" in response_data
+        assert "Unexpected error during cancellation" in response_data["detail"]
+    finally:
+        # Restore the original function to avoid affecting other tests
+        monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
+
+
+@pytest.mark.benchmark
+async def test_cancel_build_success(client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch):
+    """Test successful cancellation of a flow build."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+    assert job_id is not None
+
+    # Mock the cancel_flow_build function to simulate a successful cancellation
+    import langflow.api.v1.chat
+
+    original_cancel_flow_build = langflow.api.v1.chat.cancel_flow_build
+
+    async def mock_successful_cancel_flow_build(*_args, **_kwargs):
+        return True  # Return True to indicate successful cancellation
+
+    monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", mock_successful_cancel_flow_build)
+
+    try:
+        # Try to cancel the build (should return success)
+        cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=logged_in_headers)
+        assert cancel_response.status_code == codes.OK
+
+        # Verify the response structure indicates success
+        response_data = cancel_response.json()
+        assert "success" in response_data
+        assert "message" in response_data
+        assert response_data["success"] is True
+        assert "cancelled successfully" in response_data["message"].lower()
+    finally:
+        # Restore the original function to avoid affecting other tests
+        monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
+
+
+@pytest.mark.benchmark
+async def test_cancel_nonexistent_build(client, logged_in_headers):
+    """Test cancelling a non-existent flow build."""
+    # Generate a random job_id that doesn't exist
+    invalid_job_id = str(uuid.uuid4())
+
+    # Try to cancel a non-existent build
+    response = await client.post(f"api/v1/build/{invalid_job_id}/cancel", headers=logged_in_headers)
+    assert response.status_code == codes.NOT_FOUND
+    assert "Job not found" in response.json()["detail"]
+
+
+@pytest.mark.benchmark
+async def test_cancel_build_failure(client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch):
+    """Test handling of cancellation failure."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+    assert job_id is not None
+
+    # Mock the cancel_flow_build function to simulate a failure
+    # The import path in monkeypatch should match exactly how it's imported in the application
+    import langflow.api.v1.chat
+
+    original_cancel_flow_build = langflow.api.v1.chat.cancel_flow_build
+
+    async def mock_cancel_flow_build(*_args, **_kwargs):
+        return False  # Return False to indicate cancellation failure
+
+    monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", mock_cancel_flow_build)
+
+    try:
+        # Try to cancel the build (should return failure but success=False)
+        cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=logged_in_headers)
+        assert cancel_response.status_code == codes.OK
+
+        # Verify the response structure indicates failure
+        response_data = cancel_response.json()
+        assert "success" in response_data
+        assert "message" in response_data
+        assert response_data["success"] is False
+        assert "Failed to cancel" in response_data["message"]
+    finally:
+        # Restore the original function to avoid affecting other tests
+        monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
+
+
+@pytest.mark.benchmark
+async def test_cancel_build_with_cancelled_error(client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch):
+    """Test handling of CancelledError during cancellation (should be treated as failure)."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+    assert job_id is not None
+
+    # Mock the cancel_flow_build function to raise CancelledError
+    import asyncio
+
+    import langflow.api.v1.chat
+
+    original_cancel_flow_build = langflow.api.v1.chat.cancel_flow_build
+
+    async def mock_cancel_flow_build_with_cancelled_error(*_args, **_kwargs):
+        msg = "Task cancellation failed"
+        raise asyncio.CancelledError(msg)
+
+    monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", mock_cancel_flow_build_with_cancelled_error)
+
+    try:
+        # Try to cancel the build - should return failure when CancelledError is raised
+        # since our implementation treats CancelledError as a failed cancellation
+        cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=logged_in_headers)
+        assert cancel_response.status_code == codes.OK
+
+        # Verify the response structure indicates failure
+        response_data = cancel_response.json()
+        assert "success" in response_data
+        assert "message" in response_data
+        assert response_data["success"] is False
+        assert "failed to cancel" in response_data["message"].lower()
+    finally:
+        # Restore the original function to avoid affecting other tests
+        monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)

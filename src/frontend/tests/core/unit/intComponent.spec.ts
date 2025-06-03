@@ -12,12 +12,12 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("openai");
 
-  await page.waitForSelector('[data-testid="modelsOpenAI"]', {
+  await page.waitForSelector('[data-testid="languagemodelsOpenAI"]', {
     timeout: 3000,
   });
 
   await page
-    .getByTestId("modelsOpenAI")
+    .getByTestId("languagemodelsOpenAI")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
@@ -26,8 +26,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page.getByTestId("div-generic-node").click();
 
-  await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("edit-button-modal").last().click();
   await page.getByTestId("showmax_tokens").click();
 
   await page.getByText("Close").last().click();
@@ -60,8 +59,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
 
-  await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("edit-button-modal").last().click();
 
   value = await page.getByTestId("int_int_edit_max_tokens").inputValue();
 
@@ -139,8 +137,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
     const valueEditNode = await page
       .getByTestId("int_int_max_tokens")

@@ -3,10 +3,11 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Basic Prompting (Hello, World)",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -27,11 +28,7 @@ test(
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
       .getByText("No input message provided.", { exact: true })
       .last()

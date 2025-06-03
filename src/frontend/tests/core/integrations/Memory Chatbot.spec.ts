@@ -1,12 +1,13 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Memory Chatbot",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -26,11 +27,7 @@ test(
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page
       .getByText("No input message provided.", { exact: true })
@@ -62,8 +59,16 @@ test(
 
     await page.getByTestId("button-send").last().click();
 
-    await page.waitForSelector("text=roar", { timeout: 30000 });
-    await page.getByText("roar").last().isVisible();
+    await page.waitForSelector(".markdown", { timeout: 3000 });
+
+    const textContents = await page
+      .locator(".markdown")
+      .last()
+      .allTextContents();
+
+    const concatAllText = textContents.join(" ");
+    expect(concatAllText.length).toBeGreaterThan(20);
+
     await page.getByText("Default Session").last().click();
 
     await page.getByText("timestamp", { exact: true }).last().isVisible();

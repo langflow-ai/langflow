@@ -12,6 +12,7 @@ TOOL_TABLE_SCHEMA = [
         "sortable": False,
         "filterable": False,
         "edit_mode": EditMode.INLINE,
+        "hidden": False,
     },
     {
         "name": "description",
@@ -21,6 +22,7 @@ TOOL_TABLE_SCHEMA = [
         "sortable": False,
         "filterable": False,
         "edit_mode": EditMode.POPOVER,
+        "hidden": False,
     },
     {
         "name": "tags",
@@ -31,7 +33,17 @@ TOOL_TABLE_SCHEMA = [
         "sortable": False,
         "filterable": False,
         "edit_mode": EditMode.INLINE,
+        "hidden": True,
+    },
+    {
+        "name": "status",
+        "display_name": "Enable",
+        "type": "boolean",
+        "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+        "default": True,
     },
 ]
 
 TOOLS_METADATA_INFO = "Modify tool names and descriptions to help agents understand when to use each tool."
+
+TOOL_UPDATE_CONSTANTS = ["tool_mode", "tool_actions", TOOLS_METADATA_INPUT_NAME, "flow_name_selected"]

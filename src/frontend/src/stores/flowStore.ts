@@ -1,8 +1,12 @@
+import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
+import { BROKEN_EDGES_WARNING } from "@/constants/constants";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import {
-  BROKEN_EDGES_WARNING,
-  componentsToIgnoreUpdate,
-} from "@/constants/constants";
-import { track } from "@/customization/utils/analytics";
+  track,
+  trackDataLoaded,
+  trackFlowBuild,
+} from "@/customization/utils/analytics";
+import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { brokenEdgeMessage } from "@/utils/utils";
 import {
   EdgeChange,
@@ -14,12 +18,8 @@ import {
 } from "@xyflow/react";
 import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
-import {
-  FLOW_BUILD_SUCCESS_ALERT,
-  MISSED_ERROR_ALERT,
-} from "../constants/alerts_constants";
-import { BuildStatus } from "../constants/enums";
-import { VertexBuildTypeAPI } from "../types/api";
+import { BuildStatus, EventDeliveryType } from "../constants/enums";
+import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
   AllNodeType,
@@ -28,7 +28,11 @@ import {
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
+import {
+  ComponentsToUpdateType,
+  FlowStoreType,
+  VertexLayerElementType,
+} from "../types/zustand/flow";
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   buildPositionDictionary,
@@ -49,11 +53,15 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
-import { useMessagesStore } from "./messagesStore";
+import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  playgroundPage: false,
+  setPlaygroundPage: (playgroundPage) => {
+    set({ playgroundPage });
+  },
   positionDictionary: {},
   setPositionDictionary: (positionDictionary) => {
     set({ positionDictionary });
@@ -80,32 +88,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ componentsToUpdate: newChange });
   },
   updateComponentsToUpdate: (nodes) => {
-    let outdatedNodes: string[] = [];
+    let outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
-    for (let i = 0; i < nodes.length; i++) {
-      let node = nodes[i];
+    nodes.forEach((node) => {
       if (node.type === "genericNode") {
-        const currentCode = templates[node.data?.type]?.template?.code?.value;
-        const thisNodesCode = node.data?.node!.template?.code?.value;
-        if (
-          currentCode &&
-          thisNodesCode &&
-          currentCode !== thisNodesCode &&
-          !node.data?.node?.edited &&
-          !componentsToIgnoreUpdate.includes(node.data?.type)
-        ) {
-          outdatedNodes.push(node.id);
-        }
+        const codeValidity = checkCodeValidity(node.data, templates);
+        if (codeValidity && codeValidity.outdated)
+          outdatedNodes.push({
+            id: node.id,
+            icon: node.data.node?.icon,
+            display_name: node.data.node?.display_name,
+            outdated: codeValidity.outdated,
+            breakingChange: codeValidity.breakingChange,
+            userEdited: codeValidity.userEdited,
+          });
       }
-    }
+    });
     set({ componentsToUpdate: outdatedNodes });
   },
   onFlowPage: false,
-  lockChat: false,
-  setLockChat: (lockChat) => {
-    useMessagesStore.setState({ displayLoadingMessage: lockChat });
-    set({ lockChat });
-  },
   setOnFlowPage: (FlowPage) => set({ onFlowPage: FlowPage }),
   flowState: undefined,
   flowBuildStatus: {},
@@ -120,7 +121,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
     set({ isBuilding: false });
     get().revertBuiltStatusFromBuilding();
-    get().setLockChat(false);
     useAlertStore.getState().setErrorData({
       title: "Build stopped",
     });
@@ -221,11 +221,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
+    set({
+      dismissedNodes: JSON.parse(
+        localStorage.getItem(`dismiss_${flow?.id}`) ?? "[]",
+      ) as string[],
+    });
     unselectAllNodesEdges(nodes, edges);
+    if (flow?.id) {
+      useTweaksStore.getState().initialSetup(nodes, flow?.id);
+    }
     set({
       nodes,
       edges: newEdges,
       flowState: undefined,
+      buildInfo: null,
       inputs,
       outputs,
       hasIO: inputs.length > 0 || outputs.length > 0,
@@ -295,6 +304,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     isUserChange: boolean = true,
     callback?: () => void,
   ) => {
+    if (!get().nodes.find((node) => node.id === id)) {
+      throw new Error("Node not found");
+    }
+
     let newChange =
       typeof change === "function"
         ? change(get().nodes.find((node) => node.id === id)!)
@@ -450,7 +463,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       // Add the new node to the list of nodes in state
       newNodes = newNodes
         .map((node) => ({ ...node, selected: false }))
-        .concat({ ...newNode, selected: false });
+        .concat({ ...newNode, selected: true });
     });
     get().setNodes(newNodes);
 
@@ -589,45 +602,68 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
     });
   },
+  pastBuildFlowParams: null,
+  buildInfo: null,
+  setBuildInfo: (buildInfo: { error?: string[]; success?: boolean } | null) => {
+    set({ buildInfo });
+  },
   buildFlow: async ({
     startNodeId,
     stopNodeId,
     input_value,
     files,
     silent,
-    setLockChat,
     session,
+    stream = true,
+    eventDelivery = EventDeliveryType.STREAMING,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
     files?: string[];
     silent?: boolean;
-    setLockChat?: (lock: boolean) => void;
     session?: string;
+    stream?: boolean;
+    eventDelivery?: EventDeliveryType;
   }) => {
+    set({
+      pastBuildFlowParams: {
+        startNodeId,
+        stopNodeId,
+        input_value,
+        files,
+        silent,
+        session,
+        stream,
+        eventDelivery,
+      },
+      buildInfo: null,
+    });
+    const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
-    get().setLockChat(true);
+    set({ flowBuildStatus: {} });
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
-    const setNoticeData = useAlertStore.getState().setNoticeData;
 
     const edges = get().edges;
     let error = false;
+    let errors: string[] = [];
     for (const edge of edges) {
-      const errors = validateEdge(edge, get().nodes, edges);
-      if (errors.length > 0) {
+      const errorsEdge = validateEdge(edge, get().nodes, edges);
+      if (errorsEdge.length > 0) {
         error = true;
-        setErrorData({
+        errors.push(errorsEdge.join("\n"));
+        useAlertStore.getState().addNotificationToHistory({
           title: MISSED_ERROR_ALERT,
-          list: errors,
+          type: "error",
+          list: errorsEdge,
         });
       }
     }
     if (error) {
       get().setIsBuilding(false);
-      get().setLockChat(false);
+      get().setBuildInfo({ error: errors, success: false });
       throw new Error("Invalid components");
     }
 
@@ -639,8 +675,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       const errors = errorsObjs.map((obj) => obj.errors).flat();
       if (errors.length > 0) {
-        setErrorData({
+        get().setBuildInfo({ error: errors, success: false });
+        useAlertStore.getState().addNotificationToHistory({
           title: MISSED_ERROR_ALERT,
+          type: "error",
           list: errors,
         });
         get().setIsBuilding(false);
@@ -658,10 +696,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     ) {
       if (vertexBuildData && vertexBuildData.inactivated_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
-        get().updateBuildStatus(
-          vertexBuildData.inactivated_vertices,
-          BuildStatus.INACTIVE,
-        );
+        if (vertexBuildData.inactivated_vertices.length > 0) {
+          get().updateBuildStatus(
+            vertexBuildData.inactivated_vertices,
+            BuildStatus.INACTIVE,
+          );
+        }
       }
 
       if (vertexBuildData.next_vertices_ids) {
@@ -710,6 +750,28 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           ...get().verticesBuild!.verticesIds,
           ...next_vertices_ids,
         ];
+        if (
+          ENABLE_DATASTAX_LANGFLOW &&
+          vertexBuildData?.id?.includes("AstraDB")
+        ) {
+          const search_results: LogsLogType[] = Object.values(
+            vertexBuildData?.data?.logs?.search_results,
+          );
+          search_results.forEach((log) => {
+            if (
+              log.message.includes("Adding") &&
+              log.message.includes("documents") &&
+              log.message.includes("Vector Store")
+            ) {
+              trackDataLoaded(
+                get().currentFlow?.id,
+                get().currentFlow?.name,
+                "AstraDB Vector Store",
+                vertexBuildData?.id,
+              );
+            }
+          });
+        }
         get().updateVerticesBuild({
           verticesIds: newIds,
           verticesLayers: newLayers,
@@ -724,8 +786,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         { ...vertexBuildData, run_id: runId },
         vertexBuildData.id,
       );
-
-      useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
+      if (status !== BuildStatus.ERROR) {
+        get().updateBuildStatus([vertexBuildData.id], status);
+      }
     }
     await buildFlowVerticesWithFallback({
       session,
@@ -734,24 +797,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,
-      setLockChat,
-      onGetOrderSuccess: () => {
-        if (!silent) {
-          setNoticeData({ title: "Running components" });
-        }
-      },
+      onGetOrderSuccess: () => {},
       onBuildComplete: (allNodesValid) => {
         const nodeId = startNodeId || stopNodeId;
         if (!silent) {
           if (allNodesValid) {
-            setSuccessData({
-              title: nodeId
-                ? `${
-                    get().nodes.find((node) => node.id === nodeId)?.data.node
-                      ?.display_name
-                  } built successfully`
-                : FLOW_BUILD_SUCCESS_ALERT,
-            });
+            get().setBuildInfo({ success: true });
           }
         }
         get().updateEdgesRunningByNodes(
@@ -759,7 +810,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           false,
         );
         get().setIsBuilding(false);
-        get().setLockChat(false);
+        trackFlowBuild(get().currentFlow?.name ?? "Unknown", false, {
+          flowId: get().currentFlow?.id,
+        });
       },
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title: string, list: string[], elementList) => {
@@ -777,10 +830,18 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           get().nodes.map((n) => n.id),
           false,
         );
-        setErrorData({ list, title });
+        get().setBuildInfo({ error: list, success: false });
+        useAlertStore.getState().addNotificationToHistory({
+          title: title,
+          type: "error",
+          list: list,
+        });
         get().setIsBuilding(false);
-        get().setLockChat(false);
         get().buildController.abort();
+        trackFlowBuild(get().currentFlow?.name ?? "Unknown", true, {
+          flowId: get().currentFlow?.id,
+          error: list,
+        });
       },
       onBuildStart: (elementList) => {
         const idList = elementList
@@ -805,9 +866,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes: get().nodes || undefined,
       edges: get().edges || undefined,
       logBuilds: get().onFlowPage,
+      playgroundPage,
+      eventDelivery,
     });
     get().setIsBuilding(false);
-    get().setLockChat(false);
     get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {
@@ -941,6 +1003,48 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   currentBuildingNodeId: undefined,
   setCurrentBuildingNodeId: (nodeIds) => {
     set({ currentBuildingNodeId: nodeIds });
+  },
+  resetFlowState: () => {
+    set({
+      nodes: [],
+      edges: [],
+      flowState: undefined,
+      hasIO: false,
+      inputs: [],
+      outputs: [],
+      flowPool: {},
+      currentFlow: undefined,
+      reactFlowInstance: null,
+      lastCopiedSelection: null,
+      verticesBuild: null,
+      flowBuildStatus: {},
+      buildInfo: null,
+      isBuilding: false,
+      isPending: true,
+      positionDictionary: {},
+      componentsToUpdate: [],
+    });
+  },
+  dismissedNodes: [],
+  addDismissedNodes: (dismissedNodes: string[]) => {
+    const newDismissedNodes = Array.from(
+      new Set([...get().dismissedNodes, ...dismissedNodes]),
+    );
+    localStorage.setItem(
+      `dismiss_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodes: newDismissedNodes });
+  },
+  removeDismissedNodes: (dismissedNodes: string[]) => {
+    const newDismissedNodes = get().dismissedNodes.filter(
+      (node) => !dismissedNodes.includes(node),
+    );
+    localStorage.setItem(
+      `dismiss_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodes: newDismissedNodes });
   },
 }));
 

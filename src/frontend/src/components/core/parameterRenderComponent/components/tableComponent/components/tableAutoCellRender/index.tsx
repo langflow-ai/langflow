@@ -5,9 +5,11 @@ import DateReader from "@/components/core/dateReaderComponent";
 import { Badge } from "@/components/ui/badge";
 import { cn, isTimeStampString } from "@/utils/utils";
 import { CustomCellRendererProps } from "ag-grid-react";
+import { uniqueId } from "lodash";
+import ToggleShadComponent from "../../../toggleShadComponent";
 
 interface CustomCellRender extends CustomCellRendererProps {
-  formatter?: "json" | "text";
+  formatter?: "json" | "text" | "boolean" | "number" | "undefined" | "null";
 }
 
 export default function TableAutoCellRender({
@@ -71,13 +73,43 @@ export default function TableAutoCellRender({
         }
       case "number":
         return <NumberReader number={value} />;
+      case "undefined":
+        return "";
+      case "null":
+        return "";
+      case "boolean":
+        value =
+          (typeof value === "string" && value.toLowerCase() === "true") ||
+          value === true
+            ? true
+            : false;
+        return !!colDef?.onCellValueChanged ||
+          !!api.getGridOption("onCellValueChanged") ? (
+          <ToggleShadComponent
+            value={value}
+            handleOnNewValue={(data) => {
+              setValue?.(data.value);
+            }}
+            editNode={true}
+            id={"toggle" + colDef?.colId + uniqueId()}
+            disabled={false}
+          />
+        ) : (
+          <Badge
+            variant={value ? "successStatic" : "errorStatic"}
+            size="sq"
+            className="h-[18px]"
+          >
+            {String(value).toLowerCase()}
+          </Badge>
+        );
       default:
         return String(value);
     }
   }
 
   return (
-    <div className="group flex h-full w-full truncate text-align-last-left">
+    <div className="group flex h-full w-full items-center truncate text-align-last-left">
       {getCellType()}
     </div>
   );

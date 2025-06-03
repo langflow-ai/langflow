@@ -3,10 +3,12 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { uploadFile } from "../../utils/upload-file";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Document Q&A",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -23,13 +25,7 @@ test(
     await page.getByRole("heading", { name: "Document Q&A" }).click();
     await initialGPTsetup(page);
 
-    const fileChooserPromise = page.waitForEvent("filechooser");
-    await page.getByTestId("button_upload_file").click();
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(
-      path.join(__dirname, "../../assets/test_file.txt"),
-    );
-    await page.getByText("test_file.txt").isVisible();
+    await uploadFile(page, "test_file.txt");
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 3000,
@@ -38,11 +34,7 @@ test(
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
       .getByText("No input message provided.", { exact: true })
       .last()

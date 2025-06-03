@@ -322,7 +322,7 @@ def json_schema_from_flow(flow: Flow) -> dict:
     from langflow.graph.graph.base import Graph
 
     # Get the flow's data which contains the nodes and their configurations
-    flow_data = flow.data if flow.data else {}
+    flow_data = flow.data or {}
 
     graph = Graph.from_payload(flow_data)
     input_nodes = [vertex for vertex in graph.vertices if vertex.is_input]

@@ -2,13 +2,12 @@ import useFlowStore from "@/stores/flowStore";
 import { cloneDeep } from "lodash"; // or any other deep cloning library you prefer
 import { useCallback } from "react";
 import { APIClassType } from "../../types/api";
+import { updateHiddenOutputs } from "../helpers/update-hidden-outputs";
 
 const useUpdateNodeCode = (
   dataId: string,
   dataNode: APIClassType, // Define YourNodeType according to your data structure
   setNode: (id: string, callback: (oldNode) => any) => void,
-  setIsOutdated: (value: boolean) => void,
-  setIsUserEdited: (value: boolean) => void,
   updateNodeInternals: (id: string) => void,
 ) => {
   const { setComponentsToUpdate } = useFlowStore();
@@ -29,16 +28,24 @@ const useUpdateNodeCode = (
         }
 
         newNode.data.node.template[name].value = code;
-        setIsOutdated(false);
-        setIsUserEdited(false);
+
+        const outputs = dataNode.outputs;
+        const updatedOutputs = newNodeClass.outputs;
+
+        newNode.data.node!.outputs = updateHiddenOutputs(
+          outputs!,
+          updatedOutputs!,
+        );
 
         return newNode;
       });
 
-      setComponentsToUpdate((old) => old.filter((id) => id !== dataId));
+      setComponentsToUpdate((old) =>
+        old.filter((component) => component.id !== dataId),
+      );
       updateNodeInternals(dataId);
     },
-    [dataId, dataNode, setNode, setIsOutdated, updateNodeInternals],
+    [dataId, dataNode, setNode, updateNodeInternals],
   );
 
   return updateNodeCode;

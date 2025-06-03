@@ -1,14 +1,14 @@
 from typing_extensions import TypedDict
 
 from langflow.base.models.model import LCModelComponent
-from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
-from langflow.components.models.anthropic import AnthropicModelComponent
-from langflow.components.models.azure_openai import AzureChatOpenAIComponent
-from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
-from langflow.components.models.groq import GroqModel
-from langflow.components.models.nvidia import NVIDIAModelComponent
-from langflow.components.models.openai import OpenAIModelComponent
-from langflow.components.models.sambanova import SambaNovaComponent
+from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+from langflow.components.languagemodels.anthropic import AnthropicModelComponent
+from langflow.components.languagemodels.azure_openai import AzureChatOpenAIComponent
+from langflow.components.languagemodels.google_generative_ai import GoogleGenerativeAIComponent
+from langflow.components.languagemodels.groq import GroqModel
+from langflow.components.languagemodels.nvidia import NVIDIAModelComponent
+from langflow.components.languagemodels.openai_chat_model import OpenAIModelComponent
+from langflow.components.languagemodels.sambanova import SambaNovaComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
 
@@ -18,6 +18,7 @@ class ModelProvidersDict(TypedDict):
     inputs: list[InputTypes]
     prefix: str
     component_class: LCModelComponent
+    icon: str
 
 
 def get_filtered_inputs(component_class):
@@ -70,7 +71,7 @@ def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Inpu
 
 def _get_google_generative_ai_inputs_and_fields():
     try:
-        from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
+        from langflow.components.languagemodels.google_generative_ai import GoogleGenerativeAIComponent
 
         google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
     except ImportError as e:
@@ -84,7 +85,7 @@ def _get_google_generative_ai_inputs_and_fields():
 
 def _get_openai_inputs_and_fields():
     try:
-        from langflow.components.models.openai import OpenAIModelComponent
+        from langflow.components.languagemodels.openai_chat_model import OpenAIModelComponent
 
         openai_inputs = get_filtered_inputs(OpenAIModelComponent)
     except ImportError as e:
@@ -95,7 +96,7 @@ def _get_openai_inputs_and_fields():
 
 def _get_azure_inputs_and_fields():
     try:
-        from langflow.components.models.azure_openai import AzureChatOpenAIComponent
+        from langflow.components.languagemodels.azure_openai import AzureChatOpenAIComponent
 
         azure_inputs = get_filtered_inputs(AzureChatOpenAIComponent)
     except ImportError as e:
@@ -106,7 +107,7 @@ def _get_azure_inputs_and_fields():
 
 def _get_groq_inputs_and_fields():
     try:
-        from langflow.components.models.groq import GroqModel
+        from langflow.components.languagemodels.groq import GroqModel
 
         groq_inputs = get_filtered_inputs(GroqModel)
     except ImportError as e:
@@ -117,7 +118,7 @@ def _get_groq_inputs_and_fields():
 
 def _get_anthropic_inputs_and_fields():
     try:
-        from langflow.components.models.anthropic import AnthropicModelComponent
+        from langflow.components.languagemodels.anthropic import AnthropicModelComponent
 
         anthropic_inputs = get_filtered_inputs(AnthropicModelComponent)
     except ImportError as e:
@@ -128,7 +129,7 @@ def _get_anthropic_inputs_and_fields():
 
 def _get_nvidia_inputs_and_fields():
     try:
-        from langflow.components.models.nvidia import NVIDIAModelComponent
+        from langflow.components.languagemodels.nvidia import NVIDIAModelComponent
 
         nvidia_inputs = get_filtered_inputs(NVIDIAModelComponent)
     except ImportError as e:
@@ -139,7 +140,7 @@ def _get_nvidia_inputs_and_fields():
 
 def _get_amazon_bedrock_inputs_and_fields():
     try:
-        from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
+        from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 
         amazon_bedrock_inputs = get_filtered_inputs(AmazonBedrockComponent)
     except ImportError as e:
@@ -150,7 +151,7 @@ def _get_amazon_bedrock_inputs_and_fields():
 
 def _get_sambanova_inputs_and_fields():
     try:
-        from langflow.components.models.sambanova import SambaNovaComponent
+        from langflow.components.languagemodels.sambanova import SambaNovaComponent
 
         sambanova_inputs = get_filtered_inputs(SambaNovaComponent)
     except ImportError as e:
@@ -169,6 +170,7 @@ try:
         "inputs": openai_inputs,
         "prefix": "",
         "component_class": OpenAIModelComponent(),
+        "icon": OpenAIModelComponent.icon,
     }
 except ImportError:
     pass
@@ -180,6 +182,7 @@ try:
         "inputs": azure_inputs,
         "prefix": "",
         "component_class": AzureChatOpenAIComponent(),
+        "icon": AzureChatOpenAIComponent.icon,
     }
 except ImportError:
     pass
@@ -191,6 +194,7 @@ try:
         "inputs": groq_inputs,
         "prefix": "",
         "component_class": GroqModel(),
+        "icon": GroqModel.icon,
     }
 except ImportError:
     pass
@@ -202,6 +206,7 @@ try:
         "inputs": anthropic_inputs,
         "prefix": "",
         "component_class": AnthropicModelComponent(),
+        "icon": AnthropicModelComponent.icon,
     }
 except ImportError:
     pass
@@ -213,6 +218,7 @@ try:
         "inputs": nvidia_inputs,
         "prefix": "",
         "component_class": NVIDIAModelComponent(),
+        "icon": NVIDIAModelComponent.icon,
     }
 except ImportError:
     pass
@@ -224,6 +230,7 @@ try:
         "inputs": bedrock_inputs,
         "prefix": "",
         "component_class": AmazonBedrockComponent(),
+        "icon": AmazonBedrockComponent.icon,
     }
 except ImportError:
     pass
@@ -235,6 +242,7 @@ try:
         "inputs": google_generative_ai_inputs,
         "prefix": "",
         "component_class": GoogleGenerativeAIComponent(),
+        "icon": GoogleGenerativeAIComponent.icon,
     }
 except ImportError:
     pass
@@ -246,6 +254,7 @@ try:
         "inputs": sambanova_inputs,
         "prefix": "",
         "component_class": SambaNovaComponent(),
+        "icon": SambaNovaComponent.icon,
     }
 except ImportError:
     pass
@@ -254,3 +263,9 @@ MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
 
 MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name"]
+
+
+MODELS_METADATA = {
+    key: {"icon": MODEL_PROVIDERS_DICT[key]["icon"] if key in MODEL_PROVIDERS_DICT else None}
+    for key in MODEL_PROVIDERS_DICT
+}

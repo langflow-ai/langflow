@@ -1,17 +1,23 @@
+from __future__ import annotations
+
 import copy
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from loguru import logger
-from pydantic import BaseModel, model_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from langflow.utils.image import create_data_url
+
+if TYPE_CHECKING:
+    from langflow.schema.dataframe import DataFrame
+    from langflow.schema.message import Message
 
 
 class Data(BaseModel):
@@ -20,6 +26,8 @@ class Data(BaseModel):
     Attributes:
         data (dict, optional): Additional data associated with the record.
     """
+
+    model_config = ConfigDict(validate_assignment=True)
 
     text_key: str = "text"
     data: dict = {}
@@ -31,8 +39,14 @@ class Data(BaseModel):
         if not isinstance(values, dict):
             msg = "Data must be a dictionary"
             raise ValueError(msg)  # noqa: TRY004
-        if not values.get("data"):
+        if "data" not in values or values["data"] is None:
             values["data"] = {}
+        if not isinstance(values["data"], dict):
+            msg = (
+                f"Invalid data format: expected dictionary but got {type(values).__name__}."
+                " This will raise an error in version langflow==1.3.0."
+            )
+            logger.warning(msg)
         # Any other keyword should be added to the data dictionary
         for key in values:
             if key not in values["data"] and key not in {"text_key", "data", "default_value"}:
@@ -73,7 +87,7 @@ class Data(BaseModel):
         return new_text
 
     @classmethod
-    def from_document(cls, document: Document) -> "Data":
+    def from_document(cls, document: Document) -> Data:
         """Converts a Document to a Data.
 
         Args:
@@ -87,7 +101,7 @@ class Data(BaseModel):
         return cls(data=data, text_key="text")
 
     @classmethod
-    def from_lc_message(cls, message: BaseMessage) -> "Data":
+    def from_lc_message(cls, message: BaseMessage) -> Data:
         """Converts a BaseMessage to a Data.
 
         Args:
@@ -100,7 +114,7 @@ class Data(BaseModel):
         data["metadata"] = cast("dict", message.to_json())
         return cls(data=data, text_key="text")
 
-    def __add__(self, other: "Data") -> "Data":
+    def __add__(self, other: Data) -> Data:
         """Combines the data of two data by attempting to add values for overlapping keys.
 
         Combines the data of two data by attempting to add values for overlapping keys
@@ -227,6 +241,39 @@ class Data(BaseModel):
     def __eq__(self, /, other):
         return isinstance(other, Data) and self.data == other.data
 
+    def filter_data(self, filter_str: str) -> Data:
+        """Filters the data dictionary based on the filter string.
+
+        Args:
+            filter_str (str): The filter string to apply to the data dictionary.
+
+        Returns:
+            Data: The filtered Data.
+        """
+        from langflow.template.utils import apply_json_filter
+
+        return apply_json_filter(self.data, filter_str)
+
+    def to_message(self) -> Message:
+        from langflow.schema.message import Message  # Local import to avoid circular import
+
+        if self.text_key in self.data:
+            return Message(text=self.get_text())
+        return Message(text=str(self.data))
+
+    def to_dataframe(self) -> DataFrame:
+        from langflow.schema.dataframe import DataFrame  # Local import to avoid circular import
+
+        data_dict = self.data
+        # If data contains only one key and the value is a list of dictionaries, convert to DataFrame
+        if (
+            len(data_dict) == 1
+            and isinstance(next(iter(data_dict.values())), list)
+            and all(isinstance(item, dict) for item in next(iter(data_dict.values())))
+        ):
+            return DataFrame(data=next(iter(data_dict.values())))
+        return DataFrame(data=[self])
+
 
 def custom_serializer(obj):
     if isinstance(obj, datetime):
@@ -238,6 +285,8 @@ def custom_serializer(obj):
         return str(obj)
     if isinstance(obj, BaseModel):
         return obj.model_dump()
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
     # Add more custom serialization rules as needed
     msg = f"Type {type(obj)} not serializable"
     raise TypeError(msg)

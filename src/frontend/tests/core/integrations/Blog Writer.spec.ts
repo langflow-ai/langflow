@@ -3,10 +3,11 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Blog Writer",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -30,6 +31,9 @@ test(
       .fill(
         "https://www.natgeokids.com/uk/discover/animals/sea-life/turtle-facts/",
       );
+
+    await page.getByTestId("input-list-plus-btn_urls-0").click();
+
     await page
       .getByTestId("inputlist_str_urls_1")
       .nth(0)
@@ -45,11 +49,7 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
-    });
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
       .getByPlaceholder(
         "No chat input variables found. Click to run your flow.",

@@ -1,5 +1,6 @@
 import { expect, Page, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 
 async function verifyTextareaValue(
   page: Page,
@@ -55,16 +56,14 @@ test(
       state: "visible",
     });
 
-    await page.getByTestId("input-flow-name").click();
-
-    await page.getByTestId("input-flow-name").fill(randomFlowName);
-
-    await page.keyboard.press("Enter");
+    await renameFlow(page, { flowName: randomFlowName });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text output");
 
-    await page.getByTestId("outputsText Output").waitFor({ state: "visible" });
+    await page
+      .getByTestId("input_outputText Output")
+      .waitFor({ state: "visible" });
     await page.getByTestId("add-component-button-text-output").click();
 
     await page.waitForSelector('[data-testid="title-Text Output"]', {

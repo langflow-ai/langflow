@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeAll(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 7000));
+});
+
+test.afterEach(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 7000));
+});
+
 test(
   "should see general profile gradient",
   { tag: ["@release"] },
@@ -71,10 +79,14 @@ test(
 
     await page.getByText("openai").last().click();
 
+    await page.waitForTimeout(1000);
+
     await page.getByPlaceholder("Fields").waitFor({
       state: "visible",
       timeout: 30000,
     });
+
+    await page.waitForTimeout(1000);
 
     await page.getByPlaceholder("Fields").fill("ollama");
 
@@ -165,14 +177,12 @@ test(
     await page.getByText("Langflow API").first().click();
     await page.getByText("Langflow API", { exact: true }).nth(1).isVisible();
     await page.getByText("Add New").click();
-    await page.getByPlaceholder("Insert a name for your API Key").isVisible();
+    await page.getByPlaceholder("My API Key").isVisible();
 
     const randomName = Math.random().toString(36).substring(2);
 
-    await page
-      .getByPlaceholder("Insert a name for your API Key")
-      .fill(randomName);
-    await page.getByText("Create Secret Key", { exact: true }).click();
+    await page.getByPlaceholder("My API Key").fill(randomName);
+    await page.getByText("Generate API Key", { exact: true }).click();
 
     // Wait for api key creation to complete and render the next form element
     await page.waitForTimeout(1000);

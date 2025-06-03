@@ -9,7 +9,10 @@ from langflow.schema import dotdict
 
 class RunFlowComponent(RunFlowBaseComponent):
     display_name = "Run Flow"
-    description = "Creates a tool component from a Flow that takes all its inputs and runs it."
+    description = (
+        "Creates a tool component from a Flow that takes all its inputs and runs it. "
+        " \n **Select a Flow to use the tool mode**"
+    )
     beta = True
     name = "RunFlow"
     icon = "Workflow"
@@ -64,6 +67,5 @@ class RunFlowComponent(RunFlowBaseComponent):
             flow_name=flow_name_selected,
             tweaks=tweaks,
             user_id=str(self.user_id),
-            # run_id=self.graph.run_id,
             session_id=self.graph.session_id or self.session_id,
         )

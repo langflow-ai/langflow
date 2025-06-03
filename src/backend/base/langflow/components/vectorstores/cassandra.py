@@ -158,8 +158,11 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 password=self.token,
                 cluster_kwargs=self.cluster_kwargs,
             )
-        documents = []
 
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
+
+        documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())

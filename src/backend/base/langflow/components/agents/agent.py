@@ -6,6 +6,7 @@ from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
     MODEL_PROVIDERS_DICT,
+    MODELS_METADATA,
 )
 from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
@@ -43,6 +44,7 @@ class AgentComponent(ToolCallingAgentComponent):
             value="OpenAI",
             real_time_refresh=True,
             input_types=[],
+            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{"icon": "brain"}],
         ),
         *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
         MultilineInput(
@@ -117,7 +119,7 @@ class AgentComponent(ToolCallingAgentComponent):
             component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
         }
         # filter out empty values
-        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}
+        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}
 
         return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()
 
@@ -224,6 +226,8 @@ class AgentComponent(ToolCallingAgentComponent):
                     value="Custom",
                     real_time_refresh=True,
                     input_types=["LanguageModel"],
+                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]
+                    + [{"icon": "brain"}],
                 )
                 build_config.update({"agent_llm": custom_component.to_dict()})
             # Update input types for all fields
@@ -267,14 +271,14 @@ class AgentComponent(ToolCallingAgentComponent):
                     )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
-    async def to_toolkit(self) -> list[Tool]:
+    async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()
         # TODO: Agent Description Depreciated Feature to be removed
         description = f"{agent_description}{tools_names}"
         tools = component_toolkit(component=self).get_tools(
-            tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()
+            tool_name="Call_Agent", tool_description=description, callbacks=self.get_langchain_callbacks()
         )
         if hasattr(self, "tools_metadata"):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)

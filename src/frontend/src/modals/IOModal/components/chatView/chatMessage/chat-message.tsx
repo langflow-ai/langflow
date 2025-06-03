@@ -5,7 +5,6 @@ import { CustomProfileIcon } from "@/customization/components/custom-profile-ico
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import Robot from "../../../../../assets/robot.png";
@@ -14,7 +13,6 @@ import IconComponent, {
 } from "../../../../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
 import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
-import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useAlertStore from "../../../../../stores/alertStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
@@ -27,11 +25,10 @@ import { convertFiles } from "./helpers/convert-files";
 
 export default function ChatMessage({
   chat,
-  lockChat,
   lastMessage,
   updateChat,
-  setLockChat,
   closeChat,
+  playgroundPage,
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
@@ -49,22 +46,15 @@ export default function ChatMessage({
   const chatMessageRef = useRef(chatMessage);
   const [editMessage, setEditMessage] = useState(false);
   const [showError, setShowError] = useState(false);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+
+  const isAudioMessage = chat.category === "audio";
 
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
     setChatMessage(chatMessageString);
-  }, [chat]);
-
-  const playgroundScrollBehaves = useUtilityStore(
-    (state) => state.playgroundScrollBehaves,
-  );
-  const setPlaygroundScrollBehaves = useUtilityStore(
-    (state) => state.setPlaygroundScrollBehaves,
-  );
-  // Sync ref with state
-  useEffect(() => {
     chatMessageRef.current = chatMessage;
-  }, [chatMessage]);
+  }, [chat, isBuilding]);
 
   // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
   // probably the message is empty when we have a stream_url
@@ -103,42 +93,22 @@ export default function ChatMessage({
 
   useEffect(() => {
     if (streamUrl && !isStreaming) {
-      setLockChat(true);
       streamChunks(streamUrl)
         .then(() => {
-          setLockChat(false);
           if (updateChat) {
             updateChat(chat, chatMessageRef.current);
           }
         })
         .catch((error) => {
           console.error(error);
-          setLockChat(false);
         });
     }
   }, [streamUrl, chatMessage]);
-
   useEffect(() => {
     return () => {
       eventSource.current?.close();
     };
   }, []);
-
-  const isTabHidden = useTabVisibility();
-
-  useEffect(() => {
-    const element = document.getElementById("last-chat-message");
-    if (element && isTabHidden) {
-      if (playgroundScrollBehaves === "instant") {
-        element.scrollIntoView({ behavior: playgroundScrollBehaves });
-        setPlaygroundScrollBehaves("smooth");
-      } else {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: playgroundScrollBehaves });
-        }, 200);
-      }
-    }
-  }, [lastMessage, chat]);
 
   useEffect(() => {
     if (chat.category === "error") {
@@ -284,8 +254,10 @@ export default function ChatMessage({
                   ) : (
                     <ForwardedIconComponent name={chat.properties.icon} />
                   )
-                ) : !ENABLE_DATASTAX_LANGFLOW ? (
-                  <ProfileIcon />
+                ) : !ENABLE_DATASTAX_LANGFLOW && !playgroundPage ? (
+                  <CustomProfileIcon />
+                ) : playgroundPage ? (
+                  <ForwardedIconComponent name="User" />
                 ) : (
                   <CustomProfileIcon />
                 )}
@@ -296,7 +268,7 @@ export default function ChatMessage({
             <div>
               <div
                 className={cn(
-                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-[14px] font-semibold",
+                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-sm font-semibold",
                 )}
                 style={
                   chat.properties?.text_color
@@ -307,9 +279,19 @@ export default function ChatMessage({
                   "sender_name_" + chat.sender_name?.toLocaleLowerCase()
                 }
               >
-                {chat.sender_name}
-                {chat.properties?.source && (
-                  <div className="text-[13px] font-normal text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  {chat.sender_name}
+                  {isAudioMessage && (
+                    <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-muted">
+                      <ForwardedIconComponent
+                        name="mic"
+                        className="h-3 w-3 text-muted-foreground"
+                      />
+                    </div>
+                  )}
+                </span>
+                {chat.properties?.source && !playgroundPage && (
+                  <div className="text-mmd font-normal text-muted-foreground">
                     {chat.properties?.source.source}
                   </div>
                 )}
@@ -317,11 +299,12 @@ export default function ChatMessage({
             </div>
             {chat.content_blocks && chat.content_blocks.length > 0 && (
               <ContentBlockDisplay
+                playgroundPage={playgroundPage}
                 contentBlocks={chat.content_blocks}
                 isLoading={
-                  chatMessage === "" &&
-                  lockChat &&
-                  chat.properties?.state === "partial"
+                  chat.properties?.state === "partial" &&
+                  isBuilding &&
+                  lastMessage
                 }
                 state={chat.properties?.state}
                 chatId={chat.id}
@@ -360,13 +343,13 @@ export default function ChatMessage({
                         }
                         className="flex w-full flex-col"
                       >
-                        {chatMessage === "" && lockChat ? (
+                        {chatMessage === "" && isBuilding && lastMessage ? (
                           <IconComponent
                             name="MoreHorizontal"
                             className="h-8 w-8 animate-pulse"
                           />
                         ) : (
-                          <div className="w-full">
+                          <div className="min-h-8 w-full">
                             {editMessage ? (
                               <EditMessageField
                                 key={`edit-message-${chat.id}`}
@@ -378,6 +361,7 @@ export default function ChatMessage({
                               />
                             ) : (
                               <MarkdownField
+                                isAudioMessage={isAudioMessage}
                                 chat={chat}
                                 isEmpty={isEmpty}
                                 chatMessage={chatMessage}
@@ -406,9 +390,10 @@ export default function ChatMessage({
                   ) : (
                     <>
                       <div
-                        className={`w-full items-baseline whitespace-pre-wrap break-words text-[14px] font-normal ${
-                          isEmpty ? "text-muted-foreground" : "text-primary"
-                        }`}
+                        className={cn(
+                          "w-full items-baseline whitespace-pre-wrap break-words text-sm font-normal",
+                          isEmpty ? "text-muted-foreground" : "text-primary",
+                        )}
                         data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                       >
                         {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
@@ -440,6 +425,7 @@ export default function ChatMessage({
                   isBotMessage={!chat.isSend}
                   onEvaluate={handleEvaluateAnswer}
                   evaluation={chat.properties?.positive_feedback}
+                  isAudioMessage={isAudioMessage}
                 />
               </div>
             </div>

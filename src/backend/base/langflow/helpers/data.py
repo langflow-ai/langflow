@@ -1,6 +1,12 @@
+import re
+from collections import defaultdict
+from typing import Any
+
+import orjson
+from fastapi.encoders import jsonable_encoder
 from langchain_core.documents import Document
 
-from langflow.schema import Data
+from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
 
 
@@ -17,18 +23,42 @@ def docs_to_data(documents: list[Document]) -> list[Data]:
 
 
 def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str], list[Data]]:
-    r"""Formats `text` within Data objects based on a given template.
+    """Format text from Data objects using a template string.
 
-    Converts a Data object or a list of Data objects into a tuple containing a list of formatted strings
-    and a list of Data objects based on a given template.
+    This function processes Data objects and formats their content using a template string.
+    It handles various data structures and ensures consistent text formatting across different
+    input types.
+
+    Key Features:
+    - Supports single Data object or list of Data objects
+    - Handles nested dictionaries and extracts text from various locations
+    - Uses safe string formatting with fallback for missing keys
+    - Preserves original Data objects in output
 
     Args:
-        template (str): The format string template to be used for formatting the data.
-        data (Data | list[Data]): A single Data object or a list of Data objects to be formatted.
+        template: Format string with placeholders (e.g., "Hello {text}")
+                 Placeholders are replaced with values from Data objects
+        data: Either a single Data object or a list of Data objects to format
+              Each object can contain text, dictionaries, or nested data
 
     Returns:
-        tuple[list[str], list[Data]]: A tuple containing a list of formatted strings based on the
-                                      provided template and data, and a list of Data objects.
+        A tuple containing:
+        - List[str]: Formatted strings based on the template
+        - List[Data]: Original Data objects in the same order
+
+    Raises:
+        ValueError: If template is None
+        TypeError: If template is not a string
+
+    Examples:
+        >>> result = data_to_text_list("Hello {text}", Data(text="world"))
+        >>> assert result == (["Hello world"], [Data(text="world")])
+
+        >>> result = data_to_text_list(
+        ...     "{name} is {age}",
+        ...     Data(data={"name": "Alice", "age": 25})
+        ... )
+        >>> assert result == (["Alice is 25"], [Data(data={"name": "Alice", "age": 25})])
     """
     if data is None:
         return [], []
@@ -41,22 +71,37 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
         msg = f"Template must be a string, but got {type(template)}"
         raise TypeError(msg)
 
-    if isinstance(data, (Data)):
-        data = [data]
-    # Check if there are any format strings in the template
-    data_ = [
-        # If it is not a record, create one with the key "text"
-        Data(text=value) if not isinstance(value, Data) else value
-        for value in data
-    ]
-    formatted_text = []
-    for value in data_:
-        # Prevent conflict with 'data' keyword in template formatting
-        kwargs = value.data.copy()
-        data = kwargs.pop("data", value.data)
-        formatted_text.append(template.format(data=data, **kwargs))
+    formatted_text: list[str] = []
+    processed_data: list[Data] = []
 
-    return formatted_text, data_
+    data_list = [data] if isinstance(data, Data) else data
+
+    data_objects = [item if isinstance(item, Data) else Data(text=str(item)) for item in data_list]
+
+    for data_obj in data_objects:
+        format_dict = {}
+
+        if isinstance(data_obj.data, dict):
+            format_dict.update(data_obj.data)
+
+            if isinstance(data_obj.data.get("data"), dict):
+                format_dict.update(data_obj.data["data"])
+
+            elif format_dict.get("error"):
+                format_dict["text"] = format_dict["error"]
+
+        format_dict["data"] = data_obj.data
+
+        safe_dict = defaultdict(str, format_dict)
+
+        try:
+            formatted_text.append(template.format_map(safe_dict))
+            processed_data.append(data_obj)
+        except ValueError as e:
+            msg = f"Error formatting template: {e!s}"
+            raise ValueError(msg) from e
+
+    return formatted_text, processed_data
 
 
 def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str:
@@ -98,3 +143,63 @@ def messages_to_text(template: str, messages: Message | list[Message]) -> str:
 
     formated_messages = [template.format(data=message.model_dump(), **message.model_dump()) for message in messages_]
     return "\n".join(formated_messages)
+
+
+def clean_string(s):
+    # Remove empty lines
+    s = re.sub(r"^\s*$", "", s, flags=re.MULTILINE)
+    # Replace three or more newlines with a double newline
+    return re.sub(r"\n{3,}", "\n\n", s)
+
+
+def _serialize_data(data: Data) -> str:
+    """Serialize Data object to JSON string."""
+    # Convert data.data to JSON-serializable format
+    serializable_data = jsonable_encoder(data.data)
+    # Serialize with orjson, enabling pretty printing with indentation
+    json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
+    # Convert bytes to string and wrap in Markdown code blocks
+    return "```json\n" + json_bytes.decode("utf-8") + "\n```"
+
+
+def safe_convert(data: Any, *, clean_data: bool = False) -> str:
+    """Safely convert input data to string."""
+    try:
+        if isinstance(data, str):
+            return clean_string(data)
+        if isinstance(data, Message):
+            return data.get_text()
+        if isinstance(data, Data):
+            return clean_string(_serialize_data(data))
+        if isinstance(data, DataFrame):
+            if clean_data:
+                # Remove empty rows
+                data = data.dropna(how="all")
+                # Remove empty lines in each cell
+                data = data.replace(r"^\s*$", "", regex=True)
+                # Replace multiple newlines with a single newline
+                data = data.replace(r"\n+", "\n", regex=True)
+
+            # Replace pipe characters to avoid markdown table issues
+            processed_data = data.replace(r"\|", r"\\|", regex=True)
+
+            return processed_data.to_markdown(index=False)
+
+        return clean_string(str(data))
+    except (ValueError, TypeError, AttributeError) as e:
+        msg = f"Error converting data: {e!s}"
+        raise ValueError(msg) from e
+
+
+def data_to_dataframe(data: Data | list[Data]) -> DataFrame:
+    """Converts a Data object or a list of Data objects to a DataFrame.
+
+    Args:
+        data (Data | list[Data]): The Data object or list of Data objects to convert.
+
+    Returns:
+        DataFrame: The converted DataFrame.
+    """
+    if isinstance(data, Data):
+        return DataFrame([data.data])
+    return DataFrame(data=[d.data for d in data])

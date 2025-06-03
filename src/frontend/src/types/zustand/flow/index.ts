@@ -7,7 +7,7 @@ import {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
-import { BuildStatus } from "../../../constants/enums";
+import { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import { VertexBuildTypeAPI } from "../../api";
 import { ChatInputType, ChatOutputType } from "../../chat";
 import { FlowState } from "../../tabs";
@@ -52,7 +52,19 @@ export type FlowPoolType = {
   [key: string]: Array<VertexBuildTypeAPI>;
 };
 
+export type ComponentsToUpdateType = {
+  id: string;
+  icon?: string;
+  display_name: string;
+  outdated: boolean;
+  breakingChange: boolean;
+  userEdited: boolean;
+};
+
 export type FlowStoreType = {
+  dismissedNodes: string[];
+  addDismissedNodes: (dismissedNodes: string[]) => void;
+  removeDismissedNodes: (dismissedNodes: string[]) => void;
   //key x, y
   positionDictionary: { [key: number]: number };
   isPositionAvailable: (position: { x: number; y: number }) => boolean;
@@ -61,9 +73,11 @@ export type FlowStoreType = {
   }) => void;
   fitViewNode: (nodeId: string) => void;
   autoSaveFlow: (() => void) | undefined;
-  componentsToUpdate: string[];
+  componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (
-    update: string[] | ((oldState: string[]) => string[]),
+    update:
+      | ComponentsToUpdateType[]
+      | ((oldState: ComponentsToUpdateType[]) => ComponentsToUpdateType[]),
   ) => void;
   updateComponentsToUpdate: (nodes: AllNodeType[]) => void;
   onFlowPage: boolean;
@@ -95,6 +109,7 @@ export type FlowStoreType = {
   setIsBuilding: (isBuilding: boolean) => void;
   setPending: (isPending: boolean) => void;
   resetFlow: (flow: FlowType | undefined) => void;
+  resetFlowState: () => void;
   reactFlowInstance: ReactFlowInstance<AllNodeType, EdgeType> | null;
   setReactFlowInstance: (
     newState: ReactFlowInstance<AllNodeType, EdgeType>,
@@ -139,22 +154,40 @@ export type FlowStoreType = {
   getFilterEdge: any[];
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
-  buildFlow: ({
-    startNodeId,
-    stopNodeId,
-    input_value,
-    files,
-    silent,
-    setLockChat,
-    session,
-  }: {
-    setLockChat?: (lock: boolean) => void;
+  playgroundPage: boolean;
+  setPlaygroundPage: (playgroundPage: boolean) => void;
+  buildInfo: { error?: string[]; success?: boolean } | null;
+  setBuildInfo: (
+    buildInfo: { error?: string[]; success?: boolean } | null,
+  ) => void;
+  pastBuildFlowParams: {
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
     files?: string[];
     silent?: boolean;
     session?: string;
+    stream?: boolean;
+    eventDelivery?: EventDeliveryType;
+  } | null;
+  buildFlow: ({
+    startNodeId,
+    stopNodeId,
+    input_value,
+    files,
+    silent,
+    session,
+    stream,
+    eventDelivery,
+  }: {
+    startNodeId?: string;
+    stopNodeId?: string;
+    input_value?: string;
+    files?: string[];
+    silent?: boolean;
+    session?: string;
+    stream?: boolean;
+    eventDelivery?: EventDeliveryType;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };
   updateVerticesBuild: (
@@ -173,10 +206,13 @@ export type FlowStoreType = {
     runId?: string;
     verticesToRun: string[];
   } | null;
-  updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
+  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: {
-    [key: string]: { status: BuildStatus; timestamp?: string };
+    [key: string]: {
+      status: BuildStatus;
+      timestamp?: string;
+    };
   };
   updateFlowPool: (
     nodeId: string,
@@ -184,8 +220,6 @@ export type FlowStoreType = {
     buildId?: string,
   ) => void;
   getNodePosition: (nodeId: string) => { x: number; y: number };
-  setLockChat: (lock: boolean) => void;
-  lockChat: boolean;
   updateFreezeStatus: (nodeIds: string[], freeze: boolean) => void;
   currentFlow: FlowType | undefined;
   setCurrentFlow: (flow: FlowType | undefined) => void;

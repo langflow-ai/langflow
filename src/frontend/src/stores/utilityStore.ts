@@ -1,10 +1,11 @@
+import { EventDeliveryType } from "@/constants/enums";
 import { Pagination, Tag } from "@/types/utils/types";
 import { UtilityStoreType } from "@/types/zustand/utility";
 import { create } from "zustand";
 
 export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
-  dismissAll: false,
-  setDismissAll: (dismissAll: boolean) => set({ dismissAll }),
+  clientId: "",
+  setClientId: (clientId: string) => set({ clientId }),
   chatValueStore: "",
   setChatValueStore: (value: string) => set({ chatValueStore: value }),
   selectedItems: [],
@@ -26,6 +27,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   maxFileSizeUpload: 100 * 1024 * 1024, // 100MB in bytes
   setMaxFileSizeUpload: (maxFileSizeUpload: number) =>
     set({ maxFileSizeUpload: maxFileSizeUpload * 1024 * 1024 }),
+  serializationMaxItemsLength: 100,
+  setSerializationMaxItemsLength: (serializationMaxItemsLength: number) =>
+    set({ serializationMaxItemsLength }),
   flowsPagination: {
     page: 1,
     size: 10,
@@ -35,4 +39,13 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   setTags: (tags: Tag[]) => set({ tags }),
   featureFlags: {},
   setFeatureFlags: (featureFlags: Record<string, any>) => set({ featureFlags }),
+  webhookPollingInterval: 5000,
+  setWebhookPollingInterval: (webhookPollingInterval: number) =>
+    set({ webhookPollingInterval }),
+  currentSessionId: "",
+  setCurrentSessionId: (sessionId: string) =>
+    set({ currentSessionId: sessionId }),
+  eventDelivery: EventDeliveryType.POLLING,
+  setEventDelivery: (eventDelivery: EventDeliveryType) =>
+    set({ eventDelivery }),
 }));
