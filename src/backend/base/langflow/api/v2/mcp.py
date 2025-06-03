@@ -119,18 +119,29 @@ async def update_server(
     storage_service=Depends(get_storage_service),
     settings_service=Depends(get_settings_service),
     *,
-    check_existing: bool = False
+    check_existing: bool = False,
+    delete: bool = False,
 ):
     server_list = await get_server_list(current_user, session, storage_service, settings_service)
 
+    # Validate server name
     if check_existing and server_name in server_list["mcpServers"]:
         return {"error": "Server already exists."}
+
+    # Handle the delete case
+    if delete:
+        if server_name in server_list["mcpServers"]:
+            del server_list["mcpServers"][server_name]
+        else:
+            return {"error": "Server not found."}
+    else:
+        server_list["mcpServers"][server_name] = server_config
 
     # Remove the existing file
     server_config_file = await get_file_by_name(current_user, session, file_name=MCP_SERVERS_FILE)
     await delete_file(server_config_file.id, current_user, session, storage_service)
 
-    server_list["mcpServers"][server_name] = server_config
+    # Upload the updated server configuration
     await upload_server_config(
         server_list,
         current_user,
@@ -176,4 +187,22 @@ async def update_server_endpoint(
         session,
         storage_service,
         settings_service,
+    )
+
+@router.delete("/servers/{server_name}")
+async def delete_server(
+    server_name: str,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    storage_service=Depends(get_storage_service),
+    settings_service=Depends(get_settings_service),
+):
+    return await update_server(
+        server_name,
+        {},
+        current_user,
+        session,
+        storage_service,
+        settings_service,
+        delete=True,
     )
