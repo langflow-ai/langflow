@@ -6,7 +6,7 @@ slug: /typescript-client
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-The Langflow TypeScript client allows your TypeScript applications to programatically interact with the Langflow API.
+The Langflow TypeScript client allows your TypeScript applications to programmatically interact with the Langflow API.
 
 For more information, see the [langflow-client-ts](https://github.com/datastax/langflow-client-ts/) repository.
 
