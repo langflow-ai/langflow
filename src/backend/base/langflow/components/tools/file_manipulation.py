@@ -485,25 +485,34 @@ class FileManipulation(Component):
                     f"{'regex match' if use_regex else 'location'}{'es' if replaced_count > 1 else ''} "
                     f"in {path}."
                 )
+                # Use the line number of the first replacement, or None if no replacements
                 preview_line = replacements[0][2] if replacements else None
             elif operation == FileEditOperation.INSERT:
                 msg = f"Successfully inserted text at line {line_number} in {path}."
-                preview_line = line_number
+                preview_line = line_number if line_number is not None else None
             elif operation == FileEditOperation.REMOVE:
-                lines_removed = end_line - line_number + 1
-                msg = (
-                    f"Successfully removed {lines_removed} "
-                    f"line{'s' if lines_removed != 1 else ''} ({line_number}-{end_line}) from {path}."
-                )
-                preview_line = line_number
+                if line_number is None or end_line is None:
+                    msg = f"Successfully removed lines from {path}."
+                    preview_line = None
+                else:
+                    lines_removed = end_line - line_number + 1
+                    msg = (
+                        f"Successfully removed {lines_removed} "
+                        f"line{'s' if lines_removed != 1 else ''} ({line_number}-{end_line}) from {path}."
+                    )
+                    preview_line = line_number
             elif operation == FileEditOperation.MOVE:
-                lines_moved = end_line - line_number + 1
-                msg = (
-                    f"Successfully moved {lines_moved} "
-                    f"line{'s' if lines_moved != 1 else ''} from {line_number}-{end_line} "
-                    f"to line {target_line} in {path}."
-                )
-                preview_line = max(1, target_line - lines_moved - 2)
+                if line_number is None or end_line is None or target_line is None:
+                    msg = f"Successfully moved lines in {path}."
+                    preview_line = None
+                else:
+                    lines_moved = end_line - line_number + 1
+                    msg = (
+                        f"Successfully moved {lines_moved} "
+                        f"line{'s' if lines_moved != 1 else ''} from {line_number}-{end_line} "
+                        f"to line {target_line} in {path}."
+                    )
+                    preview_line = target_line
 
             # Get file preview after the change
             file_preview = self._get_file_preview(path, preview_line)
