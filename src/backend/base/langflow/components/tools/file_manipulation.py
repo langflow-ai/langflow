@@ -23,44 +23,44 @@ class BackupManager:
         Creates a `.backups` directory within the workspace if it does not exist, and sets up internal registries for tracking file backups and undo/redo positions.
         """
         self.workspace_folder = workspace_folder
-        self.backup_folder = os.path.join(workspace_folder, ".backups")
+        from pathlib import Path
+        self.backup_folder = Path(workspace_folder) / ".backups"
         self.backup_registry = {}  # file_path -> [backup_ids]
         self.current_positions = {}  # file_path -> current_position_index
 
-        if not os.path.exists(self.backup_folder):
-            os.makedirs(self.backup_folder)
+        if not self.backup_folder.exists():
+            self.backup_folder.mkdir(parents=True)
 
     def backup_file(self, file_path: str) -> str | None:
         """Creates a timestamped backup of the specified file and updates the backup registry.
 
         If the file does not exist or the backup fails, returns None. On success, returns the backup ID.
         """
-        if not os.path.exists(file_path):
+        from pathlib import Path
+        file_obj = Path(file_path)
+        if not file_obj.exists():
             return None
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_name = os.path.basename(file_path)
+        from datetime import timezone
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        file_name = file_obj.name
         backup_id = f"{file_name}_{timestamp}"
-        backup_path = os.path.join(self.backup_folder, backup_id)
+        backup_path = self.backup_folder / backup_id
 
         try:
             shutil.copy2(file_path, backup_path)
 
+            # Update the registry
             if file_path not in self.backup_registry:
                 self.backup_registry[file_path] = []
-                self.current_positions[file_path] = -1
 
-            # If we're not at the end of history, truncate it
-            position = self.current_positions[file_path]
-            if position != -1:
-                self.backup_registry[file_path] = self.backup_registry[file_path][: position + 1]
-                self.current_positions[file_path] = -1
-
+            # Remove old position tracking when a new backup is made
+            self.current_positions[file_path] = len(self.backup_registry[file_path])
             self.backup_registry[file_path].append(backup_id)
-            return backup_id
-
-        except Exception:
+        except OSError:
             return None
+        else:
+            return backup_id
 
     def get_backups(self, file_path: str) -> list[str]:
         """Returns a list of backup IDs for the specified file.
@@ -101,47 +101,35 @@ class BackupManager:
         Returns:
             A tuple containing a boolean indicating success, the backup ID or "current" if restored to the latest version, and a message describing the result.
         """
-        if file_path not in self.backup_registry:
-            return False, None, "No backup history for this file"
+        if file_path not in self.backup_registry or not self.backup_registry[file_path]:
+            return False, None, "No backups available for this file"
 
         backups = self.backup_registry[file_path]
-        if not backups:
-            return False, None, "No backups available"
-
-        position = self.current_positions[file_path]
+        current_pos = self.current_positions.get(file_path, len(backups) - 1)
 
         if direction == "undo":
-            if position == -1:
-                new_position = len(backups) - 1
-            elif position > 0:
-                new_position = position - 1
-            else:
-                return False, None, "No earlier version available"
-
-        elif direction == "redo":
-            if position == -1:
-                return False, None, "No redo operations available. You can only redo after an undo operation."
-            if position < len(backups) - 1:
-                new_position = position + 1
-            else:
-                # Already at most recent backup, restore to current version
-                self.current_positions[file_path] = -1
-                return True, "current", "Restored to current version"
-        else:
-            return False, None, f"Invalid direction: {direction}"
+            new_position = current_pos - 1
+            if new_position < 0:
+                return False, None, "No more undos available"
+        else:  # redo
+            new_position = current_pos + 1
+            if new_position >= len(backups):
+                return False, None, "No more redos available"
 
         backup_id = backups[new_position]
-        backup_path = os.path.join(self.backup_folder, backup_id)
+        backup_path = self.backup_folder / backup_id
 
-        if not os.path.exists(backup_path):
+        if not backup_path.exists():
             return False, None, f"Backup file not found: {backup_id}"
 
         try:
             shutil.copy2(backup_path, file_path)
             self.current_positions[file_path] = new_position
-            return True, backup_id, f"Successfully restored {direction} to version {new_position + 1} of {len(backups)}"
-        except Exception as e:
+            msg = f"Successfully restored {direction} to version {new_position + 1} of {len(backups)}"
+        except OSError as e:
             return False, None, f"Failed to restore: {e!s}"
+        else:
+            return True, backup_id, msg
 
 
 class PathHandler:
@@ -156,45 +144,47 @@ class PathHandler:
         self.workspace_folder = workspace_folder
         self.platform = platform.system()
 
-    def resolve_path(self, relative_path: str, must_exist: bool = True) -> str:
+    def resolve_path(self, relative_path: str, *, must_exist: bool = True) -> str:
         """Resolves a relative path to an absolute path within the workspace, enforcing security constraints.
 
         Args:
-            relative_path: The path relative to the workspace folder.
-            must_exist: If True, raises an error if the resolved path does not exist.
+            relative_path: A path relative to the workspace folder.
+            must_exist: Whether the path must exist (raises FileNotFoundError if not).
 
         Returns:
-            The absolute, normalized path within the workspace.
+            The resolved absolute path.
 
         Raises:
-            ValueError: If the path is absolute or outside the workspace.
-            FileNotFoundError: If must_exist is True and the path does not exist.
+            ValueError: If the path is not relative or is outside the workspace.
+            FileNotFoundError: If must_exist is True and the path doesn't exist.
         """
         # Check if absolute
-        if os.path.isabs(relative_path):
+        from pathlib import Path
+        path_obj = Path(relative_path)
+        if path_obj.is_absolute():
             msg = f"Path must be relative to workspace: {relative_path}"
             raise ValueError(msg)
 
-        # Normalize path separators for the current platform
-        if self.platform == "Windows":
-            relative_path = relative_path.replace("/", "\\")
-        else:
-            relative_path = relative_path.replace("\\", "/")
+        # Normalize path components
+        if ".." in relative_path or relative_path.startswith("/"):
+            msg = f"Path traversal not allowed: {relative_path}"
+            raise ValueError(msg)
 
         # Join with workspace and normalize
-        full_path = os.path.normpath(os.path.join(self.workspace_folder, relative_path))
+        workspace_path = Path(self.workspace_folder)
+        full_path = (workspace_path / relative_path).resolve()
 
         # Security check: ensure path is within workspace
-        if not os.path.abspath(full_path).startswith(os.path.abspath(self.workspace_folder)):
+        if not str(full_path).startswith(str(workspace_path.resolve())):
             msg = f"Path must be within workspace: {relative_path}"
             raise ValueError(msg)
 
         # Check existence if required
-        if must_exist and not os.path.exists(full_path):
+        if must_exist and not full_path.exists():
             msg = f"Path does not exist: {relative_path}"
             raise FileNotFoundError(msg)
 
-        return full_path
+        return str(full_path)
 
     def is_within_workspace(self, path: str) -> bool:
         """Determines whether the given path is located inside the workspace directory.
@@ -205,15 +195,17 @@ class PathHandler:
         Returns:
             True if the path is within the workspace; otherwise, False.
         """
-        abs_path = os.path.abspath(path)
-        abs_workspace = os.path.abspath(self.workspace_folder)
-        return abs_path.startswith(abs_workspace)
+        from pathlib import Path
+        abs_path = Path(path).resolve()
+        abs_workspace = Path(self.workspace_folder).resolve()
+        return str(abs_path).startswith(str(abs_workspace))
 
     def ensure_directory_exists(self, path: str) -> None:
         """Ensures that the parent directory of the specified path exists, creating it if necessary."""
-        directory = os.path.dirname(path)
-        if not os.path.exists(directory):
-            os.makedirs(directory, exist_ok=True)
+        from pathlib import Path
+        directory = Path(path).parent
+        if not directory.exists():
+            directory.mkdir(parents=True, exist_ok=True)
 
 
 class FileEditOperation(Enum):
@@ -257,39 +249,43 @@ class FileManipulation(Component):
         """
         try:
             resolved_path = self.path_handler.resolve_path(file_path)
+            from pathlib import Path
+            path_obj = Path(resolved_path)
 
-            if not os.path.exists(resolved_path):
+            if not path_obj.exists():
                 return f"File not found: {file_path}"
 
             # Handle empty files
-            if os.path.getsize(resolved_path) == 0:
+            if path_obj.stat().st_size == 0:
                 return f"File is empty: {file_path}"
 
-            with open(resolved_path, encoding="utf-8") as f:
+            with path_obj.open(encoding="utf-8") as f:
                 lines = f.readlines()
 
-            # If specific line is provided, show context around it
+            # Determine the range of lines to show
+            total_lines = len(lines)
             if line_number is not None:
+                # Center around the specified line
                 start = max(0, line_number - context_lines - 1)
-                end = min(len(lines), line_number + context_lines)
-                preview_lines = lines[start:end]
-                result = ""
-                for i, line in enumerate(preview_lines, start=start + 1):
-                    prefix = ">>> " if i == line_number else "    "
-                    result += f"{prefix}{i}: {line}"
-                return result
+                end = min(total_lines, line_number + context_lines)
+            else:
+                # Show first few lines by default
+                preview_length = 10
+                start = 0
+                end = min(total_lines, preview_length)
 
-            # Otherwise show first few lines
-            result = ""
-            preview_length = min(10, len(lines))
-            for i, line in enumerate(lines[:preview_length], start=1):
-                result += f"{i}: {line}"
+            result = f"Preview of {file_path} (showing lines {start + 1}-{end}):\n"
+            for i in range(start, end):
+                line = lines[i].rstrip("\n")
+                result += f"{i + 1:4}: {line}\n"
+
+            # Add truncation notice if needed
             if len(lines) > preview_length:
                 result += f"\n... and {len(lines) - preview_length} more lines"
-            return result
-
-        except Exception as e:
+        except OSError as e:
             return f"Error getting file preview: {e!s}"
+        else:
+            return result
 
     def _edit_file(
         self,
@@ -300,6 +296,7 @@ class FileManipulation(Component):
         line_number: int | None = None,
         end_line: int | None = None,
         target_line: int | None = None,
+        *,
         use_regex: bool = False,
         replace_all: bool = False,
         context_before: str | None = None,
@@ -309,69 +306,54 @@ class FileManipulation(Component):
     ) -> str:
         """Performs a unified file editing operation such as replace, insert, remove, or move.
 
-        Depending on the specified operation, this method modifies the file at the given path by replacing text, inserting new content at a specific line, removing a range of lines, or moving a block of lines to a new location. It supports dry-run mode, regex-based replacements, occurrence selection, and context constraints. The method ensures the file exists or creates it for insert operations, backs up the file before modification (unless dry run), and returns a message describing the action along with a preview of the affected file region.
-
-        Args:
-            path: Relative path to the file to edit.
-            operation: The file editing operation to perform (replace, insert, remove, move).
-            search: Text or pattern to search for (used in replace).
-            replacement: Replacement text (used in replace and insert).
-            line_number: Starting line number for insert, remove, or move operations.
-            end_line: Ending line number for remove or move operations.
-            target_line: Target line number for move operations.
-            use_regex: Whether to interpret the search string as a regular expression.
-            replace_all: Whether to replace all occurrences (for replace).
-            context_before: Required context before the match (for replace).
-            context_after: Required context after the match (for replace).
-            occurrence: Which occurrence to replace (for replace).
-            dry_run: If True, shows the result without modifying the file.
+        This method handles replacing text content with new content, inserting new content
+        at a specific line, removing a range of lines, or moving a block of lines to a new
+        location. It supports dry-run mode, regex-based replacements, occurrence selection,
+        and context constraints. The method ensures the file exists or creates it for insert
+        operations, backs up the file before modification (unless dry run), and returns a
+        message describing the action along with a preview of the affected file region.
 
         Returns:
-            A message describing the result of the operation and a preview of the affected file region. Returns an error message if the operation fails or is invalid.
+            A message describing the operation result and a preview of the affected file region.
+            Returns an error message if the operation fails or is invalid.
         """
         try:
             resolved_path = self.path_handler.resolve_path(path, must_exist=False)
 
             # Check if file exists and create an empty file if needed
-            file_exists = os.path.exists(resolved_path)
+            from pathlib import Path
+            path_obj = Path(resolved_path)
+            file_exists = path_obj.exists()
             if not file_exists:
                 if operation == FileEditOperation.INSERT:
-                    # Create parent directories if they don't exist
+                    # For insert operations, create an empty file if it doesn't exist
+                    # This ensures parent directories exist
                     self.path_handler.ensure_directory_exists(resolved_path)
                     # Create empty file for insertion
-                    with open(resolved_path, "w", encoding="utf-8") as f:
+                    with path_obj.open("w", encoding="utf-8") as f:
                         pass
                     file_exists = True
                 else:
-                    return (
-                        f"Error: File doesn't exist: {path}. To create a new file, use insert at line 1 or create_file."
-                    )
+                    return f"Error: File does not exist: {path}"
 
-            # Backup the file if not in dry run mode and file exists
-            if not dry_run and file_exists:
-                self.backup_manager.backup_file(resolved_path)
-
-            # Read file content if file exists
-            content = ""
+            # Read file content if it exists
             lines = []
+            content = ""
             if file_exists:
                 try:
-                    with open(resolved_path, encoding="utf-8") as f:
+                    with path_obj.open(encoding="utf-8") as f:
                         content = f.read()
                         lines = content.splitlines(keepends=True)
-                except Exception as e:
+                except OSError as e:
                     return f"Error reading file: {e!s}"
 
-            # Execute the requested operation
+            # Perform the specified operation
             if operation == FileEditOperation.REPLACE:
-                if not search or replacement is None:
-                    return "Error: Search and replacement strings are required for replace operation"
+                if search is None or replacement is None:
+                    return "Error: Replace operation requires both old_str and new_str"
 
-                # Special handling for empty files
-                if not content:
-                    return f"Error: Cannot replace text in empty file {path}. Use insert_at_line instead."
-
-                new_content, locations = self._replace_content(
+                # Use the _replace_content helper method
+                new_content, replacements = self._replace_content(
                     content,
                     search,
                     replacement,
@@ -383,164 +365,146 @@ class FileManipulation(Component):
                     occurrence,
                 )
 
-                if not locations:
-                    pattern_type = "Regex pattern" if use_regex else "Text"
-                    return f"Error: {pattern_type} not found in {path}"
+                if not replacements:
+                    return f"Error: Text '{search}' not found in {path}"
 
             elif operation == FileEditOperation.INSERT:
-                if replacement is None:
-                    return "Error: Replacement text is required for insert operation"
+                if replacement is None or line_number is None:
+                    return "Error: Insert operation requires new_str and line_number"
 
-                # Handle insertion in empty or small files
-                if line_number is None:
-                    line_number = 1
+                # Insert at specified line
+                if line_number < 1 or line_number > len(lines) + 1:
+                    return (
+                        f"Error: Invalid line number. File has {len(lines)} lines. "
+                        f"Valid range is 1 to {len(lines) + 1}."
+                    )
 
-                # Handle case where line number is beyond file length
-                if line_number > len(lines) + 1:
-                    # For empty files or new files, accept only line 1
-                    if len(lines) == 0 and line_number != 1:
-                        return "Error: File is empty. For empty files, you can only insert at line 1."
-                    # For non-empty files, allow insert at line = len(lines) + 1 (end of file)
-                    if line_number > len(lines) + 1:
-                        return f"Error: Invalid line number {line_number}. File has {len(lines)} lines. Valid range is 1 to {len(lines) + 1}."
-
-                # Convert to 0-based indexing
-                insert_index = max(0, min(line_number - 1, len(lines)))
-
-                # Insert the new text
-                if not replacement.endswith("\n"):
-                    replacement += "\n"
-
-                if not lines:
-                    # Empty file case
-                    lines = [replacement]
-                else:
-                    lines.insert(insert_index, replacement)
-
+                insert_index = line_number - 1
+                new_line = replacement if replacement.endswith("\n") else replacement + "\n"
+                lines.insert(insert_index, new_line)
                 new_content = "".join(lines)
 
             elif operation == FileEditOperation.REMOVE:
                 if line_number is None or end_line is None:
-                    return "Error: Start and end line numbers are required for remove operation"
+                    return "Error: Remove operation requires start_line and end_line"
 
-                # Special handling for empty files
-                if not lines:
-                    return f"Warning: Cannot remove lines from empty file {path}."
+                # Validate line numbers
+                if line_number < 1 or end_line < 1 or line_number > len(lines) or end_line > len(lines):
+                    return (
+                        f"Error: Invalid line range. File has {len(lines)} lines, "
+                        f"requested to remove lines {line_number}-{end_line}."
+                    )
 
-                if line_number < 1 or end_line > len(lines) or line_number > end_line:
-                    return f"Error: Invalid line range. File has {len(lines)} lines, requested to remove lines {line_number}-{end_line}."
+                if line_number > end_line:
+                    return "Error: Start line must be less than or equal to end line"
 
-                # Convert to 0-based indexing
-                start_idx = line_number - 1
-                end_idx = end_line
-
-                # Remove the lines
-                lines[start_idx:end_idx]
-                lines = lines[:start_idx] + lines[end_idx:]
+                # Remove lines (convert to 0-indexed)
+                start_index = line_number - 1
+                end_index = end_line
+                lines = lines[:start_index] + lines[end_index:]
                 new_content = "".join(lines)
 
             elif operation == FileEditOperation.MOVE:
                 if line_number is None or end_line is None or target_line is None:
-                    return "Error: Start, end, and target line numbers are required for move operation"
+                    return "Error: Move operation requires start_line, end_line, and target_line"
 
-                # Special handling for empty files
-                if not lines:
-                    return f"Warning: Cannot move lines in empty file {path}."
+                # Validate line numbers
+                if (
+                    line_number < 1
+                    or end_line < 1
+                    or line_number > len(lines)
+                    or end_line > len(lines)
+                ):
+                    return (
+                        f"Error: Invalid line range. File has {len(lines)} lines, "
+                        f"requested to move lines {line_number}-{end_line}."
+                    )
 
-                if line_number < 1 or end_line > len(lines) or line_number > end_line:
-                    return f"Error: Invalid line range. File has {len(lines)} lines, requested to move lines {line_number}-{end_line}."
+                if line_number > end_line:
+                    return "Error: Start line must be less than or equal to end line"
 
                 if target_line < 1 or target_line > len(lines) + 1:
-                    return f"Error: Invalid target line. File has {len(lines)} lines, requested to insert at line {target_line}."
+                    return (
+                        f"Error: Invalid target line. File has {len(lines)} lines, "
+                        f"requested to insert at line {target_line}."
+                    )
 
                 # Check if target is within the block to move
-                if target_line >= line_number and target_line <= end_line + 1:
-                    return "Error: Target line is within the block to move. This would result in no change."
+                if line_number <= target_line <= end_line:
+                    return "Error: Target line cannot be within the block being moved"
 
-                # Convert to 0-based indexing
-                start_idx = line_number - 1
-                end_idx = end_line
-                target_idx = target_line - 1
+                # Extract lines to move
+                start_index = line_number - 1
+                end_index = end_line
+                moved_lines = lines[start_index:end_index]
 
-                # Extract the block to move
-                block_lines = lines[start_idx:end_idx]
+                # Remove lines from original position
+                remaining_lines = lines[:start_index] + lines[end_index:]
 
-                # Adjust target position if it's after the block being removed
-                adjusted_target = target_idx
-                if target_idx > end_idx:
-                    adjusted_target -= end_idx - start_idx
+                # Adjust target position if necessary
+                adjusted_target = target_line - 1
+                if target_line > end_line:
+                    adjusted_target -= len(moved_lines)
 
-                # Build the new content
-                new_lines = []
-                i = 0
-                while i < len(lines):
-                    if i == start_idx:
-                        # Skip the block being moved
-                        i = end_idx
-                    elif i == adjusted_target:
-                        # Insert the block at the target position
-                        new_lines.extend(block_lines)
-                        if i < len(lines):
-                            new_lines.append(lines[i])
-                        i += 1
-                    else:
-                        if i < len(lines):
-                            new_lines.append(lines[i])
-                        i += 1
-
-                # Handle case when target is at the end of the file
-                if adjusted_target == len(lines):
-                    new_lines.extend(block_lines)
-
-                new_content = "".join(new_lines)
+                # Insert at target position
+                lines = remaining_lines[:adjusted_target] + moved_lines + remaining_lines[adjusted_target:]
+                new_content = "".join(lines)
 
             else:
-                return f"Error: Unsupported operation: {operation}"
+                return f"Error: Unknown operation: {operation}"
 
-            # Write the changes if not a dry run
+            # Write the new content to file (unless dry run)
             if not dry_run:
+                # Create backup before modifying
+                self.backup_manager.backup_file(resolved_path)
+
                 # Ensure parent directory exists
                 self.path_handler.ensure_directory_exists(resolved_path)
 
-                with open(resolved_path, "w", encoding="utf-8") as f:
+                with path_obj.open("w", encoding="utf-8") as f:
                     f.write(new_content)
 
             # Generate result message
-            action = "Would " if dry_run else ""
-
             if operation == FileEditOperation.REPLACE:
-                replaced_count = len(locations)
-                msg = f"{action}replace{'d' if not dry_run else ''} {replaced_count} {'regex match' if use_regex else 'location'}{'es' if replaced_count > 1 else ''} in {path}."
-                preview_line = locations[0][2] if locations else None
-
+                replaced_count = len(replacements)
+                msg = (
+                    f"Successfully replaced {replaced_count} "
+                    f"{'regex match' if use_regex else 'location'}{'es' if replaced_count > 1 else ''} "
+                    f"in {path}."
+                )
+                preview_line = replacements[0][2] if replacements else None
             elif operation == FileEditOperation.INSERT:
-                msg = f"{action}insert{'ed' if not dry_run else ''} text at line {line_number} in {path}."
+                msg = f"Successfully inserted text at line {line_number} in {path}."
                 preview_line = line_number
-
             elif operation == FileEditOperation.REMOVE:
                 lines_removed = end_line - line_number + 1
-                msg = f"{action}remove{'d' if not dry_run else ''} {lines_removed} line{'s' if lines_removed != 1 else ''} ({line_number}-{end_line}) from {path}."
-                preview_line = max(1, line_number - 1)
-
+                msg = (
+                    f"Successfully removed {lines_removed} "
+                    f"line{'s' if lines_removed != 1 else ''} ({line_number}-{end_line}) from {path}."
+                )
+                preview_line = line_number
             elif operation == FileEditOperation.MOVE:
                 lines_moved = end_line - line_number + 1
-                msg = f"{action}move{'d' if not dry_run else ''} {lines_moved} line{'s' if lines_moved != 1 else ''} from {line_number}-{end_line} to line {target_line} in {path}."
-                preview_line = (
-                    max(1, target_line - 2) if target_line < line_number else max(1, target_line - lines_moved - 2)
+                msg = (
+                    f"Successfully moved {lines_moved} "
+                    f"line{'s' if lines_moved != 1 else ''} from {line_number}-{end_line} "
+                    f"to line {target_line} in {path}."
                 )
+                preview_line = max(1, target_line - lines_moved - 2)
 
             # Get file preview after the change
             file_preview = self._get_file_preview(path, preview_line)
-            return f"{msg}\n\nPreview:\n{file_preview}"
-
-        except Exception as e:
+        except OSError as e:
             return f"Error editing file: {e!s}"
+        else:
+            return f"{msg}\n\nPreview:\n{file_preview}"
 
     def _replace_content(
         self,
         content: str,
         search: str,
         replacement: str,
+        *,
         use_regex: bool,
         replace_all: bool,
         context_before: str | None,
@@ -548,26 +512,11 @@ class FileManipulation(Component):
         line_number: int | None,
         occurrence: int,
     ) -> tuple[str, list[tuple[int, int, int]]]:
-        """Performs targeted find-and-replace operations within the provided content.
+        """Performs text replacement with advanced pattern matching and context constraints.
 
-        Supports plain text or regular expression search, with options for context-aware matching, line number restriction, occurrence selection, and replacing all matches. Returns the modified content and a list of replaced locations as (start, end, line number) tuples.
-
-        Args:
-            content: The text to search and modify.
-            search: The string or regex pattern to find.
-            replacement: The text to insert in place of each match.
-            use_regex: If True, interprets `search` as a regular expression.
-            replace_all: If True, replaces all matches; otherwise, only the specified occurrence.
-            context_before: Optional string that must precede a match.
-            context_after: Optional string that must follow a match.
-            line_number: If provided, restricts search to this line.
-            occurrence: The 1-based index of the match to replace if not replacing all.
-
-        Returns:
-            A tuple containing the modified content and a list of (start, end, line number) for each replacement made.
-
-        Raises:
-            ValueError: If an invalid regular expression is provided.
+        Handles plain text or regex search, line restriction, occurrence selection, and
+        replacing all matches. Returns the modified content and a list of replaced
+        locations as (start, end, line number) tuples.
         """
         lines = content.split("\n")
         occurrences = []
@@ -695,65 +644,66 @@ class FileManipulation(Component):
 
         @tool
         def view_file(path: str, view_range: list[int] | None = None) -> str:
-            """Displays the contents of a file with line numbers.
-
-            If a line range is provided, only those lines are shown; otherwise, the entire file is displayed. Returns an error message if the file does not exist or is empty.
+            """Displays the contents of a file with line numbers, optionally showing a specific range.
 
             Args:
                 path: Relative path to the file within the workspace.
-                view_range: Optional two-element list [start_line, end_line] specifying the range of lines to display (use -1 for end of file).
+                view_range: Optional list [start_line, end_line] specifying the range of lines
+                    to display (use -1 for end of file).
 
             Returns:
-                A string containing the file contents with line numbers, or an error message if the file is not found or empty.
+                A string containing the file contents with line numbers, or an error message
+                if the file is not found or empty.
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
 
                 # Check if file is empty
-                if os.path.getsize(resolved_path) == 0:
+                from pathlib import Path
+                path_obj = Path(resolved_path)
+                if path_obj.stat().st_size == 0:
                     return f"File is empty: {path}"
 
-                with open(resolved_path, encoding="utf-8") as f:
+                with path_obj.open(encoding="utf-8") as f:
                     lines = f.readlines()
 
                 # Process view range if provided
-                if view_range and len(view_range) == 2:
+                VIEW_RANGE_SIZE = 2
+                if view_range and len(view_range) == VIEW_RANGE_SIZE:
                     start = max(0, view_range[0] - 1)  # Convert to 0-indexed
                     end = len(lines) if view_range[1] == -1 else view_range[1]
+                    start = max(0, min(start, len(lines)))
+                    end = max(start, min(end, len(lines)))
                     lines = lines[start:end]
+                    line_offset = start
+                else:
+                    line_offset = 0
 
-                    # Add line numbers
-                    result = ""
-                    for i, line in enumerate(lines):
-                        line_num = view_range[0] + i
-                        result += f"{line_num}: {line}"
-
-                    return result
-
-                # Otherwise show the whole file with line numbers
-                result = ""
-                for i, line in enumerate(lines, start=1):
-                    result += f"{i}: {line}"
-
-                return result
+                # Format with line numbers
+                result = f"Contents of {path}:\n"
+                for i, line in enumerate(lines):
+                    line_number = i + line_offset + 1
+                    result += f"{line_number:4}: {line}"
 
             except FileNotFoundError:
                 return f"Error: File not found: {path}"
-            except Exception as e:
+            except OSError as e:
                 return f"Error viewing file: {e!s}"
+            else:
+                return result
 
         @tool
         def str_replace(
             path: str,
             old_str: str,
             new_str: str,
+            *,
             use_regex: bool = False,
             replace_all: bool = False,
             context_before: str | None = None,
             context_after: str | None = None,
             line_number: int | None = None,
             occurrence: int = 1,
-            *,
             dry_run: bool = False,
         ) -> str:
             """Performs text replacement in a file with advanced pattern matching capabilities.
@@ -1026,8 +976,8 @@ class FileManipulation(Component):
                 files = []
 
                 # File size constants
-                KB_SIZE = 1024
-                MB_SIZE = KB_SIZE * 1024
+                kb_size = 1024
+                mb_size = kb_size * 1024
 
                 for entry in entries:
                     if entry.is_dir():
@@ -1036,10 +986,10 @@ class FileManipulation(Component):
                         # Get file size
                         size = entry.stat().st_size
                         size_str = f"{size} bytes"
-                        if size > KB_SIZE:
-                            size_str = f"{size / KB_SIZE:.1f} KB"
-                        if size > MB_SIZE:
-                            size_str = f"{size / MB_SIZE:.1f} MB"
+                        if size > kb_size:
+                            size_str = f"{size / kb_size:.1f} KB"
+                        if size > mb_size:
+                            size_str = f"{size / mb_size:.1f} MB"
                         files.append((entry.name, "file", size_str))
 
                 # Format and add to result
