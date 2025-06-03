@@ -109,6 +109,8 @@ export const lazyIconsMapping = {
     })),
   Gmail: () =>
     import("@/icons/gmail").then((mod) => ({ default: mod.GmailIcon })),
+  Linear: () =>
+    import("@/icons/Linear").then((mod) => ({ default: mod.LinearIcon })),
   Googlecalendar: () =>
     import("@/icons/googlecalendar").then((mod) => ({
       default: mod.GooglecalendarIcon,
