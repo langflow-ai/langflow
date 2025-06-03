@@ -804,7 +804,7 @@
                 "cache": true,
                 "display_name": "Loaded Files",
                 "group_outputs": false,
-                "method": "load_dataframe",
+                "method": "load_files",
                 "name": "dataframe",
                 "required_inputs": [],
                 "selected": "DataFrame",
