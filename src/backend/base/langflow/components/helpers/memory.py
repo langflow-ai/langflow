@@ -33,13 +33,19 @@ class MemoryComponent(Component):
             real_time_refresh=True,
         ),
         MessageTextInput(
-            name="message", display_name="Message", info="The chat message to be stored.", tool_mode=True, dynamic=True
+            name="message",
+            display_name="Message",
+            info="The chat message to be stored.",
+            tool_mode=True,
+            dynamic=True,
+            show=False,
         ),
         HandleInput(
             name="memory",
             display_name="External Memory",
             input_types=["Memory"],
             info="Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
+            advanced=True,
         ),
         DropdownInput(
             name="sender",
@@ -210,12 +216,11 @@ class MemoryComponent(Component):
         self.status = stored_message
         return stored_message
 
-    def update_build_config(self, build_config: dict, field_name: str, field_value: Any) -> dict:
-        if field_name == "mode":
-            build_config = set_current_fields(
+    def update_build_config(self, build_config: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
+        build_config = set_current_fields(
                 build_config=build_config,
                 action_fields=self.mode_config,
-                selected_action=field_value,
+                selected_action=build_config["mode"]["value"],
                 default_fields=self.default_keys,
                 func=set_field_display,
             )
