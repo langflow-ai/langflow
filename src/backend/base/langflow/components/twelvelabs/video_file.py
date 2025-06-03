@@ -2,7 +2,7 @@ from pathlib import Path
 
 from langflow.base.data import BaseFileComponent
 from langflow.io import FileInput
-from langflow.schema import DataFrame
+from langflow.schema import Data, DataFrame
 
 
 class VideoFileComponent(BaseFileComponent):
@@ -168,12 +168,12 @@ class VideoFileComponent(BaseFileComponent):
             self.log("DEBUG: Returning list with Data objects")
         except (FileNotFoundError, PermissionError, OSError) as e:
             self.log(f"DEBUG: File error in video load_files: {e!s}", "ERROR")
-            return DataFrame(data=[])
+            return DataFrame()
         except ImportError as e:
             self.log(f"DEBUG: Import error in video load_files: {e!s}", "ERROR")
-            return DataFrame(data=[])
+            return DataFrame()
         except (ValueError, TypeError) as e:
             self.log(f"DEBUG: Value or type error in video load_files: {e!s}", "ERROR")
-            return DataFrame(data=[])
+            return DataFrame()
         else:
             return result
