@@ -108,7 +108,7 @@ test(
     await page.waitForTimeout(600);
 
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(0)
       .click();
 
@@ -130,7 +130,7 @@ test(
     await page.getByText("Close").first().click();
     await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
       .click();
     await page.waitForTimeout(2000);
@@ -166,7 +166,7 @@ test(
       .click();
 
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
       .click();
 
