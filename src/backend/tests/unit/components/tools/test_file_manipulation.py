@@ -17,7 +17,8 @@ async def setup_test_files(tmp_path):
     # Create various test files and directories
     """Asynchronously creates a set of test files and directories in the given temporary path.
 
-    The generated structure includes text files, a large file, a binary file, an empty file, and a nested directory with a file, suitable for comprehensive file manipulation testing.
+    The generated structure includes text files, a large file, a binary file, an empty file,
+    and a nested directory with a file, suitable for comprehensive file manipulation testing.
 
     Args:
         tmp_path: The base temporary directory path for creating test files and folders.
