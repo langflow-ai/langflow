@@ -7,6 +7,7 @@ import re
 import shutil
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 from langflow.custom import Component
@@ -25,7 +26,6 @@ class BackupManager:
         registries for tracking file backups and undo/redo positions.
         """
         self.workspace_folder = workspace_folder
-        from pathlib import Path
 
         self.backup_folder = Path(workspace_folder) / ".backups"
         self.backup_registry = {}  # file_path -> [backup_ids]
@@ -39,8 +39,6 @@ class BackupManager:
 
         If the file does not exist or the backup fails, returns None. On success, returns the backup ID.
         """
-        from pathlib import Path
-
         file_obj = Path(file_path)
         if not file_obj.exists():
             return None
@@ -162,7 +160,6 @@ class PathHandler:
             FileNotFoundError: If must_exist is True and the path doesn't exist.
         """
         # Check if absolute
-        from pathlib import Path
 
         path_obj = Path(relative_path)
         if path_obj.is_absolute():
@@ -199,16 +196,12 @@ class PathHandler:
         Returns:
             True if the path is within the workspace; otherwise, False.
         """
-        from pathlib import Path
-
         abs_path = Path(path).resolve()
         abs_workspace = Path(self.workspace_folder).resolve()
         return str(abs_path).startswith(str(abs_workspace))
 
     def ensure_directory_exists(self, path: str) -> None:
         """Ensures that the parent directory of the specified path exists, creating it if necessary."""
-        from pathlib import Path
-
         directory = Path(path).parent
         if not directory.exists():
             directory.mkdir(parents=True, exist_ok=True)
@@ -256,7 +249,6 @@ class FileManipulation(Component):
         """
         try:
             resolved_path = self.path_handler.resolve_path(file_path)
-            from pathlib import Path
 
             path_obj = Path(resolved_path)
 
@@ -329,7 +321,6 @@ class FileManipulation(Component):
             resolved_path = self.path_handler.resolve_path(path, must_exist=False)
 
             # Check if file exists and create an empty file if needed
-            from pathlib import Path
 
             path_obj = Path(resolved_path)
             file_exists = path_obj.exists()
@@ -667,7 +658,6 @@ class FileManipulation(Component):
                 resolved_path = self.path_handler.resolve_path(path)
 
                 # Check if file is empty
-                from pathlib import Path
 
                 path_obj = Path(resolved_path)
                 if path_obj.stat().st_size == 0:
@@ -891,7 +881,6 @@ class FileManipulation(Component):
                 resolved_path = self.path_handler.resolve_path(path, must_exist=False)
 
                 # Create directories if they don't exist
-                from pathlib import Path
 
                 parent_dir = Path(resolved_path).parent
                 parent_dir.mkdir(parents=True, exist_ok=True)
@@ -924,7 +913,6 @@ class FileManipulation(Component):
             """
             try:
                 resolved_path = self.path_handler.resolve_path(directory_path, must_exist=False)
-                from pathlib import Path
 
                 path_obj = Path(resolved_path)
 
@@ -955,7 +943,6 @@ class FileManipulation(Component):
             """
             try:
                 resolved_path = self.path_handler.resolve_path(directory_path)
-                from pathlib import Path
 
                 path_obj = Path(resolved_path)
 
@@ -1015,7 +1002,6 @@ class FileManipulation(Component):
             try:
                 resolved_source = self.path_handler.resolve_path(source_path)
                 resolved_dest = self.path_handler.resolve_path(destination_path, must_exist=False)
-                from pathlib import Path
 
                 source_obj = Path(resolved_source)
                 dest_obj = Path(resolved_dest)
@@ -1055,7 +1041,6 @@ class FileManipulation(Component):
             """
             try:
                 resolved_path = self.path_handler.resolve_path(directory_path)
-                from pathlib import Path
 
                 path_obj = Path(resolved_path)
 
@@ -1069,8 +1054,6 @@ class FileManipulation(Component):
                 for root, _dirs, files in os.walk(resolved_path):
                     for name in files:
                         if fnmatch.fnmatch(name.lower(), pattern.lower()):
-                            from pathlib import Path
-
                             rel_path = os.path.relpath(Path(root) / name, self.workspace_folder)
                             matches.append(rel_path)
 
@@ -1101,7 +1084,6 @@ class FileManipulation(Component):
             """
             try:
                 resolved_path = self.path_handler.resolve_path(directory_path)
-                from pathlib import Path
 
                 path_obj = Path(resolved_path)
 
@@ -1148,7 +1130,6 @@ class FileManipulation(Component):
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
-                from pathlib import Path
 
                 # If old_content not provided, read from file
                 if old_content is None:
@@ -1187,7 +1168,6 @@ class FileManipulation(Component):
             """
             try:
                 resolved_path = self.path_handler.resolve_path(path)
-                from pathlib import Path
 
                 path_obj = Path(resolved_path)
 
