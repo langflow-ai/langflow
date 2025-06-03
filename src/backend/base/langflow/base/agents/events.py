@@ -98,6 +98,18 @@ def _extract_output_text(output: str | list) -> str:
         # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
         if item.get("type") == "tool_use":
             return ""
+    if isinstance(item, dict):
+        if "text" in item:
+            return item["text"]
+        # If the item's type is "tool_use", return an empty string.
+        # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
+        if item.get("type") == "tool_use":
+            return ""
+        # This is a workaround to deal with function calling by Anthropic
+        # since the same data comes in the tool_output we don't need to stream it here
+        # although it would be nice to
+        if "partial_json" in item:
+            return ""
     msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
     raise TypeError(msg)
 

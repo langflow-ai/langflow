@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 
 from langflow.custom import Component
@@ -43,7 +45,7 @@ class EmbeddingSimilarityComponent(Component):
         embedding_2 = np.array(embedding_vectors[1].data["embeddings"])
 
         if embedding_1.shape != embedding_2.shape:
-            similarity_score = {"error": "Embeddings must have the same dimensions."}
+            similarity_score: dict[str, Any] = {"error": "Embeddings must have the same dimensions."}
         else:
             similarity_metric = self.similarity_metric
 
