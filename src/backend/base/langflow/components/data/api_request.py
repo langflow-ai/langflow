@@ -226,7 +226,6 @@ class APIRequestComponent(Component):
         """Check if an item is a valid key-value dictionary."""
         return isinstance(item, dict) and "key" in item and "value" in item
 
-
     def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
         """Parse a cURL command and update build configuration."""
         try:
