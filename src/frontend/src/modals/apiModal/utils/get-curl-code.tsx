@@ -1,6 +1,11 @@
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { GetCodeType } from "@/types/tweaks";
+import {
+  buildBasePayload,
+  collectTweaksKeys,
+  getFormattedTweaksString,
+} from "./payload-utils";
 
 /**
  * Generates a cURL command for making a POST request to a webhook endpoint.
@@ -62,14 +67,24 @@ export function getNewCurlCode({
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
-  const tweaksString =
-    tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
+  // Use shared utilities for consistent payload handling
+  const tweaksKeys = collectTweaksKeys(tweaksObject, activeTweaks);
+  const basePayload = buildBasePayload(
+    tweaksKeys,
+    input_value,
+    input_type,
+    output_type,
+  );
+  const tweaksString = getFormattedTweaksString(
+    tweaksObject,
+    activeTweaks,
+    "json",
+    2,
+  );
 
-  // Construct the payload
+  // Construct the final payload for cURL
   const payload = {
-    input_value: input_value,
-    output_type: output_type,
-    input_type: input_type,
+    ...basePayload,
     ...(activeTweaks && tweaksObject
       ? { tweaks: JSON.parse(tweaksString) }
       : {}),
