@@ -28,8 +28,8 @@ class BackupManager:
         self.workspace_folder = workspace_folder
 
         self.backup_folder = Path(workspace_folder) / ".backups"
-        self.backup_registry = {}  # file_path -> [backup_ids]
-        self.current_positions = {}  # file_path -> current_position_index
+        self.backup_registry: dict[str, list[str]] = {}  # file_path -> [backup_ids]
+        self.current_positions: dict[str, int] = {}  # file_path -> current_position_index
 
         if not self.backup_folder.exists():
             self.backup_folder.mkdir(parents=True)
@@ -1006,8 +1006,8 @@ class FileManipulation(Component):
                 # Format and add to result
                 for name, type_ in sorted(dirs):
                     result += f"📁 {name}/ ({type_})\n"
-                for name, type_, size in sorted(files):
-                    result += f"📄 {name} ({type_}, {size})\n"
+                for name, type_, size_str in sorted(files):
+                    result += f"📄 {name} ({type_}, {size_str})\n"
 
                 if not dirs and not files:
                     result += "Directory is empty."
