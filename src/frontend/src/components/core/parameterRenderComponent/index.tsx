@@ -285,9 +285,6 @@ export function ParameterRenderComponent({
           <McpComponent
             {...baseInputProps}
             id={`mcp_${id}`}
-            name={name}
-            nodeClass={nodeClass}
-            nodeId={nodeId}
             editNode={editNode}
             disabled={disabled}
             value={templateValue}

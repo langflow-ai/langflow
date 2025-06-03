@@ -20,10 +20,7 @@ const options = [
 export default function McpComponent({
   value,
   disabled,
-  nodeClass,
-  nodeId,
   handleOnNewValue,
-  name,
   editNode = false,
   id = "",
 }: InputProps<string, any>): JSX.Element {
