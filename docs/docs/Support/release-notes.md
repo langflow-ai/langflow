@@ -5,18 +5,36 @@ slug: /release notes
 
 This page summarizes significant changes and updates to Langflow.
 
-
 ## 1.5
 
-* Moved **Model** and **Embedding Model** components to the [](/components-bundles) in the sidebar, and replaced them with preferred **Language Model** and **Embedding Model** components. These components are satisfactory for most use cases, and the single-provider components are still available for your flows.
-For more information, examples, and parameters, see [Model components](/components-models).
+### New Language Model and Embedding Model components
 
-* MCP one-click installation: In the **MCP server** page, click **Auto install** to install your Langflow MCP server to Claude or Cursor clients with just one click.
+We moved **Model** and **Embedding Model** components to **Bundles** in the Langflow sidebar. The **Language Model** and **Embedding Model** components are satisfactory for most use cases, and the single-provider components are still available for your flows.
+For more information, see the [Language model](/components-models) and [Embedding model](/components-embedding-model) components.
 
-* Input schema replaces temporary overrides: Instead of managing the tweaks values in the **API access** pane, this pane now adds them to the code snippets for this flow. This still provides a template for sending the request in your language of choice, and presents a default value for you to modify to suit your application's needs.
+### MCP one-click installation
 
+In the **MCP server** page, click **Auto install** to install your Langflow MCP server to Claude or Cursor clients with just one click.
+For more information, see [MCP server](/mcp-server).
 
-### 1.4.2
+### Input schema replaces temporary overrides
+
+Instead of managing the tweaks values in the **API access** pane, the **Input schema** pane adds the default values to the code snippets for this flow. This provides a template for sending the request in your language of choice, with a default value for you to modify to suit your application's needs.
+
+### Tools category is now legacy
+
+All components in the **Tools** category are now **Legacy** or have moved.
+
+The [MCP Connection](/components-data#mcp-connection) component is available in **Data components**.
+
+Many of the components performed the same functions, like web search and API requests, so we combined this functionality into single components:
+
+* To replace legacy search components like Bing Search and Google, use the [Web search](/components-data#web-search) component.
+* To replace legacy news aggregation components, use the [News search](/components-data#news-search) component.
+
+For more information, see [Tools](/components-tools).
+
+## 1.4.2
 
 The following updates are included in this version:
 
@@ -32,7 +50,7 @@ The following updates are included in this version:
 
 - Deprecated the Combine text component.
 
-### 1.4.1
+## 1.4.1
 
 The following updates are included in this version:
 
