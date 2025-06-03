@@ -226,6 +226,7 @@ class APIRequestComponent(Component):
         """Check if an item is a valid key-value dictionary."""
         return isinstance(item, dict) and "key" in item and "value" in item
 
+
     def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
         """Parse a cURL command and update build configuration."""
         try:
@@ -456,12 +457,15 @@ class APIRequestComponent(Component):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         """Update the build config based on the selected mode."""
         if field_name != "mode":
+            if field_name == "curl_input" and self.mode == "cURL" and self.curl_input:
+                return self.parse_curl(self.curl_input, build_config)
             return build_config
 
         # print(f"Current mode: {field_value}")
         if field_value == "cURL":
             set_field_display(build_config, "curl_input", value=True)
-            build_config = self.parse_curl(self.curl_input, build_config)
+            if self.curl_input:
+                build_config = self.parse_curl(self.curl_input, build_config)
         else:
             set_field_display(build_config, "curl_input", value=False)
 
