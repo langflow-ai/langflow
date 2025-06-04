@@ -2,6 +2,7 @@ from typing import Any, cast
 
 import requests
 from loguru import logger
+from pydantic import ValidationError
 
 from langflow.base.models.anthropic_constants import (
     ANTHROPIC_MODELS,
@@ -85,14 +86,18 @@ class AnthropicModelComponent(LCModelComponent):
             msg = "langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`."
             raise ImportError(msg) from e
         try:
+            max_tokens_value = getattr(self, "max_tokens", "")
+            max_tokens_value = 4096 if max_tokens_value == "" else int(max_tokens_value)
             output = ChatAnthropic(
                 model=self.model_name,
                 anthropic_api_key=self.api_key,
-                max_tokens_to_sample=self.max_tokens,
+                max_tokens=max_tokens_value,
                 temperature=self.temperature,
-                anthropic_api_url=DEFAULT_ANTHROPIC_API_URL,
+                anthropic_api_url=self.base_url or DEFAULT_ANTHROPIC_API_URL,
                 streaming=self.stream,
             )
+        except ValidationError:
+            raise
         except Exception as e:
             msg = "Could not connect to Anthropic API."
             raise ValueError(msg) from e
