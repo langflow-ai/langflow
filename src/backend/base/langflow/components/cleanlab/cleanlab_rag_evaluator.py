@@ -22,17 +22,17 @@ class CleanlabRAGEvaluator(Component):
     - Context sufficiency (whether the retrieved context contains information needed to answer the query)
     - Response groundedness (whether the response is supported directly by the context)
     - Response helpfulness (whether the response effectively addresses the user's query)
-    - Query ease (whether the user query seems easy for an AI system to properly handle, useful to diagnose 
+    - Query ease (whether the user query seems easy for an AI system to properly handle, useful to diagnose
       queries that are: complex, vague, tricky, or disgruntled-sounding)
 
     Outputs:
-        - Trust Score: A score between 0-1 corresponding to the trustworthiness of the response. A higher score 
+        - Trust Score: A score between 0-1 corresponding to the trustworthiness of the response. A higher score
           indicates a higher confidence that the response is correct/good.
         - Explanation: An LLM generated explanation of the trustworthiness assessment
         - Other Evals: Additional evaluation metrics for selected evaluation types in the "Controls" tab
         - Evaluation Summary: A comprehensive summary of context, query, response, and selected evaluation results
 
-    This component works well in conjunction with the CleanlabRemediator to create a complete trust evaluation 
+    This component works well in conjunction with the CleanlabRemediator to create a complete trust evaluation
     and remediation pipeline.
 
     More details on the evaluation metrics can be found here: https://help.cleanlab.ai/tlm/use-cases/tlm_rag/
@@ -181,7 +181,7 @@ class CleanlabRAGEvaluator(Component):
                 )
                 self.status = "Evaluation complete."
 
-            except Exception as e: # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
                 self.status = f"Evaluation failed: {e!s}"
                 self._cached_result = {}
         return self._cached_result
