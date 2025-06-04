@@ -456,12 +456,15 @@ class APIRequestComponent(Component):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         """Update the build config based on the selected mode."""
         if field_name != "mode":
+            if field_name == "curl_input" and self.mode == "cURL" and self.curl_input:
+                return self.parse_curl(self.curl_input, build_config)
             return build_config
 
         # print(f"Current mode: {field_value}")
         if field_value == "cURL":
             set_field_display(build_config, "curl_input", value=True)
-            build_config = self.parse_curl(self.curl_input, build_config)
+            if build_config["curl_input"]["value"]:
+                build_config = self.parse_curl(build_config["curl_input"]["value"], build_config)
         else:
             set_field_display(build_config, "curl_input", value=False)
 
