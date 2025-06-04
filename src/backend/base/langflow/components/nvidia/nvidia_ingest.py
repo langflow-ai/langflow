@@ -153,10 +153,7 @@ class NvidiaIngestComponent(BaseFileComponent):
         BoolInput(
             name="high_resolution",
             display_name="High Resolution (PDF only)",
-            info=(
-                "Process pdf in high-resolution mode for better quality extraction "
-                "from scanned pdf."
-            ),
+            info=("Process pdf in high-resolution mode for better quality extraction from scanned pdf."),
             advanced=True,
             value=False,
         ),
@@ -228,7 +225,7 @@ class NvidiaIngestComponent(BaseFileComponent):
                     extract_images=self.extract_images,
                     extract_infographics=self.extract_infographics,
                     text_depth=self.text_depth,
-                    **(dict(extract_method="nemoretriever_parse") if self.high_resolution else {})
+                    **(dict(extract_method="nemoretriever_parse") if self.high_resolution else {}),
                 )
             )
 
