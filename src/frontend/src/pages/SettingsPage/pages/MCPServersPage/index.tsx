@@ -81,7 +81,7 @@ export default function MCPServersPage() {
         {servers ? (
           <>
             {servers.length === 0 ? (
-              <div className="text-sm text-muted-foreground">
+              <div className="w-full pt-8 text-center text-sm text-muted-foreground">
                 No MCP servers found.
               </div>
             ) : (
