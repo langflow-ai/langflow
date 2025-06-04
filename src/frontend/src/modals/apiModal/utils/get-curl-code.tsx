@@ -70,10 +70,10 @@ fi
   }curl --request POST \\
      --url '${apiUrl}?stream=false' \\
      --header 'Content-Type: application/json' \\${
-    isAuthenticated
-      ? `
+       isAuthenticated
+         ? `
      --header "x-api-key: $LANGFLOW_API_KEY" \\`
-      : ""
-  }
+         : ""
+     }
      --data '${formattedJsonPayload}'`;
 }
