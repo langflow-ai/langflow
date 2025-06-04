@@ -182,12 +182,12 @@ class NvidiaIngestComponent(BaseFileComponent):
         if self.high_resolution:
             for file in file_list:
                 try:
-                    with open(file.path, "rb") as f:
+                    with file.path.open("rb") as f:
                         PdfReader(f)
-                except Exception:
+                except Exception as exc:
                     error_msg = "High-resolution mode only supports valid PDF files."
                     self.log(error_msg)
-                    raise ValueError(error_msg)
+                    raise ValueError(error_msg) from exc
 
         file_paths = [str(file.path) for file in file_list]
 
