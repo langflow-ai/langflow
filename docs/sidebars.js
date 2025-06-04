@@ -225,7 +225,6 @@ module.exports = {
           id: "Integrations/Composio/integrations-composio",
           label: "Composio",
         },
-        "Integrations/Cleanlab/integrations-cleanlab",
         {
           type: "doc",
           id: "Integrations/Cleanlab/integrations-cleanlab",
