@@ -40,6 +40,7 @@ module.exports = {
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
+        "Concepts/embedded-chat-widget",
         "Concepts/mcp-server",
         "Concepts/concepts-file-management",
         "Concepts/concepts-voice-mode",
@@ -123,6 +124,17 @@ module.exports = {
           type: "doc",
           id: "Develop/webhook",
           label: "Webhook"
+        },
+        {
+          type: "category",
+          label: "Clients",
+          items: [
+            {
+              type: "doc",
+              id: "Develop/Clients/typescript-client",
+              label: "TypeScript Client"
+            }
+          ]
         },
       ],
     },
