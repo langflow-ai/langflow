@@ -1,9 +1,3 @@
-import {
-  useGetGlobalVariables,
-  usePatchGlobalVariables,
-  usePostGlobalVariables,
-} from "@/controllers/API/queries/variables";
-import { GlobalVariable } from "@/types/global_variables";
 import { useState } from "react";
 
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
@@ -11,102 +5,55 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { Textarea } from "@/components/ui/textarea";
-import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
+import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { CustomLink } from "@/customization/components/custom-link";
 import BaseModal from "@/modals/baseModal";
-import useAlertStore from "@/stores/alertStore";
-import { useTypesStore } from "@/stores/typesStore";
-import { ResponseErrorDetailAPI } from "@/types/api";
+import { MCPServerType } from "@/types/mcp";
+import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 
 //TODO IMPLEMENT FORM LOGIC
 
 export default function AddMcpServerModal({
   children,
-  asChild,
   initialData,
-  referenceField,
   open: myOpen,
   setOpen: mySetOpen,
-  disabled = false,
 }: {
   children?: JSX.Element;
-  asChild?: boolean;
-  initialData?: GlobalVariable;
-  referenceField?: string;
+  initialData?: MCPServerType;
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
-  disabled?: boolean;
 }): JSX.Element {
-  const [key, setKey] = useState(initialData?.name ?? "");
-  const [value, setValue] = useState(initialData?.value ?? "");
-  const [type, setType] = useState(initialData?.type ?? "Credential");
-  const [fields, setFields] = useState<string[]>(
-    initialData?.default_fields ?? [],
-  );
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
       ? [myOpen, mySetOpen]
       : useState(false);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const componentFields = useTypesStore((state) => state.ComponentFields);
-  const { mutate: mutateAddGlobalVariable } = usePostGlobalVariables();
-  const { mutate: updateVariable } = usePatchGlobalVariables();
-  const { data: globalVariables } = useGetGlobalVariables();
-  const [availableFields, setAvailableFields] = useState<string[]>([]);
-  useGetTypes({ checkCache: true, enabled: !!globalVariables });
 
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const [type, setType] = useState("JSON");
+  const [jsonValue, setJsonValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const { mutateAsync: addMCPServer, isPending } = useAddMCPServer();
 
-  function handleSaveVariable() {
-    let data: {
-      name: string;
-      value: string;
-      type?: string;
-      default_fields?: string[];
-    } = {
-      name: key,
-      type,
-      value,
-      default_fields: fields,
-    };
-
-    mutateAddGlobalVariable(data, {
-      onSuccess: (res) => {
-        const { name } = res;
-        setKey("");
-        setValue("");
-        setType("");
-        setFields([]);
-        setOpen(false);
-
-        setSuccessData({
-          title: `Variable ${name} ${initialData ? "updated" : "created"} successfully`,
-        });
-      },
-      onError: (error) => {
-        let responseError = error as ResponseErrorDetailAPI;
-        setErrorData({
-          title: `Error ${initialData ? "updating" : "creating"} variable`,
-          list: [
-            responseError?.response?.data?.detail ??
-              `An unexpected error occurred while ${initialData ? "updating a new" : "creating"} variable. Please try again.`,
-          ],
-        });
-      },
-    });
-  }
-
-  function submitForm() {
-    if (!initialData || !initialData.id) {
-      handleSaveVariable();
-    } else {
-      updateVariable({
-        id: initialData.id,
-        name: key,
-        value: value,
-        default_fields: fields,
-      });
+  async function submitForm() {
+    setError(null);
+    let servers: MCPServerType[];
+    try {
+      servers = extractMcpServersFromJson(jsonValue);
+    } catch (e: any) {
+      setError(e.message || "Invalid input");
+      return;
+    }
+    if (servers.length === 0) {
+      setError("No valid MCP server found in the input.");
+      return;
+    }
+    try {
+      await Promise.all(servers.map((server) => addMCPServer(server)));
       setOpen(false);
+      setJsonValue("");
+      setError(null);
+    } catch (err: any) {
+      setError(err?.message || "Failed to add one or more MCP servers.");
     }
   }
 
@@ -116,12 +63,9 @@ export default function AddMcpServerModal({
       setOpen={setOpen}
       size="x-small"
       onSubmit={submitForm}
-      disable={disabled}
       className="!p-4"
     >
-      <BaseModal.Trigger disable={disabled} asChild={asChild}>
-        {children}
-      </BaseModal.Trigger>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 tracking-normal">
           <div className="flex items-center gap-2 text-sm font-medium">
@@ -148,25 +92,13 @@ export default function AddMcpServerModal({
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger
-                  disabled={!!initialData?.type}
-                  data-testid="json-tab"
-                  value="JSON"
-                >
+                <TabsTrigger data-testid="json-tab" value="JSON">
                   JSON
                 </TabsTrigger>
-                <TabsTrigger
-                  disabled={!!initialData?.type}
-                  data-testid="stdio-tab"
-                  value="STDIO"
-                >
+                <TabsTrigger data-testid="stdio-tab" value="STDIO">
                   STDIO
                 </TabsTrigger>
-                <TabsTrigger
-                  disabled={!!initialData?.type}
-                  data-testid="json-tab"
-                  value="SSE"
-                >
+                <TabsTrigger data-testid="json-tab" value="SSE">
                   SSE
                 </TabsTrigger>
               </TabsList>
@@ -175,11 +107,17 @@ export default function AddMcpServerModal({
 
           <div className="space-y-2" id="global-variable-modal-inputs">
             <Label className="!text-mmd">Paste in JSON config</Label>
+            {error && (
+              <div className="mb-2 text-sm font-medium text-red-500">
+                {error}
+              </div>
+            )}
             <Textarea
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
+              value={jsonValue}
+              onChange={(e) => setJsonValue(e.target.value)}
               className="min-h-40 font-mono text-mmd"
               placeholder="Paste in JSON config to add server"
+              disabled={isPending}
             />
           </div>
         </div>
@@ -187,8 +125,10 @@ export default function AddMcpServerModal({
           <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
             <span className="text-mmd font-normal">Cancel</span>
           </Button>
-          <Button size="sm" onClick={submitForm}>
-            <span className="text-mmd">Add Server</span>
+          <Button size="sm" onClick={submitForm} loading={isPending}>
+            <span className="text-mmd">
+              {initialData ? "Update Server" : "Add Server"}
+            </span>
           </Button>
         </div>
       </BaseModal.Content>
