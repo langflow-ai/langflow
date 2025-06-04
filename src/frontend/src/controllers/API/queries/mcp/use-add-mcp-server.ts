@@ -40,7 +40,7 @@ export const useAddMCPServer: useMutationFunctionType<
         payload,
       );
 
-      return { message: res.data?.message || "MCP installed successfully" };
+      return { message: res.data?.message || "MCP Server added successfully" };
     } catch (error: any) {
       // Transform the error to include a message that can be handled by the UI
       const errorMessage =
