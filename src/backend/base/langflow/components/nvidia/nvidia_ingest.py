@@ -1,5 +1,7 @@
 from urllib.parse import urlparse
 
+from pypdf import PdfReader
+
 from langflow.base.data import BaseFileComponent
 from langflow.io import (
     BoolInput,
@@ -150,8 +152,8 @@ class NvidiaIngestComponent(BaseFileComponent):
         ),
         BoolInput(
             name="high_resolution",
-            display_name="High Resolution",
-            info="Process images in high resolution mode for better quality extraction.",
+            display_name="High Resolution (PDF only)",
+            info="Process pdf in high-resolution mode for better quality extraction from scanned pdf.",
             advanced=True,
             value=False,
         ),
@@ -178,14 +180,14 @@ class NvidiaIngestComponent(BaseFileComponent):
 
         # Check if all files are PDFs when high resolution mode is enabled
         if self.high_resolution:
-            non_pdf_files = [
-                file for file in file_list 
-                if not str(file.path).lower().endswith(".pdf")
-            ]
-            if non_pdf_files:
-                error_msg = "High resolution mode only supports PDF files."
-                self.log(error_msg)
-                raise ValueError(error_msg)
+            for file in file_list:
+                try:
+                    with open(file.path, "rb") as f:
+                        PdfReader(f)
+                except Exception:
+                    error_msg = "High-resolution mode only supports valid PDF files."
+                    self.log(error_msg)
+                    raise ValueError(error_msg)
 
         file_paths = [str(file.path) for file in file_list]
 
