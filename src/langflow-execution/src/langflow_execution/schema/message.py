@@ -6,7 +6,7 @@ import re
 import traceback
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
@@ -31,6 +31,9 @@ from langflow_execution.schema.data import Data
 from langflow_execution.schema.image import Image, create_data_url, get_file_paths, is_image_file
 from langflow_execution.schema.properties import Properties, Source
 from langflow_execution.schema.validators import timestamp_to_str, timestamp_to_str_validator
+
+if TYPE_CHECKING:
+    from langflow.schema.dataframe import DataFrame
 
 
 class Message(Data):
@@ -276,6 +279,14 @@ class Message(Data):
         if "files" in kwargs:
             return await asyncio.to_thread(cls, **kwargs)
         return cls(**kwargs)
+
+    def to_data(self) -> Data:
+        return Data(data=self.data)
+
+    def to_dataframe(self) -> DataFrame:
+        from langflow.schema.dataframe import DataFrame  # Local import to avoid circular import
+
+        return DataFrame(data=[self])
 
 
 class DefaultModel(BaseModel):
