@@ -11,7 +11,7 @@ Data components load data from a source into your flow.
 
 They may perform some processing or type checking, like converting raw HTML data into text, or ensuring your loaded file is of an acceptable type.
 
-## Use a data component in a flow
+## Use data components in a flow
 
 Components like [News search](#news-search), [RSS reader](#rss-reader), and [Web search](#web-search) all fetch data into Langflow, and connect to Langflow in the same way. They can output the retrieved data in [DataFrame](/concepts-objects#dataframe) format, or can be connected to an **Agent** component to be used as tools.
 
@@ -26,8 +26,12 @@ The flow looks like this:
 
 ![Data components connected to agent](/img/connect-data-components-to-agent.png)
 
-6. Open the **Playground** and ask some questions.
-You can specifically request a tool be used
+6. Open the **Playground** and ask `Use the websearch component to get me an RSS feed of the latest news.`
+The Agent uses the `perform_search` tool to return a list of RSS feeds.
+7. Ask for an RSS feed that interests you.
+The Agent uses the `read_rss` tool to fetch and summarize the latest RSS feed.
+
+Data components bring in data from many sources to Langflow, output as DataFrames or as tools for Agents to use.
 
 ## API Request
 
