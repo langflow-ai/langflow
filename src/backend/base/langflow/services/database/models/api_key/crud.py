@@ -1,3 +1,4 @@
+import os
 import asyncio
 import datetime
 import secrets
@@ -50,17 +51,13 @@ async def delete_api_key(session: AsyncSession, api_key_id: UUID) -> None:
     await session.commit()
 
 
-update_total_uses_tasks: set[asyncio.Task] = set()
-
-
 async def check_key(session: AsyncSession, api_key: str) -> User | None:
     """Check if the API key is valid."""
     query: SelectOfScalar = select(ApiKey).options(selectinload(ApiKey.user)).where(ApiKey.api_key == api_key)
     api_key_object: ApiKey | None = (await session.exec(query)).first()
     if api_key_object is not None:
-        task = asyncio.create_task(update_total_uses(api_key_object.id))
-        task.add_done_callback(update_total_uses_tasks.discard)
-        update_total_uses_tasks.add(task)
+        if os.getenv("LANGFLOW_DISABLE_TRACK_APIKEY_USAGE", "false").lower() != "true":
+            await update_total_uses(api_key_object.id)
         return api_key_object.user
     return None
 
