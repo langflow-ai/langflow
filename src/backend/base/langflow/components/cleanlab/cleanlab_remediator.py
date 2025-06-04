@@ -11,18 +11,18 @@ class CleanlabRemediator(Component):
     and applies remediation strategies based on configurable thresholds and settings.
 
     Inputs:
-        - response (MessageTextInput): The original LLM-generated response to be evaluated and possibly remediated. 
+        - response (MessageTextInput): The original LLM-generated response to be evaluated and possibly remediated.
           The CleanlabEvaluator passes this response through.
         - score (HandleInput): The trust score output from CleanlabEvaluator (expected to be a float between 0 and 1).
-        - explanation (MessageTextInput): Optional textual explanation for the trust score, to be included in the 
+        - explanation (MessageTextInput): Optional textual explanation for the trust score, to be included in the
           output.
-        - threshold (Input[float]): Minimum trust score required to accept the response. If the score is lower, the 
+        - threshold (Input[float]): Minimum trust score required to accept the response. If the score is lower, the
           response is remediated.
-        - show_untrustworthy_response (BoolInput): If true, returns the original response with a warning; if false, 
+        - show_untrustworthy_response (BoolInput): If true, returns the original response with a warning; if false,
           returns fallback text.
-        - untrustworthy_warning_text (PromptInput): Text warning to append to responses deemed untrustworthy (when 
+        - untrustworthy_warning_text (PromptInput): Text warning to append to responses deemed untrustworthy (when
           showing them).
-        - fallback_text (PromptInput): Replacement message returned if the response is untrustworthy and should be 
+        - fallback_text (PromptInput): Replacement message returned if the response is untrustworthy and should be
           hidden.
 
     Outputs:
@@ -37,8 +37,10 @@ class CleanlabRemediator(Component):
     """
 
     display_name = "Cleanlab Remediator"
-    description = ("Remediates an untrustworthy response based on trust score from the Cleanlab Evaluator, "
-                   "score threshold, and message handling settings.")
+    description = (
+        "Remediates an untrustworthy response based on trust score from the Cleanlab Evaluator, "
+        "score threshold, and message handling settings."
+    )
     icon = "Cleanlab"
     name = "CleanlabRemediator"
 
