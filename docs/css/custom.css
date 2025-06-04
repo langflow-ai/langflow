@@ -403,6 +403,12 @@ body {
   gap: 0.5em;
   list-style: none;
   outline: none;
+  cursor: pointer;
+}
+
+.markdown details summary:focus-visible {
+  outline: 2px solid var(--ifm-color-primary, #a855f7);
+  outline-offset: 2px;
 }
 
 .markdown details [class^="collapsibleContent"] {
