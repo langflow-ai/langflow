@@ -1,4 +1,5 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
+import { formatPayloadTweaks } from "./filter-tweaks";
 
 export function getNewPythonApiCode({
   flowId,
@@ -22,37 +23,43 @@ export function getNewPythonApiCode({
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
-  const tweaksString =
-    tweaksObject && activeTweaks
-      ? JSON.stringify(tweaksObject, null, 4)
-          .replace(/true/g, "True")
-          .replace(/false/g, "False")
-          .replace(/null/g, "None")
-      : "{}";
+  const includeTopLevelInputValue = formatPayloadTweaks(tweaksObject);
+
+  const payloadObj: any = {
+    output_type: output_type,
+    input_type: input_type,
+  };
+
+  if (includeTopLevelInputValue) {
+    payloadObj.input_value = input_value;
+  }
+
+  if (activeTweaks && tweaksObject && Object.keys(tweaksObject).length > 0) {
+    payloadObj.tweaks = tweaksObject;
+  }
+
+  const payloadString = JSON.stringify(payloadObj, null, 4)
+    .replace(/true/g, "True")
+    .replace(/false/g, "False")
+    .replace(/null/g, "None");
 
   return `import requests
 ${
   isAuthenticated
     ? `import os
+
 # API Configuration
 try:
     api_key = os.environ["LANGFLOW_API_KEY"]
 except KeyError:
-    raise ValueError("LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.")\n`
+    raise ValueError("LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.")
+`
     : ""
-}url = "${apiUrl}"  # The complete API endpoint URL for this flow
+}
+url = "${apiUrl}"  # The complete API endpoint URL for this flow
 
 # Request payload configuration
-payload = {
-    "input_value": "${input_value}",  # The input value to be processed by the flow
-    "output_type": "${output_type}",  # Specifies the expected output format
-    "input_type": "${input_type}"  # Specifies the input format${
-      activeTweaks && tweaksObject
-        ? `,
-    "tweaks": ${tweaksString}  # Custom tweaks to modify flow behavior`
-        : ""
-    }
-}
+payload = ${payloadString}
 
 # Request headers
 headers = {
@@ -70,6 +77,5 @@ try:
 except requests.exceptions.RequestException as e:
     print(f"Error making API request: {e}")
 except ValueError as e:
-    print(f"Error parsing response: {e}")
-    `;
+    print(f"Error parsing response: {e}")`;
 }

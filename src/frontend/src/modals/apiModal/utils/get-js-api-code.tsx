@@ -1,4 +1,5 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
+import { formatPayloadTweaks } from "./filter-tweaks";
 
 /**
  * Generates JavaScript code for making API calls to a Langflow endpoint.
@@ -35,8 +36,23 @@ export function getNewJsApiCode({
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
-  const tweaksString =
-    tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
+  const includeTopLevelInputValue = formatPayloadTweaks(tweaksObject);
+
+  const payloadObj: any = {
+    output_type: output_type,
+    input_type: input_type,
+    session_id: "user_1", // Optional: Use session tracking if needed
+  };
+
+  if (includeTopLevelInputValue) {
+    payloadObj.input_value = input_value;
+  }
+
+  if (activeTweaks && tweaksObject && Object.keys(tweaksObject).length > 0) {
+    payloadObj.tweaks = tweaksObject;
+  }
+
+  const payloadString = JSON.stringify(payloadObj, null, 4);
 
   return `${
     isAuthenticated
@@ -44,20 +60,10 @@ export function getNewJsApiCode({
 if (!process.env.LANGFLOW_API_KEY) {
     throw new Error('LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.');
 }
+
 `
       : ""
-  }const payload = {
-    "input_value": "${input_value}",
-    "output_type": "${output_type}",
-    "input_type": "${input_type}",
-    // Optional: Use session tracking if needed
-    "session_id": "user_1"${
-      activeTweaks && tweaksObject
-        ? `,
-    "tweaks": ${tweaksString}`
-        : ""
-    }
-};
+  }const payload = ${payloadString};
 
 const options = {
     method: 'POST',
@@ -70,6 +76,5 @@ const options = {
 fetch('${apiUrl}', options)
     .then(response => response.json())
     .then(response => console.log(response))
-    .catch(err => console.error(err));
-    `;
+    .catch(err => console.error(err));`;
 }
