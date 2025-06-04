@@ -238,6 +238,11 @@ module.exports = {
           label: "Composio",
         },
         {
+          type: "doc",
+          id: "Integrations/Cleanlab/integrations-cleanlab",
+          label: "Cleanlab",
+        },
+        {
           type: 'category',
           label: 'Google',
           items: [
