@@ -78,7 +78,7 @@ export default function InputListComponent({
   // );
 
   return (
-    <div className={cn("w-full", editNode && "max-h-52")}>
+    <div className={cn("relative w-full", editNode && "max-h-52")}>
       {!editNode && !disabled && (
         <ButtonInputList
           index={0}
@@ -90,7 +90,7 @@ export default function InputListComponent({
         />
       )}
 
-      <div className="mt-2 flex w-full flex-col gap-3">
+      <div className="flex w-full flex-col gap-2">
         {value.map((singleValue, index) => (
           <div key={index} className="flex w-full items-center">
             {focusedIndex !== index && !disabled && (
@@ -137,20 +137,6 @@ export default function InputListComponent({
                   />
                 </div>
               )}
-
-              {/*
-              We will add this back in a future release
-              {!disabled && (
-                <DropdownMenuInputList
-                  index={index}
-                  dropdownOpen={dropdownOpen!}
-                  setDropdownOpen={setDropdownOpen}
-                  editNode={editNode}
-                  handleDuplicateInput={handleDuplicateInput}
-                  removeInput={removeInput}
-                  canDelete={value.length > 1}
-                />
-              )} */}
             </div>
           </div>
         ))}

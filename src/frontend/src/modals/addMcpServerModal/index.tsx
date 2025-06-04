@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs-button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { CustomLink } from "@/customization/components/custom-link";
 import BaseModal from "@/modals/baseModal";
+import IOKeyPairInput from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
 import { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 
@@ -34,8 +42,98 @@ export default function AddMcpServerModal({
   const [error, setError] = useState<string | null>(null);
   const { mutateAsync: addMCPServer, isPending } = useAddMCPServer();
 
+  const changeType = (type: string) => {
+    setType(type);
+    setError(null);
+  };
+
+  // STDIO state
+  const [stdioName, setStdioName] = useState("");
+  const [stdioCommand, setStdioCommand] = useState("");
+  const [stdioArgs, setStdioArgs] = useState<string[]>([""]);
+  const [stdioEnv, setStdioEnv] = useState<any>([{ "": "" }]);
+
+  // SSE state
+  const [sseName, setSseName] = useState("");
+  const [sseUrl, setSseUrl] = useState("");
+  const [sseEnv, setSseEnv] = useState<any>([{ "": "" }]);
+
+  useEffect(() => {
+    if (open) {
+      setType("JSON");
+      setError(null);
+      setJsonValue("");
+      setStdioName("");
+      setStdioCommand("");
+      setStdioArgs([""]);
+      setStdioEnv([{ "": "" }]);
+      setSseName("");
+      setSseUrl("");
+      setSseEnv([{ "": "" }]);
+    }
+  }, [open]);
+
+  function parseEnvList(envList: any): Record<string, string> {
+    // envList is an array of objects with one key each
+    const env: Record<string, string> = {};
+    if (Array.isArray(envList)) {
+      envList.forEach((obj) => {
+        const key = Object.keys(obj)[0];
+        if (key && key.trim() !== "") {
+          env[key] = obj[key];
+        }
+      });
+    }
+    return env;
+  }
+
   async function submitForm() {
     setError(null);
+    if (type === "STDIO") {
+      if (!stdioName.trim() || !stdioCommand.trim()) {
+        setError("Name and command are required.");
+        return;
+      }
+      try {
+        await addMCPServer({
+          name: stdioName.slice(0, 20),
+          command: stdioCommand,
+          args: stdioArgs.filter((a) => a.trim() !== ""),
+          env: parseEnvList(stdioEnv),
+        });
+        setOpen(false);
+        setStdioName("");
+        setStdioCommand("");
+        setStdioArgs([""]);
+        setStdioEnv([{ "": "" }]);
+        setError(null);
+      } catch (err: any) {
+        setError(err?.message || "Failed to add MCP server.");
+      }
+      return;
+    }
+    if (type === "SSE") {
+      if (!sseName.trim() || !sseUrl.trim()) {
+        setError("Name and URL are required.");
+        return;
+      }
+      try {
+        await addMCPServer({
+          name: sseName.slice(0, 20),
+          env: parseEnvList(sseEnv),
+          url: sseUrl,
+        });
+        setOpen(false);
+        setSseName("");
+        setSseUrl("");
+        setSseEnv([{ "": "" }]);
+        setError(null);
+      } catch (err: any) {
+        setError(err?.message || "Failed to add MCP server.");
+      }
+      return;
+    }
+    // JSON mode (multi-server)
     let servers: MCPServerType[];
     try {
       servers = extractMcpServersFromJson(jsonValue);
@@ -63,65 +161,149 @@ export default function AddMcpServerModal({
       setOpen={setOpen}
       size="x-small"
       onSubmit={submitForm}
-      className="!p-4"
+      className="!p-0"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
-      <BaseModal.Content className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 tracking-normal">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <ForwardedIconComponent
-              name="Mcp"
-              className="h-4 w-4 text-primary"
-              aria-hidden="true"
-            />
-            {initialData ? "Update MCP Server" : "Add MCP Server"}
+      <BaseModal.Content className="flex flex-col justify-between overflow-hidden">
+        <div className="flex h-full w-full flex-col overflow-hidden">
+          <div className="flex flex-col gap-3 p-4 tracking-normal">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <ForwardedIconComponent
+                name="Mcp"
+                className="h-4 w-4 text-primary"
+                aria-hidden="true"
+              />
+              {initialData ? "Update MCP Server" : "Add MCP Server"}
+            </div>
+            <span className="text-mmd font-normal text-muted-foreground">
+              Save MCP Servers. Manage added connections in{" "}
+              <CustomLink className="underline" to="/settings/mcp-servers">
+                settings
+              </CustomLink>
+              .
+            </span>
           </div>
-          <span className="text-mmd font-normal text-muted-foreground">
-            Save MCP Servers. Manage added connections in{" "}
-            <CustomLink className="underline" to="/settings/mcp-servers">
-              settings
-            </CustomLink>
-            .
-          </span>
-        </div>
-        <div className="flex h-full w-full flex-col gap-4">
-          <div className="">
+          <div className="flex h-full w-full flex-col gap-4 overflow-hidden">
             <Tabs
               defaultValue={type}
-              onValueChange={setType}
+              onValueChange={changeType}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger data-testid="json-tab" value="JSON">
-                  JSON
-                </TabsTrigger>
-                <TabsTrigger data-testid="stdio-tab" value="STDIO">
-                  STDIO
-                </TabsTrigger>
-                <TabsTrigger data-testid="json-tab" value="SSE">
-                  SSE
-                </TabsTrigger>
-              </TabsList>
+              <div className="px-4">
+                <TabsList className="mb-4 grid w-full grid-cols-3">
+                  <TabsTrigger data-testid="json-tab" value="JSON">
+                    JSON
+                  </TabsTrigger>
+                  <TabsTrigger data-testid="stdio-tab" value="STDIO">
+                    STDIO
+                  </TabsTrigger>
+                  <TabsTrigger data-testid="json-tab" value="SSE">
+                    SSE
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              <div
+                className="relative flex max-h-[280px] min-h-[280px] w-full flex-1 flex-col gap-2 overflow-y-auto border-y p-4 pt-2"
+                id="global-variable-modal-inputs"
+              >
+                {error && (
+                  <div className="absolute right-4 top-2.5 text-xs font-medium text-red-500">
+                    {error}
+                  </div>
+                )}
+                <TabsContent value="JSON">
+                  <div className="flex flex-col gap-2">
+                    <Label className="!text-mmd">Paste in JSON config</Label>
+                    <Textarea
+                      value={jsonValue}
+                      onChange={(e) => setJsonValue(e.target.value)}
+                      className="min-h-[225px] font-mono text-mmd"
+                      placeholder="Paste in JSON config to add server"
+                      disabled={isPending}
+                    />
+                  </div>
+                </TabsContent>
+                <TabsContent value="STDIO">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <Label className="!text-mmd">Name</Label>
+                      <Input
+                        value={stdioName}
+                        onChange={(e) => setStdioName(e.target.value)}
+                        placeholder="Type server name..."
+                        disabled={isPending}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label className="!text-mmd">Command</Label>
+                      <Input
+                        value={stdioCommand}
+                        onChange={(e) => setStdioCommand(e.target.value)}
+                        placeholder="Type command..."
+                        disabled={isPending}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label className="!text-mmd">Arguments</Label>
+                      <InputListComponent
+                        value={stdioArgs}
+                        handleOnNewValue={({ value }) => setStdioArgs(value)}
+                        disabled={isPending}
+                        placeholder="Type argument..."
+                        listAddLabel="Add Argument"
+                        editNode={false}
+                        id="stdio-args"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label className="!text-mmd">Environment Variables</Label>
+                      <IOKeyPairInput
+                        value={stdioEnv}
+                        onChange={setStdioEnv}
+                        duplicateKey={false}
+                        isList={true}
+                        isInputField={true}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="SSE">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <Label className="!text-mmd">Name</Label>
+                      <Input
+                        value={sseName}
+                        onChange={(e) => setSseName(e.target.value)}
+                        placeholder="Name"
+                        disabled={isPending}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label className="!text-mmd">SSE URL</Label>
+                      <Input
+                        value={sseUrl}
+                        onChange={(e) => setSseUrl(e.target.value)}
+                        placeholder="SSE URL"
+                        disabled={isPending}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label className="!text-mmd">Environment Variables</Label>
+                      <IOKeyPairInput
+                        value={sseEnv}
+                        onChange={setSseEnv}
+                        duplicateKey={false}
+                        isList={true}
+                        isInputField={true}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+              </div>
             </Tabs>
           </div>
-
-          <div className="space-y-2" id="global-variable-modal-inputs">
-            <Label className="!text-mmd">Paste in JSON config</Label>
-            {error && (
-              <div className="mb-2 text-sm font-medium text-red-500">
-                {error}
-              </div>
-            )}
-            <Textarea
-              value={jsonValue}
-              onChange={(e) => setJsonValue(e.target.value)}
-              className="min-h-40 font-mono text-mmd"
-              placeholder="Paste in JSON config to add server"
-              disabled={isPending}
-            />
-          </div>
         </div>
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 p-4">
           <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
             <span className="text-mmd font-normal">Cancel</span>
           </Button>

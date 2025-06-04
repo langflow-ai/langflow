@@ -28,10 +28,10 @@ export const useAddMCPServer: useMutationFunctionType<
       if (body.command) {
         payload.command = body.command;
       }
-      if (body.args) {
+      if (body.args && body.args.length > 0) {
         payload.args = body.args;
       }
-      if (body.env) {
+      if (body.env && Object.keys(body.env).length > 0) {
         payload.env = body.env;
       }
 
