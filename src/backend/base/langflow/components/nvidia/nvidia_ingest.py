@@ -153,10 +153,7 @@ class NvidiaIngestComponent(BaseFileComponent):
         BoolInput(
             name="high_resolution",
             display_name="High Resolution (PDF only)",
-            info=(
-                "Process pdf in high-resolution mode for better quality extraction "
-                "from scanned pdf."
-            ),
+            info=("Process pdf in high-resolution mode for better quality extraction from scanned pdf."),
             advanced=True,
             value=False,
         ),
