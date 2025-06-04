@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/tabs-button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
+import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-server";
 import { CustomLink } from "@/customization/components/custom-link";
 import BaseModal from "@/modals/baseModal";
 import IOKeyPairInput from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
@@ -37,41 +38,64 @@ export default function AddMcpServerModal({
       ? [myOpen, mySetOpen]
       : useState(false);
 
-  const [type, setType] = useState("JSON");
+  const [type, setType] = useState(
+    initialData ? (initialData.command ? "STDIO" : "SSE") : "JSON",
+  );
   const [jsonValue, setJsonValue] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const { mutateAsync: addMCPServer, isPending } = useAddMCPServer();
+  const { mutateAsync: addMCPServer, isPending: isAddPending } =
+    useAddMCPServer();
+  const { mutateAsync: patchMCPServer, isPending: isPatchPending } =
+    usePatchMCPServer();
+
+  const modifyMCPServer = initialData ? patchMCPServer : addMCPServer;
+  const isPending = isAddPending || isPatchPending;
 
   const changeType = (type: string) => {
     setType(type);
     setError(null);
+    setJsonValue("");
+    setStdioName("");
+    setStdioCommand("");
+    setStdioArgs([""]);
+    setStdioEnv([{ "": "" }]);
+    setSseName("");
+    setSseUrl("");
+    setSseEnv([{ "": "" }]);
+    setSseHeaders([{ "": "" }]);
   };
 
   // STDIO state
-  const [stdioName, setStdioName] = useState("");
-  const [stdioCommand, setStdioCommand] = useState("");
-  const [stdioArgs, setStdioArgs] = useState<string[]>([""]);
-  const [stdioEnv, setStdioEnv] = useState<any>([{ "": "" }]);
+  const [stdioName, setStdioName] = useState(initialData?.name || "");
+  const [stdioCommand, setStdioCommand] = useState(initialData?.command || "");
+  const [stdioArgs, setStdioArgs] = useState<string[]>(
+    initialData?.args || [""],
+  );
+  const [stdioEnv, setStdioEnv] = useState<any>(
+    initialData?.env || [{ "": "" }],
+  );
 
   // SSE state
-  const [sseName, setSseName] = useState("");
-  const [sseUrl, setSseUrl] = useState("");
-  const [sseEnv, setSseEnv] = useState<any>([{ "": "" }]);
-  const [sseHeaders, setSseHeaders] = useState<any>([{ "": "" }]);
+  const [sseName, setSseName] = useState(initialData?.name || "");
+  const [sseUrl, setSseUrl] = useState(initialData?.url || "");
+  const [sseEnv, setSseEnv] = useState<any>(initialData?.env || [{ "": "" }]);
+  const [sseHeaders, setSseHeaders] = useState<any>(
+    initialData?.headers || [{ "": "" }],
+  );
 
   useEffect(() => {
     if (open) {
-      setType("JSON");
+      setType(initialData ? (initialData.command ? "STDIO" : "SSE") : "JSON");
       setError(null);
       setJsonValue("");
-      setStdioName("");
-      setStdioCommand("");
-      setStdioArgs([""]);
-      setStdioEnv([{ "": "" }]);
-      setSseName("");
-      setSseUrl("");
-      setSseEnv([{ "": "" }]);
-      setSseHeaders([{ "": "" }]);
+      setStdioName(initialData?.name || "");
+      setStdioCommand(initialData?.command || "");
+      setStdioArgs(initialData?.args || [""]);
+      setStdioEnv(initialData?.env || [{ "": "" }]);
+      setSseName(initialData?.name || "");
+      setSseUrl(initialData?.url || "");
+      setSseEnv(initialData?.env || [{ "": "" }]);
+      setSseHeaders(initialData?.headers || [{ "": "" }]);
     }
   }, [open]);
 
@@ -97,7 +121,7 @@ export default function AddMcpServerModal({
         return;
       }
       try {
-        await addMCPServer({
+        await modifyMCPServer({
           name: stdioName.slice(0, 20),
           command: stdioCommand,
           args: stdioArgs.filter((a) => a.trim() !== ""),
@@ -120,7 +144,7 @@ export default function AddMcpServerModal({
         return;
       }
       try {
-        await addMCPServer({
+        await modifyMCPServer({
           name: sseName.slice(0, 20),
           env: parseEnvList(sseEnv),
           url: sseUrl,
@@ -150,7 +174,7 @@ export default function AddMcpServerModal({
       return;
     }
     try {
-      await Promise.all(servers.map((server) => addMCPServer(server)));
+      await Promise.all(servers.map((server) => modifyMCPServer(server)));
       setOpen(false);
       setJsonValue("");
       setError(null);
