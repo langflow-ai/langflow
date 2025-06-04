@@ -2490,7 +2490,7 @@ curl -X GET \
 ### List all users
 
 Get a paginated list of all users in the system.
-This endpoint can only be used by superusers (`is_superuser: true`).
+Only superusers can use this endpoint (`is_superuser: true`).
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -2655,7 +2655,7 @@ curl -X PATCH \
 
 Remove a user account from the system.
 
-This can only be used by superusers (`is_superuser: true`).
+Only superusers can use this endpoint (`is_superuser: true`).
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
