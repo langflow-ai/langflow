@@ -65,6 +65,10 @@ python -m langflow run
 
 After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
 
+### Install Langflow from source
+
+To install Langflow from source, see the instructions in [Contribute to Langflow](/contributing-how-to-contribute).
+
 ### Manage Langflow OSS versions
 
 To upgrade Langflow to the latest version, use one of the following commands:

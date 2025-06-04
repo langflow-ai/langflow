@@ -6,7 +6,7 @@ slug: /contributing-how-to-contribute
 This guide is intended to help you start contributing to Langflow.
 As an open-source project in a rapidly developing field, Langflow welcomes contributions, whether it be in the form of a new feature, improved infrastructure, or better documentation.
 
-To contribute code or documentation to this project, follow the [fork and pull request](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
+To contribute code or documentation to this project, follow this [fork and pull request](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
 
 ## Contribute code
 
@@ -16,8 +16,9 @@ Develop Langflow locally with [uv](https://docs.astral.sh/uv/getting-started/ins
 
 * [uv(>=0.4)](https://docs.astral.sh/uv/getting-started/installation/)
 * [Node.js](https://nodejs.org/en/download/package-manager)
+* [Make](https://www.gnu.org/software/make/#documentation)
 
-### Clone the Langflow Repository
+### Clone the Langflow repository
 
 1. Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow), and then click **Fork**.
 
@@ -27,17 +28,55 @@ Develop Langflow locally with [uv](https://docs.astral.sh/uv/getting-started/ins
 git remote add fork https://github.com/<your_git_username>/langflow.git
 ```
 
-### Prepare the development environment
+### Set up your Langflow development environment
 
-1. Create development hooks.
+1. Change your directory to the root of the local Langflow repository:
+```bash
+cd langflow
+```
 
+2. To set up the Langflow development environment, run the following command:
 ```bash
 make init
 ```
 
-This command sets up the development environment by installing backend and frontend dependencies, building the frontend static files, and initializing the project. It runs `make install_backend`, `make install_frontend`, `make build_frontend`, and finally `uv run langflow run` to start the application.
+This command sets up the development environment by:
+- Checking for uv and npm.
+- Cleaning Python and npm caches.
+- Installing backend and frontend dependencies.
+- Building the frontend static files.
+- Starting the application with default settings.
 
-2. Run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
+After running `make init` once to set up your environment, you can use `make run_cli` for subsequent runs. The `make run_cli` command allows you to configure the application such as logging level, host, port, and environment variables.
+
+For example, this command starts Langflow with custom settings for the logging level, host binding, and port number, and specifies a custom `.env` file.
+
+```bash
+make run_cli log_level=info host=localhost port=8000 env=.env.custom
+```
+
+The `make run_cli` command accepts the following parameters:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `log_level` | `debug` | Set the logging level. Options: `debug`, `info`, `warning`, `error`, `critical` |
+| `host` | `0.0.0.0` | The host address to bind the server to. Use `localhost` or `127.0.0.1` for local-only access. |
+| `port` | `7860` | The port number to run the server on. |
+| `env` | `.env` | Path to the environment file containing configuration variables. |
+| `open_browser` | `true` | Whether to automatically open the browser when starting. Set to `false` to disable. |
+| `path` | `src/backend/base/langflow/frontend` | Path to the frontend directory containing build files. |
+
+4. (Optional) Install pre-commit hooks to help keep your changes clean and well-formatted:
+
+```bash
+uv sync
+uv run pre-commit install
+```
+
+Note: With pre-commit hooks installed, you'll need to use `uv run git commit` instead of `git commit` directly.
+
+5. To test your changes, run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
+To run all tests, including unit tests, integration tests, and coverage, run `make tests`.
 
 ### Debug
 
