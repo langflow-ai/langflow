@@ -26,9 +26,9 @@
         "id": "reactflow__edge-URL-YeUZT{œdataTypeœ:œURLœ,œidœ:œURL-YeUZTœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Ap5W5{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-YeUZT",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-YeUZTœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-YeUZTœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-Ap5W5",
-        "targetHandle": "{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-Ap5W5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-URL-57sgJ{œdataTypeœ:œURLœ,œidœ:œURL-57sgJœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Ap5W5{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-57sgJ",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-57sgJœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-57sgJœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-Ap5W5",
-        "targetHandle": "{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-Ap5W5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-URL-yrON5{œdataTypeœ:œURLœ,œidœ:œURL-yrON5œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Ap5W5{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-yrON5",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-yrON5œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-yrON5œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-Ap5W5",
-        "targetHandle": "{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-Ap5W5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-Prompt-Ap5W5{œdataTypeœ:œPromptœ,œidœ:œPrompt-Ap5W5œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-I7I40{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-I7I40œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-Ap5W5",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-Ap5W5œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Ap5W5œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-I7I40",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-I7I40œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-I7I40œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -142,9 +142,9 @@
         "id": "reactflow__edge-AnthropicModel-I7I40{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-I7I40œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Z5a3C{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Z5a3Cœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AnthropicModel-I7I40",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-I7I40œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-I7I40œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-Z5a3C",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Z5a3Cœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Z5a3Cœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -171,9 +171,9 @@
         "id": "reactflow__edge-ChatInput-gwwtq{œdataTypeœ:œChatInputœ,œidœ:œChatInput-gwwtqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-Ap5W5{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-gwwtq",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-gwwtqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-gwwtqœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-Ap5W5",
-        "targetHandle": "{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-Ap5W5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "data": {
@@ -198,9 +198,9 @@
         },
         "id": "xy-edge__Memory-Ftk3s{œdataTypeœ:œMemoryœ,œidœ:œMemory-Ftk3sœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-TypeConverterComponent-Vb89B{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-Vb89Bœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "source": "Memory-Ftk3s",
-        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-Ftk3sœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-Ftk3sœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "TypeConverterComponent-Vb89B",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-Vb89Bœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-Vb89Bœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -224,9 +224,9 @@
         },
         "id": "xy-edge__TypeConverterComponent-Vb89B{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-Vb89Bœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-Ap5W5{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "source": "TypeConverterComponent-Vb89B",
-        "sourceHandle": "{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-Vb89Bœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-Vb89Bœ, œnameœ: œmessage_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-Ap5W5",
-        "targetHandle": "{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-Ap5W5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -1464,7 +1464,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
@@ -1480,7 +1479,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
                 "required_inputs": [
                   "api_key"
                 ],
