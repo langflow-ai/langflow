@@ -1796,7 +1796,7 @@
   "id": "753b0efa-9a02-48ce-b9e8-b09244b1c110",
   "is_component": false,
   "last_tested_version": "1.4.2",
-  "name": "Memory Chatbot (4)",
+  "name": "Memory Chatbot",
   "tags": [
     "chatbots",
     "openai",
