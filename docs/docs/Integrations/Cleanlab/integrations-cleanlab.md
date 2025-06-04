@@ -9,26 +9,22 @@ Unlock trustworthy Agentic, RAG, and LLM pipelines with Cleanlab's evaluation an
 
 This Langflow integration provides 3 modular components that assess and improve the **trustworthiness** of any LLM or RAG pipeline output, enabling critical oversight for safety-sensitive, enterprise, and production GenAI applications.
 
-
-## Overview
-
 Use this bundle to:
 - Quantify trustworthiness of ANY LLM response with a **0-1 score**
 - Explain why a response may be good or bad
 - Evaluate **context sufficiency**, **groundedness**, **helpfulness**, and **query clarity** with quantitative scores (for RAG/Agentic pipelines with context)
 - Remediate low-trust responses with warnings or fallback answers
 
-
-## ✅ Prerequisites
+## Prerequisites
 
 Before using these components, you'll need:
 
 - A [Cleanlab API key](https://tlm.cleanlab.ai/)
 
 
-## 🧩 Components
+## Components
 
-### 🔹 `CleanlabEvaluator`
+### `CleanlabEvaluator`
 
 **Purpose:** Evaluate and explain the trustworthiness of a prompt + response pair using Cleanlab. More details on how the score works [here](https://help.cleanlab.ai/tlm/).
 
@@ -53,7 +49,7 @@ Before using these components, you'll need:
 
 ---
 
-### 🔹 `CleanlabRemediator`
+### `CleanlabRemediator`
 
 **Purpose:** Use the trust score from the `CleanlabEvaluator` component to determine whether to show, warn about, or replace an LLM response. This component has configurables for the score threshold, warning text, and fallback message which you can customize as needed.
 
@@ -80,7 +76,7 @@ See example outputs below!
 
 ---
 
-### 🔹 `CleanlabRAGEvaluator`
+### `CleanlabRAGEvaluator`
 
 **Purpose:** Comprehensively evaluate RAG and LLM pipeline outputs by analyzing the context, query, and response quality using Cleanlab. This component assesses trustworthiness, context sufficiency, response groundedness, helpfulness, and query ease. Learn more about Cleanlab's evaluation metrics [here](https://help.cleanlab.ai/tlm/use-cases/tlm_rag/). You can also use the `CleanlabRemediator` component with this one to remediate low-trust responses coming from the RAG pipeline.
 
