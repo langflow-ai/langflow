@@ -5,8 +5,7 @@ from langflow.schema.message import Message
 
 
 class CleanlabRemediator(Component):
-    """A component that remediates potentially untrustworthy LLM responses based on trust scores computed by the 
-    Cleanlab Evaluator.
+    """Remediates potentially untrustworthy LLM responses based on trust scores computed by the Cleanlab Evaluator.
 
     This component takes a response and its associated trust score,
     and applies remediation strategies based on configurable thresholds and settings.
