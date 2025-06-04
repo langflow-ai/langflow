@@ -15,7 +15,7 @@ def memory_chatbot_graph(template: str | None = None):
     memory_component = MemoryComponent()
     chat_input = ChatInput()
     type_converter = TypeConverterComponent()
-    type_converter.set(input_data=memory_component.retrieve_messages_dataframe())
+    type_converter.set(input_data=memory_component.retrieve_messages_dataframe)
     prompt_component = PromptComponent()
     prompt_component.set(
         template=template,

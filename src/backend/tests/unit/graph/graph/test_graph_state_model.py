@@ -24,7 +24,7 @@ AI: """
     memory_component.set(session_id=session_id)
     chat_input = ChatInput(_id="chat_input")
     type_converter = TypeConverterComponent()
-    type_converter.set(input_data=memory_component.retrieve_messages_dataframe())
+    type_converter.set(input_data=memory_component.retrieve_messages_dataframe)
     prompt_component = PromptComponent(_id="prompt")
     prompt_component.set(
         template=template,
