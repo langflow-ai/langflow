@@ -17,6 +17,7 @@ import { useDarkStore } from "../../../stores/darkStore";
 import { getNewCurlCode } from "../utils/get-curl-code";
 import { getNewJsApiCode } from "../utils/get-js-api-code";
 import { getNewPythonApiCode } from "../utils/get-python-api-code";
+import { formatPayloadTweaks } from "../utils/filter-tweaks";
 
 export default function APITabsComponent() {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
@@ -41,18 +42,33 @@ export default function APITabsComponent() {
   }
   const streaming = hasStreaming(nodes);
   const tweaks = useTweaksStore((state) => state.tweaks);
+  const activeTweaks = Object.values(tweaks).some(
+    (tweak) => Object.keys(tweak).length > 0,
+  );
+
+  // Centralized payload processing
+  const includeTopLevelInputValue = formatPayloadTweaks(tweaks);
+  const processedPayload: any = {
+    output_type: hasChatOutput ? "chat" : "text",
+    input_type: hasChatInput ? "chat" : "text",
+  };
+
+  // Only include input_value if no ChatInput tweaks have it
+  if (includeTopLevelInputValue) {
+    processedPayload.input_value = input_value;
+  }
+
+  // Add tweaks if active
+  if (activeTweaks && tweaks && Object.keys(tweaks).length > 0) {
+    processedPayload.tweaks = tweaks;
+  }
+
   const codeOptions = {
     endpointName: endpointName || "",
     streaming: streaming,
     flowId: flowId || "",
     isAuthenticated: !autologin || false,
-    input_value: input_value,
-    input_type: hasChatInput ? "chat" : "text",
-    output_type: hasChatOutput ? "chat" : "text",
-    tweaksObject: tweaks,
-    activeTweaks: Object.values(tweaks).some(
-      (tweak) => Object.keys(tweak).length > 0,
-    ),
+    processedPayload: processedPayload,
   };
   const tabsList: tabsArrayType = [
     {

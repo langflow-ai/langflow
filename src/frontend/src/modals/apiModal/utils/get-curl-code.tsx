@@ -1,7 +1,6 @@
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { GetCodeType } from "@/types/tweaks";
-import { formatPayloadTweaks } from "./filter-tweaks";
 
 /**
  * Generates a cURL command for making a POST request to a webhook endpoint.
@@ -42,41 +41,18 @@ export function getCurlWebhookCode({
 export function getNewCurlCode({
   flowId,
   isAuthenticated,
-  input_value,
-  input_type,
-  output_type,
-  tweaksObject,
-  activeTweaks,
   endpointName,
+  processedPayload,
 }: {
   flowId: string;
   isAuthenticated: boolean;
-  input_value: string;
-  input_type: string;
-  output_type: string;
-  tweaksObject: any;
-  activeTweaks: boolean;
   endpointName: string;
+  processedPayload: any;
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
-  const includeTopLevelInputValue = formatPayloadTweaks(tweaksObject);
-
-  const payload: any = {
-    output_type: output_type,
-    input_type: input_type,
-  };
-
-  if (includeTopLevelInputValue) {
-    payload.input_value = input_value;
-  }
-
-  if (activeTweaks && tweaksObject && Object.keys(tweaksObject).length > 0) {
-    payload.tweaks = tweaksObject;
-  }
-
-  const formattedJsonPayload = JSON.stringify(payload, null, 2)
+  const formattedJsonPayload = JSON.stringify(processedPayload, null, 2)
     .split("\n")
     .map((line, index) => (index === 0 ? line : "         " + line))
     .join("\n\t\t");
@@ -94,10 +70,10 @@ fi
   }curl --request POST \\
      --url '${apiUrl}?stream=false' \\
      --header 'Content-Type: application/json' \\${
-       isAuthenticated
-         ? `
+    isAuthenticated
+      ? `
      --header "x-api-key: $LANGFLOW_API_KEY" \\`
-         : ""
-     }
+      : ""
+  }
      --data '${formattedJsonPayload}'`;
 }

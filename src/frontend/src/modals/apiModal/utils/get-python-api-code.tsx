@@ -1,44 +1,20 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
-import { formatPayloadTweaks } from "./filter-tweaks";
 
 export function getNewPythonApiCode({
   flowId,
   isAuthenticated,
-  input_value,
-  input_type,
-  output_type,
-  tweaksObject,
-  activeTweaks,
   endpointName,
+  processedPayload,
 }: {
   flowId: string;
   isAuthenticated: boolean;
-  input_value: string;
-  input_type: string;
-  output_type: string;
-  tweaksObject: any;
-  activeTweaks: boolean;
   endpointName: string;
+  processedPayload: any;
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
-  const includeTopLevelInputValue = formatPayloadTweaks(tweaksObject);
-
-  const payloadObj: any = {
-    output_type: output_type,
-    input_type: input_type,
-  };
-
-  if (includeTopLevelInputValue) {
-    payloadObj.input_value = input_value;
-  }
-
-  if (activeTweaks && tweaksObject && Object.keys(tweaksObject).length > 0) {
-    payloadObj.tweaks = tweaksObject;
-  }
-
-  const payloadString = JSON.stringify(payloadObj, null, 4)
+  const payloadString = JSON.stringify(processedPayload, null, 4)
     .replace(/true/g, "True")
     .replace(/false/g, "False")
     .replace(/null/g, "None");
