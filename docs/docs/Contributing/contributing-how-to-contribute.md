@@ -6,11 +6,11 @@ slug: /contributing-how-to-contribute
 This guide is intended to help you start contributing to Langflow.
 As an open-source project in a rapidly developing field, Langflow welcomes contributions, whether it be in the form of a new feature, improved infrastructure, or better documentation.
 
-To contribute code or documentation to this project, follow this [fork and pull request](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
+To contribute code or documentation to this project, follow the [fork and pull request](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
 
-## Contribute code
+## Install Langflow from source
 
-Develop Langflow locally with [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js](https://nodejs.org/en/download/package-manager).
+Install Langflow from source by forking the repository, and then set up your development environment using Make.
 
 ### Prerequisites
 
