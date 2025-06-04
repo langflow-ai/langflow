@@ -21,4 +21,5 @@ export type MCPServerType = {
   url?: string;
   args?: string[];
   env?: Record<string, string>;
+  headers?: Record<string, string>;
 };

@@ -57,6 +57,7 @@ export default function AddMcpServerModal({
   const [sseName, setSseName] = useState("");
   const [sseUrl, setSseUrl] = useState("");
   const [sseEnv, setSseEnv] = useState<any>([{ "": "" }]);
+  const [sseHeaders, setSseHeaders] = useState<any>([{ "": "" }]);
 
   useEffect(() => {
     if (open) {
@@ -70,6 +71,7 @@ export default function AddMcpServerModal({
       setSseName("");
       setSseUrl("");
       setSseEnv([{ "": "" }]);
+      setSseHeaders([{ "": "" }]);
     }
   }, [open]);
 
@@ -122,11 +124,13 @@ export default function AddMcpServerModal({
           name: sseName.slice(0, 20),
           env: parseEnvList(sseEnv),
           url: sseUrl,
+          headers: parseEnvList(sseHeaders),
         });
         setOpen(false);
         setSseName("");
         setSseUrl("");
         setSseEnv([{ "": "" }]);
+        setSseHeaders([{ "": "" }]);
         setError(null);
       } catch (err: any) {
         setError(err?.message || "Failed to add MCP server.");
@@ -285,6 +289,16 @@ export default function AddMcpServerModal({
                         onChange={(e) => setSseUrl(e.target.value)}
                         placeholder="SSE URL"
                         disabled={isPending}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label className="!text-mmd">Headers</Label>
+                      <IOKeyPairInput
+                        value={sseHeaders}
+                        onChange={setSseHeaders}
+                        duplicateKey={false}
+                        isList={true}
+                        isInputField={true}
                       />
                     </div>
                     <div className="flex flex-col gap-2">
