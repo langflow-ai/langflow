@@ -6,26 +6,29 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Loading from "@/components/ui/loading";
 import { useDeleteMCPServer } from "@/controllers/API/queries/mcp/use-delete-mcp-server";
 import { useGetMCPServer } from "@/controllers/API/queries/mcp/use-get-mcp-server";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { MCPServerInfoType } from "@/types/mcp";
 import { useState } from "react";
 
 export default function MCPServersPage() {
-  const { data: servers = [], refetch } = useGetMCPServers();
+  const { data: servers } = useGetMCPServers();
   const { mutate: deleteServer } = useDeleteMCPServer();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editInitialData, setEditInitialData] = useState<any>(null);
-  const [loadingEdit, setLoadingEdit] = useState(false);
   const { mutateAsync: getServer } = useGetMCPServer();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [serverToDelete, setServerToDelete] =
+    useState<MCPServerInfoType | null>(null);
 
   const handleEdit = async (name: string) => {
-    setLoadingEdit(true);
     try {
       const data = await getServer({ name });
       setEditInitialData(data);
@@ -33,7 +36,6 @@ export default function MCPServersPage() {
     } catch (e: any) {
       setErrorData({ title: "Error fetching server", list: [e.message] });
     } finally {
-      setLoadingEdit(false);
     }
   };
 
@@ -41,11 +43,15 @@ export default function MCPServersPage() {
     deleteServer(
       { name: server.name },
       {
-        onSuccess: () => refetch(),
         onError: (e: any) =>
           setErrorData({ title: "Error deleting server", list: [e.message] }),
       },
     );
+  };
+
+  const openDeleteModal = (server: MCPServerInfoType) => {
+    setServerToDelete(server);
+    setDeleteModalOpen(true);
   };
 
   return (
@@ -71,70 +77,89 @@ export default function MCPServersPage() {
           <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
         </div>
       </div>
-      <div className="flex flex-col gap-2">
-        {servers.length === 0 ? (
-          <div className="text-sm text-muted-foreground">
-            No MCP servers found.
-          </div>
-        ) : (
-          <div className="text-sm font-medium text-muted-foreground">
-            Servers
-          </div>
-        )}
-        <div className="flex flex-col gap-1">
-          {servers.map((server) => (
-            <div
-              key={server.id}
-              className="flex items-center justify-between rounded-lg px-3 py-2 shadow-sm transition-colors hover:bg-accent"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{server.name}</span>
-                <span className="text-mmd text-muted-foreground">
-                  {server.toolsCount} action{server.toolsCount === 1 ? "" : "s"}
-                </span>
+      <div className="flex h-full flex-col gap-2">
+        {servers ? (
+          <>
+            {servers.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                No MCP servers found.
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="iconSm"
-                    className="text-muted-foreground hover:bg-accent"
-                  >
-                    <ForwardedIconComponent
-                      name="Ellipsis"
-                      className="h-5 w-5"
-                    />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleEdit(server.name)}>
-                    <ForwardedIconComponent
-                      name="SquarePen"
-                      className="mr-2 h-4 w-4"
-                    />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleDelete(server)}
-                    className="text-destructive"
-                  >
-                    <ForwardedIconComponent
-                      name="Trash2"
-                      className="mr-2 h-4 w-4"
-                    />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            ) : (
+              <div className="text-sm font-medium text-muted-foreground">
+                Servers
+              </div>
+            )}
+            <div className="flex flex-col gap-1">
+              {servers.map((server) => (
+                <div
+                  key={server.id}
+                  className="flex items-center justify-between rounded-lg px-3 py-2 shadow-sm transition-colors hover:bg-accent"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{server.name}</span>
+                    <span className="text-mmd text-muted-foreground">
+                      {server.toolsCount} action
+                      {server.toolsCount === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="iconSm"
+                        className="text-muted-foreground hover:bg-accent"
+                      >
+                        <ForwardedIconComponent
+                          name="Ellipsis"
+                          className="h-5 w-5"
+                        />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(server.name)}>
+                        <ForwardedIconComponent
+                          name="SquarePen"
+                          className="mr-2 h-4 w-4"
+                        />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => openDeleteModal(server)}
+                        className="text-destructive"
+                      >
+                        <ForwardedIconComponent
+                          name="Trash2"
+                          className="mr-2 h-4 w-4"
+                        />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        {editOpen && (
-          <AddMcpServerModal
-            open={editOpen}
-            setOpen={setEditOpen}
-            initialData={editInitialData}
-          />
+            {editOpen && (
+              <AddMcpServerModal
+                open={editOpen}
+                setOpen={setEditOpen}
+                initialData={editInitialData}
+              />
+            )}
+            <DeleteConfirmationModal
+              open={deleteModalOpen}
+              setOpen={setDeleteModalOpen}
+              onConfirm={() => {
+                if (serverToDelete) handleDelete(serverToDelete);
+                setDeleteModalOpen(false);
+                setServerToDelete(null);
+              }}
+              description={"MCP Server"}
+            />
+          </>
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <Loading />
+          </div>
         )}
       </div>
     </div>
