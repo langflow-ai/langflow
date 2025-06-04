@@ -83,6 +83,9 @@ def blockbuster(request):
             for func in ["os.path.abspath", "os.scandir"]:
                 bb.functions[func].can_block_in("alembic/script/base.py", "_load_revisions")
 
+            # Add os.stat to alembic/script/base.py _load_revisions
+            bb.functions["os.stat"].can_block_in("alembic/script/base.py", "_load_revisions")
+
             (
                 bb.functions["os.path.abspath"]
                 .can_block_in("loguru/_better_exceptions.py", {"_get_lib_dirs", "_format_exception"})
