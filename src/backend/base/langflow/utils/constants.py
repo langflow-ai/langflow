@@ -70,6 +70,7 @@ DIRECT_TYPES = [
     "connect",
     "query",
     "tools",
+    "mcp",
 ]
 
 
