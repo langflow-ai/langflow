@@ -125,6 +125,17 @@ module.exports = {
           id: "Develop/webhook",
           label: "Webhook"
         },
+        {
+          type: "category",
+          label: "Clients",
+          items: [
+            {
+              type: "doc",
+              id: "Develop/Clients/typescript-client",
+              label: "TypeScript Client"
+            }
+          ]
+        },
       ],
     },
     {
