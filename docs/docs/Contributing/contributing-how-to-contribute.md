@@ -116,7 +116,7 @@ For more information, see the [Python Developer's Guide](https://devguide.python
 
 ## Additional contribution guides
 
-- [Contributing Bundles](./contributing-bundles.md)
-- [Contributing Components](./contributing-components.md)
-- [Contributing Tests](./contributing-component-tests.md)
-- [Contributing Templates](./contributing-templates.md)
+- [Contribute Bundles](./contributing-bundles.md)
+- [Contribute Components](./contributing-components.md)
+- [Contribute Tests](./contributing-component-tests.md)
+- [Contribute Templates](./contributing-templates.md)
