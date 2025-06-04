@@ -1,9 +1,12 @@
 from typing import Any, cast
 
 import requests
+<<<<<<< HEAD
+=======
 from loguru import logger
 from pydantic import ValidationError
 
+>>>>>>> main
 from langflow.base.models.anthropic_constants import (
     ANTHROPIC_MODELS,
     DEFAULT_ANTHROPIC_API_URL,
@@ -15,6 +18,7 @@ from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
+from loguru import logger
 
 
 class AnthropicModelComponent(LCModelComponent):
