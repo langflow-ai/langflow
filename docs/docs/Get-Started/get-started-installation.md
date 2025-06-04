@@ -288,6 +288,9 @@ To install Langflow Desktop, follow these steps:
 
 The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, and then starts.
 
+Environment variables set in your terminal are not automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
+To set environment variables for Langflow Desktop, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
+
 ### Manage your Langflow version in Langflow Desktop
 
 When a new version of Langflow is available, Langflow Desktop displays an upgrade message.

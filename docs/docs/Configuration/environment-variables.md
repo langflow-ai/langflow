@@ -382,9 +382,10 @@ Environment variables set in your terminal are not automatically available to GU
 
 The configuration of environment variables differs between macOS and Windows installations.
 
-### Set environment variables for Langflow Desktop for macOS
+<Tabs groupId="">
+  <TabItem value="macOS" label="macOS" default>
 
-If you're using macOS and want to configure environment variables for the Langflow Desktop version, it's important to know that variables set in your terminal, such as`.zshrc` or `.bash_profile`, are **not automatically available to GUI applications** like Langflow Desktop when launched through Finder or the Dock.
+If you're using macOS and want to configure environment variables for the Langflow Desktop version, variables set in your terminal, such as`.zshrc` or `.bash_profile`, are **not automatically available to GUI applications** like Langflow Desktop when launched through Finder or the Dock.
 
 To make environment variables available to GUI apps on macOS, you need to use `launchctl` with a `plist` file.
 
@@ -424,7 +425,8 @@ This example sets the `LANGFLOW_CONFIG_DIR` environment variable for all GUI app
 launchctl load ~/Library/LaunchAgents/dev.langflow.env.plist
 ```
 
-### Set environment variables for Langflow Desktop on Windows
+  </TabItem>
+  <TabItem value="Windows" label="Windows">
 
 On Windows, environment variables set in a terminal session, such as using `set` in `cmd` or `$env:VAR=...` in PowerShell, are **not available to GUI applications** launched from the Start Menu, desktop shortcuts, or Windows Explorer.
 
@@ -443,9 +445,10 @@ To apply the setting to all users, select **System variables**.
 
 The next time you launch Langflow Desktop, it will have access to these variables.
 
-#### Set variables using PowerShell
+  </TabItem>
+    <TabItem value="Powershell" label="Powershell">
 
-Optionally, define environment variables for Windows using PowerShell.
+Define environment variables for Windows using PowerShell.
 After setting the variables, you need to restart the Langflow Desktop application for the new values to take effect.
 
 ```powershell
@@ -455,5 +458,14 @@ After setting the variables, you need to restart the Langflow Desktop applicatio
 # For all users (requires Administrator privileges)
 [System.Environment]::SetEnvironmentVariable("LANGFLOW_CONFIG_DIR", "C:\Langflow\Config", "Machine")
 ```
+
+  </TabItem>
+</Tabs>
+
+
+
+
+
+
 
 
