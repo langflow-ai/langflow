@@ -89,7 +89,12 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
     ),
     # AQA
     create_model_metadata(
-        provider="Google Generative AI", name="models/aqa", icon="GoogleGenerativeAI", tool_calling=True, preview=True
+        provider="Google Generative AI",
+        name="models/aqa",
+        icon="GoogleGenerativeAI",
+        tool_calling=True,
+        preview=True,
+        not_supported=True,
     ),
 ]
 
