@@ -49,6 +49,11 @@ export default function McpComponent({
   const handleOpenListSelectionDialog = () => setOpen(true);
   const handleCloseListSelectionDialog = () => setOpen(false);
 
+  const handleSuccess = (server: string) => {
+    handleOnNewValue({ value: server });
+    setOpen(false);
+  };
+
   return (
     <div className="flex w-full flex-col gap-2">
       {options && (
@@ -100,9 +105,13 @@ export default function McpComponent({
             addButtonText="Add MCP Server"
             onAddButtonClick={handleAddButtonClick}
           />
-          <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
         </>
       )}
+      <AddMcpServerModal
+        open={addOpen}
+        setOpen={setAddOpen}
+        onSuccess={handleSuccess}
+      />
     </div>
   );
 }

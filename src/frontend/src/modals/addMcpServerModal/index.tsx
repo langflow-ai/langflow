@@ -27,11 +27,13 @@ export default function AddMcpServerModal({
   initialData,
   open: myOpen,
   setOpen: mySetOpen,
+  onSuccess,
 }: {
   children?: JSX.Element;
   initialData?: MCPServerType;
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
+  onSuccess?: (server: string) => void;
 }): JSX.Element {
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
@@ -127,6 +129,7 @@ export default function AddMcpServerModal({
           args: stdioArgs.filter((a) => a.trim() !== ""),
           env: parseEnvList(stdioEnv),
         });
+        onSuccess?.(stdioName.slice(0, 20));
         setOpen(false);
         setStdioName("");
         setStdioCommand("");
@@ -150,6 +153,7 @@ export default function AddMcpServerModal({
           url: sseUrl,
           headers: parseEnvList(sseHeaders),
         });
+        onSuccess?.(sseName.slice(0, 20));
         setOpen(false);
         setSseName("");
         setSseUrl("");
@@ -175,6 +179,7 @@ export default function AddMcpServerModal({
     }
     try {
       await Promise.all(servers.map((server) => modifyMCPServer(server)));
+      onSuccess?.(servers.map((server) => server.name)[0].slice(0, 20));
       setOpen(false);
       setJsonValue("");
       setError(null);
