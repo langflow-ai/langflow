@@ -50,10 +50,10 @@ export default function MCPServersPage() {
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex w-full items-center justify-between gap-6">
+      <div className="flex w-full items-start justify-between gap-6">
         <div className="flex flex-col">
           <h2 className="flex items-center text-lg font-semibold tracking-tight">
-            MCP Servers
+            MCP Connections
             <ForwardedIconComponent
               name="Mcp"
               className="ml-2 h-5 w-5 text-primary"
@@ -63,70 +63,72 @@ export default function MCPServersPage() {
             Manage MCP Servers for use in your flows.
           </p>
         </div>
-        <Button variant="primary" onClick={() => setAddOpen(true)}>
-          <ForwardedIconComponent name="Plus" className="w-4" />
-          Add MCP Server
-        </Button>
-        <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <Button variant="primary" onClick={() => setAddOpen(true)}>
+            <ForwardedIconComponent name="Plus" className="w-4" />
+            Add MCP Server
+          </Button>
+          <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
+        </div>
       </div>
       <div className="flex flex-col gap-2">
-        {servers.length === 0 && (
+        {servers.length === 0 ? (
           <div className="text-sm text-muted-foreground">
             No MCP servers found.
           </div>
+        ) : (
+          <div className="text-sm font-medium text-muted-foreground">
+            Servers
+          </div>
         )}
-        {servers.map((server) => (
-          <div
-            key={server.id}
-            className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 shadow-sm transition-colors hover:bg-accent"
-          >
-            <div className="flex items-center gap-3">
-              <ForwardedIconComponent
-                name="Mcp"
-                className="h-6 w-6 text-primary"
-              />
-              <div className="flex flex-col">
-                <span className="text-base font-medium">{server.name}</span>
-                <span className="text-xs text-muted-foreground">
+        <div className="flex flex-col gap-1">
+          {servers.map((server) => (
+            <div
+              key={server.id}
+              className="flex items-center justify-between rounded-lg px-3 py-2 shadow-sm transition-colors hover:bg-accent"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{server.name}</span>
+                <span className="text-mmd text-muted-foreground">
                   {server.toolsCount} action{server.toolsCount === 1 ? "" : "s"}
                 </span>
               </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="iconSm"
+                    className="text-muted-foreground hover:bg-accent"
+                  >
+                    <ForwardedIconComponent
+                      name="Ellipsis"
+                      className="h-5 w-5"
+                    />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleEdit(server.name)}>
+                    <ForwardedIconComponent
+                      name="SquarePen"
+                      className="mr-2 h-4 w-4"
+                    />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleDelete(server)}
+                    className="text-destructive"
+                  >
+                    <ForwardedIconComponent
+                      name="Trash2"
+                      className="mr-2 h-4 w-4"
+                    />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="iconSm"
-                  className="hover:bg-accent"
-                >
-                  <ForwardedIconComponent
-                    name="EllipsisVertical"
-                    className="h-5 w-5"
-                  />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleEdit(server.name)}>
-                  <ForwardedIconComponent
-                    name="SquarePen"
-                    className="mr-2 h-4 w-4"
-                  />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleDelete(server)}
-                  className="text-destructive"
-                >
-                  <ForwardedIconComponent
-                    name="Trash2"
-                    className="mr-2 h-4 w-4"
-                  />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ))}
+          ))}
+        </div>
         {editOpen && (
           <AddMcpServerModal
             open={editOpen}

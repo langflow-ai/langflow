@@ -38,6 +38,16 @@ export default function SettingsPage(): JSX.Element {
 
   sidebarNavItems.push(
     {
+      title: "MCP Connections",
+      href: "/settings/mcp-servers",
+      icon: (
+        <ForwardedIconComponent
+          name="Mcp"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
+    {
       title: "Global Variables",
       href: "/settings/global-variables",
       icon: (
@@ -47,16 +57,7 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
-    {
-      title: "MCP Servers",
-      href: "/settings/mcp-servers",
-      icon: (
-        <ForwardedIconComponent
-          name="Mcp"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
-        />
-      ),
-    },
+
     {
       title: "Shortcuts",
       href: "/settings/shortcuts",
@@ -82,7 +83,7 @@ export default function SettingsPage(): JSX.Element {
   if (!ENABLE_DATASTAX_LANGFLOW) {
     const langflowItems = CustomStoreSidebar();
 
-    sidebarNavItems.splice(2, 0, ...langflowItems);
+    sidebarNavItems.splice(1, 0, ...langflowItems);
   }
 
   return (
