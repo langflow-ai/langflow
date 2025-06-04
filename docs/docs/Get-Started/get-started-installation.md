@@ -67,7 +67,7 @@ After confirming that Langflow is running, create your first flow with the [Quic
 
 ### Install Langflow from source
 
-To install Langflow from source, see the instructions in [Contribute to Langflow](/contributing-how-to-contribute).
+To install Langflow from source, see [Install Langflow from source](/contributing-how-to-contribute#install-langflow-from-source).
 
 ### Manage Langflow OSS versions
 
