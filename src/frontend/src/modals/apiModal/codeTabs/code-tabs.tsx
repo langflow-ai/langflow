@@ -46,19 +46,16 @@ export default function APITabsComponent() {
     (tweak) => Object.keys(tweak).length > 0,
   );
 
-  // Centralized payload processing
   const includeTopLevelInputValue = formatPayloadTweaks(tweaks);
   const processedPayload: any = {
     output_type: hasChatOutput ? "chat" : "text",
     input_type: hasChatInput ? "chat" : "text",
   };
 
-  // Only include input_value if no ChatInput tweaks have it
   if (includeTopLevelInputValue) {
     processedPayload.input_value = input_value;
   }
 
-  // Add tweaks if active
   if (activeTweaks && tweaks && Object.keys(tweaks).length > 0) {
     processedPayload.tweaks = tweaks;
   }
