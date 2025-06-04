@@ -281,6 +281,7 @@ export const SIDEBAR_BUNDLES = [
     name: "homeassistant",
     icon: "HomeAssistant",
   },
+  { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
   { display_name: "Search", name: "search", icon: "Search" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
 ];
