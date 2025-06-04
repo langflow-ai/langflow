@@ -13,15 +13,21 @@ They may perform some processing or type checking, like converting raw HTML data
 
 ## Use a data component in a flow
 
-The **URL** data component loads content from a list of URLs.
+Components like [News search](#news-search), [RSS reader](#rss-reader), and [Web search](#web-search) all fetch data into Langflow, and connect to Langflow in the same way. They can output the retrieved data in [DataFrame](/concepts-objects#dataframe) format, or can be connected to an **Agent** component to be used as tools.
 
-In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-label="Add"/>.
+For example, to connect all three components to an Agent, do the following:
 
-Alternatively, connect a component that outputs the `Message` type, like the **Chat Input** component, to supply your URLs from a component.
+1. Create the [Simple Agent starter flow](/starter-projects-simple-agent).
+2. In the **Agent** component, in the **OpenAI API Key** field, add your OpenAI API key.
+3. Add the **News search**, **RSS reader**, and **Web Search** components to your flow.
+4. In all three components, enable **Tool Mode**.
+5. Connect the three components to the **Agent** component's **Tools** port.
+The flow looks like this:
 
-In this example of a document ingestion pipeline, the URL component outputs raw HTML to a text splitter, which splits the raw content into chunks for a vector database to ingest.
+![Data components connected to agent](/img/connect-data-components-to-agent.png)
 
-![URL component in a data ingestion pipeline](/img/url-component.png)
+6. Open the **Playground** and ask some questions.
+You can specifically request a tool be used
 
 ## API Request
 
@@ -259,6 +265,55 @@ The agent chooses the correct tool based on your query.
 </details>
 
 ## News search
+
+This component searches Google News with RSS and returns clean article data. It supports searching by keywords, topics, or location. The `clean_html` method parses the HTML content with the BeautifulSoup library, and then removes HTML markup and strips whitespace so the output data is clean.
+
+The component outputs search results as a DataFrame, or can be used in **Tool Mode** with a connected **Agent**
+
+
+
+
+
+
+
+1. To use this component in a flow, connect the **News Articles** output to a component that accepts the input.
+For example, connect the **News Search** component to a **Chat Output** component.
+
+2. In the **Search Query** field, enter keywords to search for news articles.
+For example, "artificial intelligence" or "climate change".
+
+3. Optionally, configure advanced settings:
+   - **Language (hl)**: Set the language code (e.g., en-US, fr, de)
+   - **Country (gl)**: Set the country code (e.g., US, FR, DE)
+   - **Topic**: Select from WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SCIENCE, SPORTS, HEALTH
+   - **Location**: Enter a city, state, or country for location-based news
+   - **Timeout**: Set the request timeout in seconds
+
+4. Click **Playground**, and then click **Run Flow**.
+The component returns a DataFrame containing article titles, links, publication dates, and summaries.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Search Query | Search keywords for news articles. |
+| hl | Language (hl) | Language code, e.g. en-US, fr, de. Default: `en-US`. |
+| gl | Country (gl) | Country code, e.g. US, FR, DE. Default: `US`. |
+| ceid | Country:Language (ceid) | e.g. US:en, FR:fr. Default: `US:en`. |
+| topic | Topic | One of: WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SCIENCE, SPORTS, HEALTH. |
+| location | Location (Geo) | City, state, or country for location-based news. Leave blank for keyword search. |
+| timeout | Timeout | Timeout for the request in seconds. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| articles | News Articles | A DataFrame containing article titles, links, publication dates, and summaries. |
+
+</details>
 
 ## RSS reader
 
