@@ -78,7 +78,7 @@ class Vertex:
         self.built = False
         self._successors_ids: list[str] | None = None
         self.artifacts: dict[str, Any] = {}
-        self.artifacts_raw: dict[str, Any] = {}
+        self.artifacts_raw: dict[str, Any] | None = {}
         self.artifacts_type: dict[str, str] = {}
         self.steps: list[Callable] = [self._build]
         self.steps_ran: list[Callable] = []
@@ -106,6 +106,8 @@ class Vertex:
         self.output_names: list[str] = [
             output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
         ]
+        self._incoming_edges: list[CycleEdge] | None = None
+        self._outgoing_edges: list[CycleEdge] | None = None
 
     @property
     def is_loop(self) -> bool:
@@ -185,11 +187,19 @@ class Vertex:
 
     @property
     def outgoing_edges(self) -> list[CycleEdge]:
-        return [edge for edge in self.edges if edge.source_id == self.id]
+        if self._outgoing_edges is None:
+            self._outgoing_edges = [edge for edge in self.edges if edge.source_id == self.id]
+        return self._outgoing_edges
 
     @property
     def incoming_edges(self) -> list[CycleEdge]:
-        return [edge for edge in self.edges if edge.target_id == self.id]
+        if self._incoming_edges is None:
+            self._incoming_edges = [edge for edge in self.edges if edge.target_id == self.id]
+        return self._incoming_edges
+
+    # Get edge connected to an output of a certain name
+    def get_incoming_edge_by_target_param(self, target_param: str) -> str | None:
+        return next((edge.source_id for edge in self.incoming_edges if edge.target_param == target_param), None)
 
     @property
     def edges_source_names(self) -> set[str | None]:
