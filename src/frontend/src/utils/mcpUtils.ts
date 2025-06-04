@@ -93,7 +93,11 @@ export function extractMcpServersFromJson(
     try {
       parsed = JSON.parse(json);
     } catch (e) {
-      throw new Error("Invalid JSON format.");
+      try {
+        parsed = JSON.parse(`{${json}}`);
+      } catch (e) {
+        throw new Error("Invalid JSON format.");
+      }
     }
   }
 
