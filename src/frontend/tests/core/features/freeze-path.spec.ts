@@ -46,7 +46,7 @@ test(
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -69,7 +69,7 @@ test(
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -109,7 +109,7 @@ test(
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
