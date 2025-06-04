@@ -17,8 +17,9 @@ export default function McpComponent({
   const { data: mcpServers } = useGetMCPServers();
   const options = mcpServers?.map((server) => ({
     name: server.name,
-    icon: "Box",
-    description: server.toolsCount,
+    description: server.toolsCount
+      ? "No actions found"
+      : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`,
   }));
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -67,17 +68,9 @@ export default function McpComponent({
                 )}
               >
                 <span className="truncate">
-                  {selectedItem[0]?.name ? (
-                    <span className="flex items-center gap-2">
-                      <ForwardedIconComponent
-                        name="Box"
-                        className="h-4 w-4 text-muted-foreground"
-                      />
-                      {selectedItem[0]?.name}
-                    </span>
-                  ) : (
-                    "Select a server..."
-                  )}
+                  {selectedItem[0]?.name
+                    ? selectedItem[0]?.name
+                    : "Select a server..."}
                 </span>
                 <ForwardedIconComponent
                   name="ChevronsUpDown"
