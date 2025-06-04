@@ -155,10 +155,10 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         # Loop over each row to check metadata
         for _, row in data_frame.iterrows():
             assert row["source"] == test_metadata["source"], (
-                f"Expected source '{test_metadata['source']}', got '{row["source"]}'"
+                f"Expected source '{test_metadata['source']}', got '{row['source']}'"
             )
             assert row["author"] == test_metadata["author"], (
-                f"Expected author '{test_metadata['author']}', got '{row["author"]}'"
+                f"Expected author '{test_metadata['author']}', got '{row['author']}'"
             )
 
     def test_split_text_empty_input(self):
@@ -197,7 +197,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
 
         results = component.split_text()
         assert len(results) == 1, f"Expected 1 chunk, got {len(results)}"
-        assert results["text"][0] == test_text, f"Expected '{test_text}', got '{results["text"][0]}'"
+        assert results["text"][0] == test_text, f"Expected '{test_text}', got '{results['text'][0]}'"
 
     def test_split_text_multiple_inputs(self):
         """Test splitting multiple input texts."""
@@ -217,10 +217,10 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
 
         results = component.split_text()
         assert len(results) == 4, f"Expected 4 chunks (2 from each text), got {len(results)}"
-        assert "First text" in results["text"][0], f"Expected 'First text', got '{results["text"][0]}'"
-        assert "Second line" in results["text"][1], f"Expected 'Second line', got '{results["text"][1]}'"
-        assert "Another text" in results["text"][2], f"Expected 'Another text', got '{results["text"][2]}'"
-        assert "Another line" in results["text"][3], f"Expected 'Another line', got '{results["text"][3]}'"
+        assert "First text" in results["text"][0], f"Expected 'First text', got '{results['text'][0]}'"
+        assert "Second line" in results["text"][1], f"Expected 'Second line', got '{results['text'][1]}'"
+        assert "Another text" in results["text"][2], f"Expected 'Another text', got '{results['text'][2]}'"
+        assert "Another line" in results["text"][3], f"Expected 'Another line', got '{results['text'][3]}'"
 
     def test_split_text_with_dataframe_input(self):
         """Test splitting text with DataFrame input."""
@@ -241,10 +241,10 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
 
         results = component.split_text()
         assert len(results) == 4, f"Expected 4 chunks (2 from each text), got {len(results)}"
-        assert "First text" in results["text"][0], f"Expected 'First text', got '{results["text"][0]}'"
-        assert "Second line" in results["text"][1], f"Expected 'Second line', got '{results["text"][1]}'"
-        assert "Another text" in results["text"][2], f"Expected 'Another text', got '{results["text"][2]}'"
-        assert "Another line" in results["text"][3], f"Expected 'Another line', got '{results["text"][3]}'"
+        assert "First text" in results["text"][0], f"Expected 'First text', got '{results['text'][0]}'"
+        assert "Second line" in results["text"][1], f"Expected 'Second line', got '{results['text'][1]}'"
+        assert "Another text" in results["text"][2], f"Expected 'Another text', got '{results['text'][2]}'"
+        assert "Another line" in results["text"][3], f"Expected 'Another line', got '{results['text'][3]}'"
 
     def test_with_url_loader(self):
         """Test splitting text with URL loader."""
