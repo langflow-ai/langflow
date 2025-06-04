@@ -29,7 +29,7 @@ AI: """
     prompt_component.set(
         template=template,
         user_message=chat_input.message_response,
-        context=type_converter.convert_to_message(),
+        context=type_converter.convert_to_message,
     )
     openai_component = OpenAIModelComponent(_id="openai")
     openai_component.set(
