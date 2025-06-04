@@ -9,7 +9,6 @@ Unlock trustworthy Agentic, RAG, and LLM pipelines with Cleanlab's evaluation an
 
 This Langflow integration provides 3 modular components that assess and improve the **trustworthiness** of any LLM or RAG pipeline output, enabling critical oversight for safety-sensitive, enterprise, and production GenAI applications.
 
----
 
 ## Overview
 
