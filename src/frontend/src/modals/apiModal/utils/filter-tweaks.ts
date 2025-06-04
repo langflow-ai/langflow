@@ -5,8 +5,10 @@ export function formatPayloadTweaks(tweaksObject: any): boolean {
     return true;
   }
 
+  const InputTypes = [...Array.from(INPUT_TYPES), "TextInput"];
+
   const hasInputValueInTweaks = Object.keys(tweaksObject).some((key) => {
-    const isInputNode = Array.from(INPUT_TYPES).some((inputType) =>
+    const isInputNode = Array.from(InputTypes).some((inputType) =>
       key.startsWith(inputType),
     );
 
