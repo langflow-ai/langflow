@@ -25,7 +25,6 @@ Before using these components, you'll need:
 
 - A [Cleanlab API key](https://tlm.cleanlab.ai/)
 
----
 
 ## 🧩 Components
 
