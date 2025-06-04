@@ -5,7 +5,7 @@ import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTweaksStore } from "@/stores/tweaksStore";
 import { tabsArrayType } from "@/types/tabs";
-import { hasStreaming } from "@/utils/reactflowUtils";
+import { hasStreaming, isInputNode } from "@/utils/reactflowUtils";
 import { useEffect, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
@@ -18,6 +18,38 @@ import { getNewCurlCode } from "../utils/get-curl-code";
 import { getNewJsApiCode } from "../utils/get-js-api-code";
 import { getNewPythonApiCode } from "../utils/get-python-api-code";
 
+/**
+ * Determines what fields should be excluded from base payload based on tweaks
+ */
+function getExcludedPayloadFields(nodes: any[], tweaks: any) {
+  const excludedFields = new Set<string>();
+
+  // Get all input nodes
+  const inputNodes = nodes.filter((node) => isInputNode(node.data));
+
+  // Check if any input nodes exist in tweaks with input_value or input_type
+  inputNodes.forEach((node) => {
+    const nodeId = node.id;
+    const nodeTweaks = tweaks[nodeId];
+
+    if (nodeTweaks && typeof nodeTweaks === "object") {
+      const tweakKeys = Object.keys(nodeTweaks);
+
+      // Check for ChatInput specific fields
+      if (node.data.type === "ChatInput") {
+        if (tweakKeys.includes("input_value")) {
+          excludedFields.add("input_value");
+        }
+        if (tweakKeys.includes("input_type")) {
+          excludedFields.add("input_type");
+        }
+      }
+    }
+  });
+
+  return excludedFields;
+}
+
 export default function APITabsComponent() {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const endpointName = useFlowStore(
@@ -29,8 +61,13 @@ export default function APITabsComponent() {
   const autologin = useAuthStore((state) => state.autoLogin);
   const inputs = useFlowStore((state) => state.inputs);
   const outputs = useFlowStore((state) => state.outputs);
+  const tweaks = useTweaksStore((state) => state.tweaks);
+
+  // Check for input/output node types
   const hasChatInput = inputs.some((input) => input.type === "ChatInput");
   const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
+
+  // Get input value from ChatInput node if it exists
   let input_value = "hello world!";
   if (hasChatInput) {
     const chatInputId = inputs.find((input) => input.type === "ChatInput")?.id;
@@ -39,8 +76,12 @@ export default function APITabsComponent() {
       input_value = inputNode?.data.node?.template.input_value?.value;
     }
   }
+
   const streaming = hasStreaming(nodes);
-  const tweaks = useTweaksStore((state) => state.tweaks);
+
+  // Determine which fields should be excluded from base payload
+  const excludedFields = getExcludedPayloadFields(nodes, tweaks);
+
   const codeOptions = {
     endpointName: endpointName || "",
     streaming: streaming,
@@ -53,7 +94,9 @@ export default function APITabsComponent() {
     activeTweaks: Object.values(tweaks).some(
       (tweak) => Object.keys(tweak).length > 0,
     ),
+    excludedFields: excludedFields,
   };
+
   const tabsList: tabsArrayType = [
     {
       title: "Python",

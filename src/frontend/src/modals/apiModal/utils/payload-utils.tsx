@@ -1,8 +1,3 @@
-/**
- * Utility functions for handling payload generation and tweaks logic
- * across different API code generators (Python, JavaScript, cURL)
- */
-
 import useFlowStore from "@/stores/flowStore";
 
 // ========== Types and Interfaces ==========
@@ -31,6 +26,12 @@ interface InputOutputInfo {
 
 type SupportedLanguageFormat = "python" | "javascript" | "json";
 
+interface PayloadEntry {
+  key: string;
+  value: string;
+  comment: string;
+}
+
 // ========== Constants ==========
 
 const DEFAULT_SESSION_ID = "user_1";
@@ -38,6 +39,7 @@ const DEFAULT_INDENT = 2;
 
 /**
  * Configuration for which fields to exclude from base payload for each component type
+ * @deprecated This is now handled by the caller (code-tabs.tsx) which passes excludedFields
  */
 const COMPONENT_FIELD_FILTERS: Record<string, string[]> = {
   ChatInput: ["input_value"],
@@ -72,6 +74,28 @@ const LANGUAGE_FORMATTERS: Record<
       .replace(/null/g, "None"),
   javascript: (value) => value,
   json: (value) => value,
+} as const;
+
+/**
+ * Comment configurations for different languages
+ */
+const COMMENT_CONFIGS = {
+  python: {
+    prefix: "  # ",
+    inputValue: "The input value to be processed by the flow",
+    outputType: "Specifies the expected output format",
+    inputType: "Specifies the input format",
+    sessionId: "Optional: Use session tracking if needed",
+    tweaks: " # Custom tweaks to modify flow behavior",
+  },
+  javascript: {
+    prefix: " // ",
+    inputValue: "The input value to be processed by the flow",
+    outputType: "Specifies the expected output format",
+    inputType: "Specifies the input format",
+    sessionId: "Optional: Use session tracking if needed",
+    tweaks: "",
+  },
 } as const;
 
 // ========== Helper Functions ==========
@@ -136,10 +160,99 @@ function isValidNodeParams(nodeParams: any): boolean {
   );
 }
 
+// ========== Payload Generation Utilities ==========
+
+/**
+ * Generates payload entries with appropriate comments for the specified language
+ */
+export function generatePayloadEntries(
+  basePayload: Record<string, string>,
+  language: "python" | "javascript",
+): PayloadEntry[] {
+  const config = COMMENT_CONFIGS[language];
+
+  return Object.entries(basePayload).map(([key, value]) => {
+    let comment = "";
+
+    if (key === "input_value") {
+      comment = config.prefix + config.inputValue;
+    } else if (key === "output_type") {
+      comment = config.prefix + config.outputType;
+    } else if (key === "input_type") {
+      comment = config.prefix + config.inputType;
+    } else if (key === "session_id") {
+      comment = config.prefix + config.sessionId;
+    }
+
+    return { key, value, comment };
+  });
+}
+
+/**
+ * Builds payload string with proper formatting and comma placement
+ */
+export function buildPayloadString(
+  payloadEntries: PayloadEntry[],
+  hasTweaks: boolean,
+  language: "python" | "javascript",
+): string {
+  if (payloadEntries.length === 0) return "";
+
+  const formattedEntries = payloadEntries.map((entry, index) => {
+    const isLastEntry = index === payloadEntries.length - 1;
+    const needsComma = hasTweaks || !isLastEntry;
+
+    const entryString = `    "${entry.key}": "${entry.value}"${entry.comment}`;
+
+    if (language === "python" && needsComma && entry.comment) {
+      // For Python, insert comma before comment
+      const commentIndex = entryString.indexOf("  #");
+      if (commentIndex !== -1) {
+        return (
+          entryString.slice(0, commentIndex) +
+          "," +
+          entryString.slice(commentIndex)
+        );
+      } else {
+        return entryString + ",";
+      }
+    } else if (language === "javascript" && needsComma) {
+      // For JavaScript, just add comma at the end
+      return entryString + ",";
+    }
+
+    return entryString;
+  });
+
+  return formattedEntries.join("\n");
+}
+
+/**
+ * Generates the tweaks line for the payload
+ */
+export function generateTweaksLine(
+  hasTweaks: boolean,
+  hasPayloadEntries: boolean,
+  tweaksString: string,
+  language: "python" | "javascript",
+): string {
+  if (!hasTweaks) return "";
+
+  const config = COMMENT_CONFIGS[language];
+  const prefix = hasPayloadEntries ? "\n" : "";
+
+  if (language === "python") {
+    return `${prefix}    "tweaks": ${tweaksString}${config.tweaks}`;
+  } else {
+    return `${hasPayloadEntries ? ",\n" : ""}    "tweaks": ${tweaksString}`;
+  }
+}
+
 // ========== Main Functions ==========
 
 /**
  * Gets information about nodes that have configured field filters
+ * @deprecated This function is kept for backward compatibility but should be replaced by caller logic
  */
 export function getInputOutputInfo(): InputOutputInfo {
   const { nodes, inputs, outputs } = getFlowStoreState();
@@ -182,6 +295,7 @@ export function getInputOutputInfo(): InputOutputInfo {
 
 /**
  * Gets the set of fields that should be excluded from base payload
+ * @deprecated This function is now replaced by caller-provided excludedFields
  * based on what's present in tweaks and component type filters
  */
 export function getExcludedBasePayloadKeys(
@@ -222,7 +336,7 @@ export function getExcludedBasePayloadKeys(
 }
 
 /**
- * Builds base payload excluding keys that exist in tweaks from appropriate component types
+ * Builds base payload excluding keys that are provided in excludedFields set
  */
 export function buildBasePayload(
   tweaksObject: any,
@@ -231,9 +345,13 @@ export function buildBasePayload(
   input_type: string,
   output_type: string,
   includeSessionId = false,
+  excludedFields?: Set<string>,
 ): Record<string, string> {
   const basePayload: Record<string, string> = {};
-  const excludedFields = getExcludedBasePayloadKeys(tweaksObject, activeTweaks);
+
+  // Use provided excludedFields or fall back to legacy logic for backward compatibility
+  const fieldsToExclude =
+    excludedFields || getExcludedBasePayloadKeys(tweaksObject, activeTweaks);
 
   const args: PayloadArgs = {
     input_value,
@@ -245,7 +363,7 @@ export function buildBasePayload(
   // Build payload from configured fields
   Object.entries(BASE_PAYLOAD_FIELDS).forEach(([field, valueGetter]) => {
     // Skip if field is excluded by filtering logic
-    if (excludedFields.has(field)) return;
+    if (fieldsToExclude.has(field)) return;
 
     try {
       const value = valueGetter(args);

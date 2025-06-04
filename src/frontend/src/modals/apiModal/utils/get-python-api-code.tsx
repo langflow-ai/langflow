@@ -1,5 +1,11 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
-import { buildBasePayload, getFormattedTweaksString } from "./payload-utils";
+import {
+  buildBasePayload,
+  buildPayloadString,
+  generatePayloadEntries,
+  generateTweaksLine,
+  getFormattedTweaksString,
+} from "./payload-utils";
 
 export function getNewPythonApiCode({
   flowId,
@@ -10,6 +16,7 @@ export function getNewPythonApiCode({
   tweaksObject,
   activeTweaks,
   endpointName,
+  excludedFields,
 }: {
   flowId: string;
   isAuthenticated: boolean;
@@ -19,6 +26,7 @@ export function getNewPythonApiCode({
   tweaksObject: any;
   activeTweaks: boolean;
   endpointName: string;
+  excludedFields?: Set<string>;
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
@@ -30,7 +38,10 @@ export function getNewPythonApiCode({
     input_value,
     input_type,
     output_type,
+    false, // Don't include session_id for Python by default
+    excludedFields,
   );
+
   const tweaksString = getFormattedTweaksString(
     tweaksObject,
     activeTweaks,
@@ -38,46 +49,18 @@ export function getNewPythonApiCode({
     4,
   );
 
-  // Generate payload entries with proper Python formatting
-  const payloadEntries = Object.entries(basePayload).map(([key, value]) => {
-    const comment =
-      key === "input_value"
-        ? "  # The input value to be processed by the flow"
-        : key === "output_type"
-          ? "  # Specifies the expected output format"
-          : key === "input_type"
-            ? "  # Specifies the input format"
-            : "";
-    return `    "${key}": "${value}"${comment}`;
-  });
-
-  const hasPayloadEntries = payloadEntries.length > 0;
+  // Generate payload using utility functions
+  const payloadEntries = generatePayloadEntries(basePayload, "python");
   const hasTweaks = activeTweaks && tweaksObject;
+  const hasPayloadEntries = payloadEntries.length > 0;
 
-  // Build payload string with proper comma placement
-  const payloadString = hasPayloadEntries
-    ? payloadEntries
-        .map((entry, index) => {
-          const isLastPayloadEntry = index === payloadEntries.length - 1;
-          const needsComma = hasTweaks || !isLastPayloadEntry;
-          if (needsComma) {
-            const commentIndex = entry.indexOf("  #");
-            if (commentIndex !== -1) {
-              return (
-                entry.slice(0, commentIndex) + "," + entry.slice(commentIndex)
-              );
-            } else {
-              return entry + ",";
-            }
-          }
-          return entry;
-        })
-        .join("\n")
-    : "";
-
-  const tweaksLine = hasTweaks
-    ? `${hasPayloadEntries ? "\n" : ""}    "tweaks": ${tweaksString} # Custom tweaks to modify flow behavior`
-    : "";
+  const payloadString = buildPayloadString(payloadEntries, hasTweaks, "python");
+  const tweaksLine = generateTweaksLine(
+    hasTweaks,
+    hasPayloadEntries,
+    tweaksString,
+    "python",
+  );
 
   return `import requests
 ${

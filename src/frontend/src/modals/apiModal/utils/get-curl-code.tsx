@@ -50,6 +50,7 @@ export function getNewCurlCode({
   tweaksObject,
   activeTweaks,
   endpointName,
+  excludedFields,
 }: {
   flowId: string;
   isAuthenticated: boolean;
@@ -59,6 +60,7 @@ export function getNewCurlCode({
   tweaksObject: any;
   activeTweaks: boolean;
   endpointName: string;
+  excludedFields?: Set<string>;
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
@@ -70,6 +72,8 @@ export function getNewCurlCode({
     input_value,
     input_type,
     output_type,
+    false, // Don't include session_id for cURL by default
+    excludedFields,
   );
   const tweaksString = getFormattedTweaksString(
     tweaksObject,

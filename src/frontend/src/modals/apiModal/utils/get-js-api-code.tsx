@@ -1,5 +1,11 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
-import { buildBasePayload, getFormattedTweaksString } from "./payload-utils";
+import {
+  buildBasePayload,
+  buildPayloadString,
+  generatePayloadEntries,
+  generateTweaksLine,
+  getFormattedTweaksString,
+} from "./payload-utils";
 
 /**
  * Generates JavaScript code for making API calls to a Langflow endpoint.
@@ -12,6 +18,8 @@ import { buildBasePayload, getFormattedTweaksString } from "./payload-utils";
  * @param {string} params.output_type - The type of output (e.g. "text", "chat")
  * @param {Object} params.tweaksObject - Optional tweaks to customize flow behavior
  * @param {boolean} params.activeTweaks - Whether tweaks should be included
+ * @param {string} params.endpointName - The endpoint name for the flow
+ * @param {Set<string>} params.excludedFields - Fields to exclude from base payload
  * @returns {string} Generated JavaScript code as a string
  */
 export function getNewJsApiCode({
@@ -23,6 +31,7 @@ export function getNewJsApiCode({
   tweaksObject,
   activeTweaks,
   endpointName,
+  excludedFields,
 }: {
   flowId: string;
   isAuthenticated: boolean;
@@ -32,6 +41,7 @@ export function getNewJsApiCode({
   tweaksObject: any;
   activeTweaks: boolean;
   endpointName: string;
+  excludedFields?: Set<string>;
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
@@ -44,7 +54,9 @@ export function getNewJsApiCode({
     input_type,
     output_type,
     true, // Include session_id for JS
+    excludedFields,
   );
+
   const tweaksString = getFormattedTweaksString(
     tweaksObject,
     activeTweaks,
@@ -52,35 +64,22 @@ export function getNewJsApiCode({
     4,
   );
 
-  // Generate payload entries for JavaScript object
-  const payloadEntries = Object.entries(basePayload).map(([key, value]) => {
-    const comment =
-      key === "input_value"
-        ? " // The input value to be processed by the flow"
-        : key === "output_type"
-          ? " // Specifies the expected output format"
-          : key === "input_type"
-            ? " // Specifies the input format"
-            : key === "session_id"
-              ? " // Optional: Use session tracking if needed"
-              : "";
-    return `    "${key}": "${value}"${comment}`;
-  });
-
+  // Generate payload using utility functions
+  const payloadEntries = generatePayloadEntries(basePayload, "javascript");
   const hasTweaks = activeTweaks && tweaksObject;
-  const payloadString =
-    payloadEntries.length > 0
-      ? payloadEntries
-          .map((entry, index) => {
-            const needsComma = hasTweaks || index < payloadEntries.length - 1;
-            return `${entry}${needsComma ? "," : ""}`;
-          })
-          .join("\n")
-      : "";
+  const hasPayloadEntries = payloadEntries.length > 0;
 
-  const tweaksLine = hasTweaks
-    ? `${payloadEntries.length > 0 ? ",\n" : ""}    "tweaks": ${tweaksString}`
-    : "";
+  const payloadString = buildPayloadString(
+    payloadEntries,
+    hasTweaks,
+    "javascript",
+  );
+  const tweaksLine = generateTweaksLine(
+    hasTweaks,
+    hasPayloadEntries,
+    tweaksString,
+    "javascript",
+  );
 
   return `${
     isAuthenticated
