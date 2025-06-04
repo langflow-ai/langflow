@@ -24,7 +24,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("text output");
 
     await page
-      .getByTestId("outputsText Output")
+      .getByTestId("input_outputText Output")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-text-output").click();

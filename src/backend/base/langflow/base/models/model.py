@@ -26,6 +26,14 @@ class LCModelComponent(Component):
     display_name: str = "Model Name"
     description: str = "Model Description"
     trace_type = "llm"
+    metadata = {
+        "keywords": [
+            "model",
+            "llm",
+            "language model",
+            "large language model",
+        ],
+    }
 
     # Optional output parser to pass to the runnable. Subclasses may allow the user to input an `output_parser`
     output_parser: BaseOutputParser | None = None
@@ -42,7 +50,7 @@ class LCModelComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Message", name="text_output", method="text_response"),
+        Output(display_name="Model Response", name="text_output", method="text_response"),
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 

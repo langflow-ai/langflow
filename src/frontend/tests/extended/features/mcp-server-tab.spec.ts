@@ -93,11 +93,39 @@ test(
         expect(isCheckedAgainAgain).toBeFalsy();
 
         // Select first action
-        await page
-          .locator('input[data-ref="eInput"]')
-          .nth(rowsCount + 1)
-          .click();
+        let element = page.locator('input[data-ref="eInput"]').last();
+        let elementText = await element.getAttribute("id");
+
+        await element.scrollIntoViewIfNeeded();
+
+        await page.waitForTimeout(500);
+
+        let count = 0;
+
+        while (
+          elementText !==
+            (await page
+              .locator('input[data-ref="eInput"]')
+              .last()
+              .getAttribute("id")) &&
+          count < 20
+        ) {
+          element = page.locator('input[data-ref="eInput"]').last();
+          elementText = await element.getAttribute("id");
+          await element.scrollIntoViewIfNeeded();
+          await page.waitForTimeout(500);
+        }
+
+        await page.locator('input[data-ref="eInput"]').last().click();
+
         await page.waitForTimeout(1000);
+
+        const isLastChecked = await page
+          .locator('input[data-ref="eInput"]')
+          .last()
+          .isChecked();
+
+        expect(isLastChecked).toBeTruthy();
 
         await page
           .getByRole("gridcell")
@@ -105,26 +133,23 @@ test(
           .click();
         await page.waitForTimeout(1000);
 
-        const isLastChecked = await page
-          .locator('input[data-ref="eInput"]')
-          .nth(rowsCount + 1)
-          .isChecked();
-
-        expect(isLastChecked).toBeTruthy();
-
         expect(
           await page.locator('[data-testid="input_update_name"]').isVisible(),
         ).toBe(true);
 
         await page.getByTestId("input_update_name").fill("mcp test name");
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(2000);
 
         // Close the modal
         await page.getByText("Close").last().click();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(2000);
 
         // Verify the selected action is visible in the tab
         await expect(page.getByTestId("div-mcp-server-tools")).toBeVisible();
+
+        await page.getByText("JSON", { exact: true }).last().click();
+
+        await page.waitForSelector("pre", { state: "visible", timeout: 3000 });
 
         // Generate API key if not in auto login mode
         const isAutoLogin = await page
@@ -147,10 +172,21 @@ test(
 
         // Extract the SSE URL from the configuration
         const sseUrlMatch = configJson?.match(
-          /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
+          /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
         );
         expect(sseUrlMatch).not.toBeNull();
         const sseUrl = sseUrlMatch![1];
+
+        await page.getByText("macOS/Linux", { exact: true }).click();
+
+        await page.waitForSelector("pre", { state: "visible", timeout: 3000 });
+
+        const configJsonLinux = await page.locator("pre").textContent();
+
+        const sseUrlMatchLinux = configJsonLinux?.match(
+          /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
+        );
+        expect(sseUrlMatchLinux).not.toBeNull();
 
         // Verify setup guide link
         await expect(page.getByText("setup guide")).toBeVisible();
@@ -167,12 +203,12 @@ test(
         await page.getByTestId("sidebar-search-input").click();
         await page.getByTestId("sidebar-search-input").fill("mcp connection");
 
-        await page.waitForSelector('[data-testid="toolsMCP Connection"]', {
+        await page.waitForSelector('[data-testid="dataMCP Connection"]', {
           timeout: 30000,
         });
 
         await page
-          .getByTestId("toolsMCP Connection")
+          .getByTestId("dataMCP Connection")
           .dragTo(page.locator('//*[@id="react-flow-id"]'), {
             targetPosition: { x: 0, y: 0 },
           });
