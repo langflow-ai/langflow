@@ -27,7 +27,7 @@ AI: """
     prompt_component.set(
         template=template,
         user_message=chat_input.message_response,
-        context=convert_to_message(memory_component.retrieve_messages_dataframe),
+        context=convert_to_message(memory_component.retrieve_messages_dataframe()),
     )
     openai_component = OpenAIModelComponent(_id="openai")
     openai_component.set(

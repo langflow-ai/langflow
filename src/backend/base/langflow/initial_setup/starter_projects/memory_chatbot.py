@@ -18,7 +18,7 @@ def memory_chatbot_graph(template: str | None = None):
     prompt_component.set(
         template=template,
         user_message=chat_input.message_response,
-        context=convert_to_message(memory_component.retrieve_messages_dataframe),
+        context=convert_to_message(memory_component.retrieve_messages_dataframe()),
     )
     openai_component = OpenAIModelComponent()
     openai_component.set(input_value=prompt_component.build_prompt)
