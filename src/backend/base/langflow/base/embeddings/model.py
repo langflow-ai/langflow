@@ -7,7 +7,7 @@ class LCEmbeddingsModel(Component):
     trace_type = "embedding"
 
     outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
+        Output(display_name="Embedding Model", name="embeddings", method="build_embeddings"),
     ]
 
     def _validate_outputs(self) -> None:

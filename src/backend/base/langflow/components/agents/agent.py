@@ -146,7 +146,10 @@ class AgentComponent(ToolCallingAgentComponent):
             raise ValueError(msg) from e
 
     def _build_llm_model(self, component, inputs, prefix=""):
-        model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
+        model_kwargs = {}
+        for input_ in inputs:
+            if hasattr(self, f"{prefix}{input_.name}"):
+                model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
         return component.set(**model_kwargs).build_model()
 
     def set_component_params(self, component):
