@@ -19,7 +19,6 @@ Use this bundle to:
 - Evaluate **context sufficiency**, **groundedness**, **helpfulness**, and **query clarity** with quantitative scores (for RAG/Agentic pipelines with context)
 - Remediate low-trust responses with warnings or fallback answers
 
----
 
 ## ✅ Prerequisites
 
