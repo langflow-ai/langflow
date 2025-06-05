@@ -13,7 +13,7 @@ All components in the **Tools** category are now **Legacy**, except the followin
 
 * The [MCP Connection](/components-data#mcp-connection) component is available in **Data components**.
 * The [calculator](/components-helpers#calculator)  component is available in **Helpers**.
-* The [Astra DB JSON](/#astra-db-tool) and [Astra DB CQL](#astra-db-cql-tool) tools are available in the **DataStax** bundle.
+* The [Astra DB JSON](/components-tools#astra-db-tool) and [Astra DB CQL](#astra-db-cql-tool) tools are available in the **DataStax** bundle.
 * The Python REPL tool is available in **Processing** and re-named the [Python Interpreter](/components-processing#python-interpreter) component.
 
 The remaining tools are **Legacy**.

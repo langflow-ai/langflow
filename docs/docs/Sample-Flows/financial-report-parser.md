@@ -5,7 +5,7 @@ slug: /financial-report-parser
 
 import Icon from "@site/src/components/icon";
 
-Build a **Financial Report Parser** flow with the [Structured output](/components-helpers#structured-output) and [Parser](/components-processing#parser) components to parse LLM responses into a structured format.
+Build a **Financial Report Parser** flow with the [Structured output](/components-processing#structured-output) and [Parser](/components-processing#parser) components to parse LLM responses into a structured format.
 
 In this example, the **Chat Input** component is pre-loaded with a sample financial report to demonstrate extracting `Gross Profit`, `EBITDA`, and `Net Income`.
 

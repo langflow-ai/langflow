@@ -33,7 +33,7 @@ Create a semantic search system with the **Embedding model** component.
 1. Add the **Embedding model** component to your flow.
    The default model is OpenAI's `text-embedding-3-small`. Based on [OpenAI's recommendations](https://platform.openai.com/docs/guides/embeddings#embedding-models), this model is a good balance of performance and cost.
 2. In the **OpenAI API Key** field, enter your OpenAI API key.
-3. Add a [Split text](/components-processing#text-splitter) component to your flow.
+3. Add a [Split text](/components-processing#split-text) component to your flow.
    This component splits your input text into smaller chunks to be processed into embeddings.
 4. Add a [Chroma DB](/components-vector-stores#chroma-db) vector store component to your flow.
    This component stores your text embeddings for later retrieval.

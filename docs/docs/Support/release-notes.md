@@ -10,7 +10,7 @@ This page summarizes significant changes and updates to Langflow.
 ### New Language Model and Embedding Model components
 
 We moved **Model** and **Embedding Model** components to **Bundles** in the Langflow sidebar. The **Language Model** and **Embedding Model** components are satisfactory for most use cases, and the single-provider components are still available for your flows.
-For more information, see the [Language model](/components-models) and [Embedding model](/components-embedding-model) components.
+For more information, see the [Language model](/components-models) and [Embedding model](/components-embedding-models) components.
 
 ### MCP one-click installation
 

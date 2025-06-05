@@ -13,7 +13,7 @@ They may perform some processing or type checking, like converting raw HTML data
 
 ## Use data components in a flow
 
-Components like [News search](#news-search), [RSS reader](#rss-reader), and [Web search](#web-search) all fetch data into Langflow, and connect to Langflow in the same way. They can output the retrieved data in [DataFrame](/concepts-objects#dataframe) format, or can be connected to an **Agent** component to be used as tools.
+Components like [News search](#news-search), [RSS reader](#rss-reader), and [Web search](#web-search) all fetch data into Langflow, and connect to Langflow in the same way. They can output the retrieved data in [DataFrame](/concepts-objects#dataframe-object) format, or can be connected to an **Agent** component to be used as tools.
 
 For example, to connect all three components to an Agent, do the following:
 
@@ -408,6 +408,57 @@ It seems there are duplicate entries for the users.
 
 </details>
 
+## Web search
+
+This component performs web searches using DuckDuckGo's HTML interface, and returns the search results as a [DataFrame](/concepts-objects#dataframe-object) containing the key columns `title`, `links`, and `snippets`. The component can also be used in **Tool Mode** with a connected **Agent**.
+
+To use this component in a flow, do the following:
+
+1. Add the **Web search** component to the [Basic prompting](/starter-projects-basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
+2. Connect the **Web search** component's output to a component that accepts the DataFrame input.
+3. Connect a **Type Convert** component to convert the DataFrame to a Message.
+4. In the **Type Convert** component, in the **Output Type** field, select **Message**.
+Your flow looks like this:
+
+![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
+
+5. In the **Language Model** component, in the **OpenAI API Key** field, add your OpenAI API key.
+6. Click **Playground**, and then ask about `latest news`.
+
+The search results are returned to the Playground as a message.
+
+Result:
+```text
+Latest news
+AI
+gpt-4o-mini
+Here are some of the latest news articles related to the environment:
+Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
+...
+```
+
+:::note
+This component uses web scraping and may be subject to rate limits. For production use, consider using an official search API.
+:::
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Search Query | Keywords to search for. |
+| timeout | Timeout | Timeout for the web search request in seconds. Default: `5`. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| results | Search Results | A DataFrame containing search results with titles, links, and snippets. |
+
+</details>
+
 ## URL
 
 This component fetches content from one or more URLs, processes the content, and returns it in various formats. It supports output in plain text or raw HTML.
@@ -517,55 +568,6 @@ For more information, see [Trigger flows with webhooks](/webhook).
 | Name | Display Name | Description |
 |------|--------------|-------------|
 | output_data | Data | Outputs processed data from the webhook input, and returns an empty [Data](/concepts-objects) object if no input is provided. If the input is not valid JSON, the component wraps it in a `payload` object. |
-
-</details>
-
-## Web search
-
-This component performs web searches using DuckDuckGo's HTML interface, and returns the search results as a [DataFrame](/concepts-objects#dataframe) containing the key columns `title`, `links`, and `snippets`. The component can also be used in **Tool Mode** with a connected **Agent**.
-
-To use this component in a flow, do the following:
-
-1. Add the **Web search** component to the [Basic prompting](/starter-projects-basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
-2. Connect the **Web search** component's output to a component that accepts the DataFrame input.
-This example uses a **Prompt** component to give the chatbot context, so you must convert the **Web search** component's DataFrame output to a Message type.
-3. Connect a **Type Convert** component to convert the DataFrame to a Message.
-4. In the **Type Convert** component, in the **Output Type** field, select **Message**.
-Your flow looks like this:
-
-![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
-
-
-5. In the **Language Model** component, in the **OpenAI API Key** field, add your OpenAI API key.
-6. Click **Playground**, and then ask about `latest news`.
-
-The search results are returned to the Playground as a message.
-
-Result:
-```text
-Latest news
-AI
-gpt-4o-mini
-Here are some of the latest news articles related to the environment:
-Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
-...
-```
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| query | Search Query | Keywords to search for. |
-| timeout | Timeout | Timeout for the web search request in seconds. Default: `5`. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| results | Search Results | A DataFrame containing search results with titles, links, and snippets. |
 
 </details>
 

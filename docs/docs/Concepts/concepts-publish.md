@@ -2,9 +2,9 @@
 title: Publish flows
 slug: /concepts-publish
 ---
+
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import ChatWidget from '@site/src/components/ChatWidget';
 
 Langflow provides several ways to publish and integrate your flows into external applications. Whether you want to expose your flow as an API endpoint, embed it as a chat widget in your website, or share it as a public playground, this guide covers the options available for making your flows accessible to users.
 
@@ -15,39 +15,36 @@ To access the **API access** pane, click **Share**, and then click **API access*
 ![](/img/api-pane.png)
 
 <Tabs>
-
-The **API access** pane presents code templates for integrating your flow into external applications.
-
-<TabItem value="Python" label="Python">
+<TabItem value="python" label="Python">
 
 The **Python** tab displays code to interact with your flow using the Python `requests` library.
 
 1. Copy and paste the code into a Python script.
 2. Run the script.
 
-```python
+```
 python3 python-test-script.py --message="tell me about something interesting"
 ```
 
 The response content depends on your flow. Make sure the endpoint returns a successful response.
-
 </TabItem>
 
-<TabItem value="JavaScript" label="JavaScript" default>
+<TabItem value="javascript" label="JavaScript">
 
 The **JavaScript API** tab displays code to interact with your flow in JavaScript.
 
 1. Copy and paste the code into a JavaScript file.
 2. Run the script.
 
-```text
+```
 node test-script.js "tell me about something interesting"
 ```
 
 The response content depends on your flow. Make sure the endpoint returns a successful response.
 
 </TabItem>
-<TabItem value="curl" label="curl" default>
+
+<TabItem value="curl" label="curl">
 
 The **cURL** tab displays sample code for posting a query to your flow.
 
@@ -77,7 +74,7 @@ For example, to change the LLM that the **OpenAI** model component uses for your
 In the **API access** pane, inspect the code snippets.
 The `model_name` parameter for the **OpenAI** model is added to the request payload as a tweak.
 
-```
+```text
 "OpenAIModel-G3haJ":  {
   "model_name": "gpt-4.1-mini"
 }
@@ -85,7 +82,7 @@ The `model_name` parameter for the **OpenAI** model is added to the request payl
 
 3. To change the `model_name` parameter, copy and paste the code snippet from the **API access** pane into the text editor of your choice.
 For example, to modify the code snippet to use a different **OpenAI** model, change the value in your text editor:
-```
+```text
 curl --request POST \
   --url 'http://127.0.0.1:7860/api/v1/run/e32f3f61-008f-4a2a-ad1d-d6688966ed56?stream=false' \
   --header 'Content-Type: application/json' \
