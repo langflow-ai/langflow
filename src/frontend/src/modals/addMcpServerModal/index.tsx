@@ -252,13 +252,25 @@ export default function AddMcpServerModal({
             >
               <div className="px-4">
                 <TabsList className="mb-4 grid w-full grid-cols-3">
-                  <TabsTrigger data-testid="json-tab" value="JSON">
+                  <TabsTrigger
+                    disabled={!!initialData && type !== "JSON"}
+                    data-testid="json-tab"
+                    value="JSON"
+                  >
                     JSON
                   </TabsTrigger>
-                  <TabsTrigger data-testid="stdio-tab" value="STDIO">
+                  <TabsTrigger
+                    data-testid="stdio-tab"
+                    disabled={!!initialData && type !== "STDIO"}
+                    value="STDIO"
+                  >
                     STDIO
                   </TabsTrigger>
-                  <TabsTrigger data-testid="json-tab" value="SSE">
+                  <TabsTrigger
+                    data-testid="json-tab"
+                    disabled={!!initialData && type !== "SSE"}
+                    value="SSE"
+                  >
                     SSE
                   </TabsTrigger>
                 </TabsList>
