@@ -28,6 +28,7 @@ class FieldTypes(str, Enum):
     CONNECTION = "connect"
     AUTH = "auth"
     FILE = "file"
+    DIRECTORY = "directory"
     PROMPT = "prompt"
     CODE = "code"
     OTHER = "other"

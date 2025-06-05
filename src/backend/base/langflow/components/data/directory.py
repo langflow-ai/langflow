@@ -1,6 +1,6 @@
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data, retrieve_file_paths
 from langflow.custom import Component
-from langflow.io import BoolInput, IntInput, MessageTextInput, MultiselectInput
+from langflow.io import BoolInput, DirectoryInput, IntInput, MultiselectInput
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.template import Output
@@ -13,11 +13,11 @@ class DirectoryComponent(Component):
     name = "Directory"
 
     inputs = [
-        MessageTextInput(
+        DirectoryInput(
             name="path",
             display_name="Path",
             info="Path to the directory to load files from. Defaults to current directory ('.')",
-            value=".",
+            value="",
             tool_mode=True,
         ),
         MultiselectInput(

@@ -622,6 +622,19 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     field_type: SerializableFieldTypes = FieldTypes.FILE
 
 
+class DirectoryInput(BaseInputMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a directory field.
+
+    This class represents a directory input and provides functionality for handling directory values.
+    It inherits from the `BaseInputMixin`, `MetadataTraceMixin`, and `ToolModeMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.DIRECTORY.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.DIRECTORY
+
+
 class LinkInput(BaseInputMixin, LinkMixin):
     field_type: SerializableFieldTypes = FieldTypes.LINK
 
@@ -656,6 +669,7 @@ InputTypes: TypeAlias = (
     | SortableListInput
     | ConnectionInput
     | FileInput
+    | DirectoryInput
     | FloatInput
     | HandleInput
     | IntInput
