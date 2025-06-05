@@ -19,6 +19,7 @@ import BaseModal from "@/modals/baseModal";
 import IOKeyPairInput from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
 import { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
+import { parseString } from "@/utils/stringManipulation";
 import {
   useIsFetching,
   usePrefetchQuery,
@@ -129,19 +130,24 @@ export default function AddMcpServerModal({
         setError("Name and command are required.");
         return;
       }
+      const name = parseString(stdioName, [
+        "snake_case",
+        "no_blank",
+        "lowercase",
+      ]).slice(0, 20);
       try {
         await modifyMCPServer({
-          name: stdioName.slice(0, 20),
+          name,
           command: stdioCommand,
           args: stdioArgs.filter((a) => a.trim() !== ""),
           env: parseEnvList(stdioEnv),
         });
         if (!initialData) {
           await queryClient.setQueryData(["useGetMCPServers"], (old: any) => {
-            return [...old, { name: stdioName.slice(0, 20), toolsCount: 0 }];
+            return [...old, { name, toolsCount: 0 }];
           });
         }
-        onSuccess?.(stdioName.slice(0, 20));
+        onSuccess?.(name);
         setOpen(false);
         setStdioName("");
         setStdioCommand("");
@@ -158,19 +164,24 @@ export default function AddMcpServerModal({
         setError("Name and URL are required.");
         return;
       }
+      const name = parseString(sseName, [
+        "snake_case",
+        "no_blank",
+        "lowercase",
+      ]).slice(0, 20);
       try {
         await modifyMCPServer({
-          name: sseName.slice(0, 20),
+          name,
           env: parseEnvList(sseEnv),
           url: sseUrl,
           headers: parseEnvList(sseHeaders),
         });
         if (!initialData) {
           await queryClient.setQueryData(["useGetMCPServers"], (old: any) => {
-            return [...old, { name: sseName.slice(0, 20), toolsCount: 0 }];
+            return [...old, { name, toolsCount: 0 }];
           });
         }
-        onSuccess?.(sseName.slice(0, 20));
+        onSuccess?.(name);
         setOpen(false);
         setSseName("");
         setSseUrl("");
@@ -185,7 +196,14 @@ export default function AddMcpServerModal({
     // JSON mode (multi-server)
     let servers: MCPServerType[];
     try {
-      servers = extractMcpServersFromJson(jsonValue);
+      servers = extractMcpServersFromJson(jsonValue).map((server) => ({
+        ...server,
+        name: parseString(server.name, [
+          "snake_case",
+          "no_blank",
+          "lowercase",
+        ]).slice(0, 20),
+      }));
     } catch (e: any) {
       setError(e.message || "Invalid input");
       return;
@@ -207,7 +225,7 @@ export default function AddMcpServerModal({
           ];
         });
       }
-      onSuccess?.(servers.map((server) => server.name)[0].slice(0, 20));
+      onSuccess?.(servers.map((server) => server.name)[0]);
       setOpen(false);
       setJsonValue("");
       setError(null);
@@ -267,7 +285,7 @@ export default function AddMcpServerModal({
                     STDIO
                   </TabsTrigger>
                   <TabsTrigger
-                    data-testid="json-tab"
+                    data-testid="sse-tab"
                     disabled={!!initialData && type !== "SSE"}
                     value="SSE"
                   >
@@ -289,6 +307,7 @@ export default function AddMcpServerModal({
                     <Label className="!text-mmd">Paste in JSON config</Label>
                     <Textarea
                       value={jsonValue}
+                      data-testid="json-input"
                       onChange={(e) => setJsonValue(e.target.value)}
                       className="min-h-[225px] font-mono text-mmd"
                       placeholder="Paste in JSON config to add server"
@@ -306,6 +325,7 @@ export default function AddMcpServerModal({
                         value={stdioName}
                         onChange={(e) => setStdioName(e.target.value)}
                         placeholder="Type server name..."
+                        data-testid="stdio-name-input"
                         disabled={isPending}
                       />
                     </div>
@@ -317,6 +337,7 @@ export default function AddMcpServerModal({
                         value={stdioCommand}
                         onChange={(e) => setStdioCommand(e.target.value)}
                         placeholder="Type command..."
+                        data-testid="stdio-command-input"
                         disabled={isPending}
                       />
                     </div>
@@ -398,7 +419,12 @@ export default function AddMcpServerModal({
           <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
             <span className="text-mmd font-normal">Cancel</span>
           </Button>
-          <Button size="sm" onClick={submitForm} loading={isPending}>
+          <Button
+            size="sm"
+            onClick={submitForm}
+            data-testid="add-mcp-server-button"
+            loading={isPending}
+          >
             <span className="text-mmd">
               {initialData ? "Update Server" : "Add Server"}
             </span>
