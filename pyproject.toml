@@ -51,6 +51,7 @@ dependencies = [
     "elasticsearch==8.16.0",
     "pytube==15.0.0",
     "dspy-ai==2.5.41",
+    "datasets>2.14.7",
     "assemblyai==0.35.1",
     "litellm==1.60.2",
     "chromadb==0.5.23",
@@ -78,7 +79,7 @@ dependencies = [
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
     "langchain-cohere==0.3.3",
-    "langchain-anthropic==0.3.0",
+    "langchain-anthropic==0.3.14",
     "langchain-astradb~=0.6.0",
     "langchain-openai==0.2.12",
     "langchain-google-vertexai==2.0.7",
@@ -123,6 +124,7 @@ dependencies = [
     "langchain-ibm>=0.3.8",
     "opik>=1.6.3",
     "openai>=1.68.2",
+    "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
 ]
@@ -161,7 +163,6 @@ dev = [
     "packaging>=24.1,<25.0",
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
-    "pytest-codspeed>=3.0.0",
     "blockbuster>=1.5.20,<1.6",
     "types-aiofiles>=24.1.0.20240626",
     "codeflash>=0.8.4",
@@ -191,10 +192,6 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
-deploy = [
-    "celery[redis]>=5.3.6",
-    "flower>=2.0.0"
-]
 couchbase = [
     "couchbase>=4.2.1"
 ]
@@ -240,7 +237,7 @@ filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-markers = ["async_test", "api_key_required"]
+markers = ["async_test", "api_key_required", "no_blockbuster", "benchmark"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
