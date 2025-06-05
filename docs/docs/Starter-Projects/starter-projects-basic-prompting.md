@@ -11,7 +11,6 @@ By submitting natural language requests in a prompt to an LLM, you can obtain an
 
 This article demonstrates how to use Langflow's prompt tools to issue basic prompts to an LLM, and how various prompting strategies can affect your outcomes.
 
-
 ## Prerequisites
 
 - [A running Langflow instance](/get-started-installation)
@@ -25,9 +24,7 @@ This article demonstrates how to use Langflow's prompt tools to issue basic prom
 
 3. The **Basic Prompting** flow is created.
 
-
 ![](/img/starter-flow-basic-prompting.png)
-
 
 This flow allows you to chat with the **OpenAI model** component.
 The model will respond according to the prompt constructed in the **Prompt** component.

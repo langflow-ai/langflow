@@ -600,9 +600,29 @@ Keys are columns, and each dictionary (a collection of key-value pairs) in the l
 
 To use this component in a flow, do the following:
 
-1. Connect a component that outputs data to the **Type Convert** component's input.
-2. In the **Type Convert** component, select the desired output type from the **Output Type** field.
-3. Connect the **Type Convert** component's output to another component that accepts the converted data type.
+1. Add the **Web search** component to the [Basic prompting](/starter-projects-basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
+2. Connect the **Web search** component's output to a component that accepts the DataFrame input.
+This example uses a **Prompt** component to give the chatbot context, so you must convert the **Web search** component's DataFrame output to a Message type.
+3. Connect a **Type Convert** component to convert the DataFrame to a Message.
+4. In the **Type Convert** component, in the **Output Type** field, select **Message**.
+Your flow looks like this:
+
+![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
+
+5. In the **Language Model** component, in the **OpenAI API Key** field, add your OpenAI API key.
+6. Click **Playground**, and then ask about `latest news`.
+
+The search results are returned to the Playground as a message.
+
+Result:
+```text
+Latest news
+AI
+gpt-4o-mini
+Here are some of the latest news articles related to the environment:
+Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
+...
+```
 
 <details>
 <summary>Parameters</summary>

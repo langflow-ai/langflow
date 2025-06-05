@@ -473,8 +473,6 @@ Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictu
 
 </details>
 
-## Web search
-
 ## Webhook
 
 This component defines a webhook trigger that runs a flow when it receives an HTTP POST request.
@@ -519,6 +517,55 @@ For more information, see [Trigger flows with webhooks](/webhook).
 | Name | Display Name | Description |
 |------|--------------|-------------|
 | output_data | Data | Outputs processed data from the webhook input, and returns an empty [Data](/concepts-objects) object if no input is provided. If the input is not valid JSON, the component wraps it in a `payload` object. |
+
+</details>
+
+## Web search
+
+This component performs web searches using DuckDuckGo's HTML interface, and returns the search results as a [DataFrame](/concepts-objects#dataframe) containing the key columns `title`, `links`, and `snippets`. The component can also be used in **Tool Mode** with a connected **Agent**.
+
+To use this component in a flow, do the following:
+
+1. Add the **Web search** component to the [Basic prompting](/starter-projects-basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
+2. Connect the **Web search** component's output to a component that accepts the DataFrame input.
+This example uses a **Prompt** component to give the chatbot context, so you must convert the **Web search** component's DataFrame output to a Message type.
+3. Connect a **Type Convert** component to convert the DataFrame to a Message.
+4. In the **Type Convert** component, in the **Output Type** field, select **Message**.
+Your flow looks like this:
+
+![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
+
+
+5. In the **Language Model** component, in the **OpenAI API Key** field, add your OpenAI API key.
+6. Click **Playground**, and then ask about `latest news`.
+
+The search results are returned to the Playground as a message.
+
+Result:
+```text
+Latest news
+AI
+gpt-4o-mini
+Here are some of the latest news articles related to the environment:
+Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
+...
+```
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Search Query | Keywords to search for. |
+| timeout | Timeout | Timeout for the web search request in seconds. Default: `5`. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| results | Search Results | A DataFrame containing search results with titles, links, and snippets. |
 
 </details>
 
