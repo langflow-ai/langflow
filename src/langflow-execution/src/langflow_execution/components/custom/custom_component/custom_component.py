@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import yaml
 from cachetools import TTLCache
 from langchain_core.documents import Document
-from langflow.custom.custom_component.base_component import BaseComponent
+from langflow_execution.components.base.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Data
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope

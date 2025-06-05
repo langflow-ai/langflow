@@ -16,6 +16,8 @@ InputType = Literal["chat", "text", "any"]
 OutputType = Literal["chat", "text", "any", "debug"]
 
 
+# TODO: Rename this file
+
 class LogType(str, Enum):
     MESSAGE = "message"
     DATA = "data"

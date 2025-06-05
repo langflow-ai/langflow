@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol
 from typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
-    from langflow.schema.log import LoggableType
+    from langflow_execution.schema.log import LoggableType
 
     from langflow_execution.graph.edge.schema import EdgeData
     from langflow_execution.graph.schema import ResultData

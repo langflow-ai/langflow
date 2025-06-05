@@ -1,11 +1,53 @@
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
+from langflow_execution.graph.schema import ChatOutputResponse
 
 # TODO: necessary?
 InputType = Literal["chat", "text", "any"]
 OutputType = Literal["chat", "text", "any", "debug"]
+
+
+class ExecutionOutput(BaseModel):
+    """The outputs of the flow.
+    """
+    results: Any | None = Field(default_factory=dict)
+    logs: dict | None = Field(default_factory=dict)
+    messages: list[ChatOutputResponse] | None = Field(default_factory=list)
+    timedelta: float | None = None
+    duration: str | None = None
+    component_display_name: str | None = None
+    component_id: str | None = None
+    used_frozen_result: bool | None = False
+
+    @field_serializer("results")
+    def serialize_results(self, value):
+        if isinstance(value, dict):
+            return {key: serialize(val) for key, val in value.items()}
+        return serialize(value)
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_model(cls, values):
+        if not values.get("outputs") and values.get("artifacts"):
+            # Build the log from the artifacts
+
+            for key in values["artifacts"]:
+                message = values["artifacts"][key]
+
+                # ! Temporary fix
+                if message is None:
+                    continue
+
+                if "stream_url" in message and "type" in message:
+                    stream_url = StreamURL(location=message["stream_url"])
+                    values["outputs"].update({key: OutputValue(message=stream_url, type=message["type"])})
+                elif "type" in message:
+                    values["outputs"].update({key: OutputValue(message=message, type=message["type"])})
+        return values
+
+
 
 
 # TODO: This came from SimplifiedAPIRequest class
@@ -30,6 +72,17 @@ class FlowExecutionRequest(BaseModel):
     )
     tweaks: dict | None = Field(default=None, description="The tweaks")
     session_id: str | None = Field(default=None, description="The session id")
+
+class FlowExecutionResponse(BaseModel):
+    """Response model for executing a flow.
+    
+    Attributes:
+        output_value (str): The output value.
+    """
+
+    outputs: list[ExecutionOutput] | None = []
+    session_id: str | None = None
+
 
 
 # TODO: necessary?

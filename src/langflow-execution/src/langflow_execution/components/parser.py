@@ -81,6 +81,7 @@ def create_class(code, class_name):
 
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
+        print(f"Compiling class for {class_name}")
         module = ast.parse(code)
         exec_globals = prepare_global_scope(module)
 
