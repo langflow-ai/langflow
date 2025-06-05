@@ -218,7 +218,18 @@ test(
 
         await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
-        await page.getByText("Add MCP Server", { exact: true }).click();
+        try {
+          await page.getByText("Add MCP Server", { exact: true }).click({
+            timeout: 5000,
+          });
+        } catch (error) {
+          await page
+            .getByTestId("mcp-server-dropdown")
+            .click({ timeout: 3000 });
+          await page.getByText("Add MCP Server", { exact: true }).click({
+            timeout: 5000,
+          });
+        }
 
         await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
           state: "visible",

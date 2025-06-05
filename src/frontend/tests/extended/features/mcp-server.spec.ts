@@ -31,7 +31,16 @@ test(
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
-    await page.getByText("Add MCP Server", { exact: true }).click();
+    try {
+      await page.getByText("Add MCP Server", { exact: true }).click({
+        timeout: 5000,
+      });
+    } catch (error) {
+      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
+      await page.getByText("Add MCP Server", { exact: true }).click({
+        timeout: 5000,
+      });
+    }
 
     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
       state: "visible",
@@ -91,5 +100,85 @@ test(
       .count();
 
     expect(urlOptionCount).toBeGreaterThan(0);
+
+    await page.getByTestId("user_menu_button").click({ timeout: 3000 });
+
+    await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="sidebar-nav-MCP Connections"]', {
+      timeout: 30000,
+    });
+
+    await page
+      .getByTestId("sidebar-nav-MCP Connections")
+      .click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
+      timeout: 3000,
+    });
+
+    await expect(page.getByText("test_server")).toBeVisible({
+      timeout: 3000,
+    });
+
+    await page
+      .getByTestId(`mcp-server-menu-button-test_server`)
+      .click({ timeout: 3000 });
+
+    await page
+      .getByText("Edit", { exact: true })
+      .first()
+      .click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+      state: "visible",
+      timeout: 30000,
+    });
+
+    await expect(page.getByTestId("json-tab")).toBeDisabled({
+      timeout: 3000,
+    });
+
+    await expect(page.getByTestId("stdio-tab")).not.toBeDisabled({
+      timeout: 3000,
+    });
+
+    await expect(page.getByTestId("sse-tab")).toBeDisabled({
+      timeout: 3000,
+    });
+
+    expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
+      "uvx mcp-server-fetch",
+    );
+
+    await page.getByTestId("add-mcp-server-button").click();
+
+    await page
+      .getByTestId(`mcp-server-menu-button-test_server`)
+      .click({ timeout: 3000 });
+
+    await page
+      .getByText("Delete", { exact: true })
+      .first()
+      .click({ timeout: 3000 });
+
+    await page.waitForSelector(
+      '[data-testid="btn_delete_delete_confirmation_modal"]',
+      {
+        timeout: 3000,
+      },
+    );
+
+    await page
+      .getByTestId("btn_delete_delete_confirmation_modal")
+      .click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
+      timeout: 3000,
+    });
+
+    await expect(page.getByText("test_server")).not.toBeVisible({
+      timeout: 3000,
+    });
   },
 );
