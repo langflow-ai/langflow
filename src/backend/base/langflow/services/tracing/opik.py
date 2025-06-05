@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import types
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
@@ -200,27 +201,28 @@ class OpikTracer(BaseTracer):
 
     def _convert_to_opik_type(self, value):
         """Recursively converts a value to a Opik compatible type."""
-        if isinstance(value, dict):
-            value = {key: self._convert_to_opik_type(val) for key, val in value.items()}
+        # Fastest dispatch: dict→list→known types→none/generator→other unchanged
+        ty = type(value)
+        if ty is dict:
+            # Short-circuit to avoid unneeded generator creation
+            # Avoids the overhead of isinstance, faster for single inheritance
+            return {k: self._convert_to_opik_type(v) for k, v in value.items()}
 
-        elif isinstance(value, list):
-            value = [self._convert_to_opik_type(v) for v in value]
+        if ty is list:
+            return [self._convert_to_opik_type(v) for v in value]
 
-        elif isinstance(value, Message):
-            value = value.text
-
-        elif isinstance(value, Data):
-            value = value.get_text()
-
-        elif isinstance(value, (BaseMessage | HumanMessage | SystemMessage)):
-            value = value.content
-
-        elif isinstance(value, Document):
-            value = value.page_content
-
-        elif isinstance(value, types.GeneratorType | type(None)):
-            value = str(value)
-
+        # Use tuple of classes and direct isinstance for clarity and speed
+        if isinstance(value, Message):
+            return value.text
+        if isinstance(value, Data):
+            return value.get_text()
+        if isinstance(value, (BaseMessage, HumanMessage, SystemMessage)):
+            return value.content
+        if isinstance(value, Document):
+            return value.page_content
+        # Generator and NoneType: quick union check
+        if ty is types.GeneratorType or value is None:
+            return str(value)
         return value
 
     @staticmethod
