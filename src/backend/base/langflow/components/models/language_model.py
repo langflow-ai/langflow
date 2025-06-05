@@ -1,9 +1,11 @@
 from typing import Any
 
 from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
+from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
@@ -24,11 +26,11 @@ class LanguageModelComponent(LCModelComponent):
         DropdownInput(
             name="provider",
             display_name="Model Provider",
-            options=["OpenAI", "Anthropic"],
+            options=["OpenAI", "Anthropic", "Google"],
             value="OpenAI",
             info="Select the model provider",
             real_time_refresh=True,
-            options_metadata=[{"icon": "OpenAI"}, {"icon": "Anthropic"}],
+            options_metadata=[{"icon": "OpenAI"}, {"icon": "Anthropic"}, {"icon": "Google"}],
         ),
         DropdownInput(
             name="model_name",
@@ -99,6 +101,16 @@ class LanguageModelComponent(LCModelComponent):
                 streaming=stream,
                 anthropic_api_key=self.api_key,
             )
+        if provider == "Google":
+            if not self.api_key:
+                msg = "Google API key is required when using Google provider"
+                raise ValueError(msg)
+            return ChatGoogleGenerativeAI(
+                model=model_name,
+                temperature=temperature,
+                streaming=stream,
+                google_api_key=self.api_key,
+            )
         msg = f"Unknown provider: {provider}"
         raise ValueError(msg)
 
@@ -112,4 +124,8 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["model_name"]["options"] = ANTHROPIC_MODELS
                 build_config["model_name"]["value"] = ANTHROPIC_MODELS[0]
                 build_config["api_key"]["display_name"] = "Anthropic API Key"
+            elif field_value == "Google":
+                build_config["model_name"]["options"] = GOOGLE_GENERATIVE_AI_MODELS
+                build_config["model_name"]["value"] = GOOGLE_GENERATIVE_AI_MODELS[0]
+                build_config["api_key"]["display_name"] = "Google API Key"
         return build_config
