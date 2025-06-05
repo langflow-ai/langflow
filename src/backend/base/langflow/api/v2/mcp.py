@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v2.files import MCP_SERVERS_FILE, delete_file, download_file, get_file_by_name, upload_user_file
-from langflow.base.mcp.util import update_tools
+from langflow.base.mcp.util import MCPSseClient, MCPStdioClient, update_tools
 from langflow.logging import logger
 from langflow.services.deps import get_settings_service, get_storage_service
 
@@ -78,9 +78,11 @@ async def get_server(
     session: DbSession,
     storage_service=Depends(get_storage_service),
     settings_service=Depends(get_settings_service),
+    server_list: dict | None = None,
 ):
     """Get a specific server configuration."""
-    server_list = await get_server_list(current_user, session, storage_service, settings_service)
+    if server_list is None:
+        server_list = await get_server_list(current_user, session, storage_service, settings_service)
 
     if server_name not in server_list["mcpServers"]:
         return None
@@ -102,12 +104,27 @@ async def get_servers(
     # Check all of the tool counts for each server
     return_list = []
 
+    # Create a stdio client and sse client for each server
+    stdio_client: MCPStdioClient = MCPStdioClient()
+    sse_client: MCPSseClient = MCPSseClient()
+
     for server in server_list["mcpServers"]:
         server_info = {"name": server, "mode": "", "toolsCount": 0}
         try:
+            server_config = await get_server(
+                server,
+                current_user,
+                session,
+                storage_service=get_storage_service(),
+                settings_service=get_settings_service(),
+                server_list=server_list,
+            )
+
             mode, tool_list, _ = await update_tools(
                 server_name=server,
-                server_config=server_list["mcpServers"][server],
+                server_config=server_config,
+                mcp_stdio_client=stdio_client,
+                mcp_sse_client=sse_client,
             )
 
             # Get the server configuration
@@ -127,9 +144,10 @@ async def get_server_endpoint(
     current_user: CurrentActiveUser,
     session: DbSession,
     storage_service=Depends(get_storage_service),
+    settings_service=Depends(get_settings_service),
 ):
     """Get a specific server."""
-    return await get_server(server_name, current_user, session, storage_service)
+    return await get_server(server_name, current_user, session, storage_service, settings_service)
 
 
 async def update_server(
@@ -167,7 +185,14 @@ async def update_server(
         server_list, current_user, session, storage_service=storage_service, settings_service=settings_service
     )
 
-    return await get_server(server_name, current_user, session, storage_service)
+    return await get_server(
+        server_name,
+        current_user,
+        session,
+        storage_service,
+        settings_service,
+        server_list=server_list,
+    )
 
 
 @router.post("/servers/{server_name}")
