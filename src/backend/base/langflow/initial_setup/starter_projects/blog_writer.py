@@ -1,5 +1,6 @@
 from textwrap import dedent
 
+<<<<<<< HEAD
 from langflow.components.data.url import URLComponent
 from langflow.components.inputs.text import TextInputComponent
 from langflow.components.models.openai_chat_model import OpenAIModelComponent
@@ -7,6 +8,14 @@ from langflow.components.outputs.chat import ChatOutput
 from langflow.components.processing.parse_data import ParseDataComponent
 from langflow.components.prompts.prompt import PromptComponent
 from langflow.graph.graph.base import Graph
+=======
+from langflow.components.data import URLComponent
+from langflow.components.input_output import ChatOutput, TextInputComponent
+from langflow.components.languagemodels import OpenAIModelComponent
+from langflow.components.processing import ParserComponent
+from langflow.components.prompts import PromptComponent
+from langflow.graph import Graph
+>>>>>>> main
 
 
 def blog_writer_graph(template: str | None = None):
@@ -23,8 +32,8 @@ Blog:
 """)
     url_component = URLComponent()
     url_component.set(urls=["https://langflow.org/", "https://docs.langflow.org/"])
-    parse_data_component = ParseDataComponent()
-    parse_data_component.set(data=url_component.fetch_content)
+    parse_data_component = ParserComponent()
+    parse_data_component.set(input_data=url_component.fetch_content)
 
     text_input = TextInputComponent(_display_name="Instructions")
     text_input.set(
@@ -36,7 +45,7 @@ Blog:
     prompt_component.set(
         template=template,
         instructions=text_input.text_response,
-        references=parse_data_component.parse_data,
+        references=parse_data_component.parse_combined_text,
     )
 
     openai_component = OpenAIModelComponent()

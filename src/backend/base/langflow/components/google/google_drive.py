@@ -17,6 +17,7 @@ class GoogleDriveComponent(Component):
     display_name = "Google Drive Loader"
     description = "Loads documents from Google Drive using provided credentials."
     icon = "Google"
+    legacy: bool = True
 
     inputs = [
         SecretStrInput(

@@ -8,6 +8,7 @@ class CombineTextComponent(Component):
     description = "Concatenate two text sources into a single text chunk using a specified delimiter."
     icon = "merge"
     name = "CombineText"
+    legacy: bool = True
 
     inputs = [
         MessageTextInput(

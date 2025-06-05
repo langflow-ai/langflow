@@ -26,7 +26,6 @@ from langflow.services.database.models.flow.model import FlowCreate, FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.settings.feature_flags import FeatureFlags
 from langflow.services.tracing.schema import Log
-from langflow.utils.util_strings import truncate_long_strings
 
 
 class BuildStatus(Enum):
@@ -310,8 +309,7 @@ class VertexBuildResponse(BaseModel):
 
     @field_serializer("data")
     def serialize_data(self, data: ResultDataResponse) -> dict:
-        data_dict = data.model_dump() if isinstance(data, BaseModel) else data
-        return truncate_long_strings(data_dict)
+        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
 
 class VerticesBuiltResponse(BaseModel):
@@ -379,7 +377,7 @@ class FlowDataRequest(BaseModel):
 
 class ConfigResponse(BaseModel):
     feature_flags: FeatureFlags
-    serialization_max_items_lenght: int = serialization_constants.MAX_ITEMS_LENGTH
+    serialization_max_items_length: int = serialization_constants.MAX_ITEMS_LENGTH
     serialization_max_text_length: int = serialization_constants.MAX_TEXT_LENGTH
     frontend_timeout: int
     auto_saving: bool
@@ -397,3 +395,18 @@ class CancelFlowResponse(BaseModel):
 
     success: bool
     message: str
+
+
+class MCPSettings(BaseModel):
+    """Model representing MCP settings for a flow."""
+
+    id: UUID
+    mcp_enabled: bool | None = None
+    action_name: str | None = None
+    action_description: str | None = None
+    name: str | None = None
+    description: str | None = None
+
+
+class MCPInstallRequest(BaseModel):
+    client: str

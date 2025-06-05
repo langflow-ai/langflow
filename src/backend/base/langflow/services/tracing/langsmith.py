@@ -10,6 +10,7 @@ from loguru import logger
 from typing_extensions import override
 
 from langflow.schema.data import Data
+from langflow.serialization.serialization import serialize
 from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
@@ -139,7 +140,6 @@ class LangSmithTracer(BaseTracer):
             child.patch()
         else:
             child.post()
-        self._child_link[trace_name] = child.get_url()
 
     @staticmethod
     def _error_to_string(error: Exception | None):
@@ -158,12 +158,17 @@ class LangSmithTracer(BaseTracer):
     ) -> None:
         if not self._ready or not self._run_tree:
             return
-        self._run_tree.add_metadata({"inputs": inputs})
+        self._run_tree.add_metadata({"inputs": serialize(inputs)})
         if metadata:
-            self._run_tree.add_metadata(metadata)
-        self._run_tree.end(outputs=outputs, error=self._error_to_string(error))
+            self._run_tree.add_metadata(serialize(metadata))
+        self._run_tree.end(outputs=serialize(outputs), error=self._error_to_string(error))
         self._run_tree.post()
-        self._run_link = self._run_tree.get_url()
+
+    @property
+    def run_link(self):
+        if not self._ready or not self._run_tree:
+            return None
+        return self._run_tree.get_url()
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:

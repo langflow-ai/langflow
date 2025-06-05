@@ -14,6 +14,7 @@ class IDGeneratorComponent(Component):
     description = "Generates a unique ID."
     icon = "fingerprint"
     name = "IDGenerator"
+    legacy = True
 
     inputs = [
         MessageTextInput(

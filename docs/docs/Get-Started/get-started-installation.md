@@ -19,12 +19,13 @@ Before you install and run Langflow OSS, be sure you have the following items.
 - [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/)
 - A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments) or [venv](https://docs.python.org/3/library/venv.html)
+- A dual-core CPU and at least 2 GB of RAM. More intensive use requires a multi-core CPU and at least 4 GB of RAM.
 
 Install and run Langflow OSS with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/).
 
 1. To install Langflow, use one of the following commands:
 
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -43,7 +44,7 @@ pip install langflow
 
 2. To run Langflow, use one of the following commands:
 
-<Tabs>
+<Tabs groupId="package-manager">
     <TabItem value="uv" label="uv">
 
 ```bash
@@ -51,7 +52,7 @@ uv run langflow run
 ```
 
 </TabItem>
-<TabItem value="Python" label="Python">
+<TabItem value="pip" label="pip">
 
 ```bash
 python -m langflow run
@@ -68,7 +69,7 @@ After confirming that Langflow is running, create your first flow with the [Quic
 
 To upgrade Langflow to the latest version, use one of the following commands:
 
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -86,7 +87,7 @@ pip install langflow -U
 </Tabs>
 
 To install a specific version of the Langflow package, add the required version to the command.
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -104,7 +105,7 @@ pip install langflow==1.3.2
 </Tabs>
 
 To reinstall Langflow and all of its dependencies, add the `--force-reinstall` flag to the command.
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -129,7 +130,7 @@ These dependencies are listed in the [pyproject.toml](https://github.com/langflo
 
 Install dependency groups using pip's `[extras]` syntax. For example, to install Langflow with the `postgresql` dependency group, enter one of the following commands:
 
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -148,7 +149,7 @@ pip install "langflow[postgresql]"
 
 To install multiple extras, enter one of the following commands:
 
-<Tabs>
+<Tabs groupId="package-manager">
 <TabItem value="uv" label="uv" default>
 
 ```bash
@@ -239,6 +240,30 @@ To run Langflow with uv:
 uv run langflow run
 ```
 
+#### Failed to build required package
+
+When you try to install Langflow on Linux, installation fails because of outdated or missing packages.
+
+```bash
+Resolved 455 packages in 18.92s
+  × Failed to build `webrtcvad==2.0.10`
+  ├─▶ The build backend returned an error
+  ╰─▶ Call to `setuptools.build_meta:__legacy__.build_wheel` failed (exit status: 1)
+```
+
+1. Install the required build dependencies.
+
+```bash
+sudo apt-get update
+sudo apt-get install build-essential python3-dev
+```
+
+2. If upgrading your packages doesn't fix the issue, install `gcc` separately.
+
+```bash
+sudo apt-get install gcc
+```
+
 ## Install and run Langflow Desktop
 
 :::important
@@ -279,4 +304,4 @@ The application restarts with the new version installed.
 
 ## DataStax Langflow {#datastax-langflow}
 
-**DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
+**DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).

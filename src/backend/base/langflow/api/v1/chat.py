@@ -158,7 +158,7 @@ async def build_flow(
     """Build and process a flow, returning a job ID for event polling.
 
     This endpoint requires authentication through the CurrentActiveUser dependency.
-    For public flows that don't require authentication, use the /build_public_tmp/{flow_id}/flow endpoint.
+    For public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.
 
     Args:
         flow_id: UUID of the flow to build
@@ -548,9 +548,14 @@ async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user)
         background_tasks=background_tasks,
         current_user=current_user,
         queue_service=queue_service,
+        event_delivery=EventDeliveryType.STREAMING,
     )
     job_id = build_response["job_id"]
-    return await get_build_events(job_id, queue_service)
+    return await get_flow_events_response(
+        job_id=job_id,
+        queue_service=queue_service,
+        event_delivery=EventDeliveryType.STREAMING,
+    )
 
 
 @router.post("/build_public_tmp/{flow_id}/flow")

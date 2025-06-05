@@ -20,12 +20,12 @@ export type UtilityStoreType = {
   setWebhookPollingInterval: (webhookPollingInterval: number) => void;
   chatValueStore: string;
   setChatValueStore: (value: string) => void;
-  dismissAll: boolean;
-  setDismissAll: (dismissAll: boolean) => void;
   currentSessionId: string;
   setCurrentSessionId: (sessionId: string) => void;
   setClientId: (clientId: string) => void;
   clientId: string;
   eventDelivery: EventDeliveryType;
   setEventDelivery: (eventDelivery: EventDeliveryType) => void;
+  serializationMaxItemsLength: number;
+  setSerializationMaxItemsLength: (serializationMaxItemsLength: number) => void;
 };

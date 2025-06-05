@@ -66,7 +66,7 @@ class LCVectorStoreComponent(Component):
         QueryInput(
             name="search_query",
             display_name="Search Query",
-            info="Enter a query to run a combined similarity and lexical terms search.",
+            info="Enter a query to run a similarity search.",
             placeholder="Enter a query...",
             tool_mode=True,
         ),
