@@ -1,6 +1,6 @@
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ListSelectionComponent from "../../../../../CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "../../../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../../../common/genericIconComponent";
@@ -15,12 +15,16 @@ export default function McpComponent({
   id = "",
 }: InputProps<string, any>): JSX.Element {
   const { data: mcpServers } = useGetMCPServers();
-  const options = mcpServers?.map((server) => ({
-    name: server.name,
-    description: server.toolsCount
-      ? "No actions found"
-      : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`,
-  }));
+  const options = useMemo(
+    () =>
+      mcpServers?.map((server) => ({
+        name: server.name,
+        description: server.toolsCount
+          ? "No actions found"
+          : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`,
+      })),
+    [mcpServers],
+  );
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
