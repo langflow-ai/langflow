@@ -19,7 +19,7 @@ export default function McpComponent({
     () =>
       mcpServers?.map((server) => ({
         name: server.name,
-        description: server.toolsCount
+        description: !server.toolsCount
           ? "No actions found"
           : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`,
       })),
@@ -37,6 +37,9 @@ export default function McpComponent({
     setSelectedItem(
       selectedOption ? [{ name: selectedOption.name }] : [{ name: "" }],
     );
+    if (value !== selectedOption?.name) {
+      handleOnNewValue({ value: "" }, { skipSnapshot: true });
+    }
   }, [value, options]);
 
   // Handle selection from dialog

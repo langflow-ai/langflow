@@ -19,6 +19,11 @@ import BaseModal from "@/modals/baseModal";
 import IOKeyPairInput from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
 import { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
+import {
+  useIsFetching,
+  usePrefetchQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 //TODO IMPLEMENT FORM LOGIC
 
@@ -49,6 +54,8 @@ export default function AddMcpServerModal({
     useAddMCPServer();
   const { mutateAsync: patchMCPServer, isPending: isPatchPending } =
     usePatchMCPServer();
+
+  const queryClient = useQueryClient();
 
   const modifyMCPServer = initialData ? patchMCPServer : addMCPServer;
   const isPending = isAddPending || isPatchPending;
@@ -129,6 +136,11 @@ export default function AddMcpServerModal({
           args: stdioArgs.filter((a) => a.trim() !== ""),
           env: parseEnvList(stdioEnv),
         });
+        if (!initialData) {
+          await queryClient.setQueryData(["useGetMCPServers"], (old: any) => {
+            return [...old, { name: stdioName.slice(0, 20), toolsCount: 0 }];
+          });
+        }
         onSuccess?.(stdioName.slice(0, 20));
         setOpen(false);
         setStdioName("");
@@ -153,6 +165,11 @@ export default function AddMcpServerModal({
           url: sseUrl,
           headers: parseEnvList(sseHeaders),
         });
+        if (!initialData) {
+          await queryClient.setQueryData(["useGetMCPServers"], (old: any) => {
+            return [...old, { name: sseName.slice(0, 20), toolsCount: 0 }];
+          });
+        }
         onSuccess?.(sseName.slice(0, 20));
         setOpen(false);
         setSseName("");
@@ -179,6 +196,17 @@ export default function AddMcpServerModal({
     }
     try {
       await Promise.all(servers.map((server) => modifyMCPServer(server)));
+      if (!initialData) {
+        await queryClient.setQueryData(["useGetMCPServers"], (old: any) => {
+          return [
+            ...old,
+            ...servers.map((server) => ({
+              name: server.name,
+              toolsCount: 0,
+            })),
+          ];
+        });
+      }
       onSuccess?.(servers.map((server) => server.name)[0].slice(0, 20));
       setOpen(false);
       setJsonValue("");
