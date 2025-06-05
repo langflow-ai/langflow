@@ -2,9 +2,9 @@ import asyncio
 import contextlib
 import os
 import platform
+import shutil
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
-import shutil
 from typing import Any, cast
 from urllib.parse import urlparse
 from uuid import UUID
@@ -214,9 +214,11 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
     return create_model("InputSchema", **top_fields)
 
+
 def _is_valid_key_value_item(item: Any) -> bool:
     """Check if an item is a valid key-value dictionary."""
     return isinstance(item, dict) and "key" in item and "value" in item
+
 
 def _process_headers(headers: Any) -> dict:
     """Process the headers input into a valid dictionary.
@@ -239,10 +241,11 @@ def _process_headers(headers: Any) -> dict:
                 key = item["key"]
                 value = item["value"]
                 processed_headers[key] = value
-        except (KeyError, TypeError, ValueError) as e:
+        except (KeyError, TypeError, ValueError):
             return {}  # Return empty dictionary instead of None
         return processed_headers
     return {}
+
 
 def _validate_node_installation(command: str) -> str:
     """Validate the npx command."""
@@ -250,6 +253,7 @@ def _validate_node_installation(command: str) -> str:
         msg = "Node.js is not installed. Please install Node.js to use npx commands."
         raise ValueError(msg)
     return command
+
 
 async def _validate_connection_params(mode: str, command: str | None = None, url: str | None = None) -> None:
     """Validate connection parameters based on mode."""
@@ -265,6 +269,7 @@ async def _validate_connection_params(mode: str, command: str | None = None, url
     if mode == "SSE" and not url:
         msg = "URL is required for SSE mode"
         raise ValueError(msg)
+
 
 async def update_tools(
     server_name: str,
@@ -334,7 +339,7 @@ async def update_tools(
             )
             tool_list.append({"name": tool.name, "tool": tool_obj})
             tool_cache[tool.name] = tool_obj
-        except (AttributeError, ValueError, TypeError, KeyError) as e:
+        except (AttributeError, ValueError, TypeError, KeyError):
             continue
     return mode, tool_list
 
