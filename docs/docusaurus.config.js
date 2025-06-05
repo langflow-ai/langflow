@@ -259,6 +259,10 @@ const config = {
             from: "/integrations-mcp",
           },
           {
+            to: "/integrations-nvidia-g-assist",
+            from: "/integrations-nvidia-system-assist",
+          },
+          {
             to: "/deployment-kubernetes-dev",
             from: [
               "/deployment-kubernetes",
