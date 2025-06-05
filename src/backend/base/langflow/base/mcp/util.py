@@ -307,7 +307,7 @@ class MCPStdioClient:
         # Create a temporary file to capture stderr
         errlog_path = ""
         async with aiofiles.tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=False) as tmp:
-            errlog_path = cast(str, tmp.name)
+            errlog_path = cast("str", tmp.name)
 
             try:
                 # Pass the temp file as errlog to capture stderr
@@ -500,7 +500,7 @@ async def update_tools(
     server_config: dict,
     mcp_stdio_client: MCPStdioClient | None = None,
     mcp_sse_client: MCPSseClient | None = None,
-) -> tuple[str, list[StructuredTool]]:
+) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools."""
     if server_config is None:
         server_config = {}

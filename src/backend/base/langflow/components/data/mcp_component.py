@@ -64,7 +64,6 @@ class MCPToolsComponent(Component):
     stdio_client: MCPStdioClient = MCPStdioClient()
     sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
-    tool_names: list[str] = []
     _tool_cache: dict = {}
     default_keys: list[str] = [
         "code",
@@ -114,11 +113,11 @@ class MCPToolsComponent(Component):
     async def _validate_schema_inputs(self, tool_obj) -> list[InputTypes]:
         """Validate and process schema inputs for a tool."""
         try:
-            if not tool_obj or not hasattr(tool_obj, "inputSchema"):
+            if not tool_obj or not hasattr(tool_obj, "args_schema"):
                 msg = "Invalid tool object or missing input schema"
                 raise ValueError(msg)
 
-            flat_schema = flatten_schema(tool_obj.inputSchema)
+            flat_schema = flatten_schema(tool_obj.args_schema.schema())
             input_schema = create_input_schema_from_json_schema(flat_schema)
             if not input_schema:
                 msg = f"Empty input schema for tool '{tool_obj.name}'"
@@ -141,7 +140,6 @@ class MCPToolsComponent(Component):
         server_name = getattr(self, "mcp_server", None)
         if not server_name:
             self.tools = []
-            self.tool_names = []
             return []
 
         try:
@@ -159,7 +157,6 @@ class MCPToolsComponent(Component):
 
                 if not server_config:
                     self.tools = []
-                    self.tool_names = []
                     return []
 
                 _, tool_list, tool_cache = await update_tools(
@@ -224,8 +221,8 @@ class MCPToolsComponent(Component):
                 if "tool" in build_config and len(self.tools) > 0 and not build_config["tools_metadata"]["show"]:
                     self.remove_non_default_keys(build_config)
                     build_config["tool"]["show"] = True
-                    build_config["tool"]["options"] = self.tool_names
-                elif "tool" in build_config and len(self.tool_names) == 0:
+                    build_config["tool"]["options"] = [tool.name for tool in self.tools]
+                elif "tool" in build_config and len(self.tools) == 0:
                     self.remove_non_default_keys(build_config)
                     build_config["tool"]["show"] = False
                     build_config["tool"]["options"] = []
@@ -259,7 +256,7 @@ class MCPToolsComponent(Component):
             if not tool or not hasattr(tool, "name"):
                 continue
             try:
-                flat_schema = flatten_schema(tool.inputSchema)
+                flat_schema = flatten_schema(tool.args_schema.schema())
                 input_schema = create_input_schema_from_json_schema(flat_schema)
                 langflow_inputs = schema_to_langflow_inputs(input_schema)
                 inputs[tool.name] = langflow_inputs
@@ -367,14 +364,3 @@ class MCPToolsComponent(Component):
             msg = f"Error in build_output: {e!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
-
-    async def _get_tools(self):
-        """Get cached tools or update if necessary."""
-        # if not self.tools:
-        if not self.mcp_server:
-            msg = "MCP Server is not set"
-            self.tools = []
-            self.tool_names = []
-            logger.exception(msg)
-
-        return await self.update_tool_list()
