@@ -8,6 +8,7 @@ NO_INPUT_MESSAGE = "Either Query or Prompt must be provided."
 SINGLE_INPUT_MESSAGE = "Both Query and Prompt can't be provided at the same time."
 INVALID_API_KEY_MESSAGE = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
 
+
 def handle_agentql_error(e: httpx.HTTPStatusError) -> str:
     """Handle AgentQL API errors and return appropriate error message."""
     response = e.response
@@ -15,11 +16,7 @@ def handle_agentql_error(e: httpx.HTTPStatusError) -> str:
         return INVALID_API_KEY_MESSAGE
     try:
         error_json = response.json()
-        logger.error(
-            f"Failure response: '{response.status_code} {response.reason_phrase}' "
-            f"with body: {error_json}"
-        )
+        logger.error(f"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}")
         return error_json.get("error_info") or error_json.get("detail")
     except (ValueError, TypeError):
         return f"HTTP {e}."
-

@@ -1,5 +1,4 @@
 import httpx
-from loguru import logger
 
 from langflow.components.agentql.utils import (
     AGENTQL_QUERY_DOCUMENTATION,
@@ -146,8 +145,8 @@ class AgentQL(Component):
             data = Data(result=response_json["data"], metadata=response_json["metadata"])
 
         except httpx.HTTPStatusError as e:
-                self.status = handle_agentql_error(e)
-                raise ValueError(self.status) from e
+            self.status = handle_agentql_error(e)
+            raise ValueError(self.status) from e
 
         else:
             self.status = data
