@@ -23,7 +23,7 @@ AI: """
     memory_component = MemoryComponent(_id="chat_memory")
     memory_component.set(session_id=session_id)
     chat_input = ChatInput(_id="chat_input")
-    type_converter = TypeConverterComponent()
+    type_converter = TypeConverterComponent(_id="type_converter")
     type_converter.set(input_data=memory_component.retrieve_messages_dataframe)
     prompt_component = PromptComponent(_id="prompt")
     prompt_component.set(
@@ -49,6 +49,7 @@ AI: """
         "chat_output",
         "openai",
         "prompt",
+        "type_converter",
         "chat_memory",
     ]
 
