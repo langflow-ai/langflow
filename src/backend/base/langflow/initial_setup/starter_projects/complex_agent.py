@@ -1,21 +1,11 @@
 from langflow.components.crewai.crewai import CrewAIAgentComponent
 from langflow.components.crewai.hierarchical_crew import HierarchicalCrewComponent
 from langflow.components.crewai.hierarchical_task import HierarchicalTaskComponent
-<<<<<<< HEAD
-from langflow.components.inputs.chat import ChatInput
-from langflow.components.models.openai_chat_model import OpenAIModelComponent
-from langflow.components.outputs.chat import ChatOutput
-from langflow.components.prompts.prompt import PromptComponent
-from langflow.components.tools.search_api import SearchAPIComponent
-from langflow.components.tools.yahoo_finance import YfinanceToolComponent
-from langflow.graph.graph.base import Graph
-=======
 from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.prompts import PromptComponent
 from langflow.components.tools import SearchAPIComponent, YfinanceToolComponent
 from langflow.graph import Graph
->>>>>>> main
 
 
 def complex_agent_graph():

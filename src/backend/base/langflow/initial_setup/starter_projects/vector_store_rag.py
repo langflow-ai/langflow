@@ -1,16 +1,14 @@
 from textwrap import dedent
 
-from langflow.components.data.file import FileComponent
-from langflow.components.embeddings.openai import OpenAIEmbeddingsComponent
 from langflow.components.data import FileComponent
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
 from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.processing import ParserComponent
 from langflow.components.processing.split_text import SplitTextComponent
-from langflow.components.prompts.prompt import PromptComponent
-from langflow.components.vectorstores.astradb import AstraDBVectorStoreComponent
-from langflow.graph.graph.base import Graph
+from langflow.components.prompts import PromptComponent
+from langflow.components.vectorstores import AstraDBVectorStoreComponent
+from langflow.graph import Graph
 
 
 def ingestion_graph():

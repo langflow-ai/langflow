@@ -1,19 +1,9 @@
-<<<<<<< HEAD
-from langflow.components.data.file import FileComponent
-from langflow.components.inputs.chat import ChatInput
-from langflow.components.models.openai_chat_model import OpenAIModelComponent
-from langflow.components.outputs.chat import ChatOutput
-from langflow.components.processing.parse_data import ParseDataComponent
-from langflow.components.prompts.prompt import PromptComponent
-from langflow.graph.graph.base import Graph
-=======
 from langflow.components.data import FileComponent
 from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.processing import ParserComponent
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
->>>>>>> main
 
 
 def document_qa_graph(template: str | None = None):

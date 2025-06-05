@@ -1,16 +1,8 @@
 from langflow.components.helpers.memory import MemoryComponent
-<<<<<<< HEAD
-from langflow.components.inputs.chat import ChatInput
-from langflow.components.models.openai_chat_model import OpenAIModelComponent
-from langflow.components.outputs.chat import ChatOutput
-from langflow.components.prompts.prompt import PromptComponent
-from langflow.graph.graph.base import Graph
-=======
 from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
->>>>>>> main
 
 
 def memory_chatbot_graph(template: str | None = None):

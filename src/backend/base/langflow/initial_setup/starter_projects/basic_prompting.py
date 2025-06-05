@@ -1,7 +1,7 @@
 from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.prompts import PromptComponent
-from langflow.graph.graph.base import Graph
+from langflow.graph import Graph
 
 
 def basic_prompting_graph(template: str | None = None):
