@@ -270,31 +270,14 @@ The agent chooses the correct tool based on your query.
 
 ## News search
 
-This component searches Google News with RSS and returns clean article data. It supports searching by keywords, topics, or location. The `clean_html` method parses the HTML content with the BeautifulSoup library, and then removes HTML markup and strips whitespace so the output data is clean.
+This component searches Google News with RSS and returns clean article data. The `clean_html` method parses the HTML content with the BeautifulSoup library, and then removes HTML markup and strips whitespace so the output data is clean.
 
-The component outputs search results as a DataFrame, or can be used in **Tool Mode** with a connected **Agent**
+It returns news content as a DataFrame containing article titles, links, publication dates, and summaries. The component can also be used in **Tool Mode** with a connected **Agent**.
 
+To use this component in a flow, connect the **News Search** output to a component that accepts the DataFrame input.
+For example, connect the **News Search** component to a **Chat Output** component. Enter a search query, open the Playground, and click **Run Flow**.
 
-
-
-
-
-
-1. To use this component in a flow, connect the **News Articles** output to a component that accepts the input.
-For example, connect the **News Search** component to a **Chat Output** component.
-
-2. In the **Search Query** field, enter keywords to search for news articles.
-For example, "artificial intelligence" or "climate change".
-
-3. Optionally, configure advanced settings:
-   - **Language (hl)**: Set the language code (e.g., en-US, fr, de)
-   - **Country (gl)**: Set the country code (e.g., US, FR, DE)
-   - **Topic**: Select from WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SCIENCE, SPORTS, HEALTH
-   - **Location**: Enter a city, state, or country for location-based news
-   - **Timeout**: Set the request timeout in seconds
-
-4. Click **Playground**, and then click **Run Flow**.
-The component returns a DataFrame containing article titles, links, publication dates, and summaries.
+The latest content is returned in a structured DataFrame, with the key columns `title`, `link`, `published` and `summary`.
 
 <details>
 <summary>Parameters</summary>
@@ -319,11 +302,16 @@ The component returns a DataFrame containing article titles, links, publication 
 
 </details>
 
-## RSS reader
+## RSS Reader
 
-## SQL database
+This component fetches and parses RSS feeds from any valid RSS feed URL. It returns the feed content as a DataFrame containing article titles, links, publication dates, and summaries. The component can also be used in **Tool Mode** with a connected **Agent**.
 
-This component executes SQL queries on a specified SQL Alchemy-compatible database.
+To use this component in a flow, do the following:
+
+1. Connect the **RSS reader** output to a component that accepts the DataFrame input, such as a **Chat Output** component. 2. In the **RSS Feed URL** field, enter an RSS feed, such as `https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml` for the New York Times.
+3. Open the **Playground**, and then click **Run Flow**.
+
+The latest content is returned in a structured DataFrame, with the key columns `title`, `link`, `published` and `summary`.
 
 <details>
 <summary>Parameters</summary>
@@ -332,17 +320,91 @@ This component executes SQL queries on a specified SQL Alchemy-compatible databa
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| query | Query | The SQL query to execute. |
-| database_url | Database URL | The URL of the database. |
-| include_columns | Include Columns | Include columns in the result. |
-| passthrough | Passthrough | If an error occurs, return the query instead of raising an exception. |
-| add_error | Add Error | Add the error to the result. |
+| rss_url | RSS Feed URL | URL of the RSS feed to parse. |
+| timeout | Timeout | Timeout for the RSS feed request in seconds. Default: `5`. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| result | Result | The result of the SQL query execution. |
+| articles | Articles | A DataFrame containing article titles, links, publication dates, and summaries. |
+
+</details>
+
+## SQL database
+
+This component executes SQL queries on [SQLAlchemy-compatible databases](https://docs.sqlalchemy.org/en/20/). It supports any database that can be connected to using SQLAlchemy, including PostgreSQL, MySQL, SQLite, and others.
+
+To use this component in a flow, do the following:
+
+1. Create a test database called `test.db`.
+```shell
+sqlite3 test.db
+```
+
+2. Add values to the test database.
+```shell
+sqlite3 test.db "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT, age INTEGER); INSERT INTO users (name, email, age) VALUES ('John Doe', 'john@example.com', 30), ('Jane Smith', 'jane@example.com', 25), ('Bob Johnson', 'bob@example.com', 35);"
+```
+
+3. Verify that `test.db` has been created and contains your data.
+```shell
+sqlite3 test.db "SELECT * FROM users;"
+```
+
+Result:
+```shell
+1|John Doe|john@example.com
+2|Jane Smith|jane@example.com
+3|John Doe|john@example.com
+4|Jane Smith|jane@example.com
+```
+
+4. In the **SQL Database** component's **Database URL** field, add the connection string for `test.db`, such as `sqlite:///test.db`.
+
+With this connection established, the **SQL Query** field now accepts SQL queries.
+Instead of manually entering SQL queries, let's connect this database to an agent as a **Tool** to query it with natural language.
+
+5. In the **SQL Database** component, enable **Tool Mode**, and then connect it to an **Agent** component.
+The flow looks like this:
+
+![SQL database connected to agent](/img/component-sql-database.png)
+
+6. In the **Agent** component, in the **OpenAI API Key** field, add your OpenAI API key.
+7. Open the **Playground** and ask `What users are in my database?`
+The Agent uses the `run_sql_query` tool to retrieve the information, and additionally identifies the duplicate `users` entries.
+
+Result:
+```text
+Here are the users in your database:
+
+1. **John Doe** - Email: john@example.com
+2. **Jane Smith** - Email: jane@example.com
+3. **John Doe** - Email: john@example.com
+4. **Jane Smith** - Email: jane@example.com
+
+It seems there are duplicate entries for the users.
+
+> Finished chain.
+```
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| database_url | Database URL | The SQLAlchemy-compatible database connection URL. |
+| query | SQL Query | The SQL query to execute. |
+| include_columns | Include Columns | If enabled, includes column names in the result. Default: `true`. |
+| add_error | Add Error | If enabled, adds any error messages to the result. Default: `false`. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| run_sql_query | Result Table | The query results as a DataFrame. |
 
 </details>
 
@@ -440,6 +502,7 @@ This mode passes the webhook's data as a string for the **Chat Output** componen
 7. Open the **Playground**.
 Your JSON data is posted to the **Chat Output** component, which indicates that the webhook component is correctly triggering the flow.
 
+For more information, see [Trigger flows with webhooks](/webhook).
 <details>
 <summary>Parameters</summary>
 
