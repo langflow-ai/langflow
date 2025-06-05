@@ -144,26 +144,30 @@ class MCPToolsComponent(Component):
             self.tool_names = []
             return []
 
-        async for db in get_session():
-            user_id, _ = await create_user_longterm_token(db)
-            current_user = await get_user_by_id(db, user_id)
+        try:
+            async for db in get_session():
+                user_id, _ = await create_user_longterm_token(db)
+                current_user = await get_user_by_id(db, user_id)
 
-            server_config = await get_server(
-                server_name,
-                current_user,
-                db,
-                storage_service=get_storage_service(),
-                settings_service=get_settings_service(),
-            )
+                server_config = await get_server(
+                    server_name,
+                    current_user,
+                    db,
+                    storage_service=get_storage_service(),
+                    settings_service=get_settings_service(),
+                )
 
-            if not server_config:
-                self.tools = []
-                self.tool_names = []
-                return []
+                if not server_config:
+                    self.tools = []
+                    self.tool_names = []
+                    return []
 
-            _, tool_list = await update_tools(server_name=server_name, server_config=server_config)
-            return tool_list
-        return []
+                _, tool_list = await update_tools(server_name=server_name, server_config=server_config)
+                return tool_list
+        except Exception as e:
+            msg = f"Error updating tool list: {e!s}"
+            logger.exception(msg)
+            raise ValueError(msg) from e
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
@@ -171,7 +175,13 @@ class MCPToolsComponent(Component):
             if field_name == "tool":
                 try:
                     if len(self.tools) == 0:
-                        self.tools = await self.update_tool_list()
+                        try:
+                            self.tools = await self.update_tool_list()
+                        except ValueError:
+                            build_config["tool"]["options"] = []
+                            build_config["tool"]["placeholder"] = "Error on MCP Server"
+                            return build_config
+                        build_config["tool"]["placeholder"] = ""
                     if self.tool is None:
                         return build_config
                     tool_obj = None
@@ -192,8 +202,18 @@ class MCPToolsComponent(Component):
                 else:
                     return build_config
             elif field_name == "mcp_server":
-                self.tools = await self.update_tool_list()
-                if "tool" in build_config and len(self.tool_names) > 0:
+                try:
+                    self.tools = await self.update_tool_list()
+                except ValueError:
+                    if not build_config["tools_metadata"]["show"]:
+                        build_config["tool"]["show"] = True
+                        build_config["tool"]["options"] = []
+                        build_config["tool"]["placeholder"] = "Error on MCP Server"
+                    else:
+                        build_config["tool"]["show"] = False
+                    return build_config
+                build_config["tool"]["placeholder"] = ""
+                if "tool" in build_config and len(self.tool) > 0 and not build_config["tools_metadata"]["show"]:
                     self.remove_non_default_keys(build_config)
                     build_config["tool"]["show"] = True
                     build_config["tool"]["options"] = self.tool_names
@@ -202,6 +222,16 @@ class MCPToolsComponent(Component):
                     build_config["tool"]["show"] = False
                     build_config["tool"]["options"] = []
             elif field_name == "tool_mode":
+                try:
+                    await self.update_tools()
+                except ValueError:
+                    if not build_config["tools_metadata"]["show"]:
+                        build_config["tool"]["show"] = True
+                        build_config["tool"]["options"] = []
+                        build_config["tool"]["placeholder"] = "Error on MCP Server"
+                    else:
+                        build_config["tool"]["show"] = False
+                build_config["tool"]["placeholder"] = ""
                 build_config["tool"]["show"] = not field_value
                 for key, value in list(build_config.items()):
                     if key not in self.default_keys and isinstance(value, dict) and "show" in value:
@@ -335,5 +365,8 @@ class MCPToolsComponent(Component):
         # if not self.tools:
         if not self.mcp_server:
             msg = "MCP Server is not set"
-            raise ValueError(msg)
+            self.tools = []
+            self.tool_names = []
+            logger.exception(msg)
+
         return await self.update_tool_list()
