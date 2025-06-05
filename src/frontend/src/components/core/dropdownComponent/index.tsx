@@ -45,6 +45,7 @@ export default function Dropdown({
   optionsMetaData,
   combobox,
   onSelect,
+  placeholder,
   editNode = false,
   id = "",
   children,
@@ -330,7 +331,7 @@ export default function Dropdown({
                 <>
                   {value && filteredOptions.includes(value)
                     ? value
-                    : SELECT_AN_OPTION}{" "}
+                    : placeholder || SELECT_AN_OPTION}{" "}
                 </>
               )}
             </span>

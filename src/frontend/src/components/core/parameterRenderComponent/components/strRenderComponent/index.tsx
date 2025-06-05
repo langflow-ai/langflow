@@ -72,6 +72,7 @@ export function StrRenderComponent({
         options={templateData.options ?? []}
         nodeId={nodeId}
         nodeClass={nodeClass}
+        placeholder={placeholder}
         handleNodeClass={handleNodeClass}
         optionsMetaData={templateData.options_metadata}
         combobox={templateData.combobox}
