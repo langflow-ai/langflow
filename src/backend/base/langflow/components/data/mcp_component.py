@@ -74,6 +74,7 @@ class MCPToolsComponent(Component):
         "code",
         "_type",
         "tool_mode",
+        "tool_placeholder",
         "mcp_server",
         "tool",
     ]
