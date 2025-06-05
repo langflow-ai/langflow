@@ -565,6 +565,63 @@ For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS
 
 </details>
 
+## Type convert
+
+This component converts data types between different formats. It can transform data between [Data](/concepts-objects#data-object), [DataFrame](/concepts-objects#dataframe-object), and [Message](/concepts-objects#message-object) objects.
+
+* **Data**: A structured object that contains both text and metadata.
+```json
+{
+  "text": "User Profile",
+  "data": {
+    "name": "John Smith",
+    "age": 30,
+    "email": "john@example.com"
+  }
+}
+```
+* **DataFrame**: A tabular data structure with rows and columns.
+Keys are columns, and each dictionary (a collection of key-value pairs) in the list is a row.
+```json
+[
+  {
+    "name": "John Smith",
+    "age": 30,
+    "email": "john@example.com"
+  },
+  {
+    "name": "Jane Doe",
+    "age": 25,
+    "email": "jane@example.com"
+  }
+]
+```
+* **Message**: A string, such as`"Name: John Smith, Age: 30, Email: john@example.com"`.
+
+To use this component in a flow, do the following:
+
+1. Connect a component that outputs data to the **Type Convert** component's input.
+2. In the **Type Convert** component, select the desired output type from the **Output Type** field.
+3. Connect the **Type Convert** component's output to another component that accepts the converted data type.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_data | Input Data | The data to convert. Accepts Data, DataFrame, or Message objects. |
+| output_type | Output Type | The desired output type. Options: Data, DataFrame, or Message. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| output | Output | The converted data in the specified format. |
+
+</details>
+
 ## Legacy components
 
 **Legacy** components are available for use but are no longer supported.
