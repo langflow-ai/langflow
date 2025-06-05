@@ -223,9 +223,11 @@ class MCPToolsComponent(Component):
             elif field_name == "mcp_server":
                 await self.update_tools()
                 if "tool" in build_config and len(self.tool_names) > 0:
+                    self.remove_non_default_keys(build_config)
                     build_config["tool"]["show"] = True
                     build_config["tool"]["options"] = self.tool_names
                 elif "tool" in build_config and len(self.tool_names) == 0:
+                    self.remove_non_default_keys(build_config)
                     build_config["tool"]["show"] = False
                     build_config["tool"]["options"] = []
             elif field_name == "tool_mode":
