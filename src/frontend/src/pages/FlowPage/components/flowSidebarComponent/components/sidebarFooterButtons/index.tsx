@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { CustomLink } from "@/customization/components/custom-link";
+import { ENABLE_LANGFLOW_STORE } from "@/customization/feature-flags";
 
 const SidebarMenuButtons = ({
   hasStore = false,
@@ -11,7 +12,8 @@ const SidebarMenuButtons = ({
 }) => {
   return (
     <>
-      {hasStore && (
+      {/* TODO: Remove this on cleanup */}
+      {ENABLE_LANGFLOW_STORE && hasStore && (
         <SidebarMenuButton asChild>
           <CustomLink
             to="/store"
