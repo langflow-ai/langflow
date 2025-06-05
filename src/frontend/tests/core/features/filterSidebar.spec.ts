@@ -133,7 +133,7 @@ test(
 
     await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
 
-    await expect(page.getByTestId("processingSplit Text")).toBeVisible();
+    await expect(page.getByTestId("processingData Operations")).toBeVisible();
 
     await page.getByTestId("icon-X").first().click();
 
