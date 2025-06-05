@@ -383,13 +383,7 @@ class MCPToolsComponent(Component):
                 self.tool_names = []
                 return []
 
-            mode = (
-                "Stdio"
-                if "command" in server_config and "args" in server_config
-                else "SSE"
-                if "url" in server_config
-                else None
-            )
+            mode = "Stdio" if "command" in server_config else "SSE" if "url" in server_config else None
             command = server_config.get("command", "")
             url = server_config.get("url", "")
             headers = self._process_headers(server_config.get("headers", {}))
