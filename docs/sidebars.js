@@ -228,10 +228,14 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Integrations/integrations-assemblyai",
+          label: "AssemblyAI",
+        },
+        {
+          type: "doc",
           id: "Integrations/mcp-component-astra",
           label: "Astra DB MCP server",
         },
-        "Integrations/integrations-assemblyai",
         {
           type: "doc",
           id: "Integrations/Composio/integrations-composio",
@@ -268,9 +272,21 @@ module.exports = {
           type: "category",
           label: "NVIDIA",
           items: [
-            "Integrations/Nvidia/integrations-nvidia-ingest",
-            "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
-            "Integrations/Nvidia/integrations-nvidia-system-assist",
+            {
+              type: "doc",
+              id: "Integrations/Nvidia/integrations-nvidia-ingest",
+              label: "NVIDIA Ingest"
+            },
+            {
+              type: "doc",
+              id: "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
+              label: "NVIDIA NIM on WSL2"
+            },
+            {
+              type: "doc",
+              id: "Integrations/Nvidia/integrations-nvidia-g-assist",
+              label: "NVIDIA G-Assist"
+            },
           ],
         },
       ],
