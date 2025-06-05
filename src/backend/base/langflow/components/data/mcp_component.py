@@ -162,7 +162,15 @@ class MCPToolsComponent(Component):
                     self.tool_names = []
                     return []
 
-                _, tool_list = await update_tools(server_name=server_name, server_config=server_config)
+                _, tool_list, tool_cache = await update_tools(
+                    server_name=server_name,
+                    server_config=server_config,
+                    mcp_stdio_client=self.stdio_client,
+                    mcp_sse_client=self.sse_client,
+                )
+
+                self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
+                self._tool_cache = tool_cache
                 return tool_list
         except Exception as e:
             msg = f"Error updating tool list: {e!s}"
@@ -182,7 +190,7 @@ class MCPToolsComponent(Component):
                             build_config["tool"]["placeholder"] = "Error on MCP Server"
                             return build_config
                         build_config["tool"]["placeholder"] = ""
-                    if self.tool is None:
+                    if field_value == "":
                         return build_config
                     tool_obj = None
                     for tool in self.tools:
@@ -213,7 +221,7 @@ class MCPToolsComponent(Component):
                         build_config["tool"]["show"] = False
                     return build_config
                 build_config["tool"]["placeholder"] = ""
-                if "tool" in build_config and len(self.tool) > 0 and not build_config["tools_metadata"]["show"]:
+                if "tool" in build_config and len(self.tools) > 0 and not build_config["tools_metadata"]["show"]:
                     self.remove_non_default_keys(build_config)
                     build_config["tool"]["show"] = True
                     build_config["tool"]["options"] = self.tool_names

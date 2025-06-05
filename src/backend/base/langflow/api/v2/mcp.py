@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v2.files import MCP_SERVERS_FILE, delete_file, download_file, get_file_by_name, upload_user_file
 from langflow.base.mcp.util import update_tools
+from langflow.logging import logger
 from langflow.services.deps import get_settings_service, get_storage_service
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
@@ -104,13 +105,16 @@ async def get_servers(
     for server in server_list["mcpServers"]:
         server_info = {"name": server, "mode": "", "toolsCount": 0}
         try:
-            mode, tool_list = await update_tools(server_name=server)
+            mode, tool_list, _ = await update_tools(
+                server_name=server,
+                server_config=server_list["mcpServers"][server],
+            )
 
             # Get the server configuration
             server_info["mode"] = mode.lower()
             server_info["toolsCount"] = len(tool_list)
-        except Exception as _:  # noqa: BLE001, S110
-            pass
+        except Exception as e:  # noqa: BLE001, S110
+            logger.exception(e)
 
         return_list.append(server_info)
 

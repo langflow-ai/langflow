@@ -271,79 +271,6 @@ async def _validate_connection_params(mode: str, command: str | None = None, url
         raise ValueError(msg)
 
 
-async def update_tools(
-    server_name: str,
-    server_config: dict,
-) -> tuple[str, list[StructuredTool]]:
-    """Fetch server config and update available tools."""
-    if server_config is None:
-        server_config = {}
-    if not server_name:
-        return "", []
-
-    # Fetch server config from backend
-    # Assume self.current_user and self.session are available (if not, raise error)
-    mode = "Stdio" if "command" in server_config else "SSE" if "url" in server_config else ""
-    command = server_config.get("command", "")
-    url = server_config.get("url", "")
-    headers = _process_headers(server_config.get("headers", {}))
-    await _validate_connection_params(mode, command, url)
-
-    # Determine connection type and parameters
-    if mode == "Stdio":
-        # Make the connection
-        stdio_client: MCPStdioClient = MCPStdioClient()
-
-        # Stdio connection
-        args = server_config.get("args", [])
-        env = server_config.get("env", {})
-        full_command = " ".join([command, *args])
-        if not stdio_client.session:
-            tools = await stdio_client.connect_to_server(full_command, env)
-        client: MCPStdioClient | MCPSseClient = stdio_client
-    elif mode == "SSE":
-        # Make the connection
-        sse_client: MCPSseClient = MCPSseClient()
-
-        # SSE connection
-        if not sse_client.session:
-            tools = await sse_client.connect_to_server(url, headers=headers)
-        client: MCPStdioClient | MCPSseClient = sse_client
-    else:
-        msg = "Invalid MCP server configuration."
-        raise ValueError(msg)
-
-    if not tools:
-        return "", []
-
-    tool_list = []
-    tool_cache: dict[str, StructuredTool] = {}
-    for tool in tools:
-        if not tool or not hasattr(tool, "name"):
-            continue
-        try:
-            args_schema = create_input_schema_from_json_schema(tool.inputSchema)
-            if not args_schema:
-                continue
-            if not client or not client.session:
-                msg = f"Invalid client session for tool '{tool.name}'"
-                raise ValueError(msg)
-            tool_obj = StructuredTool(
-                name=tool.name,
-                description=tool.description or "",
-                args_schema=args_schema,
-                func=create_tool_func(tool.name, args_schema, client.session),
-                coroutine=create_tool_coroutine(tool.name, args_schema, client.session),
-                tags=[tool.name],
-                metadata={},
-            )
-            tool_list.append({"name": tool.name, "tool": tool_obj})
-            tool_cache[tool.name] = tool_obj
-        except (AttributeError, ValueError, TypeError, KeyError):
-            continue
-    return mode, tool_list
-
-
 class MCPStdioClient:
     def __init__(self):
         self.session: ClientSession | None = None
@@ -566,3 +493,77 @@ class MCPSseClient:
 
         msg = f"Failed to connect after {self.max_retries} attempts. Last error: {last_error}"
         raise ConnectionError(msg)
+
+
+async def update_tools(
+    server_name: str,
+    server_config: dict,
+    mcp_stdio_client: MCPStdioClient | None = None,
+    mcp_sse_client: MCPSseClient | None = None,
+) -> tuple[str, list[StructuredTool]]:
+    """Fetch server config and update available tools."""
+    if server_config is None:
+        server_config = {}
+    if not server_name:
+        return "", [], {}
+    if mcp_stdio_client is None:
+        mcp_stdio_client = MCPStdioClient()
+    if mcp_sse_client is None:
+        mcp_sse_client = MCPSseClient()
+
+    # Fetch server config from backend
+    # Assume self.current_user and self.session are available (if not, raise error)
+    mode = "Stdio" if "command" in server_config else "SSE" if "url" in server_config else ""
+    command = server_config.get("command", "")
+    url = server_config.get("url", "")
+    tools = []
+    headers = _process_headers(server_config.get("headers", {}))
+    await _validate_connection_params(mode, command, url)
+
+    # Determine connection type and parameters
+    if mode == "Stdio":
+        # Stdio connection
+        args = server_config.get("args", [])
+        env = server_config.get("env", {})
+        full_command = " ".join([command, *args])
+        if not mcp_stdio_client.session:
+            tools = await mcp_stdio_client.connect_to_server(full_command, env)
+        client: MCPStdioClient | MCPSseClient = mcp_stdio_client
+    elif mode == "SSE":
+        # SSE connection
+        if not mcp_sse_client.session:
+            tools = await mcp_sse_client.connect_to_server(url, headers=headers)
+        client: MCPStdioClient | MCPSseClient = mcp_sse_client
+    else:
+        msg = "Invalid MCP server configuration."
+        raise ValueError(msg)
+
+    if not tools:
+        return "", [], {}
+
+    tool_list = []
+    tool_cache: dict[str, StructuredTool] = {}
+    for tool in tools:
+        if not tool or not hasattr(tool, "name"):
+            continue
+        try:
+            args_schema = create_input_schema_from_json_schema(tool.inputSchema)
+            if not args_schema:
+                continue
+            if not client or not client.session:
+                msg = f"Invalid client session for tool '{tool.name}'"
+                raise ValueError(msg)
+            tool_obj = StructuredTool(
+                name=tool.name,
+                description=tool.description or "",
+                args_schema=args_schema,
+                func=create_tool_func(tool.name, args_schema, client.session),
+                coroutine=create_tool_coroutine(tool.name, args_schema, client.session),
+                tags=[tool.name],
+                metadata={},
+            )
+            tool_list.append(tool_obj)
+            tool_cache[tool.name] = tool_obj
+        except (AttributeError, ValueError, TypeError, KeyError):
+            continue
+    return mode, tool_list, tool_cache
