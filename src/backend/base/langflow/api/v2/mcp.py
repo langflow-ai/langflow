@@ -1,7 +1,7 @@
 import json
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v2.files import MCP_SERVERS_FILE, delete_file, download_file, get_file_by_name, upload_user_file
@@ -21,18 +21,14 @@ async def upload_server_config(
     content_bytes = content_str.encode("utf-8")  # Convert to bytes
     file_obj = BytesIO(content_bytes)  # Use BytesIO for binary data
 
-    upload_file = UploadFile(
-        file=file_obj,
-        filename=MCP_SERVERS_FILE + ".json",
-        size=len(content_str)
-    )
+    upload_file = UploadFile(file=file_obj, filename=MCP_SERVERS_FILE + ".json", size=len(content_str))
 
     return await upload_user_file(
         file=upload_file,
         session=session,
         current_user=current_user,
         storage_service=storage_service,
-        settings_service=settings_service
+        settings_service=settings_service,
     )
 
 
@@ -52,7 +48,7 @@ async def get_server_list(
             current_user,
             session,
             storage_service=storage_service,
-            settings_service=settings_service
+            settings_service=settings_service,
         )
         server_config_file = await get_file_by_name(current_user, session, file_name=MCP_SERVERS_FILE)
 
@@ -69,9 +65,10 @@ async def get_server_list(
     try:
         servers = json.loads(server_config)
     except json.JSONDecodeError:
-        return {"error": "Invalid server configuration file format."}
+        raise HTTPException(status_code=500, detail="Invalid server configuration file format.") from None
 
     return servers
+
 
 async def get_server(
     server_name: str,
@@ -88,6 +85,7 @@ async def get_server(
 
     return server_list["mcpServers"][server_name]
 
+
 # Define a Get servers endpoint
 @router.get("/servers")
 async def get_servers(
@@ -101,6 +99,7 @@ async def get_servers(
 
     return [{"name": k, "mode": "stdio", "toolsCount": 1} for k in server_list["mcpServers"]]
 
+
 @router.get("/servers/{server_name}")
 async def get_server_endpoint(
     server_name: str,
@@ -110,6 +109,7 @@ async def get_server_endpoint(
 ):
     """Get a specific server."""
     return await get_server(server_name, current_user, session, storage_service)
+
 
 async def update_server(
     server_name: str,
@@ -126,14 +126,14 @@ async def update_server(
 
     # Validate server name
     if check_existing and server_name in server_list["mcpServers"]:
-        return {"error": "Server already exists."}
+        raise HTTPException(status_code=500, detail="Server already exists.")
 
     # Handle the delete case
     if delete:
         if server_name in server_list["mcpServers"]:
             del server_list["mcpServers"][server_name]
         else:
-            return {"error": "Server not found."}
+            raise HTTPException(status_code=500, detail="Server not found.")
     else:
         server_list["mcpServers"][server_name] = server_config
 
@@ -143,14 +143,11 @@ async def update_server(
 
     # Upload the updated server configuration
     await upload_server_config(
-        server_list,
-        current_user,
-        session,
-        storage_service=storage_service,
-        settings_service=settings_service
+        server_list, current_user, session, storage_service=storage_service, settings_service=settings_service
     )
 
     return await get_server(server_name, current_user, session, storage_service)
+
 
 @router.post("/servers/{server_name}")
 async def add_server(
@@ -171,6 +168,7 @@ async def add_server(
         check_existing=True,
     )
 
+
 @router.patch("/servers/{server_name}")
 async def update_server_endpoint(
     server_name: str,
@@ -188,6 +186,7 @@ async def update_server_endpoint(
         storage_service,
         settings_service,
     )
+
 
 @router.delete("/servers/{server_name}")
 async def delete_server(
