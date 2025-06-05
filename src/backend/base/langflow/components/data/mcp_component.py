@@ -225,6 +225,9 @@ class MCPToolsComponent(Component):
                 if "tool" in build_config and len(self.tool_names) > 0:
                     build_config["tool"]["show"] = True
                     build_config["tool"]["options"] = self.tool_names
+                elif "tool" in build_config and len(self.tool_names) == 0:
+                    build_config["tool"]["show"] = False
+                    build_config["tool"]["options"] = []
             elif field_name == "tool_mode":
                 build_config["tool"]["show"] = not field_value
                 for key, value in list(build_config.items()):
