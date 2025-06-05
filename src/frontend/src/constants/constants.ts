@@ -660,6 +660,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "connect",
   "auth",
   "query",
+  "mcp",
   "tools",
 ]);
 

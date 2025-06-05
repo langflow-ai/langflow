@@ -39,6 +39,16 @@ export default function SettingsPage(): JSX.Element {
 
   sidebarNavItems.push(
     {
+      title: "MCP Connections",
+      href: "/settings/mcp-servers",
+      icon: (
+        <ForwardedIconComponent
+          name="Mcp"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
+    {
       title: "Global Variables",
       href: "/settings/global-variables",
       icon: (

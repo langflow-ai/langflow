@@ -27,7 +27,7 @@ export const ButtonInputList = ({
         <div
           onClick={addNewInput}
           className={cn(
-            "hit-area-icon group absolute flex -translate-y-8 translate-x-[15.36rem] items-center justify-center bg-background text-center hover:bg-muted",
+            "hit-area-icon group absolute -top-8 right-0 flex items-center justify-center bg-background text-center hover:bg-muted",
             disabled
               ? "pointer-events-none bg-background hover:bg-background"
               : "",

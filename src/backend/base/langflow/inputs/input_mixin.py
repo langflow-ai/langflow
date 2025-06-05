@@ -37,6 +37,7 @@ class FieldTypes(str, Enum):
     TAB = "tab"
     QUERY = "query"
     TOOLS = "tools"
+    MCP = "mcp"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]

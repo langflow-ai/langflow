@@ -622,6 +622,20 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     field_type: SerializableFieldTypes = FieldTypes.FILE
 
 
+class McpInput(BaseInputMixin, MetadataTraceMixin):
+    """Represents a mcp input field.
+
+    This class represents a mcp input and provides functionality for handling mcp values.
+    It inherits from the `BaseInputMixin` and `MetadataTraceMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.MCP.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.MCP
+    value: str = Field(default="")
+
+
 class LinkInput(BaseInputMixin, LinkMixin):
     field_type: SerializableFieldTypes = FieldTypes.LINK
 
@@ -659,6 +673,7 @@ InputTypes: TypeAlias = (
     | FloatInput
     | HandleInput
     | IntInput
+    | McpInput
     | MultilineInput
     | MultilineSecretInput
     | NestedDictInput
