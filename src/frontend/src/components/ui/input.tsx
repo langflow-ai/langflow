@@ -6,6 +6,7 @@ export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: string;
   inputClassName?: string;
+  placeholder?: string;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
