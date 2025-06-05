@@ -3,11 +3,11 @@ from typing import cast
 from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import data_to_text
 from langflow.inputs.inputs import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput
-from langflow.template.field.base import Output
 from langflow.memory import aget_messages
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+from langflow.template.field.base import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 

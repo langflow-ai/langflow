@@ -7,11 +7,11 @@ from fastapi.encoders import jsonable_encoder
 from langflow.base.io.chat import ChatComponent
 from langflow.helpers.data import safe_convert
 from langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput
-from langflow.template.field.base import Output
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.schema.properties import Source
+from langflow.template.field.base import Output
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
