@@ -4,6 +4,8 @@ from typing import Any
 
 from langchain_core.tools import StructuredTool
 
+# Import get_server from the backend API
+from langflow.api.v2.mcp import get_server
 from langflow.base.mcp.util import (
     MCPSseClient,
     MCPStdioClient,
@@ -12,17 +14,14 @@ from langflow.base.mcp.util import (
     create_tool_func,
 )
 from langflow.custom import Component
-from langflow.io import McpInput, MessageTextInput, Output, DropdownInput  # Import McpInput from langflow.io
+from langflow.inputs.inputs import InputTypes
+from langflow.io import DropdownInput, McpInput, MessageTextInput, Output  # Import McpInput from langflow.io
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
-from langflow.services.auth.utils import create_user_longterm_token
-from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.logging import logger
 from langflow.schema import DataFrame
-from langflow.inputs.inputs import InputTypes
+from langflow.services.auth.utils import create_user_longterm_token
+from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_session, get_settings_service, get_storage_service
-
-# Import get_server from the backend API
-from langflow.api.v2.mcp import get_server
 
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:

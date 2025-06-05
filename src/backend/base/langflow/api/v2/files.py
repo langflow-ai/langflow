@@ -320,6 +320,7 @@ async def read_file_content(file_stream: AsyncIterable[bytes] | bytes, *, decode
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Error reading file: {exc}") from exc
 
+
 @router.get("/{file_id}")
 async def download_file(
     file_id: uuid.UUID,
@@ -327,7 +328,7 @@ async def download_file(
     session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     *,
-    return_content: bool = False
+    return_content: bool = False,
 ):
     """Download a file by its ID or return its content as a string/bytes.
 
