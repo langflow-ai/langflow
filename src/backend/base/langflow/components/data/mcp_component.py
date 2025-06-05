@@ -223,7 +223,7 @@ class MCPToolsComponent(Component):
                     build_config["tool"]["options"] = []
             elif field_name == "tool_mode":
                 try:
-                    await self.update_tools()
+                    self.tools = await self.update_tool_list()
                 except ValueError:
                     if not build_config["tools_metadata"]["show"]:
                         build_config["tool"]["show"] = True
