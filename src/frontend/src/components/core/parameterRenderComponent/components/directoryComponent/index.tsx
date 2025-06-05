@@ -17,7 +17,6 @@ export default function DirectoryComponent({
 
     try {
       const selectedDirectory = await createDirectoryUpload();
-      console.log("selectedDirectory", selectedDirectory);
       if (selectedDirectory) {
         handleOnNewValue({ value: selectedDirectory });
       }
