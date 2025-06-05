@@ -44,6 +44,7 @@ withEventDeliveryModes(
     try {
       await page
         .getByTestId("anchor-popover-anchor-input-api_key")
+        .locator("input")
         .last()
         .fill(process.env.ANTHROPIC_API_KEY ?? "");
     } catch (e) {

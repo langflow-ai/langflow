@@ -1595,6 +1595,50 @@
                 "type": "other",
                 "value": ""
               },
+              "message": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Message",
+                "dynamic": false,
+                "info": "The chat message to be stored.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "mode": {
+                "_input_type": "TabInput",
+                "advanced": true,
+                "display_name": "Mode",
+                "dynamic": false,
+                "info": "Operation mode: Store messages or Retrieve messages.",
+                "name": "mode",
+                "options": [
+                  "Retrieve",
+                  "Store"
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tab",
+                "value": "Store"
+              },
               "model_kwargs": {
                 "_input_type": "DictInput",
                 "advanced": true,
@@ -1698,7 +1742,7 @@
                 ],
                 "options_metadata": [],
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "tool_mode": true,
