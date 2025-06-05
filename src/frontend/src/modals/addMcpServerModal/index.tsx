@@ -287,7 +287,9 @@ export default function AddMcpServerModal({
                 <TabsContent value="STDIO">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <Label className="!text-mmd">Name</Label>
+                      <Label className="flex items-start gap-1 !text-mmd">
+                        Name <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         value={stdioName}
                         onChange={(e) => setStdioName(e.target.value)}
@@ -296,7 +298,9 @@ export default function AddMcpServerModal({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label className="!text-mmd">Command</Label>
+                      <Label className="flex items-start gap-1 !text-mmd">
+                        Command<span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         value={stdioCommand}
                         onChange={(e) => setStdioCommand(e.target.value)}
@@ -331,7 +335,9 @@ export default function AddMcpServerModal({
                 <TabsContent value="SSE">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <Label className="!text-mmd">Name</Label>
+                      <Label className="flex items-start gap-1 !text-mmd">
+                        Name<span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         value={sseName}
                         onChange={(e) => setSseName(e.target.value)}
@@ -340,7 +346,9 @@ export default function AddMcpServerModal({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label className="!text-mmd">SSE URL</Label>
+                      <Label className="flex items-start gap-1 !text-mmd">
+                        SSE URL<span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         value={sseUrl}
                         onChange={(e) => setSseUrl(e.target.value)}
