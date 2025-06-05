@@ -130,7 +130,7 @@ async def get_servers(
             # Get the server configuration
             server_info["mode"] = mode.lower()
             server_info["toolsCount"] = len(tool_list)
-        except Exception as e:  # noqa: BLE001, S110
+        except Exception as e:  # noqa: BLE001
             logger.exception(e)
 
         return_list.append(server_info)
