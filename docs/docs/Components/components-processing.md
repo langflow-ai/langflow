@@ -914,7 +914,7 @@ The JSON cleaner component cleans JSON strings to ensure they are fully complian
 
 </details>
 
-## Message to data
+### Message to data
 
 This component converts [Message](/concepts-objects#message-object) objects to [Data](/concepts-objects#data-object) objects.
 
