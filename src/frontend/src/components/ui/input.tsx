@@ -29,7 +29,6 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         <input
           autoComplete="off"
-          data-testid=""
           type={type}
           className={cn(
             "nopan nodelete nodrag noflow primary-input",
