@@ -234,14 +234,13 @@ def _process_headers(headers: Any) -> dict:
         return headers
     if isinstance(headers, list):
         processed_headers = {}
+        # Inline the key-value check for higher speed and reduce function calling overhead
         try:
             for item in headers:
-                if not _is_valid_key_value_item(item):
+                if not (isinstance(item, dict) and "key" in item and "value" in item):
                     continue
-                key = item["key"]
-                value = item["value"]
-                processed_headers[key] = value
-        except (KeyError, TypeError, ValueError):
+                processed_headers[item["key"]] = item["value"]
+        except Exception:
             return {}  # Return empty dictionary instead of None
         return processed_headers
     return {}
