@@ -72,6 +72,7 @@ export default function McpComponent({
               role="combobox"
               onClick={handleOpenListSelectionDialog}
               className="dropdown-component-outline input-edit-node w-full py-2"
+              data-testid="mcp-server-dropdown"
               disabled={disabled}
             >
               <div

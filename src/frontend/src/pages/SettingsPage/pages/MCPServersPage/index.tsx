@@ -70,7 +70,11 @@ export default function MCPServersPage() {
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
-          <Button variant="primary" onClick={() => setAddOpen(true)}>
+          <Button
+            variant="primary"
+            onClick={() => setAddOpen(true)}
+            data-testid="add-mcp-server-button-page"
+          >
             <ForwardedIconComponent name="Plus" className="w-4" />
             Add MCP Server
           </Button>
@@ -107,6 +111,7 @@ export default function MCPServersPage() {
                       <Button
                         variant="ghost"
                         size="iconSm"
+                        data-testid={`mcp-server-menu-button-${server.name}`}
                         className="text-muted-foreground hover:bg-accent"
                       >
                         <ForwardedIconComponent
