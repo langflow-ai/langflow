@@ -86,7 +86,7 @@ async def consume_and_assert_stream(response, job_id, timeout=30.0):
                         "ChatOutput-NAw0P",
                     ]
                     assert set(to_run) == set(expected_to_run), (
-                        "Invalid to_run list in first event. Full event stream:\n" + "\n".join(lines)
+                        "Invalid to_run list in the first event. Full event stream:\n" + "\n".join(lines)
                     )
                     first_event_seen = True
                 # Last event should be end
