@@ -400,7 +400,7 @@ class MCPToolsComponent(Component):
                 # Stdio connection
                 args = server_config.get("args", [])
                 env = server_config.get("env", {})
-                full_command = " ".join([command] + args)
+                full_command = " ".join([command, *args])
                 if not self.stdio_client.session:
                     self.tools = await self.stdio_client.connect_to_server(full_command, env)
                 client = self.stdio_client
@@ -411,7 +411,8 @@ class MCPToolsComponent(Component):
                     self.tools = await self.sse_client.connect_to_server(url, env, headers=headers)
                 client = self.sse_client
             else:
-                raise ValueError("Invalid MCP server configuration.")
+                msg = "Invalid MCP server configuration."
+                raise ValueError(msg)
 
             if not self.tools:
                 logger.warning("No tools returned from server")
