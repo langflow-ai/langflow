@@ -4,6 +4,7 @@ import os
 import platform
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
+import shutil
 from typing import Any, cast
 from urllib.parse import urlparse
 from uuid import UUID
@@ -12,6 +13,7 @@ import aiofiles
 import httpx
 from anyio import Path
 from httpx import codes as httpx_codes
+from langchain_core.tools import StructuredTool
 from loguru import logger
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from mcp.client.sse import sse_client
@@ -212,6 +214,130 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
     return create_model("InputSchema", **top_fields)
 
+def _is_valid_key_value_item(item: Any) -> bool:
+    """Check if an item is a valid key-value dictionary."""
+    return isinstance(item, dict) and "key" in item and "value" in item
+
+def _process_headers(headers: Any) -> dict:
+    """Process the headers input into a valid dictionary.
+
+    Args:
+        headers: The headers to process, can be dict, str, or list
+    Returns:
+        Processed dictionary
+    """
+    if headers is None:
+        return {}
+    if isinstance(headers, dict):
+        return headers
+    if isinstance(headers, list):
+        processed_headers = {}
+        try:
+            for item in headers:
+                if not _is_valid_key_value_item(item):
+                    continue
+                key = item["key"]
+                value = item["value"]
+                processed_headers[key] = value
+        except (KeyError, TypeError, ValueError) as e:
+            return {}  # Return empty dictionary instead of None
+        return processed_headers
+    return {}
+
+def _validate_node_installation(command: str) -> str:
+    """Validate the npx command."""
+    if "npx" in command and not shutil.which("node"):
+        msg = "Node.js is not installed. Please install Node.js to use npx commands."
+        raise ValueError(msg)
+    return command
+
+async def _validate_connection_params(mode: str, command: str | None = None, url: str | None = None) -> None:
+    """Validate connection parameters based on mode."""
+    if mode not in ["Stdio", "SSE"]:
+        msg = f"Invalid mode: {mode}. Must be either 'Stdio' or 'SSE'"
+        raise ValueError(msg)
+
+    if mode == "Stdio" and not command:
+        msg = "Command is required for Stdio mode"
+        raise ValueError(msg)
+    if mode == "Stdio" and command:
+        _validate_node_installation(command)
+    if mode == "SSE" and not url:
+        msg = "URL is required for SSE mode"
+        raise ValueError(msg)
+
+async def update_tools(
+    server_name: str,
+    server_config: dict,
+) -> tuple[str, list[StructuredTool]]:
+    """Fetch server config and update available tools."""
+    if server_config is None:
+        server_config = {}
+    if not server_name:
+        return "", []
+
+    # Fetch server config from backend
+    # Assume self.current_user and self.session are available (if not, raise error)
+    mode = "Stdio" if "command" in server_config else "SSE" if "url" in server_config else ""
+    command = server_config.get("command", "")
+    url = server_config.get("url", "")
+    headers = _process_headers(server_config.get("headers", {}))
+    await _validate_connection_params(mode, command, url)
+
+    # Determine connection type and parameters
+    if mode == "Stdio":
+        # Make the connection
+        stdio_client: MCPStdioClient = MCPStdioClient()
+
+        # Stdio connection
+        args = server_config.get("args", [])
+        env = server_config.get("env", {})
+        full_command = " ".join([command, *args])
+        if not stdio_client.session:
+            tools = await stdio_client.connect_to_server(full_command, env)
+        client: MCPStdioClient | MCPSseClient = stdio_client
+    elif mode == "SSE":
+        # Make the connection
+        sse_client: MCPSseClient = MCPSseClient()
+
+        # SSE connection
+        if not sse_client.session:
+            tools = await sse_client.connect_to_server(url, headers=headers)
+        client: MCPStdioClient | MCPSseClient = sse_client
+    else:
+        msg = "Invalid MCP server configuration."
+        raise ValueError(msg)
+
+    if not tools:
+        return "", []
+
+    tool_list = []
+    tool_cache: dict[str, StructuredTool] = {}
+    for tool in tools:
+        if not tool or not hasattr(tool, "name"):
+            continue
+        try:
+            args_schema = create_input_schema_from_json_schema(tool.inputSchema)
+            if not args_schema:
+                continue
+            if not client or not client.session:
+                msg = f"Invalid client session for tool '{tool.name}'"
+                raise ValueError(msg)
+            tool_obj = StructuredTool(
+                name=tool.name,
+                description=tool.description or "",
+                args_schema=args_schema,
+                func=create_tool_func(tool.name, args_schema, client.session),
+                coroutine=create_tool_coroutine(tool.name, args_schema, client.session),
+                tags=[tool.name],
+                metadata={},
+            )
+            tool_list.append({"name": tool.name, "tool": tool_obj})
+            tool_cache[tool.name] = tool_obj
+        except (AttributeError, ValueError, TypeError, KeyError) as e:
+            continue
+    return mode, tool_list
+
 
 class MCPStdioClient:
     def __init__(self):
@@ -221,18 +347,11 @@ class MCPStdioClient:
         self.retry_delay = 1.0  # seconds
         self.timeout_seconds = 30  # default timeout
 
-    async def connect_to_server(self, command_str: str, env: list[str] | None = None):
-        env_dict: dict[str, str] = {}
-        if env is None:
-            env = []
-        for var in env:
-            if "=" not in var:
-                msg = f"Invalid env var format: {var}. Must be in the format 'VAR_NAME=VAR_VALUE'"
-                raise ValueError(msg)
-            env_dict[var.split("=")[0]] = var.split("=")[1]
+    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
+        """Connect to MCP server using stdio transport."""
         command = command_str.split(" ")
         server_params = None
-        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})}
+        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
 
         # Create platform-specific command wrapper
         if platform.system() == "Windows":
