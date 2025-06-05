@@ -216,6 +216,7 @@ class MCPToolsComponent(Component):
                         build_config["tool"]["placeholder"] = "Error on MCP Server"
                     else:
                         build_config["tool"]["show"] = False
+                    self.remove_non_default_keys(build_config)
                     return build_config
                 build_config["tool"]["placeholder"] = ""
                 if "tool" in build_config and len(self.tools) > 0 and not build_config["tools_metadata"]["show"]:
