@@ -288,7 +288,7 @@ class TraceloopTracer(BaseTracer):
         elif isinstance(value, Document):
             value = value.page_content
 
-        elif isinstance(value, (types.GeneratorType | types.NoneType)):
+        elif isinstance(value, types.GeneratorType | type(None)):
             value = str(value)
 
         elif isinstance(value, float) and not math.isfinite(value):
