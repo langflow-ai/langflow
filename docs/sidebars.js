@@ -125,6 +125,17 @@ module.exports = {
           id: "Develop/webhook",
           label: "Webhook"
         },
+        {
+          type: "category",
+          label: "Clients",
+          items: [
+            {
+              type: "doc",
+              id: "Develop/Clients/typescript-client",
+              label: "TypeScript Client"
+            }
+          ]
+        },
       ],
     },
     {
@@ -229,6 +240,11 @@ module.exports = {
           type: "doc",
           id: "Integrations/Composio/integrations-composio",
           label: "Composio",
+        },
+        {
+          type: "doc",
+          id: "Integrations/Cleanlab/integrations-cleanlab",
+          label: "Cleanlab",
         },
         {
           type: 'category',
