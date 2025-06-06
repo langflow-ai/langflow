@@ -38,24 +38,22 @@ export function getNewJsApiCode({
   const tweaksString =
     tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
 
-  return `${
-    isAuthenticated
-      ? `// Get API key from environment variable
+  return `${isAuthenticated
+    ? `// Get API key from environment variable
 if (!process.env.LANGFLOW_API_KEY) {
     throw new Error('LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.');
 }
 `
-      : ""
-  }const payload = {
+    : ""
+    }const payload = {
     "input_value": "${input_value}",
     "output_type": "${output_type}",
     "input_type": "${input_type}",
     // Optional: Use session tracking if needed
-    "session_id": "user_1"${
-      activeTweaks && tweaksObject
-        ? `,
+    "session_id": "user_1"${activeTweaks && tweaksObject
+      ? `,
     "tweaks": ${tweaksString}`
-        : ""
+      : ""
     }
 };
 
@@ -69,7 +67,10 @@ const options = {
 
 fetch('${apiUrl}', options)
     .then(response => response.json())
-    .then(response => console.log(response))
+    .then(response => {
+        console.log('Full response structure:');
+        console.log(JSON.stringify(response, null, 2));
+    })
     .catch(err => console.error(err));
     `;
 }
