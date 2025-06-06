@@ -1,6 +1,7 @@
 from typing import Any, cast
 
 from langflow.custom import Component
+from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput
 from langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, TabInput
 from langflow.memory import aget_messages, astore_message
@@ -97,7 +98,11 @@ class MemoryComponent(Component):
         ),
     ]
 
-    outputs = [Output(display_name="Messages", name="dataframe", method="retrieve_messages_dataframe", dynamic=True)]
+    outputs = [
+        Output(display_name="Data", name="messages", method="retrieve_messages"),
+        Output(display_name="Message", name="messages_text", method="retrieve_messages_as_text"),
+        Output(display_name="DataFrame", name="dataframe", method="retrieve_messages_dataframe"),
+    ]
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Dynamically show only the relevant output based on the selected output type."""
@@ -116,9 +121,9 @@ class MemoryComponent(Component):
                 ]
             if field_value == "Retrieve":
                 frontend_node["outputs"] = [
-                    Output(
-                        display_name="Messages", name="dataframe", method="retrieve_messages_dataframe", dynamic=True
-                    )
+                    Output(display_name="Data", name="messages", method="retrieve_messages"),
+                    Output(display_name="Message", name="messages_text", method="retrieve_messages_as_text"),
+                    Output(display_name="DataFrame", name="dataframe", method="retrieve_messages_dataframe"),
                 ]
         return frontend_node
 
@@ -163,6 +168,11 @@ class MemoryComponent(Component):
             )
         self.status = stored
         return cast(Data, stored)
+
+    async def retrieve_messages_as_text(self) -> Message:
+        stored_text = data_to_text(self.template, await self.retrieve_messages())
+        self.status = stored_text
+        return Message(text=stored_text)
 
     async def retrieve_messages_dataframe(self) -> DataFrame:
         """Convert the retrieved messages into a DataFrame.
