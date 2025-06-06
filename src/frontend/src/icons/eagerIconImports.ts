@@ -24,6 +24,7 @@ import { ConfluenceIcon } from "@/icons/Confluence";
 import { CouchbaseIcon } from "@/icons/Couchbase";
 import { CrewAiIcon } from "@/icons/CrewAI";
 import { DeepSeekIcon } from "@/icons/DeepSeek";
+import { DoclingIcon } from "@/icons/Docling";
 import { DropboxIcon } from "@/icons/Dropbox";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ElasticsearchIcon } from "@/icons/ElasticsearchStore";
@@ -141,6 +142,7 @@ export const eagerIconsMapping = {
   Couchbase: CouchbaseIcon,
   CrewAI: CrewAiIcon,
   DeepSeek: DeepSeekIcon,
+  Docling: DoclingIcon,
   Dropbox: DropboxIcon,
   DuckDuckGo: DuckDuckGoIcon,
   ElasticsearchStore: ElasticsearchIcon,
