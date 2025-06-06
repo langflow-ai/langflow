@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.4.2"
+version = "0.4.3"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -10,7 +10,6 @@ maintainers = [
     { name = "Carlos Coelho", email = "carlos@langflow.org" },
     { name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com" },
     { name = "Gabriel Almeida", email = "gabriel@langflow.org" },
-    { name = "Igor Carvalho", email = "igorr.ackerman@gmail.com" },
     { name = "Lucas Eduoli", email = "lucaseduoli@gmail.com" },
     { name = "Otávio Anovazzi", email = "otavio2204@gmail.com" },
     { name = "Rodrigo Nader", email = "rodrigo@langflow.org" },

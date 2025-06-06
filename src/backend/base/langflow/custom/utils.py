@@ -380,7 +380,13 @@ def build_custom_component_template_from_inputs(
         return_types = cc_instance.get_method_return_type(output.method)
         return_types = [format_type(return_type) for return_type in return_types]
         output.add_types(return_types)
-        output.set_selected()
+
+    selected_output = next((output for output in field_config.get("outputs", []) if output.get("selected")), None)
+
+    next_output = next((output for output in frontend_node.outputs if output.name == selected_output.get("name")), None)
+    if next_output and selected_output:
+        next_output.selected = selected_output.get("selected")
+
     # Validate that there is not name overlap between inputs and outputs
     frontend_node.validate_component()
     # ! This should be removed when we have a better way to handle this
