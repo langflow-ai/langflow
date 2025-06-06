@@ -36,7 +36,7 @@ class ComponentCache:
 component_cache = ComponentCache()
 
 
-async def get_langflow_components_list():
+async def import_langflow_components():
     """Asynchronously discovers and loads all built-in Langflow components.
 
     Imports and introspects submodules of the langflow.components package to identify classes that
@@ -118,7 +118,7 @@ async def get_and_cache_all_types_dict(
     if component_cache.all_types_dict is None:
         logger.debug("Building langchain types dict")
 
-        langflow_components = await get_langflow_components_list()
+        langflow_components = await import_langflow_components()
 
         if settings_service.settings.lazy_load_components:
             # Partial loading mode - just load component metadata
