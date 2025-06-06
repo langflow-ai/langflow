@@ -263,7 +263,7 @@ def run_build_inputs(
 
 
 def get_component_instance(custom_component: CustomComponent, user_id: str | UUID | None = None):
-    if custom_component.__class__.__name__ not in {"Component", "CustomComponent"}:
+    if isinstance(custom_component, Component | CustomComponent):
         return custom_component
 
     if custom_component._code is None:
@@ -305,7 +305,7 @@ def run_build_config(
     user_id: str | UUID | None = None,
 ) -> tuple[dict, CustomComponent]:
     """Build the field configuration for a custom component."""
-    if custom_component.__class__.__name__ not in {"Component", "CustomComponent"}:
+    if issubclass(custom_component, Component | CustomComponent):
         return custom_component.build_config(), custom_component
 
     if custom_component._code is None:
