@@ -15,10 +15,10 @@ if TYPE_CHECKING:
 
 
 class LambdaFilterComponent(Component):
-    display_name = "Lambda Filter"
-    description = "Uses an LLM to generate a lambda function for filtering or transforming structured data."
-    icon = "filter"
-    name = "LambdaFilter"
+    display_name = "Smart Function"
+    description = "Uses an LLM to generate a function for filtering or transforming structured data."
+    icon = "test-tube-diagonal"
+    name = "Smart Function"
     beta = True
 
     inputs = [
