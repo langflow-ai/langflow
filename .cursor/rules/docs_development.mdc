@@ -121,7 +121,7 @@ class MyComponent(Component):
 ![Component Overview](/img/components/overview.png)
 
 <!-- Use descriptive alt text -->
-![Langflow interface showing the flow editor with nodes and connections](mdc:img/flow-editor.png)
+![Langflow interface showing the flow editor with nodes and connections](/img/flow-editor.png)
 ```
 
 ---
