@@ -69,7 +69,10 @@ const options = {
 
 fetch('${apiUrl}', options)
     .then(response => response.json())
-    .then(response => console.log(response))
+    .then(response => {
+        console.log('Full response structure:');
+        console.log(JSON.stringify(response, null, 2));
+    })
     .catch(err => console.error(err));
     `;
 }
