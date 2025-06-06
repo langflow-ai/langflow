@@ -91,7 +91,7 @@ def _get_langflow_components_list_sync():
                 comp_instance = cls()
                 comp_template, _ = create_component_template(component_extractor=comp_instance)
                 # Use 'display_name' from the template if available; otherwise, fallback to the class name.
-                component_name = comp_template.get("display_name", name)
+                component_name = cls.name if hasattr(cls, "name") and cls.name else name
                 module_components[component_name] = comp_template
             except Exception as e:  # noqa: BLE001
                 logger.warning(
