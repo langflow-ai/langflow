@@ -13,6 +13,7 @@ export const customUseStartRecording = (
   workletCode: string,
   processorRef: MutableRefObject<AudioWorkletNode | null>,
   setStatus: (status: string) => void,
+  isLLMRespondingRef?: MutableRefObject<boolean>,
 ) => {
   return useStartRecording(
     audioContextRef,
@@ -26,6 +27,7 @@ export const customUseStartRecording = (
     workletCode,
     processorRef,
     setStatus,
+    isLLMRespondingRef,
   );
 };
 

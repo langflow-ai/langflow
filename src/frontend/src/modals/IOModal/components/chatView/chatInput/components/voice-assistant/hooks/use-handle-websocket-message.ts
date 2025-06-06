@@ -21,6 +21,8 @@ export const useHandleWebsocketMessage = (
   updateBuildStatus: (nodeIds: string[], status: BuildStatus) => void,
   hasOpenAIAPIKey: boolean,
   showErrorAlert: (title: string, list: string[]) => void,
+  setIsLLMGenerating: React.Dispatch<React.SetStateAction<boolean>>,
+  setLastAudioReceived: React.Dispatch<React.SetStateAction<number>>,
 ) => {
   const data = JSON.parse(event.data);
 
@@ -31,22 +33,16 @@ export const useHandleWebsocketMessage = (
       }
       break;
 
-    case "response.done":
-      if (data.response?.status_details?.error?.code) {
-        const errorCode =
-          data.response?.status_details?.error?.code?.replaceAll("_", " ");
-        setStatus(`API key error: ${errorCode}`);
-        showErrorAlert("API key error: " + errorCode, [
-          "Please check your API key and try again",
-        ]);
-      }
-      break;
-
-    case "response.cancelled":
-      interruptPlayback();
+    case "response.created":
+    case "response.output_item.added":
+    case "response.text.delta":
+      setIsLLMGenerating(true);
       break;
 
     case "response.audio.delta":
+      setIsLLMGenerating(true);
+      setLastAudioReceived(Date.now());
+
       if (data.delta && audioContextRef.current) {
         try {
           const float32Data = base64ToFloat32Array(data.delta);
@@ -67,13 +63,33 @@ export const useHandleWebsocketMessage = (
       }
       break;
 
+    case "response.done":
+    case "response.audio.done":
+    case "response.text.done":
+    case "response.output_item.done":
+    case "conversation.item.created":
+      setIsLLMGenerating(false);
+      if (data.response?.status_details?.error?.code) {
+        const errorCode =
+          data.response?.status_details?.error?.code?.replaceAll("_", " ");
+        setStatus(`API key error: ${errorCode}`);
+        showErrorAlert("API key error: " + errorCode, [
+          "Please check your API key and try again",
+        ]);
+      }
+      break;
+
+    case "response.cancelled":
+      setIsLLMGenerating(false);
+      interruptPlayback();
+      break;
+
     case "flow.build.progress":
       const buildData = data.data;
       switch (buildData.event) {
         case "start":
           setIsBuilding(true);
           break;
-
         case "start_vertex":
           updateBuildStatus([buildData.vertex_id], BuildStatus.BUILDING);
           const newEdges = edges.map((edge) => {
@@ -85,7 +101,6 @@ export const useHandleWebsocketMessage = (
           });
           setEdges(newEdges);
           break;
-
         case "end_vertex":
           updateBuildStatus([buildData.vertex_id], BuildStatus.BUILT);
           addDataToFlowPool(
@@ -99,18 +114,15 @@ export const useHandleWebsocketMessage = (
           );
           updateEdgesRunningByNodes([buildData.vertex_id], false);
           break;
-
         case "error":
           updateBuildStatus([buildData.vertex_id], BuildStatus.ERROR);
           updateEdgesRunningByNodes([buildData.vertex_id], false);
           break;
-
         case "end":
           setIsBuilding(false);
           revertBuiltStatusFromBuilding();
           clearEdgesRunningByNodes();
           break;
-
         case "add_message":
           messagesStore.addMessage(buildData.data);
           break;
@@ -118,23 +130,33 @@ export const useHandleWebsocketMessage = (
       break;
 
     case "error":
+      setIsLLMGenerating(false);
       if (data.code === "api_key_missing") {
-        setStatus("Error: " + "API key is missing");
+        setStatus("Error: API key is missing");
         showErrorAlert("API key not valid", [
           "Please check your API key and try again",
         ]);
         return;
       }
-      if (data.error.message.toLowerCase().includes("api key")) {
-        setStatus("Error: " + "API key is missing");
+      if (data.error?.message?.toLowerCase().includes("api key")) {
+        setStatus("Error: API key is missing");
         showErrorAlert("API key not valid", [
           "Please check your API key and try again",
         ]);
         return;
       }
-      data.error.message === "Cancellation failed: no active response found"
+      data.error?.message === "Cancellation failed: no active response found"
         ? interruptPlayback()
         : setStatus("Error: " + data.error);
+      break;
+
+    default:
+      if (
+        (data.type && data.type.includes("done")) ||
+        data.type.includes("complete")
+      ) {
+        setIsLLMGenerating(false);
+      }
       break;
   }
 };
