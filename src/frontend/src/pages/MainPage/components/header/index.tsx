@@ -9,6 +9,7 @@ import {
 } from "@/constants/constants";
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
+import { useGetDownloadFlowsPython } from "@/controllers/API/queries/flows/use-get-download-flows-python";
 import { ENABLE_MCP } from "@/customization/feature-flags";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
@@ -53,6 +54,12 @@ const HeaderComponent = ({
 
   const { mutate: downloadFlows, isPending: isDownloading } =
     useGetDownloadFlows();
+  const { mutate: downloadFlowsPython, isPending: isDownloadingPython } =
+    useGetDownloadFlowsPython({
+      onSuccess: () => {
+        setSuccessData({ title: "Python files downloaded successfully" });
+      },
+    });
   const { mutate: deleteFlows, isPending: isDeleting } = useDeleteDeleteFlows();
 
   useEffect(() => {
@@ -83,6 +90,10 @@ const HeaderComponent = ({
   const handleDownload = () => {
     downloadFlows({ ids: selectedFlows });
     setSuccessData({ title: "Flows downloaded successfully" });
+  };
+
+  const handleDownloadPython = () => {
+    downloadFlowsPython({ ids: selectedFlows });
   };
 
   const handleDelete = () => {
@@ -192,19 +203,34 @@ const HeaderComponent = ({
                 <div
                   className={cn(
                     "-mr-3 flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
-                    selectedFlows.length > 0 && "w-36 opacity-100",
+                    selectedFlows.length > 0 && "w-48 opacity-100",
                   )}
                 >
-                  <Button
-                    variant="outline"
-                    size="iconMd"
-                    className="h-8 w-8"
-                    data-testid="download-bulk-btn"
-                    onClick={handleDownload}
-                    loading={isDownloading}
-                  >
-                    <ForwardedIconComponent name="Download" />
-                  </Button>
+                  <ShadTooltip content="Download JSON" side="bottom">
+                    <Button
+                      variant="outline"
+                      size="iconMd"
+                      className="h-8 w-8"
+                      data-testid="download-bulk-btn"
+                      onClick={handleDownload}
+                      loading={isDownloading}
+                    >
+                      <ForwardedIconComponent name="Download" />
+                    </Button>
+                  </ShadTooltip>
+
+                  <ShadTooltip content="Download Python" side="bottom">
+                    <Button
+                      variant="outline"
+                      size="iconMd"
+                      className="h-8 w-8"
+                      data-testid="download-python-bulk-btn"
+                      onClick={handleDownloadPython}
+                      loading={isDownloadingPython}
+                    >
+                      <ForwardedIconComponent name="FileCode" />
+                    </Button>
+                  </ShadTooltip>
 
                   <DeleteConfirmationModal
                     onConfirm={handleDelete}

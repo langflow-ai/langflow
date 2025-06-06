@@ -32,6 +32,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service
 from langflow.services.settings.service import SettingsService
 from langflow.utils.compression import compress_response
+from langflow.utils.python_export import convert_flow_to_python
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -531,6 +532,104 @@ async def download_multiple_file(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     return flows_without_api_keys[0]
+
+
+@router.get("/{flow_id}/python", status_code=200)
+async def download_flow_as_python(
+    *,
+    session: DbSession,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    """Download a single flow as Python code."""
+    flow = await _read_flow(
+        session=session,
+        flow_id=flow_id,
+        user_id=current_user.id,
+        settings_service=get_settings_service(),
+    )
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+    
+    try:
+        # Remove API keys before converting
+        flow_data = remove_api_keys(flow.model_dump())
+        
+        # Convert to Python code
+        python_code = convert_flow_to_python(flow_data)
+        
+        # Generate filename
+        safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', flow.name.lower())
+        filename = f"{safe_name}_agent.py"
+        
+        return Response(
+            content=python_code,
+            media_type="text/x-python",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to convert flow to Python: {str(e)}") from e
+
+
+@router.post("/download/python", status_code=200)
+async def download_multiple_flows_as_python(
+    flow_ids: list[UUID],
+    user: CurrentActiveUser,
+    db: DbSession,
+):
+    """Download multiple flows as Python files in a ZIP archive."""
+    flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
+
+    if not flows:
+        raise HTTPException(status_code=404, detail="No flows found.")
+
+    try:
+        if len(flows) == 1:
+            # Single flow, return Python file directly
+            flow = flows[0]
+            flow_data = remove_api_keys(flow.model_dump())
+            python_code = convert_flow_to_python(flow_data)
+            
+            safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', flow.name.lower())
+            filename = f"{safe_name}_agent.py"
+            
+            return Response(
+                content=python_code,
+                media_type="text/x-python",
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
+        
+        # Multiple flows, create ZIP file
+        zip_stream = io.BytesIO()
+        
+        with zipfile.ZipFile(zip_stream, "w") as zip_file:
+            for flow in flows:
+                # Remove API keys and convert to Python
+                flow_data = remove_api_keys(flow.model_dump())
+                python_code = convert_flow_to_python(flow_data)
+                
+                # Generate safe filename
+                safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', flow.name.lower())
+                filename = f"{safe_name}_agent.py"
+                
+                # Write Python code to ZIP
+                zip_file.writestr(filename, python_code)
+        
+        # Seek to beginning of stream
+        zip_stream.seek(0)
+        
+        # Generate ZIP filename with timestamp
+        current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
+        zip_filename = f"{current_time}_langflow_python_agents.zip"
+        
+        return StreamingResponse(
+            zip_stream,
+            media_type="application/x-zip-compressed",
+            headers={"Content-Disposition": f"attachment; filename={zip_filename}"},
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to convert flows to Python: {str(e)}") from e
 
 
 all_starter_folder_flows_response: Response | None = None

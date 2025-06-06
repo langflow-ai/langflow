@@ -5,6 +5,7 @@ import { ReactNode, forwardRef, useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import EditFlowSettings from "../../components/core/editFlowSettingsComponent";
 import { Checkbox } from "../../components/ui/checkbox";
+import { Label } from "../../components/ui/label";
 import { API_WARNING_NOTICE_ALERT } from "../../constants/alerts_constants";
 import {
   ALERT_SAVE_WITH_API,
@@ -15,6 +16,7 @@ import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
+import { useGetDownloadFlowsPython } from "../../controllers/API/queries/flows/use-get-download-flows-python";
 
 const ExportModal = forwardRef(
   (
@@ -30,9 +32,27 @@ const ExportModal = forwardRef(
     const setSuccessData = useAlertStore((state) => state.setSuccessData);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(false);
+    const [exportFormat, setExportFormat] = useState<"json" | "python">("json");
     const currentFlowOnPage = useFlowStore((state) => state.currentFlow);
     const currentFlow = props.flowData ?? currentFlowOnPage;
     const isBuilding = useFlowStore((state) => state.isBuilding);
+    
+    const { mutate: downloadPython, isPending: isDownloadingPython } = useGetDownloadFlowsPython({
+      onSuccess: () => {
+        setSuccessData({
+          title: "Python code exported successfully",
+        });
+        setOpen(false);
+        track("Flow Exported as Python", { flowId: currentFlow!.id });
+      },
+      onError: (error) => {
+        console.error("Failed to export Python:", error);
+        useAlertStore.getState().setErrorData({
+          title: "Failed to export Python code",
+          list: [error.message || "An error occurred while exporting"],
+        });
+      },
+    });
     useEffect(() => {
       setName(currentFlow?.name ?? "");
       setDescription(currentFlow?.description ?? "");
@@ -54,45 +74,52 @@ const ExportModal = forwardRef(
         open={open}
         setOpen={setOpen}
         onSubmit={() => {
-          if (checked) {
-            downloadFlow(
-              {
-                id: currentFlow!.id,
-                data: currentFlow!.data!,
+          if (exportFormat === "python") {
+            // Export as Python
+            downloadPython({ ids: [currentFlow!.id] });
+          } else {
+            // Export as JSON (existing logic)
+            if (checked) {
+              downloadFlow(
+                {
+                  id: currentFlow!.id,
+                  data: currentFlow!.data!,
+                  description,
+                  name,
+                  last_tested_version: version,
+                  endpoint_name: currentFlow!.endpoint_name,
+                  is_component: false,
+                  tags: currentFlow!.tags,
+                },
+                name!,
                 description,
-                name,
-                last_tested_version: version,
-                endpoint_name: currentFlow!.endpoint_name,
-                is_component: false,
-                tags: currentFlow!.tags,
-              },
-              name!,
-              description,
-            );
-            setNoticeData({
-              title: API_WARNING_NOTICE_ALERT,
-            });
-          } else
-            downloadFlow(
-              removeApiKeys({
-                id: currentFlow!.id,
-                data: currentFlow!.data!,
-                description,
-                name,
-                last_tested_version: version,
-                endpoint_name: currentFlow!.endpoint_name,
-                is_component: false,
-                tags: currentFlow!.tags,
-              }),
-              name!,
-              description,
-            ).then(() => {
-              setSuccessData({
-                title: "Flow exported successfully",
+              );
+              setNoticeData({
+                title: API_WARNING_NOTICE_ALERT,
               });
-            });
-          setOpen(false);
-          track("Flow Exported", { flowId: currentFlow!.id });
+            } else {
+              downloadFlow(
+                removeApiKeys({
+                  id: currentFlow!.id,
+                  data: currentFlow!.data!,
+                  description,
+                  name,
+                  last_tested_version: version,
+                  endpoint_name: currentFlow!.endpoint_name,
+                  is_component: false,
+                  tags: currentFlow!.tags,
+                }),
+                name!,
+                description,
+              ).then(() => {
+                setSuccessData({
+                  title: "Flow exported successfully",
+                });
+              });
+            }
+            setOpen(false);
+            track("Flow Exported", { flowId: currentFlow!.id });
+          }
         }}
       >
         <BaseModal.Trigger asChild>{props.children ?? <></>}</BaseModal.Trigger>
@@ -111,27 +138,76 @@ const ExportModal = forwardRef(
             setName={setName}
             setDescription={setDescription}
           />
-          <div className="mt-3 flex items-center space-x-2">
-            <Checkbox
-              id="terms"
-              checked={checked}
-              onCheckedChange={(event: boolean) => {
-                setChecked(event);
-              }}
-            />
-            <label htmlFor="terms" className="export-modal-save-api text-sm">
-              {SAVE_WITH_API_CHECKBOX}
-            </label>
+          
+          {/* Export Format Selection */}
+          <div className="mt-4 space-y-3">
+            <Label className="text-sm font-medium">Export Format</Label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="json-format"
+                  name="export-format"
+                  value="json"
+                  checked={exportFormat === "json"}
+                  onChange={(e) => setExportFormat(e.target.value as "json" | "python")}
+                  className="text-primary"
+                />
+                <Label htmlFor="json-format" className="text-sm cursor-pointer">
+                  JSON (Langflow format)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="python-format"
+                  name="export-format"
+                  value="python"
+                  checked={exportFormat === "python"}
+                  onChange={(e) => setExportFormat(e.target.value as "json" | "python")}
+                  className="text-primary"
+                />
+                <Label htmlFor="python-format" className="text-sm cursor-pointer">
+                  Python (Standalone code)
+                </Label>
+              </div>
+            </div>
           </div>
-          <span className="mt-1 text-xs text-destructive">
-            {ALERT_SAVE_WITH_API}
-          </span>
+
+          {exportFormat === "json" && (
+            <>
+              <div className="mt-3 flex items-center space-x-2">
+                <Checkbox
+                  id="terms"
+                  checked={checked}
+                  onCheckedChange={(event: boolean) => {
+                    setChecked(event);
+                  }}
+                />
+                <label htmlFor="terms" className="export-modal-save-api text-sm">
+                  {SAVE_WITH_API_CHECKBOX}
+                </label>
+              </div>
+              <span className="mt-1 text-xs text-destructive">
+                {ALERT_SAVE_WITH_API}
+              </span>
+            </>
+          )}
+
+          {exportFormat === "python" && (
+            <div className="mt-3 rounded-md bg-muted p-3">
+              <p className="text-xs text-muted-foreground">
+                Python export will generate standalone code that you can use in your own projects. 
+                API keys will be automatically removed for security.
+              </p>
+            </div>
+          )}
         </BaseModal.Content>
 
         <BaseModal.Footer
           submit={{
-            label: "Export",
-            loading: isBuilding,
+            label: exportFormat === "python" ? "Export Python" : "Export JSON",
+            loading: exportFormat === "python" ? isDownloadingPython : isBuilding,
             dataTestId: "modal-export-button",
           }}
         />
