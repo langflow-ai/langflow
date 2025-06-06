@@ -26,9 +26,9 @@
         "id": "reactflow__edge-URL-raIKe{œdataTypeœ:œURLœ,œidœ:œURL-raIKeœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-sBJbI{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-sBJbIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-raIKe",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-raIKeœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-raIKeœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-sBJbI",
-        "targetHandle": "{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-sBJbIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-sBJbIœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-URL-j5F0d{œdataTypeœ:œURLœ,œidœ:œURL-j5F0dœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-sBJbI{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-sBJbIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-j5F0d",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-j5F0dœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-j5F0dœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-sBJbI",
-        "targetHandle": "{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-sBJbIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-sBJbIœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-URL-JjyEG{œdataTypeœ:œURLœ,œidœ:œURL-JjyEGœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-sBJbI{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-sBJbIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-JjyEG",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-JjyEGœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-JjyEGœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-sBJbI",
-        "targetHandle": "{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-sBJbIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-sBJbIœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-Prompt-sBJbI{œdataTypeœ:œPromptœ,œidœ:œPrompt-sBJbIœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-BC7GB{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-BC7GBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-sBJbI",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-sBJbIœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-sBJbIœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-BC7GB",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-BC7GBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-BC7GBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -142,9 +142,9 @@
         "id": "reactflow__edge-AnthropicModel-BC7GB{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-BC7GBœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-COalw{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-COalwœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AnthropicModel-BC7GB",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-BC7GBœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-BC7GBœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-COalw",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-COalwœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-COalwœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -171,9 +171,9 @@
         "id": "reactflow__edge-ChatInput-dl2NG{œdataTypeœ:œChatInputœ,œidœ:œChatInput-dl2NGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-sBJbI{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-sBJbIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-dl2NG",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-dl2NGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-dl2NGœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-sBJbI",
-        "targetHandle": "{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-sBJbIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-sBJbIœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -199,9 +199,9 @@
         "id": "xy-edge__Memory-XWOq3{œdataTypeœ:œMemoryœ,œidœ:œMemory-XWOq3œ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-sBJbI{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-sBJbIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Memory-XWOq3",
-        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-XWOq3œ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-XWOq3œ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-sBJbI",
-        "targetHandle": "{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-sBJbIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-sBJbIœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
