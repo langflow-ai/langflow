@@ -146,12 +146,12 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
 
         # if file is json, yaml, or xml, we can parse it
         if file_path.endswith(".json"):
-            text = orjson.loads(text)
-            if isinstance(text, dict):
-                text = {k: normalize_text(v) if isinstance(v, str) else v for k, v in text.items()}
-            elif isinstance(text, list):
-                text = [normalize_text(item) if isinstance(item, str) else item for item in text]
-            text = orjson.dumps(text).decode("utf-8")
+            loaded_json = orjson.loads(text)
+            if isinstance(loaded_json, dict):
+                loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
+            elif isinstance(loaded_json, list):
+                loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
+            text = orjson.dumps(loaded_json).decode("utf-8")
 
         elif file_path.endswith((".yaml", ".yml")):
             text = yaml.safe_load(text)

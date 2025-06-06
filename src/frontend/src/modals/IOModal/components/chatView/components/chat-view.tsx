@@ -1,5 +1,6 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
+import CustomChatInput from "@/customization/components/custom-chat-input";
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
@@ -18,7 +19,6 @@ import useFlowStore from "../../../../../stores/flowStore";
 import { ChatMessageType } from "../../../../../types/chat";
 import { chatViewProps } from "../../../../../types/components";
 import FlowRunningSqueleton from "../../flow-running-squeleton";
-import ChatInput from "../chatInput/chat-input";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "../chatInput/hooks/use-file-handler";
 import ChatMessage from "../chatMessage/chat-message";
@@ -287,7 +287,7 @@ export default function ChatView({
       </div>
 
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
-        <ChatInput
+        <CustomChatInput
           playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
           sendMessage={({ repeat, files }) => {

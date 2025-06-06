@@ -16,12 +16,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
 
-    await page.waitForSelector('[data-testid="modelsOpenAI"]', {
+    await page.waitForSelector('[data-testid="languagemodelsOpenAI"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("modelsOpenAI")
+      .getByTestId("languagemodelsOpenAI")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-openai").last().click();

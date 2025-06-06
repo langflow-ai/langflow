@@ -35,12 +35,12 @@ test(
     //connection 1
 
     await page
-      .getByTestId("handle-prompt-shownode-prompt message-right")
+      .getByTestId("handle-prompt-shownode-prompt-right")
       .first()
       .click();
 
     await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-shownode-inputs-left")
       .first()
       .click();
 

@@ -123,9 +123,9 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
     assert len(all_names) <= len(
         files
     )  # Less or equal because we might have some files that don't have the dependencies installed
-    assert "ChatInput" in json_response["inputs"]
+    assert "ChatInput" in json_response["input_output"]
     assert "Prompt" in json_response["prompts"]
-    assert "ChatOutput" in json_response["outputs"]
+    assert "ChatOutput" in json_response["input_output"]
 
 
 @pytest.mark.usefixtures("active_user")

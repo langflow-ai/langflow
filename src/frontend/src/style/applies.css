@@ -1277,11 +1277,7 @@
 }
 
 .deploy-dropdown-item {
-  @apply h-11 cursor-pointer px-2.5 py-1 text-sm font-normal hover:bg-background !important;
-}
-
-.deploy-dropdown-item > :first-child {
-  @apply flex h-8 w-full items-center rounded-md px-2 py-1 !important;
+  @apply cursor-pointer rounded-none px-3 py-2 text-[13px] font-normal;
 }
 
 :root {

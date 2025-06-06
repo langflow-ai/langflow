@@ -67,6 +67,8 @@ class ComponentVertex(Vertex):
                 self.custom_component, self.built_object, self.artifacts = result
                 self.logs = self.custom_component._output_logs
                 for key in self.artifacts:
+                    if self.artifacts_raw is None:
+                        self.artifacts_raw = {}
                     self.artifacts_raw[key] = self.artifacts[key].get("raw", None)
                     self.artifacts_type[key] = self.artifacts[key].get("type", None) or ArtifactType.UNKNOWN.value
         else:

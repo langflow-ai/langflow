@@ -8,12 +8,9 @@ from langflow.schema import Data
 
 
 class PythonREPLComponent(Component):
-    display_name = "Python REPL"
-    description = (
-        "A Python code executor that lets you run Python code with specific imported modules. "
-        "Remember to always use print() to see your results. Example: print(df.head())"
-    )
-    icon = "Python"
+    display_name = "Python Interpreter"
+    description = "Run Python code with optional imports. Use print() to see the output."
+    icon = "square-terminal"
 
     inputs = [
         StrInput(

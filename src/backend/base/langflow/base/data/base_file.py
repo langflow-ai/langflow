@@ -174,9 +174,7 @@ class BaseFileComponent(Component, ABC):
     ]
 
     _base_outputs = [
-        Output(display_name="Data", name="data", method="load_files"),
-        Output(display_name="DataFrame", name="dataframe", method="load_dataframe"),
-        Output(display_name="Message", name="message", method="load_message"),
+        Output(display_name="Loaded Files", name="dataframe", method="load_files"),
     ]
 
     @abstractmethod
@@ -227,7 +225,7 @@ class BaseFileComponent(Component, ABC):
                     else:
                         file.path.unlink()
 
-    def load_files(self) -> list[Data]:
+    def load_files_core(self) -> list[Data]:
         """Load files and return as Data objects.
 
         Returns:
@@ -238,13 +236,13 @@ class BaseFileComponent(Component, ABC):
             return [Data()]
         return data_list
 
-    def load_dataframe(self) -> DataFrame:
+    def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.
 
         Returns:
             DataFrame: DataFrame containing all file data
         """
-        data_list = self.load_files()
+        data_list = self.load_files_core()
         if not data_list:
             return DataFrame()
 
@@ -273,33 +271,6 @@ class BaseFileComponent(Component, ABC):
         # Combine CSV and non-CSV data
         all_rows = csv_data + non_csv_rows
         return DataFrame(all_rows)
-
-    def load_message(self) -> Message:
-        """Load files and return as Message with concatenated content.
-
-        Returns:
-            Message: Message containing concatenated file content
-        """
-        data_list = self.load_files()
-        if not data_list:
-            return Message(text="")
-
-        # Concatenate all text content
-        text_content = []
-        for data in data_list:
-            content = data.get_text()
-            text_content.append(content)
-
-        # Join with separator
-        final_text = self.separator.join(text_content)
-
-        # Create message with all metadata
-        all_data = {}
-        for data in data_list:
-            if data.data:
-                all_data.update(data.data)
-
-        return Message(text=final_text, data=all_data)
 
     @property
     def valid_extensions(self) -> list[str]:

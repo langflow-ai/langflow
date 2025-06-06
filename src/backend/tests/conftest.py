@@ -17,7 +17,7 @@ from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.inputs import ChatInput
+from langflow.components.input_output import ChatInput
 from langflow.graph import Graph
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
@@ -45,7 +45,7 @@ load_dotenv()
 
 @pytest.fixture(autouse=True)
 def blockbuster(request):
-    if "benchmark" in request.keywords:
+    if "benchmark" in request.keywords or "no_blockbuster" in request.keywords:
         yield
     else:
         with blockbuster_ctx() as bb:
@@ -78,9 +78,13 @@ def blockbuster(request):
 
             for func in ["os.stat", "os.path.abspath", "os.scandir"]:
                 bb.functions[func].can_block_in("alembic/util/pyfiles.py", "load_python_file")
+                bb.functions[func].can_block_in("dotenv/main.py", "find_dotenv")
 
             for func in ["os.path.abspath", "os.scandir"]:
                 bb.functions[func].can_block_in("alembic/script/base.py", "_load_revisions")
+
+            # Add os.stat to alembic/script/base.py _load_revisions
+            bb.functions["os.stat"].can_block_in("alembic/script/base.py", "_load_revisions")
 
             (
                 bb.functions["os.path.abspath"]

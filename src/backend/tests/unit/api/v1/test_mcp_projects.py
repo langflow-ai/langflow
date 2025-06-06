@@ -15,8 +15,7 @@ from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user import User
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import session_scope
 from mcp.server.sse import SseServerTransport
 
 # Mark all tests in this module as asyncio
@@ -100,8 +99,7 @@ def mock_current_project_ctx(mock_project):
 async def other_test_user():
     """Fixture for creating another test user."""
     user_id = uuid4()
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = User(
             id=user_id,
             username="other_test_user",
@@ -114,7 +112,7 @@ async def other_test_user():
         await session.refresh(user)
     yield user
     # Clean up
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = await session.get(User, user_id)
         if user:
             await session.delete(user)
@@ -125,15 +123,14 @@ async def other_test_user():
 async def other_test_project(other_test_user):
     """Fixture for creating a project for another test user."""
     project_id = uuid4()
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         project = Folder(id=project_id, name="Other Test Project", user_id=other_test_user.id)
         session.add(project)
         await session.commit()
         await session.refresh(project)
     yield project
     # Clean up
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         project = await session.get(Folder, project_id)
         if project:
             await session.delete(project)
@@ -144,9 +141,9 @@ async def test_handle_project_messages_success(
     client: AsyncClient, mock_project, mock_sse_transport, logged_in_headers
 ):
     """Test successful handling of project messages."""
-    with patch("langflow.api.v1.mcp_projects.get_db_service") as mock_db:
+    with patch("langflow.api.v1.mcp_projects.session_scope") as mock_db:
         mock_session = AsyncMock()
-        mock_db.return_value.with_session.return_value.__aenter__.return_value = mock_session
+        mock_db.return_value.__aenter__.return_value = mock_session
         mock_session.exec.return_value.first.return_value = mock_project
 
         response = await client.post(
@@ -160,9 +157,9 @@ async def test_handle_project_messages_success(
 
 async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, mock_project, logged_in_headers):
     """Test updating MCP settings with invalid JSON."""
-    with patch("langflow.api.v1.mcp_projects.get_db_service") as mock_db:
+    with patch("langflow.api.v1.mcp_projects.session_scope") as mock_db:
         mock_session = AsyncMock()
-        mock_db.return_value.with_session.return_value.__aenter__.return_value = mock_session
+        mock_db.return_value.__aenter__.return_value = mock_session
         mock_session.exec.return_value.first.return_value = mock_project
 
         response = await client.patch(
@@ -187,8 +184,7 @@ async def test_flow_for_update(active_user, user_test_project):
     }
 
     # Create the flow in the database
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         flow = Flow(**flow_data)
         session.add(flow)
         await session.commit()
@@ -197,7 +193,8 @@ async def test_flow_for_update(active_user, user_test_project):
     yield flow
 
     # Clean up
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
+        # Get the flow from the database
         flow = await session.get(Flow, flow_id)
         if flow:
             await session.delete(flow)
@@ -230,7 +227,7 @@ async def test_update_project_mcp_settings_success(
     assert "Updated MCP settings for 1 flows" in response.json()["message"]
 
     # Verify the flow was actually updated in the database
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         updated_flow = await session.get(Flow, test_flow_for_update.id)
         assert updated_flow is not None
         assert updated_flow.action_name == "updated_action"
@@ -271,7 +268,7 @@ async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, u
     # Use real database objects instead of mocks to avoid the coroutine issue
 
     # Empty settings list
-    settings = []
+    settings: list = []
 
     # Make the request to the actual endpoint
     response = await client.patch(
@@ -300,7 +297,7 @@ async def test_user_data_isolation_with_real_db(
     second_flow_id = uuid4()
 
     # Use real database session just for flow creation and cleanup
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         # Create a flow in the other user's project
         second_flow = Flow(
             id=second_flow_id,
@@ -331,7 +328,7 @@ async def test_user_data_isolation_with_real_db(
 
     finally:
         # Clean up flow
-        async with session_getter(get_db_service()) as session:
+        async with session_scope() as session:
             second_flow = await session.get(Flow, second_flow_id)
             if second_flow:
                 await session.delete(second_flow)
@@ -342,15 +339,14 @@ async def test_user_data_isolation_with_real_db(
 async def user_test_project(active_user):
     """Fixture for creating a project for the active user."""
     project_id = uuid4()
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         project = Folder(id=project_id, name="User Test Project", user_id=active_user.id)
         session.add(project)
         await session.commit()
         await session.refresh(project)
     yield project
     # Clean up
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         project = await session.get(Folder, project_id)
         if project:
             await session.delete(project)
@@ -361,8 +357,7 @@ async def user_test_project(active_user):
 async def user_test_flow(active_user, user_test_project):
     """Fixture for creating a flow for the active user."""
     flow_id = uuid4()
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         flow = Flow(
             id=flow_id,
             name="User Test Flow",
@@ -378,7 +373,7 @@ async def user_test_flow(active_user, user_test_project):
         await session.refresh(flow)
     yield flow
     # Clean up
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
         if flow:
             await session.delete(flow)
@@ -411,7 +406,7 @@ async def test_user_can_update_own_flow_mcp_settings(
     assert "Updated MCP settings for 1 flows" in response.json()["message"]
 
     # Verify the flow was actually updated in the database
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         updated_flow = await session.get(Flow, user_test_flow.id)
         assert updated_flow is not None
         assert updated_flow.action_name == "updated_user_action"

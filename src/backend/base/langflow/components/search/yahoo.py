@@ -8,7 +8,6 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.custom import Component
-from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
@@ -134,4 +133,4 @@ to access financial data and market information from Yahoo Finance."""
 
     def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
-        return data_to_dataframe(data)
+        return DataFrame(data)

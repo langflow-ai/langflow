@@ -1,7 +1,6 @@
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
 from langflow.custom import Component
-from langflow.helpers.data import data_to_dataframe
 from langflow.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
@@ -50,4 +49,4 @@ class WikipediaComponent(Component):
 
     def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
-        return data_to_dataframe(data)
+        return DataFrame(data)
