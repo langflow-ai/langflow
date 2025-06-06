@@ -7,7 +7,7 @@ from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import DropdownInput, IntInput, MultilineInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
-from langflow.template import Output
+from langflow.schema.message import Message
 from langflow.template.field.base import Output
 
 

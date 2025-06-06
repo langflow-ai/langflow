@@ -5,6 +5,7 @@ from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
+from langflow.template.field.base import Output
 
 
 class TavilySearchComponent(Component):

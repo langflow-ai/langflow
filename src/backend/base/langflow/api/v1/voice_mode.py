@@ -30,7 +30,7 @@ from langflow.logging import logger
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties
 from langflow.services.auth.utils import get_current_user_for_websocket
-from langflow.services.database.models import MessageTable, User
+from langflow.services.database.models.user.model import User
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import get_variable_service, session_scope

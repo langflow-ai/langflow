@@ -18,7 +18,6 @@ from mcp.client.sse import sse_client
 from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
 
-from langflow.helpers.base_model import BaseModel
 from langflow.services.database.models.flow.model import Flow
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
