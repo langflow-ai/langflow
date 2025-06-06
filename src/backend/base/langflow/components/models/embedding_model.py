@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 from langchain_openai import OpenAIEmbeddings
 
@@ -12,7 +12,6 @@ from langflow.io import (
     DropdownInput,
     FloatInput,
     IntInput,
-    StrInput,
     MessageTextInput,
     SecretStrInput,
 )
@@ -93,7 +92,7 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 show_progress_bar=self.show_progress_bar,
                 model_kwargs=self.model_kwargs or {},
             )
-        elif provider == "SentenceTransformers":
+        if provider == "SentenceTransformers":
             try:
                 from sentence_transformers import SentenceTransformer
             except ImportError as e:
@@ -105,10 +104,10 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                 raise ValueError(f"Failed to load SentenceTransformer model: {e}") from e
 
             class LangflowEmbeddingWrapper:
-                def embed_documents(self, texts: List[str]) -> List[List[float]]:
+                def embed_documents(self, texts: list[str]) -> list[list[float]]:
                     return st_model.encode(texts, convert_to_numpy=True).tolist()
 
-                def embed_query(self, text: str) -> List[float]:
+                def embed_query(self, text: str) -> list[float]:
                     return st_model.encode(text, convert_to_numpy=True).tolist()
 
             return LangflowEmbeddingWrapper()
