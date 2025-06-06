@@ -1,6 +1,6 @@
+import { useDarkStore } from "@/stores/darkStore";
 import React, { forwardRef } from "react";
 import SentenceTransformersSVG from "./sentenceTransformers";
-import { useDarkStore } from "@/stores/darkStore";
 
 export const SentenceTransformersIcon = forwardRef<
   SVGSVGElement,
