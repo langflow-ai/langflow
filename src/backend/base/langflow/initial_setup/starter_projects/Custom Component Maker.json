@@ -237,6 +237,7 @@
                 "group_outputs": false,
                 "method": "retrieve_messages",
                 "name": "messages",
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -251,6 +252,7 @@
                 "group_outputs": false,
                 "method": "retrieve_messages_as_text",
                 "name": "messages_text",
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -265,6 +267,7 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -296,7 +299,7 @@
               },
               "memory": {
                 "_input_type": "HandleInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
@@ -2039,7 +2042,7 @@
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
-                "info": "",
+                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
                 "name": "model_name",
                 "options": [
                   "claude-opus-4-20250514",
@@ -2156,7 +2159,7 @@
               },
               "tool_model_enabled": {
                 "_input_type": "BoolInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Enable Tool Models",
                 "dynamic": false,
                 "info": "Select if you want to use models that can work with tools. If yes, only those models will be shown.",
