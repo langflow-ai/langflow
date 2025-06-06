@@ -10,10 +10,15 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from langflow.components.custom_component.custom_component import CustomComponent
+from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import abuild_custom_components, create_component_template
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
+
+
+MIN_MODULE_PARTS = 2
 
 
 # Create a class to manage component cache instead of using globals
@@ -28,9 +33,11 @@ component_cache = ComponentCache()
 
 
 async def get_langflow_components_list():
-    """Asynchronously retrieves all Langflow built-in components by importing modules.
+    """Asynchronously retrieves all Langflow built-in components.
 
-    from the langflow.components package and processing the classes they define.
+    This is done by importing modules from the langflow.components package and
+    processing the classes they define.
+
     Instead of iterating over files, this function uses pkgutil to import each submodule,
     then uses introspection to locate classes defined within those modules. Each class is
     instantiated (assuming a no-argument constructor), and its component template is generated
@@ -44,60 +51,51 @@ async def get_langflow_components_list():
 
 
 def _get_langflow_components_list_sync():
-    """Returns a dictionary of built-in Langflow components grouped by their top-level.
+    """Returns a dictionary of built-in Langflow components.
 
-    package (e.g., "Notion" instead of "langflow.components.Notion").
+    The components are grouped by their top-level package
+    (e.g., "Notion" instead of "langflow.components.Notion").
     """
     modules_dict = {}
     try:
         import langflow.components as components_pkg
     except ImportError as e:
-        logger.error(f"Error importing langflow.components: {e}", exc_info=True)
-        return {"components": {}}
-
-    # Minimum number of parts in a valid module path
-    min_module_parts = 3
+        logger.error(f"Failed to import langflow.components package: {e}", exc_info=True)
+        return {"components": modules_dict}
 
     # Iterate over all submodules of langflow.components
-    for _finder, modname, _ispkg in pkgutil.walk_packages(
-        components_pkg.__path__, prefix=components_pkg.__name__ + "."
-    ):
+    for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
         try:
             module = importlib.import_module(modname)
-        except ImportError as e:
+        except (ImportError, AttributeError) as e:
             logger.error(f"Error importing module {modname}: {e}", exc_info=True)
             continue
 
+        # Extract the top-level subpackage name after "langflow.components."
         # e.g., "langflow.components.Notion.add_content_to_page" -> "Notion"
         mod_parts = modname.split(".")
-        if len(mod_parts) < min_module_parts:
+        if len(mod_parts) > MIN_MODULE_PARTS:
+            top_level = mod_parts[2]
+        else:
             continue  # skip if not a valid submodule
-        top_level = mod_parts[2]
 
-        # Initialize the top-level module in the dictionary if it doesn't exist
-        if top_level not in modules_dict:
-            modules_dict[top_level] = {}
-
-        module_components = modules_dict[top_level]
-
-        # Find all classes in the module
-        for name, obj in inspect.getmembers(module, inspect.isclass):
-            # Skip if the class is not defined in this module
-            if obj.__module__ != modname:
+        module_components = modules_dict.setdefault(top_level, {})
+        # Process each class defined in the module
+        for name, cls in inspect.getmembers(module, inspect.isclass):
+            # Only consider classes defined in this module
+            # and if the class is a subclass of Component or CustomComponent
+            if cls.__module__ != modname or not issubclass(cls, Component | CustomComponent):
                 continue
-
             try:
-                # Create an instance of the component
-                instance = obj()
-                # Get the component template
-                comp_template = create_component_template(instance)
-                if comp_template:
-                    component_name = comp_template.get("display_name", name)
-                    module_components[component_name] = comp_template
+                # Instantiate the component (assuming a no-argument constructor)
+                comp_instance = cls()
+                comp_template, _ = create_component_template(component_extractor=comp_instance)
+                # Use 'display_name' from the template if available; otherwise, fallback to the class name.
+                component_name = comp_template.get("display_name", name)
+                module_components[component_name] = comp_template
             except Exception as e:
                 logger.error(f"Error processing component class '{name}' in module '{modname}': {e}", exc_info=True)
                 raise
-
     return {"components": modules_dict}
 
 
