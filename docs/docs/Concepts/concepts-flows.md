@@ -3,9 +3,11 @@ title: Flows
 slug: /concepts-flows
 ---
 
+import Icon from "@site/src/components/icon";
+
 Flows in Langflow are fully serializable and can be saved and loaded from the file system. In this guide, we'll explore how to import and export flows.
 
-## Import Flow
+## Import flow
 
 If you've already got a Langflow JSON file, from the **Projects** page, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
 
@@ -15,7 +17,7 @@ Once imported, your flow is ready to use.
 You can drag and drop Langflow JSON files directly from your file system into the Langflow window to import a flow, even into the initial Langflow splash screen.
 :::
 
-## Export Flow
+## Export flow
 
 To **Export** your flow, in the **Playground**, click **Share**, and then click **Export**.
 
