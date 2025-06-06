@@ -180,9 +180,9 @@ def test_process_flow_vector_store_grouped(vector_store_grouped_json_flow):
 
     for idx, expected_keyword in enumerate(expected_keywords):
         for key, value in expected_keyword.items():
-            assert value in edges[idx][key].split("-")[0], (
-                f"Edge {idx}, key {key} expected to contain {value} but got {edges[idx][key]}"
-            )
+            assert (
+                value in edges[idx][key].split("-")[0]
+            ), f"Edge {idx}, key {key} expected to contain {value} but got {edges[idx][key]}"
 
 
 def test_update_template(sample_template, sample_nodes):
@@ -257,10 +257,8 @@ def test_update_source_handle():
 
 
 async def test_serialize_graph():
-    # Get the actual starter projects and directly await the result
     starter_projects = await load_starter_projects()
-    project_data = starter_projects[0][1]
-    data = project_data["data"]
+    data = starter_projects[0][1]["data"]
 
     # Create and test the graph
     graph = Graph.from_payload(data)
