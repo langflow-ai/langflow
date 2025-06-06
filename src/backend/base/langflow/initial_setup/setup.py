@@ -882,6 +882,7 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
         starter_projects = await load_starter_projects()
         await delete_start_projects(session, new_folder.id)
         await copy_profile_pictures()
+        existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
         for project_path, project in starter_projects:
             (
                 project_name,
@@ -905,7 +906,6 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
                     # We also need to update the project data in the file
                     await update_project_file(project_path, project, updated_project_data)
             if do_create and project_name and project_data:
-                existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
                 for existing_project in existing_flows:
                     await session.delete(existing_project)
 
