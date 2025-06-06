@@ -99,9 +99,9 @@ class MemoryComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="messages", method="retrieve_messages"),
-        Output(display_name="Message", name="messages_text", method="retrieve_messages_as_text"),
-        Output(display_name="DataFrame", name="dataframe", method="retrieve_messages_dataframe"),
+        Output(display_name="Data", name="messages", method="retrieve_messages", dynamic=True),
+        Output(display_name="Message", name="messages_text", method="retrieve_messages_as_text", dynamic=True),
+        Output(display_name="DataFrame", name="dataframe", method="retrieve_messages_dataframe", dynamic=True),
     ]
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
