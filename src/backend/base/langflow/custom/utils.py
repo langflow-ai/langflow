@@ -263,6 +263,9 @@ def run_build_inputs(
 
 
 def get_component_instance(custom_component: CustomComponent, user_id: str | UUID | None = None):
+    if custom_component.__class__.__name__ not in {"Component", "CustomComponent"}:
+        return custom_component
+
     if custom_component._code is None:
         error = "Code is None"
     elif not isinstance(custom_component._code, str):
@@ -302,6 +305,9 @@ def run_build_config(
     user_id: str | UUID | None = None,
 ) -> tuple[dict, CustomComponent]:
     """Build the field configuration for a custom component."""
+    if custom_component.__class__.__name__ not in {"Component", "CustomComponent"}:
+        return custom_component.build_config(), custom_component
+
     if custom_component._code is None:
         error = "Code is None"
     elif not isinstance(custom_component._code, str):
@@ -372,6 +378,7 @@ def build_custom_component_template_from_inputs(
     cc_instance = get_component_instance(custom_component, user_id=user_id)
     field_config = cc_instance.get_template_config(cc_instance)
     frontend_node = ComponentFrontendNode.from_inputs(**field_config)
+
     frontend_node = add_code_field(frontend_node, custom_component._code)
     # But we now need to calculate the return_type of the methods in the outputs
     for output in frontend_node.outputs:
@@ -446,12 +453,17 @@ def build_custom_component_template(
         ) from exc
 
 
-def create_component_template(component):
+def create_component_template(
+    component: dict | None = None,
+    component_extractor: Component | CustomComponent | None = None,
+):
     """Create a template for a component."""
-    component_code = component["code"]
-    component_output_types = component["output_types"]
+    component_output_types = []
+    if component_extractor is None and component is not None:
+        component_code = component["code"]
+        component_output_types = component["output_types"]
 
-    component_extractor = Component(_code=component_code)
+        component_extractor = Component(_code=component_code)
 
     component_template, component_instance = build_custom_component_template(component_extractor)
     if not component_template["output_types"] and component_output_types:
