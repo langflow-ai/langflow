@@ -93,9 +93,12 @@ def _get_langflow_components_list_sync():
                 # Use 'display_name' from the template if available; otherwise, fallback to the class name.
                 component_name = comp_template.get("display_name", name)
                 module_components[component_name] = comp_template
-            except Exception as e:
-                logger.error(f"Error processing component class '{name}' in module '{modname}': {e}", exc_info=True)
-                raise
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    f"Skipping component class '{name}' in module '{modname}' due to instantiation failure: {e}",
+                    exc_info=True,
+                )
+                continue
     return {"components": modules_dict}
 
 
