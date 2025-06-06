@@ -1,8 +1,14 @@
 ---
-description: Rules and checklist for adding and using langflow component icons.
-globs: 
+description: "Rules for creating and implementing component icons in Langflow, covering both backend Python component icon attributes and frontend React icon implementation."
+globs:
+  - "src/frontend/src/icons/**/*"
+  - "src/frontend/src/icons/lazyIconImports.ts"
+  - "src/backend/**/*component*.py"
+  - "src/backend/**/components/**/*.py"
 alwaysApply: false
 ---
+
+
 # Component Icon Rules
 
 ## Purpose
@@ -13,12 +19,12 @@ To ensure consistent, clear, and functional icon usage for components, covering 
 ## 1. Backend (Python) — Setting the Icon Name
 
 - **Where:** In your component class (e.g., in `src/backend/base/langflow/components/vectorstores/astradb.py`)
-- **How:**  
+- **How:**
   Set the `icon` attribute to a string matching the icon you want to use.
   ```python
   icon = "AstraDB"
   ```
-- **Tip:**  
+- **Tip:**
   The string must match the frontend icon mapping exactly (case-sensitive).
 
 ---
@@ -27,9 +33,9 @@ To ensure consistent, clear, and functional icon usage for components, covering 
 
 ### a. Create the Icon Component
 
-- **Where:**  
+- **Where:**
   In a new directory for your icon, e.g., `src/frontend/src/icons/AstraDB/`.
-- **How:**  
+- **How:**
   - Add your SVG as a React component, e.g., `AstraSVG` in `AstraDB.jsx`.
     ```jsx
     const AstraSVG = (props) => (
@@ -74,28 +80,28 @@ To ensure consistent, clear, and functional icon usage for components, covering 
 
 ### b. Add to Lazy Icon Imports
 
-- **Where:**  
+- **Where:**
   In `src/frontend/src/icons/lazyIconImports.ts`
-- **How:**  
+- **How:**
   Add an entry to the `lazyIconsMapping` object:
   ```ts
   AstraDB: () =>
     import("@/icons/AstraDB").then((mod) => ({ default: mod.AstraDBIcon })),
   ```
-- **Tip:**  
+- **Tip:**
   The key (`AstraDB`) must match the string used in the backend.
 
 ---
 
 ## 3. Best Practices
 
-- **Naming:**  
+- **Naming:**
   Use clear, recognizable names (e.g., `"AstraDB"`, `"Postgres"`, `"OpenAI"`).
-- **Consistency:**  
+- **Consistency:**
   Always use the same icon name for the same service across backend and frontend.
-- **Missing Icon:**  
+- **Missing Icon:**
   If no icon exists, use a [lucide icon](https://lucide.dev/icons)
-- **Light/Dark Mode:**  
+- **Light/Dark Mode:**
   Always support both light and dark mode for custom icons by using the `isdark` prop in your SVG.
 
 ---
@@ -114,11 +120,11 @@ To ensure consistent, clear, and functional icon usage for components, covering 
 ---
 
 **Example for AstraDB:**
-- Backend:  
+- Backend:
   ```python
   icon = "AstraDB"
   ```
-- Frontend:  
+- Frontend:
   - `src/icons/AstraDB/AstraDB.jsx` (SVG as React component, uses `isdark` prop)
   - `src/icons/AstraDB/index.tsx` (exports `AstraDBIcon` and passes `isdark`)
   - Add to `lazyIconImports.ts`:
