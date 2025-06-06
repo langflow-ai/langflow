@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from composio import Action
@@ -21,10 +22,14 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
         "YOUTUBE_GET_CHANNEL_ID_BY_HANDLE": {
             "display_name": "Get Channel ID by Handle",
             "action_fields": ["YOUTUBE_GET_CHANNEL_ID_BY_HANDLE_channel_handle"],
+            "get_result_field": True,
+            "result_field": "items",
         },
         "YOUTUBE_LIST_CAPTION_TRACK": {
             "display_name": "List Caption Track",
             "action_fields": ["YOUTUBE_LIST_CAPTION_TRACK_part", "YOUTUBE_LIST_CAPTION_TRACK_videoId"],
+            "get_result_field": True,
+            "result_field": "items",
         },
         "YOUTUBE_LIST_CHANNEL_VIDEOS": {
             "display_name": "List Channel Videos",
@@ -34,6 +39,8 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
                 "YOUTUBE_LIST_CHANNEL_VIDEOS_pageToken",
                 "YOUTUBE_LIST_CHANNEL_VIDEOS_part",
             ],
+            "get_result_field": True,
+            "result_field": "items",
         },
         "YOUTUBE_LIST_USER_PLAYLISTS": {
             "display_name": "List User Playlists",
@@ -42,6 +49,8 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
                 "YOUTUBE_LIST_USER_PLAYLISTS_pageToken",
                 "YOUTUBE_LIST_USER_PLAYLISTS_part",
             ],
+            "get_result_field": True,
+            "result_field": "response_data",
         },
         "YOUTUBE_LIST_USER_SUBSCRIPTIONS": {
             "display_name": "List User Subscriptions",
@@ -50,10 +59,14 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
                 "YOUTUBE_LIST_USER_SUBSCRIPTIONS_pageToken",
                 "YOUTUBE_LIST_USER_SUBSCRIPTIONS_part",
             ],
+            "get_result_field": True,
+            "result_field": "items",
         },
         "YOUTUBE_LOAD_CAPTIONS": {
             "display_name": "Load Captions",
             "action_fields": ["YOUTUBE_LOAD_CAPTIONS_id", "YOUTUBE_LOAD_CAPTIONS_tfmt"],
+            "get_result_field": True,
+            "result_field": "data",
         },
         "YOUTUBE_SEARCH_YOU_TUBE": {
             "display_name": "Search YouTube",
@@ -64,33 +77,24 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
                 "YOUTUBE_SEARCH_YOU_TUBE_q",
                 "YOUTUBE_SEARCH_YOU_TUBE_type",
             ],
+            "get_result_field": True,
+            "result_field": "response_data",
         },
         "YOUTUBE_SUBSCRIBE_CHANNEL": {
             "display_name": "Subscribe Channel",
             "action_fields": ["YOUTUBE_SUBSCRIBE_CHANNEL_channelId"],
-        },
-        "YOUTUBE_UPDATE_THUMBNAIL": {
-            "display_name": "Update Thumbnail",
-            "action_fields": ["YOUTUBE_UPDATE_THUMBNAIL_thumbnailUrl", "YOUTUBE_UPDATE_THUMBNAIL_videoId"],
-        },
-        "YOUTUBE_UPLOAD_VIDEO": {
-            "display_name": "Upload Video",
-            "action_fields": [
-                "YOUTUBE_UPLOAD_VIDEO_categoryId",
-                "YOUTUBE_UPLOAD_VIDEO_description",
-                "YOUTUBE_UPLOAD_VIDEO_privacyStatus",
-                "YOUTUBE_UPLOAD_VIDEO_tags",
-                "YOUTUBE_UPLOAD_VIDEO_title",
-                "YOUTUBE_UPLOAD_VIDEO_videoFilePath",
-            ],
+            "get_result_field": True,
+            "result_field": "snippet",
         },
         "YOUTUBE_VIDEO_DETAILS": {
             "display_name": "Video Details",
             "action_fields": ["YOUTUBE_VIDEO_DETAILS_id", "YOUTUBE_VIDEO_DETAILS_part"],
+            "get_result_field": True,
+            "result_field": "items",
         },
     }
 
-    _list_variables = {"YOUTUBE_UPDATE_VIDEO_tags", "YOUTUBE_UPLOAD_VIDEO_tags"}
+    _list_variables = {"YOUTUBE_UPDATE_VIDEO_tags"}
 
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
 
@@ -240,20 +244,6 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             required=True,
         ),
         MessageTextInput(
-            name="YOUTUBE_UPDATE_THUMBNAIL_thumbnailUrl",
-            display_name="Thumbnail URL",
-            info="URL of the new thumbnail image",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="YOUTUBE_UPDATE_THUMBNAIL_videoId",
-            display_name="Video ID",
-            info="YouTube video ID for which the thumbnail should be updated",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
             name="YOUTUBE_UPDATE_VIDEO_categoryId",
             display_name="Category ID",
             info="YouTube category ID of the video",
@@ -291,48 +281,6 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             required=True,
         ),
         MessageTextInput(
-            name="YOUTUBE_UPLOAD_VIDEO_categoryId",
-            display_name="Category ID",
-            info="YouTube category ID of the video",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="YOUTUBE_UPLOAD_VIDEO_description",
-            display_name="Description",
-            info="The description of the video",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="YOUTUBE_UPLOAD_VIDEO_privacyStatus",
-            display_name="Privacy Status",
-            info="The privacy status of the video. Valid values are 'public', 'private', and 'unlisted'",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="YOUTUBE_UPLOAD_VIDEO_tags",
-            display_name="Tags",
-            info="List of tags associated with the video",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="YOUTUBE_UPLOAD_VIDEO_title",
-            display_name="Title",
-            info="The title of the video",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="YOUTUBE_UPLOAD_VIDEO_videoFilePath",
-            display_name="Video File Path",
-            info="File path of the video to be uploaded",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
             name="YOUTUBE_VIDEO_DETAILS_id",
             display_name="ID",
             info="YouTube video ID for which the API should return details",
@@ -347,6 +295,22 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             value="snippet,contentDetails,statistics",
         ),
     ]
+
+    def _find_key_recursively(self, data, key):
+        """Recursively search for a key in nested dicts/lists and return its value if found."""
+        if isinstance(data, dict):
+            if key in data:
+                return data[key]
+            for v in data.values():
+                found = self._find_key_recursively(v, key)
+                if found is not None:
+                    return found
+        elif isinstance(data, list):
+            for item in data:
+                found = self._find_key_recursively(item, key)
+                if found is not None:
+                    return found
+        return None
 
     def execute_action(self):
         """Execute action and return response as Message."""
@@ -381,9 +345,43 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
                 params=params,
             )
             if not result.get("successful"):
-                return {"error": result.get("error", "No response")}
+                message = result.get("data", {}).get("message", {})
+
+                error_info = {"error": result.get("error", "No response")}
+                if isinstance(message, str):
+                    try:
+                        parsed_message = json.loads(message)
+                        if isinstance(parsed_message, dict) and "error" in parsed_message:
+                            error_data = parsed_message["error"]
+                            error_info = {
+                                "error": {
+                                    "code": error_data.get("code", "Unknown"),
+                                    "message": error_data.get("message", "No error message"),
+                                }
+                            }
+                    except (json.JSONDecodeError, KeyError) as e:
+                        logger.error(f"Failed to parse error message as JSON: {e}")
+                        error_info = {"error": str(message)}
+                elif isinstance(message, dict) and "error" in message:
+                    error_data = message["error"]
+                    error_info = {
+                        "error": {
+                            "code": error_data.get("code", "Unknown"),
+                            "message": error_data.get("message", "No error message"),
+                        }
+                    }
+
+                return error_info
 
             result_data = result.get("data", [])
+            action_data = self._actions_data.get(action_key, {})
+            if action_data.get("get_result_field"):
+                result_field = action_data.get("result_field")
+                if result_field:
+                    found = self._find_key_recursively(result_data, result_field)
+                    if found is not None:
+                        return found
+                return result_data
             if result_data and isinstance(result_data, dict):
                 return result_data[next(iter(result_data))]
             return result_data  # noqa: TRY300
