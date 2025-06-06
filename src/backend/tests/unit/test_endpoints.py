@@ -10,6 +10,19 @@ from langflow.services.settings.base import BASE_COMPONENTS_PATH
 
 
 async def run_post(client, flow_id, headers, post_data):
+    """
+    Sends a POST request to process a flow and returns the JSON response.
+    
+    Args:
+        flow_id: The identifier of the flow to process.
+        post_data: The JSON payload to send in the request.
+    
+    Returns:
+        The JSON response from the API if the request is successful.
+    
+    Raises:
+        AssertionError: If the response status code is not 200.
+    """
     response = await client.post(
         f"api/v1/process/{flow_id}",
         headers=headers,
@@ -111,6 +124,11 @@ PROMPT_REQUEST = {
 
 @pytest.mark.benchmark
 async def test_get_all(client: AsyncClient, logged_in_headers):
+    """
+    Tests the retrieval of all available components from the API.
+    
+    Sends a GET request to the `api/v1/all` endpoint and verifies that the returned component names correspond to files in the components directory. Also checks for the presence of specific components such as "ChatInput", "Prompt", and "ChatOutput" in the response.
+    """
     response = await client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     dir_reader = DirectoryReader(BASE_COMPONENTS_PATH)

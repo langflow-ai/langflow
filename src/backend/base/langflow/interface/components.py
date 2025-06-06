@@ -24,6 +24,7 @@ MIN_MODULE_PARTS = 2
 # Create a class to manage component cache instead of using globals
 class ComponentCache:
     def __init__(self):
+        Initializes the component cache with empty storage for all component types and tracking of fully loaded components.
         self.all_types_dict: dict[str, Any] | None = None
         self.fully_loaded_components: dict[str, bool] = {}
 
@@ -33,28 +34,25 @@ component_cache = ComponentCache()
 
 
 async def get_langflow_components_list():
-    """Asynchronously retrieves all Langflow built-in components.
-
-    This is done by importing modules from the langflow.components package and
-    processing the classes they define.
-
-    Instead of iterating over files, this function uses pkgutil to import each submodule,
-    then uses introspection to locate classes defined within those modules. Each class is
-    instantiated (assuming a no-argument constructor), and its component template is generated
-    using build_custom_component_template. This template is expected to contain a 'display_name'
-    (used as the key) or defaults to the class name.
-
+    """
+    Asynchronously discovers and loads all built-in Langflow components.
+    
+    Imports and introspects submodules of the langflow.components package to identify classes that represent components. Instantiates each component class and generates its template, grouping the results by top-level subpackage.
+    
     Returns:
-        dict: A dictionary mapping component names to their respective template definitions.
+        dict: A dictionary mapping top-level subpackage names to dictionaries of component names and their templates.
     """
     return await asyncio.to_thread(_get_langflow_components_list_sync)
 
 
 def _get_langflow_components_list_sync():
-    """Returns a dictionary of built-in Langflow components.
-
-    The components are grouped by their top-level package
-    (e.g., "Notion" instead of "langflow.components.Notion").
+    """
+    Synchronously discovers and loads all built-in Langflow components.
+    
+    Scans the `langflow.components` package and its submodules, instantiates classes that are subclasses of `Component` or `CustomComponent`, and generates their templates. Components are grouped by their top-level subpackage name.
+    
+    Returns:
+        A dictionary with a "components" key mapping top-level package names to their component templates.
     """
     modules_dict = {}
     try:
@@ -105,7 +103,11 @@ def _get_langflow_components_list_sync():
 async def get_and_cache_all_types_dict(
     settings_service: SettingsService,
 ):
-    """Get and cache the types dictionary, with partial loading support."""
+    """
+    Retrieves and caches the complete dictionary of component types and templates, supporting both full and partial (lazy) loading.
+    
+    If the cache is empty, loads built-in Langflow components and either fully loads all components or loads only their metadata, depending on the lazy loading setting. Merges built-in and custom components into the cache and returns the resulting dictionary.
+    """
     if component_cache.all_types_dict is None:
         logger.debug("Building langchain types dict")
 
@@ -133,7 +135,17 @@ async def aget_all_types_dict(components_paths: list[str]):
 
 
 async def aget_component_metadata(components_paths: list[str]):
-    """Get just the metadata for all components without loading full templates."""
+    """
+    Asynchronously retrieves minimal metadata for all components in the specified paths.
+    
+    Builds a dictionary containing basic information (such as display name, type, and description) for each discovered component, without loading their full templates. Each component entry is marked as `lazy_loaded` to indicate that only metadata has been loaded.
+    
+    Args:
+        components_paths: List of filesystem paths to search for component types and names.
+    
+    Returns:
+        A dictionary with component types as keys and their corresponding component metadata as values.
+    """
     # This builds a skeleton of the all_types_dict with just basic component info
 
     components_dict: dict = {"components": {}}
