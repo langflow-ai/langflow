@@ -1,4 +1,4 @@
-FROM node:20-alpine as frontend_build
+FROM node:20-alpine AS frontend_build
 ARG BACKEND_URL
 WORKDIR /app
 
