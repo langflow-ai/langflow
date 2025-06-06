@@ -305,7 +305,8 @@ def run_build_config(
     user_id: str | UUID | None = None,
 ) -> tuple[dict, CustomComponent]:
     """Build the field configuration for a custom component."""
-    if issubclass(custom_component, Component | CustomComponent):
+    # Check if the instance's class is a subclass of Component (but not Component itself)
+    if isinstance(custom_component, Component) and type(custom_component) is not Component:
         return custom_component.build_config(), custom_component
 
     if custom_component._code is None:
