@@ -137,19 +137,6 @@ Upload, store, and manage files in Langflow's **File management** system.
 
 For more on managing your files, see [Manage files](/concepts-file-management).
 
-## Options menu
-
-The dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow workspace:
-
-- <Icon name="Plus" aria-hidden="true"/> **New**: Create a new flow from scratch.
-- <Icon name="SquarePen" aria-hidden="true"/> **Edit Details**: Adjust settings specific to the current flow, such as its name, description, and endpoint name.
-- <Icon name="ScrollText" aria-hidden="true"/> **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
-- <Icon name="FileUp" aria-hidden="true"/> **Import**: Import a flow or component from a JSON file into the workspace.
-- <Icon name="FileDown" aria-hidden="true"/> **Export**: Export the current flow as a JSON file.
-- <Icon name="Undo" aria-hidden="true"/> **Undo**: Revert the last action taken in the project. Keyboard shortcut: <kbd>Control+Z</kbd> (or <kbd>Command+Z</kbd> on macOS).
-- <Icon name="Redo" aria-hidden="true"/> **Redo**: Reapply a previously undone action. Keyboard shortcut: <kbd>Control+Y</kbd> (or <kbd>Command+Y</kbd> on macOS).
-- <Icon name="RefreshCcw" aria-hidden="true"/> **Refresh All**: Refresh all components and delete cache.
-
 ## Settings
 
-Click <Icon name="Settings" aria-hidden="true"/> **Settings** to access **Global variables**, **Langflow API keys**, **Shortcuts**, and **Messages**.
+Click <Icon name="Settings" aria-hidden="true"/> **Settings** to access **Global variables**, **MCP Servers**, **Langflow API keys**, **Shortcuts**, and **Messages**.

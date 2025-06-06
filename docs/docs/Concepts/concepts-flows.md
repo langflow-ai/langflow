@@ -7,9 +7,7 @@ Flows in Langflow are fully serializable and can be saved and loaded from the fi
 
 ## Import Flow
 
-If you've already got a Langflow JSON file, import it into Langflow by clicking on the project name and choosing **Import Flow**.
-
-![Import Flow](../../static/img/flows/import.gif)
+If you've already got a Langflow JSON file, from the **Projects** page, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
 
 Once imported, your flow is ready to use.
 
@@ -19,7 +17,7 @@ You can drag and drop Langflow JSON files directly from your file system into th
 
 ## Export Flow
 
-To **Export** your flow, in the **Playground**, click **Share**, and then click **Export**
+To **Export** your flow, in the **Playground**, click **Share**, and then click **Export**.
 
 ## Langflow JSON file contents
 
