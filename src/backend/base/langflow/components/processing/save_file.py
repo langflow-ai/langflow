@@ -14,6 +14,7 @@ from langflow.schema import Data, DataFrame, Message
 from langflow.services.auth.utils import create_user_longterm_token
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_session, get_settings_service, get_storage_service
+from langflow.template.field.base import Output
 
 
 class SaveToFileComponent(Component):
@@ -50,6 +51,8 @@ class SaveToFileComponent(Component):
             advanced=True,
         ),
     ]
+
+    outputs = [Output(display_name="Result", name="result", method="save_to_file")]
 
     async def save_to_file(self) -> str:
         """Save the input to a file and upload it, returning a confirmation message."""
@@ -90,7 +93,10 @@ class SaveToFileComponent(Component):
         # Upload the saved file
         await self._upload_file(file_path)
 
-        return confirmation
+        # Return the final file path and confirmation message
+        final_path = Path.cwd() / file_path if not file_path.is_absolute() else file_path
+
+        return f"{confirmation} at {final_path}"
 
     def _get_input_type(self) -> str:
         """Determine the input type based on the provided input."""
