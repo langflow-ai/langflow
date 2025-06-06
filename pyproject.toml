@@ -127,6 +127,7 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
+    "sentence-transformers>=4.1.0",
 ]
 
 [dependency-groups]
@@ -200,7 +201,6 @@ cassio = [
 ]
 local = [
     "llama-cpp-python~=0.2.0",
-    "sentence-transformers>=2.3.1",
     "ctransformers>=0.2.10"
 ]
 clickhouse-connect = [

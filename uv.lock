@@ -4685,6 +4685,7 @@ dependencies = [
     { name = "ruff" },
     { name = "scipy" },
     { name = "scrapegraph-py" },
+    { name = "sentence-transformers" },
     { name = "smolagents" },
     { name = "spider-client" },
     { name = "sqlalchemy", extra = ["aiosqlite"] },
@@ -4716,7 +4717,6 @@ couchbase = [
 local = [
     { name = "ctransformers" },
     { name = "llama-cpp-python" },
-    { name = "sentence-transformers" },
 ]
 nv-ingest = [
     { name = "nv-ingest-api" },
@@ -4876,7 +4876,7 @@ requires-dist = [
     { name = "ruff", specifier = ">=0.9.7" },
     { name = "scipy", specifier = ">=1.14.1" },
     { name = "scrapegraph-py", specifier = ">=1.12.0" },
-    { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
+    { name = "sentence-transformers", specifier = ">=4.1.0" },
     { name = "smolagents", specifier = ">=1.8.0" },
     { name = "spider-client", specifier = "==0.1.24" },
     { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
@@ -5012,6 +5012,7 @@ dependencies = [
     { name = "python-multipart" },
     { name = "rich" },
     { name = "scipy" },
+    { name = "sentence-transformers" },
     { name = "sentry-sdk", extra = ["fastapi", "loguru"] },
     { name = "setuptools" },
     { name = "spider-client" },
@@ -5029,12 +5030,10 @@ dependencies = [
 all = [
     { name = "ctransformers" },
     { name = "llama-cpp-python" },
-    { name = "sentence-transformers" },
 ]
 local = [
     { name = "ctransformers" },
     { name = "llama-cpp-python" },
-    { name = "sentence-transformers" },
 ]
 postgresql = [
     { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
@@ -5145,8 +5144,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.12,<1.0.0" },
     { name = "rich", specifier = ">=13.7.0,<14.0.0" },
     { name = "scipy", specifier = ">=1.15.2" },
-    { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.0.0" },
-    { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
+    { name = "sentence-transformers", specifier = ">=4.1.0" },
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },
     { name = "setuptools", specifier = ">=78.1.0,<79.0.0" },
     { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
