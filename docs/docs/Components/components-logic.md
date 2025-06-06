@@ -206,28 +206,6 @@ This component generates a notification for the Listen component to use.
 
 </details>
 
-## Pass
-
-This component forwards the input message, unchanged.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_message | Input Message | The message to forward. |
-| ignored_message | Ignored Message | A second message that is ignored. Used as a workaround for continuity. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| output_message | Output Message | The forwarded message from the input. |
-
-</details>
-
 ## Run flow
 
 This component allows you to run any flow stored in your Langflow database without opening the flow editor.
@@ -314,6 +292,32 @@ The following actions occur when processing a list of Data objects:
 - Objects meeting the condition go to true_output
 - Objects not meeting the condition go to false_output
 - If all objects go to one output, the other output is empty
+
+### Pass
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
+This component forwards the input message, unchanged.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_message | Input Message | The message to forward. |
+| ignored_message | Ignored Message | A second message that is ignored. Used as a workaround for continuity. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| output_message | Output Message | The forwarded message from the input. |
+
+</details>
 
 ## Deprecated components
 
