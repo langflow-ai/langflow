@@ -118,7 +118,7 @@ class MyComponent(Component):
 ### Images and Assets
 ```markdown
 <!-- Images go in static/img/ -->
-![Component Overview](mdc:img/components/overview.png)
+![Component Overview](/img/components/overview.png)
 
 <!-- Use descriptive alt text -->
 ![Langflow interface showing the flow editor with nodes and connections](mdc:img/flow-editor.png)
