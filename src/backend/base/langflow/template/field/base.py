@@ -225,10 +225,6 @@ class Output(BaseModel):
             self.types = []
         self.types.extend([t for t in type_ if t not in self.types])
 
-    def set_selected(self) -> None:
-        if not self.selected and self.types:
-            self.selected = self.types[0]
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         result = handler(self)
