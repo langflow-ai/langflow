@@ -1,12 +1,12 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   DEFAULT_FOLDER,
-  DEFAULT_FOLDER_DEPRECATED
+  DEFAULT_FOLDER_DEPRECATED,
 } from "@/constants/constants";
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
@@ -42,7 +42,10 @@ const HeaderComponent = ({
   setNewProjectModal,
   setSearch,
   isEmptyFolder,
-  selectedFlows, totalFlowsCount, onSelectAll, onDeselectAll
+  selectedFlows,
+  totalFlowsCount,
+  onSelectAll,
+  onDeselectAll,
 }: HeaderComponentProps) => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const isMCPEnabled = ENABLE_MCP;
@@ -150,7 +153,7 @@ const HeaderComponent = ({
           {/* Search and filters */}
           {flowType !== "mcp" && (
             <div className="flex justify-between gap-2">
-              <div className="flex w-full xl:w-5/12 items-center">
+              <div className="flex w-full items-center xl:w-5/12">
                 <Input
                   icon="Search"
                   data-testid="search-store-input"
@@ -197,8 +200,14 @@ const HeaderComponent = ({
                 <div className="flex items-center gap-2 whitespace-nowrap">
                   <Checkbox
                     id="selectedFlows"
-                    checked={selectedFlows.length > 0 && selectedFlows.length === totalFlowsCount}
-                    indeterminate={selectedFlows.length > 0 && selectedFlows.length < totalFlowsCount}
+                    checked={
+                      selectedFlows.length > 0 &&
+                      selectedFlows.length === totalFlowsCount
+                    }
+                    indeterminate={
+                      selectedFlows.length > 0 &&
+                      selectedFlows.length < totalFlowsCount
+                    }
                     onCheckedChange={(checked) => {
                       if (checked) {
                         onSelectAll();
@@ -211,7 +220,7 @@ const HeaderComponent = ({
                   />
                   <label
                     htmlFor="selectedFlows"
-                    className="text-sm text-muted-foreground cursor-pointer w-[100px]"
+                    className="w-[100px] cursor-pointer text-sm text-muted-foreground"
                   >
                     {selectedFlows.length > 0
                       ? `${selectedFlows.length} selected`

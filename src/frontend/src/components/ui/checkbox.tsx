@@ -5,8 +5,12 @@ import * as React from "react";
 import { cn } from "../../utils/utils";
 import IconComponent from "../common/genericIconComponent";
 
-interface CheckboxProps extends Omit<React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>, 'checked'> {
-  checked?: boolean | 'indeterminate';
+interface CheckboxProps
+  extends Omit<
+    React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>,
+    "checked"
+  > {
+  checked?: boolean | "indeterminate";
   indeterminate?: boolean;
 }
 
@@ -14,7 +18,7 @@ const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
   CheckboxProps
 >(({ className, checked, indeterminate, ...props }, ref) => {
-  const isIndeterminate = indeterminate || checked === 'indeterminate';
+  const isIndeterminate = indeterminate || checked === "indeterminate";
   const isChecked = checked === true;
 
   return (
@@ -22,7 +26,8 @@ const Checkbox = React.forwardRef<
       ref={ref}
       className={cn(
         "peer h-4 w-4 shrink-0 rounded-sm border border-muted-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-        (isChecked || isIndeterminate) && "border-primary bg-primary text-primary-foreground",
+        (isChecked || isIndeterminate) &&
+          "border-primary bg-primary text-primary-foreground",
         className,
       )}
       checked={isChecked || isIndeterminate}
@@ -32,12 +37,9 @@ const Checkbox = React.forwardRef<
         className={cn("flex items-center justify-center text-current")}
       >
         {isIndeterminate ? (
-          <div className="h-[1.5px] w-2 bg-current rounded-sm" />
+          <div className="h-[1.5px] w-2 rounded-sm bg-current" />
         ) : (
-          <IconComponent
-            name="Check"
-            className="h-4 w-4 stroke-1"
-          />
+          <IconComponent name="Check" className="h-4 w-4 stroke-1" />
         )}
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
@@ -46,10 +48,10 @@ const Checkbox = React.forwardRef<
 Checkbox.displayName = CheckboxPrimitive.Root.displayName;
 
 const CheckBoxDiv = ({
-                       className = "",
-                       checked,
-                       indeterminate,
-                     }: {
+  className = "",
+  checked,
+  indeterminate,
+}: {
   className?: string;
   checked?: boolean;
   indeterminate?: boolean;
@@ -58,7 +60,7 @@ const CheckBoxDiv = ({
     className={cn(
       className,
       "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-      (checked || indeterminate) ? "bg-primary text-primary-foreground" : "",
+      checked || indeterminate ? "bg-primary text-primary-foreground" : "",
     )}
   >
     {(checked || indeterminate) && (

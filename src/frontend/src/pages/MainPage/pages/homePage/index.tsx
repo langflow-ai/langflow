@@ -67,7 +67,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   }, [view]);
 
   const handleSelectAll = useCallback(() => {
-    setSelectedFlows(data.flows.map(flow => flow.id));
+    setSelectedFlows(data.flows.map((flow) => flow.id));
   }, [data.flows]);
 
   const handleDeselectAll = useCallback(() => {
