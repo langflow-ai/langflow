@@ -24,7 +24,7 @@ MIN_MODULE_PARTS = 2
 # Create a class to manage component cache instead of using globals
 class ComponentCache:
     def __init__(self):
-        Initializes the component cache with empty storage for all component types and tracking of fully loaded components.
+        """Initializes the component cache with empty storage for all component types and tracking of fully loaded components."""
         self.all_types_dict: dict[str, Any] | None = None
         self.fully_loaded_components: dict[str, bool] = {}
 
@@ -121,11 +121,15 @@ async def get_and_cache_all_types_dict(
             # Traditional full loading
             component_cache.all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
 
-        # Log loading stats
+        # Log custom component loading stats
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.get("components", {}).values())
-        logger.debug(f"Loaded {component_count} components")
+        if component_count > 0 and settings_service.settings.components_path:
+            logger.debug(f"Built {component_count} custom components from {settings_service.settings.components_path}")
+
         # merge the dicts
         component_cache.all_types_dict = {**langflow_components["components"], **component_cache.all_types_dict}
+        component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
+        logger.debug(f"Loaded {component_count} components")
     return component_cache.all_types_dict
 
 
