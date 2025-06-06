@@ -94,8 +94,6 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
         },
     }
 
-    _list_variables = {"YOUTUBE_UPDATE_VIDEO_tags"}
-
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
 
     inputs = [
@@ -244,43 +242,6 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
             required=True,
         ),
         MessageTextInput(
-            name="YOUTUBE_UPDATE_VIDEO_categoryId",
-            display_name="Category ID",
-            info="YouTube category ID of the video",
-            show=False,
-        ),
-        MessageTextInput(
-            name="YOUTUBE_UPDATE_VIDEO_description",
-            display_name="Description",
-            info="Description of the video",
-            show=False,
-        ),
-        MessageTextInput(
-            name="YOUTUBE_UPDATE_VIDEO_privacyStatus",
-            display_name="Privacy Status",
-            info="Privacy status of the video. Valid values are 'public', 'private', and 'unlisted'",
-            show=False,
-        ),
-        MessageTextInput(
-            name="YOUTUBE_UPDATE_VIDEO_tags",
-            display_name="Tags",
-            info="List of tags associated with the video",
-            show=False,
-        ),
-        MessageTextInput(
-            name="YOUTUBE_UPDATE_VIDEO_title",
-            display_name="Title",
-            info="The title of the video.",
-            show=False,
-        ),
-        MessageTextInput(
-            name="YOUTUBE_UPDATE_VIDEO_videoId",
-            display_name="Video ID",
-            info="YouTube video ID to be updated",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
             name="YOUTUBE_VIDEO_DETAILS_id",
             display_name="ID",
             info="YouTube video ID for which the API should return details",
@@ -332,9 +293,6 @@ class ComposioYoutubeAPIComponent(ComposioBaseComponent):
 
                     if value is None or value == "":
                         continue
-
-                    if field in self._list_variables and value:
-                        value = [item.strip() for item in value.split(",")]
 
                     param_name = field.replace(action_key + "_", "")
 
