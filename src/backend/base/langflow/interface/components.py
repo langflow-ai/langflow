@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import asyncio
+import importlib
+import inspect
 import json
+import pkgutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from langflow.custom.utils import abuild_custom_components
+from langflow.custom.utils import abuild_custom_components, create_component_template
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -23,12 +27,88 @@ class ComponentCache:
 component_cache = ComponentCache()
 
 
+async def get_langflow_components_list():
+    """Asynchronously retrieves all Langflow built-in components by importing modules.
+
+    from the langflow.components package and processing the classes they define.
+    Instead of iterating over files, this function uses pkgutil to import each submodule,
+    then uses introspection to locate classes defined within those modules. Each class is
+    instantiated (assuming a no-argument constructor), and its component template is generated
+    using build_custom_component_template. This template is expected to contain a 'display_name'
+    (used as the key) or defaults to the class name.
+
+    Returns:
+        dict: A dictionary mapping component names to their respective template definitions.
+    """
+    return await asyncio.to_thread(_get_langflow_components_list_sync)
+
+
+def _get_langflow_components_list_sync():
+    """Returns a dictionary of built-in Langflow components grouped by their top-level.
+
+    package (e.g., "Notion" instead of "langflow.components.Notion").
+    """
+    modules_dict = {}
+    try:
+        import langflow.components as components_pkg
+    except ImportError as e:
+        logger.error(f"Error importing langflow.components: {e}", exc_info=True)
+        return {"components": {}}
+
+    # Minimum number of parts in a valid module path
+    min_module_parts = 3
+
+    # Iterate over all submodules of langflow.components
+    for _finder, modname, _ispkg in pkgutil.walk_packages(
+        components_pkg.__path__, prefix=components_pkg.__name__ + "."
+    ):
+        try:
+            module = importlib.import_module(modname)
+        except ImportError as e:
+            logger.error(f"Error importing module {modname}: {e}", exc_info=True)
+            continue
+
+        # e.g., "langflow.components.Notion.add_content_to_page" -> "Notion"
+        mod_parts = modname.split(".")
+        if len(mod_parts) < min_module_parts:
+            continue  # skip if not a valid submodule
+        top_level = mod_parts[2]
+
+        # Initialize the top-level module in the dictionary if it doesn't exist
+        if top_level not in modules_dict:
+            modules_dict[top_level] = {}
+
+        module_components = modules_dict[top_level]
+
+        # Find all classes in the module
+        for name, obj in inspect.getmembers(module, inspect.isclass):
+            # Skip if the class is not defined in this module
+            if obj.__module__ != modname:
+                continue
+
+            try:
+                # Create an instance of the component
+                instance = obj()
+                # Get the component template
+                comp_template = create_component_template(instance)
+                if comp_template:
+                    component_name = comp_template.get("display_name", name)
+                    module_components[component_name] = comp_template
+            except Exception as e:
+                logger.error(f"Error processing component class '{name}' in module '{modname}': {e}", exc_info=True)
+                raise
+
+    return {"components": modules_dict}
+
+
 async def get_and_cache_all_types_dict(
     settings_service: SettingsService,
 ):
     """Get and cache the types dictionary, with partial loading support."""
     if component_cache.all_types_dict is None:
         logger.debug("Building langchain types dict")
+
+        langflow_components = await get_langflow_components_list()
 
         if settings_service.settings.lazy_load_components:
             # Partial loading mode - just load component metadata
@@ -41,7 +121,8 @@ async def get_and_cache_all_types_dict(
         # Log loading stats
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.get("components", {}).values())
         logger.debug(f"Loaded {component_count} components")
-
+        # merge the dicts
+        component_cache.all_types_dict = {**langflow_components["components"], **component_cache.all_types_dict}
     return component_cache.all_types_dict
 
 
@@ -55,6 +136,9 @@ async def aget_component_metadata(components_paths: list[str]):
     # This builds a skeleton of the all_types_dict with just basic component info
 
     components_dict: dict = {"components": {}}
+
+    if not components_paths:
+        return components_dict
 
     # Get all component types
     component_types = await discover_component_types(components_paths)
