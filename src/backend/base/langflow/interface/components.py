@@ -1,20 +1,31 @@
 from __future__ import annotations
 
+import asyncio
+import importlib
+import inspect
 import json
+import pkgutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from langflow.custom.utils import abuild_custom_components
+from langflow.custom.utils import abuild_custom_components, create_component_template
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
 
+MIN_MODULE_PARTS = 2
+
+
 # Create a class to manage component cache instead of using globals
 class ComponentCache:
     def __init__(self):
+        """Initializes the component cache.
+
+        Creates empty storage for all component types and tracking of fully loaded components.
+        """
         self.all_types_dict: dict[str, Any] | None = None
         self.fully_loaded_components: dict[str, bool] = {}
 
@@ -23,12 +34,104 @@ class ComponentCache:
 component_cache = ComponentCache()
 
 
+async def import_langflow_components():
+    """Asynchronously discovers and loads all built-in Langflow components.
+
+    Imports and introspects submodules of the langflow.components package to identify classes that
+    represent components. Instantiates each component class and generates its template, grouping the
+    results by top-level subpackage.
+
+    Returns:
+        dict: A dictionary mapping top-level subpackage names to dictionaries of component names and their templates.
+    """
+    return await asyncio.to_thread(_get_langflow_components_list_sync)
+
+
+def _get_langflow_components_list_sync():
+    """Synchronously discovers and loads all built-in Langflow components.
+
+    Scans the `langflow.components` package and its submodules, instantiates classes that are subclasses
+    of `Component` or `CustomComponent`, and generates their templates. Components are grouped by their
+    top-level subpackage name.
+
+    Returns:
+        A dictionary with a "components" key mapping top-level package names to their component templates.
+    """
+    modules_dict = {}
+    try:
+        import langflow.components as components_pkg
+    except ImportError as e:
+        logger.error(f"Failed to import langflow.components package: {e}", exc_info=True)
+        return {"components": modules_dict}
+
+    # Iterate over all submodules of langflow.components
+    for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
+        # Skip if the module is in the deactivated folder
+        if "deactivated" in modname:
+            continue
+        try:
+            module = importlib.import_module(modname)
+        except (ImportError, AttributeError) as e:
+            logger.error(f"Error importing module {modname}: {e}", exc_info=True)
+            continue
+
+        # Extract the top-level subpackage name after "langflow.components."
+        # e.g., "langflow.components.Notion.add_content_to_page" -> "Notion"
+        mod_parts = modname.split(".")
+        if len(mod_parts) > MIN_MODULE_PARTS:
+            top_level = mod_parts[2]
+        else:
+            continue  # skip if not a valid submodule
+
+        module_components = modules_dict.setdefault(top_level, {})
+        # Process each class defined in the module
+        for name, class_obj in inspect.getmembers(module, inspect.isclass):
+            # The conditions we have to check are:
+            # 1. Is the modname different the module of the component
+            # 2. Is the class_obj a subclass of Component or CustomComponent (using issubclass)
+
+            # 2 gets weird because some subclasses of CustomComponent do not return True
+            # when calling `issubclass` and instead return they are a `type`.
+            # Because of this we have to add another condition:
+            # if they pass check 1 but not 2, then we check if they look like a CustomComponent/Component
+            # by checking some attributes
+            if class_obj.__module__ != modname:
+                continue
+
+            code_class_base_inheritance = getattr(class_obj, "code_class_base_inheritance", None)
+            _code_class_base_inheritance = getattr(class_obj, "_code_class_base_inheritance", None)
+            if code_class_base_inheritance is None and _code_class_base_inheritance is None:
+                continue
+
+            try:
+                # Instantiate the component (assuming a no-argument constructor)
+                comp_instance = class_obj()
+                comp_template, _ = create_component_template(component_extractor=comp_instance)
+                # Use 'display_name' from the template if available; otherwise, fallback to the class name.
+                component_name = class_obj.name if hasattr(class_obj, "name") and class_obj.name else name
+                module_components[component_name] = comp_template
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    f"Skipping component class '{name}' in module '{modname}' due to instantiation failure: {e}",
+                )
+                continue
+    return {"components": modules_dict}
+
+
 async def get_and_cache_all_types_dict(
     settings_service: SettingsService,
 ):
-    """Get and cache the types dictionary, with partial loading support."""
+    """Retrieves and caches the complete dictionary of component types and templates.
+
+    Supports both full and partial (lazy) loading. If the cache is empty, loads built-in Langflow
+    components and either fully loads all components or loads only their metadata, depending on the
+    lazy loading setting. Merges built-in and custom components into the cache and returns the
+    resulting dictionary.
+    """
     if component_cache.all_types_dict is None:
         logger.debug("Building langchain types dict")
+
+        langflow_components = await import_langflow_components()
 
         if settings_service.settings.lazy_load_components:
             # Partial loading mode - just load component metadata
@@ -38,10 +141,15 @@ async def get_and_cache_all_types_dict(
             # Traditional full loading
             component_cache.all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
 
-        # Log loading stats
+        # Log custom component loading stats
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.get("components", {}).values())
-        logger.debug(f"Loaded {component_count} components")
+        if component_count > 0 and settings_service.settings.components_path:
+            logger.debug(f"Built {component_count} custom components from {settings_service.settings.components_path}")
 
+        # merge the dicts
+        component_cache.all_types_dict = {**langflow_components["components"], **component_cache.all_types_dict}
+        component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
+        logger.debug(f"Loaded {component_count} components")
     return component_cache.all_types_dict
 
 
@@ -51,10 +159,24 @@ async def aget_all_types_dict(components_paths: list[str]):
 
 
 async def aget_component_metadata(components_paths: list[str]):
-    """Get just the metadata for all components without loading full templates."""
+    """Asynchronously retrieves minimal metadata for all components in the specified paths.
+
+    Builds a dictionary containing basic information (such as display name, type, and description) for
+    each discovered component, without loading their full templates. Each component entry is marked as
+    `lazy_loaded` to indicate that only metadata has been loaded.
+
+    Args:
+        components_paths: List of filesystem paths to search for component types and names.
+
+    Returns:
+        A dictionary with component types as keys and their corresponding component metadata as values.
+    """
     # This builds a skeleton of the all_types_dict with just basic component info
 
     components_dict: dict = {"components": {}}
+
+    if not components_paths:
+        return components_dict
 
     # Get all component types
     component_types = await discover_component_types(components_paths)

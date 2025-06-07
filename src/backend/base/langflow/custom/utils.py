@@ -263,6 +263,15 @@ def run_build_inputs(
 
 
 def get_component_instance(custom_component: CustomComponent, user_id: str | UUID | None = None):
+    """Returns an instance of a custom component, evaluating its code if necessary.
+
+    If the input is already an instance of `Component` or `CustomComponent`, it is returned directly.
+    Otherwise, the function evaluates the component's code to create and return an instance. Raises an
+    HTTP 400 error if the code is missing, invalid, or instantiation fails.
+    """
+    if custom_component.__class__.__name__ not in {"Component", "CustomComponent"}:
+        return custom_component
+
     if custom_component._code is None:
         error = "Code is None"
     elif not isinstance(custom_component._code, str):
@@ -301,7 +310,22 @@ def run_build_config(
     custom_component: CustomComponent,
     user_id: str | UUID | None = None,
 ) -> tuple[dict, CustomComponent]:
-    """Build the field configuration for a custom component."""
+    """Builds the field configuration dictionary for a custom component.
+
+    If the input is an instance of a subclass of Component (excluding Component itself), returns its
+    build configuration and the instance. Otherwise, evaluates the component's code to create an instance,
+    calls its build_config method, and processes any RangeSpec objects in the configuration. Raises an
+    HTTP 400 error if the code is missing or invalid, or if instantiation or configuration building fails.
+
+    Returns:
+        A tuple containing the field configuration dictionary and the component instance.
+    """
+    # Check if the instance's class is a subclass of Component (but not Component itself)
+    # If we have the a Component that is a subclass of Component, that means
+    # we have imported it and not loaded it from the file
+    if isinstance(custom_component, Component) and type(custom_component) is not Component:
+        return custom_component.build_config(), custom_component
+
     if custom_component._code is None:
         error = "Code is None"
     elif not isinstance(custom_component._code, str):
@@ -369,9 +393,20 @@ def build_custom_component_template_from_inputs(
     custom_component: Component | CustomComponent, user_id: str | UUID | None = None
 ):
     # The List of Inputs fills the role of the build_config and the entrypoint_args
+    """Builds a frontend node template from a custom component using its input-based configuration.
+
+    This function generates a frontend node template by extracting input fields from the component,
+    adding the code field, determining output types from method return types, validating the component,
+    setting base classes, and reordering fields. Returns the frontend node as a dictionary along with
+    the component instance.
+
+    Returns:
+        A tuple containing the frontend node dictionary and the component instance.
+    """
     cc_instance = get_component_instance(custom_component, user_id=user_id)
     field_config = cc_instance.get_template_config(cc_instance)
     frontend_node = ComponentFrontendNode.from_inputs(**field_config)
+
     frontend_node = add_code_field(frontend_node, custom_component._code)
     # But we now need to calculate the return_type of the methods in the outputs
     for output in frontend_node.outputs:
@@ -394,7 +429,17 @@ def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: str | UUID | None = None,
 ) -> tuple[dict[str, Any], CustomComponent | Component]:
-    """Build a custom component template."""
+    """Builds a frontend node template and instance for a custom component.
+
+    If the component uses input-based configuration, delegates to the appropriate builder. Otherwise,
+    constructs a frontend node from the component's template configuration, adds extra fields, code,
+    base classes, and output types, reorders fields, and returns the resulting template dictionary
+    along with the component instance.
+
+    Raises:
+        HTTPException: If the component is missing required attributes or if any error occurs during
+                      template construction.
+    """
     try:
         has_template_config = hasattr(custom_component, "template_config")
     except Exception as exc:
@@ -446,12 +491,22 @@ def build_custom_component_template(
         ) from exc
 
 
-def create_component_template(component):
-    """Create a template for a component."""
-    component_code = component["code"]
-    component_output_types = component["output_types"]
+def create_component_template(
+    component: dict | None = None,
+    component_extractor: Component | CustomComponent | None = None,
+):
+    """Creates a component template and instance from either a component dictionary or an existing component extractor.
 
-    component_extractor = Component(_code=component_code)
+    If a component dictionary is provided, a new Component instance is created from its code. If a component
+    extractor is provided, it is used directly. The function returns the generated template and the component
+    instance. Output types are set on the template if missing.
+    """
+    component_output_types = []
+    if component_extractor is None and component is not None:
+        component_code = component["code"]
+        component_output_types = component["output_types"]
+
+        component_extractor = Component(_code=component_code)
 
     component_template, component_instance = build_custom_component_template(component_extractor)
     if not component_template["output_types"] and component_output_types:

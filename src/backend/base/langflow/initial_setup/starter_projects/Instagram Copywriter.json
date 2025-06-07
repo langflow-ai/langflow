@@ -2818,9 +2818,7 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": [],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -2976,7 +2974,7 @@
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
-                "info": "",
+                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -3082,7 +3080,7 @@
               },
               "temperature": {
                 "_input_type": "SliderInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "",
@@ -3211,9 +3209,7 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": [],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -3369,7 +3365,7 @@
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
-                "info": "",
+                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -3475,7 +3471,7 @@
               },
               "temperature": {
                 "_input_type": "SliderInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "",
