@@ -122,5 +122,5 @@ SENTENCETRANSFORMERS_EMBEDDING_MODEL_NAMES = [
     "sentence-transformers/xlm-r-bert-base-nli-mean-tokens",
     "sentence-transformers/xlm-r-bert-base-nli-stsb-mean-tokens",
     "sentence-transformers/xlm-r-distilroberta-base-paraphrase-v1",
-    "sentence-transformers/xlm-r-large-en-ko-nli-ststb",
+    "sentence-transformers/xlm-r-large-en-ko-nli-ststb"
 ]

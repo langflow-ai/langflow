@@ -4,7 +4,7 @@ from langchain_openai import OpenAIEmbeddings
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
-from langflow.base.models.sentenceTransformers_constants import SENTENCETRANSFORMERS_EMBEDDING_MODEL_NAMES
+from langflow.base.models.sentence_transformers_constants import SENTENCETRANSFORMERS_EMBEDDING_MODEL_NAMES
 from langflow.field_typing import Embeddings
 from langflow.io import (
     BoolInput,
@@ -80,7 +80,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
         model = self.model
         if provider == "OpenAI":
             if not self.api_key:
-                raise ValueError("OpenAI API key is required for OpenAI provider.")
+                msg = "OpenAI API key is required for OpenAI provider."
+                raise ValueError(msg)
             return OpenAIEmbeddings(
                 model=model,
                 dimensions=self.dimensions or None,
@@ -96,12 +97,14 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
             try:
                 from sentence_transformers import SentenceTransformer
             except ImportError as e:
-                raise ImportError("Please install sentence-transformers to use this provider.") from e
+                msg = "Please install sentence-transformers to use this provider."
+                raise ImportError(msg) from e
 
             try:
                 st_model = SentenceTransformer(model)
             except Exception as e:
-                raise ValueError(f"Failed to load SentenceTransformer model: {e}") from e
+                msg = f"Failed to load SentenceTransformer model: {e}"
+                raise ValueError(msg) from e
 
             class LangflowEmbeddingWrapper:
                 def embed_documents(self, texts: list[str]) -> list[list[float]]:
@@ -111,8 +114,8 @@ class EmbeddingModelComponent(LCEmbeddingsModel):
                     return st_model.encode(text, convert_to_numpy=True).tolist()
 
             return LangflowEmbeddingWrapper()
-
-        raise ValueError(f"Unknown provider: {provider}")
+        msg = f"Unknown provider: {provider}"
+        raise ValueError(msg)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "provider":
