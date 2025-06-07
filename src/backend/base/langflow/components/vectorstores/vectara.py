@@ -6,10 +6,10 @@ from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cache
 from langflow.helpers.data import docs_to_data
 from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema.data import Data
-from langflow.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
     from langchain_community.vectorstores import Vectara
+    from langflow.schema.dataframe import DataFrame
 
 
 class VectaraVectorStoreComponent(LCVectorStoreComponent):
