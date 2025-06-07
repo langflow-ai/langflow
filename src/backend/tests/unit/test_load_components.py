@@ -187,8 +187,8 @@ class TestComponentLoading:
                 missing_in_2 = comps1 - comps2
                 missing_in_1 = comps2 - comps1
                 print(
-                    f"Component differences in {category}: missing in result2: {missing_in_2}, "
-                    "missing in result1: {missing_in_1}"
+                    f"Component differences in {category}: "
+                    f"missing in result2: {missing_in_2}, missing in result1: {missing_in_1}"
                 )
 
         # The results might not be exactly identical due to timing or loading order
