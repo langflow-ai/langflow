@@ -438,3 +438,100 @@ class TestComponentLoading:
         ), "get_langflow_components_list should always return components"
         assert all(isinstance(result, dict) for _, result in langflow_results), "All langflow results should be dicts"
         assert all(isinstance(result, dict) for _, result in all_types_results), "All all_types results should be dicts"
+
+    @pytest.mark.no_blockbuster
+    @pytest.mark.asyncio
+    async def test_component_differences_analysis(self, base_components_path):
+        """Analyze and report the exact differences between components loaded by both methods."""
+        print("\n" + "=" * 80)
+        print("COMPONENT DIFFERENCES ANALYSIS")
+        print("=" * 80)
+
+        # Load components from both methods
+        langflow_result = await import_langflow_components()
+        all_types_result = await aget_all_types_dict(base_components_path)
+
+        # Extract component data from both results
+        # import_langflow_components returns {"components": {category: {comp_name: comp_data}}}
+        # aget_all_types_dict returns {category: {comp_name: comp_data}}
+        langflow_components = langflow_result.get("components", {})
+        all_types_components = all_types_result
+
+        # Build flat dictionaries of all components: {comp_name: category}
+        langflow_flat = {}
+        for category, components in langflow_components.items():
+            for comp_name in components:
+                langflow_flat[comp_name] = category
+
+        all_types_flat = {}
+        for category, components in all_types_components.items():
+            for comp_name in components:
+                all_types_flat[comp_name] = category
+
+        # Calculate counts
+        langflow_count = len(langflow_flat)
+        all_types_count = len(all_types_flat)
+
+        print("\nCOMPONENT COUNTS:")
+        print(f"import_langflow_components: {langflow_count} components")
+        print(f"aget_all_types_dict: {all_types_count} components")
+        print(f"Difference: {abs(langflow_count - all_types_count)} components")
+
+        # Find components that are in one but not the other
+        langflow_only = set(langflow_flat.keys()) - set(all_types_flat.keys())
+        all_types_only = set(all_types_flat.keys()) - set(langflow_flat.keys())
+        common_components = set(langflow_flat.keys()) & set(all_types_flat.keys())
+
+        print("\nCOMPONENT OVERLAP:")
+        print(f"Common components: {len(common_components)}")
+        print(f"Only in import_langflow_components: {len(langflow_only)}")
+        print(f"Only in aget_all_types_dict: {len(all_types_only)}")
+
+        # Print detailed differences
+        if langflow_only:
+            print(f"\nCOMPONENTS ONLY IN import_langflow_components ({len(langflow_only)}):")
+            for comp_name in sorted(langflow_only):
+                category = langflow_flat[comp_name]
+                print(f"  - {comp_name} (category: {category})")
+
+        if all_types_only:
+            print(f"\nCOMPONENTS ONLY IN aget_all_types_dict ({len(all_types_only)}):")
+            for comp_name in sorted(all_types_only):
+                category = all_types_flat[comp_name]
+                print(f"  - {comp_name} (category: {category})")
+
+        # Check for category differences for common components
+        category_differences = []
+        for comp_name in common_components:
+            langflow_cat = langflow_flat[comp_name]
+            all_types_cat = all_types_flat[comp_name]
+            if langflow_cat != all_types_cat:
+                category_differences.append((comp_name, langflow_cat, all_types_cat))
+
+        if category_differences:
+            print(f"\nCOMPONENTS WITH DIFFERENT CATEGORIES ({len(category_differences)}):")
+            for comp_name, langflow_cat, all_types_cat in sorted(category_differences):
+                print(f"  - {comp_name}: import_langflow='{langflow_cat}' vs aget_all_types='{all_types_cat}'")
+
+        # Print category summary
+        print("\nCATEGORY SUMMARY:")
+        langflow_categories = set(langflow_components.keys())
+        all_types_categories = set(all_types_components.keys())
+
+        print(f"Categories in import_langflow_components: {sorted(langflow_categories)}")
+        print(f"Categories in aget_all_types_dict: {sorted(all_types_categories)}")
+
+        categories_only_langflow = langflow_categories - all_types_categories
+        categories_only_all_types = all_types_categories - langflow_categories
+
+        if categories_only_langflow:
+            print(f"Categories only in import_langflow_components: {sorted(categories_only_langflow)}")
+        if categories_only_all_types:
+            print(f"Categories only in aget_all_types_dict: {sorted(categories_only_all_types)}")
+
+        print("=" * 80)
+
+        # Assertions to ensure the analysis is meaningful
+        assert langflow_count > 0, "import_langflow_components should return components"
+        assert all_types_count > 0, "aget_all_types_dict should return components"
+        assert len(common_components) > 0, "There should be some overlap between the two methods"
