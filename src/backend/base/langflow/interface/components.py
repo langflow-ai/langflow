@@ -10,8 +10,6 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from langflow.components.custom_component.custom_component import CustomComponent
-from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import abuild_custom_components, create_component_template
 
 if TYPE_CHECKING:
@@ -68,6 +66,9 @@ def _get_langflow_components_list_sync():
 
     # Iterate over all submodules of langflow.components
     for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
+        # Skip if the module is in the deactivated folder
+        if "deactivated" in modname:
+            continue
         try:
             module = importlib.import_module(modname)
         except (ImportError, AttributeError) as e:
@@ -84,22 +85,34 @@ def _get_langflow_components_list_sync():
 
         module_components = modules_dict.setdefault(top_level, {})
         # Process each class defined in the module
-        for name, cls in inspect.getmembers(module, inspect.isclass):
-            # Only consider classes defined in this module
-            # and if the class is a subclass of Component or CustomComponent
-            if cls.__module__ != modname or not issubclass(cls, Component | CustomComponent):
+        for name, class_obj in inspect.getmembers(module, inspect.isclass):
+            # The conditions we have to check are:
+            # 1. Is the modname different the module of the component
+            # 2. Is the class_obj a subclass of Component or CustomComponent (using issubclass)
+
+            # 2 gets weird because some subclasses of CustomComponent do not return True
+            # when calling `issubclass` and instead return they are a `type`.
+            # Because of this we have to add another condition:
+            # if they pass check 1 but not 2, then we check if they look like a CustomComponent/Component
+            # by checking some attributes
+            if class_obj.__module__ != modname:
                 continue
+
+            code_class_base_inheritance = getattr(class_obj, "code_class_base_inheritance", None)
+            _code_class_base_inheritance = getattr(class_obj, "_code_class_base_inheritance", None)
+            if code_class_base_inheritance is None and _code_class_base_inheritance is None:
+                continue
+
             try:
                 # Instantiate the component (assuming a no-argument constructor)
-                comp_instance = cls()
+                comp_instance = class_obj()
                 comp_template, _ = create_component_template(component_extractor=comp_instance)
                 # Use 'display_name' from the template if available; otherwise, fallback to the class name.
-                component_name = cls.name if hasattr(cls, "name") and cls.name else name
+                component_name = class_obj.name if hasattr(class_obj, "name") and class_obj.name else name
                 module_components[component_name] = comp_template
             except Exception as e:  # noqa: BLE001
                 logger.warning(
                     f"Skipping component class '{name}' in module '{modname}' due to instantiation failure: {e}",
-                    exc_info=True,
                 )
                 continue
     return {"components": modules_dict}
