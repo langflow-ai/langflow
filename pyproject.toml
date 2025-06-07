@@ -175,6 +175,7 @@ dev = [
     'elevenlabs>=1.52.0; python_version != "3.12"',
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
+    "pyleak>=0.1.8",
 ]
 
 [tool.uv.sources]

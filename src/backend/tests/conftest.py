@@ -31,6 +31,14 @@ from langflow.services.database.models.vertex_builds.crud import delete_vertex_b
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, session_scope
 from loguru import logger
+from pyleak import (
+    EventLoopBlockError,
+    TaskLeakError,
+    ThreadLeakError,
+    no_event_loop_blocking,
+    no_task_leaks,
+    no_thread_leaks,
+)
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -355,6 +363,21 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.setenv("LANGFLOW_DEACTIVATE_TRACING", "true")
     yield
     monkeypatch.undo()
+
+
+@pytest.fixture(autouse=True)
+async def break_if_there_are_leaky_tasks():
+    try:
+        async with no_task_leaks(action="raise", enable_creation_tracking=True):
+            with no_thread_leaks(action="raise"):
+                with no_event_loop_blocking(action="raise"):
+                    yield
+    except TaskLeakError as e:
+        pytest.fail(str(e))
+    except ThreadLeakError as e:
+        pytest.fail(str(e))
+    except EventLoopBlockError as e:
+        pytest.fail(str(e))
 
 
 @pytest.fixture(name="client")
