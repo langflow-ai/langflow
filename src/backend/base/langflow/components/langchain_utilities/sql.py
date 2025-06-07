@@ -4,7 +4,7 @@ from langchain_community.agent_toolkits.sql.base import create_sql_agent
 from langchain_community.utilities import SQLDatabase
 
 from langflow.base.agents.agent import LCAgentComponent
-from langflow.inputs import HandleInput, MessageTextInput
+from langflow.inputs.inputs import HandleInput, MessageTextInput
 
 
 class SQLAgentComponent(LCAgentComponent):

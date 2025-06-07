@@ -1,6 +1,6 @@
 from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.field_typing.constants import Memory
-from langflow.inputs import DictInput, MessageTextInput, SecretStrInput
+from langflow.inputs.inputs import DictInput, MessageTextInput, SecretStrInput
 
 
 class CassandraChatMemory(LCChatMemoryComponent):

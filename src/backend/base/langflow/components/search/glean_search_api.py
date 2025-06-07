@@ -9,9 +9,10 @@ from pydantic.v1 import Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import IntInput, MultilineInput, NestedDictInput, SecretStrInput, StrInput
+from langflow.inputs.inputs import IntInput, MultilineInput, NestedDictInput, SecretStrInput, StrInput
 from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
 
 class GleanSearchAPISchema(BaseModel):

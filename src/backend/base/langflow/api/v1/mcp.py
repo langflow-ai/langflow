@@ -23,7 +23,8 @@ from langflow.base.mcp.util import get_flow_snake_case
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models import Flow, User
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_db_service,
     get_settings_service,

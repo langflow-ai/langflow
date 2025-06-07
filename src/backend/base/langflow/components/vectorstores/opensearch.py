@@ -15,7 +15,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 @vector_store_connection

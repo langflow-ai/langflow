@@ -6,7 +6,8 @@ import orjson
 from fastapi.encoders import jsonable_encoder
 from langchain_core.documents import Document
 
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
 

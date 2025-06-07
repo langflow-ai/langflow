@@ -9,7 +9,7 @@ from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import get_flow_inputs
 from langflow.io import BoolInput, DropdownInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 
 

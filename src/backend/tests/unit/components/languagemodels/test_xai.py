@@ -2,9 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.components.languagemodels import XAIModelComponent
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template
-from langflow.inputs import (
+from langflow.inputs.inputs import (
     BoolInput,
     DictInput,
     DropdownInput,

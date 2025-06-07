@@ -5,9 +5,9 @@ import graph_retriever.strategies as strategies_module
 from langchain_graph_retriever import GraphRetriever
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent
-from langflow.helpers import docs_to_data
-from langflow.inputs import DropdownInput, HandleInput, MultilineInput, NestedDictInput, StrInput
-from langflow.schema import Data
+from langflow.helpers.data import docs_to_data
+from langflow.inputs.inputs import DropdownInput, HandleInput, MultilineInput, NestedDictInput, StrInput
+from langflow.schema.data import Data
 
 
 def traversal_strategies() -> list[str]:

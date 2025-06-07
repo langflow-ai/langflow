@@ -14,7 +14,7 @@ from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 from .default_prompts import XML_AGENT_PROMPT
 

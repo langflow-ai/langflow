@@ -1,6 +1,6 @@
 from langchain_core.tools import create_retriever_tool
 
-from langflow.custom import CustomComponent
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing import BaseRetriever, Tool
 
 

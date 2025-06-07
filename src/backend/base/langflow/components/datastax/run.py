@@ -4,10 +4,10 @@ from openai.lib.streaming import AssistantEventHandler
 
 from langflow.base.astra_assistants.util import get_patched_openai_client
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
-from langflow.inputs import MultilineInput
-from langflow.schema import dotdict
+from langflow.inputs.inputs import MultilineInput
+from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
-from langflow.template import Output
+from langflow.template.field.base import Output
 
 
 class AssistantsRun(ComponentWithCache):

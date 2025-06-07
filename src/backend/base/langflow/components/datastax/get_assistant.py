@@ -1,8 +1,8 @@
 from langflow.base.astra_assistants.util import get_patched_openai_client
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
-from langflow.inputs import MultilineInput, StrInput
+from langflow.inputs.inputs import MultilineInput, StrInput
 from langflow.schema.message import Message
-from langflow.template import Output
+from langflow.template.field.base import Output
 
 
 class AssistantsGetAssistantName(ComponentWithCache):

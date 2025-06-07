@@ -1,7 +1,8 @@
-from langflow.custom import Component
-from langflow.inputs import MessageTextInput
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import MessageTextInput
 from langflow.io import HandleInput, NestedDictInput, Output, StrInput
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
 
 class AlterMetadataComponent(Component):

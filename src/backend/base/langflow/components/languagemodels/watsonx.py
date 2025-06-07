@@ -9,7 +9,7 @@ from pydantic.v1 import SecretStr
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from langflow.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from langflow.schema.dotdict import dotdict
 
 

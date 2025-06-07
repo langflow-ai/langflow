@@ -1,7 +1,7 @@
-from langflow.base.data import BaseFileComponent
+from langflow.base.data.base_file import BaseFileComponent
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from langflow.io import BoolInput, IntInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class FileComponent(BaseFileComponent):

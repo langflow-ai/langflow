@@ -4,7 +4,7 @@ from loguru import logger
 from mem0 import Memory, MemoryClient
 
 from langflow.base.memory.model import LCChatMemoryComponent
-from langflow.inputs import (
+from langflow.inputs.inputs import (
     DictInput,
     HandleInput,
     MessageTextInput,
@@ -12,7 +12,7 @@ from langflow.inputs import (
     SecretStrInput,
 )
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class Mem0MemoryComponent(LCChatMemoryComponent):

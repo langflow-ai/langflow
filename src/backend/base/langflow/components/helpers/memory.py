@@ -1,12 +1,13 @@
 from typing import Any, cast
 
-from langflow.custom import Component
-from langflow.inputs import HandleInput
-from langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, TabInput
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, TabInput
 from langflow.memory import aget_messages, astore_message
-from langflow.schema import Data, dotdict
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
+from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
+from langflow.template.field.base import Output
 from langflow.utils.component_utils import set_current_fields, set_field_display
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER
 

@@ -1,8 +1,8 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import DataInput, IntInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class SelectDataComponent(Component):

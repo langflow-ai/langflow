@@ -1,7 +1,7 @@
 from spider.spider import Spider
 
 from langflow.base.langchain_utilities.spider_constants import MODES
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import (
     BoolInput,
     DictInput,
@@ -11,7 +11,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class SpiderTool(Component):

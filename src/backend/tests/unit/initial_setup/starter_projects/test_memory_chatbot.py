@@ -8,7 +8,7 @@ from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.processing.converter import TypeConverterComponent
 from langflow.components.prompts import PromptComponent
-from langflow.graph import Graph
+from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
 
 if TYPE_CHECKING:

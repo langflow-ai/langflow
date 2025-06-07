@@ -10,7 +10,7 @@ from langflow.io import (
     MessageTextInput,
     Output,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class SemanticTextSplitterComponent(LCTextSplitterComponent):

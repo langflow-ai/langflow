@@ -1,8 +1,8 @@
-from langflow.custom import Component
-from langflow.inputs import StrInput
-from langflow.schema import Data
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import StrInput
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
-from langflow.template import Output
+from langflow.template.field.base import Output
 
 
 class CreateListComponent(Component):
