@@ -876,10 +876,15 @@ class Component(CustomComponent):
             params[input_.name] = input_.value
 
     def set_attributes(self, params: dict) -> None:
+        """Sets component attributes based on provided parameters, ensuring no reserved words are used.
+
+        Raises:
+            ValueError: If a parameter name conflicts with a reserved attribute not tracked in _attributes.
+        """
         self._validate_inputs(params)
         attributes = {}
         for key, value in params.items():
-            if key in self.__dict__ and value != getattr(self, key):
+            if key in self.__dict__ and key not in self._attributes and value != getattr(self, key):
                 msg = (
                     f"{self.__class__.__name__} defines an input parameter named '{key}' "
                     f"that is a reserved word and cannot be used."
