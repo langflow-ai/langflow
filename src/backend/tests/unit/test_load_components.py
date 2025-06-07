@@ -297,12 +297,12 @@ class TestComponentLoading:
         all_types_variance = max(all_types_times) - min(all_types_times)
 
         # Variance shouldn't be too high (more than 10x difference between min and max)
-        assert (
-            langflow_variance < langflow_avg * 10
-        ), f"get_langflow_components_list performance too inconsistent: {langflow_variance}s variance"
-        assert (
-            all_types_variance < all_types_avg * 10
-        ), f"aget_all_types_dict performance too inconsistent: {all_types_variance}s variance"
+        assert langflow_variance < langflow_avg * 10, (
+            f"get_langflow_components_list performance too inconsistent: {langflow_variance}s variance"
+        )
+        assert all_types_variance < all_types_avg * 10, (
+            f"aget_all_types_dict performance too inconsistent: {all_types_variance}s variance"
+        )
 
     @pytest.mark.no_blockbuster
     @pytest.mark.asyncio
@@ -433,9 +433,9 @@ class TestComponentLoading:
         print("=" * 80)
 
         # Assertions for basic functionality
-        assert all(
-            count > 0 for count in langflow_component_counts
-        ), "get_langflow_components_list should always return components"
+        assert all(count > 0 for count in langflow_component_counts), (
+            "get_langflow_components_list should always return components"
+        )
         assert all(isinstance(result, dict) for _, result in langflow_results), "All langflow results should be dicts"
         assert all(isinstance(result, dict) for _, result in all_types_results), "All all_types results should be dicts"
 
