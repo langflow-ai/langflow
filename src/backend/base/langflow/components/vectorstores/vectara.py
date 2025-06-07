@@ -9,6 +9,7 @@ from langflow.schema.data import Data
 
 if TYPE_CHECKING:
     from langchain_community.vectorstores import Vectara
+
     from langflow.schema.dataframe import DataFrame
 
 
