@@ -17,7 +17,7 @@
 
 ## ✨ Highlight features
 
-1. **Visual Builder** to get started quickly and iterate. 
+1. **Visual Builder** to get started quickly and iterate.
 1. **Access to Code** so developers can tweak any component using Python.
 1. **Playground** to immediately test and iterate on their flows with step-by-step control.
 1. **Multi-agent** orchestration and conversation management and retrieval.
@@ -40,6 +40,24 @@ Install with pip
 ```shell
 pip install langflow
 ```
+
+## Install from source
+
+To install Langflow from source:
+
+1. Clone the Langflow repository.
+```shell
+git clone https://github.com/langflow-ai/langflow.git
+```
+
+2. From the repository root, install dependencies and build.
+```shell
+cd langflow
+make init
+```
+
+This installs all dependencies and starts Langflow with the default settings.
+For more information, see [Contribute to Langflow](/contributing-how-to-contribute).
 
 ## 📦 Deployment
 
