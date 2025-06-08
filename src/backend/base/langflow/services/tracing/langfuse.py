@@ -81,7 +81,7 @@ class LangFuseTracer(BaseTracer):
     @override
     def add_trace(
         self,
-        trace_id: str,  # actualy component id
+        trace_id: str,  # actually component id
         trace_name: str,
         trace_type: str,
         inputs: dict[str, Any],
