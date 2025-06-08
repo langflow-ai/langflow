@@ -14,7 +14,7 @@ class ExportDoclingDocumentComponent(Component):
         HandleInput(
             name="data_inputs",
             display_name="Data or DataFrame",
-            info="The data with texts to split in chunks.",
+            info="The data with documents to export.",
             input_types=["Data", "DataFrame"],
             required=True,
         ),
