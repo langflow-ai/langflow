@@ -121,7 +121,7 @@ class DoclingInlineComponent(BaseFileComponent):
         results = converter.convert_all(file_paths)
 
         processed_data: list[Data | None] = [
-            Data(data={"text": res.document.export_to_markdown(), "file_path": res.input.file})
+            Data(data={"doc": res.document, "file_path": str(res.input.file)})
             if res.status == ConversionStatus.SUCCESS
             else None
             for res in results

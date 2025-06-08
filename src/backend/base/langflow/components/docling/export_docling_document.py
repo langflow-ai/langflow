@@ -1,0 +1,131 @@
+from langflow.custom import Component
+from langflow.io import DropdownInput, HandleInput, MessageTextInput, Output, StrInput
+from langflow.schema import Data, DataFrame
+
+
+class ExportDoclingDocumentComponent(Component):
+    display_name: str = "Export DoclingDocument"
+    description: str = "Export DoclingDocument to markdown, html or other formats."
+    documentation = "https://docling-project.github.io/docling/"
+    icon = "Docling"
+    name = "ExportDoclingDocument"
+
+    inputs = [
+        HandleInput(
+            name="data_inputs",
+            display_name="Data or DataFrame",
+            info="The data with texts to split in chunks.",
+            input_types=["Data", "DataFrame"],
+            required=True,
+        ),
+        DropdownInput(
+            name="export_format",
+            display_name="Export format",
+            options=["Markdown", "HTML", "Plaintext", "DocTags"],
+            info="Select the export format to convert the input.",
+            value="Markdown",
+        ),
+        DropdownInput(
+            name="image_mode",
+            display_name="Image export mode",
+            options=["placeholder", "embedded"],
+            info=(
+                "Specify how images are exported in the output. Placeholder will replace the images with a string, "
+                "whereas Embedded will include them as base64 encoded images."
+            ),
+            value="placeholder",
+        ),
+        StrInput(
+            name="md_image_placeholder",
+            display_name="Image placeholder",
+            info="Specify the image placeholder for markdown exports.",
+            value="<!-- image -->",
+            advanced=True,
+        ),
+        StrInput(
+            name="md_page_break_placeholder",
+            display_name="Page break placeholder",
+            info="Add this placeholder betweek pages in the markdown output.",
+            value="",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="doc_key",
+            display_name="Doc Key",
+            info="The key to use for the DoclingDocument column.",
+            value="doc",
+            advanced=True,
+        ),
+    ]
+
+    outputs = [
+        Output(display_name="Exported data", name="data", method="export_document"),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+    ]
+
+    def export_document(self) -> list[Data]:
+        from docling_core.types.doc import DoclingDocument, ImageRefMode
+
+        documents: list[DoclingDocument] = []
+        if isinstance(self.data_inputs, DataFrame):
+            if not len(self.data_inputs):
+                msg = "DataFrame is empty"
+                raise TypeError(msg)
+
+            try:
+                documents = self.data_inputs[self.doc_key].to_list()
+            except Exception as e:
+                msg = f"Error extracting DoclingDocument from DataFrame: {e}"
+                raise TypeError(msg) from e
+        else:
+            if not self.data_inputs:
+                msg = "No data inputs provided"
+                raise TypeError(msg)
+
+            if isinstance(self.data_inputs, Data):
+                if self.doc_key not in self.data_inputs.data:
+                    msg = f"{self.doc_key} field not available in the input Data"
+                    raise TypeError(msg)
+                documents = [self.data_inputs.data[self.doc_key]]
+            else:
+                try:
+                    documents = [
+                        input_.data[self.doc_key]
+                        for input_ in self.data_inputs
+                        if isinstance(input_, Data) and self.doc_key in input_.data
+                    ]
+                    if not documents:
+                        msg = f"No valid Data inputs found in {type(self.data_inputs)}"
+                        raise TypeError(msg)
+                except AttributeError as e:
+                    msg = f"Invalid input type in collection: {e}"
+                    raise TypeError(msg) from e
+
+        results: list[Data] = []
+        try:
+            image_mode = ImageRefMode(self.image_mode)
+            for doc in documents:
+                content = ""
+                if self.export_format == "Markdown":
+                    content = doc.export_to_markdown(
+                        image_mode=image_mode,
+                        image_placeholder=self.md_image_placeholder,
+                        page_break_placeholder=self.md_page_break_placeholder,
+                    )
+                elif self.export_format == "HTML":
+                    content = doc.export_to_html(image_mode=image_mode)
+                elif self.export_format == "Plaintext":
+                    content = doc.export_to_text()
+                elif self.export_format == "DocTags":
+                    content = doc.export_to_doctags()
+
+                # TODO: also add useful metadata
+                results.append(Data(text=content))
+        except Exception as e:
+            msg = f"Error splitting text: {e}"
+            raise TypeError(msg) from e
+
+        return results
+
+    def as_dataframe(self) -> DataFrame:
+        return DataFrame(self.export_document())
