@@ -50,7 +50,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
-        Path("docuemnts.txt").write_text(str(documents), encoding="utf-8")
+        Path("documents.txt").write_text(str(documents), encoding="utf-8")
 
         if not documents:
             if self.schema is None:
