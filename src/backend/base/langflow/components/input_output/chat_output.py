@@ -30,7 +30,7 @@ class ChatOutput(ChatComponent):
     inputs = [
         HandleInput(
             name="input_value",
-            display_name="Text",
+            display_name="Inputs",
             info="Message to be passed as output.",
             input_types=["Data", "DataFrame", "Message"],
             required=True,
@@ -98,7 +98,7 @@ class ChatOutput(ChatComponent):
     ]
     outputs = [
         Output(
-            display_name="Message",
+            display_name="Output Message",
             name="message",
             method="message_response",
         ),

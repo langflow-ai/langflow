@@ -26,7 +26,7 @@ class ChatInput(ChatComponent):
     inputs = [
         MultilineInput(
             name="input_value",
-            display_name="Text",
+            display_name="Input Text",
             value="",
             info="Message to be passed as input.",
             input_types=[],
@@ -88,7 +88,7 @@ class ChatInput(ChatComponent):
         ),
     ]
     outputs = [
-        Output(display_name="Message", name="message", method="message_response"),
+        Output(display_name="Chat Message", name="message", method="message_response"),
     ]
 
     async def message_response(self) -> Message:

@@ -229,6 +229,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   {
     display_name: "Language Models",
     name: "languagemodels",
@@ -238,6 +239,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Memories", name: "memories", icon: "Cpu" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
+  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   { display_name: "GitHub", name: "github", icon: "Github" },
   {
     display_name: "Googlecalendar",
@@ -279,6 +281,7 @@ export const SIDEBAR_BUNDLES = [
     name: "homeassistant",
     icon: "HomeAssistant",
   },
+  { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
   { display_name: "Search", name: "search", icon: "Search" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
 ];
@@ -339,6 +342,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatInput: "MessagesSquare",
   ChatOutput: "MessagesSquare",
   //Integration Icons
+  Outlook: "Outlook",
   AIML: "AI/ML",
   AgentQL: "AgentQL",
   LanguageModels: "BrainCircuit",

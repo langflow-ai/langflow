@@ -9,6 +9,7 @@ class PassMessageComponent(Component):
     description = "Forwards the input message, unchanged."
     name = "Pass"
     icon = "arrow-right"
+    legacy: bool = True
 
     inputs = [
         MessageInput(

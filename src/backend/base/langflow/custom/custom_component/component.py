@@ -467,7 +467,10 @@ class Component(CustomComponent):
             if input_.name is None:
                 msg = self.build_component_error_message("Input name cannot be None")
                 raise ValueError(msg)
-            self._inputs[input_.name] = deepcopy(input_)
+            try:
+                self._inputs[input_.name] = deepcopy(input_)
+            except TypeError:
+                self._inputs[input_.name] = input_
 
     def validate(self, params: dict) -> None:
         """Validates the component parameters.

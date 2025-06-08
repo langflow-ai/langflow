@@ -23,7 +23,7 @@ Answer:
 """
     file_component = FileComponent()
     parse_data_component = ParserComponent()
-    parse_data_component.set(input_data=file_component.load_dataframe)
+    parse_data_component.set(input_data=file_component.load_files)
 
     chat_input = ChatInput()
     prompt_component = PromptComponent()

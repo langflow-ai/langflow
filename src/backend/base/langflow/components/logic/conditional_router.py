@@ -40,12 +40,14 @@ class ConditionalRouterComponent(Component):
             name="case_sensitive",
             display_name="Case Sensitive",
             info="If true, the comparison will be case sensitive.",
-            value=False,
+            value=True,
+            advanced=True,
         ),
         MessageInput(
             name="message",
-            display_name="Message",
+            display_name="Alternative Output",
             info="The message to pass through either route.",
+            advanced=True,
         ),
         IntInput(
             name="max_iterations",

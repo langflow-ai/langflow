@@ -41,7 +41,7 @@ test.skip(
     await adjustScreenView(page);
     let visibleElementHandle;
     const elementsTextInputOutput = await page
-      .getByTestId("handle-textinput-shownode-text-right")
+      .getByTestId("handle-textinput-shownode-output text-right")
       .all();
     for (const element of elementsTextInputOutput) {
       if (await element.isVisible()) {
@@ -102,7 +102,7 @@ test.skip(
     await visibleElementHandle.hover();
     await page.mouse.down();
     const elementTextOutputInput = await page
-      .getByTestId("handle-textoutput-shownode-text-left")
+      .getByTestId("handle-textoutput-shownode-inputs-left")
       .all();
     for (const element of elementTextOutputInput) {
       if (await element.isVisible()) {
@@ -146,7 +146,7 @@ test.skip(
     await page.getByTestId("button_run_text_output").click();
     await page
       .getByTestId(/^rf__node-TextOutput-[a-zA-Z0-9]+$/)
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .click();
     await page.getByText("Run Flow", { exact: true }).click();
     await page.waitForTimeout(5000);

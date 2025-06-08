@@ -1,7 +1,7 @@
 import re
 
 import pytest
-from langflow.components.helpers.batch_run import BatchRunComponent
+from langflow.components.processing.batch_run import BatchRunComponent
 from langflow.schema import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient

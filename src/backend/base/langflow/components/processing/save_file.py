@@ -9,7 +9,7 @@ from fastapi.encoders import jsonable_encoder
 
 from langflow.api.v2.files import upload_user_file
 from langflow.custom import Component
-from langflow.io import DropdownInput, HandleInput, Output, StrInput
+from langflow.io import DropdownInput, HandleInput, StrInput
 from langflow.schema import Data, DataFrame, Message
 from langflow.services.auth.utils import create_user_longterm_token
 from langflow.services.database.models.user.crud import get_user_by_id
@@ -48,14 +48,6 @@ class SaveToFileComponent(Component):
             info="Select the file format to save the input. If not provided, the default format will be used.",
             value="",
             advanced=True,
-        ),
-    ]
-
-    outputs = [
-        Output(
-            name="confirmation",
-            display_name="Confirmation",
-            method="save_to_file",
         ),
     ]
 

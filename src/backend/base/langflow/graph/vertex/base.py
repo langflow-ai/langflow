@@ -78,7 +78,7 @@ class Vertex:
         self.built = False
         self._successors_ids: list[str] | None = None
         self.artifacts: dict[str, Any] = {}
-        self.artifacts_raw: dict[str, Any] = {}
+        self.artifacts_raw: dict[str, Any] | None = {}
         self.artifacts_type: dict[str, str] = {}
         self.steps: list[Callable] = [self._build]
         self.steps_ran: list[Callable] = []

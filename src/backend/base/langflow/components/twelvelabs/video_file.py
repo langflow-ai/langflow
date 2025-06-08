@@ -2,7 +2,7 @@ from pathlib import Path
 
 from langflow.base.data import BaseFileComponent
 from langflow.io import FileInput
-from langflow.schema import Data
+from langflow.schema import Data, DataFrame
 
 
 class VideoFileComponent(BaseFileComponent):
@@ -135,13 +135,13 @@ class VideoFileComponent(BaseFileComponent):
 
         return processed_files
 
-    def load_files(self) -> list[Data]:
+    def load_files(self) -> DataFrame:
         """Load video files and return a list of Data objects."""
         try:
             self.log("DEBUG: Starting video file load")
             if not hasattr(self, "file_path") or not self.file_path:
                 self.log("DEBUG: No video file path provided")
-                return []
+                return DataFrame()
 
             self.log(f"DEBUG: Loading video from path: {self.file_path}")
 
@@ -149,7 +149,7 @@ class VideoFileComponent(BaseFileComponent):
             file_path_obj = Path(self.file_path)
             if not file_path_obj.exists():
                 self.log(f"DEBUG: Video file not found at path: {self.file_path}")
-                return []
+                return DataFrame()
 
             # Verify file size
             file_size = file_path_obj.stat().st_size
@@ -162,18 +162,18 @@ class VideoFileComponent(BaseFileComponent):
             }
 
             self.log(f"DEBUG: Created video data: {video_data}")
-            result = [Data(data=video_data)]
+            result = DataFrame(data=[video_data])
 
             # Log the result to verify it's a proper Data object
             self.log("DEBUG: Returning list with Data objects")
         except (FileNotFoundError, PermissionError, OSError) as e:
             self.log(f"DEBUG: File error in video load_files: {e!s}", "ERROR")
-            return []
+            return DataFrame()
         except ImportError as e:
             self.log(f"DEBUG: Import error in video load_files: {e!s}", "ERROR")
-            return []
+            return DataFrame()
         except (ValueError, TypeError) as e:
             self.log(f"DEBUG: Value or type error in video load_files: {e!s}", "ERROR")
-            return []
+            return DataFrame()
         else:
             return result
