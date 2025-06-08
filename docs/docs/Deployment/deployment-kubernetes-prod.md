@@ -169,7 +169,7 @@ env:
 
 ### Configure scaling
 
-To scale the number of replicas for the Langflow appplication, change the `replicaCount` value in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
+To scale the number of replicas for the Langflow application, change the `replicaCount` value in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
 
 ```yaml
 replicaCount: 3
