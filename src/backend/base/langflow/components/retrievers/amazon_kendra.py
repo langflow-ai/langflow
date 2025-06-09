@@ -1,11 +1,7 @@
-from typing import TYPE_CHECKING, cast
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from langflow.field_typing import Retriever
 from langflow.io import IntInput, StrInput, DictInput
 
-if TYPE_CHECKING:
-    from langchain_community.retrievers import AmazonKendraRetriever
+from langchain_community.retrievers import AmazonKendraRetriever
 
 class AmazonKendraRetrieverComponent(LCVectorStoreComponent):
     display_name: str = "Amazon Kendra Retriever"

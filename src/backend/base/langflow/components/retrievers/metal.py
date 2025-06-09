@@ -1,15 +1,7 @@
-from typing import TYPE_CHECKING, cast
-
-from langchain_community.retrievers import MetalRetriever
-from langflow import legacy_custom
-from metal_sdk.metal import Metal
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from langflow.field_typing import Retriever
 from langflow.io import DictInput, SecretStrInput, StrInput
 
-if TYPE_CHECKING:
-    from langchain_community.retrievers import MetalRetriever
+from langchain_community.retrievers import MetalRetriever
 
 class MetalRetrieverComponent(LCVectorStoreComponent):
     display_name: str = "Metal Retriever"

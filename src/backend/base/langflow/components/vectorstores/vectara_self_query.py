@@ -1,15 +1,12 @@
 import json
-from typing import TYPE_CHECKING, cast
 
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from langflow.field_typing.constants import Retriever
 from langflow.io import HandleInput, StrInput
 
-if TYPE_CHECKING:
-    from langchain_community.vectorstores import Vectara
+from langchain_community.vectorstores import Vectara
 
 class VectaraSelfQueryRetrieverComponent(LCVectorStoreComponent):
     """A custom component for implementing Vectara Self Query Retriever using a vector store."""
