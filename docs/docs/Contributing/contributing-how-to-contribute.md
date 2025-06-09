@@ -79,6 +79,58 @@ Note: With pre-commit hooks installed, you'll need to use `uv run git commit` in
 5. To test your changes, run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
 To run all tests, including unit tests, integration tests, and coverage, run `make tests`.
 
+### Additional Langflow make commands
+
+This section includes common development `make` commands for Langflow.
+To view all available commands, enter `make help`.
+
+Install only frontend dependencies:
+```bash
+make install_frontend
+```
+
+Build frontend static files:
+```bash
+make build_frontend
+```
+
+Install only backend dependencies:
+```bash
+make install_backend
+```
+
+Run frontend in development mode (hot reload):
+```bash
+make frontend
+```
+
+Run backend in development mode:
+```bash
+make backend
+```
+
+The following commands are for testing code quality.
+
+Format code (backend & frontend):
+```bash
+make format
+```
+
+Run all tests:
+```bash
+make tests
+```
+
+Run only unit tests:
+```bash
+make unit_tests
+```
+
+Run only integration tests:
+```bash
+make integration_tests
+```
+
 ### Debug
 
 The repo includes a `.vscode/launch.json` file for debugging the backend in VSCode, which is faster than debugging with Docker Compose. To debug Langflow with the `launch.json` file in VSCode:
