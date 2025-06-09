@@ -4,9 +4,9 @@ import json
 import re
 from typing import TYPE_CHECKING, Any
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.utils.data_structure import get_data_structure
 
@@ -15,10 +15,10 @@ if TYPE_CHECKING:
 
 
 class LambdaFilterComponent(Component):
-    display_name = "Lambda Filter"
-    description = "Uses an LLM to generate a lambda function for filtering or transforming structured data."
-    icon = "filter"
-    name = "LambdaFilter"
+    display_name = "Smart Function"
+    description = "Uses an LLM to generate a function for filtering or transforming structured data."
+    icon = "test-tube-diagonal"
+    name = "Smart Function"
     beta = True
 
     inputs = [

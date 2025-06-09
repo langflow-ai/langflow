@@ -8,7 +8,7 @@ import orjson
 import yaml
 from defusedxml import ElementTree
 
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
