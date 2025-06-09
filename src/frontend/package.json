@@ -87,7 +87,11 @@
     "vite-tsconfig-paths": "^4.3.2",
     "web-vitals": "^4.1.1",
     "zod": "^3.23.8",
-    "zustand": "^4.5.2"
+    "zustand": "^4.5.2",
+    "@formily/core": "^2.3.3",
+    "@formily/react": "^2.3.3",
+    "@formily/antd-v5": "^1.1.0",
+    "antd": "^5.0.0"
   },
   "scripts": {
     "dev:docker": "vite --host 0.0.0.0",

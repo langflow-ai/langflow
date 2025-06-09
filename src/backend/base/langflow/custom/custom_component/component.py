@@ -1343,6 +1343,7 @@ class Component(CustomComponent):
             and not (self._vertex.is_output or self._vertex.is_input)
             and not has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
             and not isinstance(message, ErrorMessage)
+            and message.sender != "hil"
         )
 
     async def send_message(self, message: Message, id_: str | None = None):

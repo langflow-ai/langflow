@@ -116,6 +116,11 @@ export interface ToolContent extends BaseContent {
   error?: any;
 }
 
+export interface HILContent extends BaseContent {
+  type: "hil";
+  data: Record<string, any>;
+}
+
 // Union type for all content types
 export type ContentType =
   | ErrorContent
@@ -123,7 +128,8 @@ export type ContentType =
   | MediaContent
   | JSONContent
   | CodeContent
-  | ToolContent;
+  | ToolContent
+  | HILContent;
 
 // Updated ContentBlock interface
 export interface ContentBlock {

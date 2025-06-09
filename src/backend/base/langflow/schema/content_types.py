@@ -89,3 +89,10 @@ class ToolContent(BaseContent):
     output: Any | None = None
     error: Any | None = None
     duration: int | None = None
+
+
+class HILContent(BaseContent):
+    """Content type for HIL content."""
+
+    type: Literal["hil"] = Field(default="hil")
+    data: dict[str, Any]
