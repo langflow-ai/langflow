@@ -129,7 +129,7 @@ async def get_and_cache_all_types_dict(
     resulting dictionary.
     """
     if component_cache.all_types_dict is None:
-        logger.debug("Building langchain types dict")
+        logger.debug("Building Components Dictionary")
 
         langflow_components = await import_langflow_components()
 
