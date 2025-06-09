@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import importlib
-import inspect
 import json
 import pkgutil
 from pathlib import Path
@@ -115,37 +114,40 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     top_level = mod_parts[2]
     module_components = {}
 
-    # Process each class defined in the module
-    for name, class_obj in inspect.getmembers(module, inspect.isclass):
-        # The conditions we have to check are:
-        # 1. Is the modname different the module of the component
-        # 2. Is the class_obj a subclass of Component or CustomComponent (using issubclass)
+    # Bind frequently used functions for small speed gain
+    _getattr = getattr
 
-        # 2 gets weird because some subclasses of CustomComponent do not return True
-        # when calling `issubclass` and instead return they are a `type`.
-        # Because of this we have to add another condition:
-        # if they pass check 1 but not 2, then we check if they look like a CustomComponent/Component
-        # by checking some attributes
-        if class_obj.__module__ != modname:
+    # Fast path: only check class objects defined in this module
+    failed_count = 0
+    for name, obj in vars(module).items():
+        if not isinstance(obj, type):
             continue
 
-        code_class_base_inheritance = getattr(class_obj, "code_class_base_inheritance", None)
-        _code_class_base_inheritance = getattr(class_obj, "_code_class_base_inheritance", None)
-        if code_class_base_inheritance is None and _code_class_base_inheritance is None:
+        # Only consider classes defined in this module
+        if obj.__module__ != modname:
+            continue
+
+        # Check for required attributes
+        if not (
+            _getattr(obj, "code_class_base_inheritance", None) is not None
+            or _getattr(obj, "_code_class_base_inheritance", None) is not None
+        ):
             continue
 
         try:
-            # Instantiate the component (assuming a no-argument constructor)
-            comp_instance = class_obj()
+            comp_instance = obj()
             comp_template, _ = create_component_template(component_extractor=comp_instance)
-            # Use 'display_name' from the template if available; otherwise, fallback to the class name.
-            component_name = class_obj.name if hasattr(class_obj, "name") and class_obj.name else name
+            component_name = obj.name if hasattr(obj, "name") and obj.name else name
             module_components[component_name] = comp_template
-        except Exception as e:  # noqa: BLE001
-            logger.warning(
-                f"Skipping component class '{name}' in module '{modname}' due to instantiation failure: {e}",
-            )
+        except Exception:  # noqa: BLE001
+            failed_count += 1
             continue
+
+    if failed_count:
+        logger.warning(
+            f"Skipped {failed_count} component class{'es' if failed_count != 1 else ''} "
+            f"in module '{modname}' due to instantiation failure."
+        )
 
     return (top_level, module_components)
 
