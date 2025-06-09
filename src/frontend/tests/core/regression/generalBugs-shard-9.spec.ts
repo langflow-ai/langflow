@@ -87,38 +87,30 @@ AI:
     await page.getByText("Edit Prompt", { exact: true }).click();
     await page.getByText("Check & Save").last().click();
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("Parser");
-
-    await page
-      .getByTestId("processingParser")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 50, y: 200 },
-      });
-
     await page.getByTestId("fit_view").click();
 
     await page.getByTestId("tab_0_retrieve").click();
 
+    await page.getByTestId("dropdown-output-memory").first().click();
+
+    await page
+      .getByTestId("dropdown-item-output-memory-message")
+      .first()
+      .click();
+
     //connection 1
-    await page
-      .getByTestId("handle-memory-shownode-messages-right")
-      .first()
-      .click();
+    const elementChatMemoryOutput = await page
+      .getByTestId("handle-memory-shownode-message-right")
+      .first();
+    await elementChatMemoryOutput.hover();
+    await page.mouse.down();
 
-    await page
-      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
-      .click();
+    const promptInput = await page.getByTestId(
+      "handle-prompt-shownode-context-left",
+    );
 
-    await page
-      .getByTestId("handle-parsercomponent-shownode-parsed text-right")
-      .click();
-
-    await page
-      .getByTestId("handle-prompt-shownode-context-left")
-      .first()
-      .click();
+    await promptInput.hover();
+    await page.mouse.up();
 
     await page.locator('//*[@id="react-flow-id"]').hover();
 
