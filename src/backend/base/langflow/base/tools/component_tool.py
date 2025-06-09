@@ -113,8 +113,6 @@ def _build_output_function(component: Component,
         if isinstance(result, Data):
             return result.data
         # removing the model_dump() call here because it is not serializable
-        if isinstance(result, BaseModel):
-            return serialize(result)
         return serialize(result)
 
     return _patch_send_message_decorator(component, output_function)
@@ -141,8 +139,6 @@ def _build_output_async_function(component: Component,
         if isinstance(result, Data):
             return result.data
         # removing the model_dump() call here because it is not serializable
-        if isinstance(result, BaseModel):
-            return serialize(result)
         return serialize(result)
 
     return _patch_send_message_decorator(component, output_function)
