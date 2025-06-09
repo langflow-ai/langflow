@@ -2,7 +2,7 @@ from typing import cast
 
 from langchain_community.retrievers import AmazonKendraRetriever
 
-from langflow.custom import CustomComponent
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing import Retriever
 
 

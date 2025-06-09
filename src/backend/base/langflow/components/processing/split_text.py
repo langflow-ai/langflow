@@ -1,8 +1,9 @@
 from langchain_text_splitters import CharacterTextSplitter
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.utils.util import unescape_string
 
 
