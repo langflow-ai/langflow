@@ -5,7 +5,7 @@ import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 test(
-  "memory should work as expect",
+  "user should be able to use chat memory as expected",
   { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
@@ -88,6 +88,8 @@ AI:
     await page.getByText("Check & Save").last().click();
 
     await page.getByTestId("fit_view").click();
+
+    await page.getByTestId("tab_0_retrieve").click();
 
     await page.getByTestId("dropdown-output-memory").first().click();
 
