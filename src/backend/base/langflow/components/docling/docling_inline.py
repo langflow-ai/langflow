@@ -26,7 +26,6 @@ class DoclingInlineComponent(BaseFileComponent):
         "html",
         "jpeg",
         "json",
-        "png",
         "md",
         "pdf",
         "png",
