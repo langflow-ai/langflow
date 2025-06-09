@@ -1961,8 +1961,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "aws_access_key_id",
-                  "aws_secret_access_key"
+                  "api_key"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
