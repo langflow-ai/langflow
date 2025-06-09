@@ -216,13 +216,10 @@ class URLComponent(Component):
         return url
 
     def _create_loader(self, url: str) -> RecursiveUrlLoader:
-        """Creates a RecursiveUrlLoader instance with the configured settings.
-
-        Args:
-            url: The URL to load
-
-        Returns:
-            RecursiveUrlLoader: Configured loader instance
+        """
+        Initializes and returns a RecursiveUrlLoader configured with the component's current settings.
+        
+        The loader is set up to fetch and parse content from the specified URL, applying options such as crawl depth, domain restriction, asynchronous loading, output format (HTML or extracted text), custom headers, timeout, and error handling preferences.
         """
         headers_dict = {
             header["key"]: header["value"]
@@ -249,13 +246,16 @@ class URLComponent(Component):
         )
 
     def fetch_url_contents(self) -> list[dict]:
-        """Load documents from the configured URLs.
-
+        """
+        Fetches and parses web page content from the configured URLs.
+        
+        Validates and normalizes input URLs, loads documents from each, and extracts relevant metadata and cleaned text content. Skips URLs that cannot be loaded or return no documents. Raises a ValueError if no valid URLs are provided or if no documents are successfully loaded.
+        
         Returns:
-            List[Data]: List of Data objects containing the fetched content
-
+            A list of dictionaries, each containing the extracted text, URL, title, description, content type, and language for each successfully loaded page.
+        
         Raises:
-            ValueError: If no valid URLs are provided or if there's an error loading documents
+            ValueError: If no valid URLs are provided or if no documents are successfully loaded.
         """
         try:
             urls = list(
@@ -307,11 +307,21 @@ class URLComponent(Component):
         return data
 
     def fetch_content(self) -> DataFrame:
-        """Convert the documents to a DataFrame."""
+        """
+        Fetches and returns the extracted web page contents as a DataFrame.
+        
+        Returns:
+            DataFrame containing the parsed content from all successfully loaded URLs.
+        """
         return DataFrame(data=self.fetch_url_contents())
 
     def fetch_content_as_message(self) -> Message:
-        """Convert the documents to a Message."""
+        """
+        Aggregates fetched web page contents into a single Message object.
+        
+        Returns:
+            A Message containing the concatenated text of all fetched pages and the raw data list.
+        """
         url_contents = self.fetch_url_contents()
         return Message(text="\n\n".join([x["text"] for x in url_contents]),
                        data={"data": url_contents})
