@@ -5,9 +5,10 @@ This analyzes edge connections to determine which outputs are being used.
 """
 
 import json
+from json.decoder import JSONDecodeError
 import os
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Optional
 
 
 def load_json_file(file_path: str) -> dict:
@@ -22,7 +23,7 @@ def save_json_file(file_path: str, data: dict) -> None:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
-def analyze_edges_for_outputs(edges: List[dict]) -> Dict[str, str]:
+def analyze_edges_for_outputs(edges: list[dict]) -> dict[str, str]:
     """
     Analyze edges to determine which output is selected for each node.
     Returns: {node_id: output_name}
@@ -93,8 +94,17 @@ def process_json_file(file_path: str) -> bool:
 
         return changes_made
 
+    except JSONDecodeError as e:
+        print(f"JSON parsing error in {file_path}: {e}")
+        return False
+    except IOError as e:
+        print(f"File I/O error with {file_path}: {e}")
+        return False
+    except KeyError as e:
+        print(f"Missing key in {file_path}: {e}")
+        return False
     except Exception as e:
-        print(f"Error processing {file_path}: {e}")
+        print(f"Unexpected error processing {file_path}: {e}")
         return False
 
 
