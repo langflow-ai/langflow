@@ -3,10 +3,12 @@ import youtube_transcript_api
 from langchain_community.document_loaders import YoutubeLoader
 from langchain_community.document_loaders.youtube import TranscriptFormat
 
-from langflow.custom import Component
-from langflow.inputs import DropdownInput, IntInput, MultilineInput
-from langflow.schema import Data, DataFrame, Message
-from langflow.template import Output
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import DropdownInput, IntInput, MultilineInput
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
+from langflow.template.field.base import Output
 
 
 class YouTubeTranscriptsComponent(Component):
