@@ -2,7 +2,7 @@ from langchain_community.vectorstores import Cassandra
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.inputs import BoolInput, DictInput, FloatInput
+from langflow.inputs.inputs import BoolInput, DictInput, FloatInput
 from langflow.io import (
     DropdownInput,
     HandleInput,
@@ -10,7 +10,7 @@ from langflow.io import (
     MessageTextInput,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class CassandraVectorStoreComponent(LCVectorStoreComponent):
