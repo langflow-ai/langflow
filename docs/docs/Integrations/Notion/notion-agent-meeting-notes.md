@@ -144,7 +144,7 @@ To run the Notion Agent for Meeting Notes:
 3. Connect the components as shown in the flow diagram.
 4. Input the Notion and OpenAI API keys in their respective components.
 5. Paste your meeting transcript into the Meeting Transcript component.
-6. Run the flow by clicking **Play** on the **Chat Output** component.
+6. Run the flow by clicking <Icon name="Play" aria-hidden="True" /> **Run component** on the **Chat Output** component.
 7. Review the output in the Chat Output component, which will summarize the actions taken in your Notion workspace.
 
 For optimal results, use detailed meeting transcripts. The quality of the output depends on the comprehensiveness of the input provided.

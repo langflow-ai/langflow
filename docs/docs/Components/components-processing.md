@@ -5,15 +5,7 @@ slug: /components-processing
 
 import Icon from "@site/src/components/icon";
 
-Processing components process and transform data within a flow.
-
-## Use a processing component in a flow
-
-The **Split Text** processing component in this flow splits the incoming [Data](/concepts-objects) into chunks to be embedded into the vector store component.
-
-The component offers control over chunk size, overlap, and separator, which affect context and granularity in vector store retrieval results.
-
-![](/img/vector-store-document-ingestion.png)
+Processing components process and transform data within a flow, like converting `Data` to text with a [Parser](#parser) component, filtering data with natural language with the [Smart filter](#smart-filter), or saving data to your local machine with [Save File](#save-file).
 
 ## Batch Run
 
@@ -44,7 +36,7 @@ To use all three columns from the **Batch Run** component, include them like thi
 ```text
 record_number: {batch_index}, name: {text_input}, summary: {model_response}
 ```
-7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-label="Play icon" />.
+7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-hidden="True" /> **Run component**.
 8. To view your created DataFrame, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
 9. Optionally, connect a **Chat Output** component, and open the **Playground** to see the output.
 
