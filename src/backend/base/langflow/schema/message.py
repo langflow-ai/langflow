@@ -231,10 +231,12 @@ class Message(Data):
         self.prompt["kwargs"]["messages"] = messages
         return load(self.prompt)
 
-    def consume_iterator(self, iterator: Iterator):
+    def consume_iterator_in_text(self):
+        if isinstance(self.text, str):
+            return self.text
         complete_message = ""
-        for item in iterator:
-            complete_message += item.content  # type: ignore[attr-defined]
+        for item in self.text:
+            complete_message += item.content
         return complete_message
 
     @classmethod
