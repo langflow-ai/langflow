@@ -328,7 +328,8 @@ def compile_class_code(class_code, debug_filepath=None):
     Returns:
         Compiled code object of the class
     """
-    return compile(ast.Module(body=[class_code], type_ignores=[]), debug_filepath or "<string>", "exec")
+    filename = str(debug_filepath) if debug_filepath else "<string>"
+    return compile(ast.Module(body=[class_code], type_ignores=[]), filename, "exec")
 
 
 def build_class_constructor(compiled_class, exec_globals, class_name, debug_helper=None):

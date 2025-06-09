@@ -52,7 +52,7 @@ class DebugHelper:
 
     def _create_debug_module(self, debug_filepath: str) -> str:
         """Create debug module."""
-        file_name = Path(debug_filepath).name
+        file_name = Path(debug_filepath).stem
         mod = types.ModuleType(file_name)
         mod.__file__ = debug_filepath
         sys.modules[file_name] = mod
