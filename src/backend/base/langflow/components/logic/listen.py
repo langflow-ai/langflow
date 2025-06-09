@@ -18,9 +18,9 @@ class ListenComponent(Component):
         )
     ]
 
-    outputs = [Output(name="data", display_name="Data", method="build", cache=False)]
+    outputs = [Output(name="data", display_name="Data", method="listen_for_data", cache=False)]
 
-    def build(self) -> Data:
+    def listen_for_data(self) -> Data:
         """Retrieves data from the component context using the specified context key.
 
         Returns:
