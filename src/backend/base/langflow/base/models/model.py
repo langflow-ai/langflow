@@ -2,6 +2,7 @@ import importlib
 import json
 import warnings
 from abc import abstractmethod
+from collections.abc import AsyncIterator, Iterator
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
@@ -190,7 +191,7 @@ class LCModelComponent(Component):
         *,
         runnable: LanguageModel,
         stream: bool,
-        input_value: str | Message,
+        input_value: str | Message | AsyncIterator | Iterator,
         system_message: str | None = None,
     ) -> Message:
         messages: list[BaseMessage] = []
@@ -200,6 +201,8 @@ class LCModelComponent(Component):
         system_message_added = False
         if input_value:
             if isinstance(input_value, Message):
+                if not isinstance(input_value.text, str):
+                    input_value.text = input_value.consume_iterator(input_value.text)
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     if "prompt" in input_value:
