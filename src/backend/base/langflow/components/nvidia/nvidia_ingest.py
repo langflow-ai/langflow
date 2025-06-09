@@ -3,15 +3,9 @@ from urllib.parse import urlparse
 from pypdf import PdfReader
 
 from langflow.base.data import BaseFileComponent
-from langflow.io import (
-    BoolInput,
-    DropdownInput,
-    FloatInput,
-    IntInput,
-    MessageTextInput,
-    SecretStrInput,
-)
-from langflow.schema import Data
+from langflow.base.data.base_file import BaseFileComponent
+from langflow.inputs.inputs import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.schema.data import Data
 
 
 class NvidiaIngestComponent(BaseFileComponent):
