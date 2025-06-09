@@ -199,7 +199,6 @@ class MCPToolsComponent(Component):
                         msg = f"Tool {self.tool} not found in available tools: {self.tools}"
                         logger.warning(msg)
                         return build_config
-                    self.remove_non_default_keys(build_config)
                     await self._update_tool_config(build_config, field_value)
                 except Exception as e:
                     build_config["tool"]["options"] = []
@@ -222,7 +221,6 @@ class MCPToolsComponent(Component):
                     return build_config
                 build_config["tool"]["placeholder"] = ""
                 if "tool" in build_config and len(self.tools) > 0 and not build_config["tools_metadata"]["show"]:
-                    self.remove_non_default_keys(build_config)
                     build_config["tool"]["show"] = True
                     build_config["tool"]["options"] = [tool.name for tool in self.tools]
                     await self._update_tool_config(build_config, build_config["tool"]["value"])
@@ -247,6 +245,9 @@ class MCPToolsComponent(Component):
                 for key, value in list(build_config.items()):
                     if key not in self.default_keys and isinstance(value, dict) and "show" in value:
                         build_config[key]["show"] = not field_value
+                if field_value == False:
+                    build_config["tool"]["options"] = [tool.name for tool in self.tools]
+                    await self._update_tool_config(build_config, build_config["tool"]["value"])
 
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
@@ -301,6 +302,7 @@ class MCPToolsComponent(Component):
         tool_obj = next((tool for tool in self.tools if tool.name == tool_name), None)
         if not tool_obj:
             msg = f"Tool {tool_name} not found in available tools: {self.tools}"
+            self.remove_non_default_keys(build_config)
             build_config["tool"]["value"] = ""
             logger.warning(msg)
             return
@@ -336,11 +338,12 @@ class MCPToolsComponent(Component):
                     input_dict.setdefault("value", None)
                     input_dict.setdefault("required", True)
 
+                    build_config[name] = input_dict
+
                     # Preserve existing value if the parameter name exists in current_values
                     if name in current_values:
-                        input_dict["value"] = current_values[name]
+                        build_config[name]["value"] = current_values[name]
 
-                    build_config[name] = input_dict
                 except (AttributeError, KeyError, TypeError) as e:
                     msg = f"Error processing schema input {schema_input}: {e!s}"
                     logger.exception(msg)
@@ -382,3 +385,14 @@ class MCPToolsComponent(Component):
             msg = f"Error in build_output: {e!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
+
+    async def _get_tools(self):
+        """Get cached tools or update if necessary."""
+        # if not self.tools:
+        if not self.mcp_server:
+            msg = "MCP Server is not set"
+            self.tools = []
+            self.tool_names = []
+            logger.exception(msg)
+
+        return await self.update_tool_list()
