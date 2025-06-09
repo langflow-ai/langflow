@@ -331,6 +331,86 @@ For an additional example of using the **Parser** component to format a DataFram
 
 ## Python interpreter
 
+This component allows you to execute Python code with imported packages.
+
+1. To use this component in a flow,in the **Global Imports** field, add the packages you want to import as a comma-separated list, such as `math,pandas`.
+At least one import is required.
+2. In the **Python Code** field, enter the Python code you want to execute. Use `print()` to see the output.
+3. Optionally, enable **Tool Mode** and connect the interpreter to an **Agent** as a tool.
+For example, connect a **Python Interpreter** and a [Calculator](/components-helpers#calculator) as tools for an Agent, and test how it chooses different tools to solve math problems.
+4. Ask the agent an easier math question.
+The **Calculator** tool can add, subtract, multiple, divide, or perform exponentiation.
+The agent executes the `evaluate_expression` tool to correctly answer the question.
+
+Result:
+```text
+Executed evaluate_expression
+Input:
+{
+  "expression": "2+5"
+}
+Output:
+{
+  "result": "7"
+}
+```
+
+5. Give the agent complete Python code.
+This example creates a Pandas DataFrame table with the imported `pandas` packages, and returns the square root of the mean squares.
+
+```python
+import pandas as pd
+import math
+
+# Create a simple DataFrame
+df = pd.DataFrame({
+    'numbers': [1, 2, 3, 4, 5],
+    'squares': [x**2 for x in range(1, 6)]
+})
+
+# Calculate the square root of the mean
+result = math.sqrt(df['squares'].mean())
+print(f"Square root of mean squares: {result}")
+```
+
+The Agent correctly chooses the `run_python_repl` tool to solve the problem.
+
+Result:
+```text
+Executed run_python_repl
+
+Input:
+
+{
+  "python_code": "import pandas as pd\nimport math\n\n# Create a simple DataFrame\ndf = pd.DataFrame({\n    'numbers': [1, 2, 3, 4, 5],\n    'squares': [x**2 for x in range(1, 6)]\n})\n\n# Calculate the square root of the mean\nresult = math.sqrt(df['squares'].mean())\nprint(f\"Square root of mean squares: {result}\")"
+}
+Output:
+
+{
+  "result": "Square root of mean squares: 3.3166247903554"
+}
+```
+
+If you don't include the package imports in the chat, the Agent can still create the table using `pd.DataFrame`, because the `pandas` package is imported globally by the Python interpreter component in the **Global Imports** field.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| global_imports | String | A comma-separated list of modules to import globally, such as `math,pandas,numpy`. |
+| python_code | Code | The Python code to execute. Only modules specified in Global Imports can be used. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| results | Data | The output of the executed Python code, including any printed results or errors. |
+
+</details>
+
 ## Save file
 
 This component saves [DataFrames, Data, or Messages](/concepts-objects) to various file formats.
