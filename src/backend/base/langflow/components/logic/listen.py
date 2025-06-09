@@ -21,9 +21,8 @@ class ListenComponent(Component):
     outputs = [Output(name="data", display_name="Data", method="listen_for_data", cache=False)]
 
     def listen_for_data(self) -> Data:
-        """
-        Retrieves a Data object from the component context using the provided context key.
-        
+        """Retrieves a Data object from the component context using the provided context key.
+
         If the specified context key does not exist in the context, returns an empty Data object.
         """
         return self.ctx.get(self.context_key, Data(text=""))
