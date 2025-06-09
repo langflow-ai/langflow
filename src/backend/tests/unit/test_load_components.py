@@ -297,12 +297,12 @@ class TestComponentLoading:
         all_types_variance = max(all_types_times) - min(all_types_times)
 
         # Variance shouldn't be too high (more than 10x difference between min and max)
-        assert langflow_variance < langflow_avg * 10, (
-            f"get_langflow_components_list performance too inconsistent: {langflow_variance}s variance"
-        )
-        assert all_types_variance < all_types_avg * 10, (
-            f"aget_all_types_dict performance too inconsistent: {all_types_variance}s variance"
-        )
+        assert (
+            langflow_variance < langflow_avg * 10
+        ), f"get_langflow_components_list performance too inconsistent: {langflow_variance}s variance"
+        assert (
+            all_types_variance < all_types_avg * 10
+        ), f"aget_all_types_dict performance too inconsistent: {all_types_variance}s variance"
 
     @pytest.mark.no_blockbuster
     @pytest.mark.asyncio
@@ -361,13 +361,19 @@ class TestComponentLoading:
         print("COMPREHENSIVE COMPONENT LOADING PERFORMANCE SUMMARY")
         print("=" * 80)
 
-        # Run both functions multiple times and collect detailed metrics
+        # WARM-UP RUNS (discard these timings)
+        print("\nPerforming warm-up runs...")
+        await import_langflow_components()  # Warm up imports, thread pools, etc.
+        await aget_all_types_dict(base_components_path)  # Warm up custom component loading
+        print("Warm-up completed.")
+
+        # Now run the actual performance measurements
         num_runs = 3
         langflow_results = []
         all_types_results = []
 
         for run in range(num_runs):
-            print(f"\nRun {run + 1}/{num_runs}")
+            print(f"\nPerformance Run {run + 1}/{num_runs}")
 
             # Time get_langflow_components_list
             start_time = time.perf_counter()
@@ -384,11 +390,11 @@ class TestComponentLoading:
             print(f"  get_langflow_components_list: {langflow_duration:.4f}s")
             print(f"  aget_all_types_dict: {all_types_duration:.4f}s")
 
-        # Calculate final statistics
+        # Calculate final statistics (excluding warm-up runs)
         langflow_times = [duration for duration, _ in langflow_results]
         all_types_times = [duration for duration, _ in all_types_results]
 
-        print("\nFINAL STATISTICS:")
+        print("\nSTEADY-STATE PERFORMANCE (after warm-up):")
         print("get_langflow_components_list:")
         print(f"  Average: {sum(langflow_times) / len(langflow_times):.4f}s")
         print(f"  Min: {min(langflow_times):.4f}s")
@@ -415,7 +421,7 @@ class TestComponentLoading:
         print(f"get_langflow_components_list: {langflow_component_counts}")
         print(f"aget_all_types_dict: {all_types_component_counts}")
 
-        # Determine which is faster
+        # Determine which is faster (based on steady-state performance)
         avg_langflow = sum(langflow_times) / len(langflow_times)
         avg_all_types = sum(all_types_times) / len(all_types_times)
 
@@ -426,18 +432,29 @@ class TestComponentLoading:
             faster_method = "aget_all_types_dict"
             speedup = avg_langflow / avg_all_types
 
-        print("\nCONCLUSION:")
+        print("\nSTEADY-STATE PERFORMANCE CONCLUSION:")
         print(f"Faster method: {faster_method}")
         print(f"Speedup factor: {speedup:.2f}x")
+        print(
+            f"Timing results: {avg_langflow:.4f}s (langflow), "
+            f"{max(all_types_times) - min(all_types_times):.4f}s (all_types)"
+        )
+
+        print("\nNOTE: These results exclude warm-up runs and represent steady-state performance")
+        print("that users will experience after the first component load.")
 
         print("=" * 80)
 
         # Assertions for basic functionality
-        assert all(count > 0 for count in langflow_component_counts), (
-            "get_langflow_components_list should always return components"
-        )
+        assert all(
+            count > 0 for count in langflow_component_counts
+        ), "get_langflow_components_list should always return components"
         assert all(isinstance(result, dict) for _, result in langflow_results), "All langflow results should be dicts"
         assert all(isinstance(result, dict) for _, result in all_types_results), "All all_types results should be dicts"
+
+        # Assert that steady-state performance is good
+        assert avg_langflow < 5.0, f"Steady-state performance should be under 5s, got {avg_langflow:.4f}s"
+        assert speedup > 1.5, f"Parallelization should provide significant speedup, got {speedup:.2f}x"
 
     @pytest.mark.no_blockbuster
     @pytest.mark.asyncio
