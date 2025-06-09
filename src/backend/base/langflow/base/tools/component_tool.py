@@ -44,17 +44,16 @@ def build_description(component: Component, output: Output) -> str:
 
 
 async def send_message_noop(
-        message: Message,
-        text: str | None = None,  # noqa: ARG001
-        background_color: str | None = None,  # noqa: ARG001
-        text_color: str | None = None,  # noqa: ARG001
-        icon: str | None = None,  # noqa: ARG001
-        content_blocks: list[ContentBlock] | None = None,  # noqa: ARG001
-        format_type: Literal["default", "error", "warning",
-                             "info"] = "default",  # noqa: ARG001
-        id_: str | None = None,  # noqa: ARG001
-        *,
-        allow_markdown: bool = True,  # noqa: ARG001
+    message: Message,
+    text: str | None = None,  # noqa: ARG001
+    background_color: str | None = None,  # noqa: ARG001
+    text_color: str | None = None,  # noqa: ARG001
+    icon: str | None = None,  # noqa: ARG001
+    content_blocks: list[ContentBlock] | None = None,  # noqa: ARG001
+    format_type: Literal["default", "error", "warning", "info"] = "default",
+    id_: str | None = None,  # noqa: ARG001
+    *,
+    allow_markdown: bool = True,  # noqa: ARG001
 ) -> Message:
     """No-op implementation of send_message."""
     return message
@@ -93,10 +92,7 @@ def _patch_send_message_decorator(component, func):
     return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
 
-def _build_output_function(component: Component,
-                           output_method: Callable,
-                           event_manager: EventManager | None = None):
-
+def _build_output_function(component: Component, output_method: Callable, event_manager: EventManager | None = None):
     def output_function(*args, **kwargs):
         try:
             if event_manager:
@@ -120,20 +116,17 @@ def _build_output_function(component: Component,
     return _patch_send_message_decorator(component, output_function)
 
 
-def _build_output_async_function(component: Component,
-                                 output_method: Callable,
-                                 event_manager: EventManager | None = None):
-
+def _build_output_async_function(
+    component: Component, output_method: Callable, event_manager: EventManager | None = None
+):
     async def output_function(*args, **kwargs):
         try:
             if event_manager:
-                await asyncio.to_thread(event_manager.on_build_start,
-                                        data={"id": component._id})
+                await asyncio.to_thread(event_manager.on_build_start, data={"id": component._id})
             component.set(*args, **kwargs)
             result = await output_method()
             if event_manager:
-                await asyncio.to_thread(event_manager.on_build_end,
-                                        data={"id": component._id})
+                await asyncio.to_thread(event_manager.on_build_end, data={"id": component._id})
         except Exception as e:
             raise ToolException(e) from e
         if isinstance(result, Message):
@@ -160,10 +153,7 @@ def _add_commands_to_tool_description(tool_description: str, commands: str):
 
 
 class ComponentToolkit:
-
-    def __init__(self,
-                 component: Component,
-                 metadata: pd.DataFrame | None = None):
+    def __init__(self, component: Component, metadata: pd.DataFrame | None = None):
         self.component = component
         self.metadata = metadata
 
@@ -181,8 +171,9 @@ class ComponentToolkit:
         - output name matches TOOL_OUTPUT_NAME
         - output types contain any of the tool types in TOOL_TYPES_SET
         """
-        return not output.tool_mode or (output.name == TOOL_OUTPUT_NAME or any(
-            tool_type in output.types for tool_type in TOOL_TYPES_SET))
+        return not output.tool_mode or (
+            output.name == TOOL_OUTPUT_NAME or any(tool_type in output.types for tool_type in TOOL_TYPES_SET)
+        )
 
     def get_tools(
         self,
@@ -202,10 +193,7 @@ class ComponentToolkit:
 
             output_method: Callable = getattr(self.component, output.method)
             args_schema = None
-            tool_mode_inputs = [
-                _input for _input in self.component.inputs
-                if getattr(_input, "tool_mode", False)
-            ]
+            tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
             if flow_mode_inputs:
                 args_schema = create_input_schema_from_dict(
                     inputs=flow_mode_inputs,
@@ -223,13 +211,11 @@ class ComponentToolkit:
                 # that when the tool is called it will raise an error.
                 # so we should raise an error here.
                 # TODO: This logic might need to be improved, example if the required is an api key.
-                if not all(
-                        getattr(_input, "tool_mode", False)
-                        for _input in inputs):
+                if not all(getattr(_input, "tool_mode", False) for _input in inputs):
                     non_tool_mode_inputs = [
-                        input_.name for input_ in inputs
-                        if not getattr(input_, "tool_mode", False)
-                        and input_.name is not None
+                        input_.name
+                        for input_ in inputs
+                        if not getattr(input_, "tool_mode", False) and input_.name is not None
                     ]
                     non_tool_mode_inputs_str = ", ".join(non_tool_mode_inputs)
                     msg = (
@@ -251,38 +237,33 @@ class ComponentToolkit:
                     StructuredTool(
                         name=formatted_name,
                         description=build_description(self.component, output),
-                        coroutine=_build_output_async_function(
-                            self.component, output_method, event_manager),
+                        coroutine=_build_output_async_function(self.component, output_method, event_manager),
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
                         metadata={
-                            "display_name":
-                            formatted_name,
-                            "display_description":
-                            build_description(self.component, output),
+                            "display_name": formatted_name,
+                            "display_description": build_description(self.component, output),
                         },
-                    ))
+                    )
+                )
             else:
                 tools.append(
                     StructuredTool(
                         name=formatted_name,
                         description=build_description(self.component, output),
-                        func=_build_output_function(self.component,
-                                                    output_method,
-                                                    event_manager),
+                        func=_build_output_function(self.component, output_method, event_manager),
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
                         metadata={
-                            "display_name":
-                            formatted_name,
-                            "display_description":
-                            build_description(self.component, output),
+                            "display_name": formatted_name,
+                            "display_description": build_description(self.component, output),
                         },
-                    ))
+                    )
+                )
         if len(tools) == 1 and (tool_name or tool_description):
             tool = tools[0]
             tool.name = _format_tool_name(str(tool_name)) or tool.name
@@ -290,16 +271,16 @@ class ComponentToolkit:
             tool.tags = [tool.name]
         elif flow_mode_inputs and (tool_name or tool_description):
             for tool in tools:
-                tool.name = _format_tool_name(
-                    str(tool_name) + "_" + str(tool.name)) or tool.name
-                tool.description = (str(tool_description) +
-                                    " Output details: " +
-                                    str(tool.description)) or tool.description
+                tool.name = _format_tool_name(str(tool_name) + "_" + str(tool.name)) or tool.name
+                tool.description = (
+                    str(tool_description) + " Output details: " + str(tool.description)
+                ) or tool.description
                 tool.tags = [tool.name]
         elif tool_name or tool_description:
             msg = (
                 "When passing a tool name or description, there must be only one tool, "
-                f"but {len(tools)} tools were found.")
+                f"but {len(tools)} tools were found."
+            )
             raise ValueError(msg)
         return tools
 
@@ -336,12 +317,11 @@ class ComponentToolkit:
                         # Only include tools with status=True
                         if tool_metadata.get("status", True):
                             tool.name = tool_metadata.get("name", tool.name)
-                            tool.description = tool_metadata.get(
-                                "description", tool.description)
+                            tool.description = tool_metadata.get("description", tool.description)
                             if tool_metadata.get("commands"):
                                 tool.description = _add_commands_to_tool_description(
-                                    tool.description,
-                                    tool_metadata.get("commands"))
+                                    tool.description, tool_metadata.get("commands")
+                                )
                             filtered_tools.append(tool)
                 else:
                     msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
