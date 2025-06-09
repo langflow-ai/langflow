@@ -1961,8 +1961,9 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "aws_access_key_id",
-                  "aws_secret_access_key"
+                  "api_key",
+                  "azure_deployment",
+                  "azure_endpoint"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
