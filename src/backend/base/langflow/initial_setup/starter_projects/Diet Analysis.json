@@ -595,7 +595,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "cohere_api_key"
+                  "api_key"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,

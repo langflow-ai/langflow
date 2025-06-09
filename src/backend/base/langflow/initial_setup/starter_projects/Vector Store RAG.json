@@ -1434,8 +1434,8 @@
                 "method": "build_embeddings",
                 "name": "embeddings",
                 "required_inputs": [
-                  "aiml_api_key",
-                  "model_name"
+                  "base_url",
+                  "model"
                 ],
                 "selected": "Embeddings",
                 "tool_mode": true,
@@ -1970,8 +1970,8 @@
                 "method": "build_embeddings",
                 "name": "embeddings",
                 "required_inputs": [
-                  "aiml_api_key",
-                  "model_name"
+                  "base_url",
+                  "model"
                 ],
                 "selected": "Embeddings",
                 "tool_mode": true,
@@ -2845,7 +2845,10 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "huggingfacehub_api_token"
+                  "custom_model",
+                  "huggingfacehub_api_token",
+                  "inference_endpoint",
+                  "model_id"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
