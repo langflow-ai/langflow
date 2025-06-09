@@ -31,12 +31,8 @@ oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
 
 API_KEY_NAME = "x-api-key"
 
-api_key_query = APIKeyQuery(
-    name=API_KEY_NAME, scheme_name="API key query", auto_error=False
-)
-api_key_header = APIKeyHeader(
-    name=API_KEY_NAME, scheme_name="API key header", auto_error=False
-)
+api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
+api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
 MINIMUM_KEY_LENGTH = 32
 
@@ -69,9 +65,7 @@ async def api_key_security(
             if query_param or header_param:
                 result = await check_key(db, query_param or header_param)
             else:
-                result = await get_user_by_username(
-                    db, settings_service.auth_settings.SUPERUSER
-                )
+                result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -109,18 +103,14 @@ async def ws_api_key_security(
                     reason="Missing first superuser credentials",
                 )
             warnings.warn(
-                (
-                    "In v1.5, AUTO_LOGIN will *require* a valid API key or JWT. Please update your clients accordingly."
-                ),
+                ("In v1.5, AUTO_LOGIN will *require* a valid API key or JWT. Please update your clients accordingly."),
                 DeprecationWarning,
                 stacklevel=2,
             )
             if api_key:
                 result = await check_key(db, api_key)
             else:
-                result = await get_user_by_username(
-                    db, settings.auth_settings.SUPERUSER
-                )
+                result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
 
         # normal path: must provide an API key
         else:
@@ -189,9 +179,7 @@ async def get_current_user_by_jwt(
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            payload = jwt.decode(
-                token, secret_key, algorithms=[settings_service.auth_settings.ALGORITHM]
-            )
+            payload = jwt.decode(token, secret_key, algorithms=[settings_service.auth_settings.ALGORITHM])
         user_id: UUID = payload.get("sub")  # type: ignore[assignment]
         token_type: str = payload.get("type")  # type: ignore[assignment]
         if expires := payload.get("exp", None):
@@ -234,9 +222,7 @@ async def get_current_user_for_websocket(
     websocket: WebSocket,
     db: AsyncSession,
 ) -> User | UserRead:
-    token = websocket.cookies.get("access_token_lf") or websocket.query_params.get(
-        "token"
-    )
+    token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
     if token:
         user = await get_current_user_by_jwt(token, db)
         if user:
@@ -263,9 +249,7 @@ async def get_current_active_user(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
     return current_user
 
 
@@ -273,9 +257,7 @@ async def get_current_active_superuser(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
     if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
     if not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -286,9 +268,7 @@ async def get_current_active_superuser(
 
 def verify_password(plain_password, hashed_password):
     settings_service = get_settings_service()
-    return settings_service.auth_settings.pwd_context.verify(
-        plain_password, hashed_password
-    )
+    return settings_service.auth_settings.pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password):
@@ -376,22 +356,16 @@ def get_user_id_from_token(token: str) -> UUID:
         return UUID(int=0)
 
 
-async def create_user_tokens(
-    user_id: UUID, db: AsyncSession, *, update_last_login: bool = False
-) -> dict:
+async def create_user_tokens(user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
     settings_service = get_settings_service()
 
-    access_token_expires = timedelta(
-        seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS
-    )
+    access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
     access_token = create_token(
         data={"sub": str(user_id), "type": "access"},
         expires_delta=access_token_expires,
     )
 
-    refresh_token_expires = timedelta(
-        seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS
-    )
+    refresh_token_expires = timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS)
     refresh_token = create_token(
         data={"sub": str(user_id), "type": "refresh"},
         expires_delta=refresh_token_expires,
@@ -424,16 +398,12 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
         token_type: str = payload.get("type")  # type: ignore[assignment]
 
         if user_id is None or token_type == "":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
         user_exists = await get_user_by_id(db, user_id)
 
         if user_exists is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
         return await create_user_tokens(user_id, db)
 
@@ -445,9 +415,7 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
         ) from e
 
 
-async def authenticate_user(
-    username: str, password: str, db: AsyncSession
-) -> User | None:
+async def authenticate_user(username: str, password: str, db: AsyncSession) -> User | None:
     user = await get_user_by_username(db, username)
 
     if not user:
@@ -455,12 +423,8 @@ async def authenticate_user(
 
     if not user.is_active:
         if not user.last_login_at:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting for approval"
-            )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user"
-        )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting for approval")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
 
     return user if verify_password(password, user.password) else None
 
