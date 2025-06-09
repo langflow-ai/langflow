@@ -5,6 +5,7 @@ import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
+import { BrightDataIcon } from "@/icons/BrightData";
 
 const iconCache = new Map<string, any>();
 
@@ -238,6 +239,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
+  { display_name: "Bright Data", name: "brightdata", icon: "BrightdataIcon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   { display_name: "GitHub", name: "github", icon: "Github" },
@@ -459,6 +461,7 @@ export const eagerLoadedIconsMap = {
   // Custom icons
   GradientSave: GradientSave,
   BotMessageSquareIcon: BotMessageSquareIcon,
+  BrightDataIcon: BrightDataIcon,
 
   // React icon
   FaApple: FaApple,
