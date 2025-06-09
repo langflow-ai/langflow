@@ -2,11 +2,11 @@ from typing import cast
 
 from langchain_community.retrievers import AmazonKendraRetriever
 
-from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import Retriever
 
 
-class AmazonKendraRetrieverComponent(CustomComponent):
+class AmazonKendraRetrieverComponent(Component):
     display_name: str = "Amazon Kendra Retriever"
     description: str = "Retriever that uses the Amazon Kendra API."
     name = "AmazonKendra"

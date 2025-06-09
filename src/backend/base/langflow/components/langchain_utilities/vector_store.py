@@ -1,10 +1,10 @@
 from langchain_core.vectorstores import VectorStoreRetriever
 
-from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import VectorStore
 
 
-class VectoStoreRetrieverComponent(CustomComponent):
+class VectoStoreRetrieverComponent(Component):
     display_name = "VectorStore Retriever"
     description = "A vector store retriever"
     name = "VectorStoreRetriever"

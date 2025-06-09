@@ -13,11 +13,11 @@
 
 from langchain_core.documents import Document
 
-from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.custom.custom_component.component import Component
 from langflow.services.database.models.base import orjson_dumps
 
 
-class JSONDocumentBuilder(CustomComponent):
+class JSONDocumentBuilder(Component):
     display_name: str = "JSON Document Builder"
     description: str = "Build a Document containing a JSON object using a key and another Document page content."
     name = "JSONDocumentBuilder"

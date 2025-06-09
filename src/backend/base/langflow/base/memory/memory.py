@@ -1,9 +1,9 @@
-from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.custom.custom_component.component import Component
 from langflow.schema.data import Data
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
-class BaseMemoryComponent(CustomComponent):
+class BaseMemoryComponent(Component):
     display_name = "Chat Memory"
     description = "Retrieves stored chat messages given a specific Session ID."
     beta: bool = True

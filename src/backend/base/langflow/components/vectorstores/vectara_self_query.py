@@ -5,12 +5,12 @@ from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_core.vectorstores import VectorStore
 
-from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import Retriever
 from langflow.field_typing.constants import LanguageModel
 
 
-class VectaraSelfQueryRetriverComponent(CustomComponent):
+class VectaraSelfQueryRetriverComponent(Component):
     """A custom component for implementing Vectara Self Query Retriever using a vector store."""
 
     display_name: str = "Vectara Self Query Retriever for Vectara Vector Store"

@@ -1,8 +1,8 @@
-from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.custom.custom_component.component import Component
 from langflow.schema.data import Data
 
 
-class ListenComponent(CustomComponent):
+class ListenComponent(Component):
     display_name = "Listen"
     description = "A component to listen for a notification."
     name = "Listen"

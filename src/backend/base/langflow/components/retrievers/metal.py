@@ -3,11 +3,11 @@ from typing import cast
 from langchain_community.retrievers import MetalRetriever
 from metal_sdk.metal import Metal
 
-from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import Retriever
 
 
-class MetalRetrieverComponent(CustomComponent):
+class MetalRetrieverComponent(Component):
     display_name: str = "Metal Retriever"
     description: str = "Retriever that uses the Metal API."
     name = "MetalRetriever"
