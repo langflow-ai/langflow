@@ -1,4 +1,7 @@
-# Contributing to Langflow
+---
+title: Contribute to Langflow
+slug: /contribute
+---
 
 This guide is intended to help you start contributing to Langflow.
 As an open-source project in a rapidly developing field, Langflow welcomes contributions, whether it be in the form of a new feature, improved infrastructure, or better documentation.
@@ -204,7 +207,7 @@ For more information, see the [Python Developer's Guide](https://devguide.python
 
 ## Additional contribution guides
 
-- [Contribute Bundles](./docs/docs/Contributing/contributing-bundles.md)
-- [Contribute Components](./docs/docs/Contributing/contributing-components.md)
-- [Contribute Tests](./docs/docs/Contributing/contributing-component-tests.md)
-- [Contribute Templates](./docs/docs/Contributing/contributing-templates.md)
+- [Contribute Bundles](./contributing-bundles.md)
+- [Contribute Components](./contributing-components.md)
+- [Contribute Tests](./contributing-component-tests.md)
+- [Contribute Templates](./contributing-templates.md) 
