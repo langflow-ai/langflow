@@ -4,9 +4,11 @@ import platform
 import shutil
 from collections.abc import Awaitable, Callable
 from typing import Any
+from urllib.parse import urlparse
 from uuid import UUID
 
 from httpx import codes as httpx_codes
+import httpx
 from langchain_core.tools import StructuredTool
 from loguru import logger
 from mcp import ClientSession
@@ -22,7 +24,7 @@ NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
-        field_names = list(arg_schema.__fields__.keys())
+        field_names = list(arg_schema.model_fields.keys())
         provided_args = {}
         # Map positional arguments to their corresponding field names
         for i, arg in enumerate(args):
@@ -34,13 +36,13 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
         provided_args.update(kwargs)
         # Validate input and fill defaults for missing optional fields
         try:
-            validated = arg_schema.parse_obj(provided_args)
+            validated = arg_schema.model_validate(provided_args)
         except Exception as e:
             msg = f"Invalid input: {e}"
             raise ValueError(msg) from e
 
         try:
-            return await client.run_tool(tool_name, arguments=validated.dict())
+            return await client.run_tool(tool_name, arguments=validated.model_dump())
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -52,7 +54,7 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
 
 def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., str]:
     def tool_func(*args, **kwargs):
-        field_names = list(arg_schema.__fields__.keys())
+        field_names = list(arg_schema.model_fields.keys())
         provided_args = {}
         for i, arg in enumerate(args):
             if i >= len(field_names):
@@ -61,14 +63,14 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
             provided_args[field_names[i]] = arg
         provided_args.update(kwargs)
         try:
-            validated = arg_schema.parse_obj(provided_args)
+            validated = arg_schema.model_validate(provided_args)
         except Exception as e:
             msg = f"Invalid input: {e}"
             raise ValueError(msg) from e
 
         try:
             loop = asyncio.get_event_loop()
-            return loop.run_until_complete(client.run_tool(tool_name, arguments=validated.dict()))
+            return loop.run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -372,6 +374,43 @@ class MCPSseClient:
         self._connection_params = None
         self._connected = False
 
+    async def validate_url(self, url: str | None) -> tuple[bool, str]:
+        """Validate the SSE URL before attempting connection."""
+        try:
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return False, "Invalid URL format. Must include scheme (http/https) and host."
+
+            async with httpx.AsyncClient() as client:
+                try:
+                    # First try a HEAD request to check if server is reachable
+                    response = await client.head(url, timeout=5.0)
+                    if response.status_code >= HTTP_ERROR_STATUS_CODE:
+                        return False, f"Server returned error status: {response.status_code}"
+
+                except httpx.TimeoutException:
+                    return False, "Connection timed out. Server may be down or unreachable."
+                except httpx.NetworkError:
+                    return False, "Network error. Could not reach the server."
+                else:
+                    return True, ""
+
+        except (httpx.HTTPError, ValueError, OSError) as e:
+            return False, f"URL validation error: {e!s}"
+
+    async def pre_check_redirect(self, url: str | None) -> str | None:
+        """Check for redirects and return the final URL."""
+        if url is None:
+            return url
+        try:
+            async with httpx.AsyncClient(follow_redirects=False) as client:
+                response = await client.request("HEAD", url)
+                if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
+                    return response.headers.get("Location", url)
+        except (httpx.RequestError, httpx.HTTPError) as e:
+            logger.warning(f"Error checking redirects: {e}")
+        return url
+
     async def connect_to_server(
         self,
         url: str | None,
@@ -387,6 +426,12 @@ class MCPSseClient:
         if url is None:
             msg = "URL is required for SSE mode"
             raise ValueError(msg)
+        is_valid, error_msg = await self.validate_url(url)
+        if not is_valid:
+            msg = f"Invalid SSE URL ({url}): {error_msg}"
+            raise ValueError(msg)
+
+        url = await self.pre_check_redirect(url)
 
         # Store connection parameters for later use in run_tool
         self._connection_params = {
