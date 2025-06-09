@@ -15,6 +15,7 @@ class ListenComponent(Component):
             display_name="Context Key",
             info="The key of the context to listen for.",
             input_types=["Data", "Message", "DataFrame"],
+            required=True,
         )
     ]
 
