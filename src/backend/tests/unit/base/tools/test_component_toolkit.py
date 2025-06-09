@@ -2,11 +2,11 @@ import os
 
 import pytest
 from langflow.base.tools.component_tool import ComponentToolkit
+from langflow.components.input_output.chat_output import ChatOutput
 from langflow.components.langchain_utilities import ToolCallingAgentComponent
-from langflow.components.models import OpenAIModelComponent
-from langflow.components.outputs.chat import ChatOutput
+from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
-from langflow.graph import Graph
+from langflow.graph.graph.base import Graph
 from langflow.schema.data import Data
 from pydantic import BaseModel
 
@@ -15,7 +15,7 @@ def test_component_tool():
     calculator_component = CalculatorToolComponent()
     component_toolkit = ComponentToolkit(component=calculator_component)
     component_tool = component_toolkit.get_tools()[0]
-    assert component_tool.name == "CalculatorTool-run_model"
+    assert component_tool.name == "run_model"
     assert issubclass(component_tool.args_schema, BaseModel)
     # TODO: fix this
     # assert component_tool.args_schema.model_json_schema()["properties"] == {

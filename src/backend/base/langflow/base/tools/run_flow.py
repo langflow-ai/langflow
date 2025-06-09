@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 from typing_extensions import override
 
-from langflow.custom import Component
-from langflow.custom.custom_component.component import _get_component_toolkit
+from langflow.custom.custom_component.component import Component, _get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
@@ -15,10 +14,11 @@ from langflow.inputs.inputs import (
     InputTypes,
     MessageInput,
 )
-from langflow.schema import Data, dotdict
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
+from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
-from langflow.template import Output
+from langflow.template.field.base import Output
 
 if TYPE_CHECKING:
     from langflow.base.tools.component_tool import ComponentToolkit
@@ -47,9 +47,19 @@ class RunFlowBaseComponent(Component):
         ),
     ]
     _base_outputs: list[Output] = [
-        Output(name="flow_outputs_data", display_name="Flow Data Output", method="data_output", hidden=True),
         Output(
-            name="flow_outputs_dataframe", display_name="Flow Dataframe Output", method="dataframe_output", hidden=True
+            name="flow_outputs_data",
+            display_name="Flow Data Output",
+            method="data_output",
+            hidden=True,
+            tool_mode=False,  # This output is not intended to be used as a tool, so tool_mode is disabled.
+        ),
+        Output(
+            name="flow_outputs_dataframe",
+            display_name="Flow Dataframe Output",
+            method="dataframe_output",
+            hidden=True,
+            tool_mode=False,  # This output is not intended to be used as a tool, so tool_mode is disabled.
         ),
         Output(name="flow_outputs_message", display_name="Flow Message Output", method="message_output"),
     ]
@@ -69,7 +79,9 @@ class RunFlowBaseComponent(Component):
         if isinstance(first_output, Data):
             return first_output
 
-        message_data = first_output.outputs[0].results["message"].data
+        # just adaptive output Message
+        _, message_result = next(iter(run_outputs[0].outputs[0].results.items()))
+        message_data = message_result.data
         return Data(data=message_data)
 
     async def dataframe_output(self) -> DataFrame:
@@ -80,21 +92,20 @@ class RunFlowBaseComponent(Component):
         if isinstance(first_output, DataFrame):
             return first_output
 
-        message_data = first_output.outputs[0].results["message"].data
+        # just adaptive output Message
+        _, message_result = next(iter(run_outputs[0].outputs[0].results.items()))
+        message_data = message_result.data
         return DataFrame(data=message_data if isinstance(message_data, list) else [message_data])
 
     async def message_output(self) -> Message:
         """Return the message output."""
         run_outputs = await self.run_flow_with_tweaks()
-        message_result = run_outputs[0].outputs[0].results["message"]
-
+        _, message_result = next(iter(run_outputs[0].outputs[0].results.items()))
         if isinstance(message_result, Message):
             return message_result
-
         if isinstance(message_result, str):
-            return Message(content=message_result)
-
-        return Message(content=message_result.data["text"])
+            return Message(text=message_result)
+        return Message(text=message_result.data["text"])
 
     async def get_flow_names(self) -> list[str]:
         # TODO: get flfow ID with flow name

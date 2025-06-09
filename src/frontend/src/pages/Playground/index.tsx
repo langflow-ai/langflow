@@ -1,7 +1,8 @@
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
+import { CustomIOModal } from "@/customization/components/custom-new-modal";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
-import IOModal from "@/modals/IOModal/new-modal";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { CookieOptions, getCookie, setCookie } from "@/utils/utils";
@@ -11,6 +12,7 @@ import { v4 as uuid } from "uuid";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { getInputsAndOutputs } from "../../utils/storeUtils";
 export default function PlaygroundPage() {
+  useGetConfig();
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setClientId = useUtilityStore((state) => state.setClientId);
@@ -91,9 +93,14 @@ export default function PlaygroundPage() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
       {currentSavedFlow && (
-        <IOModal open={true} setOpen={() => {}} isPlayground playgroundPage>
+        <CustomIOModal
+          open={true}
+          setOpen={() => {}}
+          isPlayground
+          playgroundPage
+        >
           <></>
-        </IOModal>
+        </CustomIOModal>
       )}
     </div>
   );

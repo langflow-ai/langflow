@@ -12,12 +12,12 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("openai");
 
-  await page.waitForSelector('[data-testid="modelsOpenAI"]', {
+  await page.waitForSelector('[data-testid="languagemodelsOpenAI"]', {
     timeout: 3000,
   });
 
   await page
-    .getByTestId("modelsOpenAI")
+    .getByTestId("languagemodelsOpenAI")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
@@ -88,7 +88,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
     await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   await page.locator('//*[@id="showmodel_kwargs"]').click();
   expect(
@@ -108,7 +108,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
     await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeFalsy();
+  ).toBeTruthy();
 
   await page.locator('//*[@id="showmodel_kwargs"]').click();
   expect(
@@ -128,7 +128,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.locator('//*[@id="showtemperature"]').click();
   expect(
     await page.locator('//*[@id="showtemperature"]').isChecked(),
-  ).toBeTruthy();
+  ).toBeFalsy();
 
   await page.getByText("Close").last().click();
 

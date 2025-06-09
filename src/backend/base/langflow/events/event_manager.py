@@ -5,7 +5,7 @@ import json
 import time
 import uuid
 from functools import partial
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from fastapi.encoders import jsonable_encoder
 from loguru import logger
@@ -50,7 +50,7 @@ class EventManager:
     def register_event(
         self,
         name: str,
-        event_type: Literal["message", "error", "warning", "info", "token"],
+        event_type: str,
         callback: EventCallback | None = None,
     ) -> None:
         if not name:
@@ -65,7 +65,7 @@ class EventManager:
             callback_ = partial(callback, manager=self, event_type=event_type)
         self.events[name] = callback_
 
-    def send_event(self, *, event_type: Literal["message", "error", "warning", "info", "token"], data: LoggableType):
+    def send_event(self, *, event_type: str, data: LoggableType):
         try:
             if isinstance(data, dict) and event_type in {"message", "error", "warning", "info", "token"}:
                 data = create_event_by_type(event_type, **data)

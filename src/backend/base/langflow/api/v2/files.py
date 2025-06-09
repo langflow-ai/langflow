@@ -1,17 +1,21 @@
+import io
 import re
 import uuid
+import zipfile
 from collections.abc import AsyncGenerator
+from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from sqlmodel import String, cast, select
+from sqlmodel import String, cast, col, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.services.database.models.file import File as UserFile
+from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 
@@ -42,6 +46,7 @@ async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser,
 
 
 @router.post("", status_code=HTTPStatus.CREATED)
+@router.post("/", status_code=HTTPStatus.CREATED)
 async def upload_user_file(
     file: Annotated[UploadFile, File(...)],
     session: DbSession,
@@ -142,6 +147,7 @@ async def upload_user_file(
 
 
 @router.get("")
+@router.get("/", status_code=HTTPStatus.OK)
 async def list_files(
     current_user: CurrentActiveUser,
     session: DbSession,
@@ -155,6 +161,92 @@ async def list_files(
         return list(results)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
+
+
+@router.delete("/batch/", status_code=HTTPStatus.OK)
+async def delete_files_batch(
+    file_ids: list[uuid.UUID],
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+):
+    """Delete multiple files by their IDs."""
+    try:
+        # Fetch all files from the DB
+        stmt = select(UserFile).where(col(UserFile.id).in_(file_ids), col(UserFile.user_id) == current_user.id)
+        results = await session.exec(stmt)
+        files = results.all()
+
+        if not files:
+            raise HTTPException(status_code=404, detail="No files found")
+
+        # Delete all files from the storage service
+        for file in files:
+            await storage_service.delete_file(flow_id=str(current_user.id), file_name=file.path)
+            await session.delete(file)
+
+        # Delete all files from the database
+        await session.flush()  # Ensures delete is staged
+        await session.commit()  # Commit deletion
+
+    except Exception as e:
+        await session.rollback()  # Rollback on failure
+        raise HTTPException(status_code=500, detail=f"Error deleting files: {e}") from e
+
+    return {"message": f"{len(files)} files deleted successfully"}
+
+
+@router.post("/batch/", status_code=HTTPStatus.OK)
+async def download_files_batch(
+    file_ids: list[uuid.UUID],
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+):
+    """Download multiple files as a zip file by their IDs."""
+    try:
+        # Fetch all files from the DB
+        stmt = select(UserFile).where(col(UserFile.id).in_(file_ids), col(UserFile.user_id) == current_user.id)
+        results = await session.exec(stmt)
+        files = results.all()
+
+        if not files:
+            raise HTTPException(status_code=404, detail="No files found")
+
+        # Create a byte stream to hold the ZIP file
+        zip_stream = io.BytesIO()
+
+        # Create a ZIP file
+        with zipfile.ZipFile(zip_stream, "w") as zip_file:
+            for file in files:
+                # Get the file content from storage
+                file_content = await storage_service.get_file(
+                    flow_id=str(current_user.id), file_name=file.path.split("/")[-1]
+                )
+
+                # Get the file extension from the original filename
+                file_extension = Path(file.path).suffix
+                # Create the filename with extension
+                filename_with_extension = f"{file.name}{file_extension}"
+
+                # Write the file to the ZIP with the proper extension
+                zip_file.writestr(filename_with_extension, file_content)
+
+        # Seek to the beginning of the byte stream
+        zip_stream.seek(0)
+
+        # Generate the filename with the current datetime
+        current_time = datetime.now(tz=ZoneInfo("UTC")).astimezone().strftime("%Y%m%d_%H%M%S")
+        filename = f"{current_time}_langflow_files.zip"
+
+        return StreamingResponse(
+            zip_stream,
+            media_type="application/x-zip-compressed",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error downloading files: {e}") from e
 
 
 @router.get("/{file_id}")
@@ -175,6 +267,10 @@ async def download_file(
         # Get file stream
         file_stream = await storage_service.get_file(flow_id=str(current_user.id), file_name=file_name)
 
+        file_extension = Path(file.path).suffix
+        # Create the filename with extension
+        filename_with_extension = f"{file.name}{file_extension}"
+
         # Ensure file_stream is an async iterator returning bytes
         byte_stream = byte_stream_generator(file_stream)
     except Exception as e:
@@ -184,7 +280,7 @@ async def download_file(
     return StreamingResponse(
         byte_stream,
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{file.name}"'},
+        headers={"Content-Disposition": f'attachment; filename="{filename_with_extension}"'},
     )
 
 
@@ -239,6 +335,7 @@ async def delete_file(
 
 
 @router.delete("")
+@router.delete("/", status_code=HTTPStatus.OK)
 async def delete_all_files(
     current_user: CurrentActiveUser,
     session: DbSession,

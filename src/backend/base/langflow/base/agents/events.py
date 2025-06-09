@@ -4,7 +4,7 @@ from time import perf_counter
 from typing import Any, Protocol
 
 from langchain_core.agents import AgentFinish
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessageChunk, BaseMessage
 from typing_extensions import TypedDict
 
 from langflow.schema.content_block import ContentBlock
@@ -81,13 +81,37 @@ async def handle_on_chain_start(
 
 def _extract_output_text(output: str | list) -> str:
     if isinstance(output, str):
-        text = output
-    elif isinstance(output, list) and len(output) == 1 and isinstance(output[0], dict) and "text" in output[0]:
-        text = output[0]["text"]
-    else:
+        return output
+    if isinstance(output, list) and len(output) == 0:
+        return ""
+    if not isinstance(output, list) or len(output) != 1:
         msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
-        raise ValueError(msg)
-    return text
+        raise TypeError(msg)
+
+    item = output[0]
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict):
+        if "text" in item:
+            return item["text"]
+        # If the item's type is "tool_use", return an empty string.
+        # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
+        if item.get("type") == "tool_use":
+            return ""
+    if isinstance(item, dict):
+        if "text" in item:
+            return item["text"]
+        # If the item's type is "tool_use", return an empty string.
+        # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
+        if item.get("type") == "tool_use":
+            return ""
+        # This is a workaround to deal with function calling by Anthropic
+        # since the same data comes in the tool_output we don't need to stream it here
+        # although it would be nice to
+        if "partial_json" in item:
+            return ""
+    msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
+    raise TypeError(msg)
 
 
 async def handle_on_chain_end(
@@ -213,6 +237,14 @@ async def handle_on_chain_stream(
         agent_message.properties.state = "complete"
         agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
+    elif isinstance(data_chunk, AIMessageChunk):
+        output_text = _extract_output_text(data_chunk.content)
+        if output_text and isinstance(agent_message.text, str):
+            agent_message.text += output_text
+            agent_message.properties.state = "partial"
+            agent_message = await send_message_method(message=agent_message)
+        if not agent_message.text:
+            start_time = perf_counter()
     return agent_message, start_time
 
 
@@ -244,6 +276,7 @@ CHAIN_EVENT_HANDLERS: dict[str, ChainEventHandler] = {
     "on_chain_start": handle_on_chain_start,
     "on_chain_end": handle_on_chain_end,
     "on_chain_stream": handle_on_chain_stream,
+    "on_chat_model_stream": handle_on_chain_stream,
 }
 
 TOOL_EVENT_HANDLERS: dict[str, ToolEventHandler] = {

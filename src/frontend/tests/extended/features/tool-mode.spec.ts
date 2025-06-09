@@ -4,7 +4,7 @@ import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "User should be able to use components as tool",
-  { tag: ["@release"] },
+  { tag: ["@release", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
@@ -125,7 +125,7 @@ test(
     await page
       .getByTestId("agentsAgent")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 350, y: 100 },
+        targetPosition: { x: 0, y: 500 },
       });
 
     await page.getByTestId("fit_view").click();

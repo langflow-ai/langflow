@@ -4,6 +4,8 @@ import useAlertStore from "@/stores/alertStore";
 import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
+import moment from "moment";
+import "moment-timezone";
 import { twMerge } from "tailwind-merge";
 import {
   DRAG_EVENTS_CUSTOM_TYPESS,
@@ -587,7 +589,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       ) {
         if (col.options && col.formatter === FormatterType.text) {
           newCol.cellEditor = TableDropdownCellEditor;
-          newCol.cellEditorPopup = false;
+          newCol.cellEditorPopup = true;
           newCol.cellEditorParams = {
             values: col.options,
           };
@@ -854,4 +856,49 @@ export function setCookie(
   if (sameSite) cookieString += `; SameSite=${sameSite}`;
 
   document.cookie = cookieString;
+}
+
+/**
+ * Converts a string to snake_case
+ * Example: "New York" becomes "new_york"
+ * @param {string} str - The string to convert
+ * @returns {string} The snake_case string
+ */
+export function testIdCase(str: string): string {
+  return str.toLowerCase().replace(/\s+/g, "_");
+}
+
+export const convertUTCToLocalTimezone = (timestamp: string) => {
+  const localTimezone = moment.tz.guess();
+  return moment.utc(timestamp).tz(localTimezone).format("MM/DD/YYYY HH:mm:ss");
+};
+
+export const formatNumber = (num: number | undefined): string => {
+  if (num === undefined) return "0";
+
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(0) + "M";
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(0) + "k";
+  }
+  return num?.toString();
+};
+
+export function getOS() {
+  const platform = (
+    window.navigator?.userAgentData?.platform || window.navigator.platform
+  ).toLowerCase();
+
+  let os: string | null = null;
+
+  if (platform.includes("mac") || platform.includes("darwin")) {
+    os = "macos";
+  } else if (platform.includes("win")) {
+    os = "windows";
+  } else if (platform.includes("linux")) {
+    os = "linux";
+  }
+
+  return os;
 }

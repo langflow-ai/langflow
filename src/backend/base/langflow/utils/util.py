@@ -10,7 +10,7 @@ from typing import Any
 from docstring_parser import parse
 
 from langflow.logging.logger import logger
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import initialize_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
@@ -165,8 +165,15 @@ def get_default_factory(module: str, function: str):
     pattern = r"<function (\w+)>"
 
     if match := re.search(pattern, function):
-        imported_module = importlib.import_module(module)
-        return getattr(imported_module, match[1])()
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
+            )
+            warnings.filterwarnings("ignore", message="Valid config keys have changed in V2", category=UserWarning)
+            imported_module = importlib.import_module(module)
+            return getattr(imported_module, match[1])()
     return None
 
 

@@ -13,17 +13,18 @@ from langchain_core.messages import HumanMessage
 from langchain_google_community.gmail.loader import GMailLoader
 from loguru import logger
 
-from langflow.custom import Component
-from langflow.inputs import MessageTextInput
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.schema import Data
-from langflow.template import Output
+from langflow.schema.data import Data
+from langflow.template.field.base import Output
 
 
 class GmailLoaderComponent(Component):
     display_name = "Gmail Loader"
     description = "Loads emails from Gmail using provided credentials."
     icon = "Google"
+    legacy: bool = True
 
     inputs = [
         SecretStrInput(

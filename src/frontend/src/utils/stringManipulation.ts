@@ -3,7 +3,7 @@ import React from "react";
 import { FieldParserType } from "../types/api";
 
 function toSnakeCase(str: string): string {
-  return str.trim().replace(/\s+/g, "_");
+  return str.trim().replace(/[-\s]+/g, "_");
 }
 
 function toCamelCase(str: string): string {
@@ -33,6 +33,15 @@ function toLowerCase(str: string): string {
 
 function toUpperCase(str: string): string {
   return str?.toUpperCase();
+}
+
+function toSpaceCase(str: string): string {
+  return str
+    .trim()
+    .replace(/[_\s-]+/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
 function noBlank(str: string): string {
@@ -69,6 +78,14 @@ export function parseString(
 ): string {
   let result = str;
 
+  if (result === "") {
+    return "";
+  }
+
+  if (parsers.includes("no_blank") && result.trim() === "") {
+    return "";
+  }
+
   let parsersArray: FieldParserType[] = [];
 
   if (typeof parsers === "string") {
@@ -100,6 +117,9 @@ export function parseString(
           break;
         case "no_blank":
           result = noBlank(result);
+          break;
+        case "space_case":
+          result = toSpaceCase(result);
           break;
         case "valid_csv":
           result = validCsv(result);

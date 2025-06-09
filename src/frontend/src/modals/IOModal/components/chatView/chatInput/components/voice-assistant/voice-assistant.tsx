@@ -7,6 +7,8 @@ import {
   usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
+import { customUseStartConversation } from "@/customization/hooks/use-custom-start-conversation";
+import { customUseStartRecording } from "@/customization/hooks/use-custom-start-recording";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
@@ -25,11 +27,9 @@ import { useHandleWebsocketMessage } from "./hooks/use-handle-websocket-message"
 import { useInitializeAudio } from "./hooks/use-initialize-audio";
 import { useInterruptPlayback } from "./hooks/use-interrupt-playback";
 import { usePlayNextAudioChunk } from "./hooks/use-play-next-audio-chunk";
-import { useStartConversation } from "./hooks/use-start-conversation";
-import { useStartRecording } from "./hooks/use-start-recording";
 import { useStopRecording } from "./hooks/use-stop-recording";
 
-interface VoiceAssistantProps {
+export interface VoiceAssistantProps {
   flowId: string;
   setShowAudioInput: (value: boolean) => void;
 }
@@ -133,7 +133,7 @@ export function VoiceAssistant({
   };
 
   const startRecording = async () => {
-    useStartRecording(
+    customUseStartRecording(
       audioContextRef,
       microphoneRef,
       analyserRef,
@@ -187,7 +187,7 @@ export function VoiceAssistant({
   };
 
   const startConversation = () => {
-    useStartConversation(
+    customUseStartConversation(
       flowId,
       wsRef,
       setStatus,
@@ -457,14 +457,12 @@ export function VoiceAssistant({
                     variant={"outlineAmber"}
                     size={"icon"}
                     data-testid="voice-assistant-settings-icon-without-openai"
-                    className="group h-8 w-8"
+                    className="h-8 w-8"
                   >
                     <IconComponent
-                      name="Settings"
+                      name="Key"
                       strokeWidth={ICON_STROKE_WIDTH}
-                      className={cn(
-                        "h-4 w-4 text-accent-amber-foreground group-hover:text-accent-amber",
-                      )}
+                      className={cn("h-4 w-4 text-accent-amber-foreground")}
                     />
                   </Button>
                 </>

@@ -1,4 +1,5 @@
 import { GRADIENT_CLASS_DISABLED } from "@/constants/constants";
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useMemo, useRef, useState } from "react";
@@ -8,7 +9,10 @@ import { Input } from "../../../../ui/input";
 import { InputProps, TextAreaComponentType } from "../../types";
 
 const BACKEND_URL = "BACKEND_URL";
-const URL_WEBHOOK = `${window.location.protocol}//${window.location.host}/api/v1/webhook/`;
+const MCP_SSE_VALUE = "MCP_SSE";
+const { protocol, host } = customGetHostProtocol();
+const URL_WEBHOOK = `${protocol}//${host}/api/v1/webhook/`;
+const URL_MCP_SSE = `${protocol}//${host}/api/v1/mcp/sse`;
 
 const inputClasses = {
   base: ({ isFocused }: { isFocused: boolean }) =>
@@ -60,15 +64,15 @@ export default function CopyFieldAreaComponent({
   const [isFocused, setIsFocused] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  const isValueToReplace = value === BACKEND_URL;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const endpointName = currentFlow?.endpoint_name ?? "";
 
   const valueToRender = useMemo(() => {
-    if (isValueToReplace) {
-      const urlWebhook = `${URL_WEBHOOK}${endpointName}`;
-      return isValueToReplace ? urlWebhook : value;
+    if (value === BACKEND_URL) {
+      return `${URL_WEBHOOK}${endpointName}`;
+    } else if (value === MCP_SSE_VALUE) {
+      return `${URL_MCP_SSE}`;
     }
     return value;
   }, [value, endpointName]);
