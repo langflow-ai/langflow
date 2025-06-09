@@ -13,6 +13,7 @@ from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema, create_input_schema_from_dict
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.serialization.serialization import serialize_or_str
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -108,9 +109,10 @@ def _build_output_function(component: Component, output_method: Callable, event_
             return result.get_text()
         if isinstance(result, Data):
             return result.data
+        # removing the model_dump() call here because it is not serializable
         if isinstance(result, BaseModel):
-            return result.model_dump()
-        return result
+            return serialize_or_str(result)
+        return serialize_or_str(result)
 
     return _patch_send_message_decorator(component, output_function)
 
@@ -132,9 +134,10 @@ def _build_output_async_function(
             return result.get_text()
         if isinstance(result, Data):
             return result.data
+        # removing the model_dump() call here because it is not serializable
         if isinstance(result, BaseModel):
-            return result.model_dump()
-        return result
+            return serialize_or_str(result)
+        return serialize_or_str(result)
 
     return _patch_send_message_decorator(component, output_function)
 
