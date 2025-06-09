@@ -22,7 +22,7 @@ from langflow.services.deps import get_session, get_settings_service, get_storag
 
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
-    """If any key looks nested (contains a dot or “[index]”), rebuild the.
+    """If any key looks nested (contains a dot or "[index]"), rebuild the.
 
     full nested structure; otherwise return flat as is.
     """
@@ -184,6 +184,7 @@ class MCPToolsComponent(Component):
                             self.tools = await self.update_tool_list()
                         except ValueError:
                             build_config["tool"]["options"] = []
+                            build_config["tool"]["value"] = ""
                             build_config["tool"]["placeholder"] = "Error on MCP Server"
                             return build_config
                         build_config["tool"]["placeholder"] = ""
@@ -213,6 +214,7 @@ class MCPToolsComponent(Component):
                     if not build_config["tools_metadata"]["show"]:
                         build_config["tool"]["show"] = True
                         build_config["tool"]["options"] = []
+                        build_config["tool"]["value"] = ""
                         build_config["tool"]["placeholder"] = "Error on MCP Server"
                     else:
                         build_config["tool"]["show"] = False
@@ -223,10 +225,12 @@ class MCPToolsComponent(Component):
                     self.remove_non_default_keys(build_config)
                     build_config["tool"]["show"] = True
                     build_config["tool"]["options"] = [tool.name for tool in self.tools]
+                    await self._update_tool_config(build_config, build_config["tool"]["value"])
                 elif "tool" in build_config and len(self.tools) == 0:
                     self.remove_non_default_keys(build_config)
                     build_config["tool"]["show"] = False
                     build_config["tool"]["options"] = []
+                    build_config["tool"]["value"] = ""
             elif field_name == "tool_mode":
                 try:
                     self.tools = await self.update_tool_list()
@@ -234,6 +238,7 @@ class MCPToolsComponent(Component):
                     if not build_config["tools_metadata"]["show"]:
                         build_config["tool"]["show"] = True
                         build_config["tool"]["options"] = []
+                        build_config["tool"]["value"] = ""
                         build_config["tool"]["placeholder"] = "Error on MCP Server"
                     else:
                         build_config["tool"]["show"] = False
@@ -296,10 +301,17 @@ class MCPToolsComponent(Component):
         tool_obj = next((tool for tool in self.tools if tool.name == tool_name), None)
         if not tool_obj:
             msg = f"Tool {tool_name} not found in available tools: {self.tools}"
+            build_config["tool"]["value"] = ""
             logger.warning(msg)
             return
 
         try:
+            # Store current values before removing inputs
+            current_values = {}
+            for key, value in build_config.items():
+                if key not in self.default_keys and isinstance(value, dict) and "value" in value:
+                    current_values[key] = value["value"]
+
             # Get all tool inputs and remove old ones
             input_schema_for_all_tools = self.get_inputs_for_all_tools(self.tools)
             self.remove_input_schema_from_build_config(build_config, tool_name, input_schema_for_all_tools)
@@ -323,6 +335,11 @@ class MCPToolsComponent(Component):
                     input_dict = schema_input.to_dict()
                     input_dict.setdefault("value", None)
                     input_dict.setdefault("required", True)
+
+                    # Preserve existing value if the parameter name exists in current_values
+                    if name in current_values:
+                        input_dict["value"] = current_values[name]
+
                     build_config[name] = input_dict
                 except (AttributeError, KeyError, TypeError) as e:
                     msg = f"Error processing schema input {schema_input}: {e!s}"
