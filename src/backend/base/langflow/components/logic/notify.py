@@ -1,6 +1,6 @@
 from langflow.custom import Component
 from langflow.io import BoolInput, HandleInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class NotifyComponent(Component):
