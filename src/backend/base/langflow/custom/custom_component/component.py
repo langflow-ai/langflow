@@ -868,7 +868,8 @@ class Component(CustomComponent):
         # Params keys are the `name` attribute of the Input objects
         """Validates and assigns input values from the provided parameters dictionary.
 
-        For each parameter matching a defined input, sets the input's value and updates the parameter dictionary with the validated value.
+        For each parameter matching a defined input, sets the input's value and updates the parameter
+        dictionary with the validated value.
         """
         for key, value in params.copy().items():
             if key not in self._inputs:
@@ -883,7 +884,8 @@ class Component(CustomComponent):
         """Sets component attributes from the given parameters, preventing conflicts with reserved attribute names.
 
         Raises:
-            ValueError: If a parameter name matches a reserved attribute not managed in _attributes and its value differs from the current attribute value.
+            ValueError: If a parameter name matches a reserved attribute not managed in _attributes and its
+            value differs from the current attribute value.
         """
         self._validate_inputs(params)
         attributes = {}
