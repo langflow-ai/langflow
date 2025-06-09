@@ -107,6 +107,7 @@ make backend
 ```
 
 The following commands are for testing code quality.
+Frontend tests are found in `src/frontend/tests`, and backend tests are found in `src/backend/tests`.
 
 Format code (backend & frontend):
 ```bash
