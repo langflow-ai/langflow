@@ -1,3 +1,5 @@
+from typing import cast
+
 from langflow.custom import Component
 from langflow.io import BoolInput, HandleInput, Output, StrInput
 from langflow.schema.data import Data
@@ -37,12 +39,12 @@ class NotifyComponent(Component):
         Output(
             display_name="Data",
             name="result",
-            method="build",
+            method="notify_components",
             cache=False,
         ),
     ]
 
-    async def build(self) -> Data:
+    async def notify_components(self) -> Data:
         """Processes and stores a notification in the context, optionally appending to existing records.
 
         If `append` is True, adds the input value to a list of notifications under the
@@ -50,27 +52,31 @@ class NotifyComponent(Component):
         values to `Data` objects as needed and updates the component's status and state.
         Returns the processed `Data` object.
         """
-        if self.input_value and not isinstance(self.input_value, Data):
-            if isinstance(self.input_value, str):
-                self.input_value = Data(text=self.input_value)
-            elif isinstance(self.input_value, dict):
-                self.input_value = Data(data=self.input_value)
+        if not self._vertex:
+            msg = "Notify component must be used in a graph."
+            raise ValueError(msg)
+        input_value: Data | str | dict | None = self.input_value
+        if input_value and not isinstance(input_value, Data):
+            if isinstance(input_value, str):
+                input_value = Data(text=input_value)
+            elif isinstance(input_value, dict):
+                input_value = Data(data=input_value)
             else:
-                self.input_value = Data(text=str(self.input_value))
-        elif not self.input_value:
-            self.input_value = Data(text="")
-        if self.input_value:
+                input_value = Data(text=str(input_value))
+        elif not input_value:
+            input_value = Data(text="")
+        if input_value:
             if self.append:
                 current_data = self.ctx.get(self.context_key, [])
                 if not isinstance(current_data, list):
                     current_data = [current_data]
-                current_data.append(self.input_value)
+                current_data.append(input_value)
                 self.update_ctx({self.context_key: current_data})
             else:
-                self.update_ctx({self.context_key: self.input_value})
+                self.update_ctx({self.context_key: input_value})
         else:
             self.status = "No record provided."
-        self.status = self.input_value
+        self.status = input_value
         self._vertex.is_state = True
         self.graph.activate_state_vertices(name=self.context_key, caller=self._id)
-        return self.input_value
+        return cast(Data, input_value)
