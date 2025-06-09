@@ -2,7 +2,6 @@ from urllib.parse import urlparse
 
 from pypdf import PdfReader
 
-from langflow.base.data import BaseFileComponent
 from langflow.base.data.base_file import BaseFileComponent
 from langflow.inputs.inputs import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 from langflow.schema.data import Data
