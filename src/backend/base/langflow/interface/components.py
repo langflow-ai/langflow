@@ -78,10 +78,10 @@ def _get_langflow_components_list_sync():
         # Extract the top-level subpackage name after "langflow.components."
         # e.g., "langflow.components.Notion.add_content_to_page" -> "Notion"
         mod_parts = modname.split(".")
-        if len(mod_parts) > MIN_MODULE_PARTS:
+        if len(mod_parts) > MIN_MODULE_PARTS and mod_parts[0] == "langflow" and mod_parts[1] == "components":
             top_level = mod_parts[2]
         else:
-            continue  # skip if not a valid submodule
+            continue
 
         module_components = modules_dict.setdefault(top_level, {})
         # Process each class defined in the module
