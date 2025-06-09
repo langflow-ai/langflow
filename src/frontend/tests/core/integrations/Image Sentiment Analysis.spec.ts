@@ -39,6 +39,11 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
+    //* TODO: Remove these 3 steps once the template is updated *//
+    await page.getByTestId("handle-structuredoutput-shownode-structured output-right").click();
+    await page.getByTestId("handle-parser-shownode-data or dataframe-left").click();
+    await page.getByTestId("tab_1_stringify").click();
+
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
@@ -46,7 +51,7 @@ withEventDeliveryModes(
     });
 
     // Read the image file as a binary string
-    const filePath = "tests/assets/chain.png";
+    const filePath = "src/frontend/tests/assets/chain.png";
     const fileContent = readFileSync(filePath, "base64");
 
     // Create the DataTransfer and File objects within the browser context
