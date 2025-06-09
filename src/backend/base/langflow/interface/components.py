@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 
 MIN_MODULE_PARTS = 2
+EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_single_module
 
 
 # Create a class to manage component cache instead of using globals
@@ -35,22 +36,9 @@ component_cache = ComponentCache()
 
 
 async def import_langflow_components():
-    """Asynchronously discovers and loads all built-in Langflow components.
+    """Asynchronously discovers and loads all built-in Langflow components with module-level parallelization.
 
-    Imports and introspects submodules of the langflow.components package to identify classes that
-    represent components. Instantiates each component class and generates its template, grouping the
-    results by top-level subpackage.
-
-    Returns:
-        dict: A dictionary mapping top-level subpackage names to dictionaries of component names and their templates.
-    """
-    return await asyncio.to_thread(_get_langflow_components_list_sync)
-
-
-def _get_langflow_components_list_sync():
-    """Synchronously discovers and loads all built-in Langflow components.
-
-    Scans the `langflow.components` package and its submodules, instantiates classes that are subclasses
+    Scans the `langflow.components` package and its submodules in parallel, instantiates classes that are subclasses
     of `Component` or `CustomComponent`, and generates their templates. Components are grouped by their
     top-level subpackage name.
 
@@ -64,58 +52,102 @@ def _get_langflow_components_list_sync():
         logger.error(f"Failed to import langflow.components package: {e}", exc_info=True)
         return {"components": modules_dict}
 
-    # Iterate over all submodules of langflow.components
+    # Collect all module names to process
+    module_names = []
     for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
         # Skip if the module is in the deactivated folder
-        if "deactivated" in modname:
+        if "deactivated" not in modname:
+            module_names.append(modname)
+
+    if not module_names:
+        return {"components": modules_dict}
+
+    # Process modules in parallel using asyncio.to_thread
+    logger.debug(f"Processing {len(module_names)} modules in parallel")
+
+    # Create tasks for parallel module processing
+    tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
+
+    # Wait for all modules to be processed
+    try:
+        module_results = await asyncio.gather(*tasks, return_exceptions=True)
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error during parallel module processing: {e}", exc_info=True)
+        return {"components": modules_dict}
+
+    # Merge results from all modules
+    for result in module_results:
+        if isinstance(result, Exception):
+            logger.warning(f"Module processing failed: {result}")
             continue
-        try:
-            module = importlib.import_module(modname)
-        except (ImportError, AttributeError) as e:
-            logger.error(f"Error importing module {modname}: {e}", exc_info=True)
-            continue
 
-        # Extract the top-level subpackage name after "langflow.components."
-        # e.g., "langflow.components.Notion.add_content_to_page" -> "Notion"
-        mod_parts = modname.split(".")
-        if len(mod_parts) > MIN_MODULE_PARTS and mod_parts[0] == "langflow" and mod_parts[1] == "components":
-            top_level = mod_parts[2]
-        else:
-            continue
+        if result and isinstance(result, tuple) and len(result) == EXPECTED_RESULT_LENGTH:
+            top_level, components = result
+            if top_level and components:
+                if top_level not in modules_dict:
+                    modules_dict[top_level] = {}
+                modules_dict[top_level].update(components)
 
-        module_components = modules_dict.setdefault(top_level, {})
-        # Process each class defined in the module
-        for name, class_obj in inspect.getmembers(module, inspect.isclass):
-            # The conditions we have to check are:
-            # 1. Is the modname different the module of the component
-            # 2. Is the class_obj a subclass of Component or CustomComponent (using issubclass)
-
-            # 2 gets weird because some subclasses of CustomComponent do not return True
-            # when calling `issubclass` and instead return they are a `type`.
-            # Because of this we have to add another condition:
-            # if they pass check 1 but not 2, then we check if they look like a CustomComponent/Component
-            # by checking some attributes
-            if class_obj.__module__ != modname:
-                continue
-
-            code_class_base_inheritance = getattr(class_obj, "code_class_base_inheritance", None)
-            _code_class_base_inheritance = getattr(class_obj, "_code_class_base_inheritance", None)
-            if code_class_base_inheritance is None and _code_class_base_inheritance is None:
-                continue
-
-            try:
-                # Instantiate the component (assuming a no-argument constructor)
-                comp_instance = class_obj()
-                comp_template, _ = create_component_template(component_extractor=comp_instance)
-                # Use 'display_name' from the template if available; otherwise, fallback to the class name.
-                component_name = class_obj.name if hasattr(class_obj, "name") and class_obj.name else name
-                module_components[component_name] = comp_template
-            except Exception as e:  # noqa: BLE001
-                logger.warning(
-                    f"Skipping component class '{name}' in module '{modname}' due to instantiation failure: {e}",
-                )
-                continue
     return {"components": modules_dict}
+
+
+def _process_single_module(modname: str) -> tuple[str, dict] | None:
+    """Process a single module and return its components.
+
+    Args:
+        modname: The full module name to process
+
+    Returns:
+        A tuple of (top_level_package, components_dict) or None if processing failed
+    """
+    try:
+        module = importlib.import_module(modname)
+    except (ImportError, AttributeError) as e:
+        logger.error(f"Error importing module {modname}: {e}", exc_info=True)
+        return None
+
+    # Extract the top-level subpackage name after "langflow.components."
+    # e.g., "langflow.components.Notion.add_content_to_page" -> "Notion"
+    mod_parts = modname.split(".")
+    if len(mod_parts) <= MIN_MODULE_PARTS:
+        return None
+
+    top_level = mod_parts[2]
+    module_components = {}
+
+    # Process each class defined in the module
+    for name, class_obj in inspect.getmembers(module, inspect.isclass):
+        # The conditions we have to check are:
+        # 1. Is the modname different the module of the component
+        # 2. Is the class_obj a subclass of Component or CustomComponent (using issubclass)
+
+        # 2 gets weird because some subclasses of CustomComponent do not return True
+        # when calling `issubclass` and instead return they are a `type`.
+        # Because of this we have to add another condition:
+        # if they pass check 1 but not 2, then we check if they look like a CustomComponent/Component
+        # by checking some attributes
+        if class_obj.__module__ != modname:
+            continue
+
+        code_class_base_inheritance = getattr(class_obj, "code_class_base_inheritance", None)
+        _code_class_base_inheritance = getattr(class_obj, "_code_class_base_inheritance", None)
+        if code_class_base_inheritance is None and _code_class_base_inheritance is None:
+            continue
+
+        try:
+            # Instantiate the component (assuming a no-argument constructor)
+            comp_instance = class_obj()
+            comp_template, _ = create_component_template(component_extractor=comp_instance)
+            # Use 'display_name' from the template if available; otherwise, fallback to the class name.
+            component_name = class_obj.name if hasattr(class_obj, "name") and class_obj.name else name
+            module_components[component_name] = comp_template
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                f"Skipping component class '{name}' in module '{modname}' due to instantiation failure: {e}",
+            )
+            continue
+
+    return (top_level, module_components)
 
 
 async def get_and_cache_all_types_dict(
@@ -129,7 +161,7 @@ async def get_and_cache_all_types_dict(
     resulting dictionary.
     """
     if component_cache.all_types_dict is None:
-        logger.debug("Building Components Dictionary")
+        logger.debug("Building langchain types dict")
 
         langflow_components = await import_langflow_components()
 
