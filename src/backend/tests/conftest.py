@@ -91,6 +91,10 @@ def blockbuster(request):
                 .can_block_in("loguru/_better_exceptions.py", {"_get_lib_dirs", "_format_exception"})
                 .can_block_in("sqlalchemy/dialects/sqlite/pysqlite.py", "create_connect_args")
             )
+
+            # Allow os.stat in pkgutil for component loading
+            bb.functions["os.stat"].can_block_in("pkgutil.py", "_iter_file_finder_modules")
+
             yield bb
 
 
