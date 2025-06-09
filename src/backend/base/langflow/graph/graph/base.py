@@ -69,7 +69,10 @@ class Graph:
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
     ) -> None:
-        """Initializes a new Graph instance with optional start and end components, flow metadata, logging configuration, and context.
+        """Creates a new Graph instance with components and configuration.
+
+        Initializes a new Graph instance with optional start and end components, flow
+        metadata, logging configuration, and context.
 
         Raises:
             TypeError: If the provided context is not a dictionary.
@@ -499,7 +502,9 @@ class Graph:
     def update_state(self, name: str, record: str | Data, caller: str | None = None) -> None:
         """Updates the graph's state for a given name and notifies relevant state vertices.
 
-        If a caller vertex is specified, activates all state vertices (except the caller) associated with the state name and their successors. Then updates the state in the state manager.
+        If a caller vertex is specified, activates all state vertices (except the caller)
+        associated with the state name and their successors. Then updates the state in the
+        state manager.
         """
         if caller:
             # If there is a caller which is a vertex_id, I want to activate
@@ -514,7 +519,8 @@ class Graph:
     def is_state_vertices(self) -> list[str]:
         """Returns a cached list of vertex IDs that are marked as state vertices.
 
-        The list is computed lazily by filtering all vertices for those with `is_state` set to True and is cached for subsequent calls.
+        The list is computed lazily by filtering all vertices for those with `is_state` set to True and is cached for
+        subsequent calls.
         """
         if self._is_state_vertices is None:
             self._is_state_vertices = [vertex.id for vertex in self.vertices if vertex.is_state]
@@ -523,7 +529,9 @@ class Graph:
     def activate_state_vertices(self, name: str, caller: str) -> None:
         """Activates state vertices associated with a given state name, excluding the caller.
 
-        Finds all state vertices whose context key contains the specified name (excluding the caller), marks them and their related predecessors and successors as active, and updates the run manager and vertices-to-run set accordingly.
+        Finds all state vertices whose context key contains the specified name (excluding the
+        caller), marks them and their related predecessors and successors as active, and
+        updates the run manager and vertices-to-run set accordingly.
         """
         vertices_ids = set()
         new_predecessor_map = {}
@@ -678,10 +686,10 @@ class Graph:
 
     @property
     def sorted_vertices_layers(self) -> list[list[str]]:
-        """The sorted layers of vertices in the graph.
+        """Get sorted vertex layers by type.
 
-        Returns:
-            List[List[str]]: The sorted layers of vertices.
+        Returns a list of sorted vertex layers, where each layer contains vertex IDs that are
+        classified as input, output, have a session ID, or are state vertices.
         """
         if not self._sorted_vertices_layers:
             self.sort_vertices()
@@ -690,7 +698,8 @@ class Graph:
     def define_vertices_lists(self) -> None:
         """Initializes internal lists of input, output, session ID, and state vertex IDs.
 
-        This method populates the corresponding attributes with the IDs of vertices that are classified as input, output, have a session ID, or are state vertices.
+        This method populates the corresponding attributes with the IDs of vertices that are classified as input, output
+        , have a session ID, or are state vertices.
         """
         for vertex in self.vertices:
             if vertex.is_input:
@@ -705,10 +714,7 @@ class Graph:
                 self._is_state_vertices.append(vertex.id)
 
     def _set_inputs(self, input_components: list[str], inputs: dict[str, str], input_type: InputType | None) -> None:
-        """Updates input vertices with provided input values based on component and type filters.
-
-        Iterates over input vertices, updating their parameters with the given inputs if they match the specified component list and input type.
-        """
+        """Sets the inputs for the given inputs if they match the specified component list and input type."""
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
             # If the vertex is not in the input_components list
@@ -1578,7 +1584,8 @@ class Graph:
     async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: Vertex, *, cache: bool = True) -> list[str]:
         """Determines and returns the list of next runnable vertex IDs after a given vertex completes.
 
-        If the current vertex is a state vertex, also includes any recently activated state vertices. Updates the run manager and optionally caches the graph state.
+        If the current vertex is a state vertex, also includes any recently activated state
+        vertices. Updates the run manager and optionally caches the graph state.
 
         Args:
             lock: An asyncio lock to ensure thread-safe updates.
@@ -1610,7 +1617,8 @@ class Graph:
     async def _log_vertex_build_from_exception(self, vertex_id: str, result: Exception) -> None:
         """Logs details of a vertex build failure caused by an exception.
 
-        Formats the exception, constructs an error output, and records the failure using the vertex build logging mechanism.
+        Formats the exception, constructs an error output, and records the failure using the
+        vertex build logging mechanism.
         """
         if isinstance(result, ComponentBuildError):
             params = result.message
@@ -1791,7 +1799,8 @@ class Graph:
     def get_all_predecessors(self, vertex: Vertex, *, recursive: bool = True) -> list[Vertex]:
         """Returns all predecessor vertices of the given vertex.
 
-        If `recursive` is True, retrieves all direct and indirect predecessors recursively; otherwise, returns only the immediate predecessors.
+        If `recursive` is True, retrieves all direct and indirect predecessors recursively;
+        otherwise, returns only the immediate predecessors.
         """
         _predecessors = self.predecessor_map.get(vertex.id, [])
         predecessors = [self.get_vertex(v_id) for v_id in _predecessors]
@@ -1805,7 +1814,9 @@ class Graph:
     def get_vertex_neighbors(self, vertex: Vertex) -> dict[Vertex, int]:
         """Returns a mapping of neighboring vertices to the number of connecting edges.
 
-        Each neighbor is a vertex directly connected to the given vertex, either as a source or target. The returned dictionary maps each neighbor to the count of edges connecting them to the input vertex.
+        Each neighbor is a vertex directly connected to the given vertex, either as a source or
+        target. The returned dictionary maps each neighbor to the count of edges connecting them
+        to the input vertex.
         """
         neighbors: dict[Vertex, int] = {}
         for edge in self.edges:

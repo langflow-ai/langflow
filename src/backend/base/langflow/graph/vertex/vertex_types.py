@@ -476,7 +476,8 @@ class StateVertex(ComponentVertex):
     def built_object_repr(self):
         """Returns a string representation of the built object from artifacts if available.
 
-        If the artifacts dictionary contains a "repr" key, its value is returned (falling back to the superclass representation if the value is falsy). Returns None if no representation is available.
+        If the artifacts dictionary contains a "repr" key, its value is returned (falling back to the
+        superclass representation if the value is falsy). Returns None if no representation is available.
         """
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super().built_object_repr()
