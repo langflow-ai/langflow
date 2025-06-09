@@ -94,6 +94,7 @@ class PlaceholderGraph(NamedTuple):
 class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
+    selected_output: str | None = None
     code_class_base_inheritance: ClassVar[str] = "Component"
 
     def __init__(self, **kwargs) -> None:
@@ -788,7 +789,14 @@ class Component(CustomComponent):
 
     def _validate_outputs(self) -> None:
         # Raise Error if some rule isn't met
-        pass
+        if self.selected_output is not None:
+            output_names = [output.name for output in self.outputs]
+            if self.selected_output not in output_names:
+                msg = (
+                    f"selected_output '{self.selected_output}' is not valid. "
+                    f"Must be one of: {output_names}"
+                )
+                raise ValueError(msg)
 
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
@@ -855,9 +863,15 @@ class Component(CustomComponent):
 
         frontend_node.validate_component()
         frontend_node.set_base_classes_from_outputs()
+        
+        # Get the node dictionary and add selected_output if specified
+        node_dict = frontend_node.to_dict(keep_name=False)
+        if self.selected_output is not None:
+            node_dict["selected_output"] = self.selected_output
+            
         return {
             "data": {
-                "node": frontend_node.to_dict(keep_name=False),
+                "node": node_dict,
                 "type": self.name or self.__class__.__name__,
                 "id": self._id,
             },

@@ -3391,6 +3391,7 @@
             "metadata": {},
             "minimized": false,
             "output_types": [],
+            "selected_output": "dataframe",
             "outputs": [
               {
                 "allows_loop": false,
