@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Literal
 import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
-from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema, create_input_schema_from_dict
@@ -50,7 +49,7 @@ async def send_message_noop(
     text_color: str | None = None,  # noqa: ARG001
     icon: str | None = None,  # noqa: ARG001
     content_blocks: list[ContentBlock] | None = None,  # noqa: ARG001
-    format_type: Literal["default", "error", "warning", "info"] = "default",
+    format_type: Literal["default", "error", "warning", "info"] = "default",  # noqa: ARG001
     id_: str | None = None,  # noqa: ARG001
     *,
     allow_markdown: bool = True,  # noqa: ARG001
