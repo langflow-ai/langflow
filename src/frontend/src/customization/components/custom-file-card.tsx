@@ -7,7 +7,14 @@ export function CustomFileCard({
   fileType,
   showFile = true,
 }: fileCardPropsType) {
-  return <FileCard fileName={fileName} path={path} fileType={fileType} showFile={showFile} />;
+  return (
+    <FileCard
+      fileName={fileName}
+      path={path}
+      fileType={fileType}
+      showFile={showFile}
+    />
+  );
 }
 
 export default CustomFileCard;
