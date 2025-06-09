@@ -10,6 +10,7 @@ from loguru import logger
 from pydantic import ValidationError
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
+from langflow.utils.debug_helper import DebugHelper
 
 
 def add_type_ignores() -> None:
@@ -193,13 +194,19 @@ def create_class(code, class_name):
 
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
-        module = ast.parse(code)
+        debug_filepath = None
+        debug_helper = None
+        if DebugHelper.is_debug_mode():
+            debug_helper = DebugHelper(code, class_name)
+            debug_filepath = debug_helper.debug_filepath
+
+        module = ast.parse(code, filename=debug_filepath or "<string>")
         exec_globals = prepare_global_scope(module)
 
         class_code = extract_class_code(module, class_name)
-        compiled_class = compile_class_code(class_code)
+        compiled_class = compile_class_code(class_code, debug_filepath)
 
-        return build_class_constructor(compiled_class, exec_globals, class_name)
+        return build_class_constructor(compiled_class, exec_globals, class_name, debug_helper)
 
     except SyntaxError as e:
         msg = f"Syntax error in code: {e!s}"
@@ -311,25 +318,27 @@ def extract_class_code(module, class_name):
     return class_code
 
 
-def compile_class_code(class_code):
+def compile_class_code(class_code, debug_filepath=None):
     """Compiles the AST node of a class into a code object.
 
     Args:
         class_code: AST node of the class
+        debug_filepath: source code file path for debug
 
     Returns:
         Compiled code object of the class
     """
-    return compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
+    return compile(ast.Module(body=[class_code], type_ignores=[]), debug_filepath or "<string>", "exec")
 
 
-def build_class_constructor(compiled_class, exec_globals, class_name):
+def build_class_constructor(compiled_class, exec_globals, class_name, debug_helper=None):
     """Builds a constructor function for the dynamically created class.
 
     Args:
         compiled_class: Compiled code object of the class
         exec_globals: Global scope with necessary imports
         class_name: Name of the class
+        debug_helper: Debug helper instance
 
     Returns:
          Constructor function for the class
@@ -344,7 +353,12 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
             if isinstance(module, type(importlib)):
                 globals()[module_name] = module
 
-        return exec_globals[class_name]
+        created_class = exec_globals[class_name]
+        if debug_helper:
+            created_class.__module__ = debug_helper.debug_module_name
+            debug_helper.register_debug_cleanup(created_class)
+
+        return created_class
 
     return build_custom_class()
 
