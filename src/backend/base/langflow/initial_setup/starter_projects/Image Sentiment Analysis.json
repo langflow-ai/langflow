@@ -1013,7 +1013,12 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [],
+                "required_inputs": [
+                  "custom_model",
+                  "huggingfacehub_api_token",
+                  "inference_endpoint",
+                  "model_id"
+                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
