@@ -1,31 +1,63 @@
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from langchain_community.retrievers import MetalRetriever
+from langflow import legacy_custom
 from metal_sdk.metal import Metal
 
-from langflow.custom.custom_component.component import Component
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.field_typing import Retriever
+from langflow.io import DictInput, SecretStrInput, StrInput
 
+if TYPE_CHECKING:
+    from langchain_community.retrievers import MetalRetriever
 
-class MetalRetrieverComponent(Component):
+class MetalRetrieverComponent(LCVectorStoreComponent):
     display_name: str = "Metal Retriever"
     description: str = "Retriever that uses the Metal API."
     name = "MetalRetriever"
-    legacy: bool = True
+    legacy = True
 
-    def build_config(self):
-        return {
-            "api_key": {"display_name": "API Key", "password": True},
-            "client_id": {"display_name": "Client ID", "password": True},
-            "index_id": {"display_name": "Index ID"},
-            "params": {"display_name": "Parameters"},
-            "code": {"show": False},
-        }
+    inputs = [
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            required=True,
+        ),
+        SecretStrInput(
+            name="client_id",
+            display_name="Client ID",
+            required=True,
+        ),
+        StrInput(
+            name="index_id",
+            display_name="Index ID",
+            required=True,
+        ),
+        DictInput(
+            name="params",
+            display_name="Parameters",
+            required=False,
+        ),
+    ]
 
-    def build(self, api_key: str, client_id: str, index_id: str, params: dict | None = None) -> Retriever:  # type: ignore[type-var]
+    @check_cached_vector_store
+    def build_vector_store(self) -> MetalRetriever:
+        """Builds the Metal Retriever."""
         try:
-            metal = Metal(api_key=api_key, client_id=client_id, index_id=index_id)
+            from langchain_community.retrievers import MetalRetriever
+            from metal_sdk.metal import Metal
+        except ImportError as e:
+            msg = "Could not import Metal. Please install it with `pip install metal-sdk langchain-community`."
+            raise ImportError(msg) from e
+
+        try:
+            metal = Metal(
+                api_key=self.api_key,
+                client_id=self.client_id,
+                index_id=self.index_id
+            )
         except Exception as e:
             msg = "Could not connect to Metal API."
             raise ValueError(msg) from e
-        return cast("Retriever", MetalRetriever(client=metal, params=params or {}))
+
+        return MetalRetriever(client=metal, params=self.params or {})

@@ -1,7 +1,9 @@
 from langchain.retrievers import MultiQueryRetriever
+from langchain.prompts import PromptTemplate
 
 from langflow.custom.custom_component.component import Component
-from langflow.field_typing import BaseRetriever, LanguageModel, PromptTemplate, Text
+from langflow.field_typing import BaseRetriever, LanguageModel, Text
+from langflow.inputs.inputs import HandleInput, StrInput, StrInput
 
 
 class MultiQueryRetrieverComponent(Component):
@@ -9,33 +11,40 @@ class MultiQueryRetrieverComponent(Component):
     description = "Initialize from llm using default template."
     documentation = "https://python.langchain.com/docs/modules/data_connection/retrievers/how_to/MultiQueryRetriever"
     name = "MultiQueryRetriever"
-    legacy: bool = True
+    legacy = True
 
-    def build_config(self):
-        return {
-            "llm": {"display_name": "LLM"},
-            "prompt": {
-                "display_name": "Prompt",
-                "default": {
-                    "input_variables": ["question"],
-                    "input_types": {},
-                    "output_parser": None,
-                    "partial_variables": {},
-                    "template": "You are an AI language model assistant. Your task is \n"
-                    "to generate 3 different versions of the given user \n"
-                    "question to retrieve relevant documents from a vector database. \n"
-                    "By generating multiple perspectives on the user question, \n"
-                    "your goal is to help the user overcome some of the limitations \n"
-                    "of distance-based similarity search. Provide these alternative \n"
-                    "questions separated by newlines. Original question: {question}",
-                    "template_format": "f-string",
-                    "validate_template": False,
-                    "_type": "prompt",
-                },
-            },
-            "retriever": {"display_name": "Retriever"},
-            "parser_key": {"display_name": "Parser Key", "default": "lines"},
-        }
+    inputs = [
+        HandleInput(
+            name="llm",
+            display_name="LLM",
+            input_types=["LanguageModel"],
+            required=True,
+        ),
+        HandleInput(
+            name="retriever",
+            display_name="Retriever",
+            input_types=["BaseRetriever"],
+            required=True,
+        ),
+        StrInput(
+            name="prompt",
+            display_name="Prompt",
+            value="You are an AI language model assistant. Your task is \n"
+            "to generate 3 different versions of the given user \n"
+            "question to retrieve relevant documents from a vector database. \n"
+            "By generating multiple perspectives on the user question, \n"
+            "your goal is to help the user overcome some of the limitations \n"
+            "of distance-based similarity search. Provide these alternative \n"
+            "questions separated by newlines. Original question: {question}",
+            required=False,
+        ),
+        StrInput(
+            name="parser_key",
+            display_name="Parser Key",
+            value="lines",
+            required=False,
+        ),
+    ]
 
     def build(
         self,
