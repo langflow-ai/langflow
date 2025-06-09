@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.schema import ResultData
-    from langflow.schema import Data
+    from langflow.schema.data import Data
     from langflow.services.chat.schema import GetCache, SetCache
     from langflow.services.tracing.service import TracingService
 
