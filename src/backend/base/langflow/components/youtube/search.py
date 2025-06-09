@@ -4,10 +4,10 @@ import pandas as pd
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from langflow.custom import Component
-from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
-from langflow.schema import DataFrame
-from langflow.template import Output
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.schema.dataframe import DataFrame
+from langflow.template.field.base import Output
 
 
 class YouTubeSearchComponent(Component):
