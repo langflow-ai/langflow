@@ -269,41 +269,44 @@ def get_component_instance(custom_component: CustomComponent, user_id: str | UUI
     Otherwise, the function evaluates the component's code to create and return an instance. Raises an
     HTTP 400 error if the code is missing, invalid, or instantiation fails.
     """
-    if custom_component.__class__.__name__ not in {"Component", "CustomComponent"}:
+    # Fast path: avoid repeated str comparisons
+    ctype_name = custom_component.__class__.__name__
+    if ctype_name not in _COMPONENT_TYPE_NAMES:
         return custom_component
 
-    if custom_component._code is None:
-        error = "Code is None"
-    elif not isinstance(custom_component._code, str):
-        error = "Invalid code type"
-    else:
-        try:
-            custom_class = eval_custom_component_code(custom_component._code)
-        except Exception as exc:
-            logger.exception("Error while evaluating custom component code")
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": ("Invalid type conversion. Please check your code and try again."),
-                    "traceback": traceback.format_exc(),
-                },
-            ) from exc
+    code = custom_component._code
+    if not isinstance(code, str):
+        # Only two failure cases: None, or other non-str
+        error = "Code is None" if code is None else "Invalid code type"
+        msg = f"Invalid type conversion: {error}. Please check your code and try again."
+        logger.error(msg)
+        raise HTTPException(status_code=400, detail={"error": msg})
 
-        try:
-            return custom_class(_user_id=user_id, _code=custom_component._code)
-        except Exception as exc:
-            logger.exception("Error while instantiating custom component")
-            if hasattr(exc, "detail") and "traceback" in exc.detail:
-                logger.error(exc.detail["traceback"])
+    # Only now, try to process expensive exception/log traceback only *if needed*
+    try:
+        custom_class = eval_custom_component_code(code)
+    except Exception as exc:
+        # Only generate traceback if an error occurs (save time on success)
+        tb = traceback.format_exc()
+        logger.error("Error while evaluating custom component code\n%s", tb)
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Invalid type conversion. Please check your code and try again.",
+                "traceback": tb,
+            },
+        ) from exc
 
-            raise
-
-    msg = f"Invalid type conversion: {error}. Please check your code and try again."
-    logger.error(msg)
-    raise HTTPException(
-        status_code=400,
-        detail={"error": msg},
-    )
+    try:
+        return custom_class(_user_id=user_id, _code=code)
+    except Exception as exc:
+        tb = traceback.format_exc()
+        logger.error("Error while instantiating custom component\n%s", tb)
+        # Only log inner traceback if present in 'detail'
+        detail_tb = getattr(exc, "detail", {}).get("traceback", None)
+        if detail_tb is not None:
+            logger.error(detail_tb)
+        raise
 
 
 def run_build_config(
@@ -750,3 +753,6 @@ async def load_custom_component(component_name: str, components_paths: list[str]
     # If we get here, the component wasn't found in any of the paths
     logger.warning(f"Component {component_name} not found in any of the provided paths")
     return None
+
+
+_COMPONENT_TYPE_NAMES = {"Component", "CustomComponent"}
