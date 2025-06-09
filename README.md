@@ -41,24 +41,6 @@ Install with pip
 pip install langflow
 ```
 
-## Install from source
-
-To install Langflow from source:
-
-1. Clone the Langflow repository.
-```shell
-git clone https://github.com/langflow-ai/langflow.git
-```
-
-2. From the repository root, install dependencies and build.
-```shell
-cd langflow
-make init
-```
-
-This installs all dependencies and starts Langflow with the default settings.
-For more information, see [Contribute to Langflow](/contributing-how-to-contribute).
-
 ## 📦 Deployment
 
 ### Self-managed
