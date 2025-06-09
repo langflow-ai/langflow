@@ -552,3 +552,8 @@ class TestComponentLoading:
         assert langflow_count > 0, "import_langflow_components should return components"
         assert all_types_count > 0, "aget_all_types_dict should return components"
         assert len(common_components) > 0, "There should be some overlap between the two methods"
+
+    @pytest.mark.benchmark
+    async def test_component_loading_performance(self):
+        """Test the performance of component loading."""
+        await import_langflow_components()
