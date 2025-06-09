@@ -82,7 +82,7 @@ The Playground returns the most semantically similar text chunks.
 
 ## Embedding models bundles
 
-As of Langflow 1.5, the additional embedding models components are now found under [Bundles](/components-bundles) in the components sidebar.
+As of Langflow 1.5, the additional embedding models components are now found under [Bundles](/components-bundle-components) in the components sidebar.
 
 **Bundles** are third-party components grouped by provider.
 
