@@ -352,7 +352,8 @@
             },
             "tool_mode": true
           },
-          "type": "URL"
+          "type": "URL",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "URL-o7GEq",
@@ -549,7 +550,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "CalculatorComponent"
+          "type": "CalculatorComponent",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "CalculatorComponent-15FSE",
@@ -862,7 +864,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-2YUmA",
@@ -1917,7 +1920,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-qYZ9W",

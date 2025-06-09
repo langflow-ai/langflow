@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format_frontend format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_all
+.PHONY: all init format_backend format_frontend format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_all update_selected_outputs
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -39,6 +39,10 @@ check_tools:
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
 	@echo "$(GREEN)All required tools are installed.$(NC)"
 
+update_selected_outputs: ## update selected_output fields in all JSON template files
+	@echo "Updating selected_output fields in JSON template files..."
+	@python scripts/add_selected_outputs.py
+	@echo "$(GREEN)Selected output fields updated.$(NC)"
 
 help: ## show this help message
 	@echo '----'
@@ -75,6 +79,8 @@ build_frontend: ## build the frontend static files
 	@echo 'Copying build files...'
 	@cp -r src/frontend/build/. src/backend/base/langflow/frontend
 	@echo '==== Frontend build complete ===='
+	@echo 'Updating selected_output fields in JSON template files...'
+	@make update_selected_outputs
 
 init: check_tools clean_python_cache clean_npm_cache ## initialize the project
 	@make install_backend

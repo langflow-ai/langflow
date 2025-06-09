@@ -303,7 +303,8 @@
               }
             }
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 433,
@@ -410,7 +411,8 @@
               }
             }
           },
-          "type": "TextInput"
+          "type": "TextInput",
+          "selected_output": "text"
         },
         "dragging": false,
         "height": 234,
@@ -1132,7 +1134,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-Qq8W6",
@@ -1308,7 +1311,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ParserComponent"
+          "type": "ParserComponent",
+          "selected_output": "parsed_text"
         },
         "dragging": false,
         "id": "ParserComponent-KlzCE",
@@ -1675,7 +1679,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "URLComponent"
+          "type": "URLComponent",
+          "selected_output": "page_results"
         },
         "dragging": false,
         "id": "URLComponent-KZ1r5",

@@ -427,7 +427,8 @@
             },
             "tool_mode": false
           },
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "height": 234,
@@ -954,7 +955,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 347,
@@ -1353,7 +1355,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-gXjiP",
@@ -1477,7 +1480,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "TypeConverterComponent"
+          "type": "TypeConverterComponent",
+          "selected_output": "message_output"
         },
         "dragging": false,
         "id": "TypeConverterComponent-6PlBG",
@@ -1769,7 +1773,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Memory"
+          "type": "Memory",
+          "selected_output": "dataframe"
         },
         "dragging": false,
         "id": "Memory-OBr5W",

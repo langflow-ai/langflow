@@ -583,7 +583,8 @@
               }
             }
           },
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "height": 234,
@@ -764,7 +765,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 433,
@@ -983,7 +985,8 @@
               }
             }
           },
-          "type": "SplitText"
+          "type": "SplitText",
+          "selected_output": "chunks"
         },
         "dragging": false,
         "height": 475,
@@ -1859,7 +1862,8 @@
             },
             "tool_mode": false
           },
-          "type": "OpenAIEmbeddings"
+          "type": "OpenAIEmbeddings",
+          "selected_output": "embeddings"
         },
         "dragging": false,
         "height": 320,
@@ -2394,7 +2398,8 @@
             },
             "tool_mode": false
           },
-          "type": "OpenAIEmbeddings"
+          "type": "OpenAIEmbeddings",
+          "selected_output": "embeddings"
         },
         "dragging": false,
         "height": 320,
@@ -2660,7 +2665,8 @@
             },
             "tool_mode": false
           },
-          "type": "File"
+          "type": "File",
+          "selected_output": "dataframe"
         },
         "dragging": false,
         "height": 367,
@@ -3155,7 +3161,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-Ej17f",
@@ -3330,7 +3337,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "parser"
+          "type": "parser",
+          "selected_output": "parsed_text"
         },
         "dragging": false,
         "id": "parser-YIJGN",
@@ -4093,7 +4101,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "AstraDB"
+          "type": "AstraDB",
+          "selected_output": "dataframe"
         },
         "dragging": false,
         "id": "AstraDB-BRnBB",

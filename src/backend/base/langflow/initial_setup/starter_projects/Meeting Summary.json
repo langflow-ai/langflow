@@ -447,7 +447,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "AssemblyAITranscriptionJobPoller"
+          "type": "AssemblyAITranscriptionJobPoller",
+          "selected_output": "transcription_result"
         },
         "id": "AssemblyAITranscriptionJobPoller-VCkre",
         "measured": {
@@ -1002,7 +1003,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "id": "OpenAIModel-adSHw",
         "measured": {
@@ -1154,7 +1156,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "id": "Prompt-Vzk5z",
         "measured": {
@@ -2150,7 +2153,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "id": "OpenAIModel-A8LqG",
         "measured": {
@@ -2628,7 +2632,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "id": "Prompt-iKEvN",
         "measured": {
@@ -2913,7 +2918,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Memory"
+          "type": "Memory",
+          "selected_output": "dataframe"
         },
         "id": "Memory-YN8aN",
         "measured": {
@@ -3212,7 +3218,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "id": "ChatInput-xfgsq",
         "measured": {
@@ -3390,7 +3397,7 @@
               }
             ],
             "pinned": false,
-            "score": 0.000018578044550916993,
+            "score": 1.8578044550916993e-05,
             "template": {
               "_type": "Component",
               "api_key": {
@@ -3655,7 +3662,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "AssemblyAITranscriptionJobCreator"
+          "type": "AssemblyAITranscriptionJobCreator",
+          "selected_output": "transcript_id"
         },
         "dragging": false,
         "id": "AssemblyAITranscriptionJobCreator-hXp0S",
@@ -3856,7 +3864,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "parser"
+          "type": "parser",
+          "selected_output": "parsed_text"
         },
         "dragging": false,
         "id": "parser-uRyvX",
@@ -3983,7 +3992,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "TypeConverterComponent"
+          "type": "TypeConverterComponent",
+          "selected_output": "message_output"
         },
         "id": "TypeConverterComponent-MzSbu",
         "measured": {

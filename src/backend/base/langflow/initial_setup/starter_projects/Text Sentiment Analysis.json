@@ -495,7 +495,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "File"
+          "type": "File",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "File-m5GWE",
@@ -649,7 +650,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "id": "Prompt-nmNbi",
@@ -803,7 +805,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "id": "Prompt-AJxY8",
@@ -1196,7 +1199,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-zVeWr",
@@ -1589,7 +1593,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-Izkdb",
@@ -1719,7 +1724,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "id": "Prompt-LXvg7",
@@ -2112,7 +2118,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-Hl8vG",

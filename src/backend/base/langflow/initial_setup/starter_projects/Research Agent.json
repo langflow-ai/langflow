@@ -420,7 +420,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 347,
@@ -717,7 +718,8 @@
               }
             }
           },
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "height": 234,
@@ -894,7 +896,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 433,
@@ -1598,7 +1601,8 @@
             },
             "tool_mode": false
           },
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "height": 658,
@@ -1726,7 +1730,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 260,
@@ -1854,7 +1859,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 260,
@@ -2356,7 +2362,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "TavilySearchComponent"
+          "type": "TavilySearchComponent",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "TavilySearchComponent-okHYL",
@@ -2749,7 +2756,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-sO8rf",
@@ -3142,7 +3150,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-1pnlf",
