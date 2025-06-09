@@ -2,11 +2,11 @@ import json
 
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
+from langchain_community.vectorstores import Vectara
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.io import HandleInput, StrInput
 
-from langchain_community.vectorstores import Vectara
 
 class VectaraSelfQueryRetrieverComponent(LCVectorStoreComponent):
     """A custom component for implementing Vectara Self Query Retriever using a vector store."""
@@ -67,9 +67,5 @@ class VectaraSelfQueryRetrieverComponent(LCVectorStoreComponent):
             metadata_field_obj.append(attribute_info)
 
         return SelfQueryRetriever.from_llm(
-                self.llm,
-                self.vectorstore,
-                self.document_content_description,
-                metadata_field_obj,
-                verbose=True
-            )
+            self.llm, self.vectorstore, self.document_content_description, metadata_field_obj, verbose=True
+        )

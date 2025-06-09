@@ -1,7 +1,8 @@
-from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from langflow.io import IntInput, StrInput, DictInput
-
 from langchain_community.retrievers import AmazonKendraRetriever
+
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from langflow.io import DictInput, IntInput, StrInput
+
 
 class AmazonKendraRetrieverComponent(LCVectorStoreComponent):
     display_name: str = "Amazon Kendra Retriever"

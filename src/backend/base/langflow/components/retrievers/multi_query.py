@@ -1,9 +1,9 @@
-from langchain.retrievers import MultiQueryRetriever
 from langchain.prompts import PromptTemplate
+from langchain.retrievers import MultiQueryRetriever
 
 from langflow.custom.custom_component.component import Component
 from langflow.field_typing import BaseRetriever, LanguageModel, Text
-from langflow.inputs.inputs import HandleInput, StrInput, StrInput
+from langflow.inputs.inputs import HandleInput, StrInput
 
 
 class MultiQueryRetrieverComponent(Component):

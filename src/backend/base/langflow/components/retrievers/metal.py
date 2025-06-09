@@ -1,7 +1,8 @@
+from langchain_community.retrievers import MetalRetriever
+
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.io import DictInput, SecretStrInput, StrInput
 
-from langchain_community.retrievers import MetalRetriever
 
 class MetalRetrieverComponent(LCVectorStoreComponent):
     display_name: str = "Metal Retriever"
@@ -43,11 +44,7 @@ class MetalRetrieverComponent(LCVectorStoreComponent):
             raise ImportError(msg) from e
 
         try:
-            metal = Metal(
-                api_key=self.api_key,
-                client_id=self.client_id,
-                index_id=self.index_id
-            )
+            metal = Metal(api_key=self.api_key, client_id=self.client_id, index_id=self.index_id)
         except Exception as e:
             msg = "Could not connect to Metal API."
             raise ValueError(msg) from e
