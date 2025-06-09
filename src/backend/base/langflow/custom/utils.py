@@ -321,8 +321,10 @@ def run_build_config(
         A tuple containing the field configuration dictionary and the component instance.
     """
     # Check if the instance's class is a subclass of Component (but not Component itself)
-    # If we have the a Component that is a subclass of Component, that means
+    # If we have a Component that is a subclass of Component, that means
     # we have imported it and not loaded it from the file
+    # because when we load if from a file we use the Component class itself as
+    # an extractor
     if isinstance(custom_component, Component) and type(custom_component) is not Component:
         return custom_component.build_config(), custom_component
 
