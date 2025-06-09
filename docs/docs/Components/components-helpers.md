@@ -23,6 +23,8 @@ This example flow stores and retrieves chat history from an [AstraDBChatMemory](
 
 The Calculator component performs basic arithmetic operations on mathematical expressions. It supports addition, subtraction, multiplication, division, and exponentiation operations.
 
+For an example of using this component in a flow, see the [Python interpreter](/components-processing#python-interpreter) component.
+
 <details>
 <summary>Parameters</summary>
 

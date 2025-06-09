@@ -330,6 +330,8 @@ At least one import is required.
 2. In the **Python Code** field, enter the Python code you want to execute. Use `print()` to see the output.
 3. Optionally, enable **Tool Mode** and connect the interpreter to an **Agent** as a tool.
 For example, connect a **Python Interpreter** and a [Calculator](/components-helpers#calculator) as tools for an Agent, and test how it chooses different tools to solve math problems.
+The flow looks like this:
+![Python Interpreter and calculator connected to Agent](/img/component-python-interpreter.png)
 4. Ask the agent an easier math question.
 The **Calculator** tool can add, subtract, multiple, divide, or perform exponentiation.
 The agent executes the `evaluate_expression` tool to correctly answer the question.
