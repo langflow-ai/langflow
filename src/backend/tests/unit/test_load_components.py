@@ -342,7 +342,7 @@ class TestComponentLoading:
             # Empty string paths raise errors, but non-existent paths just return empty results
             if any(path == "" for path in paths):
                 # Empty string paths should raise an error
-                with pytest.raises(Exception) as exc_info:  # noqa: PT011
+                with pytest.raises((ValueError, OSError, FileNotFoundError)) as exc_info:
                     await aget_all_types_dict(paths)
                 print(f"  Expected error for empty string path: {exc_info.value}")
                 assert "path" in str(exc_info.value).lower(), f"Path-related error expected, got: {exc_info.value}"
