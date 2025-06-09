@@ -6,7 +6,15 @@ from typing_extensions import override
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
+from langflow.inputs.inputs import (
+    BoolInput,
+    DictInput,
+    DropdownInput,
+    IntInput,
+    MessageTextInput,
+    SecretStrInput,
+    SliderInput,
+)
 
 XAI_DEFAULT_MODELS = ["grok-2-latest"]
 
