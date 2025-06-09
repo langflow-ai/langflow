@@ -4,7 +4,7 @@ import asyncio
 
 from loguru import logger
 
-from langflow.events.event_manager import EventManager, create_default_event_manager
+from langflow.events.event_manager import EventManager
 from langflow.services.base import Service
 
 
@@ -133,18 +133,17 @@ class JobQueueService(Service):
                 - The asyncio.Queue instance for handling the job's tasks or messages.
                 - The EventManager instance for event handling tied to the queue.
         """
-        if job_id in self._queues:
-            msg = f"Queue for job_id {job_id} already exists"
-            logger.error(msg)
-            raise ValueError(msg)
-
         if self._closed:
             msg = "Queue service is closed"
-            logger.error(msg)
             raise RuntimeError(msg)
 
+        existing_queue = self._queues.get(job_id)
+        if existing_queue:
+            msg = f"Queue for job_id {job_id} already exists"
+            raise ValueError(msg)
+
         main_queue: asyncio.Queue = asyncio.Queue()
-        event_manager = create_default_event_manager(main_queue)
+        event_manager: EventManager = self._create_default_event_manager(main_queue)
 
         # Register the queue without an active task.
         self._queues[job_id] = (main_queue, event_manager, None, None)
@@ -300,3 +299,29 @@ class JobQueueService(Service):
                         # Enough time has passed, perform the actual cleanup
                         logger.debug(f"Cleaning up job_id {job_id} after grace period")
                         await self.cleanup_job(job_id)
+
+    def _create_default_event_manager(self, queue: asyncio.Queue) -> EventManager:
+        """Creates the default event manager with predefined events.
+
+        Args:
+            queue (asyncio.Queue): The queue to be associated with the event manager.
+
+        Returns:
+            EventManager: The configured EventManager instance.
+        """
+        manager = EventManager(queue)
+        # Registering predefined events
+        event_names_types = [
+            ("on_token", "token"),
+            ("on_vertices_sorted", "vertices_sorted"),
+            ("on_error", "error"),
+            ("on_end", "end"),
+            ("on_message", "add_message"),
+            ("on_remove_message", "remove_message"),
+            ("on_end_vertex", "end_vertex"),
+            ("on_build_start", "build_start"),
+            ("on_build_end", "build_end"),
+        ]
+        for name, event_type in event_names_types:
+            manager.register_event(name, event_type)
+        return manager

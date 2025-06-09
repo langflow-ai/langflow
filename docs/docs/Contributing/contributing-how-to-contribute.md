@@ -22,9 +22,10 @@ Develop Langflow locally with [uv](https://docs.astral.sh/uv/getting-started/ins
 1. Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow), and then click **Fork**.
 
 2. Add the new remote to your local repository on your local machine:
-
+Replace `YOUR_FORK_NAME` with a name for your fork.
+Replace `YOUR_GIT_USERNAME` with your Git username.
 ```bash
-git remote add fork https://github.com/<your_git_username>/langflow.git
+git remote add YOUR_FORK_NAME https://github.com/YOUR_GIT_USERNAME/langflow.git
 ```
 
 ### Prepare the development environment
@@ -53,7 +54,6 @@ Use `launch.json` to quickly debug different parts of your application, like the
 ### Run Langflow locally
 
 After setting up the environment with `make init`, you can run Langflow's backend and frontend separately for development.
-Langflow recommends using a virtual environment like [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda) to isolate dependencies.
 
 Before you begin, ensure you have [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js](https://nodejs.org/en/download/package-manager) installed.
 
@@ -113,3 +113,10 @@ Some additional guidance on pull request titles:
 * Pull requests should strive to fix one thing **only**, and should contain a good description of what is being fixed.
 
 For more information, see the [Python Developer's Guide](https://devguide.python.org/getting-started/pull-request-lifecycle/index.html#making-good-commits).
+
+## Additional contribution guides
+
+- [Contribute Bundles](./contributing-bundles.md)
+- [Contribute Components](./contributing-components.md)
+- [Contribute Tests](./contributing-component-tests.md)
+- [Contribute Templates](./contributing-templates.md)

@@ -98,6 +98,8 @@ test(
 
         await element.scrollIntoViewIfNeeded();
 
+        await page.waitForTimeout(500);
+
         let count = 0;
 
         while (
@@ -145,6 +147,10 @@ test(
         // Verify the selected action is visible in the tab
         await expect(page.getByTestId("div-mcp-server-tools")).toBeVisible();
 
+        await page.getByText("JSON", { exact: true }).last().click();
+
+        await page.waitForSelector("pre", { state: "visible", timeout: 3000 });
+
         // Generate API key if not in auto login mode
         const isAutoLogin = await page
           .getByText("Generate API key")
@@ -166,10 +172,21 @@ test(
 
         // Extract the SSE URL from the configuration
         const sseUrlMatch = configJson?.match(
-          /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
+          /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
         );
         expect(sseUrlMatch).not.toBeNull();
         const sseUrl = sseUrlMatch![1];
+
+        await page.getByText("macOS/Linux", { exact: true }).click();
+
+        await page.waitForSelector("pre", { state: "visible", timeout: 3000 });
+
+        const configJsonLinux = await page.locator("pre").textContent();
+
+        const sseUrlMatchLinux = configJsonLinux?.match(
+          /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
+        );
+        expect(sseUrlMatchLinux).not.toBeNull();
 
         // Verify setup guide link
         await expect(page.getByText("setup guide")).toBeVisible();
@@ -186,12 +203,12 @@ test(
         await page.getByTestId("sidebar-search-input").click();
         await page.getByTestId("sidebar-search-input").fill("mcp connection");
 
-        await page.waitForSelector('[data-testid="toolsMCP Connection"]', {
+        await page.waitForSelector('[data-testid="dataMCP Connection"]', {
           timeout: 30000,
         });
 
         await page
-          .getByTestId("toolsMCP Connection")
+          .getByTestId("dataMCP Connection")
           .dragTo(page.locator('//*[@id="react-flow-id"]'), {
             targetPosition: { x: 0, y: 0 },
           });

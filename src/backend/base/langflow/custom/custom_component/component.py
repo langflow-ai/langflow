@@ -160,6 +160,23 @@ class Component(CustomComponent):
         self.set_class_code()
         self._set_output_required_inputs()
 
+    def get_incoming_edge_by_target_param(self, target_param: str) -> str | None:
+        """Get the source vertex ID for an incoming edge that targets a specific parameter.
+
+        This method delegates to the underlying vertex to find an incoming edge that connects
+        to the specified target parameter.
+
+        Args:
+            target_param (str): The name of the target parameter to find an incoming edge for
+
+        Returns:
+            str | None: The ID of the source vertex if an incoming edge is found, None otherwise
+        """
+        if self._vertex is None:
+            msg = "Vertex not found. Please build the graph first."
+            raise ValueError(msg)
+        return self._vertex.get_incoming_edge_by_target_param(target_param)
+
     @property
     def enabled_tools(self) -> list[str] | None:
         """Dynamically determine which tools should be enabled.
@@ -450,7 +467,10 @@ class Component(CustomComponent):
             if input_.name is None:
                 msg = self.build_component_error_message("Input name cannot be None")
                 raise ValueError(msg)
-            self._inputs[input_.name] = deepcopy(input_)
+            try:
+                self._inputs[input_.name] = deepcopy(input_)
+            except TypeError:
+                self._inputs[input_.name] = input_
 
     def validate(self, params: dict) -> None:
         """Validates the component parameters.
@@ -963,14 +983,53 @@ class Component(CustomComponent):
             self._append_tool_to_outputs_map()
 
     def _should_process_output(self, output):
+        """Determines whether a given output should be processed based on vertex edge configuration.
+
+        Returns True if the component has no vertex or outgoing edges, or if the output's name is among
+        the vertex's source edge names.
+        """
         if not self._vertex or not self._vertex.outgoing_edges:
             return True
         return output.name in self._vertex.edges_source_names
 
     def _get_outputs_to_process(self):
-        return (output for output in self._outputs_map.values() if self._should_process_output(output))
+        """Returns a list of outputs to process, ordered according to self.outputs.
+
+        Outputs are included only if they should be processed, as determined by _should_process_output.
+        First processes outputs in the order defined by self.outputs, then processes any remaining outputs
+        from _outputs_map that weren't in self.outputs.
+
+        Returns:
+            list: Outputs to be processed in the defined order.
+
+        Raises:
+            ValueError: If an output name in self.outputs is not present in _outputs_map.
+        """
+        result = []
+        processed_names = set()
+
+        # First process outputs in the order defined by self.outputs
+        for output in self.outputs:
+            output_obj = self._outputs_map.get(output.name, deepcopy(output))
+            if self._should_process_output(output_obj):
+                result.append(output_obj)
+                processed_names.add(output_obj.name)
+
+        # Then process any remaining outputs from _outputs_map
+        for name, output_obj in self._outputs_map.items():
+            if name not in processed_names and self._should_process_output(output_obj):
+                result.append(output_obj)
+
+        return result
 
     async def _get_output_result(self, output):
+        """Computes and returns the result for a given output, applying caching and output options.
+
+        If the output is cached and a value is already defined, returns the cached value. Otherwise,
+        invokes the associated output method asynchronously, applies output options, updates the cache,
+        and returns the result. Raises a ValueError if the output method is not defined, or a TypeError
+        if the method invocation fails.
+        """
         if output.cache and output.value != UNDEFINED:
             return output.value
 
@@ -997,7 +1056,29 @@ class Component(CustomComponent):
 
         return result
 
+    async def resolve_output(self, output_name: str) -> Any:
+        """Resolves and returns the value for a specified output by name.
+
+        If output caching is enabled and a value is already available, returns the cached value;
+        otherwise, computes and returns the output result. Raises a KeyError if the output name
+        does not exist.
+        """
+        output = self._outputs_map.get(output_name)
+        if output is None:
+            msg = (
+                f"Sorry, an output named '{output_name}' could not be found. "
+                "Please ensure that the output is correctly configured and try again."
+            )
+            raise KeyError(msg)
+        if output.cache and output.value != UNDEFINED:
+            return output.value
+        return await self._get_output_result(output)
+
     def _build_artifact(self, result):
+        """Builds an artifact dictionary containing a string representation, raw data, and type for a result.
+
+        The artifact includes a human-readable representation, the processed raw result, and its determined type.
+        """
         custom_repr = self.custom_repr()
         if custom_repr is None and isinstance(result, dict | Data | str):
             custom_repr = result
