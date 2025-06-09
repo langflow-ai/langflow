@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlmodel import select
 
 from langflow.api.utils import DbSession
-from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_chat_service
 
 health_check_router = APIRouter(tags=["Health Check"])

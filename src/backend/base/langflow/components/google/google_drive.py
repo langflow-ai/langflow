@@ -5,12 +5,12 @@ from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from langchain_google_community import GoogleDriveLoader
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import docs_to_data
-from langflow.inputs import MessageTextInput
+from langflow.inputs.inputs import MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.schema import Data
-from langflow.template import Output
+from langflow.schema.data import Data
+from langflow.template.field.base import Output
 
 
 class GoogleDriveComponent(Component):

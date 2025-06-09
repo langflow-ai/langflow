@@ -1,9 +1,9 @@
 import logging
 from typing import TYPE_CHECKING
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import HandleInput, MessageInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 if TYPE_CHECKING:
     from langflow.field_typing import Embeddings

@@ -7,9 +7,9 @@ from pathlib import Path
 import anyio
 from langchain_community.document_loaders.git import GitLoader
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DropdownInput, MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class GitLoaderComponent(Component):

@@ -7,11 +7,11 @@ from langchain_community.document_loaders.apify_dataset import ApifyDatasetLoade
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field, field_serializer
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import BoolInput
 from langflow.io import MultilineInput, Output, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 MAX_DESCRIPTION_LEN = 250
 

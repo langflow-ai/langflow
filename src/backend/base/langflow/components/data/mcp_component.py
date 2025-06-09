@@ -11,13 +11,12 @@ from langflow.base.mcp.util import (
     create_tool_coroutine,
     create_tool_func,
 )
-from langflow.custom import Component
-from langflow.inputs import DropdownInput, TableInput
-from langflow.inputs.inputs import InputTypes
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import DropdownInput, InputTypes, TableInput
 from langflow.io import MessageTextInput, MultilineInput, Output, TabInput
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
-from langflow.schema import DataFrame
+from langflow.schema.dataframe import DataFrame
 
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:

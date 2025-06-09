@@ -4,9 +4,9 @@ import json
 import re
 from typing import TYPE_CHECKING, Any
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.utils.data_structure import get_data_structure
 

@@ -1,6 +1,6 @@
 from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.field_typing.constants import Memory
-from langflow.inputs import DropdownInput, MessageTextInput, SecretStrInput
+from langflow.inputs.inputs import DropdownInput, MessageTextInput, SecretStrInput
 
 
 class ZepChatMemory(LCChatMemoryComponent):

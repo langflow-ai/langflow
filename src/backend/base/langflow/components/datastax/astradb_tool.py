@@ -10,7 +10,7 @@ from langchain_core.tools import StructuredTool, Tool
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
 from langflow.logging import logger
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.table import EditMode
 
 

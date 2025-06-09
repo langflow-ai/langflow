@@ -5,8 +5,8 @@ from langchain_core.prompts import PromptTemplate
 
 from langflow.base.chains.model import LCChainComponent
 from langflow.field_typing import Message
-from langflow.inputs import HandleInput, IntInput, MultilineInput
-from langflow.template import Output
+from langflow.inputs.inputs import HandleInput, IntInput, MultilineInput
+from langflow.template.field.base import Output
 
 if TYPE_CHECKING:
     from langchain_core.runnables import Runnable

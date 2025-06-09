@@ -3,7 +3,7 @@ from langchain_community.chat_models import ChatMaritalk
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput
+from langflow.inputs.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput
 
 
 class MaritalkModelComponent(LCModelComponent):
