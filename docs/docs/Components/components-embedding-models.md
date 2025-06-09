@@ -20,6 +20,8 @@ If you want to try additional providers not supported by the new components, the
 
 ## Embedding model
 
+Use an **Embedding Model** component in your flow anywhere you would use an embedding model.
+
 Embedding models convert text into numerical vectors. These embeddings capture the semantic meaning of the input text, and allow LLMs to understand context.
 
 This embeddings component uses an OpenAI API key for authentication.

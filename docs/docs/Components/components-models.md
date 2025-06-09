@@ -26,6 +26,8 @@ Instead of swapping out model components when you want to try a different provid
 
 ### Use a Language Model component in a flow
 
+Use a **Language Moodel** component in your flow anywhere you would use an LLM.
+
 Model components receive inputs and prompts for generating text, and the generated text is sent to an output component.
 
 This example has the OpenAI model in a chatbot flow. For more information, see the [Basic prompting flow](/starter-projects-basic-prompting).
@@ -59,7 +61,6 @@ In the **Language Model** component, in the **Model Provider** field, select **A
 This model uses Claude 3.5 Haiku, based on [Anthropic's recommendation](https://docs.anthropic.com/en/docs/about-claude/models/choosing-a-model) for a fast and cost-effective model.
 11. In the **Anthropic API Key** field, enter your Anthropic API key.
 12. Open the **Playground**, and ask the same question as you did before.
-The response from the Anthropic model is less verbose, and lists its sources outside of the informative paragraph.
 
 ```
 User
@@ -74,7 +75,8 @@ U.S. Census Bureau
 Encyclopedia Britannica
 ```
 
-For more information, see the [OpenAI documentation](https://platform.openai.com/docs) and [Anthropic documentation](https://docs.anthropic.com/).
+The response from the Anthropic model is less verbose, and lists its sources outside of the informative paragraph.
+For more information, see your LLM provider's documentation.
 
 <details>
 <summary>Parameters</summary>
@@ -95,7 +97,7 @@ For more information, see the [OpenAI documentation](https://platform.openai.com
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | LanguageModel | An instance of ChatOpenAI or ChatAnthropic configured with the specified parameters. |
+| model | LanguageModel | An instance of Chat configured with the specified parameters. |
 
 </details>
 
