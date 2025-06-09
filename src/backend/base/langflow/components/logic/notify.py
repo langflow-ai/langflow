@@ -45,12 +45,18 @@ class NotifyComponent(Component):
     ]
 
     async def notify_components(self) -> Data:
-        """Processes and stores a notification in the context, optionally appending to existing records.
+        """Processes and stores a notification in the component's context.
 
-        If `append` is True, adds the input value to a list of notifications under the
-        specified context key; otherwise, replaces the existing value. Converts input
-        values to `Data` objects as needed and updates the component's status and state.
-        Returns the processed `Data` object.
+        Normalizes the input value to a `Data` object and stores it under the
+        specified context key. If `append` is True, adds the value to a list
+        of notifications; otherwise, replaces the existing value. Updates the
+        component's status and activates related state vertices in the graph.
+
+        Returns:
+            The processed `Data` object stored in the context.
+
+        Raises:
+            ValueError: If the component is not part of a graph.
         """
         if not self._vertex:
             msg = "Notify component must be used in a graph."
