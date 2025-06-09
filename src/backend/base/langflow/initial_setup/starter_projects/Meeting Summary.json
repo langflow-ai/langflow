@@ -2675,37 +2675,7 @@
                 "cache": true,
                 "display_name": "Messages",
                 "group_outputs": false,
-                "method": "retrieve_messages",
-                "name": "messages",
-                "required_inputs": [],
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Message",
-                "group_outputs": false,
-                "method": "retrieve_messages_as_text",
-                "name": "messages_text",
-                "required_inputs": [],
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "DataFrame",
-                "group_outputs": false,
-                "method": "as_dataframe",
+                "method": "retrieve_messages_dataframe",
                 "name": "dataframe",
                 "required_inputs": [],
                 "selected": "DataFrame",
@@ -2759,7 +2729,7 @@
               },
               "message": {
                 "_input_type": "MessageTextInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Message",
                 "dynamic": true,
                 "info": "The chat message to be stored.",
@@ -2782,7 +2752,7 @@
               },
               "mode": {
                 "_input_type": "TabInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Mode",
                 "dynamic": false,
                 "info": "Operation mode: Store messages or Retrieve messages.",

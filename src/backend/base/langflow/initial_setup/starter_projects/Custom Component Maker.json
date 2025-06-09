@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-YeUZT",
+            "id": "URL-57sgJ",
             "name": "text",
             "output_types": []
           },
@@ -23,10 +23,10 @@
         },
         "id": "reactflow__edge-URL-YeUZT{œdataTypeœ:œURLœ,œidœ:œURL-YeUZTœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Ap5W5{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "URL-VNBsH",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-VNBsHœ, œnameœ: œtextœ, œoutput_typesœ: []}",
-        "target": "Prompt-TBdwC",
-        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-TBdwCœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "URL-57sgJ",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-57sgJœ, œnameœ: œtextœ, œoutput_typesœ: []}",
+        "target": "Prompt-Ap5W5",
+        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-Ap5W5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -50,10 +50,10 @@
         },
         "id": "reactflow__edge-URL-57sgJ{œdataTypeœ:œURLœ,œidœ:œURL-57sgJœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Ap5W5{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "URL-7lpSF",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-7lpSFœ, œnameœ: œtextœ, œoutput_typesœ: []}",
-        "target": "Prompt-TBdwC",
-        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-TBdwCœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "URL-57sgJ",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-57sgJœ, œnameœ: œtextœ, œoutput_typesœ: []}",
+        "target": "Prompt-Ap5W5",
+        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-Ap5W5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -61,7 +61,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-yrON5",
+            "id": "URL-57sgJ",
             "name": "text",
             "output_types": []
           },
@@ -77,10 +77,10 @@
         },
         "id": "reactflow__edge-URL-yrON5{œdataTypeœ:œURLœ,œidœ:œURL-yrON5œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Ap5W5{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-Ap5W5œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "URL-V6Rnb",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-V6Rnbœ, œnameœ: œtextœ, œoutput_typesœ: []}",
-        "target": "Prompt-TBdwC",
-        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-TBdwCœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "URL-57sgJ",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-57sgJœ, œnameœ: œtextœ, œoutput_typesœ: []}",
+        "target": "Prompt-Ap5W5",
+        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-Ap5W5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -262,37 +262,7 @@
                 "cache": true,
                 "display_name": "Messages",
                 "group_outputs": false,
-                "method": "retrieve_messages",
-                "name": "messages",
-                "required_inputs": [],
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Message",
-                "group_outputs": false,
-                "method": "retrieve_messages_as_text",
-                "name": "messages_text",
-                "required_inputs": [],
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "DataFrame",
-                "group_outputs": false,
-                "method": "as_dataframe",
+                "method": "retrieve_messages_dataframe",
                 "name": "dataframe",
                 "required_inputs": [],
                 "selected": "DataFrame",
@@ -345,7 +315,7 @@
               },
               "message": {
                 "_input_type": "MessageTextInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Message",
                 "dynamic": true,
                 "info": "The chat message to be stored.",
@@ -368,7 +338,7 @@
               },
               "mode": {
                 "_input_type": "TabInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Mode",
                 "dynamic": false,
                 "info": "Operation mode: Store messages or Retrieve messages.",
