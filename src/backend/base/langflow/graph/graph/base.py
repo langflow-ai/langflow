@@ -1243,8 +1243,6 @@ class Graph:
             if vertex.id in self.cycle_vertices:
                 self.run_manager.add_to_cycle_vertices(vertex.id)
 
-        self.assert_streaming_sequence()
-
     def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
         """Returns the edges of the graph as a list of tuples."""
         return [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
@@ -1899,18 +1897,6 @@ class Graph:
         vertex_instance = vertex_class(frontend_data, graph=self)
         vertex_instance.set_top_level(self.top_level_vertices)
         return vertex_instance
-
-    def assert_streaming_sequence(self) -> None:
-        for i in self.edges:
-            source = self.get_vertex(i.source_id)
-            if "stream" in source.params and source.params["stream"] is True:
-                target = self.get_vertex(i.target_id)
-                if target.vertex_type != "ChatOutput":
-                    msg = (
-                        "Error: A 'streaming' vertex cannot be followed by a non-'chat output' vertex."
-                        "Disable streaming to run the flow."
-                    )
-                    raise Exception(msg)  # noqa: TRY002
 
     def prepare(self, stop_component_id: str | None = None, start_component_id: str | None = None):
         self.initialize()
