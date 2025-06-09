@@ -114,7 +114,7 @@ class DoclingRemoteComponent(BaseFileComponent):
             while task["task_status"] not in ("success", "failure"):
                 time.sleep(2)
                 response = client.get(f"{base_url}/status/poll/{task['task_id']}")
-                if response.status_code > retry_status_code:
+                if response.status_code >= retry_status_code:
                     http_failures += 1
                     if http_failures > self.MAX_500_RETRIES:
                         self.log(f"The status requests got a http response {response.status_code} too many times.")
@@ -146,7 +146,10 @@ class DoclingRemoteComponent(BaseFileComponent):
         }
 
         processed_data: list[Data | None] = []
-        with httpx.Client() as client, ThreadPoolExecutor(max_workers=self.max_concurrency) as executor:
+        with (
+            httpx.Client(headers=self.api_headers) as client,
+            ThreadPoolExecutor(max_workers=self.max_concurrency) as executor,
+        ):
             futures: list[tuple[int, Future]] = []
             for i, file in enumerate(file_list):
                 if file.path is None:
@@ -159,13 +162,8 @@ class DoclingRemoteComponent(BaseFileComponent):
                 try:
                     result_data = future.result()
                     processed_data.append(result_data)
-                except (
-                    httpx.HTTPStatusError,
-                    httpx.RequestError,
-                    KeyError,
-                    ValueError,
-                ):
-                    self.log("Error occurred")
+                except (httpx.HTTPStatusError, httpx.RequestError, KeyError, ValueError) as exc:
+                    self.log(f"Docling remote processing failed: {exc}")
                     raise
 
         return self.rollup_data(file_list, processed_data)

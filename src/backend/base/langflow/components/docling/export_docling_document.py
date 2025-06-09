@@ -64,42 +64,11 @@ class ExportDoclingDocumentComponent(Component):
     ]
 
     def export_document(self) -> list[Data]:
-        from docling_core.types.doc import DoclingDocument, ImageRefMode
+        from docling_core.types.doc import ImageRefMode
 
-        documents: list[DoclingDocument] = []
-        if isinstance(self.data_inputs, DataFrame):
-            if not len(self.data_inputs):
-                msg = "DataFrame is empty"
-                raise TypeError(msg)
+        from ._utils import extract_docling_documents
 
-            try:
-                documents = self.data_inputs[self.doc_key].to_list()
-            except Exception as e:
-                msg = f"Error extracting DoclingDocument from DataFrame: {e}"
-                raise TypeError(msg) from e
-        else:
-            if not self.data_inputs:
-                msg = "No data inputs provided"
-                raise TypeError(msg)
-
-            if isinstance(self.data_inputs, Data):
-                if self.doc_key not in self.data_inputs.data:
-                    msg = f"{self.doc_key} field not available in the input Data"
-                    raise TypeError(msg)
-                documents = [self.data_inputs.data[self.doc_key]]
-            else:
-                try:
-                    documents = [
-                        input_.data[self.doc_key]
-                        for input_ in self.data_inputs
-                        if isinstance(input_, Data) and self.doc_key in input_.data
-                    ]
-                    if not documents:
-                        msg = f"No valid Data inputs found in {type(self.data_inputs)}"
-                        raise TypeError(msg)
-                except AttributeError as e:
-                    msg = f"Invalid input type in collection: {e}"
-                    raise TypeError(msg) from e
+        documents = extract_docling_documents(self.data_inputs, self.doc_key)
 
         results: list[Data] = []
         try:
