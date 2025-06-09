@@ -885,10 +885,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "custom_model",
-                  "huggingfacehub_api_token",
-                  "inference_endpoint",
-                  "model_id"
+                  "api_key"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
@@ -1281,10 +1278,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "custom_model",
-                  "huggingfacehub_api_token",
-                  "inference_endpoint",
-                  "model_id"
+                  "api_key"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
@@ -1807,10 +1801,7 @@
                 "method": "build_model",
                 "name": "model_output",
                 "required_inputs": [
-                  "custom_model",
-                  "huggingfacehub_api_token",
-                  "inference_endpoint",
-                  "model_id"
+                  "api_key"
                 ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
