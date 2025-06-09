@@ -143,6 +143,9 @@ export const nodeColorsName: { [char: string]: string } = {
   chains: "orange",
   list: "lime",
   agents: "purple",
+  BrightDataStructuredDataComponent: "BrightData",
+  BrightDataSearchEngineComponent: "BrightData", 
+  BrightDataWebScraperComponent: "BrightData",
   tools: "cyan",
   memories: "amber",
   saved_components: "lime",
@@ -239,7 +242,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
-  { display_name: "Bright Data", name: "brightdata", icon: "BrightdataIcon" },
+  { display_name: "Bright Data", name: "brightdata", icon: "BrightData" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   { display_name: "GitHub", name: "github", icon: "Github" },
@@ -461,7 +464,7 @@ export const eagerLoadedIconsMap = {
   // Custom icons
   GradientSave: GradientSave,
   BotMessageSquareIcon: BotMessageSquareIcon,
-  BrightDataIcon: BrightDataIcon,
+  BrightData: BrightDataIcon,
 
   // React icon
   FaApple: FaApple,

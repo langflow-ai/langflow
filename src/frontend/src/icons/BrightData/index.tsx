@@ -1,9 +1,11 @@
 import React, { forwardRef } from "react";
-import SvgBrightData from "./Brightdata.svg";
+import SvgBrightData from "./BrightData";
 
 export const BrightDataIcon = forwardRef<
   SVGSVGElement,
-  React.PropsWithChildren<{}>
+  React.SVGProps<SVGSVGElement>
 >((props, ref) => {
   return <SvgBrightData ref={ref} {...props} />;
 });
+
+BrightDataIcon.displayName = "BrightDataIcon";

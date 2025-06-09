@@ -11,28 +11,31 @@ import urllib.parse
 class BrightDataSearchEngineComponent(Component):
     display_name = "Bright Data Search Engine"
     description = "Search Google, Bing, or Yandex using Bright Data's search scraping service"
-    icon = "search"
+    icon = "BrightData"
     name = "BrightDataSearchEngine"
 
     inputs = [
         SecretStrInput(
             name="api_token",
             display_name="🔑 API Token",
-            info="Your Bright Data API token",
             required=True,
+            password=True,
+            info="Your Bright Data API token from account settings",
+            placeholder="Enter your API token...",
         ),
         StrInput(
             name="query",
-            display_name="Search Query",
-            info="The search query to execute",
-            required=True,
+            display_name="🔍 Search Query",
+            info="The search term or phrase to look for",
+            placeholder="Enter your search query...",
+            tool_mode=True,
         ),
         DropdownInput(
             name="engine",
-            display_name="Search Engine",
+            display_name="🌐 Search Engine",
             options=["google", "bing", "yandex"],
             value="google",
-            info="Choose which search engine to use",
+            info="Choose which search engine to use for the search",
         ),
         StrInput(
             name="zone_name",
