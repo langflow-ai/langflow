@@ -74,9 +74,9 @@ class NotifyComponent(Component):
                 self.update_ctx({self.context_key: current_data})
             else:
                 self.update_ctx({self.context_key: input_value})
+            self.status = input_value
         else:
             self.status = "No record provided."
-        self.status = input_value
         self._vertex.is_state = True
         self.graph.activate_state_vertices(name=self.context_key, caller=self._id)
         return cast(Data, input_value)
