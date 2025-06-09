@@ -48,8 +48,7 @@ class URLComponent(Component):
         MessageTextInput(
             name="urls",
             display_name="URLs",
-            info=
-            "Enter one or more URLs to crawl recursively, by clicking the '+' button.",
+            info="Enter one or more URLs to crawl recursively, by clicking the '+' button.",
             is_list=True,
             tool_mode=True,
             placeholder="Enter a URL...",
@@ -59,12 +58,13 @@ class URLComponent(Component):
         SliderInput(
             name="max_depth",
             display_name="Depth",
-            info=
-            ("Controls how many 'clicks' away from the initial page the crawler will go:\n"
-             "- depth 1: only the initial page\n"
-             "- depth 2: initial page + all pages linked directly from it\n"
-             "- depth 3: initial page + direct links + links found on those direct link pages\n"
-             "Note: This is about link traversal, not URL path depth."),
+            info=(
+                "Controls how many 'clicks' away from the initial page the crawler will go:\n"
+                "- depth 1: only the initial page\n"
+                "- depth 2: initial page + all pages linked directly from it\n"
+                "- depth 3: initial page + direct links + links found on those direct link pages\n"
+                "Note: This is about link traversal, not URL path depth."
+            ),
             value=DEFAULT_MAX_DEPTH,
             range_spec=RangeSpec(min=1, max=5, step=1),
             required=False,
@@ -77,10 +77,10 @@ class URLComponent(Component):
         BoolInput(
             name="prevent_outside",
             display_name="Prevent Outside",
-            info=
-            ("If enabled, only crawls URLs within the same domain as the root URL. "
-             "This helps prevent the crawler from going to external websites."
-             ),
+            info=(
+                "If enabled, only crawls URLs within the same domain as the root URL. "
+                "This helps prevent the crawler from going to external websites."
+            ),
             value=True,
             required=False,
             advanced=True,
@@ -88,9 +88,10 @@ class URLComponent(Component):
         BoolInput(
             name="use_async",
             display_name="Use Async",
-            info=
-            ("If enabled, uses asynchronous loading which can be significantly faster "
-             "but might use more system resources."),
+            info=(
+                "If enabled, uses asynchronous loading which can be significantly faster "
+                "but might use more system resources."
+            ),
             value=True,
             required=False,
             advanced=True,
@@ -98,8 +99,7 @@ class URLComponent(Component):
         DropdownInput(
             name="format",
             display_name="Output Format",
-            info=
-            "Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.",
+            info="Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.",
             options=["Text", "HTML"],
             value=DEFAULT_FORMAT,
             advanced=True,
@@ -130,18 +130,14 @@ class URLComponent(Component):
                     "description": "Header value",
                 },
             ],
-            value=[{
-                "key": "User-Agent",
-                "value": get_settings_service().settings.user_agent
-            }],
+            value=[{"key": "User-Agent", "value": get_settings_service().settings.user_agent}],
             advanced=True,
             input_types=["DataFrame"],
         ),
         BoolInput(
             name="filter_text_html",
             display_name="Filter Text/HTML",
-            info=
-            "If enabled, filters out text/css content type from the results.",
+            info="If enabled, filters out text/css content type from the results.",
             value=True,
             required=False,
             advanced=True,
@@ -173,12 +169,8 @@ class URLComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Extracted Pages ",
-               name="page_results",
-               method="fetch_content"),
-        Output(display_name="Raw Content",
-               name="raw_results",
-               method="fetch_content_as_message"),
+        Output(display_name="Extracted Pages ", name="page_results", method="fetch_content"),
+        Output(display_name="Raw Content", name="raw_results", method="fetch_content_as_message"),
     ]
 
     @staticmethod
@@ -224,12 +216,8 @@ class URLComponent(Component):
         Returns:
             RecursiveUrlLoader: Configured loader instance
         """
-        headers_dict = {
-            header["key"]: header["value"]
-            for header in self.headers
-        }
-        extractor = (lambda x: x) if self.format == "HTML" else (
-            lambda x: BeautifulSoup(x, "lxml").get_text())
+        headers_dict = {header["key"]: header["value"] for header in self.headers}
+        extractor = (lambda x: x) if self.format == "HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
 
         return RecursiveUrlLoader(
             url=url,
@@ -242,8 +230,7 @@ class URLComponent(Component):
             check_response_status=self.check_response_status,
             continue_on_failure=self.continue_on_failure,
             base_url=url,  # Add base_url to ensure consistent domain crawling
-            autoset_encoding=self.
-            autoset_encoding,  # Enable automatic encoding detection
+            autoset_encoding=self.autoset_encoding,  # Enable automatic encoding detection
             exclude_dirs=[],  # Allow customization of excluded directories
             link_regex=None,  # Allow customization of link filtering
         )
@@ -258,9 +245,7 @@ class URLComponent(Component):
             ValueError: If no valid URLs are provided or if there's an error loading documents
         """
         try:
-            urls = list(
-                {self.ensure_url(url)
-                 for url in self.urls if url.strip()})
+            urls = list({self.ensure_url(url) for url in self.urls if url.strip()})
             logger.info(f"URLs: {urls}")
             if not urls:
                 msg = "No valid URLs provided."
@@ -282,8 +267,7 @@ class URLComponent(Component):
                     all_docs.extend(docs)
 
                 except requests.exceptions.RequestException as e:
-                    logger.exception(
-                        f"Error loading documents from {url}: {e}")
+                    logger.exception(f"Error loading documents from {url}: {e}")
                     continue
 
             if not all_docs:
@@ -291,14 +275,17 @@ class URLComponent(Component):
                 raise ValueError(msg)
 
             # data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
-            data = [{
-                "text": safe_convert(doc.page_content, clean_data=True),
-                "url": doc.metadata.get("source", ""),
-                "title": doc.metadata.get("title", ""),
-                "description": doc.metadata.get("description", ""),
-                "content_type": doc.metadata.get("content_type", ""),
-                "language": doc.metadata.get("language", ""),
-            } for doc in all_docs]
+            data = [
+                {
+                    "text": safe_convert(doc.page_content, clean_data=True),
+                    "url": doc.metadata.get("source", ""),
+                    "title": doc.metadata.get("title", ""),
+                    "description": doc.metadata.get("description", ""),
+                    "content_type": doc.metadata.get("content_type", ""),
+                    "language": doc.metadata.get("language", ""),
+                }
+                for doc in all_docs
+            ]
         except Exception as e:
             error_msg = e.message if hasattr(e, "message") else e
             msg = f"Error loading documents: {error_msg!s}"
@@ -313,5 +300,4 @@ class URLComponent(Component):
     def fetch_content_as_message(self) -> Message:
         """Convert the documents to a Message."""
         url_contents = self.fetch_url_contents()
-        return Message(text="\n\n".join([x["text"] for x in url_contents]),
-                       data={"data": url_contents})
+        return Message(text="\n\n".join([x["text"] for x in url_contents]), data={"data": url_contents})
