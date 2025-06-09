@@ -7,9 +7,9 @@ from zipfile import ZipFile, is_zipfile
 
 import pandas as pd
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
@@ -174,7 +174,7 @@ class BaseFileComponent(Component, ABC):
     ]
 
     _base_outputs = [
-        Output(display_name="Loaded Files", name="dataframe", method="load_dataframe"),
+        Output(display_name="Loaded Files", name="dataframe", method="load_files"),
     ]
 
     @abstractmethod
@@ -225,7 +225,7 @@ class BaseFileComponent(Component, ABC):
                     else:
                         file.path.unlink()
 
-    def load_files(self) -> list[Data]:
+    def load_files_core(self) -> list[Data]:
         """Load files and return as Data objects.
 
         Returns:
@@ -236,13 +236,13 @@ class BaseFileComponent(Component, ABC):
             return [Data()]
         return data_list
 
-    def load_dataframe(self) -> DataFrame:
+    def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.
 
         Returns:
             DataFrame: DataFrame containing all file data
         """
-        data_list = self.load_files()
+        data_list = self.load_files_core()
         if not data_list:
             return DataFrame()
 

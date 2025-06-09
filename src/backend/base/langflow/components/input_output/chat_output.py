@@ -6,13 +6,12 @@ from fastapi.encoders import jsonable_encoder
 
 from langflow.base.io.chat import ChatComponent
 from langflow.helpers.data import safe_convert
-from langflow.inputs import BoolInput
-from langflow.inputs.inputs import HandleInput
-from langflow.io import DropdownInput, MessageTextInput, Output
+from langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.schema.properties import Source
+from langflow.template.field.base import Output
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
@@ -30,7 +29,7 @@ class ChatOutput(ChatComponent):
     inputs = [
         HandleInput(
             name="input_value",
-            display_name="Text",
+            display_name="Inputs",
             info="Message to be passed as output.",
             input_types=["Data", "DataFrame", "Message"],
             required=True,
@@ -98,7 +97,7 @@ class ChatOutput(ChatComponent):
     ]
     outputs = [
         Output(
-            display_name="Message",
+            display_name="Output Message",
             name="message",
             method="message_response",
         ),
