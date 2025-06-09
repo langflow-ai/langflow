@@ -56,15 +56,15 @@ class NotifyComponent(Component):
             msg = "Notify component must be used in a graph."
             raise ValueError(msg)
         input_value: Data | str | dict | None = self.input_value
-        if input_value and not isinstance(input_value, Data):
+        if input_value is None:
+            input_value = Data(text="")
+        elif not isinstance(input_value, Data):
             if isinstance(input_value, str):
                 input_value = Data(text=input_value)
             elif isinstance(input_value, dict):
                 input_value = Data(data=input_value)
             else:
                 input_value = Data(text=str(input_value))
-        elif not input_value:
-            input_value = Data(text="")
         if input_value:
             if self.append:
                 current_data = self.ctx.get(self.context_key, [])
