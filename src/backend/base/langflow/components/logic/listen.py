@@ -1,6 +1,5 @@
 from langflow.custom import Component
 from langflow.io import Output, StrInput
-from langflow.schema import Data
 from langflow.schema.data import Data
 
 
