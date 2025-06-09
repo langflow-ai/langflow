@@ -51,3 +51,23 @@ Be aware of the following considerations when using voice mode:
 * Voice mode does not use the instructions in the Agent component's **Agent Instructions** field, because your spoken instructions override this value.
 * Voice mode only maintains context within the conversation session you are currently in.
 If you exit a conversation and close the **Playground**, your conversational context is not available in the next chat session.
+
+## Voice mode endpoints
+
+Langflow exposes OpenAI Realtime API-compatible websocket endpoints for your flows. You can build voice applications against these endpoints the same way you would build against [OpenAI Realtime API websockets](https://platform.openai.com/docs/guides/realtime#connect-with-websockets).
+
+Both endpoints require an [OpenAI API key](https://platform.openai.com/docs/overview) for authentication, and support an optional [ElevenLabs](https://elevenlabs.io) integration.
+
+Langflow exposes two WebSockets endpoints:
+
+* [/ws/flow_as_tool/](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/voice_mode.py#L688) - A connection is established to OpenAI Realtime voice, and flows are invoked as tools by the [OpenAI Realtime model](https://platform.openai.com/docs/guides/realtime-conversations#handling-audio-with-websockets).
+This approach is ideal for low latency applications, but is less deterministic since the OpenAI voice-to-voice model determines when to call your flow.
+
+* [ws/flow_tts/](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/voice_mode.py#L1117) - Audio is converted to text by [OpenAI Realtime voice transcription](https://platform.openai.com/docs/guides/realtime-transcription).
+The flow is invoked directly for each transcript.
+This approach is more deterministic but has higher latency.
+This is the mode used in the Langflow playground.
+
+Required Parameters:
+- `flow_id` (path parameter): The ID of the flow to be used as a tool
+- `session_id` (path parameter, optional): A unique identifier for the conversation session. If not provided, one will be automatically generated.
