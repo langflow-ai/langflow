@@ -1434,8 +1434,8 @@
                 "method": "build_embeddings",
                 "name": "embeddings",
                 "required_inputs": [
-                  "base_url",
-                  "model"
+                  "aiml_api_key",
+                  "model_name"
                 ],
                 "selected": "Embeddings",
                 "tool_mode": true,
@@ -1970,8 +1970,8 @@
                 "method": "build_embeddings",
                 "name": "embeddings",
                 "required_inputs": [
-                  "base_url",
-                  "model"
+                  "aiml_api_key",
+                  "model_name"
                 ],
                 "selected": "Embeddings",
                 "tool_mode": true,
