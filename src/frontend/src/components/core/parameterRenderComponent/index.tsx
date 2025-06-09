@@ -10,6 +10,7 @@ import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
 import ToolsComponent from "./components/ToolsComponent";
 import DictComponent from "./components/dictComponent";
+import DirectoryComponent from "./components/directoryComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
 import InputFileComponent from "./components/inputFileComponent";
@@ -180,6 +181,10 @@ export function ParameterRenderComponent({
             tempFile={templateData.temp_file ?? true}
             id={`inputfile_${id}`}
           />
+        );
+      case "directory":
+        return (
+          <DirectoryComponent {...baseInputProps} id={`directory_${id}`} />
         );
       case "prompt":
         return (
