@@ -1,15 +1,11 @@
 from urllib.parse import urlparse
 
+from pypdf import PdfReader
+
 from langflow.base.data import BaseFileComponent
-from langflow.io import (
-    BoolInput,
-    DropdownInput,
-    FloatInput,
-    IntInput,
-    MessageTextInput,
-    SecretStrInput,
-)
-from langflow.schema import Data
+from langflow.base.data.base_file import BaseFileComponent
+from langflow.inputs.inputs import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.schema.data import Data
 
 
 class NvidiaIngestComponent(BaseFileComponent):
@@ -67,6 +63,13 @@ class NvidiaIngestComponent(BaseFileComponent):
             info="Extract images from document",
             value=True,
         ),
+        BoolInput(
+            name="extract_infographics",
+            display_name="Extract Infographics",
+            info="Extract infographics from document",
+            value=False,
+            advanced=True,
+        ),
         DropdownInput(
             name="text_depth",
             display_name="Text Depth",
@@ -104,7 +107,7 @@ class NvidiaIngestComponent(BaseFileComponent):
             display_name="Filter Images",
             info="Filter images (see advanced options for filtering criteria).",
             advanced=True,
-            value=True,
+            value=False,
         ),
         IntInput(
             name="min_image_size",
@@ -141,6 +144,13 @@ class NvidiaIngestComponent(BaseFileComponent):
             advanced=True,
             value=True,
         ),
+        BoolInput(
+            name="high_resolution",
+            display_name="High Resolution (PDF only)",
+            info=("Process pdf in high-resolution mode for better quality extraction from scanned pdf."),
+            advanced=True,
+            value=False,
+        ),
     ]
 
     outputs = [
@@ -161,6 +171,17 @@ class NvidiaIngestComponent(BaseFileComponent):
             err_msg = "No files to process."
             self.log(err_msg)
             raise ValueError(err_msg)
+
+        # Check if all files are PDFs when high resolution mode is enabled
+        if self.high_resolution:
+            for file in file_list:
+                try:
+                    with file.path.open("rb") as f:
+                        PdfReader(f)
+                except Exception as exc:
+                    error_msg = "High-resolution mode only supports valid PDF files."
+                    self.log(error_msg)
+                    raise ValueError(error_msg) from exc
 
         file_paths = [str(file.path) for file in file_list]
 
@@ -196,7 +217,9 @@ class NvidiaIngestComponent(BaseFileComponent):
                     extract_tables=self.extract_tables,
                     extract_charts=self.extract_charts,
                     extract_images=self.extract_images,
+                    extract_infographics=self.extract_infographics,
                     text_depth=self.text_depth,
+                    **({"extract_method": "nemoretriever_parse"} if self.high_resolution else {}),
                 )
             )
 

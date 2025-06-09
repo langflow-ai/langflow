@@ -9,7 +9,7 @@ from langflow.base.models.model_input_constants import (
     MODELS_METADATA,
 )
 from langflow.base.models.model_utils import get_model_name
-from langflow.components.helpers import CurrentDateComponent
+from langflow.components.helpers.current_date import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from langflow.custom.custom_component.component import _get_component_toolkit

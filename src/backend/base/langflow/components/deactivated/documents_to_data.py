@@ -1,7 +1,7 @@
 from langchain_core.documents import Document
 
-from langflow.custom import CustomComponent
-from langflow.schema import Data
+from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.schema.data import Data
 
 
 class DocumentsToDataComponent(CustomComponent):

@@ -8,7 +8,7 @@ from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 from langflow.schema.serialize import UUIDstr
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.user import User
+    from langflow.services.database.models.user.model import User
 
 
 def utc_now():
