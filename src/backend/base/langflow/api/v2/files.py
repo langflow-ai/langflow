@@ -173,7 +173,7 @@ async def get_file_by_name(
         stmt = select(UserFile).where(UserFile.user_id == current_user.id).where(UserFile.name == file_name)
         result = await session.exec(stmt)
 
-        return result.first() or None
+        return result.first()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching file: {e}") from e
 
