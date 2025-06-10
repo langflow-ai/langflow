@@ -41,7 +41,7 @@ async def get_server_list(
     settings_service=Depends(get_settings_service),
 ):
     # Read the server configuration from a file using the files api
-    server_config_file = await get_file_by_name(current_user, session, file_name=MCP_SERVERS_FILE)
+    server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
 
     # If the file does not exist, create a new one with an empty configuration
     if not server_config_file:
@@ -52,7 +52,7 @@ async def get_server_list(
             storage_service=storage_service,
             settings_service=settings_service,
         )
-        server_config_file = await get_file_by_name(current_user, session, file_name=MCP_SERVERS_FILE)
+        server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
 
     # Download the server configuration file content
     server_config = await download_file(
@@ -164,7 +164,7 @@ async def update_server(
         server_list["mcpServers"][server_name] = server_config
 
     # Remove the existing file
-    server_config_file = await get_file_by_name(current_user, session, file_name=MCP_SERVERS_FILE)
+    server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
     await delete_file(server_config_file.id, current_user, session, storage_service)
 
     # Upload the updated server configuration

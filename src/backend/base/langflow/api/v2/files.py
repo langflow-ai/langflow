@@ -162,11 +162,10 @@ async def upload_user_file(
     return UploadFileResponse(id=new_file.id, name=new_file.name, path=Path(new_file.path), size=new_file.size)
 
 
-@router.get("/{file_name}", status_code=HTTPStatus.OK)
 async def get_file_by_name(
+    file_name: str,  # The name of the file to search for
     current_user: CurrentActiveUser,
     session: DbSession,
-    file_name: str,  # The name of the file to search for
 ) -> UserFile | None:
     """Get the file associated with a given file name for the current user."""
     try:
@@ -353,6 +352,7 @@ async def download_file(
 
         # Get file stream
         file_stream = await storage_service.get_file(flow_id=str(current_user.id), file_name=file_name)
+
         if file_stream is None:
             raise HTTPException(status_code=404, detail="File stream not available")
 
