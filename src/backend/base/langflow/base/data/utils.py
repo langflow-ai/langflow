@@ -88,7 +88,6 @@ def retrieve_file_paths(
     paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
     return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
-
 def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
     # Use the partition function to load the file
     from unstructured.partition.auto import partition
@@ -107,7 +106,6 @@ def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | Non
     metadata["file_path"] = file_path
     return Data(text=text, data=metadata)
 
-
 def read_text_file(file_path: str) -> str:
     file_path_ = Path(file_path)
     raw_data = file_path_.read_bytes()
@@ -119,7 +117,7 @@ def read_text_file(file_path: str) -> str:
 
     return file_path_.read_text(encoding=encoding)
 
-
+"""
 def read_docx_file(file_path: str) -> str:
     from docx import Document
 
@@ -165,34 +163,125 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
         return None
 
     return Data(data={"file_path": file_path, "text": text})
+"""
 
+def convert_json_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
+    _text = read_text_file(file_path=file_path)
+    
+    loaded_json = orjson.loads(_text)
+    if isinstance(loaded_json, dict):
+        loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
+    elif isinstance(loaded_json, list):
+        loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
+        text = orjson.dumps(loaded_json).decode("utf-8")
+    return Data(data={"file_path": file_path, "text": text})    
 
-# ! Removing unstructured dependency until
-# ! 3.12 is supported
-# def get_elements(
-#     file_paths: List[str],
-#     silent_errors: bool,
-#     max_concurrency: int,
-#     use_multithreading: bool,
-# ) -> List[Optional[Data]]:
-#     if use_multithreading:
-#         data = parallel_load_data(file_paths, silent_errors, max_concurrency)
-#     else:
-#         data = [partition_file_to_data(file_path, silent_errors) for file_path in file_paths]
-#     data = list(filter(None, data))
-#     return data
+def convert_yaml_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
+    _text = read_text_file(file_path=file_path)
+    text = yaml.safe_load(_text)
+    
+    return Data(data={"file_path": file_path, "text": text})
 
+def convert_xml_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
+    _text = read_text_file(file_path=file_path)
+
+    xml_element = ElementTree.fromstring(_text)
+    text = ElementTree.tostring(xml_element, encoding="unicode")        
+    return Data(data={"file_path": file_path, "text": text})
+
+def convert_pdf_to_text(file_path: str,
+                        do_table_structure:bool = False,
+                        do_picture_classification: bool = False
+                        silent_errors: bool) -> Data | None:
+
+    try:
+        # FIXME: optimization could be to "cache" the converters ...
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.images_scale = 2
+        pipeline_options.generate_page_images = False
+        pipeline_options.do_picture_classification = False
+        pipeline_options.do_ocr = False
+        pipeline_options.do_table_structure = False
+        pipeline_options.table_structure_options.do_cell_matching = False
+        pipeline_options.ocr_options.lang = ["es"]
+        pipeline_options.accelerator_options = AcceleratorOptions(
+            num_threads=1, device=AcceleratorDevice.AUTO
+        )
+        
+        converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(
+                    pipeline_options=pipeline_options
+                ),
+            }
+        )
+
+        result = converter.convert(source=Path(file_path))
+        markdown_text = result.document.export_to_markdown()
+        
+        return Data(data={"file_path": file_path, "text": markdown_text})
+    
+    except Exception as exc:
+        if not silent_errors:
+            log.error(exc.what())
+
+    return None
+    
+def convert_docx_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
+
+    try:
+        converter = DocumentConverter(allowed_formats=[InputFormat.DOCX])
+
+        result = converter.convert(source=Path(file_path))
+        markdown_text = result.document.export_to_markdown()
+        
+        return Data(data={"file_path": file_path, "text": markdown_text})
+    
+    except Exception as exc:
+        if not silent_errors:
+            log.error(exc.what())
+
+    return None
+
+def convert_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+    try:
+        if file_path.endswith(".json"):
+            return convert_json_to_text(file_path=file_path, *, silent_error=silent_error)
+        
+        elif file_path.endswith((".yaml", ".yml")):
+            return convert_yaml_to_text(file_path=file_path, *, silent_error=silent_error)
+        
+        elif file_path.endswith(".xml"):
+            return convert_xml_to_text(file_path=file_path, *, silent_error=silent_error)
+        
+        elif file_path.endswith(".pdf"):
+            return convert_pdf_to_text(file_path=file_path, *, silent_error=silent_error)
+
+        elif file_path.endswith(".docx"):
+            return convert_docx_to_text(file_path=file_path, *, silent_error=silent_error)
+        
+        else:
+            text = read_text_file(file_path)
+            
+    except Exception as e:
+        if not silent_errors:
+            msg = f"Error loading file {file_path}: {e}"
+            raise ValueError(msg) from e
+        return None
+
+    return None
+    
 
 def parallel_load_data(
     file_paths: list[str],
     *,
     silent_errors: bool,
     max_concurrency: int,
-    load_function: Callable = parse_text_file_to_data,
+    load_function: Callable = convert_file_to_data,
 ) -> list[Data | None]:
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
         loaded_files = executor.map(
-            lambda file_path: load_function(file_path, silent_errors=silent_errors),
+            lambda file_path: load_function(file_path, *, silent_errors=silent_errors),
             file_paths,
         )
     # loaded_files is an iterator, so we need to convert it to a list
