@@ -13,7 +13,7 @@ import anyio
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
 from loguru import logger
@@ -377,6 +377,12 @@ def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = Fals
         msg = f"Static files directory {static_files_dir} does not exist."
         raise RuntimeError(msg)
     app = create_app()
+    
+    # Add redirect from / to /flows before static files
+    @app.get("/")
+    async def redirect_to_flows():
+        return RedirectResponse(url="/flows")
+        
     if not backend_only and static_files_dir is not None:
         setup_static_files(app, static_files_dir)
     return app

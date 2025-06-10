@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PosixPath
 from shutil import copy2
 from typing import Any, Literal
 
@@ -410,7 +410,10 @@ class Settings(BaseSettings):
         if not value:
             value = [BASE_COMPONENTS_PATH]
             logger.debug("Setting default components path to components_path")
-        elif BASE_COMPONENTS_PATH not in value:
+        elif isinstance(value, PosixPath):
+            value = [str(value)]
+
+        if BASE_COMPONENTS_PATH not in value:
             value.append(BASE_COMPONENTS_PATH)
             logger.debug("Adding default components path to components_path")
 

@@ -83,6 +83,25 @@ def handle_sigterm(signum, frame):  # noqa: ARG001
     # Raise SystemExit to trigger graceful shutdown
     sys.exit(0)
 
+def handle_sigint(signum, frame):  # noqa: ARG001
+    """Handle SIGINT signal gracefully."""
+    logger.info("Received SIGINT signal. Performing graceful shutdown...")
+    # Raise SystemExit to trigger graceful shutdown
+    sys.exit(0)
+
+def wait_for_server_ready(host, port, protocol) -> None:
+    """Wait for the server to become ready by polling the health endpoint."""
+    status_code = 0
+    while status_code != httpx.codes.OK:
+        try:
+            status_code = httpx.get(
+                f"{protocol}://{host}:{port}/health", verify=host not in ("127.0.0.1", "localhost")
+            ).status_code
+        except HTTPError:
+            time.sleep(1)
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error while waiting for the server to become ready.")
+            time.sleep(1)
 
 @app.command()
 def run(
@@ -168,6 +187,7 @@ def run(
     """Run Langflow."""
     # Register SIGTERM handler
     signal.signal(signal.SIGTERM, handle_sigterm)
+    signal.signal(signal.SIGINT, handle_sigint)
 
     if env_file:
         load_dotenv(env_file, override=True)
@@ -198,6 +218,7 @@ def run(
             settings_service.auth_settings.set(arg, values[arg])
         logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
+    # Get final values from settings
     host = settings_service.settings.host
     port = settings_service.settings.port
     workers = settings_service.settings.workers
@@ -212,81 +233,48 @@ def run(
     static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
 
     app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
+
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
+    
+    protocol = "https" if ssl_cert_file_path and ssl_key_file_path else "http"
 
-    options = {
-        "bind": f"{host}:{port}",
-        "workers": get_number_of_workers(workers),
-        "timeout": worker_timeout,
-        "certfile": ssl_cert_file_path,
-        "keyfile": ssl_key_file_path,
-    }
-    protocol = "https" if options["keyfile"] and options["certfile"] else "http"
+    print(f"Running Langflow via uv run langflow run")
+    if platform.system() == "Windows":
+        # Windows doesn't support Gunicorn, use uvicorn directly
+        import uvicorn
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            log_level=log_level,
+            reload=False,
+            workers=get_number_of_workers(workers),
+            loop="asyncio",
+        )
+    else:
+        # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
+        from langflow.server import LangflowApplication
+        
+        options = {
+            "bind": f"{host}:{port}",
+            "workers": get_number_of_workers(workers),
+            "timeout": worker_timeout,
+            "certfile": ssl_cert_file_path,
+            "keyfile": ssl_key_file_path,
+        }
+        server = LangflowApplication(app, options)
+        webapp_process = Process(target=server.run)
+        webapp_process.start()
+        
+        # Wait for server to be ready
+        wait_for_server_ready(host, port, protocol)
 
-    # Define an env variable to know if we are just testing the server
-    if "pytest" in sys.modules:
-        return
-    process: Process | None = None
-    try:
-        if platform.system() == "Windows":
-            # Run using uvicorn on MacOS and Windows
-            # Windows doesn't support gunicorn
-            # MacOS requires an env variable to be set to use gunicorn
-            run_on_windows(host, port, log_level, options, app, protocol)
-        else:
-            # Run using gunicorn on Linux
-            process = run_on_mac_or_linux(host, port, log_level, options, app, protocol)
+        print_banner(host, port, protocol)   
+        # Handle browser opening after server starts
         if open_browser and not backend_only:
-            click.launch(f"http://{host}:{port}")
-        if process:
-            process.join()
-    except (KeyboardInterrupt, SystemExit) as e:
-        logger.info("Shutting down server...")
-        if process is not None:
-            process.terminate()
-            process.join(timeout=15)  # Wait up to 15 seconds for process to terminate
-            if process.is_alive():
-                logger.warning("Process did not terminate gracefully, forcing...")
-                process.kill()
-        raise typer.Exit(0) from e
-    except Exception as e:
-        logger.exception(e)
-        if process is not None:
-            process.terminate()
-        raise typer.Exit(1) from e
-
-
-def wait_for_server_ready(host, port, protocol) -> None:
-    """Wait for the server to become ready by polling the health endpoint."""
-    status_code = 0
-    while status_code != httpx.codes.OK:
-        try:
-            status_code = httpx.get(
-                f"{protocol}://{host}:{port}/health", verify=host not in ("127.0.0.1", "localhost")
-            ).status_code
-        except HTTPError:
-            time.sleep(1)
-        except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error while waiting for the server to become ready.")
-            time.sleep(1)
-
-
-def run_on_mac_or_linux(host, port, log_level, options, app, protocol):
-    webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
-    webapp_process.start()
-    wait_for_server_ready(host, port, protocol)
-
-    print_banner(host, port, protocol)
-    return webapp_process
-
-
-def run_on_windows(host, port, log_level, options, app, protocol) -> None:
-    """Run the Langflow server on Windows."""
-    print_banner(host, port, protocol)
-    run_langflow(host, port, log_level, options, app)
-
+            click.launch(f"{protocol}://{host}:{port}")
 
 def is_port_in_use(port, host="localhost"):
     """Check if a port is in use.
@@ -421,47 +409,6 @@ def print_banner(host: str, port: int, protocol: str) -> None:
     message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
 
     console.print(Panel.fit(message, border_style="#7528FC", padding=(1, 2)))
-
-
-def run_langflow(host, port, log_level, options, app) -> None:
-    """Run Langflow server on localhost."""
-    if platform.system() == "Windows":
-        import uvicorn
-
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level=log_level.lower(),
-            loop="asyncio",
-            ssl_keyfile=options["keyfile"],
-            ssl_certfile=options["certfile"],
-        )
-    else:
-        from langflow.server import LangflowApplication
-
-        server = LangflowApplication(app, options)
-
-        def graceful_shutdown(signum, frame):  # noqa: ARG001
-            """Gracefully shutdown the server when receiving SIGTERM."""
-            # Suppress click exceptions during shutdown
-            import click
-
-            click.echo = lambda *args, **kwargs: None  # noqa: ARG005
-
-            logger.info("Gracefully shutting down server...")
-            # For Gunicorn workers, we raise SystemExit to trigger graceful shutdown
-            raise SystemExit(0)
-
-        # Register signal handlers
-        signal.signal(signal.SIGTERM, graceful_shutdown)
-        signal.signal(signal.SIGINT, graceful_shutdown)
-
-        try:
-            server.run()
-        except (KeyboardInterrupt, SystemExit):
-            # Suppress the exception output
-            sys.exit(0)
 
 
 @app.command()
