@@ -143,7 +143,7 @@ export const nodeColorsName: { [char: string]: string } = {
   chains: "orange",
   list: "lime",
   agents: "purple",
-  BrightDataStructuredDataComponent: "BrightData",
+  BrightDataStructuredDataEnhancedComponent: "BrightData",
   BrightDataSearchEngineComponent: "BrightData", 
   BrightDataWebScraperComponent: "BrightData",
   tools: "cyan",
