@@ -87,19 +87,48 @@ Before you install and run Langflow OSS, be sure you have the following items.
 
 Install and run Langflow OSS with [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-1. To install Langflow, use the following command:
+1. To install Langflow, do the following.
+
+<Tabs groupId="os">
+  <TabItem value="macOS" label="macOS">
 
 ```bash
 uv pip install langflow
 ```
 
-2. To run Langflow, use the following command:
+  </TabItem>
+  <TabItem value="Windows" label="Windows">
+  :::important
+  Windows installations of Langflow OSS require a C++ compiler, such as [Visual Studio](https://visualstudio.microsoft.com/downloads/), that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or visit the Visual Studio download link above.
+  :::
+  1. Clone the Langflow repository.
+  ```
+  git clone https://github.com/langflow-ai/langflow
+  ```
+  2. Create a virtual environment in the repository root.
+  ```
+  uv venv 
+  ```
+  3. Install
+
+  </TabItem>
+  <TabItem value="Linux" label="Linux">
+
+    ```bash
+    uv pip install langflow
+    ```
+  </TabItem>
+
+</Tabs>
+
+
+After installation, to run Langflow, use the following command:
 
 ```bash
 uv run langflow run
 ```
 
-3. To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
+To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
 
 After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
 
