@@ -89,6 +89,7 @@ def wait_for_server_ready(host, port, protocol) -> None:
             logger.opt(exception=True).debug("Error while waiting for the server to become ready.")
             time.sleep(1)
 
+
 @app.command()
 def run(
     *,
@@ -107,7 +108,11 @@ def run(
         help="Path to the .env file containing environment variables.",
         show_default=False,
     ),
-    log_level: str | None = typer.Option(None, help="Logging level. One of: [DEBUG, INFO, WARNING, ERROR, CRITICAL]. Defaults to INFO.", show_default=False),
+    log_level: str | None = typer.Option(
+        None,
+        help="Logging level. One of: [DEBUG, INFO, WARNING, ERROR, CRITICAL]. Defaults to INFO.",
+        show_default=False,
+    ),
     log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
     cache: str | None = typer.Option(  # noqa: ARG001
         None,
@@ -227,13 +232,14 @@ def run(
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
-    
+
     protocol = "https" if ssl_cert_file_path and ssl_key_file_path else "http"
 
     if platform.system() == "Windows":
         # Windows doesn't support Gunicorn, use uvicorn directly
         print_banner(host, port, protocol)
         import uvicorn
+
         uvicorn.run(
             app,
             host=host,
@@ -246,7 +252,7 @@ def run(
     else:
         # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
         from langflow.server import LangflowApplication
-        
+
         options = {
             "bind": f"{host}:{port}",
             "workers": get_number_of_workers(workers),
@@ -259,11 +265,11 @@ def run(
 
         webapp_process = Process(target=server.run)
         webapp_process.start()
-        
+
         # Wait for server to be ready
         wait_for_server_ready(host, port, protocol)
 
-        print_banner(host, port, protocol)   
+        print_banner(host, port, protocol)
         # Handle browser opening after server starts
         if open_browser and not backend_only:
             click.launch(f"{protocol}://{host}:{port}")
@@ -274,6 +280,7 @@ def run(
             webapp_process.terminate()
             webapp_process.join()
             raise typer.Exit(0)
+
 
 def is_port_in_use(port, host="localhost"):
     """Check if a port is in use.

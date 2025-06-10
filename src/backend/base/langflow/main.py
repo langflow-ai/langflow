@@ -199,7 +199,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             await asyncio.gather(*temp_dir_cleanups)
 
             logger.debug("Langflow shutdown complete")
-            logger.info("👋 See you next time!")  # noqa: T201
+            logger.info("👋 See you next time!")
 
     return lifespan
 
@@ -379,12 +379,12 @@ def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = Fals
         msg = f"Static files directory {static_files_dir} does not exist."
         raise RuntimeError(msg)
     app = create_app()
-    
+
     # Add redirect from / to /flows before static files
     @app.get("/")
     async def redirect_to_flows():
         return RedirectResponse(url="/flows")
-        
+
     if not backend_only and static_files_dir is not None:
         setup_static_files(app, static_files_dir)
     return app
