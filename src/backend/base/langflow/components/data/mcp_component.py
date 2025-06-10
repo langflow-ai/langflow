@@ -245,7 +245,7 @@ class MCPToolsComponent(Component):
                 for key, value in list(build_config.items()):
                     if key not in self.default_keys and isinstance(value, dict) and "show" in value:
                         build_config[key]["show"] = not field_value
-                if field_value == False:
+                if not field_value:
                     build_config["tool"]["options"] = [tool.name for tool in self.tools]
                     await self._update_tool_config(build_config, build_config["tool"]["value"])
 
