@@ -553,8 +553,8 @@
               }
             }
           },
-          "type": "ChatInput",
-          "selected_output": "message"
+          "selected_output": "message",
+          "type": "ChatInput"
         },
         "dragging": false,
         "height": 234,
@@ -735,8 +735,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt",
-          "selected_output": "prompt"
+          "selected_output": "prompt",
+          "type": "Prompt"
         },
         "dragging": false,
         "height": 433,
@@ -941,8 +941,8 @@
               }
             }
           },
-          "type": "SplitText",
-          "selected_output": "chunks"
+          "selected_output": "chunks",
+          "type": "SplitText"
         },
         "dragging": false,
         "height": 475,
@@ -1818,8 +1818,8 @@
             },
             "tool_mode": false
           },
-          "type": "OpenAIEmbeddings",
-          "selected_output": "embeddings"
+          "selected_output": "embeddings",
+          "type": "OpenAIEmbeddings"
         },
         "dragging": false,
         "height": 320,
@@ -2354,8 +2354,8 @@
             },
             "tool_mode": false
           },
-          "type": "OpenAIEmbeddings",
-          "selected_output": "embeddings"
+          "selected_output": "embeddings",
+          "type": "OpenAIEmbeddings"
         },
         "dragging": false,
         "height": 320,
@@ -2621,8 +2621,8 @@
             },
             "tool_mode": false
           },
-          "type": "File",
-          "selected_output": "dataframe"
+          "selected_output": "dataframe",
+          "type": "File"
         },
         "dragging": false,
         "height": 367,
@@ -3116,9 +3116,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
-          "type": "OpenAIModel",
-          "selected_output": "text_output"
+          "type": "OpenAIModel"
         },
         "dragging": false,
         "id": "OpenAIModel-9bWp2",
@@ -3292,9 +3292,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "parsed_text",
           "showNode": true,
-          "type": "parser",
-          "selected_output": "parsed_text"
+          "type": "parser"
         },
         "dragging": false,
         "id": "parser-Qet8H",
@@ -3355,7 +3355,6 @@
             "metadata": {},
             "minimized": false,
             "output_types": [],
-            "selected_output": "dataframe",
             "outputs": [
               {
                 "allows_loop": false,
@@ -3408,6 +3407,7 @@
               }
             ],
             "pinned": false,
+            "selected_output": "dataframe",
             "template": {
               "_type": "Component",
               "advanced_search_filter": {
@@ -4070,9 +4070,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "dataframe",
           "showNode": true,
-          "type": "AstraDB",
-          "selected_output": "dataframe"
+          "type": "AstraDB"
         },
         "dragging": false,
         "id": "AstraDB-tVkFw",
