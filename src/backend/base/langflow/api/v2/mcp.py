@@ -54,6 +54,10 @@ async def get_server_list(
         )
         server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
 
+    # Make sure we have it now
+    if not server_config_file:
+        raise HTTPException(status_code=500, detail="Server configuration file not found.")
+
     # Download the server configuration file content
     server_config = await download_file(
         server_config_file.id,
@@ -165,7 +169,9 @@ async def update_server(
 
     # Remove the existing file
     server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
-    await delete_file(server_config_file.id, current_user, session, storage_service)
+
+    if server_config_file:
+        await delete_file(server_config_file.id, current_user, session, storage_service)
 
     # Upload the updated server configuration
     await upload_server_config(

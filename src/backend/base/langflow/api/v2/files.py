@@ -166,14 +166,14 @@ async def get_file_by_name(
     file_name: str,  # The name of the file to search for
     current_user: CurrentActiveUser,
     session: DbSession,
-) -> UserFile:
+) -> UserFile | None:
     """Get the file associated with a given file name for the current user."""
     try:
         # Fetch from the UserFile table
         stmt = select(UserFile).where(UserFile.user_id == current_user.id).where(UserFile.name == file_name)
         result = await session.exec(stmt)
 
-        return result.first()
+        return result.first() or None
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching file: {e}") from e
 
