@@ -38,18 +38,27 @@ console = Console()
 
 app = typer.Typer(no_args_is_help=True)
 
-# Add a global variable to track the webapp process
+# Add global variables to track the webapp process and shutdown state
 webapp_process = None
+shutdown_in_progress = False
 
 
 def handle_sigterm(signum, frame):  # noqa: ARG001
     """Handle SIGTERM signal gracefully."""
+    global shutdown_in_progress
+    if shutdown_in_progress:
+        return  # Already shutting down, ignore
+    shutdown_in_progress = True
     logger.info("Received SIGTERM signal. Performing graceful shutdown...")
     _shutdown_webapp_process()
 
 
 def handle_sigint(signum, frame):  # noqa: ARG001
     """Handle SIGINT signal gracefully."""
+    global shutdown_in_progress
+    if shutdown_in_progress:
+        return  # Already shutting down, ignore
+    shutdown_in_progress = True
     logger.info("Received SIGINT signal. Performing graceful shutdown...")
     _shutdown_webapp_process()
 
@@ -65,7 +74,6 @@ def _shutdown_webapp_process():
             logger.warning("Process didn't terminate gracefully, killing it...")
             webapp_process.kill()
             webapp_process.join()
-    time.sleep(10)
     sys.exit(0)
 
 

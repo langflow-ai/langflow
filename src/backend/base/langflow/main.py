@@ -190,6 +190,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             if sync_flows_from_fs_task:
                 sync_flows_from_fs_task.cancel()
                 await asyncio.wait([sync_flows_from_fs_task])
+
             await teardown_services()
 
             await asyncio.sleep(0.1)  # let logger flush async logs
