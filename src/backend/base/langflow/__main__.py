@@ -232,6 +232,7 @@ def run(
 
     if platform.system() == "Windows":
         # Windows doesn't support Gunicorn, use uvicorn directly
+        print_banner(host, port, protocol)
         import uvicorn
         uvicorn.run(
             app,
