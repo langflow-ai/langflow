@@ -2,10 +2,10 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
-from langflow.custom import Component
-from langflow.inputs import DropdownInput, SecretStrInput, StrInput
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import DropdownInput, SecretStrInput, StrInput
 from langflow.io import MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 

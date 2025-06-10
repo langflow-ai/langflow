@@ -2,7 +2,7 @@ import asyncio
 
 from loguru import logger
 
-from langflow.custom.directory_reader import DirectoryReader
+from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 
 

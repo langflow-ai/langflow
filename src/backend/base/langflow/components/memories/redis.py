@@ -4,7 +4,7 @@ from langchain_community.chat_message_histories.redis import RedisChatMessageHis
 
 from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.field_typing.constants import Memory
-from langflow.inputs import IntInput, MessageTextInput, SecretStrInput, StrInput
+from langflow.inputs.inputs import IntInput, MessageTextInput, SecretStrInput, StrInput
 
 
 class RedisIndexChatMemory(LCChatMemoryComponent):
