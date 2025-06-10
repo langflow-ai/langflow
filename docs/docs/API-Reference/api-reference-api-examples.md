@@ -5,6 +5,7 @@ slug: /api-reference-api-examples
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
 
 This page provides examples and practices for managing Langflow using the Langflow API.
 

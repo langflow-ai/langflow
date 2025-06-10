@@ -5,7 +5,7 @@ slug: /components-memories
 
 # Memory components in Langflow
 
-Components in the **Memories** category are moved to [Bundles](/components-bundles) as of Langflow 1.5.
+Components in the **Memories** category are moved to [Bundles](/components-bundle-components) as of Langflow 1.5.
 
 **Bundles** are third-party components grouped by provider.
 
