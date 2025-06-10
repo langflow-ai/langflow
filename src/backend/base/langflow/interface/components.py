@@ -61,9 +61,6 @@ async def import_langflow_components():
     if not module_names:
         return {"components": modules_dict}
 
-    # Process modules in parallel using asyncio.to_thread
-    logger.debug(f"Processing {len(module_names)} modules in parallel")
-
     # Create tasks for parallel module processing
     tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
 
