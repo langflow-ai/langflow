@@ -55,7 +55,7 @@ withEventDeliveryModes(
     });
 
     // Read the image file as a binary string
-    const filePath = "src/frontend/tests/assets/chain.png";
+    const filePath = "tests/assets/chain.png";
     const fileContent = readFileSync(filePath, "base64");
 
     // Create the DataTransfer and File objects within the browser context
