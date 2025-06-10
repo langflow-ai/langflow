@@ -52,53 +52,6 @@ const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
 ));
 
-const HideShowButton = memo(
-  ({
-    disabled,
-    onClick,
-    hidden,
-    isToolMode,
-    title,
-  }: {
-    disabled: boolean;
-    onClick: () => void;
-    hidden: boolean;
-    isToolMode: boolean;
-    title: string;
-  }) => (
-    <Button
-      disabled={disabled}
-      unstyled
-      onClick={onClick}
-      data-testid={`input-inspection-${title.toLowerCase()}`}
-    >
-      <ShadTooltip
-        content={
-          disabled
-            ? "Connected outputs can't be hidden."
-            : hidden
-              ? "Show output"
-              : "Hide output"
-        }
-      >
-        <div>
-          <EyeIcon
-            hidden={hidden}
-            className={cn(
-              "icon-size",
-              disabled
-                ? "text-placeholder-foreground opacity-60"
-                : isToolMode
-                  ? "text-background hover:text-secondary-hover"
-                  : "text-placeholder-foreground hover:text-primary-hover",
-            )}
-          />
-        </div>
-      </ShadTooltip>
-    </Button>
-  ),
-);
-
 const InspectButton = memo(
   forwardRef(
     (
