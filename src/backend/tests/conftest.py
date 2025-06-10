@@ -64,6 +64,7 @@ def blockbuster(request):
                 "io.TextIOWrapper.read",
             ]:
                 bb.functions[func].can_block_in("importlib_metadata/__init__.py", "metadata")
+                # bb.functions[func].can_block_in("http/client.py", "_safe_read")
 
             (
                 bb.functions["os.stat"]
@@ -76,9 +77,10 @@ def blockbuster(request):
                 .can_block_in("langchain_core/runnables/utils.py", "get_function_nonlocals")
             )
 
-            for func in ["os.stat", "os.path.abspath", "os.scandir"]:
+            for func in ["os.stat", "os.path.abspath", "os.scandir", "os.listdir"]:
                 bb.functions[func].can_block_in("alembic/util/pyfiles.py", "load_python_file")
                 bb.functions[func].can_block_in("dotenv/main.py", "find_dotenv")
+                bb.functions[func].can_block_in("pkgutil.py", "_iter_file_finder_modules")
 
             for func in ["os.path.abspath", "os.scandir"]:
                 bb.functions[func].can_block_in("alembic/script/base.py", "_load_revisions")
@@ -90,10 +92,12 @@ def blockbuster(request):
                 bb.functions["os.path.abspath"]
                 .can_block_in("loguru/_better_exceptions.py", {"_get_lib_dirs", "_format_exception"})
                 .can_block_in("sqlalchemy/dialects/sqlite/pysqlite.py", "create_connect_args")
+                .can_block_in("botocore/__init__.py", "__init__")
             )
 
-            # Allow os.stat in pkgutil for component loading
-            bb.functions["os.stat"].can_block_in("pkgutil.py", "_iter_file_finder_modules")
+            bb.functions["socket.socket.connect"].can_block_in("urllib3/connection.py", "_new_conn")
+            bb.functions["ssl.SSLSocket.send"].can_block_in("ssl.py", "sendall")
+            bb.functions["ssl.SSLSocket.read"].can_block_in("ssl.py", "recv_into")
 
             yield bb
 
