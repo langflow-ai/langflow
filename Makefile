@@ -38,7 +38,6 @@ check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
 	@echo "$(GREEN)All required tools are installed.$(NC)"
-
 help: ## show this help message
 	@echo '----'
 	@grep -hE '^\S+:.*##' $(MAKEFILE_LIST) | \
