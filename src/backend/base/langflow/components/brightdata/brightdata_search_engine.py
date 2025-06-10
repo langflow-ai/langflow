@@ -1,10 +1,10 @@
-#brightdata_search_engine.py
+# brightdata_search_engine.py
 from langflow.custom import Component
 from langflow.inputs import SecretStrInput, StrInput, DropdownInput, MessageTextInput
 from langflow.template import Output
 from langflow.schema import Data
 from langflow.schema.message import Message
-from typing import List
+from typing import List, AsyncIterator, Iterator
 import requests
 import urllib.parse
 
@@ -60,12 +60,14 @@ class BrightDataSearchEngineComponent(Component):
     
     def get_query_from_input(self) -> str:
         """Extract query from the input, handling both Message and string types"""
-        if isinstance(self.query_input, Message):
-            return self.query_input.text.strip()
-        elif isinstance(self.query_input, str):
-            return self.query_input.strip()
+        # Langflow automatically converts inputs to appropriate types
+        # We just need to handle Message vs string cases
+        if hasattr(self.query_input, 'text'):
+            # It's a Message object
+            return str(self.query_input.text).strip()
         else:
-            return str(self.query_input).strip()
+            # It's already a string or can be converted to string
+            return str(self.query_input or "").strip()
     
     def search_web(self) -> Data:
         """Search the web using Bright Data's search engine scraping"""

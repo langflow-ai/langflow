@@ -1,4 +1,4 @@
-#brightdata_structured_data.py
+# brightdata_structured_data.py
 
 from loguru import logger
 
@@ -20,7 +20,7 @@ import json
 import time
 import re
 from urllib.parse import urlparse
-from typing import Dict, Tuple, Optional, Any, List
+from typing import Dict, Tuple, Optional, Any, List, Union
 
 
 class BrightDataStructuredDataEnhancedComponent(Component):
@@ -821,12 +821,14 @@ class BrightDataStructuredDataEnhancedComponent(Component):
     
     def get_url_from_input(self) -> str:
         """Extract URL from the input, handling both Message and string types"""
-        if isinstance(self.url_input, Message):
-            return self.url_input.text.strip()
-        elif isinstance(self.url_input, str):
-            return self.url_input.strip()
+        # Langflow automatically converts inputs to appropriate types
+        # We just need to handle Message vs string cases
+        if hasattr(self.url_input, 'text'):
+            # It's a Message object
+            return str(self.url_input.text).strip()
         else:
-            return str(self.url_input).strip()
+            # It's already a string or can be converted to string
+            return str(self.url_input or "").strip()
         
     def _prepare_dataset_payload(self, data_type: str, url: str, additional_params: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare payload for dataset based on its input requirements"""
@@ -987,7 +989,7 @@ class BrightDataStructuredDataEnhancedComponent(Component):
                         
                         # Handle snapshot response format - could also be dict or list
                         status = None
-                        final_data = None
+                        final_data: Union[Dict[str, Any], List[Any], None] = None
                         
                         if isinstance(snapshot_data, dict):
                             status = snapshot_data.get('status', 'unknown')

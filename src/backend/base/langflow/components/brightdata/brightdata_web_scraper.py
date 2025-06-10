@@ -1,17 +1,17 @@
-#brightdata_web_scraper.py
+# brightdata_web_scraper.py
 from langflow.custom import Component
 from langflow.inputs import SecretStrInput, StrInput, DropdownInput, MessageTextInput
 from langflow.template import Output
 from langflow.schema import Data
 from langflow.schema.message import Message
-from typing import Union
+from typing import Union, Any, AsyncIterator, Iterator
 import requests
 import json
 
 
 class BrightDataWebScraperComponent(Component):
     display_name = "Bright Data Web Scraper"
-    description = "Scrape the web with bot detection bypass amd unlocking tools powered bu Bright Data"
+    description = "Scrape the web with bot detection bypass and unlocking tools powered by Bright Data"
     icon = "BrightData"
     name = "BrightDataWebScraper"
 
@@ -62,12 +62,14 @@ class BrightDataWebScraperComponent(Component):
 
     def get_url_from_input(self) -> str:
         """Extract URL from the input, handling both Message and string types"""
-        if isinstance(self.url_input, Message):
-            return self.url_input.text.strip()
-        elif isinstance(self.url_input, str):
-            return self.url_input.strip()
+        # Langflow automatically converts inputs to appropriate types
+        # We just need to handle Message vs string cases
+        if hasattr(self.url_input, 'text'):
+            # It's a Message object
+            return str(self.url_input.text).strip()
         else:
-            return str(self.url_input).strip()
+            # It's already a string or can be converted to string
+            return str(self.url_input or "").strip()
 
     def scrape_content(self) -> Data:
         """Scrape content from the specified URL using Bright Data"""
@@ -136,7 +138,7 @@ class BrightDataWebScraperComponent(Component):
                 try:
                     error_detail = response.json()
                     error_msg += f" - {error_detail}"
-                except:
+                except Exception:
                     error_msg += f" - {response.text}"
                 
                 self._scraped_url = url
