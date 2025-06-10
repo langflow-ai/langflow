@@ -2,10 +2,10 @@ import asyncio
 import inspect
 import os
 import platform
-import sys
-import socket
-import time
 import signal
+import socket
+import sys
+import time
 import warnings
 from contextlib import suppress
 from pathlib import Path
@@ -41,15 +41,18 @@ app = typer.Typer(no_args_is_help=True)
 # Add a global variable to track the webapp process
 webapp_process = None
 
+
 def handle_sigterm(signum, frame):  # noqa: ARG001
     """Handle SIGTERM signal gracefully."""
     logger.info("Received SIGTERM signal. Performing graceful shutdown...")
     _shutdown_webapp_process()
 
+
 def handle_sigint(signum, frame):  # noqa: ARG001
     """Handle SIGINT signal gracefully."""
     logger.info("Received SIGINT signal. Performing graceful shutdown...")
     _shutdown_webapp_process()
+
 
 def _shutdown_webapp_process():
     """Gracefully shutdown the webapp process."""
@@ -64,6 +67,7 @@ def _shutdown_webapp_process():
             webapp_process.join()
     time.sleep(10)
     sys.exit(0)
+
 
 def get_number_of_workers(workers=None):
     if workers == -1 or workers is None:
@@ -205,7 +209,7 @@ def run(
 ) -> None:
     """Run Langflow."""
     global webapp_process
-    
+
     signal.signal(signal.SIGTERM, handle_sigterm)
     signal.signal(signal.SIGINT, handle_sigint)
 
