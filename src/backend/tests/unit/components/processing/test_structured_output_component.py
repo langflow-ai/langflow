@@ -292,7 +292,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             component.build_structured_output_base()
 
         # Verify the error message contains expected content
-        assert "max_tokens was reached" in str(exc_info.value)
+        assert "max_tokens or model output limit was reached" in str(exc_info.value)
 
     @pytest.mark.skipif(
         "OPENAI_API_KEY" not in os.environ,
