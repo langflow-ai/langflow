@@ -781,9 +781,9 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
-                "display_name": "Sender Type",
+                "display_name": "Sender",
                 "dynamic": false,
-                "info": "Filter by sender type.",
+                "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
                 "name": "sender",
                 "options": [
                   "Machine",
@@ -820,6 +820,31 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Finance Agent"
+              },
+              "sender_type": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "info": "Filter by sender type.",
+                "name": "sender_type",
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Machine and User"
               },
               "session_id": {
                 "_input_type": "MessageTextInput",
@@ -1448,9 +1473,9 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
-                "display_name": "Sender Type",
+                "display_name": "Sender",
                 "dynamic": false,
-                "info": "Filter by sender type.",
+                "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
                 "name": "sender",
                 "options": [
                   "Machine",
@@ -1487,6 +1512,31 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Analysis & Editor Agent"
+              },
+              "sender_type": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "info": "Filter by sender type.",
+                "name": "sender_type",
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Machine and User"
               },
               "session_id": {
                 "_input_type": "MessageTextInput",
@@ -2941,9 +2991,9 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
-                "display_name": "Sender Type",
+                "display_name": "Sender",
                 "dynamic": false,
-                "info": "Filter by sender type.",
+                "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
                 "name": "sender",
                 "options": [
                   "Machine",
@@ -2980,6 +3030,31 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "sender_type": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "info": "Filter by sender type.",
+                "name": "sender_type",
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Machine and User"
               },
               "session_id": {
                 "_input_type": "MessageTextInput",
