@@ -48,7 +48,7 @@ class VectaraSelfQueryRetrieverComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> Vectara:
         """Builds the Vectara Self Query Retriever."""
         try:
-            from langchain_community.vectorstores import Vectara
+            from langchain_community.vectorstores import Vectara  # noqa: F401
         except ImportError as e:
             msg = "Could not import Vectara. Please install it with `pip install langchain-community`."
             raise ImportError(msg) from e

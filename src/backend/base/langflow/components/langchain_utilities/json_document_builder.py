@@ -11,16 +11,12 @@
 
 # - **Document:** The Document containing the JSON object.
 
-from typing import TYPE_CHECKING
 
 from langchain_core.documents import Document
 
 from langflow.custom.custom_component.component import Component
 from langflow.io import HandleInput, StrInput
 from langflow.services.database.models.base import orjson_dumps
-
-if TYPE_CHECKING:
-    from langchain_core.documents import Document
 
 
 class JSONDocumentBuilder(Component):
