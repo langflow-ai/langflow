@@ -5181,12 +5181,12 @@
       "zoom": 0.6467573903452069
     }
   },
-  "description": "Template workflow to integrate the Nvidia RTX Remix Toolkit REST API and RTX Remix Documentation",
+  "description": "Template workflow to integrate the NVIDIA RTX Remix Toolkit REST API and RTX Remix Documentation",
   "endpoint_name": null,
   "id": "55bf6f1b-714a-4f93-b262-3d9862488be3",
   "is_component": false,
   "last_tested_version": "1.4.2",
-  "name": "Nvidia RTX Remix Template",
+  "name": "NVIDIA RTX Remix Template",
   "tags": [
     "agents"
   ]
