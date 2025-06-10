@@ -58,6 +58,7 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         sse_client.session = AsyncMock()
         return sse_client
 
+
 class TestMCPStdioClient:
     @pytest.fixture
     def stdio_client(self):
