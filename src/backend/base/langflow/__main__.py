@@ -2,9 +2,7 @@ import asyncio
 import inspect
 import os
 import platform
-import signal
 import socket
-import sys
 import time
 import warnings
 from contextlib import suppress
@@ -76,18 +74,6 @@ def set_var_for_macos_issue() -> None:
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
-
-def handle_sigterm(signum, frame):  # noqa: ARG001
-    """Handle SIGTERM signal gracefully."""
-    logger.info("Received SIGTERM signal. Performing graceful shutdown...")
-    # Raise SystemExit to trigger graceful shutdown
-    sys.exit(0)
-
-def handle_sigint(signum, frame):  # noqa: ARG001
-    """Handle SIGINT signal gracefully."""
-    logger.info("Received SIGINT signal. Performing graceful shutdown...")
-    # Raise SystemExit to trigger graceful shutdown
-    sys.exit(0)
 
 def wait_for_server_ready(host, port, protocol) -> None:
     """Wait for the server to become ready by polling the health endpoint."""
@@ -185,14 +171,13 @@ def run(
     ssl_key_file_path: str | None = typer.Option(None, help="Defines the SSL key file path.", show_default=False),
 ) -> None:
     """Run Langflow."""
-    # Register SIGTERM handler
-    signal.signal(signal.SIGTERM, handle_sigterm)
-    signal.signal(signal.SIGINT, handle_sigint)
+    logger.info("Initializing Langflow...")
 
     if env_file:
         load_dotenv(env_file, override=True)
 
     configure(log_level=log_level, log_file=log_file)
+
     logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
     set_var_for_macos_issue()
     settings_service = get_settings_service()
@@ -263,8 +248,10 @@ def run(
             "timeout": worker_timeout,
             "certfile": ssl_cert_file_path,
             "keyfile": ssl_key_file_path,
+            "log_level": log_level.lower(),
         }
         server = LangflowApplication(app, options)
+
         webapp_process = Process(target=server.run)
         webapp_process.start()
         
@@ -275,6 +262,13 @@ def run(
         # Handle browser opening after server starts
         if open_browser and not backend_only:
             click.launch(f"{protocol}://{host}:{port}")
+
+        try:
+            webapp_process.join()
+        except KeyboardInterrupt:
+            webapp_process.terminate()
+            webapp_process.join()
+            raise typer.Exit(0)
 
 def is_port_in_use(port, host="localhost"):
     """Check if a port is in use.
