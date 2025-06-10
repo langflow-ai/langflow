@@ -1651,7 +1651,7 @@
   "id": "5e867fb1-2ce2-481c-9114-aa381cdf1a79",
   "is_component": false,
   "last_tested_version": "1.4.2",
-  "name": "Financial Report Parser (1)",
+  "name": "Financial Report Parser",
   "tags": [
     "chatbots",
     "content-generation"
