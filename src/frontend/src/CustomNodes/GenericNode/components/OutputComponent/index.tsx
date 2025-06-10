@@ -60,8 +60,6 @@ export default function OutputComponent({
   const shouldShowDropdown =
     hasOutputs && !hasLoopOutput && !hasGroupOutputs && !isConditionalRouter;
 
-  console.log(outputs);
-
   return (
     <div>
       {shouldShowDropdown ? (
