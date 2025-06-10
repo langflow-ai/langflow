@@ -10,14 +10,6 @@ globs:
 alwaysApply: false
 ---
 
-
-# Frontend Development Guidelines
-
-## Purpose
-Guidelines for frontend development in Langflow, focusing on React/TypeScript UI components, build processes, and frontend testing.
-
----
-
 ## 1. Frontend Environment Setup
 
 ### Prerequisites
@@ -61,60 +53,7 @@ src/frontend/src/
 
 ---
 
-## 3. Component Icon Development
-
-### Adding Component Icons
-1. **Create Icon Directory:**
-   ```
-   src/frontend/src/icons/MyComponent/
-   ├── MyComponent.jsx      # SVG as React component
-   └── index.tsx           # Export with forwardRef
-   ```
-
-2. **SVG Component (`MyComponent.jsx`):**
-   ```jsx
-   const MyComponentSVG = (props) => (
-     <svg {...props}>
-       <path
-         fill={stringToBool(props.isdark) ? "#ffffff" : "#0A0A0A"}
-         d="M12 2L2 7l10 5 10-5-10-5z"
-       />
-     </svg>
-   );
-   export default MyComponentSVG;
-   ```
-
-3. **Index Export (`index.tsx`):**
-   ```tsx
-   import { useDarkStore } from "@/stores/darkStore";
-   import React, { forwardRef } from "react";
-   import MyComponentSVG from "./MyComponent";
-
-   export const MyComponentIcon = forwardRef<
-     SVGSVGElement,
-     React.PropsWithChildren<{}>
-   >((props, ref) => {
-     const isdark = useDarkStore((state) => state.dark).toString();
-     return <MyComponentSVG ref={ref} isdark={isdark} {...props} />;
-   });
-   ```
-
-4. **Register in Lazy Imports (`src/frontend/src/icons/lazyIconImports.ts`):**
-   ```ts
-   MyComponent: () =>
-     import("@/icons/MyComponent").then((mod) => ({
-       default: mod.MyComponentIcon
-     })),
-   ```
-
-### Icon Best Practices
-- **Light/Dark Support:** Always use `isdark` prop to switch colors
-- **Consistent Naming:** Icon name must match backend component `icon` attribute exactly
-- **Fallback:** Use [Lucide icons](mdc:https:/lucide.dev/icons) when custom icons don't exist
-
----
-
-## 4. Frontend Code Quality
+## 3. Frontend Code Quality
 
 ### Formatting
 ```bash
@@ -139,7 +78,7 @@ make tests_frontend  # Run frontend tests (requires additional setup)
 
 ---
 
-## 5. State Management
+## 4. State Management
 
 ### Zustand Stores
 ```typescript
@@ -176,7 +115,7 @@ export function MyComponent() {
 
 ---
 
-## 6. API Integration
+## 5. API Integration
 
 ### Service Functions
 ```typescript
@@ -223,7 +162,7 @@ export function useApi<T>(apiFunction: (...args: any[]) => Promise<T>) {
 
 ---
 
-## 7. React Flow Integration
+## 6. React Flow Integration
 
 ### Flow Graph Components
 ```typescript
@@ -298,7 +237,7 @@ export const ComponentNode = memo(({ data }: ComponentNodeProps) => {
 
 ---
 
-## 8. Styling with Tailwind
+## 7. Styling with Tailwind
 
 ### Component Styling
 ```typescript
@@ -354,7 +293,7 @@ export function useDarkMode() {
 
 ---
 
-## 9. Frontend Testing
+## 8. Frontend Testing
 
 ### Component Testing
 ```typescript
@@ -398,7 +337,7 @@ describe('FlowEditor', () => {
 
 ---
 
-## 10. Build and Deployment
+## 9. Build and Deployment
 
 ### Development Build
 ```bash
@@ -415,14 +354,11 @@ npm run build  # Creates dist/ directory
 - Frontend builds to `src/frontend/dist/`
 - Backend serves static files from this directory in production
 - `make init` includes frontend build step
-
 ---
 
 ## Frontend Development Checklist
 - [ ] Frontend service running with `make frontend`
 - [ ] Changes hot-reload correctly in browser
-- [ ] Custom icons follow light/dark mode patterns
-- [ ] Icons registered in `lazyIconImports.ts`
 - [ ] State management uses Zustand stores
 - [ ] API calls use proper error handling
 - [ ] Components styled with Tailwind CSS
@@ -430,3 +366,9 @@ npm run build  # Creates dist/ directory
 - [ ] Code formatted with `make format_frontend`
 - [ ] Linting passed with `make lint`
 - [ ] Changes tested in both light and dark mode
+
+- [ ] Components styled with Tailwind CSS
+- [ ] Dark mode support implemented where needed
+- [ ] Code formatted with `make format_frontend`
+- [ ] Changes tested in both light and dark mode
+
