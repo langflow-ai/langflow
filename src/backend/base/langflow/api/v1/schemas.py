@@ -14,7 +14,7 @@ from pydantic import (
 )
 
 from langflow.graph.schema import RunOutputs
-from langflow.schema import dotdict
+from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
 from langflow.serialization import constants as serialization_constants
@@ -22,8 +22,8 @@ from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.serialization.serialization import serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
-from langflow.services.database.models.flow import FlowCreate, FlowRead
-from langflow.services.database.models.user import UserRead
+from langflow.services.database.models.flow.model import FlowCreate, FlowRead
+from langflow.services.database.models.user.model import UserRead
 from langflow.services.settings.feature_flags import FeatureFlags
 from langflow.services.tracing.schema import Log
 

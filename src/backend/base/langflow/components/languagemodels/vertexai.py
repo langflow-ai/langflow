@@ -2,7 +2,7 @@ from typing import cast
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs import MessageTextInput
+from langflow.inputs.inputs import MessageTextInput
 from langflow.io import BoolInput, FileInput, FloatInput, IntInput, StrInput
 
 

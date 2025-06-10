@@ -1,6 +1,6 @@
-from langflow.custom import CustomComponent
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing import Embeddings
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class EmbedComponent(CustomComponent):

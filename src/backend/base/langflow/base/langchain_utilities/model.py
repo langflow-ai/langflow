@@ -1,10 +1,11 @@
 from abc import abstractmethod
 from collections.abc import Sequence
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import Tool
 from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
 
 class LCToolComponent(Component):
