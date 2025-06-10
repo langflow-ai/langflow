@@ -165,4 +165,4 @@ class StructuredOutputComponent(Component):
     def build_structured_output(self) -> Data:
         output = self.build_structured_output_base()
 
-        return Data(text_key="results", data={"results": output})
+        return Data(data=output[-1])
