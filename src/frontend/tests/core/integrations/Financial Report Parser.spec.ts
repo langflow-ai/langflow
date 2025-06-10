@@ -37,7 +37,9 @@ withEventDeliveryModes(
     //* TODO: Remove these 3 steps once the template is updated *//
     await page.getByTestId("dropdown-output-openaimodel").click();
 
-    await page.getByTestId("dropdown-item-output-openaimodel-language model").click();
+    await page
+      .getByTestId("dropdown-item-output-openaimodel-language model")
+      .click();
 
     await page.getByTestId("tab_1_stringify").click();
 
