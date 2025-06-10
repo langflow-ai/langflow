@@ -17,14 +17,14 @@ test(
     //first component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
-    await page.waitForSelector('[data-testid="inputsText Input"]', {
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 1000,
     });
 
     await zoomOut(page, 3);
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -58,13 +58,13 @@ test(
     //fourth component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("data to message");
-    await page.waitForSelector('[data-testid="processingData to Message"]', {
+    await page.getByTestId("sidebar-search-input").fill("Parser");
+    await page.waitForSelector('[data-testid="processingParser"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingData to Message")
+      .getByTestId("processingParser")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 300 },
       });
@@ -75,12 +75,12 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 600, y: 200 },
       });
@@ -93,16 +93,14 @@ test(
 
     await page.getByTestId("fit_view").click();
 
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
+    let outdatedComponents = await page.getByTestId("update-button").count();
 
     while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForSelector('[data-testid="icon-AlertTriangle"]', {
+      await page.getByTestId("update-button").first().click();
+      await page.waitForSelector('[data-testid="update-button"]', {
         timeout: 1000,
       });
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+      outdatedComponents = await page.getByTestId("update-button").count();
     }
 
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
@@ -116,7 +114,7 @@ test(
 
     //connection 1
     await page
-      .getByTestId("handle-urlcomponent-shownode-data-right")
+      .getByTestId("handle-urlcomponent-shownode-result-right")
       .nth(0)
       .click();
     await page
@@ -125,7 +123,7 @@ test(
 
     //connection 2
     await page
-      .getByTestId("handle-textinput-shownode-message-right")
+      .getByTestId("handle-textinput-shownode-output text-right")
       .nth(0)
       .click();
     await page.getByTestId("handle-splittext-shownode-separator-left").click();
@@ -135,14 +133,16 @@ test(
       .getByTestId("handle-splittext-shownode-chunks-right")
       .nth(0)
       .click();
-    await page.getByTestId("handle-parsedata-shownode-data-left").click();
+    await page
+      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
+      .click();
 
     //connection 4
     await page
-      .getByTestId("handle-parsedata-shownode-message-right")
+      .getByTestId("handle-parsercomponent-shownode-parsed text-right")
       .nth(0)
       .click();
-    await page.getByTestId("handle-chatoutput-shownode-text-left").click();
+    await page.getByTestId("handle-chatoutput-shownode-inputs-left").click();
 
     await page
       .getByTestId("textarea_str_input_value")
@@ -157,19 +157,15 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page.waitForSelector(
-      '[data-testid="output-inspection-message-chatoutput"]',
+      '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
       },
     );
 
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -185,19 +181,15 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page.waitForSelector(
-      '[data-testid="output-inspection-message-chatoutput"]',
+      '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
       },
     );
 
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -242,19 +234,15 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page.waitForSelector(
-      '[data-testid="output-inspection-message-chatoutput"]',
+      '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
       },
     );
 
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -278,19 +266,15 @@ test(
       timeout: 30000 * 3,
     });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page.waitForSelector(
-      '[data-testid="output-inspection-message-chatoutput"]',
+      '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
       },
     );
 
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 

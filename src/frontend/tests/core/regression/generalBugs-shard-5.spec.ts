@@ -19,12 +19,12 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
-    await page.waitForSelector('[data-testid="inputsText Input"]', {
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {});
 
     await zoomOut(page, 4);
@@ -32,7 +32,7 @@ test(
     await page.waitForTimeout(500);
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 150 },
       });
@@ -40,7 +40,7 @@ test(
     await page.waitForTimeout(500);
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 670, y: 200 },
       });
@@ -75,12 +75,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text");
 
-    await page.waitForSelector('[data-testid="outputsText Output"]', {
+    await page.waitForSelector('[data-testid="input_outputText Output"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("outputsText Output")
+      .getByTestId("input_outputText Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 10, y: 400 },
       });
@@ -91,13 +91,13 @@ test(
     await elementCombineTextOutput0.click();
 
     const blockedHandle = page
-      .getByTestId("div-handle-textinput-shownode-message-right")
+      .getByTestId("div-handle-textinput-shownode-output text-right")
       .first();
     const secondBlockedHandle = page
       .getByTestId("div-handle-combinetext-shownode-combined text-right")
       .nth(1);
     const thirdBlockedHandle = page
-      .getByTestId("div-handle-textoutput-shownode-message-right")
+      .getByTestId("div-handle-textoutput-shownode-output text-right")
       .first();
 
     const hasGradient = await blockedHandle?.evaluate((el) => {
@@ -129,7 +129,7 @@ test(
       .getByTestId("div-handle-combinetext-shownode-second text-left")
       .first();
     const fourthUnlockedHandle = page
-      .getByTestId("div-handle-textoutput-shownode-text-left")
+      .getByTestId("div-handle-textoutput-shownode-inputs-left")
       .first();
 
     const hasGradientUnlocked = await unlockedHandle?.evaluate((el) => {
@@ -184,7 +184,7 @@ test(
 
     //connection 1
     const elementTextOutput0 = page
-      .getByTestId("handle-textinput-shownode-message-right")
+      .getByTestId("handle-textinput-shownode-output text-right")
       .nth(0);
     await elementTextOutput0.click();
     const elementGroupInput0 = page.getByTestId(
@@ -194,7 +194,7 @@ test(
 
     //connection 2
     const elementTextOutput1 = page
-      .getByTestId("handle-textinput-shownode-message-right")
+      .getByTestId("handle-textinput-shownode-output text-right")
       .nth(2);
     await elementTextOutput1.click();
     const elementGroupInput1 = page
@@ -204,7 +204,7 @@ test(
 
     //connection 3
     const elementTextOutput2 = page
-      .getByTestId("handle-textinput-shownode-message-right")
+      .getByTestId("handle-textinput-shownode-output text-right")
       .nth(1);
     await elementTextOutput2.click();
 
@@ -220,7 +220,7 @@ test(
       .nth(0);
     await elementGroupOutput.click();
     const elementTextOutputInput = page
-      .getByTestId("handle-textoutput-shownode-text-left")
+      .getByTestId("handle-textoutput-shownode-inputs-left")
       .nth(0);
 
     await elementTextOutputInput.click();
@@ -240,10 +240,6 @@ test(
     await page.getByTestId("button_run_text output").last().click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
 
     expect(
       await page

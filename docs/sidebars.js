@@ -25,6 +25,7 @@ module.exports = {
         'Sample-Flows/blog-writer',
         'Sample-Flows/document-qa',
         'Sample-Flows/memory-chatbot',
+        'Sample-Flows/financial-report-parser',
         'Sample-Flows/sequential-agent',
         'Sample-Flows/travel-planning-agent',
       ],
@@ -39,6 +40,7 @@ module.exports = {
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
+        "Concepts/embedded-chat-widget",
         "Concepts/mcp-server",
         "Concepts/concepts-file-management",
         "Concepts/concepts-voice-mode",
@@ -88,13 +90,52 @@ module.exports = {
       type: "category",
       label: "Develop",
       items: [
-        "Develop/develop-overview",
-        "Develop/develop-application",
-        "Develop/install-custom-dependencies",
-        "Develop/memory",
-        "Develop/session-id",
-        "Develop/logging",
-        "Develop/webhook",
+        {
+          type: "doc",
+          id: "Develop/develop-overview",
+          label: "Overview"
+        },
+        {
+          type: "doc",
+          id: "Develop/develop-application",
+          label: "Develop an application in Langflow"
+        },
+        {
+          type: "doc",
+          id: "Develop/install-custom-dependencies",
+          label: "Install custom dependencies"
+        },
+        {
+          type: "doc",
+          id: "Develop/memory",
+          label: "Memory management"
+        },
+        {
+          type: "doc",
+          id: "Develop/session-id",
+          label: "Session ID"
+        },
+        {
+          type: "doc",
+          id: "Develop/logging",
+          label: "Logging"
+        },
+        {
+          type: "doc",
+          id: "Develop/webhook",
+          label: "Webhook"
+        },
+        {
+          type: "category",
+          label: "Clients",
+          items: [
+            {
+              type: "doc",
+              id: "Develop/Clients/typescript-client",
+              label: "TypeScript Client"
+            }
+          ]
+        },
       ],
     },
     {
@@ -110,6 +151,11 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-docker",
           label: "Docker"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-caddyfile",
+          label: "Deploy Langflow on a remote server"
         },
         {
           type: "category",
@@ -180,7 +226,16 @@ module.exports = {
           id: "Integrations/Arize/integrations-arize",
           label: "Arize",
         },
-        "Integrations/integrations-assemblyai",
+        {
+          type: "doc",
+          id: "Integrations/integrations-assemblyai",
+          label: "AssemblyAI",
+        },
+        {
+          type: "doc",
+          id: "Integrations/mcp-component-astra",
+          label: "Astra DB MCP server",
+        },
         {
           type: "doc",
           id: "Integrations/Composio/integrations-composio",
@@ -188,8 +243,8 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Integrations/mcp-component-astra",
-          label: "Astra DB MCP server",
+          id: "Integrations/Cleanlab/integrations-cleanlab",
+          label: "Cleanlab",
         },
         {
           type: 'category',
@@ -217,8 +272,21 @@ module.exports = {
           type: "category",
           label: "NVIDIA",
           items: [
-            "Integrations/Nvidia/integrations-nvidia-ingest",
-            "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
+            {
+              type: "doc",
+              id: "Integrations/Nvidia/integrations-nvidia-ingest",
+              label: "NVIDIA Ingest"
+            },
+            {
+              type: "doc",
+              id: "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
+              label: "NVIDIA NIM on WSL2"
+            },
+            {
+              type: "doc",
+              id: "Integrations/Nvidia/integrations-nvidia-g-assist",
+              label: "NVIDIA G-Assist"
+            },
           ],
         },
       ],
@@ -228,11 +296,13 @@ module.exports = {
       label: "Contributing",
       items: [
         "Contributing/contributing-community",
+        "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-components",
         "Contributing/contributing-component-tests",
+        "Contributing/contributing-templates",
+        "Contributing/contributing-bundles",
         "Contributing/contributing-github-discussion-board",
         "Contributing/contributing-github-issues",
-        "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-telemetry",
       ],
     },
