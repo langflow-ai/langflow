@@ -907,7 +907,7 @@
               },
               "message": {
                 "_input_type": "MessageTextInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Message",
                 "dynamic": true,
                 "info": "The chat message to be stored.",
@@ -930,7 +930,7 @@
               },
               "mode": {
                 "_input_type": "TabInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Mode",
                 "dynamic": false,
                 "info": "Operation mode: Store messages or Retrieve messages.",
@@ -1861,7 +1861,7 @@
               },
               "message": {
                 "_input_type": "MessageTextInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Message",
                 "dynamic": true,
                 "info": "The chat message to be stored.",
@@ -1884,7 +1884,7 @@
               },
               "mode": {
                 "_input_type": "TabInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Mode",
                 "dynamic": false,
                 "info": "Operation mode: Store messages or Retrieve messages.",
