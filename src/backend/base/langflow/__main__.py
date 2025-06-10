@@ -107,7 +107,7 @@ def run(
         help="Path to the .env file containing environment variables.",
         show_default=False,
     ),
-    log_level: str | None = typer.Option(None, help="Logging level.", show_default=False),
+    log_level: str | None = typer.Option(None, help="Logging level. One of: [DEBUG, INFO, WARNING, ERROR, CRITICAL]. Defaults to INFO.", show_default=False),
     log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
     cache: str | None = typer.Option(  # noqa: ARG001
         None,
@@ -171,12 +171,17 @@ def run(
     ssl_key_file_path: str | None = typer.Option(None, help="Defines the SSL key file path.", show_default=False),
 ) -> None:
     """Run Langflow."""
-    logger.info("Initializing Langflow...")
-
     if env_file:
         load_dotenv(env_file, override=True)
 
+    log_level = log_level.upper() if log_level else "INFO"
+
+    # Must set as env var for child process to pick up
+    if os.environ.get("LANGFLOW_LOG_LEVEL") is None:
+        os.environ["LANGFLOW_LOG_LEVEL"] = log_level
+
     configure(log_level=log_level, log_file=log_file)
+    logger.info("Initializing Langflow...")
 
     logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
     set_var_for_macos_issue()
@@ -225,7 +230,6 @@ def run(
     
     protocol = "https" if ssl_cert_file_path and ssl_key_file_path else "http"
 
-    print(f"Running Langflow via uv run langflow run")
     if platform.system() == "Windows":
         # Windows doesn't support Gunicorn, use uvicorn directly
         import uvicorn

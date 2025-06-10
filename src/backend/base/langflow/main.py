@@ -197,8 +197,9 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
             await asyncio.gather(*temp_dir_cleanups)
-            # Final message
+
             logger.debug("Langflow shutdown complete")
+            logger.info("👋 See you next time!")  # noqa: T201
 
     return lifespan
 
