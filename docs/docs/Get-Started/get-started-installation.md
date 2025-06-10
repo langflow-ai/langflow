@@ -68,9 +68,9 @@ The Langflow Docker image is available on [Docker Hub](https://hub.docker.com/r/
 
 1. With Docker installed and running on your system, run this command:
 
-```bash
-docker run -p 7860:7860 langflowai/langflow:latest
-```
+    ```bash
+    docker run -p 7860:7860 langflowai/langflow:latest
+    ```
 
 2. To start using Langflow, visit `http://localhost:7860/`.
 
@@ -82,45 +82,98 @@ Before you install and run Langflow OSS, be sure you have the following items.
 
 - [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments)
 - A dual-core CPU and at least 2 GB of RAM. More intensive use requires a multi-core CPU and at least 4 GB of RAM.
+- A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments)
 
-Install and run Langflow OSS with [uv](https://docs.astral.sh/uv/getting-started/installation/).
+<details>
+<summary>Need help with virtual environments?</summary>
+
+Virtual environments ensure Langflow is installed in an isolated, fresh environment.
+To create a new virtual environment, do the following.
+
+<Tabs groupId="os">
+  <TabItem value="macOS" label="macOS">
+    1. Navigate to where you want your virtual environment to be created, and create it with `uv`.
+Replace `VENV_NAME` with your preferred name for your virtual environment.
+```
+uv venv VENV_NAME
+```
+2. Start the virtual environment.
+```
+source VENV_NAME/bin/activate
+```
+Your shell's prompt changes to display that you're currently working in a virtual environment.
+```
+(VENV_NAME) ➜  langflow git:(main) ✗
+```
+3. To deactivate the virtual environment and return to your regular shell, type `deactivate`.
+To delete the virtual environment, type `rm -rf VENV_NAME`.
+  </TabItem>
+  <TabItem value="Windows" label="Windows">
+1. Navigate to where you want your virtual environment to be created, and create it with `uv`.
+Replace `VENV_NAME` with your preferred name for your virtual environment.
+```
+uv venv VENV_NAME
+```
+2. Start the virtual environment.
+```shell
+VENV_NAME\Scripts\activate
+```
+Your shell's prompt changes to display that you're currently working in a virtual environment.
+```
+(VENV_NAME) PS C:/users/username/langflow-dir>
+```
+3. To deactivate the virtual environment and return to your regular shell, type `deactivate`.
+To delete the virtual environment, type `Remove-Item VENV_NAME`.
+  </TabItem>
+  </Tabs>
+
+</details>
+
 
 1. To install Langflow, do the following.
 
 <Tabs groupId="os">
   <TabItem value="macOS" label="macOS">
 
-```bash
-uv pip install langflow
-```
+    ```bash
+    uv pip install langflow
+    ```
 
   </TabItem>
   <TabItem value="Windows" label="Windows">
   :::important
   Windows installations of Langflow OSS require a C++ compiler, such as [Visual Studio](https://visualstudio.microsoft.com/downloads/), that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or visit the Visual Studio download link above.
   :::
-  1. Clone the Langflow repository.
+
+  1. Create a virtual environment.
+  ```shell
+  uv venv
   ```
-  git clone https://github.com/langflow-ai/langflow
+  2. Start the virtual environment.
+  ```shell
+  .venv\Scripts\activate
   ```
-  2. Create a virtual environment in the repository root.
+  3. Install Langflow in the virtual environment.
+  ```shell
+  uv pip install langflow
   ```
-  uv venv 
-  ```
-  3. Install
+
+  :::tip
+  If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in the virtual environment, and then try installing again.
+  :::
+
 
   </TabItem>
   <TabItem value="Linux" label="Linux">
 
-    ```bash
-    uv pip install langflow
-    ```
+      ```bash
+      uv pip install langflow
+      ```
+
   </TabItem>
 
 </Tabs>
-
 
 After installation, to run Langflow, use the following command:
 
