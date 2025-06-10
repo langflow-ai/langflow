@@ -314,7 +314,7 @@
               },
               "message": {
                 "_input_type": "MessageTextInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Message",
                 "dynamic": true,
                 "info": "The chat message to be stored.",
@@ -337,7 +337,7 @@
               },
               "mode": {
                 "_input_type": "TabInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Mode",
                 "dynamic": false,
                 "info": "Operation mode: Store messages or Retrieve messages.",
