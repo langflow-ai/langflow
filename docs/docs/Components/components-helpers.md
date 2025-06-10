@@ -9,16 +9,6 @@ import Icon from "@site/src/components/icon";
 
 Helper components provide utility functions to help manage data, tasks, and other components in your flow.
 
-## Use a helper component in a flow
-
-Chat memory in Langflow is stored either in local Langflow tables with `LCBufferMemory`, or connected to an external database.
-
-The **Store Message** helper component stores chat memories as [Data](/concepts-objects) objects, and the **Message History** helper component retrieves chat messages as data objects or strings.
-
-This example flow stores and retrieves chat history from an [AstraDBChatMemory](/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
-
-![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
-
 ## Calculator
 
 The Calculator component performs basic arithmetic operations on mathematical expressions. It supports addition, subtraction, multiplication, division, and exponentiation operations.
@@ -66,14 +56,31 @@ The Current Date component returns the current date and time in a selected timez
 ## Message history
 
 :::info
-Prior to Langflow 1.1, this component was known as the Chat Memory component.
+Prior to Langflow 1.5, this component was two separate components called **Chat History** and **Message Store**.
 :::
 
-This component retrieves chat messages from Langflow tables or external memory.
+This component combines the **Chat History** and **Message Store** component into one component that can utilize Langflow's SQLite database, or connect to external memory, to store and retrieve chat messages.
 
-In this example, the **Message Store** component stores the complete chat history in a local Langflow table, which the **Message History** component retrieves as context for the LLM to answer each question.
+Chat memory components is distinct from vector store memory components, because they are built specifically for storing and retrieving chat messages from databases.
+
+Memory components provide access to their respective external databases **as memory**. This allows Large Language Models (LLMs) or [agents](/components-agents) to access external memory for persistence and context retention.
+
+In **Retrieve** mode, this component retrieves chat messages from Langflow tables or external memory.
+In **Store** mode, this component stores chat messages in Langflow tables or external memory.
+
+In this example, one **Message History** component stores the complete chat history in a local Langflow table, which the other **Message History** component retrieves as context for the LLM to answer each question.
 
 ![Message store and history components](/img/component-message-history-message-store.png)
+
+To configure Langflow to store and retrieve messages from an external database instead of local Langflow memory, follow these steps.
+
+1. Add two **Memory** components to your flow.
+This example uses **Astra DB Chat Memory**.
+2. To enable external memory ports, in both **Memory** components, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, and then enable **External Memory**.
+3. Connect the **Memory** ports to the **Message History** components.
+The flow looks like this:
+![Message store and history components with external memory](/img/component-message-history-external-memory.png)
+4. In the **Astra DB Chat Memory** components, add your **Astra DB Application Token**, **API Endpoint**, and **Collection Name**. These values are found in your Astra deployment. For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
 
 For more information on configuring memory in Langflow, see [Memory](/memory).
 
@@ -99,37 +106,6 @@ For more information on configuring memory in Langflow, see [Memory](/memory).
 | messages | Data | The retrieved messages as Data objects. |
 | messages_text | Message | The retrieved messages formatted as text. |
 | dataframe | DataFrame | A DataFrame containing the message data. |
-
-</details>
-
-## Message store
-
-This component stores chat messages or text in Langflow tables or external memory.
-
-In this example, the **Message Store** component stores the complete chat history in a local Langflow table, which the **Message History** component retrieves as context for the LLM to answer each question.
-
-![Message store and history components](/img/component-message-history-message-store.png)
-
-For more information on configuring memory in Langflow, see [Memory](/memory).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| message | String | The chat message to be stored. (Required) |
-| memory | Memory | The external memory to store the message. If empty, the Langflow tables are used. |
-| sender | String | The sender of the message. Can be Machine or User. If empty, the current sender parameter is used. |
-| sender_name | String | The name of the sender. Can be AI or User. If empty, the current sender parameter is used. |
-| session_id | String | The session ID of the chat. If empty, the current session ID parameter is used. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| stored_messages | List[Data] | The list of stored messages after the current message has been added. |
 
 </details>
 
@@ -185,6 +161,41 @@ This component generates a unique ID.
 | Name | Type | Description |
 |------|------|-------------|
 | id | String | The generated unique ID. |
+
+</details>
+
+### Message store
+
+:::info
+As of Langflow 1.5, this component is part of the **Message History** component.
+:::
+
+This component stores chat messages or text in Langflow tables or external memory.
+
+In this example, the **Message Store** component stores the complete chat history in a local Langflow table, which the **Message History** component retrieves as context for the LLM to answer each question.
+
+![Message store and history components](/img/component-message-history-message-store.png)
+
+For more information on configuring memory in Langflow, see [Memory](/memory).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| message | String | The chat message to be stored. (Required) |
+| memory | Memory | The external memory to store the message. If empty, the Langflow tables are used. |
+| sender | String | The sender of the message. Can be Machine or User. If empty, the current sender parameter is used. |
+| sender_name | String | The name of the sender. Can be AI or User. If empty, the current sender parameter is used. |
+| session_id | String | The session ID of the chat. If empty, the current session ID parameter is used. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| stored_messages | List[Data] | The list of stored messages after the current message has been added. |
 
 </details>
 
