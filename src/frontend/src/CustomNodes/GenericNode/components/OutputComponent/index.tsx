@@ -43,7 +43,7 @@ export default function OutputComponent({
   const singleOutput = displayProxy(
     <span
       className={cn(
-        "text-[13px] font-medium",
+        "px-2 py-1 text-[13px] font-medium",
         isToolMode && "text-secondary",
         frozen ? "text-ice" : "",
       )}
