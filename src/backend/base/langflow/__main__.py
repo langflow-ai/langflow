@@ -2,8 +2,10 @@ import asyncio
 import inspect
 import os
 import platform
+import sys
 import socket
 import time
+import signal
 import warnings
 from contextlib import suppress
 from pathlib import Path
@@ -36,6 +38,32 @@ console = Console()
 
 app = typer.Typer(no_args_is_help=True)
 
+# Add a global variable to track the webapp process
+webapp_process = None
+
+def handle_sigterm(signum, frame):  # noqa: ARG001
+    """Handle SIGTERM signal gracefully."""
+    logger.info("Received SIGTERM signal. Performing graceful shutdown...")
+    _shutdown_webapp_process()
+
+def handle_sigint(signum, frame):  # noqa: ARG001
+    """Handle SIGINT signal gracefully."""
+    logger.info("Received SIGINT signal. Performing graceful shutdown...")
+    _shutdown_webapp_process()
+
+def _shutdown_webapp_process():
+    """Gracefully shutdown the webapp process."""
+    global webapp_process
+    if webapp_process and webapp_process.is_alive():
+        logger.info("Cleaning up resources...")
+        webapp_process.terminate()
+        webapp_process.join(timeout=30)  # Wait up to 30 seconds
+        if webapp_process.is_alive():
+            logger.warning("Process didn't terminate gracefully, killing it...")
+            webapp_process.kill()
+            webapp_process.join()
+    time.sleep(10)
+    sys.exit(0)
 
 def get_number_of_workers(workers=None):
     if workers == -1 or workers is None:
@@ -176,6 +204,11 @@ def run(
     ssl_key_file_path: str | None = typer.Option(None, help="Defines the SSL key file path.", show_default=False),
 ) -> None:
     """Run Langflow."""
+    global webapp_process
+    
+    signal.signal(signal.SIGTERM, handle_sigterm)
+    signal.signal(signal.SIGINT, handle_sigint)
+
     if env_file:
         load_dotenv(env_file, override=True)
 
@@ -277,9 +310,14 @@ def run(
         try:
             webapp_process.join()
         except KeyboardInterrupt:
-            webapp_process.terminate()
-            webapp_process.join()
-            raise typer.Exit(0)
+            # SIGINT should be handled by the signal handler, but leaving here for safety
+            logger.warning("KeyboardInterrupt caught in main thread")
+            _shutdown_webapp_process()
+        finally:
+            # Ensure cleanup happens
+            if webapp_process and webapp_process.is_alive():
+                webapp_process.terminate()
+                webapp_process.join()
 
 
 def is_port_in_use(port, host="localhost"):
