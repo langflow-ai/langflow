@@ -166,7 +166,7 @@ async def get_file_by_name(
     file_name: str,  # The name of the file to search for
     current_user: CurrentActiveUser,
     session: DbSession,
-) -> UserFile | None:
+) -> UserFile:
     """Get the file associated with a given file name for the current user."""
     try:
         # Fetch from the UserFile table
