@@ -101,7 +101,7 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     except (ImportError, AttributeError) as e:
         logger.error(f"Error importing module {modname}: {e}", exc_info=True)
         return None
-
+    logger.debug(f"Processing module {modname}")
     # Extract the top-level subpackage name after "langflow.components."
     # e.g., "langflow.components.Notion.add_content_to_page" -> "Notion"
     mod_parts = modname.split(".")
@@ -145,7 +145,7 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
             f"Skipped {failed_count} component class{'es' if failed_count != 1 else ''} "
             f"in module '{modname}' due to instantiation failure."
         )
-
+    logger.debug(f"Processed module {modname}")
     return (top_level, module_components)
 
 
