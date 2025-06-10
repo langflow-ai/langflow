@@ -1240,6 +1240,7 @@ class Graph:
         self._build_vertex_params()
         self._instantiate_components_in_vertices()
         self._set_cache_to_vertices_in_cycle()
+        self._set_cache_if_listen_notify_components()
         for vertex in self.vertices:
             if vertex.id in self.cycle_vertices:
                 self.run_manager.add_to_cycle_vertices(vertex.id)
@@ -1247,8 +1248,28 @@ class Graph:
         self.assert_streaming_sequence()
 
     def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
-        """Returns the edges of the graph as a list of tuples."""
+        """Returns the edges of the graph as a list of tuples.
+
+        Each tuple contains the source and target handle IDs from the edge data.
+
+        Returns:
+            list[tuple[str, str]]: List of (source_id, target_id) tuples representing graph edges.
+        """
         return [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
+
+    def _set_cache_if_listen_notify_components(self) -> None:
+        """Disables caching for all vertices if Listen/Notify components are present.
+
+        If the graph contains any Listen or Notify components, caching is disabled for all vertices
+        by setting cache=False on their outputs. This ensures proper handling of real-time
+        communication between components.
+        """
+        has_listen_or_notify_component = any(
+            vertex.id.split("-")[0] in {"Listen", "Notify"} for vertex in self.vertices
+        )
+        if has_listen_or_notify_component:
+            for vertex in self.vertices:
+                vertex.apply_on_outputs(lambda output_object: setattr(output_object, "cache", False))
 
     def _set_cache_to_vertices_in_cycle(self) -> None:
         """Sets the cache to the vertices in cycle."""
