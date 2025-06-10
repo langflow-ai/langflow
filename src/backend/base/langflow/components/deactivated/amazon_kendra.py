@@ -1,3 +1,4 @@
+# mypy: disable-error-code="attr-defined"
 from langchain_community.retrievers import AmazonKendraRetriever
 
 from langflow.base.vectorstores.model import check_cached_vector_store

@@ -1,3 +1,4 @@
+# mypy: disable-error-code="attr-defined"
 import json
 
 from langchain.chains.query_constructor.base import AttributeInfo
@@ -68,5 +69,9 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
             metadata_field_obj.append(attribute_info)
 
         return SelfQueryRetriever.from_llm(
-            self.llm, self.vectorstore, self.document_content_description, metadata_field_obj, verbose=True
+            self.llm,  # noqa: ignore[attr-defined]
+            self.vectorstore,  # noqa: ignore[attr-defined]
+            self.document_content_description,  # noqa: ignore[attr-defined]
+            metadata_field_obj,
+            verbose=True,
         )
