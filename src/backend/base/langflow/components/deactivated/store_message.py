@@ -1,9 +1,9 @@
-from langflow.custom.custom_component.component import Component
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.memory import aget_messages, astore_message
 from langflow.schema.message import Message
 
 
-class StoreMessageComponent(Component):
+class StoreMessageComponent(CustomComponent):
     display_name = "Store Message"
     description = "Stores a chat message."
     name = "StoreMessage"

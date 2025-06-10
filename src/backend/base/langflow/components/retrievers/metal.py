@@ -1,10 +1,11 @@
 from langchain_community.retrievers import MetalRetriever
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from langflow.base.vectorstores.model import check_cached_vector_store
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.io import DictInput, SecretStrInput, StrInput
 
 
-class MetalRetrieverComponent(LCVectorStoreComponent):
+class MetalRetrieverComponent(CustomComponent):
     display_name: str = "Metal Retriever"
     description: str = "Retriever that uses the Metal API."
     name = "MetalRetriever"

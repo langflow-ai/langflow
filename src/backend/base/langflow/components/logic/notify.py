@@ -1,8 +1,8 @@
-from langflow.custom.custom_component.component import Component
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.schema.data import Data
 
 
-class NotifyComponent(Component):
+class NotifyComponent(CustomComponent):
     display_name = "Notify"
     description = "A component to generate a notification to Get Notified component."
     icon = "Notify"

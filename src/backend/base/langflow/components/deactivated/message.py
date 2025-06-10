@@ -1,9 +1,9 @@
-from langflow.custom.custom_component.component import Component
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
-class MessageComponent(Component):
+class MessageComponent(CustomComponent):
     display_name = "Message"
     description = "Creates a Message object given a Session ID."
     name = "Message"

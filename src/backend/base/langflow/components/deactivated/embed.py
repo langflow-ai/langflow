@@ -1,9 +1,9 @@
-from langflow.custom.custom_component.component import Component
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing import Embeddings
 from langflow.schema.data import Data
 
 
-class EmbedComponent(Component):
+class EmbedComponent(CustomComponent):
     display_name = "Embed Texts"
     name = "Embed"
 

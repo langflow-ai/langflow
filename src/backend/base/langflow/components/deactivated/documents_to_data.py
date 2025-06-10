@@ -1,10 +1,10 @@
 from langchain_core.documents import Document
 
-from langflow.custom.custom_component.component import Component
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.schema.data import Data
 
 
-class DocumentsToDataComponent(Component):
+class DocumentsToDataComponent(CustomComponent):
     display_name = "Documents ⇢ Data"
     description = "Convert LangChain Documents into Data."
     icon = "LangChain"

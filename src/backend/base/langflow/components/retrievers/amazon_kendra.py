@@ -1,10 +1,11 @@
 from langchain_community.retrievers import AmazonKendraRetriever
 
-from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from langflow.base.vectorstores.model import check_cached_vector_store
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.io import DictInput, IntInput, StrInput
 
 
-class AmazonKendraRetrieverComponent(LCVectorStoreComponent):
+class AmazonKendraRetrieverComponent(CustomComponent):
     display_name: str = "Amazon Kendra Retriever"
     description: str = "Retriever that uses the Amazon Kendra API."
     name = "AmazonKendra"

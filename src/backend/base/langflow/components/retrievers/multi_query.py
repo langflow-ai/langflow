@@ -1,12 +1,12 @@
 from langchain.prompts import PromptTemplate
 from langchain.retrievers import MultiQueryRetriever
 
-from langflow.custom.custom_component.component import Component
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing import BaseRetriever, LanguageModel, Text
 from langflow.inputs.inputs import HandleInput, StrInput
 
 
-class MultiQueryRetrieverComponent(Component):
+class MultiQueryRetrieverComponent(CustomComponent):
     display_name = "MultiQueryRetriever"
     description = "Initialize from llm using default template."
     documentation = "https://python.langchain.com/docs/modules/data_connection/retrievers/how_to/MultiQueryRetriever"

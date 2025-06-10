@@ -1,8 +1,8 @@
-from langflow.custom.custom_component.component import Component
+from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.schema.data import Data
 
 
-class ListFlowsComponent(Component):
+class ListFlowsComponent(CustomComponent):
     display_name = "List Flows"
     description = "A component to list all available flows."
     icon = "ListFlows"
