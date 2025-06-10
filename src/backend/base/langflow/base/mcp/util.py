@@ -243,15 +243,16 @@ def _process_headers(headers: Any) -> dict:
         return headers
     if isinstance(headers, list):
         processed_headers = {}
-        try:
-            for item in headers:
-                if not _is_valid_key_value_item(item):
-                    continue
-                key = item["key"]
-                value = item["value"]
-                processed_headers[key] = value
-        except (KeyError, TypeError, ValueError):
-            return {}  # Return empty dictionary instead of None
+        for item in headers:
+            # Inline _is_valid_key_value_item for speed, and use EAFP.
+            try:
+                # Fast path: check type, fetch keys.
+                if type(item) is dict:
+                    key = item["key"]
+                    value = item["value"]
+                    processed_headers[key] = value
+            except (KeyError, TypeError):
+                continue  # skip items that are not valid dict with both keys
         return processed_headers
     return {}
 
