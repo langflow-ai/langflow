@@ -226,6 +226,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
 def _is_valid_key_value_item(item: Any) -> bool:
     """Check if an item is a valid key-value dictionary."""
+    # Don't change signature or logic, but avoid calling this function inside loop
     return isinstance(item, dict) and "key" in item and "value" in item
 
 
@@ -245,12 +246,17 @@ def _process_headers(headers: Any) -> dict:
         processed_headers = {}
         try:
             for item in headers:
-                if not _is_valid_key_value_item(item):
+                # Manual inline, faster: Only for dict and handled via exception
+                if not isinstance(item, dict):
                     continue
-                key = item["key"]
-                value = item["value"]
+                try:
+                    key = item["key"]
+                    value = item["value"]
+                except (KeyError, TypeError):
+                    continue
                 processed_headers[key] = value
-        except (KeyError, TypeError, ValueError):
+        except Exception:
+            # Only rare exceptions escape item loop (e.g. headers is not iterable)
             return {}  # Return empty dictionary instead of None
         return processed_headers
     return {}
