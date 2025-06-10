@@ -288,6 +288,10 @@ export const lazyIconsMapping = {
     import("@/icons/IBMWatsonx").then((mod) => ({
       default: mod.WatsonxAiIcon,
     })),
+  WatsonxData: () =>
+    import("@/icons/IBMWatsonxData").then((mod) => ({
+      default: mod.WatsonxDataIcon,
+    })),
   Weaviate: () =>
     import("@/icons/Weaviate").then((mod) => ({ default: mod.WeaviateIcon })),
   Wikipedia: () =>
