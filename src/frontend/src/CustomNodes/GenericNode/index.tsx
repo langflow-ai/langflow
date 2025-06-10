@@ -587,45 +587,22 @@ function GenericNode({
                 showHiddenOutputs={showHiddenOutputs}
                 selectedOutput={selectedOutput}
                 handleSelectOutput={handleSelectOutput}
+                hasExistingHiddenOutputs={
+                  !!hiddenOutputs && hiddenOutputs.length > 0
+                }
               />
-              {showHiddenOutputs && (
-                <MemoizedNodeOutputs
-                  outputs={hiddenOutputs}
-                  keyPrefix="hidden"
-                  data={data}
-                  types={types}
-                  selected={selected ?? false}
-                  showNode={showNode}
-                  isToolMode={isToolMode}
-                  showHiddenOutputs={true}
-                  selectedOutput={selectedOutput}
-                  handleSelectOutput={handleSelectOutput}
-                />
-              )}
-              {hiddenOutputs && hiddenOutputs.length > 0 && (
-                <ShadTooltip
-                  content={
-                    showHiddenOutputs
-                      ? `${TOOLTIP_HIDDEN_OUTPUTS} (${hiddenOutputs?.length})`
-                      : `${TOOLTIP_OPEN_HIDDEN_OUTPUTS} (${hiddenOutputs?.length})`
-                  }
-                >
-                  <div
-                    className={cn(
-                      "absolute left-1/2 flex -translate-x-1/2 justify-center",
-                      (shownOutputs && shownOutputs.length > 0) ||
-                        showHiddenOutputs
-                        ? "bottom-[-0.8rem]"
-                        : "bottom-[-0.8rem]",
-                    )}
-                  >
-                    <HiddenOutputsButton
-                      showHiddenOutputs={showHiddenOutputs}
-                      onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
-                    />
-                  </div>
-                </ShadTooltip>
-              )}
+              <MemoizedNodeOutputs
+                outputs={hiddenOutputs}
+                keyPrefix="hidden"
+                data={data}
+                types={types}
+                selected={selected ?? false}
+                showNode={showNode}
+                isToolMode={isToolMode}
+                showHiddenOutputs={true}
+                selectedOutput={selectedOutput}
+                handleSelectOutput={handleSelectOutput}
+              />
             </>
           </div>
         )}
