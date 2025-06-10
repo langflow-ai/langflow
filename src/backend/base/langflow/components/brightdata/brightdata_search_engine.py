@@ -1,8 +1,9 @@
 #brightdata_search_engine.py
 from langflow.custom import Component
-from langflow.inputs import SecretStrInput, StrInput, DropdownInput
+from langflow.inputs import SecretStrInput, StrInput, DropdownInput, MessageTextInput
 from langflow.template import Output
 from langflow.schema import Data
+from langflow.schema.message import Message
 from typing import List
 import requests
 import urllib.parse
@@ -21,14 +22,15 @@ class BrightDataSearchEngineComponent(Component):
             required=True,
             password=True,
             info="Your Bright Data API token from account settings",
-            placeholder="Enter your API token...",
+            placeholder="Enter your Bright Data API token...",
         ),
-        StrInput(
-            name="query",
-            display_name="🔍 Search Query",
-            info="The search term or phrase to look for",
-            placeholder="Enter your search query...",
+        MessageTextInput(
+            name="query_input",
+            display_name="🔍 Search Query Input",
+            info="The search term or phrase to look for - can be connected from another component or entered manually",
             tool_mode=True,
+            placeholder="Enter your search query...",
+
         ),
         DropdownInput(
             name="engine",
@@ -36,13 +38,9 @@ class BrightDataSearchEngineComponent(Component):
             options=["google", "bing", "yandex"],
             value="google",
             info="Choose which search engine to use for the search",
+            placeholder="google, bing, yandex",
         ),
-        StrInput(
-            name="zone_name",
-            display_name="Zone Name",
-            value="mcp_unlocker",
-            info="Bright Data zone name (defaults to mcp_unlocker)",
-        ),
+
     ]
 
     outputs = [
@@ -59,11 +57,32 @@ class BrightDataSearchEngineComponent(Component):
             return f"https://www.bing.com/search?q={encoded_query}"
         else:  # default to google
             return f"https://www.google.com/search?q={encoded_query}"
-
+    
+    def get_query_from_input(self) -> str:
+        """Extract query from the input, handling both Message and string types"""
+        if isinstance(self.query_input, Message):
+            return self.query_input.text.strip()
+        elif isinstance(self.query_input, str):
+            return self.query_input.strip()
+        else:
+            return str(self.query_input).strip()
+    
     def search_web(self) -> Data:
         """Search the web using Bright Data's search engine scraping"""
         try:
-            search_url = self._build_search_url(self.engine, self.query)
+            query = self.get_query_from_input()
+            
+            if not query:
+                error_msg = "Search query is required"
+                return Data(
+                    text=error_msg,
+                    data={
+                        "status": "error",
+                        "error": error_msg
+                    }
+                )
+            
+            search_url = self._build_search_url(self.engine, query)
             
             headers = {
                 'authorization': f'Bearer {self.api_token}',
@@ -72,7 +91,7 @@ class BrightDataSearchEngineComponent(Component):
             
             payload = {
                 'url': search_url,
-                'zone': self.zone_name,
+                'zone': 'mcp_unlocker',
                 'format': 'raw',
                 'data_format': 'markdown',
             }
@@ -89,7 +108,7 @@ class BrightDataSearchEngineComponent(Component):
                 return Data(
                     text=results,
                     data={
-                        "query": self.query,
+                        "query": query,
                         "engine": self.engine,
                         "search_url": search_url,
                         "status": "success",
@@ -101,7 +120,7 @@ class BrightDataSearchEngineComponent(Component):
                 return Data(
                     text=error_msg,
                     data={
-                        "query": self.query,
+                        "query": query,
                         "engine": self.engine,
                         "status": "error",
                         "error": error_msg
@@ -113,7 +132,7 @@ class BrightDataSearchEngineComponent(Component):
             return Data(
                 text=error_msg,
                 data={
-                    "query": self.query,
+                    "query": query if 'query' in locals() else "unknown",
                     "engine": self.engine,
                     "status": "error",
                     "error": error_msg

@@ -1,3 +1,5 @@
+#brightdata_structured_data.py
+
 from loguru import logger
 
 from langflow.custom import Component
@@ -5,12 +7,14 @@ from langflow.io import (
     BoolInput,
     DropdownInput,
     IntInput,
+    MessageTextInput,
     MultilineInput,
     Output,
     SecretStrInput,
     StrInput,
 )
 from langflow.schema import Data
+from langflow.schema.message import Message
 import requests
 import json
 import time
@@ -21,8 +25,8 @@ from typing import Dict, Tuple, Optional, Any, List
 
 class BrightDataStructuredDataEnhancedComponent(Component):
     display_name: str = "Bright Data Structured Data"
-    description: str = "Extract structured data with AI-powered auto-detection and 40+ specialized datasets"
-    name = "BrightDataStructuredDataEnhanced"
+    description: str = "Extract structured data from 40+ real-time specialized datasets using AI-powered auto detection"
+    name = "BrightDataStructuredData"
     icon = "BrightData"
     
     documentation: str = "https://docs.brightdata.com/datasets"
@@ -34,13 +38,13 @@ class BrightDataStructuredDataEnhancedComponent(Component):
             required=True,
             password=True,
             info="Your Bright Data API token from account settings",
-            placeholder="Enter your API token...",
+            placeholder="Enter your Bright Data API token...",
         ),
-        StrInput(
-            name="url",
-            display_name="🌐 Target URL",
+        MessageTextInput(
+            name="url_input",
+            display_name="🔍 URL Input",
             required=True,
-            info="The webpage URL to extract structured data from",
+            info="The webpage URL to extract structured data from - can be connected from another component or entered manually",
             tool_mode=True,
             placeholder="https://example.com/page",
         ),
@@ -814,7 +818,16 @@ class BrightDataStructuredDataEnhancedComponent(Component):
             bonus += 25
         
         return bonus
-
+    
+    def get_url_from_input(self) -> str:
+        """Extract URL from the input, handling both Message and string types"""
+        if isinstance(self.url_input, Message):
+            return self.url_input.text.strip()
+        elif isinstance(self.url_input, str):
+            return self.url_input.strip()
+        else:
+            return str(self.url_input).strip()
+        
     def _prepare_dataset_payload(self, data_type: str, url: str, additional_params: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare payload for dataset based on its input requirements"""
         datasets = self._get_all_datasets()
@@ -839,9 +852,15 @@ class BrightDataStructuredDataEnhancedComponent(Component):
             msg = "API token is required"
             raise ValueError(msg)
 
-        if not self.url:
+        url = self.get_url_from_input()
+        if not url:
             msg = "URL is required"
             raise ValueError(msg)
+        
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+
+        self.url = url
 
         try:
             # Parse additional parameters
@@ -858,7 +877,7 @@ class BrightDataStructuredDataEnhancedComponent(Component):
             
             # Determine which dataset to use
             if self.auto_detect:
-                detected_type, confidence, detection_details = self._detect_website_type(self.url)
+                detected_type, confidence, detection_details = self._detect_website_type(url)
                 if not detected_type:
                     parsed_url = urlparse(self.url)
                     available_domains = self._get_supported_domains()
@@ -891,7 +910,7 @@ class BrightDataStructuredDataEnhancedComponent(Component):
             }
             
             # Prepare payload
-            payload = self._prepare_dataset_payload(data_type, self.url, additional_params)
+            payload = self._prepare_dataset_payload(data_type, url, additional_params)
             trigger_payload = [payload]
             
             logger.info(f"Triggering data collection for dataset {dataset_id} ({dataset_config['display_name']}) with payload: {payload}")
@@ -994,7 +1013,7 @@ class BrightDataStructuredDataEnhancedComponent(Component):
                             
                             # Prepare comprehensive output data
                             output_data = {
-                                "url": self.url,
+                                "url": url,
                                 "dataset_key": data_type,
                                 "dataset_name": dataset_config["display_name"],
                                 "dataset_category": dataset_config["category"],
@@ -1049,11 +1068,12 @@ class BrightDataStructuredDataEnhancedComponent(Component):
         
         try:
             # Run detection analysis
-            detected_type, confidence, detection_details = self._detect_website_type(self.url)
+            url = self.get_url_from_input()
+            detected_type, confidence, detection_details = self._detect_website_type(url)
             
             analysis_data = {
                 "auto_detect_enabled": True,
-                "url_analyzed": self.url,
+                "url_analyzed": url,
                 "detection_successful": detected_type is not None,
                 "recommended_dataset": detected_type,
                 "confidence_score": confidence,

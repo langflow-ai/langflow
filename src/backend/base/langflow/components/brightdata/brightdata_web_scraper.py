@@ -11,7 +11,7 @@ import json
 
 class BrightDataWebScraperComponent(Component):
     display_name = "Bright Data Web Scraper"
-    description = "Scrape web content using Bright Data's web scraping service with bot detection bypass"
+    description = "Scrape the web with bot detection bypass amd unlocking tools powered bu Bright Data"
     icon = "BrightData"
     name = "BrightDataWebScraper"
 
@@ -20,6 +20,7 @@ class BrightDataWebScraperComponent(Component):
             name="api_token",
             display_name="🔑 API Key",
             info="Insert Your Bright Data API Key Here",
+            placeholder="Enter your Bright Data API token...",
             required=True,
         ),
         MessageTextInput(
@@ -27,6 +28,7 @@ class BrightDataWebScraperComponent(Component):
             display_name="🔍 URL Input",
             info="The URL to scrape - can be connected from another component or entered manually",
             required=True,
+            placeholder="https://example.com/page",
         ),
         DropdownInput(
             name="output_format",
