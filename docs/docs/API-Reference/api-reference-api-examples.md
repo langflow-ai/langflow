@@ -756,9 +756,6 @@ Result:
 In the POST request to `v2/files`, replace **@FILE_NAME.EXTENSION** with the uploaded file name and its extension.
 You must include the ampersand (`@`) in the request to instruct curl to upload the contents of the file, not the string `FILE_NAME.EXTENSION`.
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
 ```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v2/files" \
@@ -779,9 +776,6 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API
   "provider":null
 }
 ```
-
-  </TabItem>
-</Tabs>
 
 ### Send files to your flows (v2)
 
