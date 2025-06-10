@@ -884,9 +884,7 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": [],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1277,9 +1275,7 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": [],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1800,9 +1796,7 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": [],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [

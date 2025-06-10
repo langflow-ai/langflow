@@ -1433,6 +1433,10 @@
                 "group_outputs": false,
                 "method": "build_embeddings",
                 "name": "embeddings",
+                "required_inputs": [
+                  "base_url",
+                  "model"
+                ],
                 "selected": "Embeddings",
                 "tool_mode": true,
                 "types": [
@@ -1965,6 +1969,10 @@
                 "group_outputs": false,
                 "method": "build_embeddings",
                 "name": "embeddings",
+                "required_inputs": [
+                  "base_url",
+                  "model"
+                ],
                 "selected": "Embeddings",
                 "tool_mode": true,
                 "types": [
@@ -2836,9 +2844,7 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": [],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
