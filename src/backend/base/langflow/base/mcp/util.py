@@ -243,14 +243,20 @@ def _process_headers(headers: Any) -> dict:
         return headers
     if isinstance(headers, list):
         processed_headers = {}
+        dict_type = dict  # Local reference for speed
         try:
+            # Inline and optimize _is_valid_key_value_item check
             for item in headers:
-                if not _is_valid_key_value_item(item):
+                if not isinstance(item, dict):
                     continue
-                key = item["key"]
-                value = item["value"]
+                # Try to only look up keys once per item
+                try:
+                    key = item["key"]
+                    value = item["value"]
+                except KeyError:
+                    continue  # skip items lacking required keys
                 processed_headers[key] = value
-        except (KeyError, TypeError, ValueError):
+        except (TypeError, ValueError):
             return {}  # Return empty dictionary instead of None
         return processed_headers
     return {}
