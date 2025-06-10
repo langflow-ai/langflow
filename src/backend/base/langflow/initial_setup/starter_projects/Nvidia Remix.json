@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-4Gfmi",
+            "id": "ChatInput-HR8bc",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-oPMFT",
+            "id": "Agent-Y9N68",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-4Gfmi{œdataTypeœ:œChatInputœ,œidœ:œChatInput-4Gfmiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-oPMFT{œfieldNameœ:œinput_valueœ,œidœ:œAgent-oPMFTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-HR8bc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-HR8bcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-Y9N68{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-4Gfmi",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-4Gfmiœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-oPMFT",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-oPMFTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-HR8bc",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-HR8bcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-Y9N68",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-oPMFT",
+            "id": "Agent-Y9N68",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-QHB00",
+            "id": "ChatOutput-Z5mkj",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,12 +52,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__Agent-oPMFT{œdataTypeœ:œAgentœ,œidœ:œAgent-oPMFTœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-QHB00{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-QHB00œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Agent-Y9N68{œdataTypeœ:œAgentœ,œidœ:œAgent-Y9N68œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Z5mkj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Z5mkjœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-oPMFT",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-oPMFTœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-QHB00",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-QHB00œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "Agent-Y9N68",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-Y9N68œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-Z5mkj",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Z5mkjœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-wLupQ",
+            "id": "Prompt-muf0Q",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -73,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "system_prompt",
-            "id": "Agent-oPMFT",
+            "id": "Agent-Y9N68",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-wLupQ{œdataTypeœ:œPromptœ,œidœ:œPrompt-wLupQœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-oPMFT{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-oPMFTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-muf0Q{œdataTypeœ:œPromptœ,œidœ:œPrompt-muf0Qœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-Y9N68{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-wLupQ",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-wLupQœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-oPMFT",
-        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-oPMFTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-muf0Q",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-muf0Qœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-Y9N68",
+        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "MCPTools",
-            "id": "MCPTools-wTXNz",
+            "id": "MCPTools-OP04x",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -101,19 +101,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-oPMFT",
+            "id": "Agent-Y9N68",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__MCPTools-wTXNz{œdataTypeœ:œMCPToolsœ,œidœ:œMCPTools-wTXNzœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oPMFT{œfieldNameœ:œtoolsœ,œidœ:œAgent-oPMFTœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-MCPTools-OP04x{œdataTypeœ:œMCPToolsœ,œidœ:œMCPTools-OP04xœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Y9N68{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "MCPTools-wTXNz",
-        "sourceHandle": "{œdataTypeœ: œMCPToolsœ, œidœ: œMCPTools-wTXNzœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-oPMFT",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oPMFTœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "MCPTools-OP04x",
+        "sourceHandle": "{œdataTypeœ:œMCPToolsœ,œidœ:œMCPTools-OP04xœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-Y9N68",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -121,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "RemixDocumentation",
-            "id": "CustomComponent-QmADf",
+            "id": "RemixDocumentation-Fm0YC",
             "name": "dataframe_output",
             "output_types": [
               "DataFrame"
@@ -129,7 +129,7 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "FAISS-D5d8G",
+            "id": "FAISS-B6D5I",
             "inputTypes": [
               "Data",
               "DataFrame"
@@ -137,12 +137,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__CustomComponent-QmADf{œdataTypeœ:œRemixDocumentationœ,œidœ:œCustomComponent-QmADfœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-FAISS-D5d8G{œfieldNameœ:œingest_dataœ,œidœ:œFAISS-D5d8Gœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-RemixDocumentation-Fm0YC{œdataTypeœ:œRemixDocumentationœ,œidœ:œRemixDocumentation-Fm0YCœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-FAISS-B6D5I{œfieldNameœ:œingest_dataœ,œidœ:œFAISS-B6D5Iœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "CustomComponent-QmADf",
-        "sourceHandle": "{œdataTypeœ: œRemixDocumentationœ, œidœ: œCustomComponent-QmADfœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "FAISS-D5d8G",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œFAISS-D5d8Gœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "RemixDocumentation-Fm0YC",
+        "sourceHandle": "{œdataTypeœ:œRemixDocumentationœ,œidœ:œRemixDocumentation-Fm0YCœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "FAISS-B6D5I",
+        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œFAISS-B6D5Iœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -150,7 +150,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "EmbeddingModel",
-            "id": "EmbeddingModel-ujgGM",
+            "id": "EmbeddingModel-HFaq5",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -158,19 +158,19 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "FAISS-D5d8G",
+            "id": "FAISS-B6D5I",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__EmbeddingModel-ujgGM{œdataTypeœ:œEmbeddingModelœ,œidœ:œEmbeddingModel-ujgGMœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-FAISS-D5d8G{œfieldNameœ:œembeddingœ,œidœ:œFAISS-D5d8Gœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-EmbeddingModel-HFaq5{œdataTypeœ:œEmbeddingModelœ,œidœ:œEmbeddingModel-HFaq5œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-FAISS-B6D5I{œfieldNameœ:œembeddingœ,œidœ:œFAISS-B6D5Iœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "EmbeddingModel-ujgGM",
-        "sourceHandle": "{œdataTypeœ: œEmbeddingModelœ, œidœ: œEmbeddingModel-ujgGMœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "FAISS-D5d8G",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œFAISS-D5d8Gœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "EmbeddingModel-HFaq5",
+        "sourceHandle": "{œdataTypeœ:œEmbeddingModelœ,œidœ:œEmbeddingModel-HFaq5œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "target": "FAISS-B6D5I",
+        "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œFAISS-B6D5Iœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -178,7 +178,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "FAISS",
-            "id": "FAISS-D5d8G",
+            "id": "FAISS-B6D5I",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -186,25 +186,25 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-oPMFT",
+            "id": "Agent-Y9N68",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__FAISS-D5d8G{œdataTypeœ:œFAISSœ,œidœ:œFAISS-D5d8Gœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oPMFT{œfieldNameœ:œtoolsœ,œidœ:œAgent-oPMFTœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FAISS-B6D5I{œdataTypeœ:œFAISSœ,œidœ:œFAISS-B6D5Iœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Y9N68{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FAISS-D5d8G",
-        "sourceHandle": "{œdataTypeœ: œFAISSœ, œidœ: œFAISS-D5d8Gœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-oPMFT",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oPMFTœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "FAISS-B6D5I",
+        "sourceHandle": "{œdataTypeœ:œFAISSœ,œidœ:œFAISS-B6D5Iœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-Y9N68",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-4Gfmi",
+          "id": "ChatInput-HR8bc",
           "node": {
             "base_classes": [
               "Message"
@@ -501,21 +501,21 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-4Gfmi",
+        "id": "ChatInput-HR8bc",
         "measured": {
-          "height": 65,
+          "height": 47,
           "width": 192
         },
         "position": {
-          "x": 520.6463691797087,
-          "y": 782.1096810815502
+          "x": -210.69432682306316,
+          "y": 315.16488151952666
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-QHB00",
+          "id": "ChatOutput-Z5mkj",
           "node": {
             "base_classes": [
               "Message"
@@ -809,21 +809,21 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-QHB00",
+        "id": "ChatOutput-Z5mkj",
         "measured": {
-          "height": 65,
+          "height": 47,
           "width": 192
         },
         "position": {
-          "x": 1142.5689460119079,
-          "y": 850.5538244081481
+          "x": 431.32852283796484,
+          "y": 385.1551996791115
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-oPMFT",
+          "id": "Agent-Y9N68",
           "node": {
             "base_classes": [
               "Message"
@@ -875,6 +875,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
+                "hidden": false,
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
@@ -999,7 +1000,7 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1509,21 +1510,21 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-oPMFT",
+        "id": "Agent-Y9N68",
         "measured": {
-          "height": 618,
+          "height": 591,
           "width": 320
         },
         "position": {
-          "x": 769.8312597879964,
-          "y": 287.0054432326453
+          "x": 78.6911094428821,
+          "y": -159.83908350054932
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "MCPTools-wTXNz",
+          "id": "MCPTools-OP04x",
           "node": {
             "base_classes": [
               "Message"
@@ -4206,21 +4207,21 @@
           "type": "MCPTools"
         },
         "dragging": false,
-        "id": "MCPTools-wTXNz",
+        "id": "MCPTools-OP04x",
         "measured": {
-          "height": 483,
+          "height": 439,
           "width": 320
         },
         "position": {
-          "x": -346.9214944226569,
-          "y": 656.3871951078409
+          "x": -343.82914475668326,
+          "y": 419.82244566085546
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Prompt-wLupQ",
+          "id": "Prompt-muf0Q",
           "node": {
             "base_classes": [
               "Message"
@@ -4260,6 +4261,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Prompt Message",
+                "hidden": false,
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
@@ -4406,21 +4408,21 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-wLupQ",
+        "id": "Prompt-muf0Q",
         "measured": {
-          "height": 573,
+          "height": 529,
           "width": 320
         },
         "position": {
-          "x": 401.06713766765915,
-          "y": -131.06528822067298
+          "x": -338.00443250004696,
+          "y": -753.7815399447686
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "CustomComponent-QmADf",
+          "id": "RemixDocumentation-Fm0YC",
           "node": {
             "base_classes": [
               "Data",
@@ -4533,21 +4535,21 @@
           "type": "RemixDocumentation"
         },
         "dragging": false,
-        "id": "CustomComponent-QmADf",
+        "id": "RemixDocumentation-Fm0YC",
         "measured": {
-          "height": 451,
+          "height": 373,
           "width": 320
         },
         "position": {
-          "x": -753.8321127628427,
-          "y": -387.01450573898296
+          "x": -752.3770110461156,
+          "y": -384.10430230552856
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "EmbeddingModel-ujgGM",
+          "id": "EmbeddingModel-HFaq5",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -4585,6 +4587,7 @@
                 "display_name": "Embeddings",
                 "method": "build_embeddings",
                 "name": "embeddings",
+                "options": null,
                 "required_inputs": [
                   "api_key"
                 ],
@@ -4629,7 +4632,7 @@
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -4826,9 +4829,9 @@
           "type": "EmbeddingModel"
         },
         "dragging": false,
-        "id": "EmbeddingModel-ujgGM",
+        "id": "EmbeddingModel-HFaq5",
         "measured": {
-          "height": 411,
+          "height": 366,
           "width": 320
         },
         "position": {
@@ -4840,7 +4843,7 @@
       },
       {
         "data": {
-          "id": "FAISS-D5d8G",
+          "id": "FAISS-B6D5I",
           "node": {
             "base_classes": [
               "Data",
@@ -5130,9 +5133,9 @@
           "type": "FAISS"
         },
         "dragging": false,
-        "id": "FAISS-D5d8G",
+        "id": "FAISS-B6D5I",
         "measured": {
-          "height": 518,
+          "height": 455,
           "width": 320
         },
         "position": {
@@ -5141,19 +5144,50 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "note-J4I1x",
+          "node": {
+            "description": "# RTX Remix Langflow Integration\n\nThis Langflow project provides an integration for the NVIDIA RTX Remix Toolkit through its REST API.\n\n## Prerequisites\n\nBefore using this project, ensure you have completed the following steps:\n\n1. **Install RTX Remix Toolkit**\n   You must have the RTX Remix Toolkit installed on your system. Follow the installation guide here:\n   [Installing the RTX Remix Toolkit](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/docs/installation/install-toolkit.html)\n\n2. **Run RTX Remix Toolkit**\n   Make sure the RTX Remix Toolkit application is running before using this Langflow project.\n\n3. **Create/Open a Project**\n   You must have an RTX Remix project opened within the Toolkit. Learn how to set up a project here:\n   [Setting Up a Project with the RTX Remix Toolkit](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/docs/gettingstarted/learning-toolkitsetup.html)\n\n## Getting Started\n\nOnce all prerequisites are met, the Langflow project should work without additional configuration.\n\n### Testing the Connection\n\nTo verify everything is working correctly:\n\n1. Open the Langflow project\n2. Locate the **RTX Remix MCP Connection** node\n3. Click the **refresh button** on the node\n4. Verify that the various REST API tools appear\n\nIf the REST API tools appear after refreshing, your connection to RTX Remix Toolkit is working properly and you can begin using the available tools.\n\n## Additional Resources\n\n- [RTX Remix Documentation](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/)\n- [RTX Remix REST API Guide](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/docs/howto/using-rest-api.html)",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 1296,
+        "id": "note-J4I1x",
+        "measured": {
+          "height": 1296,
+          "width": 370
+        },
+        "position": {
+          "x": -1181.898918275863,
+          "y": -634.0975399601093
+        },
+        "resizing": false,
+        "selected": true,
+        "type": "noteNode",
+        "width": 370
       }
     ],
     "viewport": {
-      "x": 1061.0564115600098,
-      "y": 333.55527364025704,
-      "zoom": 0.638768045364949
+      "x": 1219.0219300276187,
+      "y": 569.2965741651219,
+      "zoom": 0.6467573903452069
     }
   },
-  "description": "Template workflow to integrate the RTX Remix Toolkit REST API and RTX Remix Documentation",
+  "description": "Template workflow to integrate the Nvidia RTX Remix Toolkit REST API and RTX Remix Documentation",
   "endpoint_name": null,
-  "id": "f3469ff1-d843-4603-832d-30f7f10c0635",
+  "id": "55bf6f1b-714a-4f93-b262-3d9862488be3",
   "is_component": false,
   "last_tested_version": "1.4.2",
-  "name": "RTX Remix Template",
-  "tags": ["agents"]
+  "name": "Nvidia RTX Remix Template",
+  "tags": [
+    "agents"
+  ]
 }
