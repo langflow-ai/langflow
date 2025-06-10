@@ -4,6 +4,7 @@ slug: /integrations-setup-google-oauth-langflow
 ---
 
 import TOCInline from '@theme/TOCInline';
+import Icon from "@site/src/components/icon";
 
 Langflow integrates with [Google OAuth](https://developers.google.com/identity/protocols/oauth2) for authenticating the [Gmail loader](/components-data#gmail-loader), [Google Drive loader](components-data#google-drive-loader), and [Google Drive Search](/components-data#google-drive-search) components.
 

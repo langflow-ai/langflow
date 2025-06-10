@@ -3,6 +3,8 @@ title: Notion Meeting Notes Agent
 slug: /integrations/notion/notion-agent-meeting-notes
 ---
 
+import Icon from "@site/src/components/icon";
+
 The Notion Agent for Meeting Notes is an AI-powered tool that automatically processes meeting transcripts and updates your Notion workspace. It identifies tasks, action items, and key points from your meetings, then creates new tasks or updates existing ones in Notion without manual input.
 
 ## Prerequisites

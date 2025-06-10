@@ -3,7 +3,7 @@ title: AssemblyAI
 slug: /integrations-assemblyai
 ---
 
-
+import Icon from "@site/src/components/icon";
 
 # AssemblyAI
 
