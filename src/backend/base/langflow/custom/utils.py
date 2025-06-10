@@ -381,17 +381,6 @@ def build_custom_component_template_from_inputs(
         return_types = [format_type(return_type) for return_type in return_types]
         output.add_types(return_types)
 
-    # Get the selected output from field_config if it exists
-    selected_output = next((output for output in field_config.get("outputs", []) if output.get("selected")), None)
-
-    # Only attempt to set selected output if we have both a valid selected_output and its name
-    if selected_output and selected_output.get("name"):
-        # Find the matching output in frontend_node.outputs
-        next_output = next((output for output in frontend_node.outputs if output.name == selected_output["name"]), None)
-        # Set the selected state if we found a matching output
-        if next_output:
-            next_output.selected = selected_output.get("selected", True)
-
     # Validate that there is not name overlap between inputs and outputs
     frontend_node.validate_component()
     # ! This should be removed when we have a better way to handle this
