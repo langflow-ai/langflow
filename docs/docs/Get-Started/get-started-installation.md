@@ -1,65 +1,103 @@
 ---
 title: Install Langflow
 slug: /get-started-installation
+downloadUrl: 
+macosFileType: "*.dmg"
+windowsFileType: "*.msi"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Langflow can be installed in three ways:
+Langflow can be installed in multiple ways.
 
-* As a [Python package](#install-and-run-langflow-oss) with Langflow OSS
-* As a [standalone desktop application](#install-and-run-langflow-desktop) with Langflow Desktop
-* As a [cloud-hosted service](#datastax-langflow) with DataStax Langflow
+* **For beginners**: Download and install the [standalone desktop application](#install-and-run-langflow-desktop) with Langflow Desktop for the easiest setup experience.
+
+* **For production**: Run the [Docker image](#install-and-run-langflow-docker) from [Docker Hub](https://hub.docker.com/r/langflowai/langflow) for a clean, isolated setup.
+
+* **For developers**: Install the [Python package](#install-and-run-langflow-oss) with Langflow OSS for maximum customization and contribution opportunities.
+
+## Install and run Langflow Desktop
+
+**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [version management](#manage-your-langflow-version-in-langflow-desktop) feature for managing your Langflow version.
+
+<Tabs groupId="os">
+  <TabItem value="macOS" label="macOS">
+
+  1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
+  2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
+  3. Open the **Finder**, and then navigate to **Downloads**.
+  4. Double-click the downloaded `.dmg` file.
+  5. To install Langflow Desktop, drag and drop the application icon to the **Applications** folder.
+  6. When the installation completes, open the Langflow application.
+
+  </TabItem>
+  <TabItem value="Windows" label="Windows">
+
+  1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
+  2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
+  3. Open the **File Explorer**, and then navigate to **Downloads**.
+  4. Double-click the downloaded `.msi` file.
+  5. To install Langflow Desktop, follow the instructions to install the executable file.
+  6. When the installation completes, open the Langflow application.
+
+  </TabItem>
+
+</Tabs>
+
+The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, and then starts.
+
+### Manage your Langflow version in Langflow Desktop
+
+When a new version of Langflow is available, Langflow Desktop displays an upgrade message.
+
+To manage your Langflow version in Langflow Desktop, follow these steps:
+
+1. To access Langflow Desktop's **Version Management** pane, click your **Profile Image**, and then select **Version Management**.
+Langflow Desktop's current version is displayed, with other version options listed after it.
+The **latest** version is always highlighted.
+2. To change your Langflow version, select another version.
+A confirmation pane containing the selected version's changelog appears.
+3. To change to the selected version, click **Confirm**.
+The application restarts with the new version installed.
+
+## Install and run Langflow with Docker {#install-and-run-langflow-docker}
+
+[Docker](https://docs.docker.com/) provides the simplest way to run Langflow in an isolated environment to ensure consistent behavior across different systems and eliminate dependency conflicts.
+The Langflow Docker image is available on [Docker Hub](https://hub.docker.com/r/langflowai/langflow).
+
+1. With Docker installed and running on your system, run this command:
+
+```bash
+docker run -p 7860:7860 langflowai/langflow:latest
+```
+
+2. To start using Langflow, visit `http://localhost:7860/`.
+
+For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
 ## Install and run Langflow OSS
 
 Before you install and run Langflow OSS, be sure you have the following items.
 
 - [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/)
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/)
-- A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments) or [venv](https://docs.python.org/3/library/venv.html)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments)
 - A dual-core CPU and at least 2 GB of RAM. More intensive use requires a multi-core CPU and at least 4 GB of RAM.
 
-Install and run Langflow OSS with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/) or [pip](https://pypi.org/project/pip/).
+Install and run Langflow OSS with [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-1. To install Langflow, use one of the following commands:
-
-<Tabs groupId="package-manager">
-<TabItem value="uv" label="uv" default>
+1. To install Langflow, use the following command:
 
 ```bash
 uv pip install langflow
 ```
 
-</TabItem>
-<TabItem value="pip" label="pip">
-
-```bash
-pip install langflow
-```
-
-</TabItem>
-</Tabs>
-
-2. To run Langflow, use one of the following commands:
-
-<Tabs groupId="package-manager">
-    <TabItem value="uv" label="uv">
+2. To run Langflow, use the following command:
 
 ```bash
 uv run langflow run
 ```
-
-</TabItem>
-<TabItem value="pip" label="pip">
-
-```bash
-python -m langflow run
-```
-
-</TabItem>
-</Tabs>
 
 3. To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
 
@@ -67,60 +105,23 @@ After confirming that Langflow is running, create your first flow with the [Quic
 
 ### Manage Langflow OSS versions
 
-To upgrade Langflow to the latest version, use one of the following commands:
-
-<Tabs groupId="package-manager">
-<TabItem value="uv" label="uv" default>
+To upgrade Langflow to the latest version, use the following command:
 
 ```bash
 uv pip install langflow -U
 ```
 
-</TabItem>
-<TabItem value="pip" label="pip">
-
-```bash
-pip install langflow -U
-```
-
-</TabItem>
-</Tabs>
-
-To install a specific version of the Langflow package, add the required version to the command.
-<Tabs groupId="package-manager">
-<TabItem value="uv" label="uv" default>
+To install a specific version of the Langflow package, add the required version to the command:
 
 ```bash
 uv pip install langflow==1.3.2
 ```
 
-</TabItem>
-<TabItem value="pip" label="pip">
-
-```bash
-pip install langflow==1.3.2
-```
-
-</TabItem>
-</Tabs>
-
-To reinstall Langflow and all of its dependencies, add the `--force-reinstall` flag to the command.
-<Tabs groupId="package-manager">
-<TabItem value="uv" label="uv" default>
+To reinstall Langflow and all of its dependencies, add the `--force-reinstall` flag to the command:
 
 ```bash
 uv pip install langflow --force-reinstall
 ```
-
-</TabItem>
-<TabItem value="pip" label="pip">
-
-```bash
-pip install langflow --force-reinstall
-```
-
-</TabItem>
-</Tabs>
 
 ### Install optional dependencies for Langflow OSS
 
@@ -128,43 +129,17 @@ Langflow OSS provides optional dependency groups that extend its functionality.
 
 These dependencies are listed in the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L191) file under `[project.optional-dependencies]`.
 
-Install dependency groups using pip's `[extras]` syntax. For example, to install Langflow with the `postgresql` dependency group, enter one of the following commands:
-
-<Tabs groupId="package-manager">
-<TabItem value="uv" label="uv" default>
+Install dependency groups using pip's `[extras]` syntax. For example, to install Langflow with the `postgresql` dependency group, enter the following command:
 
 ```bash
 uv pip install "langflow[postgresql]"
 ```
 
-</TabItem>
-<TabItem value="pip" label="pip">
-
-```bash
-pip install "langflow[postgresql]"
-```
-
-</TabItem>
-</Tabs>
-
-To install multiple extras, enter one of the following commands:
-
-<Tabs groupId="package-manager">
-<TabItem value="uv" label="uv" default>
+To install multiple extras, enter the following command:
 
 ```bash
 uv pip install "langflow[deploy,local,postgresql]"
 ```
-
-</TabItem>
-<TabItem value="pip" label="pip">
-
-```bash
-pip install "langflow[deploy,local,postgresql]"
-```
-
-</TabItem>
-</Tabs>
 
 To add your own custom dependencies, see [Install custom dependencies](/install-custom-dependencies).
 
@@ -263,45 +238,3 @@ sudo apt-get install build-essential python3-dev
 ```bash
 sudo apt-get install gcc
 ```
-
-## Install and run Langflow Desktop
-
-:::important
-Langflow Desktop is in **Alpha**.
-Development is ongoing, and the features and functionality are subject to change.
-:::
-
-**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [version management](#manage-your-langflow-version-in-langflow-desktop) feature for managing your Langflow version.
-
-:::important
-Langflow Desktop is available only for macOS.
-:::
-
-To install Langflow Desktop, follow these steps:
-
-1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
-2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
-3. Open the **Finder**, and then navigate to **Downloads**.
-4. Double-click the downloaded `*.dmg` file.
-5. To install Langflow Desktop, drag and drop the application icon to the **Applications** folder.
-6. When the installation completes, open the Langflow application.
-
-The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, and then starts.
-
-### Manage your Langflow version in Langflow Desktop
-
-When a new version of Langflow is available, Langflow Desktop displays an upgrade message.
-
-To manage your Langflow version in Langflow Desktop, follow these steps:
-
-1. To access Langflow Desktop's **Version Management** pane, click your **Profile Image**, and then select **Version Management**.
-Langflow Desktop's current version is displayed, with other version options listed after it.
-The **latest** version is always highlighted.
-2. To change your Langflow version, select another version.
-A confirmation pane containing the selected version's changelog appears.
-3. To change to the selected version, click **Confirm**.
-The application restarts with the new version installed.
-
-## DataStax Langflow {#datastax-langflow}
-
-**DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
