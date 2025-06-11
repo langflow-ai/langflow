@@ -15,6 +15,7 @@ from langflow.field_typing import LanguageModel
 from langflow.inputs.inputs import BoolInput, InputTypes, MessageInput, MultilineInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
+from langflow.utils.constants import MESSAGE_SENDER_AI
 
 # Enabled detailed thinking for NVIDIA reasoning models.
 #
@@ -83,12 +84,12 @@ class LCModelComponent(Component):
                 msg = f"Method '{method_name}' must be defined."
                 raise ValueError(msg)
 
-    def text_response(self) -> Message:
+    async def text_response(self) -> Message:
         input_value = self.input_value
         stream = self.stream
         system_message = self.system_message
         output = self.build_model()
-        result = self.get_chat_result(
+        result = await self.get_chat_result(
             runnable=output, stream=stream, input_value=input_value, system_message=system_message
         )
         self.status = result
@@ -168,7 +169,7 @@ class LCModelComponent(Component):
             status_message = f"Response: {message.content}"  # type: ignore[assignment]
         return status_message
 
-    def get_chat_result(
+    async def get_chat_result(
         self,
         *,
         runnable: LanguageModel,
@@ -179,14 +180,14 @@ class LCModelComponent(Component):
         if getattr(self, "detailed_thinking", False):
             system_message = DETAILED_THINKING_PREFIX + (system_message or "")
 
-        return self._get_chat_result(
+        return await self._get_chat_result(
             runnable=runnable,
             stream=stream,
             input_value=input_value,
             system_message=system_message,
         )
 
-    def _get_chat_result(
+    async def _get_chat_result(
         self,
         *,
         runnable: LanguageModel,
@@ -199,6 +200,7 @@ class LCModelComponent(Component):
             msg = "The message you want to send to the model is empty."
             raise ValueError(msg)
         system_message_added = False
+        message = None
         if input_value:
             if isinstance(input_value, Message):
                 if not isinstance(input_value.text, str):
@@ -235,9 +237,29 @@ class LCModelComponent(Component):
                 }
             )
             if stream:
-                return runnable.stream(inputs)
-            message = runnable.invoke(inputs)
-            result = message.content if hasattr(message, "content") else message
+                iterator = runnable.astream(inputs)
+                if self.is_connected_to_chat_output():
+                    # Add a Message
+                    if hasattr(self, "graph"):
+                        session_id = self.graph.session_id
+                    elif hasattr(self, "_session_id"):
+                        session_id = self._session_id
+                    else:
+                        session_id = None
+                    model_message = Message(
+                        text=iterator,
+                        sender=MESSAGE_SENDER_AI,
+                        sender_name=self.display_name,
+                        properties={"icon": "Bot", "state": "partial"},
+                        session_id=session_id,
+                    )
+                    lf_message = await self.send_message(model_message)
+                    result = lf_message.text
+                else:
+                    message = await runnable.ainvoke(inputs)
+            else:
+                message = await runnable.ainvoke(inputs)
+                result = message.content if hasattr(message, "content") else message
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)
                 self.status = status_message
