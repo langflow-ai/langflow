@@ -30,8 +30,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           autoComplete="off"
           type={type}
+          placeholder={placeholder}
           className={cn(
-            "nopan nodelete nodrag noflow primary-input",
+            "nopan nodelete nodrag noflow primary-input placeholder-opacity-0",
             icon && "pl-9",
             icon ? inputClassName : className,
           )}
