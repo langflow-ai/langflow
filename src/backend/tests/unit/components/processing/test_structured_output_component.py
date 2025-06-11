@@ -8,8 +8,8 @@ from langchain_openai import ChatOpenAI
 from langflow.components.processing.structured_output import StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
-from pydantic import BaseModel
 
+from pydantic import BaseModel
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
@@ -47,7 +47,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 "messages": ["mock_message"],
                 "responses": [MockBaseModel()],
                 "response_metadata": [{"id": "mock_id"}],
-                "attempts": 1
+                "attempts": 1,
             }
 
         component = StructuredOutputComponent(
@@ -196,7 +196,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             "messages": ["mock_message"],
             "responses": [ParentModel()],
             "response_metadata": [{"id": "mock_id"}],
-            "attempts": 1
+            "attempts": 1,
         }
 
         component = StructuredOutputComponent(
@@ -234,7 +234,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             "messages": ["mock_message"],
             "responses": [MockBaseModel()],
             "response_metadata": [{"id": "mock_id"}],
-            "attempts": 1
+            "attempts": 1,
         }
 
         component = StructuredOutputComponent(
@@ -310,11 +310,14 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
         # Verify the error message contains expected content (updated to match actual OpenAI error format)
         error_message = str(exc_info.value)
-        assert any(phrase in error_message for phrase in [
-            "max_tokens was reached",
-            "max_tokens or model output limit was reached",
-            "Could not finish the message because max_tokens"
-        ]), f"Expected max_tokens error but got: {error_message}"
+        assert any(
+            phrase in error_message
+            for phrase in [
+                "max_tokens was reached",
+                "max_tokens or model output limit was reached",
+                "Could not finish the message because max_tokens",
+            ]
+        ), f"Expected max_tokens error but got: {error_message}"
 
     @pytest.mark.skipif(
         "OPENAI_API_KEY" not in os.environ,
@@ -463,13 +466,14 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
     def test_structured_output_returns_dict_when_no_objects_key(self):
         """Test that when trustcall returns a dict without 'objects' key, we return the dict directly."""
+
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             # Return trustcall-style response but without BaseModel that creates "objects" key
             return {
                 "messages": ["mock_message"],
                 "responses": [{"field": "value", "another_field": "another_value"}],  # Direct dict, not BaseModel
                 "response_metadata": [{"id": "mock_id"}],
-                "attempts": 1
+                "attempts": 1,
             }
 
         component = StructuredOutputComponent(
@@ -489,6 +493,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
     def test_structured_output_returns_direct_response_when_not_dict(self):
         """Test that when trustcall returns a non-dict response, we return it directly."""
+
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             # Return a string response (edge case)
             return "Simple string response"
@@ -510,6 +515,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
     def test_structured_output_handles_empty_responses_array(self):
         """Test that when trustcall returns empty responses array, we return the result dict."""
+
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             # Return trustcall-style response with empty responses
             return {
@@ -517,7 +523,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 "responses": [],  # Empty responses array
                 "response_metadata": [],
                 "attempts": 1,
-                "fallback_data": {"field": "fallback_value"}  # Some other data in the result
+                "fallback_data": {"field": "fallback_value"},  # Some other data in the result
             }
 
         component = StructuredOutputComponent(
@@ -539,13 +545,14 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
     def test_build_structured_output_fails_when_base_returns_non_list(self):
         """Test that build_structured_output() fails when base method returns non-list."""
+
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             # Return a dict instead of list with objects
             return {
                 "messages": ["mock_message"],
                 "responses": [{"single_item": "value"}],  # Dict without "objects" key
                 "response_metadata": [{"id": "mock_id"}],
-                "attempts": 1
+                "attempts": 1,
             }
 
         component = StructuredOutputComponent(
@@ -557,27 +564,26 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
-            # build_structured_output() expects a list but base returns a dict
-            with pytest.raises(ValueError, match="No structured output returned"):
-                component.build_structured_output()
+        with (
+            patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result),
+            pytest.raises(ValueError, match="No structured output returned"),
+        ):
+            component.build_structured_output()
 
     def test_build_structured_output_returns_data_with_dict(self):
         """Test that build_structured_output() returns Data object with dict data."""
+
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
-                    return {"objects": [
-                        {"field": "value1", "number": 42},
-                        {"field": "value2", "number": 24}
-                    ]}
+                    return {"objects": [{"field": "value1", "number": 42}, {"field": "value2", "number": 24}]}
 
             # Return trustcall-style response structure
             return {
                 "messages": ["mock_message"],
                 "responses": [MockBaseModel()],
                 "response_metadata": [{"id": "mock_id"}],
-                "attempts": 1
+                "attempts": 1,
             }
 
         component = StructuredOutputComponent(
@@ -586,7 +592,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             schema_name="TestSchema",
             output_schema=[
                 {"name": "field", "type": "str", "description": "A test field"},
-                {"name": "number", "type": "int", "description": "A test number"}
+                {"name": "number", "type": "int", "description": "A test number"},
             ],
             multiple=False,
             system_prompt="Test system prompt",
@@ -594,17 +600,18 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
         with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
-            
+
             # Check that result is a Data object
             from langflow.schema.data import Data
+
             assert isinstance(result, Data)
-            
+
             # Check that result.data is a dict
             assert isinstance(result.data, dict)
-            
+
             # Check the content of the dict (should be the last item from the objects array)
             assert result.data == {"field": "value2", "number": 24}
-            
+
             # Verify the data has the expected keys
             assert "field" in result.data
             assert "number" in result.data
@@ -613,6 +620,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
     def test_build_structured_output_returns_data_with_single_item(self):
         """Test that build_structured_output() returns Data object when only one item in objects."""
+
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
@@ -622,7 +630,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 "messages": ["mock_message"],
                 "responses": [MockBaseModel()],
                 "response_metadata": [{"id": "mock_id"}],
-                "attempts": 1
+                "attempts": 1,
             }
 
         component = StructuredOutputComponent(
@@ -631,7 +639,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             schema_name="PersonInfo",
             output_schema=[
                 {"name": "name", "type": "str", "description": "Person's name"},
-                {"name": "age", "type": "int", "description": "Person's age"}
+                {"name": "age", "type": "int", "description": "Person's age"},
             ],
             multiple=False,
             system_prompt="Extract person info",
@@ -639,19 +647,21 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
         with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
-            
+
             # Check that result is a Data object
             from langflow.schema.data import Data
+
             assert isinstance(result, Data)
-            
+
             # Check that result.data is a dict
             assert isinstance(result.data, dict)
-            
+
             # Check the content matches exactly
             assert result.data == {"name": "John Doe", "age": 30}
 
     def test_build_structured_output_data_object_properties(self):
         """Test that the returned Data object has proper properties."""
+
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
@@ -661,7 +671,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 "messages": ["mock_message"],
                 "responses": [MockBaseModel()],
                 "response_metadata": [{"id": "mock_id"}],
-                "attempts": 1
+                "attempts": 1,
             }
 
         component = StructuredOutputComponent(
@@ -671,7 +681,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             output_schema=[
                 {"name": "product", "type": "str", "description": "Product name"},
                 {"name": "price", "type": "float", "description": "Product price"},
-                {"name": "available", "type": "bool", "description": "Product availability"}
+                {"name": "available", "type": "bool", "description": "Product availability"},
             ],
             multiple=False,
             system_prompt="Extract product info",
@@ -679,24 +689,25 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
         with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
-            
+
             # Check that result is a Data object
             from langflow.schema.data import Data
+
             assert isinstance(result, Data)
-            
+
             # Check that result.data is a dict with correct types
             assert isinstance(result.data, dict)
             assert isinstance(result.data["product"], str)
             assert isinstance(result.data["price"], float)
             assert isinstance(result.data["available"], bool)
-            
+
             # Check values
             assert result.data["product"] == "iPhone"
             assert result.data["price"] == 999.99
             assert result.data["available"] is True
-            
+
             # Test Data object methods if they exist
-            if hasattr(result, 'get_text'):
+            if hasattr(result, "get_text"):
                 # Data object should be able to represent itself as text
                 text_repr = result.get_text()
                 assert isinstance(text_repr, str)
