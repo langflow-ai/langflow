@@ -79,7 +79,7 @@ test(
     await zoomOut(page, 2);
 
     //connection 1
-    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
+    await page.getByTestId("handle-urlcomponent-shownode-extracted pages-right").click();
     await page
       .getByTestId("handle-splittext-shownode-data or dataframe-left")
       .click();
