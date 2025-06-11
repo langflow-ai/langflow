@@ -14,7 +14,7 @@ class MessageStoreComponent(Component):
     description = "Stores a chat message or text into Langflow tables or an external memory."
     icon = "message-square-text"
     name = "StoreMessage"
-    # legacy = True
+    legacy = True
 
     inputs = [
         MessageTextInput(

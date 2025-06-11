@@ -129,8 +129,11 @@ class MemoryComponent(Component):
             if field_value == "Retrieve":
                 frontend_node["outputs"] = [
                     Output(
-                        display_name="Messages", name="dataframe", method="retrieve_messages_dataframe", dynamic=True
-                    )
+                        display_name="Messages", name="messages_text", method="retrieve_messages_as_text", dynamic=True
+                    ),
+                    Output(
+                        display_name="Dataframe", name="dataframe", method="retrieve_messages_dataframe", dynamic=True
+                    ),
                 ]
         return frontend_node
 
