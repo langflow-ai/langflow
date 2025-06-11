@@ -163,6 +163,10 @@ class StructuredOutputComponent(Component):
         return result
 
     def build_structured_output(self) -> Data:
-        output = self.build_structured_output_base()
 
+        output = self.build_structured_output_base()
+        if not isinstance(output, list) or not output:
+            # handle empty or unexpected type case
+            msg = "No structured output returned"
+            raise ValueError(msg)
         return Data(data=output[-1])
