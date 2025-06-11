@@ -259,7 +259,10 @@ function GenericNode({
   }, [data.node?.outputs]);
 
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
-    () => data.node?.outputs?.find((output) => output.selected) || null,
+    () =>
+      data.node?.outputs?.find(
+        (output) => output.name === data?.selected_output,
+      ) || null,
   );
 
   const handleSelectOutput = useCallback(

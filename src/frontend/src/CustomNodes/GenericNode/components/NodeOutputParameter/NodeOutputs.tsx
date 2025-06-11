@@ -79,15 +79,11 @@ export default function NodeOutputs({
         ? outputs.filter((output) => output.hidden)
         : outputs.filter((output) => !output.hidden);
 
-    const selectedByField = filteredOutputs.find(
-      (output) => output.name === data.selected_output,
-    );
-
     const outputWithSelection = filteredOutputs.find(
-      (output) => output.name === selectedOutput.name,
+      (output) => output.name === selectedOutput?.name,
     );
 
-    return selectedByField || outputWithSelection || filteredOutputs[0];
+    return outputWithSelection || filteredOutputs[0];
   };
 
   const displayOutput = getDisplayOutput();
