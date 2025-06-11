@@ -391,7 +391,7 @@ async def install_mcp_config(
 
         # Create the MCP configuration
         mcp_config = {
-            "mcpServers": {f"lf-{project.name.lower().replace(' ', '_')[:27]}": {"command": command, "args": args}}
+            "mcpServers": {f"lf-{project.name.lower().replace(' ', '_')[:26]}": {"command": command, "args": args}}
         }
 
         # Determine the config file path based on the client and OS
@@ -456,7 +456,7 @@ async def check_installed_mcp_servers(
                 raise HTTPException(status_code=404, detail="Project not found")
 
         # Project server name pattern
-        project_server_name = f"lf-{project.name.lower().replace(' ', '_')[:11]}"
+        project_server_name = f"lf-{project.name.lower().replace(' ', '_')[:26]}"
 
         # Check configurations for different clients
         results = []
