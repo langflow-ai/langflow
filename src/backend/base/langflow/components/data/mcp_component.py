@@ -8,12 +8,12 @@ from langflow.base.mcp.util import (
     create_input_schema_from_json_schema,
     update_tools,
 )
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import InputTypes
 from langflow.io import DropdownInput, McpInput, MessageTextInput, Output  # Import McpInput from langflow.io
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
-from langflow.schema import DataFrame
+from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import create_user_longterm_token
 
 # Import get_server from the backend API

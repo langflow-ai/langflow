@@ -6,7 +6,7 @@ from langflow.components.input_output.chat_output import ChatOutput
 from langflow.components.langchain_utilities import ToolCallingAgentComponent
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
-from langflow.graph import Graph
+from langflow.graph.graph.base import Graph
 from langflow.schema.data import Data
 from pydantic import BaseModel
 
