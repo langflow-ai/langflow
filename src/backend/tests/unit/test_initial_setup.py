@@ -54,9 +54,9 @@ async def test_get_project_data():
         assert isinstance(updated_at_datetime, datetime), f"Project {project_name} has no updated_at_datetime"
         assert isinstance(project_data, dict), f"Project {project_name} has no data"
         assert isinstance(project_icon, str) or project_icon is None, f"Project {project_name} has no icon"
-        assert (
-            isinstance(project_icon_bg_color, str) or project_icon_bg_color is None
-        ), f"Project {project_name} has no icon_bg_color"
+        assert isinstance(project_icon_bg_color, str) or project_icon_bg_color is None, (
+            f"Project {project_name} has no icon_bg_color"
+        )
 
 
 @pytest.mark.usefixtures("client")
