@@ -29,23 +29,33 @@ def get_filtered_inputs(component_class):
 
 
 def process_inputs(component_data: Input):
-    if isinstance(component_data, SecretStrInput):
+    # Fast-path for type check (most expensive in the profile)
+    if type(component_data) is SecretStrInput:  # slightly faster than isinstance for a single class check
+        # Inline assignment instead of function call
         component_data.value = ""
         component_data.load_from_db = False
         component_data.real_time_refresh = True
-    elif component_data.name == "tool_model_enabled":
+        return component_data
+
+    name = component_data.name
+    # Avoiding creating a set each call: use tuple for membership test
+    if name == "tool_model_enabled":
         component_data.advanced = True
         component_data.value = True
-    elif component_data.name in {"temperature", "base_url"}:
-        component_data = set_advanced_true(component_data)
-    elif component_data.name == "model_name":
-        component_data = set_real_time_refresh_false(component_data)
-        component_data = add_combobox_true(component_data)
-        component_data = add_info(
-            component_data,
+        return component_data
+    if name == "temperature" or name == "base_url":
+        # Inline function
+        component_data.advanced = True
+        return component_data
+    if name == "model_name":
+        # Inline and combine all modifications to minimize lookups
+        component_data.real_time_refresh = False
+        component_data.combobox = True
+        component_data.info = (
             "To see the model names, first choose a provider. Then, enter your API key and click the refresh button "
-            "next to the model name.",
+            "next to the model name."
         )
+        return component_data
     return component_data
 
 
