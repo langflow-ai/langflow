@@ -114,7 +114,7 @@ test(
 
     //connection 1
     await page
-      .getByTestId("handle-urlcomponent-shownode-result-right")
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .nth(0)
       .click();
     await page

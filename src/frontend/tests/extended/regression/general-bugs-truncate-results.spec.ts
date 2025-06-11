@@ -34,7 +34,7 @@ test(
       timeout: 30000,
     });
 
-    await page.getByTestId("output-inspection-result-urlcomponent").click();
+    await page.getByTestId("output-inspection-extracted pages-urlcomponent").click();
 
     await page.getByText(`Inspect the output of the component below.`, {
       exact: true,
