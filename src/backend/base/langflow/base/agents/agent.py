@@ -39,6 +39,7 @@ class LCAgentComponent(Component):
             display_name="Input",
             info="The input provided by the user for the agent to process.",
             tool_mode=True,
+            required=True,
         ),
         BoolInput(
             name="handle_parsing_errors",
@@ -121,6 +122,11 @@ class LCAgentComponent(Component):
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
     ) -> Message:
+        # Validate that input_value is not empty
+        if not hasattr(self, "input_value") or not self.input_value or not str(self.input_value).strip():
+            msg = "Input value cannot be empty. Please provide a valid input for the agent to process."
+            raise ValueError(msg)
+        
         if isinstance(agent, AgentExecutor):
             runnable = agent
         else:

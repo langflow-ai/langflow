@@ -1332,7 +1332,7 @@
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "tool_mode": true,
