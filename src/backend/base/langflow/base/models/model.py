@@ -203,8 +203,6 @@ class LCModelComponent(Component):
         message = None
         if input_value:
             if isinstance(input_value, Message):
-                if not isinstance(input_value.text, str):
-                    input_value.text = input_value.consume_iterator_in_text()
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     if "prompt" in input_value:
