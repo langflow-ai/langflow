@@ -1,9 +1,6 @@
 ---
 title: Install Langflow
 slug: /get-started-installation
-downloadUrl: 
-macosFileType: "*.dmg"
-windowsFileType: "*.msi"
 ---
 
 import Tabs from '@theme/Tabs';
@@ -11,11 +8,11 @@ import TabItem from '@theme/TabItem';
 
 Langflow can be installed in multiple ways.
 
-* **For beginners**: Download and install the [standalone desktop application](#install-and-run-langflow-desktop) with Langflow Desktop for the easiest setup experience.
+* **Recommended option**: Download and install the [standalone desktop application](#install-and-run-langflow-desktop) for the easiest setup experience.
 
-* **For production**: Run the [Docker image](#install-and-run-langflow-docker) from [Docker Hub](https://hub.docker.com/r/langflowai/langflow) for a clean, isolated setup.
+* **Docker**: Pull and run the [Docker image](#install-and-run-langflow-docker) to start a Langflow container.
 
-* **For developers**: Install the [Python package](#install-and-run-langflow-oss) with Langflow OSS for maximum customization and contribution opportunities.
+* **For developers**: Install the [Langflow OSS Python package](#install-and-run-langflow-oss).
 
 ## Install and run Langflow Desktop
 
@@ -66,7 +63,7 @@ The application restarts with the new version installed.
 [Docker](https://docs.docker.com/) provides the simplest way to run Langflow in an isolated environment to ensure consistent behavior across different systems and eliminate dependency conflicts.
 The Langflow Docker image is available on [Docker Hub](https://hub.docker.com/r/langflowai/langflow).
 
-1. With Docker installed and running on your system, run this command:
+1. With Docker installed and running on your system, run this command to pull the `latest` Langflow image and start it:
 
     ```bash
     docker run -p 7860:7860 langflowai/langflow:latest
@@ -127,7 +124,23 @@ Your shell's prompt changes to display that you're currently working in a virtua
 To delete the virtual environment, type `Remove-Item VENV_NAME`.
   </TabItem>
   </Tabs>
-
+  <TabItem value="Linux" label="Linux">
+    1. Navigate to where you want your virtual environment to be created, and create it with `uv`.
+Replace `VENV_NAME` with your preferred name for your virtual environment.
+```
+uv venv VENV_NAME
+```
+2. Start the virtual environment.
+```
+source VENV_NAME/bin/activate
+```
+Your shell's prompt changes to display that you're currently working in a virtual environment.
+```
+(VENV_NAME) ➜  langflow git:(main) ✗
+```
+3. To deactivate the virtual environment and return to your regular shell, type `deactivate`.
+To delete the virtual environment, type `rm -rf VENV_NAME`.
+  </TabItem>
 </details>
 
 
