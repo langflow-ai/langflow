@@ -9,11 +9,10 @@ import yaml
 from defusedxml import ElementTree
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import (
-    AcceleratorDevice,
-    AcceleratorOptions,
     PdfPipelineOptions,
 )
 from docling.document_converter import DocumentConverter, ImageFormatOption, PdfFormatOption
+from docling_core.types.doc.base import ImageRefMode
 
 from langflow.schema.data import Data
 
@@ -192,14 +191,14 @@ def convert_pdf_to_text(
 
         # OPTIMIZAION: could be better to "cache" the converters ...
         pipeline_options = PdfPipelineOptions()
-        pipeline_options.images_scale = 2
+        # pipeline_options.images_scale = 2
         pipeline_options.generate_page_images = False
         pipeline_options.do_picture_classification = do_picture_classification
         pipeline_options.do_ocr = do_ocr
         pipeline_options.do_table_structure = do_table_structure
         pipeline_options.table_structure_options.do_cell_matching = False
         pipeline_options.ocr_options.lang = ocr_lang
-        pipeline_options.accelerator_options = AcceleratorOptions(num_threads=1, device=AcceleratorDevice.AUTO)
+        # pipeline_options.accelerator_options = AcceleratorOptions(num_threads=1, device=AcceleratorDevice.AUTO)
 
         converter = DocumentConverter(
             format_options={
@@ -208,7 +207,10 @@ def convert_pdf_to_text(
         )
 
         result = converter.convert(source=Path(file_path))
-        markdown_text = result.document.export_to_markdown()
+        markdown_text = result.document.export_to_markdown(
+            image_mode=ImageRefMode.PLACEHOLDER,
+            image_placeholder="<!-- image -->",
+        )
 
         return Data(data={"file_path": file_path, "text": markdown_text})
 
@@ -235,14 +237,14 @@ def convert_img_to_text(
 
         # OPTIMIZAION: could be better to "cache" the converters ...
         pipeline_options = PdfPipelineOptions()
-        pipeline_options.images_scale = 2
+        # pipeline_options.images_scale = 2
         pipeline_options.generate_page_images = False
         pipeline_options.do_picture_classification = do_picture_classification
         pipeline_options.do_ocr = True
         pipeline_options.do_table_structure = do_table_structure
         pipeline_options.table_structure_options.do_cell_matching = False
         pipeline_options.ocr_options.lang = ocr_lang
-        pipeline_options.accelerator_options = AcceleratorOptions(num_threads=1, device=AcceleratorDevice.AUTO)
+        # pipeline_options.accelerator_options = AcceleratorOptions(num_threads=1, device=AcceleratorDevice.AUTO)
 
         converter = DocumentConverter(
             format_options={
@@ -251,7 +253,10 @@ def convert_img_to_text(
         )
 
         result = converter.convert(source=Path(file_path))
-        markdown_text = result.document.export_to_markdown()
+        markdown_text = result.document.export_to_markdown(
+            image_mode=ImageRefMode.PLACEHOLDER,
+            image_placeholder="<!-- image -->",
+        )
 
         return Data(data={"file_path": file_path, "text": markdown_text})
 
