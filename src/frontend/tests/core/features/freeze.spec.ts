@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
@@ -9,6 +10,8 @@ test(
 
   async ({ page }) => {
     await awaitBootstrapTest(page);
+
+    await addFlowToTestOnEmptyLangflow(page);
 
     await page.getByTestId("blank-flow").click();
 
