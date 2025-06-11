@@ -35,7 +35,7 @@ Langflow requires [Python 3.10 to 3.13](https://www.python.org/downloads/release
 uv pip install langflow
 ```
 
-2. After installation, to run Langflow, use the following command:
+2. To run Langflow, run:
 
 ```shell
 uv run langflow run
