@@ -94,7 +94,7 @@ export default function Dropdown({
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
-  const { helperText } = baseInputProps;
+  const { helperText, hasRefreshButton } = baseInputProps;
 
   // API and store hooks
   const postTemplateValue = usePostTemplateValue({
@@ -371,6 +371,26 @@ export default function Dropdown({
     </div>
   );
 
+  const renderRefeshButton = () => (
+    <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
+      <Button
+        className="w-full"
+        unstyled
+        onClick={() => {
+          handleRefreshButtonPress();
+        }}
+      >
+        <div className="flex items-center gap-2 pl-1">
+          <ForwardedIconComponent
+            name="RefreshCcw"
+            className={cn("refresh-icon h-3 w-3 text-primary")}
+          />
+          Refresh list
+        </div>
+      </Button>
+    </CommandItem>
+  );
+
   const renderCustomOptionDialog = () => (
     <CommandGroup className="flex flex-col">
       <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
@@ -390,23 +410,7 @@ export default function Dropdown({
           </div>
         </Button>
       </CommandItem>
-      <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
-        <Button
-          className="w-full"
-          unstyled
-          onClick={() => {
-            handleRefreshButtonPress();
-          }}
-        >
-          <div className="flex items-center gap-2 pl-1">
-            <ForwardedIconComponent
-              name="RefreshCcw"
-              className={cn("refresh-icon h-3 w-3 text-primary")}
-            />
-            Refresh list
-          </div>
-        </Button>
-      </CommandItem>
+      {renderRefeshButton()}
       <NodeDialog
         open={openDialog}
         dialogInputs={dialogInputs}
@@ -439,7 +443,7 @@ export default function Dropdown({
                     onSelect(currentValue);
                     setOpen(false);
                   }}
-                  className="items-center"
+                  className="w-full items-center"
                   data-testid={`${option}-${index}-option`}
                 >
                   <div className="flex w-full items-center gap-2">
@@ -450,14 +454,14 @@ export default function Dropdown({
                       />
                     )}
                     <div
-                      className={cn("flex truncate", {
+                      className={cn("flex", {
                         "flex-col":
                           filteredMetadata && filteredMetadata?.length > 0,
                         "w-full pl-2": !filteredMetadata?.[index]?.icon,
                       })}
                     >
-                      <div className="flex truncate">
-                        {option}{" "}
+                      <div className="truncate">{option}</div>
+                      {filteredMetadata?.[index]?.status && (
                         <span
                           className={`flex items-center pl-2 text-xs ${getStatusColor(
                             filteredMetadata?.[index]?.status,
@@ -469,8 +473,8 @@ export default function Dropdown({
                             ]?.status?.toLowerCase()}
                           />
                         </span>
-                      </div>
-                      {filteredMetadata && filteredMetadata?.length > 0 ? (
+                      )}
+                      {filteredMetadata && filteredMetadata?.length > 0 && (
                         <div className="flex w-full items-center overflow-hidden text-muted-foreground">
                           {Object.entries(
                             filterMetadataKeys(filteredMetadata?.[index] || {}),
@@ -501,8 +505,9 @@ export default function Dropdown({
                               </div>
                             ))}
                         </div>
-                      ) : (
-                        <div className="ml-auto flex">
+                      )}
+                      {value === option && (
+                        <div className="ml-auto flex pl-2">
                           <ForwardedIconComponent
                             name="Check"
                             className={cn(
@@ -525,6 +530,9 @@ export default function Dropdown({
         )}
       </CommandGroup>
       <CommandSeparator />
+      {!dialogInputs?.fields && hasRefreshButton && (
+        <CommandGroup>{renderRefeshButton()}</CommandGroup>
+      )}
       {dialogInputs && dialogInputs?.fields && renderCustomOptionDialog()}
     </CommandList>
   );
