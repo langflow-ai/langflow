@@ -1407,7 +1407,7 @@ class Component(CustomComponent):
                             self._event_manager.on_remove_message(data={"id": data_dict["id"]})
                         else:
                             # If no id, try to get it from the message object or id_ parameter
-                            message_id = getattr(message, 'id', None) or id_
+                            message_id = getattr(message, "id", None) or id_
                             if message_id:
                                 self._event_manager.on_remove_message(data={"id": message_id})
                     case _:
