@@ -183,7 +183,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
-    "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 11)}": {
+    "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 26)}": {
       "command": "${selectedPlatform === "windows" ? "cmd" : selectedPlatform === "wsl" ? "wsl" : "uvx"}",
       "args": [
         ${
