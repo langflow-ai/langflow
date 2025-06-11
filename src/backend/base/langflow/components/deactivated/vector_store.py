@@ -5,7 +5,7 @@ from langflow.field_typing import VectorStore
 from langflow.inputs.inputs import HandleInput
 
 
-class VectoStoreRetrieverComponent(CustomComponent):
+class VectorStoreRetrieverComponent(CustomComponent):
     display_name = "VectorStore Retriever"
     description = "A vector store retriever"
     name = "VectorStoreRetriever"
