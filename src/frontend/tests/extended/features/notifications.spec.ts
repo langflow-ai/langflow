@@ -7,18 +7,18 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="disclosure-inputs"]', {
+    await page.waitForSelector('[data-testid="disclosure-i/o"]', {
       timeout: 3000,
       state: "visible",
     });
 
-    await page.getByTestId("disclosure-inputs").click();
-    await page.waitForSelector('[data-testid="inputsText Input"]', {
+    await page.getByTestId("disclosure-i/o").click();
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 3000,
       state: "visible",
     });
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-text-input").click();

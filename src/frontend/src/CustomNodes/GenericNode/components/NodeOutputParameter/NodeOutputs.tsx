@@ -1,4 +1,3 @@
-// NodeOutputs.tsx
 import { NodeDataType } from "@/types/flow";
 import { OutputParameter } from ".";
 
@@ -13,6 +12,7 @@ export default function NodeOutputs({
   showHiddenOutputs,
   selectedOutput,
   handleSelectOutput,
+  hasExistingHiddenOutputs = false,
 }: {
   outputs: any;
   keyPrefix: string;
@@ -24,83 +24,90 @@ export default function NodeOutputs({
   showHiddenOutputs: boolean;
   selectedOutput: any;
   handleSelectOutput: any;
+  hasExistingHiddenOutputs?: boolean;
 }) {
-  const output = selectedOutput
-    ? outputs.find((output) => output.name === selectedOutput.name)
-    : outputs[0];
+  const hasLoopOutput = outputs.some((output) => output.allows_loop);
+  const hasGroupOutputs = outputs.some((output) => output.group_outputs);
+  const isConditionalRouter = data.type === "ConditionalRouter";
+  const hasHiddenOutputs = outputs.some((output) => output.hidden);
 
-  if (!output) return null;
+  const shouldShowAllOutputs =
+    hasLoopOutput || hasGroupOutputs || isConditionalRouter || hasHiddenOutputs;
 
-  const idx =
-    data.node!.outputs?.findIndex((out) => out.name === output.name) ?? 0;
+  if (shouldShowAllOutputs) {
+    const outputsToRender =
+      keyPrefix === "hidden"
+        ? outputs.filter((output) => output.hidden)
+        : outputs.filter((output) => !output.hidden);
 
-  const isLoop = output?.allows_loop ?? false;
+    return (
+      <>
+        {outputsToRender?.map((output, idx) => (
+          <OutputParameter
+            key={`${keyPrefix}-${output.name}-${idx}`}
+            output={output}
+            outputs={outputs}
+            idx={
+              data.node!.outputs?.findIndex(
+                (out) => out.name === output.name,
+              ) ?? idx
+            }
+            lastOutput={idx === outputsToRender.length - 1}
+            data={data}
+            types={types}
+            selected={selected}
+            showNode={showNode}
+            isToolMode={isToolMode}
+            showHiddenOutputs={showHiddenOutputs}
+            handleSelectOutput={handleSelectOutput}
+            hidden={
+              keyPrefix === "hidden"
+                ? showHiddenOutputs
+                  ? output.hidden
+                  : true
+                : false
+            }
+          />
+        ))}
+      </>
+    );
+  }
 
-  const hiddenOutputs = outputs.filter((output) => output.hidden);
+  const getDisplayOutput = () => {
+    const filteredOutputs =
+      keyPrefix === "hidden"
+        ? outputs.filter((output) => output.hidden)
+        : outputs.filter((output) => !output.hidden);
 
-  return isLoop ? (
-    keyPrefix === "hidden" ? (
-      hiddenOutputs?.map((output, idx) => (
-        <OutputParameter
-          key={`${keyPrefix}-${output.name}-${idx}`}
-          output={output}
-          idx={
-            data.node!.outputs?.findIndex((out) => out.name === output.name) ??
-            idx
-          }
-          lastOutput={idx === outputs.length - 1}
-          data={data}
-          types={types}
-          selected={selected}
-          showNode={showNode}
-          isToolMode={isToolMode}
-          showHiddenOutputs={showHiddenOutputs}
-          handleSelectOutput={handleSelectOutput}
-          hidden={
-            keyPrefix === "hidden"
-              ? showHiddenOutputs
-                ? output.hidden
-                : true
-              : false
-          }
-        />
-      ))
-    ) : (
-      outputs?.map((output, idx) => (
-        <OutputParameter
-          key={`${keyPrefix}-${output.name}-${idx}`}
-          output={output}
-          idx={
-            data.node!.outputs?.findIndex((out) => out.name === output.name) ??
-            idx
-          }
-          lastOutput={idx === outputs.length - 1}
-          data={data}
-          types={types}
-          selected={selected}
-          showNode={showNode}
-          isToolMode={isToolMode}
-          showHiddenOutputs={showHiddenOutputs}
-          handleSelectOutput={handleSelectOutput}
-          hidden={
-            keyPrefix === "hidden"
-              ? showHiddenOutputs
-                ? output.hidden
-                : true
-              : false
-          }
-        />
-      ))
-    )
-  ) : (
+    if (selectedOutput) {
+      return (
+        filteredOutputs.find((output) => output.name === selectedOutput.name) ||
+        filteredOutputs[0]
+      );
+    }
+
+    const outputWithSelection = filteredOutputs.find(
+      (output) => output.selected,
+    );
+
+    return outputWithSelection || filteredOutputs[0];
+  };
+
+  const displayOutput = getDisplayOutput();
+
+  if (!displayOutput) return null;
+
+  return (
     <OutputParameter
-      key={`${keyPrefix}-${output.name}-${idx}`}
-      output={output}
+      key={`${keyPrefix}-${displayOutput.name}`}
+      output={displayOutput}
       outputs={outputs}
       idx={
-        data.node!.outputs?.findIndex((out) => out.name === output.name) ?? idx
+        data.node!.outputs?.findIndex(
+          (out) => out.name === displayOutput.name,
+        ) ?? 0
       }
-      lastOutput={true}
+      lastOutput={!hasExistingHiddenOutputs}
       data={data}
       types={types}
       selected={selected}
@@ -111,7 +118,7 @@ export default function NodeOutputs({
       hidden={
         keyPrefix === "hidden"
           ? showHiddenOutputs
-            ? output.hidden
+            ? displayOutput.hidden
             : true
           : false
       }

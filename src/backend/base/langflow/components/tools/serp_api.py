@@ -8,8 +8,8 @@ from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
-from langflow.schema import Data
+from langflow.inputs.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
+from langflow.schema.data import Data
 
 
 class SerpAPISchema(BaseModel):

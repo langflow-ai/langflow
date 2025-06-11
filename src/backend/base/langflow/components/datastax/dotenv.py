@@ -2,10 +2,10 @@ import io
 
 from dotenv import load_dotenv
 
-from langflow.custom import Component
-from langflow.inputs import MultilineSecretInput
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import MultilineSecretInput
 from langflow.schema.message import Message
-from langflow.template import Output
+from langflow.template.field.base import Output
 
 
 class Dotenv(Component):

@@ -1,10 +1,8 @@
 from unittest.mock import Mock, patch
 
 import pytest
-import respx
-from httpx import Response
 from langflow.components.data import URLComponent
-from langflow.schema import DataFrame, Message
+from langflow.schema import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -42,142 +40,190 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         with patch("langchain_community.document_loaders.RecursiveUrlLoader.load") as mock:
             yield mock
 
-    def test_recursive_url_component(self, mock_recursive_loader):
+    def test_url_component_basic_functionality(self, mock_recursive_loader):
         """Test basic URLComponent functionality."""
         component = URLComponent()
         component.set_attributes({"urls": ["https://example.com"], "max_depth": 2})
 
-        mock_recursive_loader.return_value = [
-            Mock(page_content="test content", metadata={"source": "https://example.com"})
-        ]
+        mock_doc = Mock(
+            page_content="test content",
+            metadata={
+                "source": "https://example.com",
+                "title": "Test Page",
+                "description": "Test Description",
+                "content_type": "text/html",
+                "language": "en",
+            },
+        )
+        mock_recursive_loader.return_value = [mock_doc]
 
-        data_ = component.fetch_content()
-        assert all(value.data for value in data_)
-        assert all(value.text for value in data_)
-        assert all(value.source for value in data_)
+        data_frame = component.fetch_content()
+        assert isinstance(data_frame, DataFrame)
+        assert len(data_frame) == 1
 
-    def test_recursive_url_component_as_dataframe(self, mock_recursive_loader):
-        """Test URLComponent's as_dataframe method."""
+        row = data_frame.iloc[0]
+        assert row["text"] == "test content"
+        assert row["url"] == "https://example.com"
+        assert row["title"] == "Test Page"
+        assert row["description"] == "Test Description"
+        assert row["content_type"] == "text/html"
+        assert row["language"] == "en"
+
+    def test_url_component_multiple_urls(self, mock_recursive_loader):
+        """Test URLComponent with multiple URL inputs."""
+        # Setup component with multiple URLs
         component = URLComponent()
         urls = ["https://example1.com", "https://example2.com"]
-        component.set_attributes({"urls": urls, "max_depth": 1})
+        component.set_attributes({"urls": urls})
 
-        # Mock the loader response
-        mock_recursive_loader.return_value = [
-            Mock(page_content="content1", metadata={"source": urls[0]}),
-            Mock(page_content="content2", metadata={"source": urls[1]}),
+        # Create mock documents for each URL
+        mock_docs = [
+            Mock(
+                page_content="Content from first URL",
+                metadata={
+                    "source": "https://example1.com",
+                    "title": "First Page",
+                    "description": "First Description",
+                    "content_type": "text/html",
+                    "language": "en",
+                },
+            ),
+            Mock(
+                page_content="Content from second URL",
+                metadata={
+                    "source": "https://example2.com",
+                    "title": "Second Page",
+                    "description": "Second Description",
+                    "content_type": "text/html",
+                    "language": "en",
+                },
+            ),
         ]
 
-        # Test as_dataframe
-        data_frame = component.as_dataframe()
-        assert isinstance(data_frame, DataFrame), "Expected DataFrame instance"
-        assert len(data_frame) == 4
+        # Configure mock to return both documents
+        mock_recursive_loader.return_value = mock_docs
 
-        assert list(data_frame.columns) == ["text", "source"]
+        # Execute component
+        result = component.fetch_content()
 
-        assert data_frame.iloc[0]["text"] == "content1"
-        assert data_frame.iloc[0]["source"] == urls[0]
+        # Verify results
+        assert isinstance(result, DataFrame)
+        assert len(result) == 4
 
-        assert data_frame.iloc[1]["text"] == "content2"
-        assert data_frame.iloc[1]["source"] == urls[1]
+        # Verify first URL content
+        first_row = result.iloc[0]
+        assert first_row["text"] == "Content from first URL"
+        assert first_row["url"] == "https://example1.com"
+        assert first_row["title"] == "First Page"
+        assert first_row["description"] == "First Description"
 
-        assert data_frame.iloc[2]["text"] == "content1"
-        assert data_frame.iloc[2]["source"] == urls[0]
+        # Verify second URL content
+        second_row = result.iloc[1]
+        assert second_row["text"] == "Content from second URL"
+        assert second_row["url"] == "https://example2.com"
+        assert second_row["title"] == "Second Page"
+        assert second_row["description"] == "Second Description"
 
-        assert data_frame.iloc[3]["text"] == "content2"
-        assert data_frame.iloc[3]["source"] == urls[1]
-
-    def test_recursive_url_component_fetch_content_text(self, mock_recursive_loader):
-        """Test URLComponent's fetch_content_text method."""
-        component = URLComponent()
-        component.set_attributes({"urls": ["https://example.com"], "max_depth": 1})
-
-        mock_recursive_loader.return_value = [
-            Mock(page_content="test content", metadata={"source": "https://example.com"})
-        ]
-
-        # Test fetch_content_text
-        message = component.fetch_content_text()
-        assert isinstance(message, Message), "Expected Message instance"
-        assert message.text == "test content"
-
-    def test_recursive_url_component_ensure_url(self):
-        """Test URLComponent's ensure_url method."""
-        component = URLComponent()
-
-        # Test URL without protocol
-        url = "example.com"
-        fixed_url = component.ensure_url(url)
-        assert fixed_url == "http://example.com"
-
-        # Test URL with protocol
-        url = "http://example.com"
-        fixed_url = component.ensure_url(url)
-        assert fixed_url == "http://example.com"
-
-    def test_recursive_url_component_multiple_urls(self, mock_recursive_loader):
-        """Test URLComponent with multiple URLs."""
-        component = URLComponent()
-        urls = ["https://example1.com", "https://example2.com", "https://example3.com"]
-        component.set_attributes({"urls": urls, "max_depth": 1})
-
-        # Mock different content for each URL
-        mock_recursive_loader.side_effect = [
-            [Mock(page_content=f"content{i + 1}", metadata={"source": url})] for i, url in enumerate(urls)
-        ]
-
-        # Test fetch_content
-        content = component.fetch_content()
-        assert len(content) == 3, f"Expected 3 content items, got {len(content)}"
-
-        for i, item in enumerate(content):
-            assert item.source == urls[i], f"Expected '{urls[i]}', got '{item.source}'"
-            assert item.text == f"content{i + 1}"
-
-    @patch("langflow.components.data.URLComponent.ensure_url")
-    def test_recursive_url_component_error_handling(self, mock_recursive_loader):
-        """Test error handling in URLComponent."""
-        component = URLComponent()
-        component.set_attributes({"urls": ["https://example.com"]})
-
-        # Set up the mock to raise an exception
-        mock_recursive_loader.side_effect = Exception("Connection error")
-
-        # Test that exceptions are properly handled
-        with pytest.raises(ValueError, match="Error loading documents: Connection error"):
-            component.fetch_content()
-
-    def test_recursive_url_component_format_options(self, mock_recursive_loader):
+    def test_url_component_format_options(self, mock_recursive_loader):
         """Test URLComponent with different format options."""
         component = URLComponent()
 
         # Test with Text format
         component.set_attributes({"urls": ["https://example.com"], "format": "Text"})
         mock_recursive_loader.return_value = [
-            Mock(page_content="extracted text", metadata={"source": "https://example.com"})
+            Mock(
+                page_content="extracted text",
+                metadata={
+                    "source": "https://example.com",
+                    "title": "Test Page",
+                    "description": "Test Description",
+                    "content_type": "text/html",
+                    "language": "en",
+                },
+            )
         ]
-        content_text = component.fetch_content()
-        assert content_text[0].text == "extracted text"
+        data_frame = component.fetch_content()
+        assert data_frame.iloc[0]["text"] == "extracted text"
+        assert data_frame.iloc[0]["content_type"] == "text/html"
 
-        # Test with Raw HTML format
-        component.set_attributes({"urls": ["https://example.com"], "format": "Raw HTML"})
+        # Test with HTML format
+        component.set_attributes({"urls": ["https://example.com"], "format": "HTML"})
         mock_recursive_loader.return_value = [
-            Mock(page_content="<html>raw html</html>", metadata={"source": "https://example.com"})
+            Mock(
+                page_content="<html>raw html</html>",
+                metadata={
+                    "source": "https://example.com",
+                    "title": "Test Page",
+                    "description": "Test Description",
+                    "content_type": "text/html",
+                    "language": "en",
+                },
+            )
         ]
-        content_html = component.fetch_content()
-        assert content_html[0].text == "<html>raw html</html>"
+        data_frame = component.fetch_content()
+        assert data_frame.iloc[0]["text"] == "<html>raw html</html>"
+        assert data_frame.iloc[0]["content_type"] == "text/html"
 
-    @respx.mock
-    async def test_url_request_success(self, mock_recursive_loader):
-        """Test successful URL request."""
-        url = "https://example.com/api/test"
-        respx.get(url).mock(return_value=Response(200, json={"success": True}))
-
+    def test_url_component_missing_metadata(self, mock_recursive_loader):
+        """Test URLComponent with missing metadata fields."""
         component = URLComponent()
-        component.set_attributes({"urls": [url], "max_depth": 1})
+        component.set_attributes({"urls": ["https://example.com"]})
 
-        mock_recursive_loader.return_value = [Mock(page_content="test content", metadata={"source": url})]
+        mock_doc = Mock(
+            page_content="test content",
+            metadata={"source": "https://example.com"},  # Only source is provided
+        )
+        mock_recursive_loader.return_value = [mock_doc]
 
-        result = component.fetch_content()
-        assert len(result) == 1
-        assert result[0].source == url
+        data_frame = component.fetch_content()
+        row = data_frame.iloc[0]
+        assert row["text"] == "test content"
+        assert row["url"] == "https://example.com"
+        assert row["title"] == ""  # Default empty string
+        assert row["description"] == ""  # Default empty string
+        assert row["content_type"] == ""  # Default empty string
+        assert row["language"] == ""  # Default empty string
+
+    def test_url_component_error_handling(self, mock_recursive_loader):
+        """Test error handling in URLComponent."""
+        component = URLComponent()
+
+        # Test empty URLs
+        component.set_attributes({"urls": []})
+        with pytest.raises(ValueError, match="Error loading documents:"):
+            component.fetch_content()
+
+        # Test request exception
+        component.set_attributes({"urls": ["https://example.com"]})
+        mock_recursive_loader.side_effect = Exception("Connection error")
+        with pytest.raises(ValueError, match="Error loading documents:"):
+            component.fetch_content()
+
+        # Test no documents found
+        mock_recursive_loader.side_effect = None
+        mock_recursive_loader.return_value = []
+        with pytest.raises(ValueError, match="Error loading documents:"):
+            component.fetch_content()
+
+    def test_url_component_ensure_url(self):
+        """Test URLComponent's ensure_url method."""
+        component = URLComponent()
+
+        # Test URL without protocol
+        url = "example.com"
+        fixed_url = component.ensure_url(url)
+        assert fixed_url == "https://example.com"
+
+        # Test URL with protocol
+        url = "https://example.com"
+        fixed_url = component.ensure_url(url)
+        assert fixed_url == "https://example.com"
+
+        # Test URL with https protocol
+        url = "https://example.com"
+        fixed_url = component.ensure_url(url)
+        assert fixed_url == "https://example.com"
+
+        # Test invalid URL
+        with pytest.raises(ValueError, match="Invalid URL"):
+            component.ensure_url("not a url")

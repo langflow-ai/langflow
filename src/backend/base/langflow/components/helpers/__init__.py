@@ -5,10 +5,8 @@ from .id_generator import IDGeneratorComponent
 from .memory import MemoryComponent
 from .output_parser import OutputParserComponent
 from .store_message import MessageStoreComponent
-from .structured_output import StructuredOutputComponent
 
 __all__ = [
-    "BatchRunComponent",
     "CalculatorComponent",
     "CreateListComponent",
     "CurrentDateComponent",
@@ -16,5 +14,4 @@ __all__ = [
     "MemoryComponent",
     "MessageStoreComponent",
     "OutputParserComponent",
-    "StructuredOutputComponent",
 ]

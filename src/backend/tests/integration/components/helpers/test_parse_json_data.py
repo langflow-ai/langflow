@@ -1,4 +1,4 @@
-from langflow.components.inputs import ChatInput
+from langflow.components.input_output import ChatInput
 from langflow.components.processing.parse_json_data import ParseJSONDataComponent
 from langflow.schema import Data
 
