@@ -240,7 +240,7 @@ def run(
             # Run using gunicorn on Linux
             process = run_on_mac_or_linux(host, port, log_level, options, app, protocol)
         if open_browser and not backend_only:
-            browser_host = get_best_access_host(host, port, protocol)
+            browser_host = get_best_access_host(host, port)
             click.launch(f"{protocol}://{browser_host}:{port}")
         if process:
             process.join()
@@ -345,7 +345,7 @@ def is_loopback_address(host: str) -> bool:
         return False
 
 
-def get_best_access_host(host: str, port: int, protocol: str) -> str:
+def get_best_access_host(host: str, port: int) -> str:
     """Get the best host to use for accessing the server.
     
     For loopback addresses, we prefer 'localhost' over IP addresses like '127.0.0.1'
@@ -491,7 +491,7 @@ def print_banner(host: str, port: int, protocol: str) -> None:
             "To contribute, set: [bold]DO_NOT_TRACK=false[/bold] in your environment."
         )
     )
-    access_host = get_best_access_host(host, port, protocol)
+    access_host = get_best_access_host(host, port)
     access_link = f"[bold]🟢 Open Langflow →[/bold] [link={protocol}://{access_host}:{port}]{protocol}://{access_host}:{port}[/link]"
 
     message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
