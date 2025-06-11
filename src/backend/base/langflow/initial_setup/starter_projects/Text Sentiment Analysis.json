@@ -268,7 +268,6 @@
                 "group_outputs": false,
                 "method": "load_files",
                 "name": "dataframe",
-                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -870,7 +869,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -885,9 +883,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1263,7 +1258,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1278,9 +1272,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1786,7 +1777,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1801,9 +1791,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
