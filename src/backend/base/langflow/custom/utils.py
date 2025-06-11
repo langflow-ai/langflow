@@ -430,7 +430,7 @@ def build_custom_component_template_from_inputs(
         return_types = cc_instance.get_method_return_type(output.method)
         return_types = [format_type(return_type) for return_type in return_types]
         output.add_types(return_types)
-        output.set_selected()
+
     # Validate that there is not name overlap between inputs and outputs
     frontend_node.validate_component()
     # ! This should be removed when we have a better way to handle this
