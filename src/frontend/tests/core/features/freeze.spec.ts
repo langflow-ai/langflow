@@ -11,7 +11,13 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
-    await addFlowToTestOnEmptyLangflow(page);
+    const firstRunLangflow = await page
+      .getByTestId("empty-project-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
 
     await page.getByTestId("blank-flow").click();
 
