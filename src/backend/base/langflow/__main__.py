@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import inspect
 import os
 import platform
@@ -318,27 +319,32 @@ def get_free_port(port):
     return port
 
 
+@functools.lru_cache(maxsize=4096)
 def is_loopback_address(host: str) -> bool:
     """Check if a host is a loopback address (localhost, 127.0.0.1, ::1, etc.).
-    
+
     Args:
         host: The host address to check
-        
+
     Returns:
         bool: True if the host is a loopback address, False otherwise
     """
-    # Check if it's exactly "localhost"
-    if host == "localhost":
+    # Fast-path for most common loopback names
+    if host in _LOCALHOSTS:
         return True
-    
-    # Check if it's exactly "0.0.0.0" (which binds to all interfaces)
-    if host == "0.0.0.0":  # noqa: S104
+    if host in _LOOPBACK_IPV4 or host in _LOOPBACK_IPV6:
         return True
-    
+    # Check for other 127.x.x.x IPv4 addresses (rare but valid)
+    if host.startswith("127."):
+        try:
+            parts = host.split(".")
+            if len(parts) == 4 and all(0 <= int(part) <= 255 for part in parts):
+                return True
+        except ValueError:
+            pass
     try:
-        # Convert string to IP address object
+        # Convert string to IP address object only if needed
         ip = ip_address(host)
-        # Check if it's a loopback address (127.0.0.0/8 for IPv4, ::1 for IPv6)
         return bool(ip.is_loopback)
     except ValueError:
         # If the IP address is invalid, default to False
@@ -347,25 +353,25 @@ def is_loopback_address(host: str) -> bool:
 
 def get_best_access_host(host: str, port: int) -> str:
     """Get the best host to use for accessing the server.
-    
+
     For loopback addresses, we prefer 'localhost' over IP addresses like '127.0.0.1'
     because 'localhost' is more universally supported across different operating systems
     and network configurations.
-    
+
     Args:
         host: The original host address
         port: The port number
         protocol: The protocol (http or https)
-        
+
     Returns:
         str: The best host address to use for access
     """
     if not is_loopback_address(host):
         return host
-    
+
     # For loopback addresses, prefer localhost
     preferred_host = "localhost"
-    
+
     # Test connectivity to both localhost and the original host if it's different
     if host != preferred_host:
         # Test if localhost works
@@ -377,7 +383,7 @@ def get_best_access_host(host: str, port: int) -> str:
                     return preferred_host
         except Exception:  # noqa: BLE001
             pass
-        
+
         # If localhost doesn't work, test the original host
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -387,7 +393,7 @@ def get_best_access_host(host: str, port: int) -> str:
                     return host
         except Exception:  # noqa: BLE001
             pass
-    
+
     # Default to localhost for loopback addresses
     return preferred_host
 
@@ -746,3 +752,9 @@ if __name__ == "__main__":
     except Exception as e:
         logger.exception(e)
         raise typer.Exit(1) from e
+
+_LOOPBACK_IPV4 = {"127.0.0.1", "127.0.1.1"}
+
+_LOOPBACK_IPV6 = {"::1"}
+
+_LOCALHOSTS = {"localhost", "0.0.0.0"}
