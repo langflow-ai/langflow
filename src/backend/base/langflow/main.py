@@ -182,6 +182,8 @@ def get_lifespan(*, fix_migration=False, version=None):
             logger.debug(f"Total initialization time: {total_time:.2f}s")
             yield
 
+        except asyncio.CancelledError:
+            logger.debug("Lifespan received cancellation signal")
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.exception(exc)
@@ -195,6 +197,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await asyncio.wait([sync_flows_from_fs_task])
 
                 await teardown_services()
+                temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
+                await asyncio.gather(*temp_dir_cleanups)
+
+                logger.debug("Langflow shutdown complete")
+                logger.info("👋 See you next time!")
+
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.DBAPIError) as e:
                 # Case where the database connection is closed during shutdown
                 logger.warning(f"Database teardown failed due to closed connection: {e}")
@@ -202,16 +210,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                 # Swallow this - it's normal during shutdown
                 logger.debug("Teardown cancelled during shutdown.")
             except Exception as e:
-                logger.exception(f"Unhandled error during teardown: {e}")
-
-            temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
-            await asyncio.gather(*temp_dir_cleanups)
-
-            logger.debug("Langflow shutdown complete")
-            logger.info("👋 See you next time!")
-
-            await asyncio.sleep(0.1)  # let logger flush async logs
-            await logger.complete()
+                logger.exception(f"Unhandled error during cleanup: {e}")
+            
+            
+            try:
+                await asyncio.shield(asyncio.sleep(0.1))  # let logger flush async logs
+                await asyncio.shield(logger.complete())
+            except asyncio.CancelledError:
+                # Cancellation during logger flush is possible during shutdown, so we swallow it
+                pass
 
     return lifespan
 
