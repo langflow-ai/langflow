@@ -127,11 +127,6 @@ class TestOutput:
         output_obj.add_types(["str", "int"])
         assert output_obj.types == ["str", "int"]
 
-    def test_output_set_selected(self):
-        output_obj = Output(name="test_output", types=["str", "int"])
-        output_obj.set_selected()
-        assert output_obj.selected == "str"
-
     def test_output_to_dict(self):
         output_obj = Output(name="test_output")
         assert output_obj.to_dict() == {

@@ -64,7 +64,16 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") == "Agent"
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
+                # Set selected output as the previous selected output
+                for output in latest_node["outputs"]:
+                    node_data_output = next(
+                        (output_ for output_ in node_data["outputs"] if output_["name"] == output["name"]),
+                        None,
+                    )
+                    if node_data_output:
+                        output["selected"] = node_data_output.get("selected")
                 node_data["outputs"] = latest_node["outputs"]
+
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
                 if node_type != "Prompt":

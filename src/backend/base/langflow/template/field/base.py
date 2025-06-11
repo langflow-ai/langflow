@@ -224,9 +224,8 @@ class Output(BaseModel):
         if self.types is None:
             self.types = []
         self.types.extend([t for t in type_ if t not in self.types])
-
-    def set_selected(self) -> None:
-        if not self.selected and self.types:
+        # If no type is selected and we have types, select the first one
+        if self.selected is None and self.types:
             self.selected = self.types[0]
 
     @model_serializer(mode="wrap")
