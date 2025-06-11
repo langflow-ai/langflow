@@ -72,8 +72,7 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
             break
 
         # Extract the variable name from either the single or double brace match.
-        # If match found in double braces, re-add single braces for JSON strings.
-        variable_name = "{{" + match.group(1) + "}}" if match.group(1) else match.group(2)
+        variable_name = match.group(1) if match.group(1) else match.group(2)
         if variable_name is not None:
             # This means there is a match
             # but there is nothing inside the braces
