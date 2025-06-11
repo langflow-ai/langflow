@@ -309,6 +309,11 @@ def get_component_instance(custom_component: CustomComponent, user_id: str | UUI
         raise
 
 
+def is_a_preimported_component(custom_component: CustomComponent):
+    """Check if the component is a preimported component."""
+    return isinstance(custom_component, Component) and type(custom_component) is not Component
+
+
 def run_build_config(
     custom_component: CustomComponent,
     user_id: str | UUID | None = None,
@@ -325,10 +330,10 @@ def run_build_config(
     """
     # Check if the instance's class is a subclass of Component (but not Component itself)
     # If we have a Component that is a subclass of Component, that means
-    # we have imported it and not loaded it from the file
-    # because when we load if from a file we use the Component class itself as
-    # an extractor
-    if isinstance(custom_component, Component) and type(custom_component) is not Component:
+    # we have imported it
+    # If not, it means the component was loaded through LANGFLOW_COMPONENTS_PATH
+    # and loaded from a file
+    if is_a_preimported_component(custom_component):
         return custom_component.build_config(), custom_component
 
     if custom_component._code is None:
