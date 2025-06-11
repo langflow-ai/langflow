@@ -292,8 +292,13 @@ jobs:
           cd ./src/frontend
           npx playwright install --with-deps chromium
 
-      - name: Setup Python Environment with UV
-        uses: ./.github/actions/setup-uv
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
 
       - name: Install Python Dependencies
         run: uv sync
