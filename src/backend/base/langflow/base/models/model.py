@@ -235,7 +235,6 @@ class LCModelComponent(Component):
                 }
             )
             if stream:
-                iterator = runnable.astream(inputs)
                 if self.is_connected_to_chat_output():
                     # Add a Message
                     if hasattr(self, "graph"):
@@ -245,7 +244,7 @@ class LCModelComponent(Component):
                     else:
                         session_id = None
                     model_message = Message(
-                        text=iterator,
+                        text=runnable.stream(inputs),
                         sender=MESSAGE_SENDER_AI,
                         sender_name=self.display_name,
                         properties={"icon": "Bot", "state": "partial"},
@@ -254,9 +253,10 @@ class LCModelComponent(Component):
                     lf_message = await self.send_message(model_message)
                     result = lf_message.text
                 else:
-                    message = await runnable.ainvoke(inputs)
+                    message = runnable.invoke(inputs)
+                    result = message.content if hasattr(message, "content") else message
             else:
-                message = await runnable.ainvoke(inputs)
+                message = runnable.invoke(inputs)
                 result = message.content if hasattr(message, "content") else message
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)
