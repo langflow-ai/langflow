@@ -25,9 +25,9 @@
         "id": "xy-edge__Prompt-CMP8r{œdataTypeœ:œPromptœ,œidœ:œPrompt-CMP8rœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-v0n1N{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-v0n1Nœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-CMP8r",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-CMP8rœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-CMP8rœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-v0n1N",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-v0n1Nœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-v0n1Nœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "xy-edge__Prompt-PZu7g{œdataTypeœ:œPromptœ,œidœ:œPrompt-PZu7gœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-v0n1N{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-v0n1Nœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-PZu7g",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-PZu7gœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-PZu7gœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-v0n1N",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-v0n1Nœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-v0n1Nœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "xy-edge__LanguageModelComponent-v0n1N{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-v0n1Nœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-2rZzN{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-2rZzNœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-v0n1N",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-v0n1Nœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-v0n1Nœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-2rZzN",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-2rZzNœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-2rZzNœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -901,7 +901,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
@@ -917,7 +916,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
                 "required_inputs": [],
                 "selected": "LanguageModel",
                 "tool_mode": true,
@@ -1078,7 +1076,7 @@
               },
               "system_message": {
                 "_input_type": "MessageTextInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
