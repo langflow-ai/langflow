@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-qrgXn",
+            "id": "Prompt-10zWr",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "LanguageModelComponent-UrOQf",
+            "id": "LanguageModelComponent-ANJZn",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-qrgXn{œdataTypeœ:œPromptœ,œidœ:œPrompt-qrgXnœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-UrOQf{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-UrOQfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-10zWr{œdataTypeœ:œPromptœ,œidœ:œPrompt-10zWrœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-ANJZn{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-ANJZnœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-qrgXn",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-qrgXnœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-UrOQf",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-UrOQfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-10zWr",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-10zWrœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-ANJZn",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-ANJZnœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-9rvSS",
+            "id": "ChatInput-VBtrG",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-UrOQf",
+            "id": "LanguageModelComponent-ANJZn",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-9rvSS{œdataTypeœ:œChatInputœ,œidœ:œChatInput-9rvSSœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-UrOQf{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-UrOQfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__ChatInput-VBtrG{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VBtrGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-ANJZn{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-ANJZnœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-9rvSS",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-9rvSSœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-UrOQf",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-UrOQfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-VBtrG",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-VBtrGœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-ANJZn",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-ANJZnœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-UrOQf",
+            "id": "LanguageModelComponent-ANJZn",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-AyRuN",
+            "id": "ChatOutput-WjNSG",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -80,12 +80,12 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__LanguageModelComponent-UrOQf{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-UrOQfœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-AyRuN{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-AyRuNœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__LanguageModelComponent-ANJZn{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-ANJZnœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-WjNSG{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-WjNSGœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-UrOQf",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-UrOQfœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-AyRuN",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-AyRuNœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "LanguageModelComponent-ANJZn",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-ANJZnœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-WjNSG",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-WjNSGœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -93,7 +93,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-9rvSS",
+          "id": "ChatInput-VBtrG",
           "node": {
             "base_classes": [
               "Message"
@@ -360,7 +360,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-9rvSS",
+        "id": "ChatInput-VBtrG",
         "measured": {
           "height": 234,
           "width": 320
@@ -381,7 +381,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-qrgXn",
+          "id": "Prompt-10zWr",
           "node": {
             "base_classes": [
               "Message"
@@ -488,7 +488,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-qrgXn",
+        "id": "Prompt-10zWr",
         "measured": {
           "height": 260,
           "width": 320
@@ -507,7 +507,7 @@
       },
       {
         "data": {
-          "id": "undefined-x1gke",
+          "id": "undefined-Nwgqn",
           "node": {
             "description": "## 📖 README\n\nPerform basic prompting with a Language model component.\n\n#### Quick Start\n- Add your **OpenAI API key** to the **Language Model** component.\n- Open the **Playground** to chat with your bot.\n\n#### Next steps:\nExperiment by changing the prompt and the Language model temperature to see how the bot's responses change.",
             "display_name": "Read Me",
@@ -519,10 +519,10 @@
         },
         "dragging": false,
         "height": 403,
-        "id": "undefined-x1gke",
+        "id": "undefined-Nwgqn",
         "measured": {
           "height": 403,
-          "width": 324
+          "width": 325
         },
         "position": {
           "x": 309.22132329147314,
@@ -543,7 +543,7 @@
       },
       {
         "data": {
-          "id": "note-YJtLA",
+          "id": "note-iylyn",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -556,7 +556,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-YJtLA",
+        "id": "note-iylyn",
         "measured": {
           "height": 324,
           "width": 324
@@ -580,7 +580,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-AyRuN",
+          "id": "ChatOutput-WjNSG",
           "node": {
             "base_classes": [
               "Message"
@@ -863,7 +863,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-AyRuN",
+        "id": "ChatOutput-WjNSG",
         "measured": {
           "height": 234,
           "width": 320
@@ -882,7 +882,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-UrOQf",
+          "id": "LanguageModelComponent-ANJZn",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1101,7 +1101,7 @@
               },
               "system_message": {
                 "_input_type": "MessageTextInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
@@ -1157,7 +1157,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-UrOQf",
+        "id": "LanguageModelComponent-ANJZn",
         "measured": {
           "height": 534,
           "width": 320
@@ -1166,22 +1166,22 @@
           "x": 1085.7542386472996,
           "y": 795.0399905192078
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -38.712024727138214,
-      "y": -377.46660457274356,
-      "zoom": 0.7816796789893417
+      "x": -211.08737632991608,
+      "y": -468.399925377115,
+      "zoom": 0.8960810767526934
     }
   },
   "description": "Perform basic prompting with an OpenAI model.",
   "endpoint_name": null,
-  "id": "f0994431-652b-4fd1-940e-e5bfa1416fcc",
+  "id": "0ed48916-2202-4ffb-8bf6-2d381cc33cfd",
   "is_component": false,
   "last_tested_version": "1.4.2",
-  "name": "Basic Prompting",
+  "name": "Basic Prompting (4)",
   "tags": [
     "chatbots"
   ]
