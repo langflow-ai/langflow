@@ -14,7 +14,6 @@ def convert_to_message(v) -> Message:
     Returns:
         Message: Converted Message object
     """
-
     return v if isinstance(v, Message) else v.to_message()
 
 
@@ -77,9 +76,7 @@ class TypeConverterComponent(Component):
         )
     ]
 
-    def update_outputs(
-        self, frontend_node: dict, field_name: str, field_value: Any
-    ) -> dict:
+    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Dynamically show only the relevant output based on the selected output type."""
         if field_name == "output_type":
             # Start with empty outputs
@@ -115,9 +112,7 @@ class TypeConverterComponent(Component):
 
     def convert_to_message(self) -> Message:
         """Convert input to Message type."""
-        input_value = (
-            self.input_data[0] if isinstance(self.input_data, list) else self.input_data
-        )
+        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data
 
         # Handle string input by converting to Message first
         if isinstance(input_value, str):
@@ -127,9 +122,7 @@ class TypeConverterComponent(Component):
 
     def convert_to_data(self) -> Data:
         """Convert input to Data type."""
-        input_value = (
-            self.input_data[0] if isinstance(self.input_data, list) else self.input_data
-        )
+        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data
 
         # Handle string input by converting to Message first
         if isinstance(input_value, str):
@@ -139,9 +132,7 @@ class TypeConverterComponent(Component):
 
     def convert_to_dataframe(self) -> DataFrame:
         """Convert input to DataFrame type."""
-        input_value = (
-            self.input_data[0] if isinstance(self.input_data, list) else self.input_data
-        )
+        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data
 
         # Handle string input by converting to Message first
         if isinstance(input_value, str):
