@@ -32,7 +32,11 @@ def process_inputs(component_data: Input):
     if isinstance(component_data, SecretStrInput):
         component_data.value = ""
         component_data.load_from_db = False
-    elif component_data.name in {"temperature", "tool_model_enabled", "base_url"}:
+        component_data.real_time_refresh = True
+    elif component_data.name == "tool_model_enabled":
+        component_data.advanced = True
+        component_data.value = True
+    elif component_data.name in {"temperature", "base_url"}:
         component_data = set_advanced_true(component_data)
     elif component_data.name == "model_name":
         component_data = set_real_time_refresh_false(component_data)
