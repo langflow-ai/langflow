@@ -176,7 +176,7 @@ class S3BucketUploaderComponent(Component):
         try:
             import boto3
         except ImportError as e:
-            msg = "boto3 is not installed. Please install it using `pip install boto3`."
+            msg = "boto3 is not installed. Please install it using `uv pip install boto3`."
             raise ImportError(msg) from e
 
         return boto3.client(
