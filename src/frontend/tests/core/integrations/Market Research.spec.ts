@@ -41,6 +41,23 @@ withEventDeliveryModes(
       .nth(0)
       .fill(process.env.TAVILY_API_KEY ?? "");
 
+    //* TODO: Remove these 5 steps once the template is updated *//
+    await page.getByTestId("dropdown-output-openaimodel").click();
+
+    await page
+      .getByTestId("dropdown-item-output-openaimodel-language model")
+      .click();
+
+    await page
+      .getByTestId("handle-structuredoutput-shownode-structured output-right")
+      .click();
+
+    await page
+      .getByTestId("handle-parser-shownode-data or dataframe-left")
+      .click();
+
+    await page.getByTestId("tab_1_stringify").click();
+
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", {
       timeout: 60000 * 3,
