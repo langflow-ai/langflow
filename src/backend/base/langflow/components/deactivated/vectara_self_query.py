@@ -3,7 +3,6 @@ import json
 
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
-from langchain_community.vectorstores import Vectara
 
 from langflow.base.vectorstores.model import check_cached_vector_store
 from langflow.custom.custom_component.custom_component import CustomComponent
@@ -47,7 +46,7 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
     ]
 
     @check_cached_vector_store
-    def build_vector_store(self) -> Vectara:
+    def build_vector_store(self):
         """Builds the Vectara Self Query Retriever."""
         try:
             from langchain_community.vectorstores import Vectara  # noqa: F401
