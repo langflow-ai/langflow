@@ -155,20 +155,22 @@ class StructuredOutputComponent(Component):
             config=config_dict,
         )
 
-        # OPTIMIZATION NOTE: Simplified result processing logic
-        # - Removed unreachable isinstance(result, BaseModel) check since get_chat_result never returns BaseModel
-        # - Used early return pattern to reduce nesting
-
-        # Early return for non-dict results
+        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure
+        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)
         if not isinstance(result, dict):
             return result
 
-        # Handle responses structure
-        if responses := result.get("responses"):
-            result = responses[0].model_dump() if isinstance(responses[0], BaseModel) else responses[0]
+        # Extract first response and convert BaseModel to dict
+        responses = result.get("responses", [])
+        if not responses:
+            return result
 
-        # Return objects if present, otherwise the processed result
-        return result.get("objects") or result
+        # Convert BaseModel to dict (creates the "objects" key)
+        first_response = responses[0]
+        structured_data = first_response.model_dump() if isinstance(first_response, BaseModel) else first_response
+
+        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)
+        return structured_data.get("objects", structured_data)
 
     def build_structured_output(self) -> Data:
         output = self.build_structured_output_base()
