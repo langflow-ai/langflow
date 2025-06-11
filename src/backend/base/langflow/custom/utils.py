@@ -308,7 +308,9 @@ def get_component_instance(custom_component: CustomComponent | Component, user_i
 
 def is_a_preimported_component(custom_component: CustomComponent):
     """Check if the component is a preimported component."""
-    return isinstance(custom_component, Component) and type(custom_component) is not Component
+    klass = type(custom_component)
+    # This avoids double type lookups, and may speed up the common-case short-circuit
+    return issubclass(klass, Component) and klass is not Component
 
 
 def run_build_config(
