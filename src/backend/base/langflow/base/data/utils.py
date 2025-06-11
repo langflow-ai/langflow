@@ -150,8 +150,8 @@ def convert_json_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
 def convert_yaml_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
     try:
         _text = read_text_file(file_path=file_path)
-        text = yaml.safe_load(_text)
-
+        loaded_yaml = yaml.safe_load(_text)
+        text = yaml.dump(loaded_yaml, default_flow_style=False)
         return Data(data={"file_path": file_path, "text": text})
     except Exception as exc:
         if not silent_errors:
@@ -186,8 +186,9 @@ def convert_pdf_to_text(
     do_picture_classification: bool = False,
 ) -> Data | None:
     try:
+        # fall back to english, pick your language here: https://www.jaided.ai/easyocr/
         if ocr_lang is None:
-            ocr_lang = ["es"]  # fall back to english
+            ocr_lang = ["en"]
 
         # OPTIMIZAION: could be better to "cache" the converters ...
         pipeline_options = PdfPipelineOptions()
@@ -228,8 +229,9 @@ def convert_img_to_text(
     do_picture_classification: bool = False,
 ) -> Data | None:
     try:
+        # fall back to english, pick your language here: https://www.jaided.ai/easyocr/
         if ocr_lang is None:
-            ocr_lang = ["es"]  # fall back to english
+            ocr_lang = ["en"]
 
         # OPTIMIZAION: could be better to "cache" the converters ...
         pipeline_options = PdfPipelineOptions()
@@ -278,7 +280,9 @@ def convert_docx_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
     return None
 
 
-def convert_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+def convert_file_to_data(
+    file_path: str, *, silent_errors: bool, do_ocr: bool = False, ocr_lang: list[str] | None = None
+) -> Data | None:
     try:
         if file_path.endswith(".json"):
             return convert_json_to_text(file_path=file_path, silent_errors=silent_errors)
@@ -290,10 +294,21 @@ def convert_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
             return convert_xml_to_text(file_path=file_path, silent_errors=silent_errors)
 
         if file_path.endswith(".pdf"):
-            return convert_pdf_to_text(file_path=file_path, silent_errors=silent_errors)
+            return convert_pdf_to_text(
+                file_path=file_path, silent_errors=silent_errors, do_ocr=do_ocr, ocr_lang=ocr_lang
+            )
 
         if file_path.endswith(".docx"):
             return convert_docx_to_text(file_path=file_path, silent_errors=silent_errors)
+
+        # Handle image files
+        if do_ocr and (any(file_path.endswith(f".{ext}") for ext in IMG_FILE_TYPES)):
+            return convert_img_to_text(file_path=file_path, silent_errors=silent_errors, ocr_lang=ocr_lang)
+
+        # Handle plain text and other text-based files
+        if any(file_path.endswith(f".{ext}") for ext in TEXT_FILE_TYPES):
+            text = read_text_file(file_path)
+            return Data(data={"file_path": file_path, "text": text})
 
     except Exception as exc:
         if not silent_errors:
@@ -309,10 +324,21 @@ def parallel_load_data(
     silent_errors: bool,
     max_concurrency: int,
     load_function: Callable = convert_file_to_data,
+    do_table_structure: bool = False,  # We try to keep conversion as light as possible
+    do_picture_classification: bool = False,
+    do_ocr: bool = False,
+    ocr_lang: list[str] | None = None,
 ) -> list[Data | None]:
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
         loaded_files = executor.map(
-            lambda file_path: load_function(file_path, silent_errors=silent_errors),
+            lambda file_path: load_function(
+                file_path,
+                silent_errors=silent_errors,
+                do_ocr=do_ocr,
+                ocr_lang=ocr_lang,
+                do_table_structure=do_table_structure,
+                do_picture_classification=do_picture_classification,
+            ),
             file_paths,
         )
     # loaded_files is an iterator, so we need to convert it to a list
