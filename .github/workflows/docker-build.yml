@@ -39,6 +39,7 @@ on:
         required: true
         type: string
       pre_release:
+        description: "Whether this is a pre-release."
         required: false
         type: boolean
         default: false
@@ -49,7 +50,7 @@ on:
 
 
 env:
-  POETRY_VERSION: "1.8.2"
+  PYTHON_VERSION: "3.13"
   TEST_TAG: "langflowai/langflow:test"
 
 jobs:
@@ -195,7 +196,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
       - name: Install the project
         run: |

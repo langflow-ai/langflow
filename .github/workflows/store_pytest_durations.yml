@@ -27,7 +27,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
           prune-cache: false
       - name: Install the project
         run: uv sync
