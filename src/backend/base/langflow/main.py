@@ -211,8 +211,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                 logger.debug("Teardown cancelled during shutdown.")
             except Exception as e:
                 logger.exception(f"Unhandled error during cleanup: {e}")
-            
-            
+
             try:
                 await asyncio.shield(asyncio.sleep(0.1))  # let logger flush async logs
                 await asyncio.shield(logger.complete())
@@ -401,6 +400,7 @@ def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = Fals
 
     # Add redirect from / to /flows before static files
     if not backend_only:
+
         @app.get("/")
         async def redirect_to_flows():
             return RedirectResponse(url="/flows")
