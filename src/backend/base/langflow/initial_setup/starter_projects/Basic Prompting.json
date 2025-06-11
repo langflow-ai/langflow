@@ -1101,7 +1101,7 @@
               },
               "system_message": {
                 "_input_type": "MessageTextInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
@@ -1181,7 +1181,7 @@
   "id": "0ed48916-2202-4ffb-8bf6-2d381cc33cfd",
   "is_component": false,
   "last_tested_version": "1.4.2",
-  "name": "Basic Prompting (4)",
+  "name": "Basic Prompting",
   "tags": [
     "chatbots"
   ]
