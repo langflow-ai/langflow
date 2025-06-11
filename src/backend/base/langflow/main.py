@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import sqlite3
 import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
@@ -20,6 +21,7 @@ from loguru import logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
+import sqlalchemy
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router
@@ -124,6 +126,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
+
         try:
             start_time = asyncio.get_event_loop().time()
 
@@ -186,21 +189,30 @@ def get_lifespan(*, fix_migration=False, version=None):
             raise
         finally:
             # Clean shutdown
-            logger.info("Cleaning up resources...")
-            if sync_flows_from_fs_task:
-                sync_flows_from_fs_task.cancel()
-                await asyncio.wait([sync_flows_from_fs_task])
+            logger.info("Cleaning up services...")
+            try:
+                if sync_flows_from_fs_task:
+                    sync_flows_from_fs_task.cancel()
+                    await asyncio.wait([sync_flows_from_fs_task])
 
-            await teardown_services()
-
-            await asyncio.sleep(0.1)  # let logger flush async logs
-            await logger.complete()
+                await teardown_services()
+            except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.DBAPIError) as e:
+                # Case where the database connection is closed during shutdown
+                logger.warning(f"Database teardown failed due to closed connection: {e}")
+            except asyncio.CancelledError:
+                # Swallow this - it's normal during shutdown
+                logger.debug("Teardown cancelled during shutdown.")
+            except Exception as e:
+                logger.exception(f"Unhandled error during teardown: {e}")
 
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
             await asyncio.gather(*temp_dir_cleanups)
 
             logger.debug("Langflow shutdown complete")
             logger.info("👋 See you next time!")
+
+            await asyncio.sleep(0.1)  # let logger flush async logs
+            await logger.complete()
 
     return lifespan
 

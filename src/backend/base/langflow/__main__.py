@@ -69,9 +69,12 @@ def _shutdown_webapp_process():
     if webapp_process and webapp_process.is_alive():
         logger.info("Cleaning up resources...")
         webapp_process.terminate()
-        webapp_process.join(timeout=30)  # Wait up to 30 seconds
+        # The long wait allows the process to finish setup, preventing it from
+        # getting in a state where background tasks continue to do work after termination
+        # is sent.
+        webapp_process.join(timeout=30)
         if webapp_process.is_alive():
-            logger.warning("Process didn't terminate gracefully, killing it...")
+            logger.warning("Process didn't terminate gracefully, killing it.")
             webapp_process.kill()
             webapp_process.join()
     sys.exit(0)
