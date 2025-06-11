@@ -158,7 +158,6 @@ class Component(CustomComponent):
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
-        self._set_output_required_inputs()
 
     def get_incoming_edge_by_target_param(self, target_param: str) -> str | None:
         """Get the source vertex ID for an incoming edge that targets a specific parameter.
@@ -539,7 +538,6 @@ class Component(CustomComponent):
             raise ValueError(msg)
         return_types = self._get_method_return_type(output.method)
         output.add_types(return_types)
-        output.set_selected()
 
     def _set_output_required_inputs(self) -> None:
         for output in self.outputs:
@@ -851,7 +849,6 @@ class Component(CustomComponent):
                 continue
             return_types = self._get_method_return_type(output.method)
             output.add_types(return_types)
-            output.set_selected()
 
         frontend_node.validate_component()
         frontend_node.set_base_classes_from_outputs()
