@@ -68,6 +68,7 @@ const IOKeyPairInput = ({
 
                 {isList && isInputField && index === ref.current.length - 1 ? (
                   <button
+                    type="button"
                     onClick={() => {
                       let newInputList = _.cloneDeep(ref.current);
                       newInputList.push({ "": "" });
@@ -81,6 +82,7 @@ const IOKeyPairInput = ({
                   </button>
                 ) : isList && isInputField ? (
                   <button
+                    type="button"
                     onClick={() => {
                       let newInputList = _.cloneDeep(ref.current);
                       newInputList.splice(index, 1);

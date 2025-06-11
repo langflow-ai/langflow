@@ -7,3 +7,19 @@ export type MCPSettingsType = {
   description?: string;
   input_schema?: Record<string, any>;
 };
+
+export type MCPServerInfoType = {
+  id: string;
+  name: string;
+  description: string;
+  toolsCount: number;
+};
+
+export type MCPServerType = {
+  name: string;
+  command?: string;
+  url?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  headers?: Record<string, string>;
+};

@@ -13,6 +13,7 @@ export default function DropdownComponent({
   name,
   dialogInputs,
   optionsMetaData,
+  placeholder,
   nodeClass,
   nodeId,
   handleNodeClass,
@@ -38,6 +39,7 @@ export default function DropdownComponent({
         handleNodeClass={handleNodeClass}
         optionsMetaData={optionsMetaData}
         onSelect={onChange}
+        placeholder={placeholder}
         combobox={combobox}
         value={value || (toggleValue === false && toggle ? options[0] : "")}
         id={`dropdown_${id}`}
