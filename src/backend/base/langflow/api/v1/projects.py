@@ -3,8 +3,8 @@ import json
 import zipfile
 from datetime import datetime, timezone
 from typing import Annotated
-from uuid import UUID
 from urllib.parse import quote
+from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
@@ -293,16 +293,16 @@ async def download_file(
         with zipfile.ZipFile(zip_stream, "w") as zip_file:
             for flow in flows_without_api_keys:
                 flow_json = json.dumps(jsonable_encoder(flow))
-                zip_file.writestr(f"{flow['name']}.json", flow_json.encode('utf-8'))
+                zip_file.writestr(f"{flow['name']}.json", flow_json.encode("utf-8"))
 
         zip_stream.seek(0)
 
         current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"{current_time}_{project.name}_flows.zip"
-        
+
         # URL encode filename handle non-ASCII (ex. Cyrillic)
         encoded_filename = quote(filename)
-        
+
         return StreamingResponse(
             zip_stream,
             media_type="application/x-zip-compressed",
