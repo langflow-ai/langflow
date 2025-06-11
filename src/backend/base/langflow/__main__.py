@@ -242,7 +242,7 @@ def run(
     
     # Step 0: Initializing Langflow
     with progress.step(0):
-        logger.info("Initializing Langflow...")
+        # logger.info("Initializing Langflow...")
         logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
         set_var_for_macos_issue()
         settings_service = get_settings_service()
