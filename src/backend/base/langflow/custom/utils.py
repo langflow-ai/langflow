@@ -262,7 +262,7 @@ def run_build_inputs(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def get_component_instance(custom_component: CustomComponent, user_id: str | UUID | None = None):
+def get_component_instance(custom_component: CustomComponent | Component, user_id: str | UUID | None = None):
     """Returns an instance of a custom component, evaluating its code if necessary.
 
     If the input is already an instance of `Component` or `CustomComponent`, it is returned directly.
