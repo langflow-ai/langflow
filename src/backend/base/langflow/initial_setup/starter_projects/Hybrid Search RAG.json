@@ -872,7 +872,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -887,9 +886,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1270,11 +1266,6 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "required_inputs": [
-                  "collection_name",
-                  "database_name",
-                  "token"
-                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1289,7 +1280,6 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [

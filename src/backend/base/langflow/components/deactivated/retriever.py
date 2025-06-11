@@ -2,26 +2,37 @@ from langchain_core.tools import create_retriever_tool
 
 from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing import BaseRetriever, Tool
+from langflow.io import HandleInput, StrInput
 
 
 class RetrieverToolComponent(CustomComponent):
     display_name = "RetrieverTool"
     description = "Tool for interacting with retriever"
     name = "RetrieverTool"
-    legacy = True
     icon = "LangChain"
+    legacy = True
 
-    def build_config(self):
-        return {
-            "retriever": {
-                "display_name": "Retriever",
-                "info": "Retriever to interact with",
-                "type": BaseRetriever,
-                "input_types": ["Retriever"],
-            },
-            "name": {"display_name": "Name", "info": "Name of the tool"},
-            "description": {"display_name": "Description", "info": "Description of the tool"},
-        }
+    inputs = [
+        HandleInput(
+            name="retriever",
+            display_name="Retriever",
+            info="Retriever to interact with",
+            input_types=["Retriever"],
+            required=True,
+        ),
+        StrInput(
+            name="name",
+            display_name="Name",
+            info="Name of the tool",
+            required=True,
+        ),
+        StrInput(
+            name="description",
+            display_name="Description",
+            info="Description of the tool",
+            required=True,
+        ),
+    ]
 
     def build(self, retriever: BaseRetriever, name: str, description: str, **kwargs) -> Tool:
         _ = kwargs

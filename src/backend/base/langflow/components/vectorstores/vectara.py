@@ -8,8 +8,6 @@ from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema.data import Data
 
 if TYPE_CHECKING:
-    from langchain_community.vectorstores import Vectara
-
     from langflow.schema.dataframe import DataFrame
 
 
@@ -41,7 +39,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     @check_cached_vector_store
-    def build_vector_store(self) -> "Vectara":
+    def build_vector_store(self) -> Vectara:
         """Builds the Vectara object."""
         try:
             from langchain_community.vectorstores import Vectara
@@ -58,7 +56,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
         self._add_documents_to_vector_store(vectara)
         return vectara
 
-    def _add_documents_to_vector_store(self, vector_store: "Vectara") -> None:
+    def _add_documents_to_vector_store(self, vector_store: Vectara) -> None:
         """Adds documents to the Vector Store."""
         ingest_data: list | Data | DataFrame = self.ingest_data
         if not ingest_data:

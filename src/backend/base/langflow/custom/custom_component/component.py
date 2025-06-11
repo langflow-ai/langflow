@@ -158,7 +158,6 @@ class Component(CustomComponent):
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
-        self._set_output_required_inputs()
 
     def get_incoming_edge_by_target_param(self, target_param: str) -> str | None:
         """Get the source vertex ID for an incoming edge that targets a specific parameter.
