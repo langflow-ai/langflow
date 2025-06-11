@@ -1075,7 +1075,7 @@
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
-                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
+                "info": "",
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -1182,7 +1182,7 @@
               },
               "temperature": {
                 "_input_type": "SliderInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "",

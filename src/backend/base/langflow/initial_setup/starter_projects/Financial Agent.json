@@ -2275,11 +2275,11 @@
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
-                "combobox": true,
+                "combobox": false,
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
-                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
+                "info": "",
                 "name": "model_name",
                 "options": [
                   "Meta-Llama-3.3-70B-Instruct",

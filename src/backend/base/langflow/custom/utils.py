@@ -270,9 +270,6 @@ def get_component_instance(custom_component: CustomComponent | Component, user_i
     HTTP 400 error if the code is missing, invalid, or instantiation fails.
     """
     # Fast path: avoid repeated str comparisons
-    ctype_name = custom_component.__class__.__name__
-    if ctype_name not in _COMPONENT_TYPE_NAMES:
-        return custom_component
 
     code = custom_component._code
     if not isinstance(code, str):
@@ -413,10 +410,16 @@ def build_custom_component_template_from_inputs(
     Returns:
         A tuple containing the frontend node dictionary and the component instance.
     """
-    cc_instance = get_component_instance(custom_component, user_id=user_id)
-    field_config = cc_instance.get_template_config(cc_instance)
-    frontend_node = ComponentFrontendNode.from_inputs(**field_config)
+    ctype_name = custom_component.__class__.__name__
+    if ctype_name in _COMPONENT_TYPE_NAMES:
+        cc_instance = get_component_instance(custom_component, user_id=user_id)
 
+        field_config = cc_instance.get_template_config(cc_instance)
+        frontend_node = ComponentFrontendNode.from_inputs(**field_config)
+
+    else:
+        frontend_node = ComponentFrontendNode.from_inputs(**custom_component.template_config)
+        cc_instance = custom_component
     frontend_node = add_code_field(frontend_node, custom_component._code)
     # But we now need to calculate the return_type of the methods in the outputs
     for output in frontend_node.outputs:

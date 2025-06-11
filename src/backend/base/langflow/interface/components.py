@@ -115,7 +115,7 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     _getattr = getattr
 
     # Fast path: only check class objects defined in this module
-    failed_count = 0
+    failed_count = []
     for name, obj in vars(module).items():
         if not isinstance(obj, type):
             continue
@@ -136,14 +136,14 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
             comp_template, _ = create_component_template(component_extractor=comp_instance)
             component_name = obj.name if hasattr(obj, "name") and obj.name else name
             module_components[component_name] = comp_template
-        except Exception:  # noqa: BLE001
-            failed_count += 1
+        except Exception as e:  # noqa: BLE001
+            failed_count.append(f"{name}: {e}")
             continue
 
     if failed_count:
         logger.warning(
-            f"Skipped {failed_count} component class{'es' if failed_count != 1 else ''} "
-            f"in module '{modname}' due to instantiation failure."
+            f"Skipped {len(failed_count)} component class{'es' if len(failed_count) != 1 else ''} "
+            f"in module '{modname}' due to instantiation failure: {', '.join(failed_count)}"
         )
     logger.debug(f"Processed module {modname}")
     return (top_level, module_components)
