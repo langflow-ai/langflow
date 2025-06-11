@@ -1,6 +1,6 @@
 ---
 description: Rules and checklist for creating a basic Langflow Component
-globs: 
+globs:
 alwaysApply: false
 ---
 # Rule: How to Create a Basic Langflow Component

@@ -59,7 +59,7 @@ export class Network extends Construct {
       internetFacing: true, //インターネットからのアクセスを許可するかどうか指定
       loadBalancerName: 'langflow-alb',
       securityGroup: this.albSG, //作成したセキュリティグループを割り当てる
-      vpc:this.vpc,   
+      vpc:this.vpc,
     })
 
     const listener = this.alb.addListener('Listener', { port: alb_listen_port });

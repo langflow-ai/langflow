@@ -128,31 +128,52 @@ def read_text_file(file_path: str) -> str:
 
 
 def convert_json_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
-    _text = read_text_file(file_path=file_path)
+    try:
+        _text = read_text_file(file_path=file_path)
 
-    loaded_json = orjson.loads(_text)
-    if isinstance(loaded_json, dict):
-        loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
-    elif isinstance(loaded_json, list):
-        loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
+        loaded_json = orjson.loads(_text)
+        if isinstance(loaded_json, dict):
+            loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
+        elif isinstance(loaded_json, list):
+            loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
 
-    text = orjson.dumps(loaded_json).decode("utf-8")
-    return Data(data={"file_path": file_path, "text": text})
+        text = orjson.dumps(loaded_json).decode("utf-8")
+        return Data(data={"file_path": file_path, "text": text})
+    except Exception as exc:
+        if not silent_errors:
+            msg = f"Could not parse json file {file_path}: {exc}"
+            raise ValueError(msg) from exc
+
+    return None
 
 
 def convert_yaml_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
-    _text = read_text_file(file_path=file_path)
-    text = yaml.safe_load(_text)
+    try:
+        _text = read_text_file(file_path=file_path)
+        text = yaml.safe_load(_text)
 
-    return Data(data={"file_path": file_path, "text": text})
+        return Data(data={"file_path": file_path, "text": text})
+    except Exception as exc:
+        if not silent_errors:
+            msg = f"Could not parse yaml file {file_path}: {exc}"
+            raise ValueError(msg) from exc
+
+    return None
 
 
 def convert_xml_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
-    _text = read_text_file(file_path=file_path)
+    try:
+        _text = read_text_file(file_path=file_path)
 
-    xml_element = ElementTree.fromstring(_text)
-    text = ElementTree.tostring(xml_element, encoding="unicode")
-    return Data(data={"file_path": file_path, "text": text})
+        xml_element = ElementTree.fromstring(_text)
+        text = ElementTree.tostring(xml_element, encoding="unicode")
+        return Data(data={"file_path": file_path, "text": text})
+    except Exception as exc:
+        if not silent_errors:
+            msg = f"Could not parse xml file {file_path}: {exc}"
+            raise ValueError(msg) from exc
+
+    return None
 
 
 def convert_pdf_to_text(
@@ -160,12 +181,15 @@ def convert_pdf_to_text(
     *,
     silent_errors: bool = False,
     do_ocr: bool = False,
-    ocr_lang: list[str] = ["es"],
+    ocr_lang: list[str] | None = None,
     do_table_structure: bool = False,
     do_picture_classification: bool = False,
 ) -> Data | None:
     try:
-        # FIXME: optimization could be to "cache" the converters ...
+        if ocr_lang is None:
+            ocr_lang = ["es"]  # fall back to english
+
+        # OPTIMIZAION: could be better to "cache" the converters ...
         pipeline_options = PdfPipelineOptions()
         pipeline_options.images_scale = 2
         pipeline_options.generate_page_images = False
@@ -189,7 +213,7 @@ def convert_pdf_to_text(
 
     except Exception as exc:
         if not silent_errors:
-            msg = f"Could not parse docx file {file_path}: {exc}"
+            msg = f"Could not parse pdf file {file_path}: {exc}"
             raise ValueError(msg) from exc
 
     return None
@@ -199,12 +223,15 @@ def convert_img_to_text(
     file_path: str,
     *,
     silent_errors: bool = False,
-    ocr_lang: list[str] = ["es"],
+    ocr_lang: list[str] | None = None,
     do_table_structure: bool = False,
     do_picture_classification: bool = False,
 ) -> Data | None:
     try:
-        # FIXME: optimization could be to "cache" the converters ...
+        if ocr_lang is None:
+            ocr_lang = ["es"]  # fall back to english
+
+        # OPTIMIZAION: could be better to "cache" the converters ...
         pipeline_options = PdfPipelineOptions()
         pipeline_options.images_scale = 2
         pipeline_options.generate_page_images = False
@@ -228,7 +255,7 @@ def convert_img_to_text(
 
     except Exception as exc:
         if not silent_errors:
-            msg = f"Could not parse docx file {file_path}: {exc}"
+            msg = f"Could not parse image file {file_path}: {exc}"
             raise ValueError(msg) from exc
 
     return None
@@ -267,8 +294,6 @@ def convert_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
 
         if file_path.endswith(".docx"):
             return convert_docx_to_text(file_path=file_path, silent_errors=silent_errors)
-
-        text = read_text_file(file_path)
 
     except Exception as exc:
         if not silent_errors:

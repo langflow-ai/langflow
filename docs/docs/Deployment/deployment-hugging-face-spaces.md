@@ -7,7 +7,7 @@ This guide explains how to deploy Langflow on [HuggingFace Spaces](https://huggi
 
 1. Go to the [Langflow Space](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true).
 
-2. Click **Duplicate Space**. 
+2. Click **Duplicate Space**.
 3. In the configuration dialog, do the following:
    - Enter a name for your Space.
    - Select either public or private visibility.
