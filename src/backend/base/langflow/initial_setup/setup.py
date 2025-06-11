@@ -1010,7 +1010,7 @@ async def sync_flows_from_fs():
                             logger.exception(f"Error while handling flow file {path}")
             except asyncio.CancelledError:
                 logger.debug("Flow sync cancelled")
-                break 
+                break
             except (sa.exc.OperationalError, ValueError) as e:
                 if "no active connection" in str(e) or "connection is closed" in str(e):
                     logger.debug("Database connection lost, assuming shutdown")
@@ -1018,7 +1018,7 @@ async def sync_flows_from_fs():
                 raise  # Re-raise if it's a real connection problem
             except Exception:
                 logger.exception("Error while syncing flows from database")
-                break 
+                break
 
             await asyncio.sleep(fs_flows_polling_interval)
     except asyncio.CancelledError:
