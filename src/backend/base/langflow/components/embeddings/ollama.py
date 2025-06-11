@@ -57,6 +57,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(field_value):
             # Check if any URL in the list is valid
             valid_url = ""
+            # Use the same logic than Ollama
             if self.base_url:
                 check_urls = [self.base_url, *URL_LIST]
             for url in check_urls:
