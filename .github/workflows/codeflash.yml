@@ -28,10 +28,10 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
       - run: uv sync
       - name: Run Codeflash Optimizer
         working-directory: ./src/backend/base
         continue-on-error: true
         run: uv run codeflash
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+

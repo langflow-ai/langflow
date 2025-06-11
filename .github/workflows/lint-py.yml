@@ -35,6 +35,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
       - name: Install the project
         run: uv sync
       - name: Run Mypy
@@ -42,5 +43,4 @@ jobs:
           uv run mypy --namespace-packages -p "langflow"
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+

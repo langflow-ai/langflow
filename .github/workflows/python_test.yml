@@ -53,6 +53,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
       - name: Install the project
         run: uv sync
       - name: Run unit tests
@@ -61,8 +62,7 @@ jobs:
           timeout_minutes: 12
           max_attempts: 2
           command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5"
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
@@ -79,12 +79,12 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
       - name: Install the project
         run: uv sync
       - name: Run integration tests
         run: make integration_tests_no_api_keys
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
@@ -102,6 +102,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
 
       - name: Check Version
         id: check-version
@@ -151,5 +152,4 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+
