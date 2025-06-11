@@ -56,15 +56,15 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert isinstance(data_frame, DataFrame), "Expected DataFrame instance"
         assert len(data_frame) == 3, f"Expected DataFrame with 3 rows, got {len(data_frame)}"
         assert list(data_frame.columns) == ["text"], f"Expected columns ['text'], got {list(data_frame.columns)}"
-        assert (
-            "First chunk" in data_frame.iloc[0]["text"]
-        ), f"Expected 'First chunk', got '{data_frame.iloc[0]['text']}'"
-        assert (
-            "Second chunk" in data_frame.iloc[1]["text"]
-        ), f"Expected 'Second chunk', got '{data_frame.iloc[1]['text']}'"
-        assert (
-            "Third chunk" in data_frame.iloc[2]["text"]
-        ), f"Expected 'Third chunk', got '{data_frame.iloc[2]['text']}'"
+        assert "First chunk" in data_frame.iloc[0]["text"], (
+            f"Expected 'First chunk', got '{data_frame.iloc[0]['text']}'"
+        )
+        assert "Second chunk" in data_frame.iloc[1]["text"], (
+            f"Expected 'Second chunk', got '{data_frame.iloc[1]['text']}'"
+        )
+        assert "Third chunk" in data_frame.iloc[2]["text"], (
+            f"Expected 'Third chunk', got '{data_frame.iloc[2]['text']}'"
+        )
 
     def test_split_text_with_overlap(self):
         """Test text splitting with overlap."""
@@ -86,15 +86,15 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert isinstance(data_frame, DataFrame), "Expected DataFrame instance"
         assert len(data_frame) == 3, f"Expected DataFrame with 3 rows, got {len(data_frame)}"
         assert list(data_frame.columns) == ["text"], f"Expected columns ['text'], got {list(data_frame.columns)}"
-        assert (
-            "First chunk" in data_frame.iloc[0]["text"]
-        ), f"Expected 'First chunk', got '{data_frame.iloc[0]['text']}'"
-        assert (
-            "Second chunk" in data_frame.iloc[1]["text"]
-        ), f"Expected 'Second chunk', got '{data_frame.iloc[1]['text']}'"
-        assert (
-            "Third chunk" in data_frame.iloc[2]["text"]
-        ), f"Expected 'Third chunk', got '{data_frame.iloc[2]['text']}'"
+        assert "First chunk" in data_frame.iloc[0]["text"], (
+            f"Expected 'First chunk', got '{data_frame.iloc[0]['text']}'"
+        )
+        assert "Second chunk" in data_frame.iloc[1]["text"], (
+            f"Expected 'Second chunk', got '{data_frame.iloc[1]['text']}'"
+        )
+        assert "Third chunk" in data_frame.iloc[2]["text"], (
+            f"Expected 'Third chunk', got '{data_frame.iloc[2]['text']}'"
+        )
 
     def test_split_text_custom_separator(self):
         """Test text splitting with a custom separator."""
@@ -116,15 +116,15 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert isinstance(data_frame, DataFrame), "Expected DataFrame instance"
         assert len(data_frame) == 3, f"Expected DataFrame with 3 rows, got {len(data_frame)}"
         assert list(data_frame.columns) == ["text"], f"Expected columns ['text'], got {list(data_frame.columns)}"
-        assert (
-            "First chunk" in data_frame.iloc[0]["text"]
-        ), f"Expected 'First chunk', got '{data_frame.iloc[0]['text']}'"
-        assert (
-            "Second chunk" in data_frame.iloc[1]["text"]
-        ), f"Expected 'Second chunk', got '{data_frame.iloc[1]['text']}'"
-        assert (
-            "Third chunk" in data_frame.iloc[2]["text"]
-        ), f"Expected 'Third chunk', got '{data_frame.iloc[2]['text']}'"
+        assert "First chunk" in data_frame.iloc[0]["text"], (
+            f"Expected 'First chunk', got '{data_frame.iloc[0]['text']}'"
+        )
+        assert "Second chunk" in data_frame.iloc[1]["text"], (
+            f"Expected 'Second chunk', got '{data_frame.iloc[1]['text']}'"
+        )
+        assert "Third chunk" in data_frame.iloc[2]["text"], (
+            f"Expected 'Third chunk', got '{data_frame.iloc[2]['text']}'"
+        )
 
     def test_split_text_with_metadata(self):
         """Test text splitting while preserving metadata."""
@@ -146,20 +146,20 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         data_frame = component.split_text()
         assert isinstance(data_frame, DataFrame), "Expected DataFrame instance"
         assert len(data_frame) == 2, f"Expected DataFrame with 2 rows, got {len(data_frame)}"
-        assert (
-            "First chunk" in data_frame.iloc[0]["text"]
-        ), f"Expected 'First chunk', got '{data_frame.iloc[0]['text']}'"
-        assert (
-            "Second chunk" in data_frame.iloc[1]["text"]
-        ), f"Expected 'Second chunk', got '{data_frame.iloc[1]['text']}'"
+        assert "First chunk" in data_frame.iloc[0]["text"], (
+            f"Expected 'First chunk', got '{data_frame.iloc[0]['text']}'"
+        )
+        assert "Second chunk" in data_frame.iloc[1]["text"], (
+            f"Expected 'Second chunk', got '{data_frame.iloc[1]['text']}'"
+        )
         # Loop over each row to check metadata
         for _, row in data_frame.iterrows():
-            assert (
-                row["source"] == test_metadata["source"]
-            ), f"Expected source '{test_metadata['source']}', got '{row['source']}'"
-            assert (
-                row["author"] == test_metadata["author"]
-            ), f"Expected author '{test_metadata['author']}', got '{row['author']}'"
+            assert row["source"] == test_metadata["source"], (
+                f"Expected source '{test_metadata['source']}', got '{row['source']}'"
+            )
+            assert row["author"] == test_metadata["author"], (
+                f"Expected author '{test_metadata['author']}', got '{row['author']}'"
+            )
 
     def test_split_text_empty_input(self):
         """Test handling of empty input text."""

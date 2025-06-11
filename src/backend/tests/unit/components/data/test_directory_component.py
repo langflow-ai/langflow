@@ -159,9 +159,9 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             # Check column names
             expected_columns = ["text", "file_path"]
             actual_columns = list(data_frame.columns)
-            assert set(expected_columns).issubset(
-                set(actual_columns)
-            ), f"Missing required columns. Expected at least {expected_columns}, got {actual_columns}"
+            assert set(expected_columns).issubset(set(actual_columns)), (
+                f"Missing required columns. Expected at least {expected_columns}, got {actual_columns}"
+            )
 
             # Verify content matches input files
             texts = data_frame["text"].tolist()
@@ -260,9 +260,9 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             results = directory_component.load_directory()
 
             # Verify number of loaded files
-            assert (
-                len(results) == expected_count
-            ), f"Expected {expected_count} results for file types {file_types}, got {len(results)}"
+            assert len(results) == expected_count, (
+                f"Expected {expected_count} results for file types {file_types}, got {len(results)}"
+            )
             # Optionally, check the file extension in each result
             for r in results:
                 # e.g., verify that the extension is indeed in file_types
@@ -358,20 +358,20 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             # Verify parallel_load_data was called with correct parameters
             mock_parallel_load.assert_called_once()
             call_args = mock_parallel_load.call_args[1]
-            assert (
-                call_args["max_concurrency"] == 2
-            ), f"Expected max_concurrency=2, got {call_args.get('max_concurrency')}"
-            assert (
-                call_args["silent_errors"] is False
-            ), f"Expected silent_errors=False, got {call_args.get('silent_errors')}"
+            assert call_args["max_concurrency"] == 2, (
+                f"Expected max_concurrency=2, got {call_args.get('max_concurrency')}"
+            )
+            assert call_args["silent_errors"] is False, (
+                f"Expected silent_errors=False, got {call_args.get('silent_errors')}"
+            )
 
             # Verify results
-            assert (
-                len(results) == 2
-            ), f"Expected 2 results, got {len(results)}: {[r.data['file_path'] for r in results]}"
-            assert all(
-                isinstance(r, Data) for r in results
-            ), f"All results should be Data objects, got types: {[type(r) for r in results]}"
+            assert len(results) == 2, (
+                f"Expected 2 results, got {len(results)}: {[r.data['file_path'] for r in results]}"
+            )
+            assert all(isinstance(r, Data) for r in results), (
+                f"All results should be Data objects, got types: {[type(r) for r in results]}"
+            )
 
             actual_texts = [r.text for r in results]
             expected_texts = ["content1", "content2"]
