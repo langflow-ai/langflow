@@ -538,7 +538,6 @@ class Component(CustomComponent):
             raise ValueError(msg)
         return_types = self._get_method_return_type(output.method)
         output.add_types(return_types)
-        output.set_selected()
 
     def _set_output_required_inputs(self) -> None:
         for output in self.outputs:
@@ -850,7 +849,6 @@ class Component(CustomComponent):
                 continue
             return_types = self._get_method_return_type(output.method)
             output.add_types(return_types)
-            output.set_selected()
 
         frontend_node.validate_component()
         frontend_node.set_base_classes_from_outputs()
