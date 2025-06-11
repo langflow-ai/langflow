@@ -23,7 +23,11 @@ jobs:
         with:
           fetch-depth: 0
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
       - run: uv sync
       - name: Run Codeflash Optimizer
         working-directory: ./src/backend/base

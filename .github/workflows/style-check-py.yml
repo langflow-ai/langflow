@@ -18,8 +18,10 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
       - name: Register problem matcher
         run: echo "::add-matcher::.github/workflows/matchers/ruff.json"
