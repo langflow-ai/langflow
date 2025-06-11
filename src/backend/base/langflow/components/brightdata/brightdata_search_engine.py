@@ -1,10 +1,8 @@
 # brightdata_search_engine.py
 from langflow.custom import Component
-from langflow.inputs import SecretStrInput, StrInput, DropdownInput, MessageTextInput
+from langflow.inputs import SecretStrInput, DropdownInput, MessageTextInput
 from langflow.template import Output
 from langflow.schema import Data
-from langflow.schema.message import Message
-from typing import List, AsyncIterator, Iterator
 import requests
 import urllib.parse
 
@@ -129,7 +127,7 @@ class BrightDataSearchEngineComponent(Component):
                     }
                 )
                 
-        except Exception as e:
+        except requests.RequestException as e:
             error_msg = f"Exception occurred while searching: {str(e)}"
             return Data(
                 text=error_msg,

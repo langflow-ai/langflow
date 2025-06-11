@@ -1,7 +1,5 @@
 # brightdata_structured_data.py
-
 from loguru import logger
-
 from langflow.custom import Component
 from langflow.io import (
     BoolInput,
@@ -11,10 +9,8 @@ from langflow.io import (
     MultilineInput,
     Output,
     SecretStrInput,
-    StrInput,
 )
 from langflow.schema import Data
-from langflow.schema.message import Message
 import requests
 import json
 import time
@@ -618,7 +614,7 @@ class BrightDataStructuredDataEnhancedComponent(Component):
                 "keywords": ["channel", "creator"]
             },
             "youtube_videos": {
-                "dataset_id": "gd_m5mbdl081229ln6t4a",
+                "dataset_id": "gd_lk538t2k2p1k3oos72",
                 "display_name": "YouTube Videos",
                 "category": "Social Media",
                 "description": "Video content, metadata, and analytics",

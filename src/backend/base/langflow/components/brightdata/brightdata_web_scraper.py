@@ -3,10 +3,7 @@ from langflow.custom import Component
 from langflow.inputs import SecretStrInput, StrInput, DropdownInput, MessageTextInput
 from langflow.template import Output
 from langflow.schema import Data
-from langflow.schema.message import Message
-from typing import Union, Any, AsyncIterator, Iterator
 import requests
-import json
 
 
 class BrightDataWebScraperComponent(Component):
@@ -28,6 +25,7 @@ class BrightDataWebScraperComponent(Component):
             display_name="🔍 URL Input",
             info="The URL to scrape - can be connected from another component or entered manually",
             required=True,
+            tool_mode=True,
             placeholder="https://example.com/page",
         ),
         DropdownInput(
