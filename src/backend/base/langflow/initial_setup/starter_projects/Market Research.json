@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-b4sJc",
+            "id": "ChatInput-xGZs1",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-bjWdX",
+            "id": "Agent-GuZvV",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-b4sJc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-b4sJcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-bjWdX{œfieldNameœ:œinput_valueœ,œidœ:œAgent-bjWdXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-xGZs1{œdataTypeœ:œChatInputœ,œidœ:œChatInput-xGZs1œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-GuZvV{œfieldNameœ:œinput_valueœ,œidœ:œAgent-GuZvVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-b4sJc",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-b4sJcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-bjWdX",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-bjWdXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-xGZs1",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-xGZs1œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-GuZvV",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-GuZvVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-bjWdX",
+            "id": "Agent-GuZvV",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-5OFKk",
+            "id": "StructuredOutput-TgwNF",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-bjWdX{œdataTypeœ:œAgentœ,œidœ:œAgent-bjWdXœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-5OFKk{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-5OFKkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-GuZvV{œdataTypeœ:œAgentœ,œidœ:œAgent-GuZvVœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-TgwNF{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-TgwNFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-bjWdX",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-bjWdXœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-5OFKk",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-5OFKkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-GuZvV",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-GuZvVœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutput-TgwNF",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-TgwNFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-vpPJd",
+            "id": "TavilySearchComponent-oQBdN",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-bjWdX",
+            "id": "Agent-GuZvV",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-vpPJd{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-vpPJdœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-bjWdX{œfieldNameœ:œtoolsœ,œidœ:œAgent-bjWdXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-oQBdN{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-oQBdNœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-GuZvV{œfieldNameœ:œtoolsœ,œidœ:œAgent-GuZvVœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-vpPJd",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-vpPJdœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-bjWdX",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-bjWdXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-oQBdN",
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-oQBdNœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-GuZvV",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-GuZvVœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-2q7JZ",
+            "id": "OpenAIModel-kaJVR",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -99,51 +99,27 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-5OFKk",
+            "id": "StructuredOutput-TgwNF",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-2q7JZ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-2q7JZœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-5OFKk{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-5OFKkœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-kaJVR{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-kaJVRœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-TgwNF{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-TgwNFœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-2q7JZ",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-2q7JZœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-5OFKk",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-5OFKkœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OpenAIModel-kaJVR",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-kaJVRœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "StructuredOutput-TgwNF",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-TgwNFœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "StructuredOutput",
-            "id": "StructuredOutput-5OFKk",
-            "name": "structured_output_dataframe",
-            "output_types": []
-          },
-          "targetHandle": {
-            "fieldName": "input_data",
-            "id": "parser-7JQpB",
-            "inputTypes": [
-              "DataFrame",
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__StructuredOutput-5OFKk{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-5OFKkœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-7JQpB{œfieldNameœ:œinput_dataœ,œidœ:œparser-7JQpBœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "StructuredOutput-5OFKk",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-5OFKkœ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: []}",
-        "target": "parser-7JQpB",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-7JQpBœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
-      },
-      {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-7JQpB",
+            "id": "parser-4iVNG",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -151,7 +127,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-CFSA4",
+            "id": "ChatOutput-eTO66",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -160,11 +136,40 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__parser-7JQpB{œdataTypeœ:œparserœ,œidœ:œparser-7JQpBœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-CFSA4{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-CFSA4œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "source": "parser-7JQpB",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-7JQpBœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-CFSA4",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-CFSA4œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-parser-4iVNG{œdataTypeœ:œparserœ,œidœ:œparser-4iVNGœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-eTO66{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-eTO66œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "parser-4iVNG",
+        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-4iVNGœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-eTO66",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-eTO66œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "StructuredOutput",
+            "id": "StructuredOutput-TgwNF",
+            "name": "structured_output",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "parser-4iVNG",
+            "inputTypes": [
+              "DataFrame",
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__StructuredOutput-TgwNF{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-TgwNFœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-4iVNG{œfieldNameœ:œinput_dataœ,œidœ:œparser-4iVNGœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "StructuredOutput-TgwNF",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-TgwNFœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "target": "parser-4iVNG",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-4iVNGœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
@@ -172,7 +177,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-b4sJc",
+          "id": "ChatInput-xGZs1",
           "node": {
             "base_classes": [
               "Message"
@@ -448,7 +453,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-b4sJc",
+        "id": "ChatInput-xGZs1",
         "measured": {
           "height": 234,
           "width": 320
@@ -469,7 +474,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-CFSA4",
+          "id": "ChatOutput-eTO66",
           "node": {
             "base_classes": [
               "Message"
@@ -752,7 +757,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-CFSA4",
+        "id": "ChatOutput-eTO66",
         "measured": {
           "height": 234,
           "width": 320
@@ -771,7 +776,7 @@
       },
       {
         "data": {
-          "id": "note-UqfqM",
+          "id": "note-tcZdh",
           "node": {
             "description": "# Market Research\nThis flow helps you gather comprehensive information about companies for sales and business intelligence purposes.\n\n## Prerequisites\n\n- **[Tavily API Key](https://docs.tavily.com/welcome)**\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your **OpenAI API key** to the **OpenAI** model and **Agent** components.\n2. Add your **Tavily API key** to the **Tavily Search** component.\n3. In the **Chat Input**, enter a company name you want to research.\n4. Open the **Playground** and research the company. The **Structured Output** component transforms the raw LLM response into structured data, and the **Parser** component presents the data as text for the **Chat output** component to present.",
             "display_name": "",
@@ -784,7 +789,7 @@
         },
         "dragging": false,
         "height": 671,
-        "id": "note-UqfqM",
+        "id": "note-tcZdh",
         "measured": {
           "height": 671,
           "width": 660
@@ -810,7 +815,7 @@
         "data": {
           "description": "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information or creating consistent outputs.",
           "display_name": "Structured Output",
-          "id": "StructuredOutput-5OFKk",
+          "id": "StructuredOutput-TgwNF",
           "node": {
             "base_classes": [
               "Data",
@@ -873,7 +878,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from pydantic import BaseModel, Field, create_model\nfrom trustcall import create_extractor\n\nfrom langflow.base.models.chat_result import get_chat_result\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.helpers.base_model import build_model_from_schema\nfrom langflow.io import (\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    TableInput,\n)\nfrom langflow.schema.data import Data\nfrom langflow.schema.table import EditMode\n\n\nclass StructuredOutputComponent(Component):\n    display_name = \"Structured Output\"\n    description = \"Uses an LLM to generate structured data. Ideal for extraction and consistency.\"\n    name = \"StructuredOutput\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"llm\",\n            display_name=\"Language Model\",\n            info=\"The language model to use to generate the structured output.\",\n            input_types=[\"LanguageModel\"],\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input Message\",\n            info=\"The input message to the language model.\",\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Format Instructions\",\n            info=\"The instructions to the language model for formatting the output.\",\n            value=(\n                \"You are an AI system designed to extract structured information from unstructured text.\"\n                \"Given the input_text, return a JSON object with predefined keys based on the expected structure.\"\n                \"Extract values accurately and format them according to the specified type \"\n                \"(e.g., string, integer, float, date).\"\n                \"If a value is missing or cannot be determined, return a default \"\n                \"(e.g., null, 0, or 'N/A').\"\n                \"If multiple instances of the expected structure exist within the input_text, \"\n                \"stream each as a separate JSON object.\"\n            ),\n            required=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"schema_name\",\n            display_name=\"Schema Name\",\n            info=\"Provide a name for the output data schema.\",\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=\"Define the structure and data types for the model's output.\",\n            required=True,\n            # TODO: remove deault value\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"name\": \"field\",\n                    \"description\": \"description of field\",\n                    \"type\": \"str\",\n                    \"multiple\": \"False\",\n                }\n            ],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"structured_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_output\",\n        ),\n    ]\n\n    def build_structured_output_base(self) -> Data:\n        schema_name = self.schema_name or \"OutputModel\"\n\n        if not hasattr(self.llm, \"with_structured_output\"):\n            msg = \"Language model does not support structured output.\"\n            raise TypeError(msg)\n        if not self.output_schema:\n            msg = \"Output schema cannot be empty\"\n            raise ValueError(msg)\n\n        output_model_ = build_model_from_schema(self.output_schema)\n\n        output_model = create_model(\n            schema_name,\n            __doc__=f\"A list of {schema_name}.\",\n            objects=(list[output_model_], Field(description=f\"A list of {schema_name}.\")),  # type: ignore[valid-type]\n        )\n\n        try:\n            llm_with_structured_output = create_extractor(self.llm, tools=[output_model])\n        except NotImplementedError as exc:\n            msg = f\"{self.llm.__class__.__name__} does not support structured output.\"\n            raise TypeError(msg) from exc\n\n        config_dict = {\n            \"run_name\": self.display_name,\n            \"project_name\": self.get_project_name(),\n            \"callbacks\": self.get_langchain_callbacks(),\n        }\n        result = get_chat_result(\n            runnable=llm_with_structured_output,\n            system_message=self.system_prompt,\n            input_value=self.input_value,\n            config=config_dict,\n        )\n\n        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure\n        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)\n        if not isinstance(result, dict):\n            return result\n\n        # Extract first response and convert BaseModel to dict\n        responses = result.get(\"responses\", [])\n        if not responses:\n            return result\n\n        # Convert BaseModel to dict (creates the \"objects\" key)\n        first_response = responses[0]\n        structured_data = first_response.model_dump() if isinstance(first_response, BaseModel) else first_response\n\n        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)\n        return structured_data.get(\"objects\", structured_data)\n\n    def build_structured_output(self) -> Data:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        return Data(data=output[-1])\n"
+                "value": "from pydantic import BaseModel, Field, create_model\nfrom trustcall import create_extractor\n\nfrom langflow.base.models.chat_result import get_chat_result\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.helpers.base_model import build_model_from_schema\nfrom langflow.io import (\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    TableInput,\n)\nfrom langflow.schema.data import Data\nfrom langflow.schema.table import EditMode\n\n\nclass StructuredOutputComponent(Component):\n    display_name = \"Structured Output\"\n    description = \"Uses an LLM to generate structured data. Ideal for extraction and consistency.\"\n    name = \"StructuredOutput\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"llm\",\n            display_name=\"Language Model\",\n            info=\"The language model to use to generate the structured output.\",\n            input_types=[\"LanguageModel\"],\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Input Message\",\n            info=\"The input message to the language model.\",\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Format Instructions\",\n            info=\"The instructions to the language model for formatting the output.\",\n            value=(\n                \"You are an AI system designed to extract structured information from unstructured text.\"\n                \"Given the input_text, return a JSON object with predefined keys based on the expected structure.\"\n                \"Extract values accurately and format them according to the specified type \"\n                \"(e.g., string, integer, float, date).\"\n                \"If a value is missing or cannot be determined, return a default \"\n                \"(e.g., null, 0, or 'N/A').\"\n                \"If multiple instances of the expected structure exist within the input_text, \"\n                \"stream each as a separate JSON object.\"\n            ),\n            required=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"schema_name\",\n            display_name=\"Schema Name\",\n            info=\"Provide a name for the output data schema.\",\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=\"Define the structure and data types for the model's output.\",\n            required=True,\n            # TODO: remove deault value\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"name\": \"field\",\n                    \"description\": \"description of field\",\n                    \"type\": \"str\",\n                    \"multiple\": \"False\",\n                }\n            ],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"structured_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_output\",\n        ),\n    ]\n\n    def build_structured_output_base(self):\n        schema_name = self.schema_name or \"OutputModel\"\n\n        if not hasattr(self.llm, \"with_structured_output\"):\n            msg = \"Language model does not support structured output.\"\n            raise TypeError(msg)\n        if not self.output_schema:\n            msg = \"Output schema cannot be empty\"\n            raise ValueError(msg)\n\n        output_model_ = build_model_from_schema(self.output_schema)\n\n        output_model = create_model(\n            schema_name,\n            __doc__=f\"A list of {schema_name}.\",\n            objects=(list[output_model_], Field(description=f\"A list of {schema_name}.\")),  # type: ignore[valid-type]\n        )\n\n        try:\n            llm_with_structured_output = create_extractor(self.llm, tools=[output_model])\n        except NotImplementedError as exc:\n            msg = f\"{self.llm.__class__.__name__} does not support structured output.\"\n            raise TypeError(msg) from exc\n\n        config_dict = {\n            \"run_name\": self.display_name,\n            \"project_name\": self.get_project_name(),\n            \"callbacks\": self.get_langchain_callbacks(),\n        }\n        result = get_chat_result(\n            runnable=llm_with_structured_output,\n            system_message=self.system_prompt,\n            input_value=self.input_value,\n            config=config_dict,\n        )\n\n        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure\n        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)\n        if not isinstance(result, dict):\n            return result\n\n        # Extract first response and convert BaseModel to dict\n        responses = result.get(\"responses\", [])\n        if not responses:\n            return result\n\n        # Convert BaseModel to dict (creates the \"objects\" key)\n        first_response = responses[0]\n        structured_data = first_response.model_dump() if isinstance(first_response, BaseModel) else first_response\n\n        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)\n        return structured_data.get(\"objects\", structured_data)\n\n    def build_structured_output(self) -> Data:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        return Data(data=output[-1])\n"
               },
               "input_value": {
                 "_input_type": "MessageTextInput",
@@ -1120,7 +1125,7 @@
         },
         "dragging": false,
         "height": 541,
-        "id": "StructuredOutput-5OFKk",
+        "id": "StructuredOutput-TgwNF",
         "measured": {
           "height": 541,
           "width": 320
@@ -1141,7 +1146,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-bjWdX",
+          "id": "Agent-GuZvV",
           "node": {
             "base_classes": [
               "Message"
@@ -1290,7 +1295,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1812,7 +1817,7 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-bjWdX",
+        "id": "Agent-GuZvV",
         "measured": {
           "height": 650,
           "width": 320
@@ -1829,7 +1834,7 @@
         "data": {
           "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
           "display_name": "Tavily AI Search",
-          "id": "TavilySearchComponent-vpPJd",
+          "id": "TavilySearchComponent-oQBdN",
           "node": {
             "base_classes": [
               "Data",
@@ -1864,6 +1869,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
+                "group_outputs": false,
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
@@ -1895,7 +1901,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "TAVILY_API_KEY"
+                "value": ""
               },
               "chunks_per_source": {
                 "_input_type": "IntInput",
@@ -2140,11 +2146,11 @@
                 "type": "str"
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -2152,100 +2158,28 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": true,
-                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
-                      "disable_edit": false,
-                      "display_name": "Enable",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "status",
-                      "sortable": true,
-                      "type": "boolean"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "name": "TavilySearchComponent-fetch_content",
+                    "args": {
+                      "query": {
+                        "default": "",
+                        "description": "The search query you want to execute with Tavily.",
+                        "title": "Query",
+                        "type": "string"
+                      }
+                    },
+                    "description": "TavilySearchComponent. fetch_content_dataframe - **Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+                    "display_description": "TavilySearchComponent. fetch_content_dataframe - **Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+                    "display_name": "fetch_content_dataframe",
+                    "name": "fetch_content_dataframe",
+                    "readonly": false,
+                    "status": true,
                     "tags": [
-                      "TavilySearchComponent-fetch_content"
-                    ]
-                  },
-                  {
-                    "description": "fetch_content_text(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "name": "TavilySearchComponent-fetch_content_text",
-                    "tags": [
-                      "TavilySearchComponent-fetch_content_text"
+                      "fetch_content_dataframe"
                     ]
                   }
                 ]
@@ -2280,21 +2214,21 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-vpPJd",
+        "id": "TavilySearchComponent-oQBdN",
         "measured": {
-          "height": 437,
+          "height": 316,
           "width": 320
         },
         "position": {
-          "x": 875.7686789989679,
-          "y": 798.478848045035
+          "x": 868.5433981701304,
+          "y": 653.9732314682851
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "OpenAIModel-2q7JZ",
+          "id": "OpenAIModel-kaJVR",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2344,7 +2278,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"
@@ -2385,7 +2318,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -2670,9 +2603,9 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-2q7JZ",
+        "id": "OpenAIModel-kaJVR",
         "measured": {
-          "height": 525,
+          "height": 540,
           "width": 320
         },
         "position": {
@@ -2684,7 +2617,7 @@
       },
       {
         "data": {
-          "id": "parser-7JQpB",
+          "id": "parser-4iVNG",
           "node": {
             "base_classes": [
               "Message"
@@ -2844,30 +2777,30 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-7JQpB",
+        "id": "parser-4iVNG",
         "measured": {
-          "height": 395,
+          "height": 361,
           "width": 320
         },
         "position": {
           "x": 2132.7576351687417,
           "y": 744.0431534971781
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 218.73749848572567,
-      "y": 82.09531548995307,
-      "zoom": 0.3869462183165413
+      "x": -318.95425982795314,
+      "y": -363.533384278095,
+      "zoom": 0.6920146245449773
     }
   },
   "description": "Researches companies, extracts key business data, and presents structured information for efficient analysis. ",
   "endpoint_name": null,
-  "id": "312739e7-29bb-4a71-8faf-3bcf2d7c22bb",
+  "id": "8ce19804-52f5-4894-9354-4272aff238f7",
   "is_component": false,
-  "last_tested_version": "1.2.0",
+  "last_tested_version": "1.4.3",
   "name": "Market Research",
   "tags": [
     "assistants",
