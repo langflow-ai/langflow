@@ -119,7 +119,7 @@ class StructuredOutputComponent(Component):
         ),
     ]
 
-    def build_structured_output_base(self) -> Data:
+    def build_structured_output_base(self):
         schema_name = self.schema_name or "OutputModel"
 
         if not hasattr(self.llm, "with_structured_output"):
