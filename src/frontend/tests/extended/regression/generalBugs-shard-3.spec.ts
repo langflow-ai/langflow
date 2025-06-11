@@ -70,13 +70,15 @@ test(
     await page.getByTestId("fit_view").click();
 
     await page
-      .getByTestId("handle-chatinput-noshownode-message-source")
+      .getByTestId("handle-chatinput-noshownode-chat message-source")
       .click();
     await page.getByTestId("handle-openaimodel-shownode-input-left").click();
 
-    await page.getByTestId("handle-openaimodel-shownode-message-right").click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-openaimodel-shownode-model response-right")
+      .click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .last()
       .click();
 

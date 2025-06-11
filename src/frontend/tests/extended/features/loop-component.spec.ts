@@ -132,7 +132,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-loopcomponent-shownode-data or dataframe-left")
+      .getByTestId("handle-loopcomponent-shownode-inputs-left")
       .first()
       .click();
 
@@ -153,7 +153,7 @@ test(
       .click();
 
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .first()
       .click();
 
@@ -228,13 +228,13 @@ test(
 
     // Verify output
     await page.waitForSelector(
-      '[data-testid="output-inspection-message-chatoutput"]',
+      '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
       },
     );
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
