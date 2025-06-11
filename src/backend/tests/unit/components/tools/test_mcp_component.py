@@ -100,9 +100,21 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         # Test tool options are updated
         assert "options" in updated_config["tool"]
 
-    @pytest.mark.parametrize("input_value", ["test value", Message(text="test value")])
+    @pytest.mark.parametrize(
+        ("input_value", "expected"),
+        [
+            pytest.param("test value", {"test_param": "test value"}, id="string_value"),
+            pytest.param(Message(text="test value"), {"test_param": "test value"}, id="message_object"),
+            pytest.param(False, {"test_param": False}, id="boolean_false"),
+            pytest.param(0, {"test_param": 0}, id="integer_zero"),
+            pytest.param(None, {}, id="none_value"),  # None should be skipped
+            pytest.param("", {}, id="empty_string"),  # Blank strings should be skipped
+        ],
+    )
     @patch("langflow.components.data.mcp_component.create_tool_coroutine")
-    async def test_build_output(self, mock_create_coroutine, component_class, default_kwargs, mock_tool, input_value):
+    async def test_build_output(
+        self, mock_create_coroutine, component_class, default_kwargs, mock_tool, input_value, expected
+    ):
         """Test building output with a tool."""
         component = component_class(**default_kwargs)
         component.tool = "test_tool"
@@ -135,7 +147,7 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
             assert output.iloc[0]["text"] == "Test response"
             # Verify the mocks were called correctly
             mock_get_inputs.assert_called_once_with(component.tools)
-            mock_structured_tool.coroutine.assert_called_once_with(test_param="test value")
+            mock_structured_tool.coroutine.assert_called_once_with(**expected)
 
     async def test_get_inputs_for_all_tools(self, component_class, default_kwargs, mock_tool):
         """Test getting input schemas for all tools."""

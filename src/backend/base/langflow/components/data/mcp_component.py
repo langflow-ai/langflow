@@ -421,7 +421,7 @@ class MCPToolsComponent(Component):
                     value = getattr(self, arg.name, None)
                     if isinstance(value, Message):
                         kwargs[arg.name] = value.text
-                    elif value:
+                    elif value is not None and value != "":
                         kwargs[arg.name] = value
 
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
