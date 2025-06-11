@@ -104,6 +104,35 @@ test(
       timeout: 30000,
     });
 
+    attempts = 0;
+    dropdownEnabled = false;
+    await page.waitForTimeout(1000);
+
+    while (attempts < maxAttempts && !dropdownEnabled) {
+      await page.waitForTimeout(3000);
+
+      try {
+        await page.waitForSelector(
+          '[data-testid="dropdown_str_tool"]:not([disabled])',
+          {
+            timeout: 30000,
+            state: "visible",
+          },
+        );
+        dropdownEnabled = true;
+      } catch (error) {
+        attempts++;
+        console.log(`Retry attempt ${attempts} for second refresh button`);
+        await page.getByTestId("refresh-button-sse_url").click();
+      }
+    }
+
+    if (!dropdownEnabled) {
+      throw new Error(
+        "Dropdown did not become enabled after multiple refresh attempts",
+      );
+    }
+
     await page.getByTestId("tab_0_stdio").click();
 
     await page.waitForTimeout(2000);
