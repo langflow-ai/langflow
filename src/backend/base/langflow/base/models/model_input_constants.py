@@ -39,22 +39,23 @@ def process_inputs(component_data: Input):
     Returns:
         The modified input configuration.
     """
+    name = getattr(component_data, "name", None)
     if isinstance(component_data, SecretStrInput):
         component_data.value = ""
         component_data.load_from_db = False
         component_data.real_time_refresh = True
-    elif component_data.name == "tool_model_enabled":
+    elif name == "tool_model_enabled":
         component_data.advanced = True
         component_data.value = True
-    elif component_data.name in {"temperature", "base_url"}:
-        component_data = set_advanced_true(component_data)
-    elif component_data.name == "model_name":
-        component_data = set_real_time_refresh_false(component_data)
-        component_data = add_combobox_true(component_data)
-        component_data = add_info(
-            component_data,
+    elif name == "temperature" or name == "base_url":
+        component_data.advanced = True
+    elif name == "model_name":
+        # Fastest path: combine all assignments directly
+        component_data.real_time_refresh = False
+        component_data.combobox = True
+        component_data.info = (
             "To see the model names, first choose a provider. Then, enter your API key and click the refresh button "
-            "next to the model name.",
+            "next to the model name."
         )
     return component_data
 
