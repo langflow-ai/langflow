@@ -391,7 +391,7 @@ async def install_mcp_config(
 
         # Create the MCP configuration
         mcp_config = {
-            "mcpServers": {f"lf-{project.name.lower().replace(' ', '_')[:11]}": {"command": command, "args": args}}
+            "mcpServers": {f"lf-{project.name.lower().replace(' ', '_')[:27]}": {"command": command, "args": args}}
         }
 
         # Determine the config file path based on the client and OS
@@ -517,13 +517,27 @@ class ProjectMCPServer:
                             select(Flow).where(Flow.mcp_enabled == True, Flow.folder_id == self.project_id)  # noqa: E712
                         )
                     ).all()
-
+                    existing_names = set()
                     for flow in flows:
                         if flow.user_id is None:
                             continue
 
                         # Use action_name if available, otherwise construct from flow name
-                        name = flow.action_name or "_".join(flow.name.lower().split())
+                        base_name = flow.action_name or "_".join(flow.name.lower().split())
+                        max_length = 30
+                        name = base_name[:max_length]
+                        if name in existing_names:
+                            # Find a unique name by appending a number
+                            i = 1
+                            while True:
+                                # Reserve space for the number and underscore
+                                suffix = f"_{i}"
+                                truncated_base = base_name[: max_length - len(suffix)]
+                                candidate = f"{truncated_base}{suffix}"
+                                if candidate not in existing_names:
+                                    name = candidate
+                                    break
+                                i += 1
 
                         # Use action_description if available, otherwise use defaults
                         description = flow.action_description or (
@@ -536,6 +550,7 @@ class ProjectMCPServer:
                             inputSchema=json_schema_from_flow(flow),
                         )
                         tools.append(tool)
+                        existing_names.add(name)
             except Exception as e:  # noqa: BLE001
                 msg = f"Error in listing project tools: {e!s} from flow: {name}"
                 logger.warning(msg)
