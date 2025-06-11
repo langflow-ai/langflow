@@ -177,6 +177,8 @@ test(
       timeout: 3000,
     });
 
+    await page.waitForTimeout(3000);
+
     await expect(page.getByText("test_server")).not.toBeVisible({
       timeout: 3000,
     });
