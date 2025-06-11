@@ -144,11 +144,10 @@ To delete the virtual environment, type `rm -rf VENV_NAME`.
 </details>
 
 
-1. To install Langflow, do the following.
-
 <Tabs groupId="os">
   <TabItem value="macOS" label="macOS">
 
+    1. To install Langflow, run the following command.
     ```bash
     uv pip install langflow
     ```
@@ -159,18 +158,10 @@ To delete the virtual environment, type `rm -rf VENV_NAME`.
   Windows installations of Langflow OSS require a C++ compiler, such as [Visual Studio](https://visualstudio.microsoft.com/downloads/), that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or visit the Visual Studio download link above.
   :::
 
-  1. Create a virtual environment.
-  ```shell
-  uv venv
-  ```
-  2. Start the virtual environment.
-  ```shell
-  .venv\Scripts\activate
-  ```
-  3. Install Langflow in the virtual environment.
-  ```shell
-  uv pip install langflow
-  ```
+      1. To install Langflow, run the following command.
+      ```bash
+      uv pip install langflow
+      ```
 
   :::tip
   If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in the virtual environment, and then try installing again.
@@ -180,6 +171,7 @@ To delete the virtual environment, type `rm -rf VENV_NAME`.
   </TabItem>
   <TabItem value="Linux" label="Linux">
 
+      1. To install Langflow, run the following command.
       ```bash
       uv pip install langflow
       ```
@@ -188,13 +180,13 @@ To delete the virtual environment, type `rm -rf VENV_NAME`.
 
 </Tabs>
 
-After installation, to run Langflow, use the following command:
+2. After installation, to run Langflow, use the following command:
 
 ```bash
 uv run langflow run
 ```
 
-To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
+3. To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
 
 After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
 
