@@ -389,10 +389,11 @@ async def install_mcp_config(
             args = ["/c", "uvx", "mcp-proxy", sse_url]
             logger.debug("Windows detected, using cmd command")
 
+        name = project.name
+        name = "Starter Project" if name == "My Projects" else name
+
         # Create the MCP configuration
-        mcp_config = {
-            "mcpServers": {f"lf-{project.name.lower().replace(' ', '_')[:26]}": {"command": command, "args": args}}
-        }
+        mcp_config = {"mcpServers": {f"lf-{name.lower().replace(' ', '_')[:26]}": {"command": command, "args": args}}}
 
         # Determine the config file path based on the client and OS
         if body.client.lower() == "cursor":
