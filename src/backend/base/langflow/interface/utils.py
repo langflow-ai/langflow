@@ -58,33 +58,26 @@ def try_setting_streaming_options(langchain_object):
 
     return langchain_object
 
-
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
-    variables = []
-    remaining_text = prompt
+    """
+    Single braces {var} is used as variableand double braces {{var}} is for escaping
+    """
+    variables: list[str] = []
 
-    # Pattern to match single {var} and double {{var}} braces.
-    pattern = r"\{\{(.*?)\}\}|\{([^{}]+)\}"
+    # one or more '{',   the identifier,   one or more '}'
+    brace_pattern = re.compile(r"(\{+)([^{}]+?)(\}+)")
 
-    while True:
-        match = re.search(pattern, remaining_text)
-        if not match:
-            break
+    seen: set[str] = set()
 
-        # Extract the variable name from either the single or double brace match.
-        # If match found in double braces, re-add single braces for JSON strings.
-        variable_name = "{{" + match.group(1) + "}}" if match.group(1) else match.group(2)
-        if variable_name is not None:
-            # This means there is a match
-            # but there is nothing inside the braces
-            variables.append(variable_name)
+    for m in brace_pattern.finditer(prompt):
+        open_run, var_name, close_run = m.groups()
 
-        # Remove the matched text from the remaining_text
-        start, end = match.span()
-        remaining_text = remaining_text[:start] + remaining_text[end:]
-
-        # Proceed to the next match until no more matches are found
-        # No need to compare remaining "{}" instances because we are re-adding braces for JSON compatibility
+        # “real” variable only when both sides have the same *odd* length
+        if len(open_run) == len(close_run) and len(open_run) % 2 == 1:
+            clean_name = var_name.strip()
+            if clean_name not in seen:  # avoid duplicates
+                variables.append(clean_name)
+                seen.add(clean_name)
 
     return variables
 

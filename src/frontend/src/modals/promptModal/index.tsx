@@ -52,11 +52,18 @@ export default function PromptModal({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   function checkVariables(valueToCheck: string): void {
-    const regex = /\{([^{}]+)\}/g;
+    // Match *any* brace run around an identifier
+    const regex = /(\{+)([^{}]+)(\}+)/g;
     const matches: string[] = [];
     let match;
+
     while ((match = regex.exec(valueToCheck))) {
-      matches.push(`{${match[1]}}`);
+      const [openRun, varName, closeRun] = [match[1], match[2], match[3]];
+
+      // keep only odd, balanced runs (actual variables)
+      if (openRun.length === closeRun.length && openRun.length % 2 === 1) {
+        matches.push(`{${varName}}`);       // normalise to single-brace form
+      }
     }
 
     let invalid_chars: string[] = [];
@@ -86,22 +93,29 @@ export default function PromptModal({
   }
 
   const coloredContent = (typeof inputValue === "string" ? inputValue : "")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(regexHighlight, (match, p1, p2) => {
-      // Decide which group was matched. If p1 is not undefined, do nothing
-      // we don't want to change the text. If p2 is not undefined, then we
-      // have a variable, so we should highlight it.
-      // ! This will not work with multiline or indented json yet
-      if (p1 !== undefined) {
-        return match;
-      } else if (p2 !== undefined) {
-        return varHighlightHTML({ name: p2 });
-      }
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(regexHighlight, (match, codeFence, openRun, varName, closeRun) => {
+    // 1) Leave code-fenced blocks untouched
+    if (codeFence) return match;
 
-      return match;
-    })
-    .replace(/\n/g, "<br />");
+    // 2) Only highlight when both sides are the *same* length and that
+    //    length is odd (   1,3,5,…  ).
+    const lenOpen  = openRun?.length ?? 0;
+    const lenClose = closeRun?.length ?? 0;
+    const isVariable = lenOpen === lenClose && (lenOpen % 2 === 1);
+
+    if (!isVariable) return match;      // even-brace runs ⇒ escape, no highlight
+
+    // 3) Number of literal braces each side = floor(lenOpen / 2)
+    const literal = "{".repeat(Math.floor(lenOpen / 2));
+    return (
+      literal +
+      varHighlightHTML({ name: varName }) +
+      literal.replace(/\{/g, "}")        // same amount of closing braces
+    );
+  })
+  .replace(/\n/g, "<br />");
 
   useEffect(() => {
     if (inputValue && inputValue != "") {
