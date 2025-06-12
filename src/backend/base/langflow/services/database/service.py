@@ -334,8 +334,8 @@ class DatabaseService(Service):
                     msg = "Error initializing alembic"
                     logger.exception(msg)
                     raise RuntimeError(msg) from exc
-            # else:
-            #     logger.info("Alembic initialized")
+            else:
+                logger.debug("Alembic initialized")
 
 
             try:
