@@ -91,14 +91,14 @@ To install a specific version of the Langflow package, add the required version 
 <TabItem value="uv" label="uv" default>
 
 ```bash
-uv pip install langflow==1.3.2
+uv pip install langflow==1.4.2
 ```
 
 </TabItem>
 <TabItem value="pip" label="pip">
 
 ```bash
-pip install langflow==1.3.2
+pip install langflow==1.4.2
 ```
 
 </TabItem>
