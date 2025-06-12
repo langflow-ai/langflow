@@ -175,6 +175,7 @@ class BaseFileComponent(Component, ABC):
 
     _base_outputs = [
         Output(display_name="Loaded Files", name="dataframe", method="load_files"),
+        Output(display_name="Raw Content", name="message", method="load_files_message"),
     ]
 
     @abstractmethod
@@ -235,6 +236,14 @@ class BaseFileComponent(Component, ABC):
         if not data_list:
             return [Data()]
         return data_list
+
+    def load_files_message(self) -> Message:
+        """Load files and return as Message.
+
+        Returns:
+            Message: Message containing all file data
+        """
+        return Message(text="\n\n".join([str(item.data) for item in self.load_files_core()]))
 
     def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.
