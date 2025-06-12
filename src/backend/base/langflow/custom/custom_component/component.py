@@ -789,7 +789,7 @@ class Component(CustomComponent):
         # Raise Error if some rule isn't met
         if self.selected_output is not None:
             if self.selected_output not in self._outputs_map:
-                output_names = ', '.join(list(self._outputs_map.keys()))
+                output_names = ", ".join(list(self._outputs_map.keys()))
                 msg = f"selected_output '{self.selected_output}' is not valid. Must be one of: {output_names}"
                 raise ValueError(msg)
 
