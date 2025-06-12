@@ -4,7 +4,8 @@ on:
     paths:
       - "**/*.py"
 env:
-  POETRY_VERSION: "1.8.2"
+  PYTHON_VERSION: "3.13"
+
 
 jobs:
   lint:
@@ -13,7 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
       - run: uv run ruff check --fix-only .
       - run: uv run ruff format . --config pyproject.toml
       - uses: autofix-ci/action@551dded8c6cc8a1054039c8bc0b8b48c51dfc6ef
@@ -25,7 +31,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
 
       - name: "Install dependencies"
         run: |
