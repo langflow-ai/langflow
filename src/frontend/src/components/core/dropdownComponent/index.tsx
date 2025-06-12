@@ -372,63 +372,9 @@ export default function Dropdown({
     </div>
   );
 
-  const renderRefeshButton = () => (
-    <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
-      <Button
-        className="w-full"
-        unstyled
-        onClick={() => {
-          handleRefreshButtonPress();
-        }}
-      >
-        <div className="flex items-center gap-2 pl-1">
-          <ForwardedIconComponent
-            name="RefreshCcw"
-            className={cn("refresh-icon h-3 w-3 text-primary")}
-          />
-          Refresh list
-        </div>
-      </Button>
-    </CommandItem>
-  );
-
-  const renderCustomOptionDialog = () => (
-    <CommandGroup className="flex flex-col">
-      <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
-        <Button
-          className="w-full"
-          unstyled
-          onClick={() => {
-            setOpenDialog(true);
-          }}
-        >
-          <div className="flex items-center gap-2 pl-1">
-            <ForwardedIconComponent
-              name="Plus"
-              className="h-3 w-3 text-primary"
-            />
-            {`New ${firstWord}`}
-          </div>
-        </Button>
-      </CommandItem>
-      {renderRefeshButton()}
-      <NodeDialog
-        open={openDialog}
-        dialogInputs={dialogInputs}
-        onClose={() => {
-          setOpenDialog(false);
-          setOpen(false);
-        }}
-        nodeId={nodeId!}
-        name={name!}
-        nodeClass={nodeClass!}
-      />
-    </CommandGroup>
-  );
-
   const renderOptionsList = () => (
-    <CommandList>
-      <CommandGroup defaultChecked={false}>
+    <CommandList className="max-h-[300px] overflow-y-auto">
+      <CommandGroup defaultChecked={false} className="p-0">
         {filteredOptions?.length > 0 ? (
           filteredOptions?.map((option, index) => (
             <ShadTooltip
@@ -444,7 +390,7 @@ export default function Dropdown({
                     onSelect(currentValue);
                     setOpen(false);
                   }}
-                  className="w-full items-center"
+                  className="w-full items-center rounded-none"
                   data-testid={`${option}-${index}-option`}
                 >
                   <div className="flex w-full items-center gap-2">
@@ -455,10 +401,8 @@ export default function Dropdown({
                       />
                     )}
                     <div
-                      className={cn("flex", {
-                        "flex w-full":
-                          filteredMetadata && filteredMetadata?.length > 0,
-                        "w-full pl-2": !filteredMetadata?.[index]?.icon,
+                      className={cn("flex w-full", {
+                        "pl-2": !filteredMetadata?.[index]?.icon,
                       })}
                     >
                       <div className="truncate">{option}</div>
@@ -475,8 +419,9 @@ export default function Dropdown({
                           />
                         </span>
                       )}
+
                       {filteredMetadata && filteredMetadata?.length > 0 && (
-                        <div className="flex items-center overflow-hidden text-muted-foreground">
+                        <div className="flex flex-1 items-center overflow-hidden pl-2 text-muted-foreground">
                           {Object.entries(
                             filterMetadataKeys(filteredMetadata?.[index] || {}),
                           )
@@ -498,26 +443,26 @@ export default function Dropdown({
                                     className="mx-1 h-1 w-1 flex-shrink-0 overflow-visible fill-muted-foreground"
                                   />
                                 )}
-                                <div
-                                  className={cn("text-xs", {
-                                    "w-full truncate": i === arr.length - 1,
-                                  })}
-                                >{`${String(value)} ${key}`}</div>
+                                <div className="truncate text-xs">
+                                  {`${String(value)} ${key}`}
+                                </div>
                               </div>
                             ))}
                         </div>
                       )}
-                      {value === option && (
-                        <div className="ml-auto flex pl-2">
-                          <ForwardedIconComponent
-                            name="Check"
-                            className={cn(
-                              "h-4 w-4 shrink-0 text-primary",
-                              value === option ? "opacity-100" : "opacity-0",
-                            )}
-                          />
-                        </div>
-                      )}
+                      <div
+                        className={cn("pl-2", {
+                          "ml-auto": !filteredMetadata,
+                        })}
+                      >
+                        <ForwardedIconComponent
+                          name="Check"
+                          className={cn(
+                            "h-4 w-4 shrink-0 text-primary",
+                            value === option ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                      </div>
                     </div>
                   </div>
                 </CommandItem>
@@ -531,10 +476,55 @@ export default function Dropdown({
         )}
       </CommandGroup>
       <CommandSeparator />
-      {!dialogInputs?.fields && hasRefreshButton && (
-        <CommandGroup>{renderRefeshButton()}</CommandGroup>
+      {dialogInputs && dialogInputs?.fields && (
+        <CommandGroup className="p-0">
+          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2 text-xs font-semibold text-muted-foreground">
+            <Button
+              className="w-full"
+              unstyled
+              onClick={() => {
+                setOpenDialog(true);
+              }}
+            >
+              <div className="flex items-center gap-2 pl-1">
+                <ForwardedIconComponent
+                  name="Plus"
+                  className="h-3 w-3 text-primary"
+                />
+                {`New ${firstWord}`}
+              </div>
+            </Button>
+          </CommandItem>
+          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2 text-xs font-semibold text-muted-foreground">
+            <Button
+              className="w-full"
+              unstyled
+              onClick={() => {
+                handleRefreshButtonPress();
+              }}
+            >
+              <div className="flex items-center gap-2 pl-1">
+                <ForwardedIconComponent
+                  name="RefreshCcw"
+                  className={cn("refresh-icon h-3 w-3 text-primary")}
+                />
+                Refresh list
+              </div>
+            </Button>
+          </CommandItem>
+          <NodeDialog
+            open={openDialog}
+            dialogInputs={dialogInputs}
+            onClose={() => {
+              setOpenDialog(false);
+              setOpen(false);
+            }}
+            nodeId={nodeId!}
+            name={name!}
+            nodeClass={nodeClass!}
+          />
+        </CommandGroup>
       )}
-      {dialogInputs && dialogInputs?.fields && renderCustomOptionDialog()}
     </CommandList>
   );
 
@@ -547,9 +537,30 @@ export default function Dropdown({
         children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
       }
     >
-      <Command>
+      <Command className="flex flex-col">
         {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
+        {!dialogInputs?.fields && hasRefreshButton && (
+          <div className="sticky bottom-0 border-t bg-background">
+            <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs font-semibold text-muted-foreground">
+              <Button
+                className="w-full"
+                unstyled
+                onClick={() => {
+                  handleRefreshButtonPress();
+                }}
+              >
+                <div className="flex items-center gap-2 pl-1">
+                  <ForwardedIconComponent
+                    name="RefreshCcw"
+                    className={cn("refresh-icon h-3 w-3 text-primary")}
+                  />
+                  Refresh list
+                </div>
+              </Button>
+            </CommandItem>
+          </div>
+        )}
       </Command>
     </PopoverContentDropdown>
   );
