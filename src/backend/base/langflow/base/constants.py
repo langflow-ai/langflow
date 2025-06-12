@@ -65,14 +65,12 @@ USER_PRESERVED_ATTRIBUTES = [
     "input_types",
     "type",
     "_input_type",
-    "show"
-    "output"
+    "showoutput",
 ]
 
 # Attributes that preserve user values but update metadata from template
 VALUE_PRESERVED_ATTRIBUTES = [
-    "show"
-    "value",
+    "showvalue",
     "default",
     "selected",
     "load_from_db",
@@ -81,8 +79,7 @@ VALUE_PRESERVED_ATTRIBUTES = [
     "output_types",
     "input_types",
     "type",
-    "output"
-    "_input_type"
+    "output_input_type",
 ]
 
 # Critical attributes that must always be updated for functionality
