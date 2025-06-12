@@ -9,7 +9,9 @@
             "dataType": "URL",
             "id": "URL-kLxHN",
             "name": "text",
-            "output_types": []
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "EXAMPLE_COMPONENTS",
@@ -36,7 +38,9 @@
             "dataType": "URL",
             "id": "URL-JhHJV",
             "name": "text",
-            "output_types": []
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "BASE_COMPONENT_CODE",
@@ -63,7 +67,9 @@
             "dataType": "URL",
             "id": "URL-Duno8",
             "name": "text",
-            "output_types": []
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "CUSTOM_COMPONENT_CODE",
