@@ -68,7 +68,13 @@ class TypeConverterComponent(Component):
         ),
     ]
 
-    outputs = [Output(display_name="Message Output", name="message_output", method="convert_to_message")]
+    outputs = [
+        Output(
+            display_name="Message Output",
+            name="message_output",
+            method="convert_to_message",
+        )
+    ]
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Dynamically show only the relevant output based on the selected output type."""
@@ -79,16 +85,26 @@ class TypeConverterComponent(Component):
             # Add only the selected output type
             if field_value == "Message":
                 frontend_node["outputs"].append(
-                    Output(display_name="Message Output", name="message_output", method="convert_to_message").to_dict()
+                    Output(
+                        display_name="Message Output",
+                        name="message_output",
+                        method="convert_to_message",
+                    ).to_dict()
                 )
             elif field_value == "Data":
                 frontend_node["outputs"].append(
-                    Output(display_name="Data Output", name="data_output", method="convert_to_data").to_dict()
+                    Output(
+                        display_name="Data Output",
+                        name="data_output",
+                        method="convert_to_data",
+                    ).to_dict()
                 )
             elif field_value == "DataFrame":
                 frontend_node["outputs"].append(
                     Output(
-                        display_name="DataFrame Output", name="dataframe_output", method="convert_to_dataframe"
+                        display_name="DataFrame Output",
+                        name="dataframe_output",
+                        method="convert_to_dataframe",
                     ).to_dict()
                 )
 
@@ -96,12 +112,30 @@ class TypeConverterComponent(Component):
 
     def convert_to_message(self) -> Message:
         """Convert input to Message type."""
-        return convert_to_message(self.input_data[0] if isinstance(self.input_data, list) else self.input_data)
+        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data
+
+        # Handle string input by converting to Message first
+        if isinstance(input_value, str):
+            input_value = Message(text=input_value)
+
+        return convert_to_message(input_value)
 
     def convert_to_data(self) -> Data:
         """Convert input to Data type."""
-        return convert_to_data(self.input_data[0] if isinstance(self.input_data, list) else self.input_data)
+        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data
+
+        # Handle string input by converting to Message first
+        if isinstance(input_value, str):
+            input_value = Message(text=input_value)
+
+        return convert_to_data(input_value)
 
     def convert_to_dataframe(self) -> DataFrame:
         """Convert input to DataFrame type."""
-        return convert_to_dataframe(self.input_data[0] if isinstance(self.input_data, list) else self.input_data)
+        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data
+
+        # Handle string input by converting to Message first
+        if isinstance(input_value, str):
+            input_value = Message(text=input_value)
+
+        return convert_to_dataframe(input_value)
