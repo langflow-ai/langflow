@@ -405,7 +405,7 @@ export default function Dropdown({
                         "pl-2": !filteredMetadata?.[index]?.icon,
                       })}
                     >
-                      <div className="truncate">{option}</div>
+                      <div className="truncate text-[13px]">{option}</div>
                       {filteredMetadata?.[index]?.status && (
                         <span
                           className={`flex items-center pl-2 text-xs ${getStatusColor(
@@ -478,7 +478,7 @@ export default function Dropdown({
       <CommandSeparator />
       {dialogInputs && dialogInputs?.fields && (
         <CommandGroup className="p-0">
-          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2 text-xs font-semibold text-muted-foreground">
+          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
             <Button
               className="w-full"
               unstyled
@@ -495,7 +495,7 @@ export default function Dropdown({
               </div>
             </Button>
           </CommandItem>
-          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2 text-xs font-semibold text-muted-foreground">
+          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
             <Button
               className="w-full"
               unstyled
