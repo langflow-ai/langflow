@@ -71,12 +71,7 @@ VALUE_PRESERVED_ATTRIBUTES = [
 
 # Critical attributes that must always be updated for functionality
 CRITICAL_UPDATE_ATTRIBUTES = [
-    "required",
-    "input_types",
-    "type",
-    "_input_type",
     "options",
-    "range_spec",
     "show",
 ]
 
