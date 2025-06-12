@@ -184,7 +184,7 @@ You have successfully added RAG to your chatbot application using the **Astra DB
 
 This example used movie data, but the RAG pattern can be used with any data you want to load and chat with.
 
-Make the **Astra DB** database the brain that [Agents](/agents-overview) use to make decisions.
+Make the **Astra DB** database the brain that [Agents](/agents) use to make decisions.
 
 Publish this flow as an [API](/concepts-publish) and call it from your external applications.
 

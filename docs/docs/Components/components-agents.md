@@ -21,7 +21,7 @@ The [simple agent starter project](/starter-projects-simple-agent) uses an [agen
 
 ![Simple agent starter flow](/img/starter-flow-simple-agent.png)
 
-For a multi-agent example see, [Create a problem-solving agent](/agents-tool-calling-agent-component).
+For a multi-agent example see [Create a flow with an agent](/agents).
 
 ## Agent component {#agent-component}
 
@@ -29,7 +29,7 @@ This component creates an agent that can use tools to answer questions and perfo
 
 The component includes an LLM model integration, a system message prompt, and a **Tools** port to connect tools to extend its capabilities.
 
-For more information on this component, see the [tool calling agent documentation](/agents-tool-calling-agent-component).
+For more information on this component, see the [Agent documentation](/agents).
 
 <details>
 <summary>Parameters</summary>
@@ -40,7 +40,7 @@ For more information on this component, see the [tool calling agent documentatio
 |------|------|-------------|
 | agent_llm | Dropdown | The provider of the language model that the agent uses to generate responses. Options include OpenAI and other providers or Custom. |
 | system_prompt | String | The system prompt provides initial instructions and context to guide the agent's behavior. |
-| tools | List | The list of tools available for the agent to use. |
+| tools | List | The list of tools available for the agent to use. This field is optional and can be empty. |
 | input_value | String | The input task or question for the agent to process. |
 | add_current_date_tool | Boolean | When true this adds a tool to the agent that returns the current date. |
 | memory | Memory | An optional memory configuration for maintaining conversation history. |

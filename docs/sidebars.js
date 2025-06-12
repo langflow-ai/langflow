@@ -70,8 +70,7 @@ module.exports = {
       type: "category",
       label: "Agents",
       items: [
-        "Agents/agents-overview",
-        "Agents/agent-tool-calling-agent-component",
+        "Agents/agents",
       ],
     },
     {
