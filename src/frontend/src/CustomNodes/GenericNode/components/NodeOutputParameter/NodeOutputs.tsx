@@ -12,6 +12,7 @@ export default function NodeOutputs({
   showHiddenOutputs,
   selectedOutput,
   handleSelectOutput,
+  hasExistingHiddenOutputs = false,
 }: {
   outputs: any;
   keyPrefix: string;
@@ -23,6 +24,7 @@ export default function NodeOutputs({
   showHiddenOutputs: boolean;
   selectedOutput: any;
   handleSelectOutput: any;
+  hasExistingHiddenOutputs?: boolean;
 }) {
   const hasLoopOutput = outputs.some((output) => output.allows_loop);
   const hasGroupOutputs = outputs.some((output) => output.group_outputs);
@@ -105,7 +107,7 @@ export default function NodeOutputs({
           (out) => out.name === displayOutput.name,
         ) ?? 0
       }
-      lastOutput={true}
+      lastOutput={!hasExistingHiddenOutputs}
       data={data}
       types={types}
       selected={selected}

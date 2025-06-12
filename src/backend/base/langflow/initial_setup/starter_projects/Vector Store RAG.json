@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-FzOTA",
+            "id": "ChatInput-kNQkx",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-kr3Rx",
+            "id": "Prompt-zHQI0",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,39 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-FzOTA{œdataTypeœ:œChatInputœ,œidœ:œChatInput-FzOTAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-kr3Rx{œfieldNameœ:œquestionœ,œidœ:œPrompt-kr3Rxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-kNQkx{œdataTypeœ:œChatInputœ,œidœ:œChatInput-kNQkxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-zHQI0{œfieldNameœ:œquestionœ,œidœ:œPrompt-zHQI0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-FzOTA",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-FzOTAœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-kr3Rx",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-kr3Rxœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "File",
-            "id": "File-EO8pn",
-            "name": "data",
-            "output_types": []
-          },
-          "targetHandle": {
-            "fieldName": "data_inputs",
-            "id": "SplitText-aHhAi",
-            "inputTypes": [
-              "Data",
-              "DataFrame"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-File-CBftc{œdataTypeœ:œFileœ,œidœ:œFile-CBftcœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-gIoap{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-gIoapœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "File-EO8pn",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-EO8pnœ, œnameœ: œdataœ, œoutput_typesœ: []}",
-        "target": "SplitText-aHhAi",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-aHhAiœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "ChatInput-kNQkx",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-kNQkxœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-zHQI0",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-zHQI0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-kr3Rx",
+            "id": "Prompt-zHQI0",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -71,19 +44,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-7W8gE",
+            "id": "OpenAIModel-9bWp2",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-kr3Rx{œdataTypeœ:œPromptœ,œidœ:œPrompt-kr3Rxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Ej17f{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Ej17fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-zHQI0{œdataTypeœ:œPromptœ,œidœ:œPrompt-zHQI0œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-9bWp2{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-9bWp2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-kr3Rx",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-kr3Rxœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-Ej17f",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-7W8gEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-zHQI0",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-zHQI0œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-9bWp2",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-9bWp2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +64,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-Ej17f",
+            "id": "OpenAIModel-9bWp2",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -99,7 +72,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-mbLiD",
+            "id": "ChatOutput-GAFHg",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,12 +81,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-Ej17f{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Ej17fœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-nGc6Z{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-nGc6Zœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-9bWp2{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-9bWp2œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-GAFHg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-GAFHgœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-Ej17f",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Ej17fœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-nGc6Z",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-mbLiDœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "OpenAIModel-9bWp2",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-9bWp2œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-GAFHg",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-GAFHgœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -121,7 +94,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-YIJGN",
+            "id": "parser-Qet8H",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -129,7 +102,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-dcKE8",
+            "id": "Prompt-zHQI0",
             "inputTypes": [
               "Message",
               "Text"
@@ -137,41 +110,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-YIJGN{œdataTypeœ:œparserœ,œidœ:œparser-YIJGNœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-kr3Rx{œfieldNameœ:œcontextœ,œidœ:œPrompt-kr3Rxœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-Qet8H{œdataTypeœ:œparserœ,œidœ:œparser-Qet8Hœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-zHQI0{œfieldNameœ:œcontextœ,œidœ:œPrompt-zHQI0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-YIJGN",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-YIJGNœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-kr3Rx",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-dcKE8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "SplitText",
-            "id": "SplitText-aHhAi",
-            "name": "chunks",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "ingest_data",
-            "id": "AstraDB-xD6ep",
-            "inputTypes": [
-              "Data",
-              "DataFrame"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-SplitText-aHhAi{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-aHhAiœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-lXzoG{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-lXzoGœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "SplitText-aHhAi",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-aHhAiœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AstraDB-lXzoG",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-xD6epœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "parser-Qet8H",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-Qet8Hœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-zHQI0",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-zHQI0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -179,7 +123,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-tSZ8A",
+            "id": "OpenAIEmbeddings-D1jSt",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -187,19 +131,19 @@
           },
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-xD6ep",
+            "id": "AstraDB-eQaxM",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-tSZ8A{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-tSZ8Aœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-lXzoG{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-lXzoGœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIEmbeddings-D1jSt{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-D1jStœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-eQaxM{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-eQaxMœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIEmbeddings-tSZ8A",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-tSZ8Aœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-lXzoG",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-xD6epœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OpenAIEmbeddings-D1jSt",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-D1jStœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-eQaxM",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-eQaxMœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -207,7 +151,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-M2xTe",
+            "id": "OpenAIEmbeddings-4Uky4",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -215,19 +159,19 @@
           },
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-PTTd1",
+            "id": "AstraDB-tVkFw",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-M2xTe{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-M2xTeœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-BRnBB{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-BRnBBœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIEmbeddings-4Uky4{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-4Uky4œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-tVkFw{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-tVkFwœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIEmbeddings-M2xTe",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-M2xTeœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-BRnBB",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-PTTd1œ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OpenAIEmbeddings-4Uky4",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-4Uky4œ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-tVkFw",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-tVkFwœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -235,7 +179,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-FzOTA",
+            "id": "ChatInput-kNQkx",
             "name": "message",
             "output_types": [
               "Message"
@@ -243,19 +187,19 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "AstraDB-PTTd1",
+            "id": "AstraDB-tVkFw",
             "inputTypes": [
               "Message"
             ],
             "type": "query"
           }
         },
-        "id": "reactflow__edge-ChatInput-FzOTA{œdataTypeœ:œChatInputœ,œidœ:œChatInput-FzOTAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-BRnBB{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-BRnBBœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "id": "reactflow__edge-ChatInput-kNQkx{œdataTypeœ:œChatInputœ,œidœ:œChatInput-kNQkxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-tVkFw{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-tVkFwœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
-        "source": "ChatInput-FzOTA",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-FzOTAœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-BRnBB",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-PTTd1œ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "source": "ChatInput-kNQkx",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-kNQkxœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-tVkFw",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-tVkFwœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
         "animated": false,
@@ -263,7 +207,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-BRnBB",
+            "id": "AstraDB-tVkFw",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -271,7 +215,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-l9sAS",
+            "id": "parser-Qet8H",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -279,12 +223,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraDB-BRnBB{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-BRnBBœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-YIJGN{œfieldNameœ:œinput_dataœ,œidœ:œparser-YIJGNœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AstraDB-tVkFw{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-tVkFwœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-Qet8H{œfieldNameœ:œinput_dataœ,œidœ:œparser-Qet8Hœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AstraDB-BRnBB",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-BRnBBœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "parser-YIJGN",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-l9sASœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "AstraDB-tVkFw",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-tVkFwœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "parser-Qet8H",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-Qet8Hœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -292,7 +236,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-EO8pn",
+            "id": "File-kPRpn",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -300,7 +244,7 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-aHhAi",
+            "id": "SplitText-sDxql",
             "inputTypes": [
               "Data",
               "DataFrame"
@@ -308,12 +252,38 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__File-EO8pn{œdataTypeœ:œFileœ,œidœ:œFile-EO8pnœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-aHhAi{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-aHhAiœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-File-kPRpn{œdataTypeœ:œFileœ,œidœ:œFile-kPRpnœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-sDxql{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-sDxqlœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-EO8pn",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-EO8pnœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "SplitText-aHhAi",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-aHhAiœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "File-kPRpn",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-kPRpnœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "SplitText-sDxql",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-sDxqlœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "SplitText",
+            "id": "SplitText-sDxql",
+            "name": "dataframe",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "ingest_data",
+            "id": "AstraDB-eQaxM",
+            "inputTypes": [
+              "Data",
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__SplitText-sDxql{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-sDxqlœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-AstraDB-eQaxM{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-eQaxMœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "source": "SplitText-sDxql",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-sDxqlœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "AstraDB-eQaxM",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-eQaxMœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -321,7 +291,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-FzOTA",
+          "id": "ChatInput-kNQkx",
           "node": {
             "base_classes": [
               "Message"
@@ -587,7 +557,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-FzOTA",
+        "id": "ChatInput-kNQkx",
         "measured": {
           "height": 234,
           "width": 320
@@ -608,7 +578,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-kr3Rx",
+          "id": "Prompt-zHQI0",
           "node": {
             "base_classes": [
               "Message"
@@ -768,7 +738,7 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-kr3Rx",
+        "id": "Prompt-zHQI0",
         "measured": {
           "height": 433,
           "width": 320
@@ -789,7 +759,7 @@
         "data": {
           "description": "Split text into chunks based on specified criteria.",
           "display_name": "Split Text",
-          "id": "SplitText-aHhAi",
+          "id": "SplitText-sDxql",
           "node": {
             "base_classes": [
               "Data"
@@ -820,20 +790,6 @@
                 "display_name": "Chunks",
                 "group_outputs": false,
                 "method": "split_text",
-                "name": "chunks",
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "DataFrame",
-                "group_outputs": false,
-                "method": "as_dataframe",
                 "name": "dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
@@ -892,7 +848,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_text_splitters import CharacterTextSplitter\n\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.utils.util import unescape_string\n\n\nclass SplitTextComponent(Component):\n    display_name: str = \"Split Text\"\n    description: str = \"Split text into chunks based on specified criteria.\"\n    icon = \"scissors-line-dashed\"\n    name = \"SplitText\"\n\n    inputs = [\n        HandleInput(\n            name=\"data_inputs\",\n            display_name=\"Data or DataFrame\",\n            info=\"The data with texts to split in chunks.\",\n            input_types=[\"Data\", \"DataFrame\"],\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_overlap\",\n            display_name=\"Chunk Overlap\",\n            info=\"Number of characters to overlap between chunks.\",\n            value=200,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=(\n                \"The maximum length of each chunk. Text is first split by separator, \"\n                \"then chunks are merged up to this size. \"\n                \"Individual splits larger than this won't be further divided.\"\n            ),\n            value=1000,\n        ),\n        MessageTextInput(\n            name=\"separator\",\n            display_name=\"Separator\",\n            info=(\n                \"The character to split on. Use \\\\n for newline. \"\n                \"Examples: \\\\n\\\\n for paragraphs, \\\\n for lines, . for sentences\"\n            ),\n            value=\"\\n\",\n        ),\n        MessageTextInput(\n            name=\"text_key\",\n            display_name=\"Text Key\",\n            info=\"The key to use for the text column.\",\n            value=\"text\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"keep_separator\",\n            display_name=\"Keep Separator\",\n            info=\"Whether to keep the separator in the output chunks and where to place it.\",\n            options=[\"False\", \"True\", \"Start\", \"End\"],\n            value=\"False\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Chunks\", name=\"chunks\", method=\"split_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def _docs_to_data(self, docs) -> list[Data]:\n        return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]\n\n    def _fix_separator(self, separator: str) -> str:\n        \"\"\"Fix common separator issues and convert to proper format.\"\"\"\n        if separator == \"/n\":\n            return \"\\n\"\n        if separator == \"/t\":\n            return \"\\t\"\n        return separator\n\n    def split_text_base(self):\n        separator = self._fix_separator(self.separator)\n        separator = unescape_string(separator)\n\n        if isinstance(self.data_inputs, DataFrame):\n            if not len(self.data_inputs):\n                msg = \"DataFrame is empty\"\n                raise TypeError(msg)\n\n            self.data_inputs.text_key = self.text_key\n            try:\n                documents = self.data_inputs.to_lc_documents()\n            except Exception as e:\n                msg = f\"Error converting DataFrame to documents: {e}\"\n                raise TypeError(msg) from e\n        else:\n            if not self.data_inputs:\n                msg = \"No data inputs provided\"\n                raise TypeError(msg)\n\n            documents = []\n            if isinstance(self.data_inputs, Data):\n                self.data_inputs.text_key = self.text_key\n                documents = [self.data_inputs.to_lc_document()]\n            else:\n                try:\n                    documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]\n                    if not documents:\n                        msg = f\"No valid Data inputs found in {type(self.data_inputs)}\"\n                        raise TypeError(msg)\n                except AttributeError as e:\n                    msg = f\"Invalid input type in collection: {e}\"\n                    raise TypeError(msg) from e\n        try:\n            # Convert string 'False'/'True' to boolean\n            keep_sep = self.keep_separator\n            if isinstance(keep_sep, str):\n                if keep_sep.lower() == \"false\":\n                    keep_sep = False\n                elif keep_sep.lower() == \"true\":\n                    keep_sep = True\n                # 'start' and 'end' are kept as strings\n\n            splitter = CharacterTextSplitter(\n                chunk_overlap=self.chunk_overlap,\n                chunk_size=self.chunk_size,\n                separator=separator,\n                keep_separator=keep_sep,\n            )\n            return splitter.split_documents(documents)\n        except Exception as e:\n            msg = f\"Error splitting text: {e}\"\n            raise TypeError(msg) from e\n\n    def split_text(self) -> list[Data]:\n        return self._docs_to_data(self.split_text_base())\n\n    def as_dataframe(self) -> DataFrame:\n        return DataFrame(self.split_text())\n"
+                "value": "from langchain_text_splitters import CharacterTextSplitter\n\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.utils.util import unescape_string\n\n\nclass SplitTextComponent(Component):\n    display_name: str = \"Split Text\"\n    description: str = \"Split text into chunks based on specified criteria.\"\n    icon = \"scissors-line-dashed\"\n    name = \"SplitText\"\n\n    inputs = [\n        HandleInput(\n            name=\"data_inputs\",\n            display_name=\"Data or DataFrame\",\n            info=\"The data with texts to split in chunks.\",\n            input_types=[\"Data\", \"DataFrame\"],\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_overlap\",\n            display_name=\"Chunk Overlap\",\n            info=\"Number of characters to overlap between chunks.\",\n            value=200,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=(\n                \"The maximum length of each chunk. Text is first split by separator, \"\n                \"then chunks are merged up to this size. \"\n                \"Individual splits larger than this won't be further divided.\"\n            ),\n            value=1000,\n        ),\n        MessageTextInput(\n            name=\"separator\",\n            display_name=\"Separator\",\n            info=(\n                \"The character to split on. Use \\\\n for newline. \"\n                \"Examples: \\\\n\\\\n for paragraphs, \\\\n for lines, . for sentences\"\n            ),\n            value=\"\\n\",\n        ),\n        MessageTextInput(\n            name=\"text_key\",\n            display_name=\"Text Key\",\n            info=\"The key to use for the text column.\",\n            value=\"text\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"keep_separator\",\n            display_name=\"Keep Separator\",\n            info=\"Whether to keep the separator in the output chunks and where to place it.\",\n            options=[\"False\", \"True\", \"Start\", \"End\"],\n            value=\"False\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Chunks\", name=\"dataframe\", method=\"split_text\"),\n    ]\n\n    def _docs_to_data(self, docs) -> list[Data]:\n        return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]\n\n    def _fix_separator(self, separator: str) -> str:\n        \"\"\"Fix common separator issues and convert to proper format.\"\"\"\n        if separator == \"/n\":\n            return \"\\n\"\n        if separator == \"/t\":\n            return \"\\t\"\n        return separator\n\n    def split_text_base(self):\n        separator = self._fix_separator(self.separator)\n        separator = unescape_string(separator)\n\n        if isinstance(self.data_inputs, DataFrame):\n            if not len(self.data_inputs):\n                msg = \"DataFrame is empty\"\n                raise TypeError(msg)\n\n            self.data_inputs.text_key = self.text_key\n            try:\n                documents = self.data_inputs.to_lc_documents()\n            except Exception as e:\n                msg = f\"Error converting DataFrame to documents: {e}\"\n                raise TypeError(msg) from e\n        else:\n            if not self.data_inputs:\n                msg = \"No data inputs provided\"\n                raise TypeError(msg)\n\n            documents = []\n            if isinstance(self.data_inputs, Data):\n                self.data_inputs.text_key = self.text_key\n                documents = [self.data_inputs.to_lc_document()]\n            else:\n                try:\n                    documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]\n                    if not documents:\n                        msg = f\"No valid Data inputs found in {type(self.data_inputs)}\"\n                        raise TypeError(msg)\n                except AttributeError as e:\n                    msg = f\"Invalid input type in collection: {e}\"\n                    raise TypeError(msg) from e\n        try:\n            # Convert string 'False'/'True' to boolean\n            keep_sep = self.keep_separator\n            if isinstance(keep_sep, str):\n                if keep_sep.lower() == \"false\":\n                    keep_sep = False\n                elif keep_sep.lower() == \"true\":\n                    keep_sep = True\n                # 'start' and 'end' are kept as strings\n\n            splitter = CharacterTextSplitter(\n                chunk_overlap=self.chunk_overlap,\n                chunk_size=self.chunk_size,\n                separator=separator,\n                keep_separator=keep_sep,\n            )\n            return splitter.split_documents(documents)\n        except Exception as e:\n            msg = f\"Error splitting text: {e}\"\n            raise TypeError(msg) from e\n\n    def split_text(self) -> DataFrame:\n        return DataFrame(self._docs_to_data(self.split_text_base()))\n"
               },
               "data_inputs": {
                 "advanced": false,
@@ -987,7 +943,7 @@
         },
         "dragging": false,
         "height": 475,
-        "id": "SplitText-aHhAi",
+        "id": "SplitText-sDxql",
         "measured": {
           "height": 475,
           "width": 320
@@ -1006,7 +962,7 @@
       },
       {
         "data": {
-          "id": "note-eJrcq",
+          "id": "note-VWeXf",
           "node": {
             "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
@@ -1019,7 +975,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-eJrcq",
+        "id": "note-VWeXf",
         "measured": {
           "height": 324,
           "width": 325
@@ -1043,7 +999,7 @@
       },
       {
         "data": {
-          "id": "note-oUrKA",
+          "id": "note-K46GL",
           "node": {
             "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
             "display_name": "Read Me",
@@ -1056,7 +1012,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-oUrKA",
+        "id": "note-K46GL",
         "measured": {
           "height": 324,
           "width": 325
@@ -1082,7 +1038,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-nGc6Z",
+          "id": "ChatOutput-GAFHg",
           "node": {
             "base_classes": [
               "Message"
@@ -1365,7 +1321,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-nGc6Z",
+        "id": "ChatOutput-GAFHg",
         "measured": {
           "height": 234,
           "width": 320
@@ -1384,7 +1340,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-M2xTe",
+          "id": "OpenAIEmbeddings-4Uky4",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -1433,9 +1389,6 @@
                 "group_outputs": false,
                 "method": "build_embeddings",
                 "name": "embeddings",
-                "required_inputs": [
-                  "openai_api_key"
-                ],
                 "selected": "Embeddings",
                 "tool_mode": true,
                 "types": [
@@ -1680,7 +1633,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "openai_api_type": {
                 "_input_type": "MessageTextInput",
@@ -1863,7 +1816,7 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-M2xTe",
+        "id": "OpenAIEmbeddings-4Uky4",
         "measured": {
           "height": 320,
           "width": 320
@@ -1876,13 +1829,13 @@
           "x": 825.435626932521,
           "y": 739.6327999745448
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "note-cYKfJ",
+          "id": "note-Jk7TI",
           "node": {
             "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick ▶️ **Run component** on the **Astra DB** component to load your data.\n\n* If you're using OSS Langflow, add your Astra DB Application Token to the Astra DB component.\n\n#### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
@@ -1895,7 +1848,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-cYKfJ",
+        "id": "note-Jk7TI",
         "measured": {
           "height": 324,
           "width": 325
@@ -1919,7 +1872,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-tSZ8A",
+          "id": "OpenAIEmbeddings-D1jSt",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -1968,9 +1921,6 @@
                 "group_outputs": false,
                 "method": "build_embeddings",
                 "name": "embeddings",
-                "required_inputs": [
-                  "openai_api_key"
-                ],
                 "selected": "Embeddings",
                 "tool_mode": true,
                 "types": [
@@ -2215,7 +2165,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "openai_api_type": {
                 "_input_type": "MessageTextInput",
@@ -2398,7 +2348,7 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-tSZ8A",
+        "id": "OpenAIEmbeddings-D1jSt",
         "measured": {
           "height": 320,
           "width": 320
@@ -2417,7 +2367,7 @@
       },
       {
         "data": {
-          "id": "File-EO8pn",
+          "id": "File-kPRpn",
           "node": {
             "base_classes": [
               "Data"
@@ -2449,7 +2399,6 @@
                 "group_outputs": false,
                 "method": "load_files",
                 "name": "dataframe",
-                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -2664,7 +2613,7 @@
         },
         "dragging": false,
         "height": 367,
-        "id": "File-EO8pn",
+        "id": "File-kPRpn",
         "measured": {
           "height": 367,
           "width": 320
@@ -2683,7 +2632,7 @@
       },
       {
         "data": {
-          "id": "note-NsKYL",
+          "id": "note-mQAwf",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2696,7 +2645,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-NsKYL",
+        "id": "note-mQAwf",
         "measured": {
           "height": 324,
           "width": 324
@@ -2715,7 +2664,7 @@
       },
       {
         "data": {
-          "id": "note-By1Lm",
+          "id": "note-6Bw7F",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2728,7 +2677,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-By1Lm",
+        "id": "note-6Bw7F",
         "measured": {
           "height": 324,
           "width": 324
@@ -2747,7 +2696,7 @@
       },
       {
         "data": {
-          "id": "note-iSzAZ",
+          "id": "note-dVn2E",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2760,7 +2709,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-iSzAZ",
+        "id": "note-dVn2E",
         "measured": {
           "height": 324,
           "width": 324
@@ -2779,7 +2728,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-Ej17f",
+          "id": "OpenAIModel-9bWp2",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2828,7 +2777,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2843,9 +2791,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -3158,9 +3103,9 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-Ej17f",
+        "id": "OpenAIModel-9bWp2",
         "measured": {
-          "height": 614,
+          "height": 540,
           "width": 320
         },
         "position": {
@@ -3172,7 +3117,7 @@
       },
       {
         "data": {
-          "id": "parser-YIJGN",
+          "id": "parser-Qet8H",
           "node": {
             "base_classes": [
               "Message"
@@ -3333,9 +3278,9 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-YIJGN",
+        "id": "parser-Qet8H",
         "measured": {
-          "height": 395,
+          "height": 361,
           "width": 320
         },
         "position": {
@@ -3347,7 +3292,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-BRnBB",
+          "id": "AstraDB-tVkFw",
           "node": {
             "base_classes": [
               "Data",
@@ -3399,11 +3344,6 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "required_inputs": [
-                  "collection_name",
-                  "database_name",
-                  "token"
-                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -3418,7 +3358,6 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -3481,7 +3420,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_API_ENDPOINT"
               },
               "astradb_vectorstore_kwargs": {
                 "_input_type": "NestedDictInput",
@@ -3722,7 +3661,11 @@
                             "dynamic": false,
                             "info": "Cloud provider for the new database.",
                             "name": "cloud_provider",
-                            "options": [],
+                            "options": [
+                              "Amazon Web Services",
+                              "Google Cloud Platform",
+                              "Microsoft Azure"
+                            ],
                             "options_metadata": [],
                             "placeholder": "",
                             "real_time_refresh": true,
@@ -3765,12 +3708,22 @@
                 "info": "The Database name for the Astra DB instance.",
                 "name": "database_name",
                 "options": [],
-                "options_metadata": [],
+                "options_metadata": [
+                  {
+                    "api_endpoint": "https://deb10a81-3c5d-4fd3-8b1b-945915d2835b-us-east-2.apps.astra.datastax.com",
+                    "collections": 1,
+                    "keyspaces": [
+                      "default_keyspace"
+                    ],
+                    "org_id": "4bd8a5f9-41b3-4d8a-b039-0dd35f5eb374",
+                    "status": null
+                  }
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
                 "required": true,
-                "show": false,
+                "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -4095,9 +4048,9 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-BRnBB",
+        "id": "AstraDB-tVkFw",
         "measured": {
-          "height": 449,
+          "height": 458,
           "width": 320
         },
         "position": {
@@ -4109,7 +4062,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-lXzoG",
+          "id": "AstraDB-eQaxM",
           "node": {
             "base_classes": [
               "Data",
@@ -4161,11 +4114,6 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "required_inputs": [
-                  "collection_name",
-                  "database_name",
-                  "token"
-                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -4180,7 +4128,6 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -4531,12 +4478,22 @@
                 "info": "The Database name for the Astra DB instance.",
                 "name": "database_name",
                 "options": [],
-                "options_metadata": [],
+                "options_metadata": [
+                  {
+                    "api_endpoint": "https://deb10a81-3c5d-4fd3-8b1b-945915d2835b-us-east-2.apps.astra.datastax.com",
+                    "collections": 1,
+                    "keyspaces": [
+                      "default_keyspace"
+                    ],
+                    "org_id": "4bd8a5f9-41b3-4d8a-b039-0dd35f5eb374",
+                    "status": null
+                  }
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
                 "required": true,
-                "show": false,
+                "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -4852,7 +4809,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "ASTRA_DB_APPLICATION_TOKEN"
+                "value": ""
               }
             },
             "tool_mode": false
@@ -4861,9 +4818,9 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-lXzoG",
+        "id": "AstraDB-eQaxM",
         "measured": {
-          "height": 449,
+          "height": 458,
           "width": 320
         },
         "position": {
@@ -4875,9 +4832,9 @@
       }
     ],
     "viewport": {
-      "x": 90.57560089396452,
-      "y": -149.7037806007536,
-      "zoom": 0.46276403161264995
+      "x": 20.50191698112849,
+      "y": -144.65436276592914,
+      "zoom": 0.43295751491830675
     }
   },
   "description": "Load your data for chat context with Retrieval Augmented Generation.",
