@@ -310,7 +310,6 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 
 # Complete installation
 complete = [
-    "langflow-base[deploy]",
     "langflow-base[couchbase]",
     "langflow-base[cassandra]",
     "langflow-base[clickhouse]",
@@ -392,7 +391,5 @@ complete = [
 
 all = [
     "langflow-base[complete]",
-    "langflow-base[dev]",
-    "langflow-base[deploy]",
 ]
 
