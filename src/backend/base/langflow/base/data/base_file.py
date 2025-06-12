@@ -243,8 +243,23 @@ class BaseFileComponent(Component, ABC):
         Returns:
             Message: Message containing all file data
         """
-        return Message(text="\n\n".join([str(item.data) for item in self.load_files_core()]))
+        data_list = self.load_files_core()
+        if not data_list:
+            return Message()  # No data -> empty message
 
+        sep: str = getattr(self, "separator", "\n\n") or "\n\n"
+
+        parts: list[str] = []
+        for d in data_list:
+            # Prefer explicit text if available, fall back to full dict, lastly str()
+            text = (
+                (getattr(d, "get_text", lambda: None)() or d.data.get("text"))
+                if isinstance(d.data, dict)
+                else None
+            )
+            parts.append(text if text is not None else str(d))
+
+        return Message(text=sep.join(parts))
     def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.
 
