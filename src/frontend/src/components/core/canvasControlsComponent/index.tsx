@@ -44,7 +44,7 @@ export const CustomControlButton = ({
       disabled={disabled}
       title={testId?.replace(/_/g, " ")}
     >
-      <ShadTooltip content={tooltipText} side="left">
+      <ShadTooltip content={tooltipText} side="right">
         <div className={cn("rounded p-2.5", backgroundClasses)}>
           <IconComponent
             name={iconName}
