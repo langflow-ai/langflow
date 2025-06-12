@@ -80,6 +80,20 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
     return tool_func
 
 
+def get_unique_name(base_name, max_length, existing_names):
+    name = base_name[:max_length]
+    if name not in existing_names:
+        return name
+    i = 1
+    while True:
+        suffix = f"_{i}"
+        truncated_base = base_name[: max_length - len(suffix)]
+        candidate = f"{truncated_base}{suffix}"
+        if candidate not in existing_names:
+            return candidate
+        i += 1
+
+
 async def get_flow_snake_case(flow_name: str, user_id: str, session, is_action: bool | None = None) -> Flow | None:
     uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
     stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712

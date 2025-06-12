@@ -153,7 +153,7 @@ export function extractMcpServersFromJson(
     throw new Error("No valid MCP server found in the input.");
   }
   return validServers.map(([name, server]) => ({
-    name: name.slice(0, 20),
+    name: name.slice(0, 30),
     command: server.command,
     args: server.args,
     env: server.env && typeof server.env === "object" ? server.env : {},
