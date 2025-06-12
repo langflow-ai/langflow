@@ -787,11 +787,10 @@ class Component(CustomComponent):
 
     def _validate_outputs(self) -> None:
         # Raise Error if some rule isn't met
-        if self.selected_output is not None:
-            if self.selected_output not in self._outputs_map:
-                output_names = ", ".join(list(self._outputs_map.keys()))
-                msg = f"selected_output '{self.selected_output}' is not valid. Must be one of: {output_names}"
-                raise ValueError(msg)
+        if self.selected_output is not None and self.selected_output not in self._outputs_map:
+            output_names = ", ".join(list(self._outputs_map.keys()))
+            msg = f"selected_output '{self.selected_output}' is not valid. Must be one of: {output_names}"
+            raise ValueError(msg)
 
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
