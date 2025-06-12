@@ -372,6 +372,8 @@ export default function Dropdown({
     </div>
   );
 
+  console.log(filteredMetadata);
+
   const renderOptionsList = () => (
     <CommandList className="max-h-[300px] overflow-y-auto">
       <CommandGroup defaultChecked={false} className="p-0">
@@ -405,7 +407,13 @@ export default function Dropdown({
                         "pl-2": !filteredMetadata?.[index]?.icon,
                       })}
                     >
-                      <div className="truncate text-[13px]">{option}</div>
+                      <div
+                        className={cn("truncate text-[13px]", {
+                          "w-1/2": filteredMetadata?.length !== 0,
+                        })}
+                      >
+                        {option}
+                      </div>
                       {filteredMetadata?.[index]?.status && (
                         <span
                           className={`flex items-center pl-2 text-xs ${getStatusColor(
