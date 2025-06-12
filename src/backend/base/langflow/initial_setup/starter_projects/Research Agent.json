@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-KgyhN",
+            "id": "ChatInput-BUgw3",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Prompt-o2zd8",
+            "id": "Prompt-gjXon",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-KgyhN{œdataTypeœ:œChatInputœ,œidœ:œChatInput-KgyhNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-o2zd8{œfieldNameœ:œinput_valueœ,œidœ:œPrompt-o2zd8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-BUgw3{œdataTypeœ:œChatInputœ,œidœ:œChatInput-BUgw3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-gjXon{œfieldNameœ:œinput_valueœ,œidœ:œPrompt-gjXonœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-KgyhN",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-KgyhNœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-o2zd8",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œPrompt-o2zd8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-BUgw3",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-BUgw3œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-gjXon",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œPrompt-gjXonœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-I3JbF",
+            "id": "Prompt-pmjSJ",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -44,19 +44,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-TPxdA",
+            "id": "Agent-Z2V8G",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-I3JbF{œdataTypeœ:œPromptœ,œidœ:œPrompt-I3JbFœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-TPxdA{œfieldNameœ:œinput_valueœ,œidœ:œAgent-TPxdAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-pmjSJ{œdataTypeœ:œPromptœ,œidœ:œPrompt-pmjSJœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-Z2V8G{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Z2V8Gœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-I3JbF",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-I3JbFœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-TPxdA",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-TPxdAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-pmjSJ",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-pmjSJœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-Z2V8G",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-Z2V8Gœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -64,7 +64,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-TPxdA",
+            "id": "Agent-Z2V8G",
             "name": "response",
             "output_types": [
               "Message"
@@ -72,7 +72,7 @@
           },
           "targetHandle": {
             "fieldName": "search_results",
-            "id": "Prompt-o2zd8",
+            "id": "Prompt-gjXon",
             "inputTypes": [
               "Message",
               "Text"
@@ -80,12 +80,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-TPxdA{œdataTypeœ:œAgentœ,œidœ:œAgent-TPxdAœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-o2zd8{œfieldNameœ:œsearch_resultsœ,œidœ:œPrompt-o2zd8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-Z2V8G{œdataTypeœ:œAgentœ,œidœ:œAgent-Z2V8Gœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-gjXon{œfieldNameœ:œsearch_resultsœ,œidœ:œPrompt-gjXonœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-TPxdA",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-TPxdAœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-o2zd8",
-        "targetHandle": "{œfieldNameœ: œsearch_resultsœ, œidœ: œPrompt-o2zd8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "Agent-Z2V8G",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Z2V8Gœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-gjXon",
+        "targetHandle": "{œfieldNameœ: œsearch_resultsœ, œidœ: œPrompt-gjXonœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-okHYL",
+            "id": "TavilySearchComponent-bQqQ3",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -101,19 +101,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-TPxdA",
+            "id": "Agent-Z2V8G",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-okHYL{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-okHYLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-TPxdA{œfieldNameœ:œtoolsœ,œidœ:œAgent-TPxdAœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-bQqQ3{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-bQqQ3œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Z2V8G{œfieldNameœ:œtoolsœ,œidœ:œAgent-Z2V8Gœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-okHYL",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-okHYLœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-TPxdA",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-TPxdAœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-bQqQ3",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-bQqQ3œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-Z2V8G",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Z2V8Gœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -121,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-saNk6",
+            "id": "Prompt-GEpb2",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -129,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-sO8rf",
+            "id": "OpenAIModel-6XjJL",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-saNk6{œdataTypeœ:œPromptœ,œidœ:œPrompt-saNk6œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-sO8rf{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-sO8rfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-GEpb2{œdataTypeœ:œPromptœ,œidœ:œPrompt-GEpb2œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-6XjJL{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-6XjJLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-saNk6",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-saNk6œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-sO8rf",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-sO8rfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-GEpb2",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-GEpb2œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-6XjJL",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-6XjJLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -149,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-KgyhN",
+            "id": "ChatInput-BUgw3",
             "name": "message",
             "output_types": [
               "Message"
@@ -157,19 +157,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-sO8rf",
+            "id": "OpenAIModel-6XjJL",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-KgyhN{œdataTypeœ:œChatInputœ,œidœ:œChatInput-KgyhNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-sO8rf{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-sO8rfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-BUgw3{œdataTypeœ:œChatInputœ,œidœ:œChatInput-BUgw3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-6XjJL{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-6XjJLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-KgyhN",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-KgyhNœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-sO8rf",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-sO8rfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-BUgw3",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-BUgw3œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-6XjJL",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-6XjJLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -177,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-sO8rf",
+            "id": "OpenAIModel-6XjJL",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -185,7 +185,7 @@
           },
           "targetHandle": {
             "fieldName": "previous_response",
-            "id": "Prompt-I3JbF",
+            "id": "Prompt-pmjSJ",
             "inputTypes": [
               "Message",
               "Text"
@@ -193,12 +193,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-sO8rf{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-sO8rfœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-I3JbF{œfieldNameœ:œprevious_responseœ,œidœ:œPrompt-I3JbFœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-6XjJL{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-6XjJLœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-pmjSJ{œfieldNameœ:œprevious_responseœ,œidœ:œPrompt-pmjSJœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-sO8rf",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-sO8rfœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-I3JbF",
-        "targetHandle": "{œfieldNameœ: œprevious_responseœ, œidœ: œPrompt-I3JbFœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "OpenAIModel-6XjJL",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-6XjJLœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-pmjSJ",
+        "targetHandle": "{œfieldNameœ: œprevious_responseœ, œidœ: œPrompt-pmjSJœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -206,7 +206,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-o2zd8",
+            "id": "Prompt-gjXon",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -214,19 +214,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-1pnlf",
+            "id": "OpenAIModel-rCRSl",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-o2zd8{œdataTypeœ:œPromptœ,œidœ:œPrompt-o2zd8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-1pnlf{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-1pnlfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-gjXon{œdataTypeœ:œPromptœ,œidœ:œPrompt-gjXonœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-rCRSl{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-rCRSlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-o2zd8",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-o2zd8œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-1pnlf",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-1pnlfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-gjXon",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gjXonœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-rCRSl",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-rCRSlœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -234,7 +234,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-z31Nf",
+            "id": "Prompt-LzmiE",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -242,19 +242,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-1pnlf",
+            "id": "OpenAIModel-rCRSl",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-z31Nf{œdataTypeœ:œPromptœ,œidœ:œPrompt-z31Nfœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-1pnlf{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-1pnlfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-LzmiE{œdataTypeœ:œPromptœ,œidœ:œPrompt-LzmiEœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-rCRSl{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-rCRSlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-z31Nf",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-z31Nfœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-1pnlf",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-1pnlfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-LzmiE",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-LzmiEœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-rCRSl",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-rCRSlœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -262,7 +262,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-1pnlf",
+            "id": "OpenAIModel-rCRSl",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -270,7 +270,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Fg9B4",
+            "id": "ChatOutput-qShGq",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -279,12 +279,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-1pnlf{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-1pnlfœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Fg9B4{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Fg9B4œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-rCRSl{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-rCRSlœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-qShGq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-qShGqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-1pnlf",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-1pnlfœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-Fg9B4",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Fg9B4œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "OpenAIModel-rCRSl",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-rCRSlœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-qShGq",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-qShGqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -292,7 +292,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-I3JbF",
+          "id": "Prompt-pmjSJ",
           "node": {
             "base_classes": [
               "Message"
@@ -314,7 +314,7 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.4.3",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -424,7 +424,7 @@
         },
         "dragging": false,
         "height": 347,
-        "id": "Prompt-I3JbF",
+        "id": "Prompt-pmjSJ",
         "measured": {
           "height": 347,
           "width": 320
@@ -443,7 +443,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-KgyhN",
+          "id": "ChatInput-BUgw3",
           "node": {
             "base_classes": [
               "Message"
@@ -471,7 +471,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.4.3",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -721,7 +721,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-KgyhN",
+        "id": "ChatInput-BUgw3",
         "measured": {
           "height": 234,
           "width": 320
@@ -742,7 +742,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-o2zd8",
+          "id": "Prompt-gjXon",
           "node": {
             "base_classes": [
               "Message"
@@ -765,7 +765,7 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.4.3",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -898,7 +898,7 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-o2zd8",
+        "id": "Prompt-gjXon",
         "measured": {
           "height": 433,
           "width": 320
@@ -917,7 +917,7 @@
       },
       {
         "data": {
-          "id": "note-DarNU",
+          "id": "note-KPs4x",
           "node": {
             "description": "# Research Agent \n\nWelcome to the Research Agent! This flow helps you conduct in-depth research on various topics using AI-powered tools and analysis.\n\n## Instructions\n1. Enter Your Research Query\n   - Type your research question or topic into the Chat Input node.\n   - Be specific and clear about what you want to investigate.\n\n2. Generate Research Plan\n   - The system will create a focused research plan based on your query.\n   - This plan includes key search queries and priorities.\n\n3. Conduct Web Search\n   - The Tavily AI Search tool will perform web searches using the generated queries.\n   - It focuses on finding academic and reliable sources.\n\n4. Analyze and Synthesize\n   - The AI agent will review the search results and create a comprehensive synthesis.\n   - The report includes an executive summary, methodology, findings, and conclusions.\n\n5. Review the Output\n   - Read the final report in the Chat Output node.\n   - Use this information as a starting point for further research or decision-making.\n\nRemember: You can refine your initial query for more specific results! 🔍📊",
             "display_name": "",
@@ -930,7 +930,7 @@
         },
         "dragging": false,
         "height": 694,
-        "id": "note-DarNU",
+        "id": "note-KPs4x",
         "measured": {
           "height": 694,
           "width": 325
@@ -956,7 +956,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-TPxdA",
+          "id": "Agent-Z2V8G",
           "node": {
             "base_classes": [
               "Message"
@@ -999,7 +999,7 @@
             "frozen": false,
             "icon": "bot",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.4.3",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -1105,7 +1105,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1627,7 +1627,7 @@
         },
         "dragging": false,
         "height": 658,
-        "id": "Agent-TPxdA",
+        "id": "Agent-Z2V8G",
         "measured": {
           "height": 658,
           "width": 320
@@ -1648,7 +1648,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-saNk6",
+          "id": "Prompt-GEpb2",
           "node": {
             "base_classes": [
               "Message"
@@ -1668,7 +1668,7 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.4.3",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -1755,7 +1755,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-saNk6",
+        "id": "Prompt-GEpb2",
         "measured": {
           "height": 260,
           "width": 320
@@ -1776,7 +1776,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-z31Nf",
+          "id": "Prompt-LzmiE",
           "node": {
             "base_classes": [
               "Message"
@@ -1796,7 +1796,7 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.4.3",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -1883,7 +1883,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-z31Nf",
+        "id": "Prompt-LzmiE",
         "measured": {
           "height": 260,
           "width": 320
@@ -1902,7 +1902,7 @@
       },
       {
         "data": {
-          "id": "note-ZQq6I",
+          "id": "note-J4Hc2",
           "node": {
             "description": "# 🔑 Tavily AI Search Needs API Key\n\nYou can get 1000 searches/month free [here](https://tavily.com/) ",
             "display_name": "",
@@ -1915,7 +1915,7 @@
         },
         "dragging": false,
         "height": 325,
-        "id": "note-ZQq6I",
+        "id": "note-J4Hc2",
         "measured": {
           "height": 325,
           "width": 326
@@ -1934,7 +1934,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-okHYL",
+          "id": "TavilySearchComponent-bQqQ3",
           "node": {
             "base_classes": [
               "Data",
@@ -1960,6 +1960,7 @@
             "frozen": false,
             "icon": "TavilyIcon",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1968,6 +1969,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
+                "group_outputs": false,
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
@@ -1999,7 +2001,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "TAVILY_API_KEY"
+                "value": ""
               },
               "chunks_per_source": {
                 "_input_type": "IntInput",
@@ -2244,11 +2246,11 @@
                 "type": "str"
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -2256,100 +2258,28 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": true,
-                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
-                      "disable_edit": false,
-                      "display_name": "Enable",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "status",
-                      "sortable": true,
-                      "type": "boolean"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "name": "TavilySearchComponent-fetch_content",
+                    "args": {
+                      "query": {
+                        "default": "",
+                        "description": "The search query you want to execute with Tavily.",
+                        "title": "Query",
+                        "type": "string"
+                      }
+                    },
+                    "description": "TavilySearchComponent. fetch_content_dataframe - **Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+                    "display_description": "TavilySearchComponent. fetch_content_dataframe - **Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+                    "display_name": "fetch_content_dataframe",
+                    "name": "fetch_content_dataframe",
+                    "readonly": false,
+                    "status": true,
                     "tags": [
-                      "TavilySearchComponent-fetch_content"
-                    ]
-                  },
-                  {
-                    "description": "fetch_content_text(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "name": "TavilySearchComponent-fetch_content_text",
-                    "tags": [
-                      "TavilySearchComponent-fetch_content_text"
+                      "fetch_content_dataframe"
                     ]
                   }
                 ]
@@ -2384,9 +2314,9 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-okHYL",
+        "id": "TavilySearchComponent-bQqQ3",
         "measured": {
-          "height": 437,
+          "height": 316,
           "width": 320
         },
         "position": {
@@ -2398,7 +2328,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-sO8rf",
+          "id": "OpenAIModel-6XjJL",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2429,6 +2359,7 @@
             "icon": "OpenAI",
             "key": "OpenAIModel",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {
               "keywords": [
                 "model",
@@ -2488,7 +2419,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -2773,9 +2704,9 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-sO8rf",
+        "id": "OpenAIModel-6XjJL",
         "measured": {
-          "height": 525,
+          "height": 539,
           "width": 320
         },
         "position": {
@@ -2787,7 +2718,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-1pnlf",
+          "id": "OpenAIModel-rCRSl",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2818,6 +2749,7 @@
             "icon": "OpenAI",
             "key": "OpenAIModel",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {
               "keywords": [
                 "model",
@@ -2877,7 +2809,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -3162,9 +3094,9 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-1pnlf",
+        "id": "OpenAIModel-rCRSl",
         "measured": {
-          "height": 525,
+          "height": 539,
           "width": 320
         },
         "position": {
@@ -3176,7 +3108,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-Fg9B4",
+          "id": "ChatOutput-qShGq",
           "node": {
             "base_classes": [
               "Message"
@@ -3205,6 +3137,7 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -3471,9 +3404,9 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-Fg9B4",
+        "id": "ChatOutput-qShGq",
         "measured": {
-          "height": 66,
+          "height": 48,
           "width": 192
         },
         "position": {
@@ -3485,16 +3418,16 @@
       }
     ],
     "viewport": {
-      "x": -154.13080129013133,
-      "y": 193.27768148412844,
-      "zoom": 0.436204605187947
+      "x": -270.56486809177886,
+      "y": 55.40724387742989,
+      "zoom": 0.4817049597080576
     }
   },
   "description": "Agent that generates focused plans, conducts web searches, and synthesizes findings into comprehensive reports.",
   "endpoint_name": null,
-  "id": "b833e38c-c394-4bde-b35c-334ce43a0476",
+  "id": "c42f508b-de52-4d07-b2fa-ffe15e5212a1",
   "is_component": false,
-  "last_tested_version": "1.2.0",
+  "last_tested_version": "1.4.3",
   "name": "Research Agent",
   "tags": [
     "assistants",
