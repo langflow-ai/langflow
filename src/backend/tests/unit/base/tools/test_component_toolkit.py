@@ -117,9 +117,9 @@ def test_component_tool():
     assert component_toolkit.component == calculator_component
 
     result = component_tool.invoke(input={"expression": "1+1"})
-    assert isinstance(result[0], Data)
-    assert "result" in result[0].data
-    assert result[0].result == "2"
+    assert isinstance(result[0], dict)
+    assert "result" in result[0]["data"]
+    assert result[0]["data"]["result"] == "2"
 
 
 @pytest.mark.api_key_required
@@ -129,10 +129,10 @@ async def test_component_tool_with_api_key():
     openai_llm = OpenAIModelComponent()
     openai_llm.set(api_key=os.environ["OPENAI_API_KEY"])
     tool_calling_agent = ToolCallingAgentComponent()
-
+    tools = await chat_output.to_toolkit()
     tool_calling_agent.set(
         llm=openai_llm.build_model,
-        tools=[chat_output.to_toolkit],
+        tools=list(tools),
         input_value="Which tools are available? Please tell its name.",
     )
 
@@ -140,7 +140,7 @@ async def test_component_tool_with_api_key():
     g.session_id = "test"
     assert g is not None
     results = [result async for result in g.async_start()]
-    assert len(results) == 4
+    assert len(results) == 3
     assert "message_response" in tool_calling_agent._outputs_map["response"].value.get_text()
 
 
