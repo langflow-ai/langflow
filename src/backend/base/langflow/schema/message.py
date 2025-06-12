@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import re
 import traceback
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
@@ -400,23 +399,35 @@ class ErrorMessage(Message):
     @staticmethod
     def _format_plain_reason(exception: BaseException) -> str:
         """Format the error reason without markdown."""
-        if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
-            reason = f"{exception.body.get('message')}\n"
-        elif hasattr(exception, "_message"):
-            reason = f"{exception._message()}\n" if callable(exception._message) else f"{exception._message}\n"
-        elif hasattr(exception, "code"):
-            reason = f"Code: {exception.code}\n"
-        elif hasattr(exception, "args") and exception.args:
-            reason = f"{exception.args[0]}\n"
-        elif isinstance(exception, ValidationError):
-            reason = f"{exception!s}\n"
-        elif hasattr(exception, "detail"):
-            reason = f"{exception.detail}\n"
-        elif hasattr(exception, "message"):
-            reason = f"{exception.message}\n"
-        else:
-            reason = "An unknown error occurred.\n"
-        return reason
+        # Local variable lookups for efficient attribute access
+        exc_body = getattr(exception, "body", None)
+        if isinstance(exc_body, dict) and "message" in exc_body:
+            return f"{exc_body['message']}\n"
+
+        exc__message = getattr(exception, "_message", None)
+        if exc__message is not None:
+            if callable(exc__message):
+                return f"{exc__message()}\n"
+            return f"{exc__message}\n"
+
+        if hasattr(exception, "code"):
+            return f"Code: {exception.code}\n"
+
+        if getattr(exception, "args", None):
+            return f"{exception.args[0]}\n"
+
+        if isinstance(exception, ValidationError):
+            return f"{exception!s}\n"
+
+        exc_detail = getattr(exception, "detail", None)
+        if exc_detail is not None:
+            return f"{exc_detail}\n"
+
+        exc_message = getattr(exception, "message", None)
+        if exc_message is not None:
+            return f"{exc_message}\n"
+
+        return "An unknown error occurred.\n"
 
     def __init__(
         self,
@@ -426,22 +437,29 @@ class ErrorMessage(Message):
         trace_name: str | None = None,
         flow_id: UUID | str | None = None,
     ) -> None:
-        # This is done to avoid circular imports
+        # Avoid circular imports and redundant exception wrapping
         if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
             exception = exception.__cause__
 
         plain_reason = self._format_plain_reason(exception)
+        # markdown_reason must call its base class, not reimplement
         markdown_reason = self._format_markdown_reason(exception)
-        # Get the sender ID
-        if trace_name:
-            match = re.search(r"\((.*?)\)", trace_name)
-            if match:
-                match.group(1)
+
+        # Cache display_name if source is provided
+        sender_display_name = source.display_name if source is not None else None
+
+        # Note: Removed the unused result of match.group(1)
+        # Get the sender ID (Unused original code block)
+
+        # Use local variables to store those used more than once for efficiency
+        component = sender_display_name
+        field = str(exception.field) if hasattr(exception, "field") else None
+        solution = str(exception.solution) if hasattr(exception, "solution") else None
 
         super().__init__(
             session_id=session_id,
-            sender=source.display_name if source else None,
-            sender_name=source.display_name if source else None,
+            sender=sender_display_name,
+            sender_name=sender_display_name,
             text=plain_reason,
             properties=Properties(
                 text_color="red",
@@ -460,10 +478,10 @@ class ErrorMessage(Message):
                     contents=[
                         ErrorContent(
                             type="error",
-                            component=source.display_name if source else None,
-                            field=str(exception.field) if hasattr(exception, "field") else None,
+                            component=component,
+                            field=field,
                             reason=markdown_reason,
-                            solution=str(exception.solution) if hasattr(exception, "solution") else None,
+                            solution=solution,
                             traceback=traceback.format_exc(),
                         )
                     ],
