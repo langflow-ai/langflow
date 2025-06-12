@@ -26,9 +26,9 @@
         "id": "reactflow__edge-ChatInput-BUgw3{œdataTypeœ:œChatInputœ,œidœ:œChatInput-BUgw3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-gjXon{œfieldNameœ:œinput_valueœ,œidœ:œPrompt-gjXonœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-BUgw3",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-BUgw3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-BUgw3œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-gjXon",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œPrompt-gjXonœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œPrompt-gjXonœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -54,9 +54,9 @@
         "id": "reactflow__edge-Prompt-pmjSJ{œdataTypeœ:œPromptœ,œidœ:œPrompt-pmjSJœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-Z2V8G{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Z2V8Gœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-pmjSJ",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-pmjSJœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-pmjSJœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-Z2V8G",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Z2V8Gœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-Z2V8Gœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-Agent-Z2V8G{œdataTypeœ:œAgentœ,œidœ:œAgent-Z2V8Gœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-gjXon{œfieldNameœ:œsearch_resultsœ,œidœ:œPrompt-gjXonœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-Z2V8G",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-Z2V8Gœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Z2V8Gœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-gjXon",
-        "targetHandle": "{œfieldNameœ:œsearch_resultsœ,œidœ:œPrompt-gjXonœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_resultsœ, œidœ: œPrompt-gjXonœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -111,9 +111,9 @@
         "id": "reactflow__edge-TavilySearchComponent-bQqQ3{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-bQqQ3œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Z2V8G{œfieldNameœ:œtoolsœ,œidœ:œAgent-Z2V8Gœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TavilySearchComponent-bQqQ3",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-bQqQ3œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-bQqQ3œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-Z2V8G",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-Z2V8Gœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Z2V8Gœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -139,9 +139,9 @@
         "id": "reactflow__edge-Prompt-GEpb2{œdataTypeœ:œPromptœ,œidœ:œPrompt-GEpb2œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-6XjJL{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-6XjJLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-GEpb2",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-GEpb2œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-GEpb2œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-6XjJL",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-6XjJLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-6XjJLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -167,9 +167,9 @@
         "id": "reactflow__edge-ChatInput-BUgw3{œdataTypeœ:œChatInputœ,œidœ:œChatInput-BUgw3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-6XjJL{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-6XjJLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-BUgw3",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-BUgw3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-BUgw3œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-6XjJL",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-6XjJLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-6XjJLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -196,9 +196,9 @@
         "id": "reactflow__edge-OpenAIModel-6XjJL{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-6XjJLœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-pmjSJ{œfieldNameœ:œprevious_responseœ,œidœ:œPrompt-pmjSJœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "OpenAIModel-6XjJL",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-6XjJLœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-6XjJLœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-pmjSJ",
-        "targetHandle": "{œfieldNameœ:œprevious_responseœ,œidœ:œPrompt-pmjSJœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œprevious_responseœ, œidœ: œPrompt-pmjSJœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -224,9 +224,9 @@
         "id": "reactflow__edge-Prompt-gjXon{œdataTypeœ:œPromptœ,œidœ:œPrompt-gjXonœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-rCRSl{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-rCRSlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-gjXon",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-gjXonœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gjXonœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-rCRSl",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-rCRSlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-rCRSlœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -252,9 +252,9 @@
         "id": "reactflow__edge-Prompt-LzmiE{œdataTypeœ:œPromptœ,œidœ:œPrompt-LzmiEœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-rCRSl{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-rCRSlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-LzmiE",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-LzmiEœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-LzmiEœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-rCRSl",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-rCRSlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-rCRSlœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -282,9 +282,9 @@
         "id": "reactflow__edge-OpenAIModel-rCRSl{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-rCRSlœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-qShGq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-qShGqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIModel-rCRSl",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-rCRSlœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-rCRSlœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-qShGq",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-qShGqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-qShGqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -2378,7 +2378,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2393,9 +2392,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -2772,7 +2768,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2787,9 +2782,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [

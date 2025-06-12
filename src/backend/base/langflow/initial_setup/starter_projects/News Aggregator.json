@@ -25,9 +25,9 @@
         "id": "reactflow__edge-AgentQL-mAUuI{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-mAUuIœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-MtFB7{œfieldNameœ:œtoolsœ,œidœ:œAgent-MtFB7œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AgentQL-mAUuI",
-        "sourceHandle": "{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-mAUuIœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-mAUuIœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-MtFB7",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-MtFB7œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-MtFB7œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-l2zGd{œdataTypeœ:œChatInputœ,œidœ:œChatInput-l2zGdœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-MtFB7{œfieldNameœ:œinput_valueœ,œidœ:œAgent-MtFB7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-l2zGd",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-l2zGdœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-l2zGdœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-MtFB7",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-MtFB7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-MtFB7œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-Agent-MtFB7{œdataTypeœ:œAgentœ,œidœ:œAgent-MtFB7œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ZC7ao{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ZC7aoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-MtFB7",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-MtFB7œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-MtFB7œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-ZC7ao",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ZC7aoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-ZC7aoœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "xy-edge__ChatOutput-ZC7ao{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-ZC7aoœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SaveToFile-PIe7f{œfieldNameœ:œinputœ,œidœ:œSaveToFile-PIe7fœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ChatOutput-ZC7ao",
-        "sourceHandle": "{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-ZC7aoœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatOutputœ, œidœ: œChatOutput-ZC7aoœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "SaveToFile-PIe7f",
-        "targetHandle": "{œfieldNameœ:œinputœ,œidœ:œSaveToFile-PIe7fœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œSaveToFile-PIe7fœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
