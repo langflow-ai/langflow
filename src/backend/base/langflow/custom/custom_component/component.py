@@ -1399,7 +1399,14 @@ class Component(CustomComponent):
                     case "error":
                         self._event_manager.on_error(data=data_dict)
                     case "remove_message":
-                        self._event_manager.on_remove_message(data={"id": data_dict["id"]})
+                        # Check if id exists in data_dict before accessing it
+                        if "id" in data_dict:
+                            self._event_manager.on_remove_message(data={"id": data_dict["id"]})
+                        else:
+                            # If no id, try to get it from the message object or id_ parameter
+                            message_id = getattr(message, "id", None) or id_
+                            if message_id:
+                                self._event_manager.on_remove_message(data={"id": message_id})
                     case _:
                         self._event_manager.on_message(data=data_dict)
 
