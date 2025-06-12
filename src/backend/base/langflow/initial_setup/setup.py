@@ -592,7 +592,7 @@ def log_node_changes(node_changes_log) -> None:
         message = f"\nNode: {node_name} was updated with the following changes:"
 
         # Group changes by reason for better readability
-        changes_by_reason = {}
+        changes_by_reason: dict[str, list[dict]] = {}
         for change in changes:
             reason = change.get("reason", "standard_update")
             if reason not in changes_by_reason:
