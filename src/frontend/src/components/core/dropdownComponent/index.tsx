@@ -456,7 +456,7 @@ export default function Dropdown({
                     )}
                     <div
                       className={cn("flex", {
-                        "flex-col":
+                        "flex w-full":
                           filteredMetadata && filteredMetadata?.length > 0,
                         "w-full pl-2": !filteredMetadata?.[index]?.icon,
                       })}
@@ -476,7 +476,7 @@ export default function Dropdown({
                         </span>
                       )}
                       {filteredMetadata && filteredMetadata?.length > 0 && (
-                        <div className="flex w-full items-center overflow-hidden text-muted-foreground">
+                        <div className="flex items-center overflow-hidden text-muted-foreground">
                           {Object.entries(
                             filterMetadataKeys(filteredMetadata?.[index] || {}),
                           )
