@@ -10,7 +10,6 @@ from langflow.components.langchain_utilities import ToolCallingAgentComponent
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.graph.graph.base import Graph
-
 from pydantic import BaseModel
 
 
@@ -142,6 +141,7 @@ async def test_component_tool_with_api_key():
     results = [result async for result in g.async_start()]
     assert len(results) == 3
     assert "message_response" in tool_calling_agent._outputs_map["response"].value.get_text()
+
 
 @pytest.mark.api_key_required
 @pytest.mark.usefixtures("client")
