@@ -178,4 +178,7 @@ class StructuredOutputComponent(Component):
             # handle empty or unexpected type case
             msg = "No structured output returned"
             raise ValueError(msg)
-        return Data(data=output[-1])
+        if len(output) != 1:
+            msg = "Multiple structured outputs returned"
+            raise ValueError(msg)
+        return Data(data=output[0])
