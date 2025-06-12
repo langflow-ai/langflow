@@ -8,8 +8,8 @@ from langchain_openai import ChatOpenAI
 from langflow.components.processing.structured_output import StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
-
 from pydantic import BaseModel
+
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
