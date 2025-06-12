@@ -49,19 +49,15 @@ async def api_key_security(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Missing first superuser credentials",
                 )
-            warnings.warn(
-                (
-                    "In v1.5, the default behavior of AUTO_LOGIN authentication will change to require a valid API key"
-                    " or JWT. If you integrated with Langflow prior to v1.5, make sure to update your code to pass an "
-                    "API key or JWT when authenticating with protected endpoints."
-                ),
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if query_param or header_param:
-                result = await check_key(db, query_param or header_param)
-            else:
-                result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+            if not query_param and not header_param:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=(
+                        "Since v1.5, AUTO_LOGIN requires a valid API key or JWT."
+                        " Please update your authentication method."
+                    ),
+                )
+            result = await check_key(db, query_param or header_param)
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -98,15 +94,15 @@ async def ws_api_key_security(
                     code=status.WS_1011_INTERNAL_ERROR,
                     reason="Missing first superuser credentials",
                 )
-            warnings.warn(
-                ("In v1.5, AUTO_LOGIN will *require* a valid API key or JWT. Please update your clients accordingly."),
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if api_key:
-                result = await check_key(db, api_key)
-            else:
-                result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
+            if not api_key:
+                raise WebSocketException(
+                    code=status.WS_1008_POLICY_VIOLATION,
+                    reason=(
+                        "Since v1.5, AUTO_LOGIN requires a valid API key or JWT."
+                        " Please update your authentication method."
+                    ),
+                )
+            result = await check_key(db, api_key)
 
         # normal path: must provide an API key
         else:
