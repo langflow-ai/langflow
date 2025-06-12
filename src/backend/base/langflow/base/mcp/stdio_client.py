@@ -164,6 +164,9 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
                         # initialize succeeded
                         initializer_task.result()  # re-raise initialization errors if any
 
+                    # Capture protocol information after successful initialization
+                    self._capture_stdio_protocol_info()
+
                     # If we get here, initialization succeeded
                     if self.session is None:
                         msg = "Session is None after successful initialization"
@@ -192,6 +195,31 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
             finally:
                 # Clean up the temp file with proper error suppression
                 await self._safe_file_cleanup(errlog_path)
+
+    def _capture_stdio_protocol_info(self) -> None:
+        """Capture protocol information for successful STDIO connection."""
+        from datetime import datetime
+        
+        if not self.session or not hasattr(self.session, 'init_result'):
+            # Fallback if init_result is not available
+            self.protocol_info = {
+                "protocol_version": "stdio",  # STDIO doesn't specify protocol version
+                "transport_type": "stdio",
+                "capabilities": {},
+                "server_info": {},
+                "last_detected": datetime.utcnow().isoformat()
+            }
+            return
+
+        init_result = self.session.init_result
+        self.protocol_info = {
+            "protocol_version": getattr(init_result, 'protocolVersion', 'stdio'),
+            "transport_type": "stdio",
+            "capabilities": getattr(init_result, 'capabilities', {}),
+            "server_info": getattr(init_result, 'serverInfo', {}),
+            "last_detected": datetime.utcnow().isoformat()
+        }
+        logger.debug(f"Captured STDIO protocol info: {self.protocol_info}")
 
     async def _cleanup_tasks(self, watcher_task, initializer_task):
         """Safely cleanup async tasks with proper cancellation handling."""

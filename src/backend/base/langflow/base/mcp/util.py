@@ -288,12 +288,20 @@ async def update_tools(
     server_config: dict,
     mcp_stdio_client: MCPStdioClient | None = None,
     mcp_sse_client: MCPSseClient | None = None,
-) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
-    """Fetch server config and update available tools."""
+) -> tuple[str, list[StructuredTool], dict[str, StructuredTool], dict[str, Any]]:
+    """Fetch server config and update available tools.
+    
+    Returns:
+        Tuple containing:
+        - mode: Connection mode ("Stdio" or "SSE")
+        - tool_list: List of structured tools
+        - tool_cache: Dictionary mapping tool names to tools
+        - protocol_info: Protocol version and connection details
+    """
     if server_config is None:
         server_config = {}
     if not server_name:
-        return "", [], {}
+        return "", [], {}, {}
     if mcp_stdio_client is None:
         mcp_stdio_client = MCPStdioClient()
     if mcp_sse_client is None:
@@ -311,7 +319,7 @@ async def update_tools(
             await _validate_connection_params(mode, command, url)
         except ValueError as e:
             logger.error(f"Invalid MCP server configuration for '{server_name}': {e}")
-            return "", [], {}
+            return "", [], {}, {}
 
         # Determine connection type and parameters
         client: MCPStdioClient | MCPSseClient | None = None
@@ -329,14 +337,20 @@ async def update_tools(
                 client = mcp_sse_client
             else:
                 logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")
-                return "", [], {}
+                return "", [], {}, {}
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             logger.error(f"Failed to connect to MCP server '{server_name}': {e}")
-            return "", [], {}
+            return "", [], {}, {}
 
         if not tools or not client or not client._connected:
             logger.warning(f"No tools available from MCP server '{server_name}' or connection failed")
-            return "", [], {}
+            return "", [], {}, {}
+
+        # Capture protocol information from the connected client
+        protocol_info = {}
+        if client and hasattr(client, 'get_protocol_info'):
+            protocol_info = client.get_protocol_info()
+            logger.debug(f"Retrieved protocol info for '{server_name}': {protocol_info}")
 
         tool_list = []
         tool_cache: dict[str, StructuredTool] = {}
@@ -367,6 +381,6 @@ async def update_tools(
         logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
     except (ConnectionError, TimeoutError, OSError, ValueError) as e:
         logger.error(f"Unexpected error while updating tools for MCP server '{server_name}': {e}")
-        return "", [], {}
+        return "", [], {}, {}
     else:
-        return mode, tool_list, tool_cache
+        return mode, tool_list, tool_cache, protocol_info

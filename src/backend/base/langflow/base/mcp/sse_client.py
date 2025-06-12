@@ -396,6 +396,9 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
             self.connected_transport = "streamable_http"
             self._connected = True
 
+            # Capture protocol information for Streamable HTTP transport
+            self._capture_streamable_http_protocol_info()
+
             # Get tools from session
             if self.session is None:
                 msg = "Session is None after successful initialization"
@@ -411,6 +414,9 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
         if http_sse_success:
             self.connected_transport = "http_sse"
             self._connected = True
+
+            # Capture protocol information for HTTP+SSE transport
+            self._capture_http_sse_protocol_info()
 
             # Get tools via HTTP+SSE
             tools_request = {"jsonrpc": "2.0", "method": "tools/list"}
@@ -428,6 +434,55 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
         )
         logger.error(error_msg)
         raise MCPTransportError(error_msg)
+
+    def _capture_streamable_http_protocol_info(self) -> None:
+        """Capture protocol information for successful Streamable HTTP connection."""
+        from datetime import datetime
+        
+        if not self.session or not hasattr(self.session, 'init_result'):
+            # Fallback if init_result is not available
+            self.protocol_info = {
+                "protocol_version": "2025-03-26",  # Streamable HTTP is 2025-03-26
+                "transport_type": "streamable_http",
+                "capabilities": {},
+                "server_info": {},
+                "last_detected": datetime.utcnow().isoformat()
+            }
+            return
+
+        init_result = self.session.init_result
+        self.protocol_info = {
+            "protocol_version": getattr(init_result, 'protocolVersion', '2025-03-26'),
+            "transport_type": "streamable_http",
+            "capabilities": getattr(init_result, 'capabilities', {}),
+            "server_info": getattr(init_result, 'serverInfo', {}),
+            "last_detected": datetime.utcnow().isoformat()
+        }
+        logger.debug(f"Captured Streamable HTTP protocol info: {self.protocol_info}")
+
+    def _capture_http_sse_protocol_info(self) -> None:
+        """Capture protocol information for successful HTTP+SSE connection."""
+        from datetime import datetime
+        
+        if not self.init_result:
+            # Fallback if init_result is not available
+            self.protocol_info = {
+                "protocol_version": "2024-11-05",  # HTTP+SSE is 2024-11-05
+                "transport_type": "http_sse", 
+                "capabilities": {},
+                "server_info": {},
+                "last_detected": datetime.utcnow().isoformat()
+            }
+            return
+
+        self.protocol_info = {
+            "protocol_version": getattr(self.init_result, 'protocolVersion', '2024-11-05'),
+            "transport_type": "http_sse",
+            "capabilities": getattr(self.init_result, 'capabilities', {}),
+            "server_info": getattr(self.init_result, 'serverInfo', {}),
+            "last_detected": datetime.utcnow().isoformat()
+        }
+        logger.debug(f"Captured HTTP+SSE protocol info: {self.protocol_info}")
 
     async def list_tools(self) -> list[StructuredTool]:
         """Return the list of available tools depending on the active transport."""

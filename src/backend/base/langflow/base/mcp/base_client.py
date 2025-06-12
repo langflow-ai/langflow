@@ -21,6 +21,7 @@ class BaseMCPClient(ABC, Generic[T]):
     - Resource cleanup and lifecycle management
     - Context manager protocol
     - Common validation patterns
+    - Protocol version detection and tracking
 
     Transport-specific implementations should inherit from this class and implement
     the abstract methods for connection establishment and tool execution.
@@ -35,6 +36,24 @@ class BaseMCPClient(ABC, Generic[T]):
         # Connection state tracking
         self._connection_params: T | None = None
         self._connected = False
+
+        # Protocol information tracking - added for US-003
+        self.protocol_info: dict[str, Any] | None = None
+
+    def get_protocol_info(self) -> dict[str, Any]:
+        """Get protocol information for the connected session.
+        
+        Returns:
+            Dictionary containing protocol version, transport type, capabilities,
+            server info, and detection timestamp. Returns default values if not connected.
+        """
+        return self.protocol_info or {
+            "protocol_version": None,
+            "transport_type": None,
+            "capabilities": None,
+            "server_info": None,
+            "last_detected": None
+        }
 
     @abstractmethod
     async def connect_to_server(self, *args, **kwargs) -> list[types.Tool]:
@@ -103,6 +122,7 @@ class BaseMCPClient(ABC, Generic[T]):
         - Closes the exit stack and releases resources
         - Resets session and connection state
         - Marks client as disconnected
+        - Clears protocol information
 
         Transport-specific cleanup should be implemented in _cleanup_transport().
         """
@@ -114,6 +134,7 @@ class BaseMCPClient(ABC, Generic[T]):
         self.session = None
         self._connection_params = None
         self._connected = False
+        self.protocol_info = None  # Clear protocol info on disconnect
 
     async def _cleanup_transport(self) -> None:
         """Perform transport-specific cleanup operations.

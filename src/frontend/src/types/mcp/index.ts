@@ -13,6 +13,15 @@ export type MCPServerInfoType = {
   name: string;
   description: string;
   toolsCount: number;
+  protocolVersion?: string;
+  transportType?: string;
+  capabilities?: Record<string, any>;
+  serverInfo?: {
+    name?: string;
+    version?: string;
+  };
+  lastChecked?: string;
+  error?: string;
 };
 
 export type MCPServerType = {

@@ -159,7 +159,7 @@ class MCPToolsComponent(Component):
                     self.tools = []
                     return []
 
-                _, tool_list, tool_cache = await update_tools(
+                _, tool_list, tool_cache, _ = await update_tools(
                     server_name=server_name,
                     server_config=server_config,
                     mcp_stdio_client=self.stdio_client,
