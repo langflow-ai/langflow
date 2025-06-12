@@ -222,6 +222,7 @@ class LCModelComponent(Component):
         if system_message and not system_message_added:
             messages.insert(0, SystemMessage(content=system_message))
         inputs: list | dict = messages or {}
+        lf_message = None
         try:
             # TODO: Depreciated Feature to be removed in upcoming release
             if hasattr(self, "output_parser") and self.output_parser is not None:
@@ -246,10 +247,11 @@ class LCModelComponent(Component):
                     model_message = Message(
                         text=runnable.stream(inputs),
                         sender=MESSAGE_SENDER_AI,
-                        sender_name=self.display_name,
-                        properties={"icon": "Bot", "state": "partial"},
+                        sender_name="AI",
+                        properties={"icon": self.icon, "state": "partial"},
                         session_id=session_id,
                     )
+                    model_message.properties.source = self._build_source(self._id, self.display_name, self)
                     lf_message = await self.send_message(model_message)
                     result = lf_message.text
                 else:
@@ -270,8 +272,7 @@ class LCModelComponent(Component):
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
             raise
-
-        return Message(text=result)
+        return lf_message or Message(text=result)
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
