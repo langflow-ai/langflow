@@ -356,7 +356,7 @@ export default function Dropdown({
   );
 
   const renderSearchInput = () => (
-    <div className="flex items-center border-b px-3">
+    <div className="flex items-center border-b px-2.5">
       <ForwardedIconComponent
         name="search"
         className="mr-2 h-4 w-4 shrink-0 opacity-50"
@@ -365,7 +365,7 @@ export default function Dropdown({
         onChange={searchRoleByTerm}
         onKeyDown={handleInputKeyDown}
         placeholder="Search options..."
-        className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
         data-testid="dropdown_search_input"
       />
@@ -421,7 +421,7 @@ export default function Dropdown({
                       )}
 
                       {filteredMetadata && filteredMetadata?.length > 0 && (
-                        <div className="flex flex-1 items-center overflow-hidden pl-2 text-muted-foreground">
+                        <div className="ml-auto flex items-center overflow-hidden pl-2 text-muted-foreground">
                           {Object.entries(
                             filterMetadataKeys(filteredMetadata?.[index] || {}),
                           )
@@ -452,7 +452,8 @@ export default function Dropdown({
                       )}
                       <div
                         className={cn("pl-2", {
-                          "ml-auto": !filteredMetadata,
+                          "ml-auto":
+                            !filteredMetadata || filteredMetadata.length === 0,
                         })}
                       >
                         <ForwardedIconComponent
