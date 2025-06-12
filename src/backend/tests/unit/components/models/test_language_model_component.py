@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -32,6 +34,30 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for version-specific files."""
         # No version-specific files for this component
         return []
+
+    @pytest.fixture
+    def openai_api_key(self):
+        """Fixture to get OpenAI API key from environment variable."""
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            pytest.skip("OPENAI_API_KEY environment variable not set")
+        return api_key
+
+    @pytest.fixture
+    def anthropic_api_key(self):
+        """Fixture to get Anthropic API key from environment variable."""
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            pytest.skip("ANTHROPIC_API_KEY environment variable not set")
+        return api_key
+
+    @pytest.fixture
+    def google_api_key(self):
+        """Fixture to get Google API key from environment variable."""
+        api_key = os.environ.get("GOOGLE_API_KEY")
+        if not api_key:
+            pytest.skip("GOOGLE_API_KEY environment variable not set")
+        return api_key
 
     async def test_update_build_config_openai(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
@@ -149,3 +175,45 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
 
         with pytest.raises(ValueError, match="Unknown provider: Unknown"):
             component.build_model()
+
+    async def test_openai_live_api(self, component_class, default_kwargs, openai_api_key):
+        """Test that the component can create a model with a real API key."""
+        component = component_class(**default_kwargs)
+        component.provider = "OpenAI"
+        component.model_name = "gpt-3.5-turbo"
+        component.api_key = openai_api_key
+        component.temperature = 0.1
+        component.stream = False
+
+        model = component.build_model()
+        assert isinstance(model, ChatOpenAI)
+        # We could attempt a simple call here, but that would increase test time
+        # and might fail due to network issues, so we'll just verify the instance
+
+    async def test_anthropic_live_api(self, component_class, default_kwargs, anthropic_api_key):
+        """Test that the component can create a model with a real API key."""
+        component = component_class(**default_kwargs)
+        component.provider = "Anthropic"
+        component.model_name = ANTHROPIC_MODELS[0]
+        component.api_key = anthropic_api_key
+        component.temperature = 0.1
+        component.stream = False
+
+        model = component.build_model()
+        assert isinstance(model, ChatAnthropic)
+        # We could attempt a simple call here, but that would increase test time
+        # and might fail due to network issues, so we'll just verify the instance
+
+    async def test_google_live_api(self, component_class, default_kwargs, google_api_key):
+        """Test that the component can create a model with a real API key."""
+        component = component_class(**default_kwargs)
+        component.provider = "Google"
+        component.model_name = GOOGLE_GENERATIVE_AI_MODELS[0]
+        component.api_key = google_api_key
+        component.temperature = 0.1
+        component.stream = False
+
+        model = component.build_model()
+        assert isinstance(model, ChatGoogleGenerativeAI)
+        # We could attempt a simple call here, but that would increase test time
+        # and might fail due to network issues, so we'll just verify the instance
