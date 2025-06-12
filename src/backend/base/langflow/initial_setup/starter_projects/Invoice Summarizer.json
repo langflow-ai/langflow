@@ -432,7 +432,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Inputs",
                 "dynamic": false,
@@ -453,7 +453,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
@@ -474,6 +474,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1002,6 +1003,7 @@
               "input_value": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Input Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
@@ -1039,6 +1041,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1318,6 +1321,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1334,6 +1338,7 @@
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
@@ -1517,7 +1522,7 @@
                 "name": "message",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": true,
                 "trace_as_input": true,
@@ -1612,7 +1617,7 @@
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -1658,6 +1663,7 @@
                 "required": true,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1683,7 +1689,7 @@
                 "value": 1
               },
               "sender": {
-                "_input_type": "DropdownInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
                 "combobox": false,
                 "dialog_inputs": {},
@@ -1693,6 +1699,8 @@
                 "input_types": [
                   "Message"
                 ],
+                "list": false,
+                "list_add_label": "Add More",
                 "name": "sender",
                 "options": [
                   "Machine",
@@ -1724,7 +1732,7 @@
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -1851,7 +1859,7 @@
                 "name": "template",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,

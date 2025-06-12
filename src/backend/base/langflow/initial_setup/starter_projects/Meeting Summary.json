@@ -585,6 +585,7 @@
               "template": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
@@ -861,9 +862,11 @@
                 ],
                 "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -927,6 +930,7 @@
               "system_message": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
@@ -1091,6 +1095,7 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "template",
                 "placeholder": "",
                 "required": false,
@@ -1111,6 +1116,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "tool_placeholder",
                 "placeholder": "",
@@ -1228,6 +1234,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -1250,6 +1257,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -1308,6 +1316,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "data_template",
                 "placeholder": "",
@@ -1321,7 +1330,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Inputs",
                 "dynamic": false,
@@ -1332,6 +1341,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -1341,13 +1351,14 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -1356,10 +1367,12 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1375,6 +1388,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -1397,6 +1411,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -1416,6 +1431,7 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
@@ -1436,6 +1452,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -1530,6 +1547,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -1552,6 +1570,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -1610,6 +1629,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "data_template",
                 "placeholder": "",
@@ -1623,7 +1643,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Inputs",
                 "dynamic": false,
@@ -1634,6 +1654,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -1643,13 +1664,14 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -1658,10 +1680,12 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1677,6 +1701,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -1699,6 +1724,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -1718,6 +1744,7 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
@@ -1738,6 +1765,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -2005,9 +2033,11 @@
                 ],
                 "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2071,6 +2101,7 @@
               "system_message": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
@@ -2220,6 +2251,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -2242,6 +2274,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -2300,6 +2333,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "data_template",
                 "placeholder": "",
@@ -2313,7 +2347,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Inputs",
                 "dynamic": false,
@@ -2324,6 +2358,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -2333,13 +2368,14 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -2348,10 +2384,12 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2367,6 +2405,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -2389,6 +2428,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -2408,6 +2448,7 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
@@ -2428,6 +2469,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -2584,6 +2626,7 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "template",
                 "placeholder": "",
                 "required": false,
@@ -2604,6 +2647,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "tool_placeholder",
                 "placeholder": "",
@@ -2791,7 +2835,7 @@
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -2816,19 +2860,25 @@
                 "required": true,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
               },
               "sender": {
-                "_input_type": "DropdownInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
                 "combobox": false,
                 "dialog_inputs": {},
                 "display_name": "Sender",
                 "dynamic": false,
                 "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
                 "name": "sender",
                 "options": [
                   "Machine",
@@ -2860,7 +2910,7 @@
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -2919,6 +2969,7 @@
               "template": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
@@ -2932,7 +2983,7 @@
                 "name": "template",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -3019,6 +3070,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -3041,6 +3093,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -3104,6 +3157,7 @@
                 "file_path": "",
                 "info": "Files to be sent with the message.",
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "files",
                 "placeholder": "",
                 "required": false,
@@ -3117,11 +3171,13 @@
               "input_value": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Input Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
                 "input_types": [],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "input_value",
@@ -3139,6 +3195,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -3147,10 +3204,12 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -3166,6 +3225,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -3188,6 +3248,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -3207,6 +3268,7 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
@@ -3227,6 +3289,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -3495,6 +3558,7 @@
                 "placeholder": "",
                 "required": true,
                 "show": true,
+                "temp_file": false,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -3677,6 +3741,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",

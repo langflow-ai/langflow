@@ -391,11 +391,13 @@
                 "dynamic": false,
                 "info": "If true, will add a tool to the agent that returns the current date.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "add_current_date_tool",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -403,6 +405,7 @@
               "agent_description": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
@@ -410,6 +413,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "agent_description",
@@ -427,6 +431,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Model Provider",
                 "dynamic": false,
                 "info": "The provider of the language model that the agent will use to generate responses.",
@@ -443,11 +448,41 @@
                   "SambaNova",
                   "Custom"
                 ],
+                "options_metadata": [
+                  {
+                    "icon": "Amazon"
+                  },
+                  {
+                    "icon": "Anthropic"
+                  },
+                  {
+                    "icon": "Azure"
+                  },
+                  {
+                    "icon": "GoogleGenerativeAI"
+                  },
+                  {
+                    "icon": "Groq"
+                  },
+                  {
+                    "icon": "NVIDIA"
+                  },
+                  {
+                    "icon": "OpenAI"
+                  },
+                  {
+                    "icon": "SambaNova"
+                  },
+                  {
+                    "icon": "brain"
+                  }
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -464,6 +499,7 @@
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
@@ -495,11 +531,13 @@
                 "dynamic": false,
                 "info": "Should the Agent fix errors when reading user input for better processing?",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "handle_parsing_errors",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -514,6 +552,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -533,11 +572,13 @@
                 "dynamic": false,
                 "info": "If True, it will output JSON regardless of passing a schema.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "json_mode",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": false
@@ -549,11 +590,13 @@
                 "dynamic": false,
                 "info": "The maximum number of attempts the agent can make to complete its task before it stops.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_iterations",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 15
@@ -583,6 +626,7 @@
                 "dynamic": false,
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_tokens",
                 "placeholder": "",
                 "range_spec": {
@@ -594,6 +638,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": ""
@@ -608,6 +653,7 @@
                   "Memory"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "memory",
                 "placeholder": "",
                 "required": false,
@@ -632,7 +678,7 @@
                 "name": "message",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": true,
                 "trace_as_input": true,
@@ -668,11 +714,13 @@
                 "dynamic": false,
                 "info": "Additional keyword arguments to pass to the model.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "model_kwargs",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "type": "dict",
                 "value": {}
@@ -681,6 +729,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": true,
+                "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
@@ -698,10 +747,13 @@
                   "gpt-3.5-turbo",
                   "o1"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -714,11 +766,13 @@
                 "dynamic": false,
                 "info": "Number of messages to retrieve.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 100
@@ -730,12 +784,14 @@
                 "dynamic": false,
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "openai_api_base",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
@@ -744,6 +800,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Order",
                 "dynamic": false,
                 "info": "Order of the messages.",
@@ -752,10 +809,12 @@
                   "Ascending",
                   "Descending"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -768,22 +827,29 @@
                 "dynamic": false,
                 "info": "The seed controls the reproducibility of the job.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "seed",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 1
               },
               "sender": {
-                "_input_type": "DropdownInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
                 "combobox": false,
                 "display_name": "Sender",
                 "dynamic": false,
                 "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
                 "name": "sender",
                 "options": [
                   "Machine",
@@ -809,11 +875,12 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -856,6 +923,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -871,6 +939,7 @@
               "system_prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
@@ -878,6 +947,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_prompt",
@@ -892,24 +962,39 @@
                 "value": "You are the chief editor of a prestigious publication known for transforming complex information into clear, engaging content. Review and refine the researcher's document about {topic}.\n\nYour editing process should:\n- Verify and challenge any questionable claims\n- Restructure content for better flow and readability\n- Remove redundancies and unclear statements\n- Add context where needed\n- Ensure balanced coverage of the topic\n- Transform technical language into accessible explanations\n\nMaintain high editorial standards while making the content engaging for an educated general audience. Present the revised version in a clean, well-structured format."
               },
               "temperature": {
-                "_input_type": "FloatInput",
+                "_input_type": "SliderInput",
                 "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
                 "name": "temperature",
                 "placeholder": "",
+                "range_spec": {
+                  "max": 1.0,
+                  "min": 0.0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
                 "required": false,
                 "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
-                "type": "float",
+                "type": "slider",
                 "value": 0.1
               },
               "template": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
@@ -917,12 +1002,13 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "template",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -958,6 +1044,7 @@
                   "Tool"
                 ],
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "tools",
                 "placeholder": "",
                 "required": false,
@@ -974,11 +1061,13 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "verbose",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -1083,11 +1172,13 @@
                 "dynamic": false,
                 "info": "If true, will add a tool to the agent that returns the current date.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "add_current_date_tool",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -1095,6 +1186,7 @@
               "agent_description": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
@@ -1102,6 +1194,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "agent_description",
@@ -1119,6 +1212,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Model Provider",
                 "dynamic": false,
                 "info": "The provider of the language model that the agent will use to generate responses.",
@@ -1135,11 +1229,41 @@
                   "SambaNova",
                   "Custom"
                 ],
+                "options_metadata": [
+                  {
+                    "icon": "Amazon"
+                  },
+                  {
+                    "icon": "Anthropic"
+                  },
+                  {
+                    "icon": "Azure"
+                  },
+                  {
+                    "icon": "GoogleGenerativeAI"
+                  },
+                  {
+                    "icon": "Groq"
+                  },
+                  {
+                    "icon": "NVIDIA"
+                  },
+                  {
+                    "icon": "OpenAI"
+                  },
+                  {
+                    "icon": "SambaNova"
+                  },
+                  {
+                    "icon": "brain"
+                  }
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1156,6 +1280,7 @@
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
@@ -1187,11 +1312,13 @@
                 "dynamic": false,
                 "info": "Should the Agent fix errors when reading user input for better processing?",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "handle_parsing_errors",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -1206,6 +1333,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -1225,11 +1353,13 @@
                 "dynamic": false,
                 "info": "If True, it will output JSON regardless of passing a schema.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "json_mode",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": false
@@ -1241,11 +1371,13 @@
                 "dynamic": false,
                 "info": "The maximum number of attempts the agent can make to complete its task before it stops.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_iterations",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 15
@@ -1275,6 +1407,7 @@
                 "dynamic": false,
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_tokens",
                 "placeholder": "",
                 "range_spec": {
@@ -1286,6 +1419,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": ""
@@ -1300,6 +1434,7 @@
                   "Memory"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "memory",
                 "placeholder": "",
                 "required": false,
@@ -1324,7 +1459,7 @@
                 "name": "message",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": true,
                 "trace_as_input": true,
@@ -1360,11 +1495,13 @@
                 "dynamic": false,
                 "info": "Additional keyword arguments to pass to the model.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "model_kwargs",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "type": "dict",
                 "value": {}
@@ -1373,6 +1510,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": true,
+                "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
@@ -1390,10 +1528,13 @@
                   "gpt-3.5-turbo",
                   "o1"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1406,11 +1547,13 @@
                 "dynamic": false,
                 "info": "Number of messages to retrieve.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 100
@@ -1422,12 +1565,14 @@
                 "dynamic": false,
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "openai_api_base",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
@@ -1436,6 +1581,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Order",
                 "dynamic": false,
                 "info": "Order of the messages.",
@@ -1444,10 +1590,12 @@
                   "Ascending",
                   "Descending"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1460,22 +1608,29 @@
                 "dynamic": false,
                 "info": "The seed controls the reproducibility of the job.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "seed",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 1
               },
               "sender": {
-                "_input_type": "DropdownInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
                 "combobox": false,
                 "display_name": "Sender",
                 "dynamic": false,
                 "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
                 "name": "sender",
                 "options": [
                   "Machine",
@@ -1501,11 +1656,12 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -1548,6 +1704,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -1563,6 +1720,7 @@
               "system_prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
@@ -1570,6 +1728,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_prompt",
@@ -1584,24 +1743,39 @@
                 "value": "You are a brilliant comedy writer known for making complex topics entertaining and memorable. Using the editor's refined document about {topic}, create an engaging, humorous blog post.\n\nYour approach should:\n- Find unexpected angles and amusing parallels\n- Use clever wordplay and wit (avoid cheap jokes)\n- Maintain accuracy while being entertaining\n- Include relatable examples and analogies\n- Keep a smart, sophisticated tone\n- Make the topic more approachable through humor\n\nCreate a blog post that makes people laugh while actually teaching them about {topic}. The humor should enhance, not overshadow, the educational value."
               },
               "temperature": {
-                "_input_type": "FloatInput",
+                "_input_type": "SliderInput",
                 "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
                 "name": "temperature",
                 "placeholder": "",
+                "range_spec": {
+                  "max": 1.0,
+                  "min": 0.0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
                 "required": false,
                 "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
-                "type": "float",
+                "type": "slider",
                 "value": 0.1
               },
               "template": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
@@ -1609,12 +1783,13 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "template",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -1650,6 +1825,7 @@
                   "Tool"
                 ],
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "tools",
                 "placeholder": "",
                 "required": false,
@@ -1666,11 +1842,13 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "verbose",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -1776,6 +1954,7 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "template",
                 "placeholder": "",
@@ -1797,6 +1976,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "tool_placeholder",
                 "placeholder": "",
@@ -1910,6 +2090,7 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "template",
                 "placeholder": "",
@@ -1931,6 +2112,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "tool_placeholder",
                 "placeholder": "",
@@ -2093,6 +2275,7 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "template",
                 "placeholder": "",
@@ -2114,6 +2297,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "tool_placeholder",
                 "placeholder": "",
@@ -2210,6 +2394,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -2232,6 +2417,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -2295,6 +2481,7 @@
                 "file_path": "",
                 "info": "Files to be sent with the message.",
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "files",
                 "placeholder": "",
                 "required": false,
@@ -2308,11 +2495,13 @@
               "input_value": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Input Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
                 "input_types": [],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "input_value",
@@ -2330,6 +2519,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -2338,10 +2528,12 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2357,6 +2549,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -2379,6 +2572,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -2398,11 +2592,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -2417,6 +2613,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -2601,11 +2798,13 @@
                 "dynamic": false,
                 "info": "If true, will add a tool to the agent that returns the current date.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "add_current_date_tool",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -2613,6 +2812,7 @@
               "agent_description": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
@@ -2620,6 +2820,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "agent_description",
@@ -2637,6 +2838,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Model Provider",
                 "dynamic": false,
                 "info": "The provider of the language model that the agent will use to generate responses.",
@@ -2653,11 +2855,41 @@
                   "SambaNova",
                   "Custom"
                 ],
+                "options_metadata": [
+                  {
+                    "icon": "Amazon"
+                  },
+                  {
+                    "icon": "Anthropic"
+                  },
+                  {
+                    "icon": "Azure"
+                  },
+                  {
+                    "icon": "GoogleGenerativeAI"
+                  },
+                  {
+                    "icon": "Groq"
+                  },
+                  {
+                    "icon": "NVIDIA"
+                  },
+                  {
+                    "icon": "OpenAI"
+                  },
+                  {
+                    "icon": "SambaNova"
+                  },
+                  {
+                    "icon": "brain"
+                  }
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2674,6 +2906,7 @@
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
@@ -2705,11 +2938,13 @@
                 "dynamic": false,
                 "info": "Should the Agent fix errors when reading user input for better processing?",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "handle_parsing_errors",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -2724,6 +2959,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -2743,11 +2979,13 @@
                 "dynamic": false,
                 "info": "If True, it will output JSON regardless of passing a schema.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "json_mode",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": false
@@ -2759,11 +2997,13 @@
                 "dynamic": false,
                 "info": "The maximum number of attempts the agent can make to complete its task before it stops.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_iterations",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 15
@@ -2793,6 +3033,7 @@
                 "dynamic": false,
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_tokens",
                 "placeholder": "",
                 "range_spec": {
@@ -2804,6 +3045,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": ""
@@ -2818,6 +3060,7 @@
                   "Memory"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "memory",
                 "placeholder": "",
                 "required": false,
@@ -2842,7 +3085,7 @@
                 "name": "message",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": true,
                 "trace_as_input": true,
@@ -2878,11 +3121,13 @@
                 "dynamic": false,
                 "info": "Additional keyword arguments to pass to the model.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "model_kwargs",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "type": "dict",
                 "value": {}
@@ -2891,6 +3136,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": true,
+                "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
@@ -2908,10 +3154,13 @@
                   "gpt-3.5-turbo",
                   "o1"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2924,11 +3173,13 @@
                 "dynamic": false,
                 "info": "Number of messages to retrieve.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 100
@@ -2940,12 +3191,14 @@
                 "dynamic": false,
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "openai_api_base",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
@@ -2954,6 +3207,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Order",
                 "dynamic": false,
                 "info": "Order of the messages.",
@@ -2962,10 +3216,12 @@
                   "Ascending",
                   "Descending"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2978,22 +3234,29 @@
                 "dynamic": false,
                 "info": "The seed controls the reproducibility of the job.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "seed",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 1
               },
               "sender": {
-                "_input_type": "DropdownInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
                 "combobox": false,
                 "display_name": "Sender",
                 "dynamic": false,
                 "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
                 "name": "sender",
                 "options": [
                   "Machine",
@@ -3019,11 +3282,12 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -3066,6 +3330,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -3081,6 +3346,7 @@
               "system_prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
@@ -3088,6 +3354,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_prompt",
@@ -3102,24 +3369,39 @@
                 "value": "You are a helpful assistant that can use tools to answer questions and perform tasks."
               },
               "temperature": {
-                "_input_type": "FloatInput",
+                "_input_type": "SliderInput",
                 "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
                 "name": "temperature",
                 "placeholder": "",
+                "range_spec": {
+                  "max": 1.0,
+                  "min": 0.0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
                 "required": false,
                 "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
-                "type": "float",
+                "type": "slider",
                 "value": 0.1
               },
               "template": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
@@ -3127,12 +3409,13 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "template",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -3168,6 +3451,7 @@
                   "Tool"
                 ],
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "tools",
                 "placeholder": "",
                 "required": false,
@@ -3184,11 +3468,13 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "verbose",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -3400,6 +3686,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -4057,6 +4344,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -4082,6 +4370,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str"
@@ -4215,6 +4504,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -4438,6 +4728,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
