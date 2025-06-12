@@ -23,30 +23,35 @@ NODE_FORMAT_ATTRIBUTES = [
     # remove display_name to prevent overwriting the display_name from the latest template
     # "display_name",
     "description",
+    "output",
+    "input_types",
+    "type",
+    "output_types",
+    "input_types",
+    "type",
 ]
 
 # Attributes that get updated from the latest template
 FIELD_FORMAT_ATTRIBUTES = [
-    "info",
-    "display_name",
-    "required",
-    "list",
-    "multiline",
-    "combobox",
-    "fileTypes",
-    "password",
-    "input_types",
-    "title_case",
-    "real_time_refresh",
-    "refresh_button",
-    "refresh_button_text",
-    "options",
+    # "info",
+    # "display_name",
+    # "required",
+    # "list",
+    # "multiline",
+    # "combobox",
+    # "fileTypes",
+    # "password",
+    # "title_case",
+    # "real_time_refresh",
+    # "refresh_button",
+    # "refresh_button_text",
+    # "options",
     "advanced",
-    "copy_field",
-    "dynamic",
-    "show",
-    "placeholder",
-    "range_spec",
+    # "copy_field",
+    # "dynamic",
+    # "show",
+    # "placeholder",
+    # "range_spec",
 ]
 
 # User customizations that should NEVER be overwritten during updates
@@ -56,23 +61,40 @@ USER_PRESERVED_ATTRIBUTES = [
     "trace_as_input",  # User's tracing preferences
     "trace_as_metadata",  # User's metadata preferences
     "name",  # Field name should not change
-    "_input_type",  # Input type should not change
+    "output_types",
+    "input_types",
+    "type",
+    "_input_type",
+    "show"
+    "output"
 ]
 
 # Attributes that preserve user values but update metadata from template
 VALUE_PRESERVED_ATTRIBUTES = [
+    "show"
     "value",
     "default",
     "selected",
     "load_from_db",
     "trace_as_input",
     "trace_as_metadata",
+    "output_types",
+    "input_types",
+    "type",
+    "output"
+    "_input_type"
 ]
 
 # Critical attributes that must always be updated for functionality
 CRITICAL_UPDATE_ATTRIBUTES = [
-    "options",
-    "show",
+    # "required",
+    # "input_types",
+    # "type",
+    # "_input_type",
+    # "options",
+    # "range_spec",
+    # "show",
+    # "type"
 ]
 
 # Attributes that should only be updated if they don't exist (new fields only)
