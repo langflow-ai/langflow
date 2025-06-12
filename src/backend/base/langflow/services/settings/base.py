@@ -134,6 +134,7 @@ class Settings(BaseSettings):
     prometheus_port: int = 9090
     """The port on which Langflow will expose Prometheus metrics. 9090 is the default port."""
 
+    disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
     components_path: list[str] = []
     langchain_cache: str = "InMemoryCache"
@@ -393,6 +394,12 @@ class Settings(BaseSettings):
     @field_validator("components_path", mode="before")
     @classmethod
     def set_components_path(cls, value):
+        """Processes and updates the components path list, incorporating environment variable overrides.
+
+        If the `LANGFLOW_COMPONENTS_PATH` environment variable is set and points to an existing path, it is
+        appended to the provided list if not already present. If the input list is empty or missing, it is
+        set to an empty list.
+        """
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
             langflow_component_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
@@ -407,11 +414,8 @@ class Settings(BaseSettings):
                     logger.debug(f"Appending {langflow_component_path} to components_path")
 
         if not value:
-            value = [BASE_COMPONENTS_PATH]
-            logger.debug("Setting default components path to components_path")
-        elif BASE_COMPONENTS_PATH not in value:
-            value.append(BASE_COMPONENTS_PATH)
-            logger.debug("Adding default components path to components_path")
+            value = []
+            logger.debug("Setting empty components path")
 
         logger.debug(f"Components path: {value}")
         return value

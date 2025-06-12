@@ -11,7 +11,7 @@ from langflow.components.processing import ParseDataComponent
 from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.prompts import PromptComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
-from langflow.graph import Graph
+from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
@@ -24,7 +24,7 @@ def ingestion_graph():
     file_component.set(path="test.txt")
     file_component.set_on_output(name="dataframe", value=Data(text="This is a test file."), cache=True)
     text_splitter = SplitTextComponent(_id="text-splitter-123")
-    text_splitter.set(data_inputs=file_component.load_dataframe)
+    text_splitter.set(data_inputs=file_component.load_files)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
     openai_embeddings.set(
         openai_api_key="sk-123", openai_api_base="https://api.openai.com/v1", openai_api_type="openai"

@@ -1,7 +1,8 @@
-from langflow.custom import Component
-from langflow.io import HandleInput, Output
-from langflow.schema import Data
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import HandleInput
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
+from langflow.template.field.base import Output
 
 
 class LoopComponent(Component):
@@ -14,9 +15,9 @@ class LoopComponent(Component):
     inputs = [
         HandleInput(
             name="data",
-            display_name="Data or DataFrame",
+            display_name="Inputs",
             info="The initial list of Data objects or DataFrame to iterate over.",
-            input_types=["Data", "DataFrame"],
+            input_types=["DataFrame"],
         ),
     ]
 

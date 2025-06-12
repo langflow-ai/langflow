@@ -3,9 +3,9 @@ from typing import Any
 
 from typing_extensions import override
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import MessageTextInput, Output
-from langflow.schema import dotdict
+from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
 
@@ -14,6 +14,7 @@ class IDGeneratorComponent(Component):
     description = "Generates a unique ID."
     icon = "fingerprint"
     name = "IDGenerator"
+    legacy = True
 
     inputs = [
         MessageTextInput(

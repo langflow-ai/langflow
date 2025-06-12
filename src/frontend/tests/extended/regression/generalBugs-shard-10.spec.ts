@@ -40,7 +40,7 @@ test(
       .click();
 
     await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-shownode-inputs-left")
       .first()
       .click();
 

@@ -1,4 +1,5 @@
 from .alter_metadata import AlterMetadataComponent
+from .batch_run import BatchRunComponent
 from .combine_text import CombineTextComponent
 from .converter import TypeConverterComponent
 from .create_data import CreateDataComponent
@@ -17,10 +18,12 @@ from .python_repl_core import PythonREPLComponent
 from .regex import RegexExtractorComponent
 from .select_data import SelectDataComponent
 from .split_text import SplitTextComponent
+from .structured_output import StructuredOutputComponent
 from .update_data import UpdateDataComponent
 
 __all__ = [
     "AlterMetadataComponent",
+    "BatchRunComponent",
     "CombineTextComponent",
     "CreateDataComponent",
     "DataFilterComponent",
@@ -39,6 +42,7 @@ __all__ = [
     "RegexExtractorComponent",
     "SelectDataComponent",
     "SplitTextComponent",
+    "StructuredOutputComponent",
     "TypeConverterComponent",
     "UpdateDataComponent",
 ]
