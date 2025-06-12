@@ -26,34 +26,34 @@ export default function PromptAreaComponent({
   readonly = false,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
   const coloredContent = (typeof value === "string" ? value : "")
-  // escape HTML first
-  .replace(/</g, "&lt;")
-  .replace(/>/g, "&gt;")
-  // highlight variables
-  .replace(regexHighlight, (match, codeFence, openRun, varName, closeRun) => {
-    // 1) Leave ```code``` blocks untouched
-    if (codeFence) return match;
+    // escape HTML first
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    // highlight variables
+    .replace(regexHighlight, (match, codeFence, openRun, varName, closeRun) => {
+      // 1) Leave ```code``` blocks untouched
+      if (codeFence) return match;
 
-    // 2) Balanced & odd-length brace runs mean “real variable”
-    const lenOpen  = openRun?.length ?? 0;
-    const lenClose = closeRun?.length ?? 0;
-    const isVariable = lenOpen === lenClose && (lenOpen % 2 === 1);
+      // 2) Balanced & odd-length brace runs mean “real variable”
+      const lenOpen = openRun?.length ?? 0;
+      const lenClose = closeRun?.length ?? 0;
+      const isVariable = lenOpen === lenClose && lenOpen % 2 === 1;
 
-    if (!isVariable) return match;   // even runs are just escapes
+      if (!isVariable) return match; // even runs are just escapes
 
-    // 3) Number of literal braces outside the span
-    const outerCount = Math.floor(lenOpen / 2);
-    const outerLeft  = "{".repeat(outerCount);
-    const outerRight = "}".repeat(outerCount);
+      // 3) Number of literal braces outside the span
+      const outerCount = Math.floor(lenOpen / 2);
+      const outerLeft = "{".repeat(outerCount);
+      const outerRight = "}".repeat(outerCount);
 
-    return (
-      `${outerLeft}` +
-      `<span class="chat-message-highlight">{${varName}}</span>` +
-      `${outerRight}`
-    );
-  })
-  // preserve new-lines
-  .replace(/\n/g, "<br />");
+      return (
+        `${outerLeft}` +
+        `<span class="chat-message-highlight">{${varName}}</span>` +
+        `${outerRight}`
+      );
+    })
+    // preserve new-lines
+    .replace(/\n/g, "<br />");
 
   const renderPromptText = () => (
     <span
