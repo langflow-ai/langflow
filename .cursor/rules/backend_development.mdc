@@ -1,0 +1,268 @@
+---
+description: "Guidelines for backend development in Langflow, focusing on Python components, FastAPI services, and backend testing."
+globs:
+  - "src/backend/**/*.py"
+  - "tests/**/*.py"
+  - "Makefile"
+  - "pyproject.toml"
+  - "uv.lock"
+alwaysApply: false
+---
+
+
+# Backend Development Guidelines
+
+## Purpose
+Guidelines for backend development in Langflow, focusing on Python components, FastAPI services, and backend testing.
+
+---
+
+## 1. Backend Environment Setup
+
+### Prerequisites
+- **Python Package Manager:** `uv` (>=0.4) for dependency management
+- **Database:** SQLite for development, PostgreSQL for production
+- **Development Tools:** `make` for build coordination
+
+### Backend Service
+```bash
+make backend  # Start FastAPI backend on port 7860
+```
+- Auto-reloads on file changes
+- Health check: http://localhost:7860/health
+- Backend components: `src/backend/base/langflow/`
+
+---
+
+## 2. Component Development
+
+### Component Structure
+```
+src/backend/base/langflow/components/
+├── agents/           # Agent components
+├── data/            # Data processing components
+├── embeddings/      # Embedding components
+├── input_output/    # Input/output components
+├── models/          # Language model components
+├── processing/      # Text processing components
+├── prompts/         # Prompt components
+├── tools/           # Tool components
+└── vectorstores/    # Vector store components
+```
+
+### Adding New Components
+1. **Location:** Add to appropriate subdirectory under `src/backend/base/langflow/components/`
+2. **Import:** Update `__init__.py` with alphabetical imports:
+   ```python
+   from .my_component import MyComponent
+
+   __all__ = [
+       "ExistingComponent",
+       "MyComponent",  # Add alphabetically
+   ]
+   ```
+3. **Auto-restart:** Backend auto-restarts on save
+4. **Browser refresh:** Refresh browser to see component changes
+
+### Component Testing
+- **Unit Tests:** `src/backend/tests/unit/components/`
+- **Test Structure:** Mirror component directory structure
+- **Test Base Classes:** Use `ComponentTestBaseWithClient` or `ComponentTestBaseWithoutClient`
+- **Version Testing:** Provide `file_names_mapping` for backward compatibility
+
+### Development Tips
+- **Fast iteration:** Edit component in UI first, then save to source
+- **Component updates:** Old components show "Updates Available" after backend restart
+- **Testing:** Create comprehensive unit tests for all new components
+
+---
+
+## 3. Backend Code Quality
+
+### Formatting (CRITICAL)
+```bash
+make format_backend  # Format Python code
+```
+**Important:** Run `make format_backend` _early and often_ (ideally before running linting or committing changes). It auto-corrects the majority of style issues, preventing lengthy manual fixes when lint errors surface later.
+
+### Linting
+```bash
+make lint  # Run linting checks
+```
+
+### Testing
+```bash
+make unit_tests  # Run backend unit tests
+```
+
+### Pre-commit Workflow
+1. **Run `make format_backend`** (FIRST - saves time on lint fixes)
+2. Run `make lint`
+3. Run `make unit_tests`
+4. Commit changes
+
+---
+
+## 4. FastAPI Development
+
+### API Structure
+```
+src/backend/base/langflow/api/
+├── v1/              # API version 1
+│   ├── chat.py      # Chat endpoints
+│   ├── flows.py     # Flow management
+│   ├── users.py     # User management
+│   └── ...
+└── v2/              # API version 2 (future)
+```
+
+### Testing APIs
+- Use `client` fixture from `conftest.py`
+- Test with `logged_in_headers` for authenticated endpoints
+- Example:
+  ```python
+  async def test_flows_endpoint(client, logged_in_headers):
+      response = await client.post(
+          "api/v1/flows/",
+          json=flow_data,
+          headers=logged_in_headers
+      )
+      assert response.status_code == 201
+  ```
+
+---
+
+## 5. Database Development
+
+### Models Location
+```
+src/backend/base/langflow/services/database/models/
+├── api_key/         # API key models
+├── flow/            # Flow models
+├── folder/          # Folder models
+├── user/            # User models
+└── ...
+```
+
+### Database Testing
+- Use in-memory SQLite for tests
+- Database tests may fail in batch runs - run individually if needed:
+  ```bash
+  uv run pytest src/backend/tests/unit/test_database.py
+  ```
+
+---
+
+## 6. Async Development Patterns
+
+### Component Async Methods
+```python
+async def run(self) -> MessageType:
+    """Main component execution method."""
+    # Use await for async operations
+    result = await self.async_operation()
+    return result
+
+async def message_response(self) -> Message:
+    """Return a Message object for chat components."""
+    return Message(
+        text=self.input_value,
+        sender=self.sender,
+        session_id=self.session_id,
+    )
+```
+
+### Background Tasks
+```python
+import asyncio
+
+async def process_in_background(self):
+    """Process items without blocking."""
+    # Use asyncio.create_task for background work
+    task = asyncio.create_task(self.heavy_operation())
+
+    # Ensure proper cleanup
+    try:
+        result = await task
+        return result
+    except asyncio.CancelledError:
+        # Handle cancellation gracefully
+        await self.cleanup()
+        raise
+```
+
+### Queue Operations
+```python
+async def queue_processing(self):
+    """Non-blocking queue operations."""
+    queue = asyncio.Queue()
+
+    # Non-blocking put
+    queue.put_nowait(data)
+
+    # Timeout-controlled get
+    try:
+        result = await asyncio.wait_for(queue.get(), timeout=5.0)
+        return result
+    except asyncio.TimeoutError:
+        # Handle timeout appropriately
+        raise ComponentError("Processing timeout")
+```
+
+---
+
+## 7. Component Integration Testing
+
+### Flow Testing
+```python
+from tests.unit.build_utils import create_flow, build_flow, get_build_events
+
+async def test_component_in_flow(client, json_flow, logged_in_headers):
+    """Test component within a complete flow."""
+    flow_id = await create_flow(client, json_flow, logged_in_headers)
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+
+    # Validate flow execution
+    job_id = build_response["job_id"]
+    events_response = await get_build_events(client, job_id, logged_in_headers)
+    assert events_response.status_code == 200
+```
+
+### External API Testing
+```python
+@pytest.mark.api_key_required
+@pytest.mark.no_blockbuster
+async def test_with_real_api(self):
+    """Test component with external service."""
+    api_key = os.getenv("OPENAI_API_KEY")
+    component = MyComponent(api_key=api_key, model="gpt-4o")
+
+    response = await component.run()
+    assert response is not None
+```
+
+---
+
+## 8. Known Backend Issues
+
+### Testing Quirks
+- `test_database.py` may fail in batch runs but pass individually
+- Use `@pytest.mark.no_blockbuster` to skip blockbuster plugin when needed
+- Context variables may not propagate correctly in `asyncio.to_thread` - test both patterns
+
+### File Changes
+- Starter project files auto-format after `langflow run`
+- These formatting changes can be committed or ignored
+
+---
+
+## Backend Development Checklist
+- [ ] Component added to appropriate subdirectory
+- [ ] `__init__.py` updated with alphabetical imports
+- [ ] Code formatted with `make format_backend` (FIRST)
+- [ ] Linting passed with `make lint`
+- [ ] Unit tests created and passing with `make unit_tests`
+- [ ] Component tested in UI with backend restart + browser refresh
+- [ ] Version mapping provided for backward compatibility
+- [ ] Async patterns implemented correctly with proper cleanup
+- [ ] External API calls use appropriate pytest markers

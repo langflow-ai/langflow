@@ -1,0 +1,440 @@
+---
+description: "Guidelines for developing and maintaining Langflow documentation using Docusaurus, including content structure, style, and deployment processes."
+globs:
+  - "docs/**/*.{md,mdx}"
+  - "docs/**/*.{js,jsx,ts,tsx}"
+  - "docs/package*.json"
+  - "docs/docusaurus.config.js"
+  - "docs/sidebars.js"
+  - "docs/static/**/*"
+alwaysApply: false
+---
+
+
+# Documentation Development Guidelines
+
+## Purpose
+Guidelines for developing and maintaining Langflow documentation using Docusaurus, including content structure, style, and deployment processes.
+
+---
+
+## 1. Documentation Environment Setup
+
+### Prerequisites
+- **Node.js:** v22.12 LTS for runtime
+- **Package Manager:** Yarn for dependency management
+- **Documentation Framework:** Docusaurus v3
+
+### Documentation Service
+```bash
+cd docs
+yarn install      # Install dependencies
+yarn start        # Start dev server (usually port 3001)
+```
+- Auto-reloads on documentation changes
+- Access at: http://localhost:3001/
+- Documentation source: `docs/`
+
+---
+
+## 2. Documentation Structure
+
+### Directory Layout
+```
+docs/
+├── docs/                    # Main documentation content
+│   ├── getting-started/     # Getting started guides
+│   ├── components/          # Component documentation
+│   ├── integrations/        # Third-party integrations
+│   ├── administration/      # Admin and deployment guides
+│   ├── contributing/        # Contribution guidelines
+│   └── api-reference/       # API documentation
+├── blog/                    # Blog posts and announcements
+├── src/                     # Custom React components
+├── static/                  # Static assets (images, etc.)
+├── sidebars.js             # Sidebar configuration
+├── docusaurus.config.js    # Main configuration
+└── package.json            # Dependencies
+```
+
+### Content Types
+- **Guides:** Step-by-step tutorials (`docs/getting-started/`)
+- **Reference:** API and component reference (`docs/api-reference/`)
+- **How-to:** Problem-solving articles (`docs/components/`)
+- **Concepts:** Explanatory articles about Langflow concepts
+- **Blog:** Release notes, announcements (`blog/`)
+
+---
+
+## 3. Writing Documentation
+
+### Markdown Conventions
+```markdown
+---
+title: Page Title
+description: Brief description for SEO
+sidebar_position: 1
+---
+
+# Page Title
+
+Brief introduction paragraph.
+
+## Section Header
+
+Content with proper formatting.
+
+### Subsection
+
+More detailed content.
+
+:::tip
+Use admonitions for important information.
+:::
+
+:::warning
+Use warnings for potential issues.
+:::
+
+:::danger
+Use danger for critical warnings.
+:::
+```
+
+### Code Blocks
+````markdown
+```python title="component_example.py"
+from langflow.components.base import Component
+
+class MyComponent(Component):
+    display_name = "My Component"
+    description = "Example component"
+
+    def run(self):
+        return "Hello, World!"
+```
+````
+
+### Images and Assets
+```markdown
+<!-- Images go in static/img/ -->
+![Component Overview](/img/components/overview.png)
+
+<!-- Use descriptive alt text -->
+![Langflow interface showing the flow editor with nodes and connections](/img/flow-editor.png)
+```
+
+---
+
+## 4. Component Documentation
+
+### Component Page Template
+```markdown
+---
+title: Component Name
+description: Brief description of what the component does
+sidebar_position: 1
+---
+
+# Component Name
+
+Brief overview of the component's purpose.
+
+## Overview
+
+What this component does and when to use it.
+
+## Configuration
+
+### Inputs
+
+| Input | Type | Required | Description |
+|-------|------|----------|-------------|
+| `input_text` | String | Yes | The text to process |
+| `model_name` | String | No | Model to use (default: gpt-3.5-turbo) |
+
+### Outputs
+
+| Output | Type | Description |
+|--------|------|-------------|
+| `result` | Message | Processed result |
+
+## Usage Example
+
+```python
+# Example of using the component
+component = MyComponent(
+    input_text="Hello, world!",
+    model_name="gpt-4"
+)
+result = component.run()
+```
+
+## Common Issues
+
+### Issue: Component not loading
+
+**Solution:** Check that all required inputs are provided.
+
+### Issue: API key errors
+
+**Solution:** Ensure your API key is properly configured.
+```
+
+### API Documentation
+```markdown
+---
+title: API Endpoint
+description: REST API endpoint documentation
+---
+
+# API Endpoint Name
+
+## Endpoint
+
+`POST /api/v1/endpoint`
+
+## Request
+
+### Headers
+```json
+{
+  "Authorization": "Bearer <token>",
+  "Content-Type": "application/json"
+}
+```
+
+### Body
+```json
+{
+  "parameter": "value",
+  "optional_param": "optional_value"
+}
+```
+
+## Response
+
+### Success (200)
+```json
+{
+  "success": true,
+  "data": {
+    "result": "success"
+  }
+}
+```
+
+### Error (400)
+```json
+{
+  "success": false,
+  "error": "Error message"
+}
+```
+
+## Example
+
+```bash
+curl -X POST http://localhost:7860/api/v1/endpoint \
+  -H "Authorization: Bearer your-token" \
+  -H "Content-Type: application/json" \
+  -d '{"parameter": "value"}'
+```
+```
+
+---
+
+## 5. Blog Posts and Announcements
+
+### Blog Post Template
+```markdown
+---
+title: "Release: Langflow v1.1.0"
+description: "New features and improvements in Langflow v1.1.0"
+authors: [author-name]
+date: 2024-01-15
+tags: [release, features]
+---
+
+# Release: Langflow v1.1.0
+
+Brief introduction to the release.
+
+## New Features
+
+### Feature 1
+Description of the feature and how to use it.
+
+### Feature 2
+Another feature description.
+
+## Improvements
+
+- List of improvements
+- Bug fixes
+- Performance enhancements
+
+## Breaking Changes
+
+:::warning
+List any breaking changes that require user action.
+:::
+
+## Migration Guide
+
+Steps to migrate from previous versions.
+```
+
+### Announcement Posts
+```markdown
+---
+title: "Announcement: New Integration"
+description: "Langflow now supports integration with XYZ service"
+authors: [author-name]
+date: 2024-01-15
+tags: [announcement, integration]
+---
+
+Brief announcement content with clear call-to-action.
+```
+
+---
+
+## 6. Configuration
+
+### Sidebar Configuration (`sidebars.js`)
+```javascript
+module.exports = {
+  docs: [
+    'introduction',
+    {
+      type: 'category',
+      label: 'Getting Started',
+      items: [
+        'getting-started/installation',
+        'getting-started/quickstart',
+        'getting-started/first-flow',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Components',
+      items: [
+        'components/overview',
+        'components/inputs',
+        'components/outputs',
+        'components/processing',
+      ],
+    },
+  ],
+};
+```
+
+### Site Configuration (`docusaurus.config.js`)
+```javascript
+module.exports = {
+  title: 'Langflow Documentation',
+  tagline: 'Build AI flows visually',
+  url: 'https://docs.langflow.org',
+  baseUrl: '/',
+
+  themeConfig: {
+    navbar: {
+      title: 'Langflow',
+      logo: {
+        alt: 'Langflow Logo',
+        src: 'img/logo.svg',
+      },
+      items: [
+        {
+          type: 'doc',
+          docId: 'introduction',
+          position: 'left',
+          label: 'Docs',
+        },
+        {
+          to: '/blog',
+          label: 'Blog',
+          position: 'left'
+        },
+      ],
+    },
+  },
+};
+```
+
+---
+
+## 7. Documentation Testing
+
+### Link Checking
+```bash
+# Check for broken internal links
+yarn build
+yarn serve
+# Manual testing or use link checker tools
+```
+
+### Content Review
+- **Accuracy:** Verify all code examples work
+- **Completeness:** Ensure all features are documented
+- **Clarity:** Review for clear, concise language
+- **Navigation:** Test sidebar and cross-references
+
+### Screenshots
+- Keep screenshots up-to-date with current UI
+- Use consistent browser/OS for screenshots
+- Highlight relevant UI elements
+- Use descriptive file names
+
+---
+
+## 8. Style Guide
+
+### Writing Style
+- **Tone:** Professional but approachable
+- **Voice:** Second person ("you") for instructions
+- **Tense:** Present tense for current features
+- **Length:** Keep paragraphs short and scannable
+
+### Formatting
+- **Headers:** Use sentence case
+- **Code:** Inline code with `backticks`
+- **Emphasis:** Use **bold** for UI elements, *italic* for emphasis
+- **Lists:** Use parallel structure
+
+### Terminology
+- **Langflow:** Always capitalize
+- **Component:** Capitalize when referring to Langflow components
+- **Flow:** Capitalize when referring to Langflow flows
+- **API:** Always uppercase
+- **JSON:** Always uppercase
+
+---
+
+## 9. Deployment
+
+### Local Testing
+```bash
+yarn build    # Build static site
+yarn serve    # Serve built site locally
+```
+
+### Production Deployment
+- Documentation is automatically deployed on commit to main branch
+- Build artifacts go to `build/` directory
+- Static site is served via CDN
+
+---
+
+## Documentation Development Checklist
+- [ ] Documentation service running with `yarn start`
+- [ ] Content follows markdown conventions
+- [ ] Code examples are tested and working
+- [ ] Images have descriptive alt text
+- [ ] Internal links are functional
+- [ ] Sidebar navigation is updated
+- [ ] Content follows style guide
+- [ ] Screenshots are current and properly formatted
+- [ ] Cross-references between related topics
+- [ ] Build succeeds with `yarn build`
