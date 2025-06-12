@@ -52,7 +52,7 @@ class SaveToFileComponent(Component):
         ),
     ]
 
-    outputs = [Output(display_name="Result", name="result", method="save_to_file")]
+    outputs = [Output(display_name="File Path", name="result", method="save_to_file")]
 
     async def save_to_file(self) -> str:
         """Save the input to a file and upload it, returning a confirmation message."""
