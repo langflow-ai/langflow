@@ -50,7 +50,6 @@ def handle_sigterm(signum, frame):  # noqa: ARG001
     if shutdown_in_progress:
         return  # Already shutting down, ignore
     shutdown_in_progress = True
-    logger.info("Received SIGTERM signal. Performing graceful shutdown...")
     _shutdown_webapp_process()
 
 
@@ -60,7 +59,6 @@ def handle_sigint(signum, frame):  # noqa: ARG001
     if shutdown_in_progress:
         return  # Already shutting down, ignore
     shutdown_in_progress = True
-    logger.info("Received SIGINT signal. Performing graceful shutdown...")
     _shutdown_webapp_process()
 
 
@@ -68,7 +66,8 @@ def _shutdown_webapp_process():
     """Gracefully shutdown the webapp process."""
     global webapp_process
     if webapp_process and webapp_process.is_alive():
-        logger.info("Cleaning up resources...")
+        # Just terminate the process - the actual shutdown progress is handled 
+        # by the FastAPI lifespan context in main.py
         webapp_process.terminate()
         # The long wait allows the process to finish setup, preventing it from
         # getting in a state where background tasks continue to do work after termination
@@ -242,7 +241,6 @@ def run(
     
     # Step 0: Initializing Langflow
     with progress.step(0):
-        # logger.info("Initializing Langflow...")
         logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
         set_var_for_macos_issue()
         settings_service = get_settings_service()

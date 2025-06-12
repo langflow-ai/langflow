@@ -32,7 +32,6 @@ class DatabaseVariableService(VariableService, Service):
             logger.info("Skipping environment variable storage.")
             return
 
-        # logger.info("Storing environment variables in the database.")
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
             if var_name in os.environ and os.environ[var_name].strip():
                 value = os.environ[var_name].strip()

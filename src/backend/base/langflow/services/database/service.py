@@ -310,7 +310,6 @@ class DatabaseService(Service):
         command.ensure_version(alembic_cfg)
         # alembic_cfg.attributes["connection"].commit()
         command.upgrade(alembic_cfg, "head")
-        # logger.info("Alembic initialized")
 
     def _run_migrations(self, should_initialize_alembic, fix) -> None:
         # First we need to check if alembic has been initialized
@@ -338,7 +337,6 @@ class DatabaseService(Service):
             # else:
             #     logger.info("Alembic initialized")
 
-            # logger.info(f"Running DB migrations in {self.script_location}")
 
             try:
                 buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")

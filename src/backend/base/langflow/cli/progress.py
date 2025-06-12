@@ -147,6 +147,30 @@ class ProgressIndicator:
         click.echo()
         click.echo(click.style(f"Total initialization time: {total_time:.2f}s", fg="bright_black"))
 
+    def print_shutdown_summary(self) -> None:
+        """Print a summary of all completed shutdown steps."""
+        if not self.verbose:
+            return
+            
+        completed_steps = [s for s in self.steps if s["status"] in ["completed", "failed"]]
+        if not completed_steps:
+            return
+            
+        total_time = sum(
+            (s["end_time"] - s["start_time"]) 
+            for s in completed_steps 
+            if s["start_time"] and s["end_time"]
+        )
+        
+        click.echo()
+        click.echo(click.style(f"Total shutdown time: {total_time:.2f}s", fg="bright_black"))
+
+    def print_farewell_message(self) -> None:
+        """Print a nice farewell message after shutdown is complete."""
+        click.echo()
+        farewell = click.style("👋 See you next time!", fg="bright_blue", bold=True)
+        click.echo(farewell)
+
 
 def create_langflow_progress(verbose: bool = False) -> ProgressIndicator:
     """Create a progress indicator with predefined Langflow initialization steps."""
@@ -161,6 +185,25 @@ def create_langflow_progress(verbose: bool = False) -> ProgressIndicator:
         ("Loading Components", "Caching component types and custom components"),
         ("Adding Starter Projects", "Creating or updating starter project templates"),
         ("Launching Langflow", "Starting server and final setup")
+    ]
+    
+    for title, description in steps:
+        progress.add_step(title, description)
+    
+    return progress
+
+
+def create_langflow_shutdown_progress(verbose: bool = False) -> ProgressIndicator:
+    """Create a progress indicator with predefined Langflow shutdown steps."""
+    progress = ProgressIndicator(verbose=verbose)
+    
+    # Define the shutdown steps in reverse order of initialization
+    steps = [
+        ("Stopping Server", "Gracefully stopping the web server"),
+        ("Cancelling Background Tasks", "Stopping file synchronization and background jobs"),
+        ("Cleaning Up Services", "Teardown database connections and services"),
+        ("Clearing Temporary Files", "Removing temporary directories and cache"),
+        ("Finalizing Shutdown", "Completing cleanup and logging")
     ]
     
     for title, description in steps:

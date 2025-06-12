@@ -189,19 +189,44 @@ def get_lifespan(*, fix_migration=False, version=None):
                 logger.exception(exc)
             raise
         finally:
-            # Clean shutdown
-            logger.info("Cleaning up services...")
+            # Clean shutdown with progress indicator
+            from langflow.cli.progress import create_langflow_shutdown_progress
+            
+            # Create shutdown progress (show verbose timing if log level is DEBUG)
+            import os
+            log_level = os.getenv("LANGFLOW_LOG_LEVEL", "INFO").upper()
+            verbose = log_level == "DEBUG"
+            shutdown_progress = create_langflow_shutdown_progress(verbose=verbose)
+            
             try:
-                if sync_flows_from_fs_task:
-                    sync_flows_from_fs_task.cancel()
-                    await asyncio.wait([sync_flows_from_fs_task])
-
-                await teardown_services()
-                temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
-                await asyncio.gather(*temp_dir_cleanups)
-
-                logger.debug("Langflow shutdown complete")
-                logger.info("👋 See you next time!")
+                # Step 0: Stopping Server
+                with shutdown_progress.step(0):
+                    logger.debug("Stopping server gracefully...")
+                    # The actual server stopping is handled by the lifespan context
+                    await asyncio.sleep(0.1)  # Brief pause for visual effect
+                
+                # Step 1: Cancelling Background Tasks  
+                with shutdown_progress.step(1):
+                    if sync_flows_from_fs_task:
+                        sync_flows_from_fs_task.cancel()
+                        await asyncio.wait([sync_flows_from_fs_task])
+                
+                # Step 2: Cleaning Up Services
+                with shutdown_progress.step(2):
+                    await teardown_services()
+                
+                # Step 3: Clearing Temporary Files
+                with shutdown_progress.step(3):
+                    temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
+                    await asyncio.gather(*temp_dir_cleanups)
+                
+                # Step 4: Finalizing Shutdown
+                with shutdown_progress.step(4):
+                    logger.debug("Langflow shutdown complete")
+                
+                # Show completion summary and farewell
+                shutdown_progress.print_shutdown_summary()
+                shutdown_progress.print_farewell_message()
 
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.DBAPIError) as e:
                 # Case where the database connection is closed during shutdown
@@ -390,8 +415,6 @@ def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = Fals
     # get the directory of the current file
     if not static_files_dir:
         static_files_dir = get_static_files_dir()
-
-    # logger.info(f"Setting up app with static files directory {static_files_dir}")
 
     if not backend_only and (not static_files_dir or not static_files_dir.exists()):
         msg = f"Static files directory {static_files_dir} does not exist."
