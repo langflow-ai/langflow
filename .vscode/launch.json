@@ -3,11 +3,10 @@
   "configurations": [
     {
       "name": "Debug Backend",
-      "type": "debugpy",
+      "type": "python",
       "request": "launch",
       "module": "uvicorn",
       "preLaunchTask": "Install Backend",
-
       "args": [
         "--factory",
         "langflow.main:create_app",
@@ -31,7 +30,7 @@
     },
     {
       "name": "Debug CLI",
-      "type": "debugpy",
+      "type": "python",
       "request": "launch",
       "module": "langflow",
       "args": [
@@ -41,13 +40,12 @@
         "--env-file",
         "${workspaceFolder}/.env"
       ],
-      // "python": "/path/to/your/python_env/python", // Replace with the path to your Python executable
       "jinja": true,
       "justMyCode": false
     },
     {
       "name": "Python: Remote Attach",
-      "type": "debugpy",
+      "type": "python",
       "request": "attach",
       "justMyCode": true,
       "connect": {
@@ -69,7 +67,7 @@
     },
     {
       "name": "Python: Debug Tests",
-      "type": "debugpy",
+      "type": "python",
       "request": "launch",
       "program": "${file}",
       "purpose": ["debug-test"],
