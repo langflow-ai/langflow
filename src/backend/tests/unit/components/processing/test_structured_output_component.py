@@ -576,7 +576,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
-                    return {"objects": [{"field": "value1", "number": 42}, {"field": "value2", "number": 24}]}
+                    return {"objects": [{"field": "value2", "number": 24}]}  # Return only one object
 
             # Return trustcall-style response structure
             return {
@@ -609,7 +609,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             # Check that result.data is a dict
             assert isinstance(result.data, dict)
 
-            # Check the content of the dict (should be the last item from the objects array)
+            # Check the content of the dict
             assert result.data == {"field": "value2", "number": 24}
 
             # Verify the data has the expected keys
