@@ -1,20 +1,23 @@
+from __future__ import annotations
+
 import asyncio
-import os
-import platform
+import re
 import shutil
-from collections.abc import Awaitable, Callable
-from typing import Any
-from urllib.parse import urlparse
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-import httpx
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
 from httpx import codes as httpx_codes
 from langchain_core.tools import StructuredTool
 from loguru import logger
-from mcp import ClientSession
 from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
 
+# Import clients from their respective modules
+from langflow.base.mcp.sse_client import MCPSseClient
+from langflow.base.mcp.stdio_client import MCPStdioClient
 from langflow.services.database.models.flow.model import Flow
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
@@ -257,8 +260,8 @@ def _process_headers(headers: Any) -> dict:
 
 
 def _validate_node_installation(command: str) -> str:
-    """Validate the npx command."""
-    if "npx" in command and not shutil.which("node"):
+    """Validate the npx command using word boundaries to avoid false positives."""
+    if re.search(r"\bnpx\b", command) and not shutil.which("node"):
         msg = "Node.js is not installed. Please install Node.js to use npx commands."
         raise ValueError(msg)
     return command
@@ -278,231 +281,6 @@ async def _validate_connection_params(mode: str, command: str | None = None, url
     if mode == "SSE" and not url:
         msg = "URL is required for SSE mode"
         raise ValueError(msg)
-
-
-class MCPStdioClient:
-    def __init__(self):
-        self.session: ClientSession | None = None
-        self._connection_params = None
-        self._connected = False
-
-    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
-        """Connect to MCP server using stdio transport (SDK style)."""
-        from mcp import StdioServerParameters
-        from mcp.client.stdio import stdio_client
-
-        command = command_str.split(" ")
-        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
-
-        if platform.system() == "Windows":
-            server_params = StdioServerParameters(
-                command="cmd",
-                args=[
-                    "/c",
-                    f"{command[0]} {' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
-                ],
-                env=env_data,
-            )
-        else:
-            server_params = StdioServerParameters(
-                command="bash",
-                args=["-c", f"{command_str} || echo 'Command failed with exit code $?' >&2"],
-                env=env_data,
-            )
-
-        # Store connection parameters for later use in run_tool
-        self._connection_params = server_params
-
-        try:
-            async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
-                await session.initialize()
-                response = await session.list_tools()
-                self._connected = True
-                return response.tools
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            logger.error(f"Failed to connect to MCP stdio server: {e}")
-            self._connection_params = None
-            self._connected = False
-            return []
-
-    async def disconnect(self):
-        """Properly close the connection and clean up resources."""
-        self.session = None
-        self._connection_params = None
-        self._connected = False
-
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-        """Run a tool with the given arguments.
-
-        Args:
-            tool_name: Name of the tool to run
-            arguments: Dictionary of arguments to pass to the tool
-
-        Returns:
-            The result of the tool execution
-
-        Raises:
-            ValueError: If session is not initialized or tool execution fails
-        """
-        if not self._connected or not self._connection_params:
-            msg = "Session not initialized or disconnected. Call connect_to_server first."
-            raise ValueError(msg)
-
-        try:
-            from mcp.client.stdio import stdio_client
-
-            async with stdio_client(self._connection_params) as (read, write), ClientSession(read, write) as session:
-                await session.initialize()
-                return await session.call_tool(tool_name, arguments=arguments)
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            msg = f"Failed to run tool '{tool_name}': {e}"
-            logger.error(msg)
-            # Mark as disconnected on error
-            self._connected = False
-            raise ValueError(msg) from e
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.disconnect()
-
-
-class MCPSseClient:
-    def __init__(self):
-        self.session: ClientSession | None = None
-        self._connection_params = None
-        self._connected = False
-
-    async def validate_url(self, url: str | None) -> tuple[bool, str]:
-        """Validate the SSE URL before attempting connection."""
-        try:
-            parsed = urlparse(url)
-            if not parsed.scheme or not parsed.netloc:
-                return False, "Invalid URL format. Must include scheme (http/https) and host."
-
-            async with httpx.AsyncClient() as client:
-                try:
-                    # First try a HEAD request to check if server is reachable
-                    response = await client.head(url, timeout=5.0)
-                    if response.status_code >= HTTP_ERROR_STATUS_CODE:
-                        return False, f"Server returned error status: {response.status_code}"
-
-                except httpx.TimeoutException:
-                    return False, "Connection timed out. Server may be down or unreachable."
-                except httpx.NetworkError:
-                    return False, "Network error. Could not reach the server."
-                else:
-                    return True, ""
-
-        except (httpx.HTTPError, ValueError, OSError) as e:
-            return False, f"URL validation error: {e!s}"
-
-    async def pre_check_redirect(self, url: str | None) -> str | None:
-        """Check for redirects and return the final URL."""
-        if url is None:
-            return url
-        try:
-            async with httpx.AsyncClient(follow_redirects=False) as client:
-                response = await client.request("HEAD", url)
-                if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
-                    return response.headers.get("Location", url)
-        except (httpx.RequestError, httpx.HTTPError) as e:
-            logger.warning(f"Error checking redirects: {e}")
-        return url
-
-    async def connect_to_server(
-        self,
-        url: str | None,
-        headers: dict[str, str] | None = None,
-        timeout_seconds: int = 30,
-        sse_read_timeout_seconds: int = 30,
-    ) -> list[StructuredTool]:
-        """Connect to MCP server using SSE transport (SDK style)."""
-        from mcp.client.sse import sse_client
-
-        if headers is None:
-            headers = {}
-        if url is None:
-            msg = "URL is required for SSE mode"
-            raise ValueError(msg)
-        is_valid, error_msg = await self.validate_url(url)
-        if not is_valid:
-            msg = f"Invalid SSE URL ({url}): {error_msg}"
-            raise ValueError(msg)
-
-        url = await self.pre_check_redirect(url)
-
-        # Store connection parameters for later use in run_tool
-        self._connection_params = {
-            "url": url,
-            "headers": headers,
-            "timeout_seconds": timeout_seconds,
-            "sse_read_timeout_seconds": sse_read_timeout_seconds,
-        }
-
-        try:
-            async with (
-                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds) as (read, write),
-                ClientSession(read, write) as session,
-            ):
-                await session.initialize()
-                response = await session.list_tools()
-                self._connected = True
-                return response.tools
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            logger.error(f"Failed to connect to MCP SSE server: {e}")
-            self._connection_params = None
-            self._connected = False
-            return []
-
-    async def disconnect(self):
-        """Properly close the connection and clean up resources."""
-        self.session = None
-        self._connection_params = None
-        self._connected = False
-
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-        """Run a tool with the given arguments.
-
-        Args:
-            tool_name: Name of the tool to run
-            arguments: Dictionary of arguments to pass to the tool
-
-        Returns:
-            The result of the tool execution
-
-        Raises:
-            ValueError: If session is not initialized or tool execution fails
-        """
-        if not self._connected or not self._connection_params:
-            msg = "Session not initialized or disconnected. Call connect_to_server first."
-            raise ValueError(msg)
-
-        try:
-            from mcp.client.sse import sse_client
-
-            params = self._connection_params
-            async with (
-                sse_client(
-                    params["url"], params["headers"], params["timeout_seconds"], params["sse_read_timeout_seconds"]
-                ) as (read, write),
-                ClientSession(read, write) as session,
-            ):
-                await session.initialize()
-                return await session.call_tool(tool_name, arguments=arguments)
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            msg = f"Failed to run tool '{tool_name}': {e}"
-            logger.error(msg)
-            # Mark as disconnected on error
-            self._connected = False
-            raise ValueError(msg) from e
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.disconnect()
 
 
 async def update_tools(
