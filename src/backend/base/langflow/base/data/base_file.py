@@ -252,14 +252,11 @@ class BaseFileComponent(Component, ABC):
         parts: list[str] = []
         for d in data_list:
             # Prefer explicit text if available, fall back to full dict, lastly str()
-            text = (
-                (getattr(d, "get_text", lambda: None)() or d.data.get("text"))
-                if isinstance(d.data, dict)
-                else None
-            )
+            text = (getattr(d, "get_text", lambda: None)() or d.data.get("text")) if isinstance(d.data, dict) else None
             parts.append(text if text is not None else str(d))
 
         return Message(text=sep.join(parts))
+
     def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.
 
