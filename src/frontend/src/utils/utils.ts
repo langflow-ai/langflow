@@ -884,3 +884,21 @@ export const formatNumber = (num: number | undefined): string => {
   }
   return num?.toString();
 };
+
+export function getOS() {
+  const platform = (
+    window.navigator?.userAgentData?.platform || window.navigator.platform
+  ).toLowerCase();
+
+  let os: string | null = null;
+
+  if (platform.includes("mac") || platform.includes("darwin")) {
+    os = "macos";
+  } else if (platform.includes("win")) {
+    os = "windows";
+  } else if (platform.includes("linux")) {
+    os = "linux";
+  }
+
+  return os;
+}

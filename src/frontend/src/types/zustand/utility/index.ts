@@ -9,6 +9,7 @@ export type UtilityStoreType = {
   playgroundScrollBehaves: ScrollBehavior;
   setPlaygroundScrollBehaves: (behaves: ScrollBehavior) => void;
   maxFileSizeUpload: number;
+  setMaxFileSizeUpload: (maxFileSizeUpload: number) => void;
   flowsPagination: Pagination;
   setFlowsPagination: (pagination: Pagination) => void;
   tags: Tag[];
@@ -25,4 +26,6 @@ export type UtilityStoreType = {
   clientId: string;
   eventDelivery: EventDeliveryType;
   setEventDelivery: (eventDelivery: EventDeliveryType) => void;
+  serializationMaxItemsLength: number;
+  setSerializationMaxItemsLength: (serializationMaxItemsLength: number) => void;
 };

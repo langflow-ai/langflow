@@ -29,12 +29,12 @@ test(
     await page.getByTestId("sidebar-search-input").fill("chat output");
     await page.waitForTimeout(500);
 
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 400, y: 400 },
       });
@@ -98,7 +98,7 @@ class CustomComponent(Component):
     await elementCustomComponentOutput.hover();
     await page.mouse.down();
     const elementChatOutput = await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-shownode-inputs-left")
       .first();
     await elementChatOutput.hover();
     await page.mouse.up();

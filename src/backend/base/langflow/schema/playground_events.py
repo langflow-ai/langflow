@@ -170,12 +170,13 @@ _EVENT_CREATORS: dict[str, tuple[Callable, inspect.Signature]] = {
 }
 
 
-def create_event_by_type(
-    event_type: Literal["message", "error", "warning", "info", "token"], **kwargs
-) -> PlaygroundEvent | dict:
+def create_event_by_type(event_type: str, **kwargs) -> PlaygroundEvent | dict:
     if event_type not in _EVENT_CREATORS:
         return kwargs
-
-    creator_func, signature = _EVENT_CREATORS[event_type]
+    try:
+        creator_func, signature = _EVENT_CREATORS[event_type]
+    except KeyError as e:
+        msg = f"Invalid event type: {event_type}"
+        raise ValueError(msg) from e
     valid_params = {k: v for k, v in kwargs.items() if k in signature.parameters}
     return creator_func(**valid_params)

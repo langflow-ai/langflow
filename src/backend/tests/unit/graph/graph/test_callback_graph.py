@@ -1,7 +1,7 @@
 import asyncio
 
 import pytest
-from langflow.components.outputs import ChatOutput
+from langflow.components.input_output import ChatOutput
 from langflow.custom import Component
 from langflow.events.event_manager import EventManager
 from langflow.graph import Graph

@@ -63,7 +63,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup Environment
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
       - name: Install the project
         run: uv sync
       - name: Check Version
@@ -127,7 +132,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup Environment
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
       - name: Install the project
         run: uv sync
 
@@ -200,10 +210,21 @@ jobs:
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: inputs.build_docker_ep == true
+    needs: [release-main, call_docker_build_base]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      main_version: ${{ needs.release-main.outputs.version }}
+      release_type: main-ep
+      pre_release: False
+    secrets: inherit
+
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: inputs.build_docker_main == true
-    needs: [release-main]
+    needs: [release-main, call_docker_build_main_ep]
     uses: ./.github/workflows/docker-build.yml
     with:
       main_version: ${{ needs.release-main.outputs.version }}
@@ -212,7 +233,7 @@ jobs:
     secrets: inherit
 
   call_docker_build_main_all:
-    name: Call Docker Build Workflow for Langflow
+    name: Call Docker Build Workflow for langflow-all
     if: inputs.build_docker_main == true
     needs: [release-main]
     uses: ./.github/workflows/docker-build.yml
@@ -222,16 +243,6 @@ jobs:
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
-  call_docker_build_main_ep:
-    name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: inputs.build_docker_ep == true
-    needs: [release-main]
-    uses: ./.github/workflows/docker-build.yml
-    with:
-      main_version: ${{ needs.release-main.outputs.version }}
-      release_type: main-ep
-      pre_release: False
-    secrets: inherit
 
   create_release:
     name: Create Release

@@ -40,7 +40,6 @@ To find your project ID, call the Langflow [/api/v1/projects/](#read-projects) e
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/projects/" \
-  "$LANGFLOW_URL/api/v1/projects/" \
   -H "accept: application/json"
 ```
 
@@ -58,8 +57,8 @@ curl -X GET \
 ```
   </TabItem>
 </Tabs>
-Export the `project-id` as an environment variable.
-Export the `project-id` as an environment variable.
+
+- Export the `project-id` as an environment variable.
 ```bash
 export project_ID="1415de42-8f01-4f36-bf34-539f23e47466"
 ```
@@ -568,6 +567,7 @@ The `v2/files` version offers several improvements over `/v1`:
 - In `v2`, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
 - Responses from the `/v2` endpoint contain more descriptive metadata.
 - The `v2` endpoints require authentication by an API key or JWT.
+- The `/v2/files` endpoint does not support sending **image** files to flows through the API. To send **image** files to your flows through the API, follow the procedure in [Upload image files (v1)](#upload-image-files-v1).
 
 ## Files/V1 endpoints
 
@@ -740,11 +740,22 @@ To create a Langflow API key and export it as an environment variable, see [Expo
 
 Upload a file to your user account. The file can be used across multiple flows.
 
-The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, such as `6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt`.
-Replace **FILE_NAME.EXTENSION** with the uploaded file name and its extension.
+The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, such as `07e5b864-e367-4f52-b647-a48035ae7e5e/d44dc2e1-9ae9-4cf6-9114-8d34a6126c94.pdf`.
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
+To retrieve your current `user_id`, call the `/whoami` endpoint.
+```bash
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/users/whoami" \
+  -H "accept: application/json"
+```
+
+Result:
+```
+{"id":"07e5b864-e367-4f52-b647-a48035ae7e5e","username":"langflow","profile_image":null,"store_api_key":null,"is_active":true,"is_superuser":true,"create_at":"2025-05-08T17:59:07.855965","updated_at":"2025-05-28T19:00:42.556460","last_login_at":"2025-05-28T19:00:42.554338","optins":{"github_starred":false,"dialog_dismissed":true,"discord_clicked":false,"mcp_dialog_dismissed":true}}
+```
+
+In the POST request to `v2/files`, replace **@FILE_NAME.EXTENSION** with the uploaded file name and its extension.
+You must include the ampersand (`@`) in the request to instruct curl to upload the contents of the file, not the string `FILE_NAME.EXTENSION`.
 
 ```bash
 curl -X POST \
@@ -755,71 +766,82 @@ curl -X POST \
   -F "file=@FILE_NAME.EXTENSION"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API returns metadata about the uploaded file:
 
 ```json
 {
-  "id": "c7b22c4c-d5e0-4ec9-af97-5d85b7657a34",
-  "name": "FILE_NAME.EXTENSION",
-  "path": "6f17a73e-97d7-4519-a8d9-8e4c0be411bb/c7b22c4c-d5e0-4ec9-af97-5d85b7657a34.txt",
-  "size": 1234,
-  "provider": null
+  "id":"d44dc2e1-9ae9-4cf6-9114-8d34a6126c94",
+  "name":"engine_manual",
+  "path":"07e5b864-e367-4f52-b647-a48035ae7e5e/d44dc2e1-9ae9-4cf6-9114-8d34a6126c94.pdf",
+  "size":851160,
+  "provider":null
 }
 ```
 
-  </TabItem>
-</Tabs>
-
 ### Send files to your flows (v2)
 
-Send a file to your flow for analysis using the [File](/components-data#file) component.
+:::important
+The `/v2/files` endpoint does not support sending **image** files to flows.
+To send **image** files to your flows through the API, follow the procedure in [Upload image files (v1)](#upload-image-files-v1).
+:::
+
+Send a file to your flow for analysis using the [File](/components-data#file) component and the API.
+Your flow must contain a [File](/components-data#file) component to receive the file.
 
 The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
 For more information, see [Supported environment variables](/environment-variables#supported-variables).
 
-1. To send an image to your flow with the API, POST the image file to the `/api/v2/files` endpoint.
+1. To send a file to your flow with the API, POST the file to the `/api/v2/files` endpoint.
    Replace **FILE_NAME** with the uploaded file name.
+   This is the same step described in [Upload file (v2)](#upload-file-v2), but since you need the filename to upload to your flow, it is included here.
 
 ```bash
-curl -X POST "$LANGFLOW_URL/api/v2/files" \
+curl -X POST \
+  "$LANGFLOW_URL/api/v2/files" \
+  -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
-  -F "file=@FILE_NAME.png"
+  -F "file=@FILE_NAME.EXTENSION"
 ```
 
 The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API returns metadata about the uploaded file:
 
 ```json
 {
-  "id": "5f829bc4-ac1e-4a80-b1d1-fedc03cd5b6e",
-  "name": "FILE_NAME",
-  "path": "232f54ba-dd54-4760-977e-ed637f83e785/5f829bc4-ac1e-4a80-b1d1-fedc03cd5b6e.png",
-  "size": 84408,
+  "id":"d44dc2e1-9ae9-4cf6-9114-8d34a6126c94",
+  "name":"engine_manual",
+  "path":"07e5b864-e367-4f52-b647-a48035ae7e5e/d44dc2e1-9ae9-4cf6-9114-8d34a6126c94.pdf",
+  "size":851160,
   "provider": null
 }
 ```
 
 2. To use this file in your flow, add a [File](/components-data#file) component to load a file into the flow.
 3. To load the file into your flow, send it to the **File** component.
+To retrieve the **File** component's full name with the UUID attached, call the [Read flow](#read-flow) endpoint, and then include your **File** component and the file path as a tweak with the `/v1/run` POST request.
+In this example, the file uploaded to `/v2/files` is included with the `/v1/run` POST request.
 
 ```text
 curl --request POST \
-  --url '$LANGFLOW_URL/api/v1/run/$FLOW_ID' \
-  --header 'Content-Type: application/json' \
-  --header 'x-api-key: $LANGFLOW_API_KEY' \
+  --url "$LANGFLOW_URL/api/v1/run/$FLOW_ID" \
+  --header "Content-Type: application/json" \
   --data '{
   "input_value": "what do you see?",
   "output_type": "chat",
   "input_type": "text",
   "tweaks": {
-    "File-t2Ngc": {
+    "File-1olS3": {
       "path": [
-        "232f54ba-dd54-4760-977e-ed637f83e785/5f829bc4-ac1e-4a80-b1d1-fedc03cd5b6e.png"
+        "07e5b864-e367-4f52-b647-a48035ae7e5e/3a290013-fe1e-4d3d-a454-cacae81288f3.pdf"
       ]
     }
   }
 }'
+```
+
+Result:
+```text
+"text":"This document provides important safety information and instructions for selecting, installing, and operating Briggs & Stratton engines. It includes warnings and guidelines to prevent injury, fire, or damage, such as choosing the correct engine model, proper installation procedures, safe fuel handling, and correct engine operation. The document emphasizes following all safety precautions and using authorized parts to ensure safe and effective engine use."
 ```
 
 ### List files (v2)

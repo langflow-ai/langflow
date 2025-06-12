@@ -84,17 +84,11 @@ LANGFLOW_DB_CONNECT_TIMEOUT=20
 
 ## Configure cache memory
 
-Langflow provides multiple caching options that can be configured using the `LANGFLOW_CACHE_TYPE` environment variable.
+The default Langflow caching behavior is an asynchronous, in-memory cache.
+```
+LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
+LANGFLOW_CACHE_TYPE=Async
+```
 
-| Type              | Description                  | Storage Location         | Persistence            |
-| ----------------- | ---------------------------- | ------------------------ | ---------------------- |
-| `async` (default) | Asynchronous in-memory cache | Application memory       | Cleared on restart     |
-| `memory`          | Thread-safe in-memory cache  | Application memory       | Cleared on restart     |
-| `disk`            | File system-based cache      | System cache directory\* | Persists after restart |
-| `redis`           | Distributed cache            | Redis server             | Persists in Redis      |
-
-\*System cache directory locations:
-
-- Linux/WSL: `~/.cache/langflow/`
-- macOS: `/Users/<username>/Library/Caches/langflow/`
-- Windows: `%LOCALAPPDATA%\langflow\langflow\Cache`
+Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache are not supported.
+The default behavior is suitable for most use cases.
