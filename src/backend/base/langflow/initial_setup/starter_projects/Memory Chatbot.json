@@ -205,6 +205,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -227,6 +228,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -290,6 +292,7 @@
                 "file_path": "",
                 "info": "Files to be sent with the message.",
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "files",
                 "placeholder": "",
                 "required": false,
@@ -303,11 +306,13 @@
               "input_value": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Input Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
                 "input_types": [],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "input_value",
@@ -325,6 +330,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -333,10 +339,12 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -352,6 +360,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -374,6 +383,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -393,11 +403,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -412,6 +424,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -510,6 +523,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -532,6 +546,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -590,6 +605,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "data_template",
                 "placeholder": "",
@@ -603,7 +619,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Inputs",
                 "dynamic": false,
@@ -614,6 +630,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -622,13 +639,14 @@
                 "title_case": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -637,10 +655,12 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -656,6 +676,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -678,6 +699,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -697,11 +719,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -716,6 +740,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -853,7 +878,21 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Messages",
+                "display_name": "Message",
+                "group_outputs": false,
+                "method": "retrieve_messages_as_text",
+                "name": "messages_text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Dataframe",
                 "group_outputs": false,
                 "method": "retrieve_messages_dataframe",
                 "name": "dataframe",
@@ -884,7 +923,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any, cast\n\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.inputs.inputs import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, TabInput\nfrom langflow.memory import aget_messages, astore_message\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\nfrom langflow.template.field.base import Output\nfrom langflow.utils.component_utils import set_current_fields, set_field_display\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER\n\n\nclass MemoryComponent(Component):\n    display_name = \"Message History\"\n    description = \"Stores or retrieves stored chat messages from Langflow tables or an external memory.\"\n    icon = \"message-square-more\"\n    name = \"Memory\"\n    default_keys = [\"mode\", \"memory\"]\n    mode_config = {\n        \"Store\": [\"message\", \"memory\", \"sender\", \"sender_name\", \"session_id\"],\n        \"Retrieve\": [\"n_messages\", \"order\", \"template\", \"memory\"],\n    }\n\n    inputs = [\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Retrieve\", \"Store\"],\n            value=\"Retrieve\",\n            info=\"Operation mode: Store messages or Retrieve messages.\",\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"message\",\n            display_name=\"Message\",\n            info=\"The chat message to be stored.\",\n            tool_mode=True,\n            dynamic=True,\n            show=False,\n        ),\n        HandleInput(\n            name=\"memory\",\n            display_name=\"External Memory\",\n            input_types=[\"Memory\"],\n            info=\"Retrieve messages from an external memory. If empty, it will use the Langflow tables.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, \"Machine and User\"],\n            value=\"Machine and User\",\n            info=\"Filter by sender type.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Filter by sender name.\",\n            advanced=True,\n            show=False,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Messages\",\n            value=100,\n            info=\"Number of messages to retrieve.\",\n            advanced=True,\n            show=False,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"order\",\n            display_name=\"Order\",\n            options=[\"Ascending\", \"Descending\"],\n            value=\"Ascending\",\n            info=\"Order of the messages.\",\n            advanced=True,\n            tool_mode=True,\n            required=True,\n            show=False,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {sender} or any other key in the message data.\",\n            value=\"{sender_name}: {text}\",\n            advanced=True,\n            show=False,\n        ),\n    ]\n\n    outputs = [Output(display_name=\"Messages\", name=\"dataframe\", method=\"retrieve_messages_dataframe\", dynamic=True)]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"Dynamically show only the relevant output based on the selected output type.\"\"\"\n        if field_name == \"mode\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n            if field_value == \"Store\":\n                frontend_node[\"outputs\"] = [\n                    Output(\n                        display_name=\"Stored Messages\",\n                        name=\"stored_messages\",\n                        method=\"store_message\",\n                        hidden=True,\n                        dynamic=True,\n                    )\n                ]\n            if field_value == \"Retrieve\":\n                frontend_node[\"outputs\"] = [\n                    Output(\n                        display_name=\"Messages\", name=\"dataframe\", method=\"retrieve_messages_dataframe\", dynamic=True\n                    )\n                ]\n        return frontend_node\n\n    async def retrieve_messages(self) -> Data:\n        sender = self.sender\n        sender_name = self.sender_name\n        session_id = self.session_id\n        n_messages = self.n_messages\n        order = \"DESC\" if self.order == \"Descending\" else \"ASC\"\n\n        if sender == \"Machine and User\":\n            sender = None\n\n        if self.memory and not hasattr(self.memory, \"aget_messages\"):\n            memory_name = type(self.memory).__name__\n            err_msg = f\"External Memory object ({memory_name}) must have 'aget_messages' method.\"\n            raise AttributeError(err_msg)\n        # Check if n_messages is None or 0\n        if n_messages == 0:\n            stored = []\n        elif self.memory:\n            # override session_id\n            self.memory.session_id = session_id\n\n            stored = await self.memory.aget_messages()\n            # langchain memories are supposed to return messages in ascending order\n            if order == \"DESC\":\n                stored = stored[::-1]\n            if n_messages:\n                stored = stored[:n_messages]\n            stored = [Message.from_lc_message(m) for m in stored]\n            if sender:\n                expected_type = MESSAGE_SENDER_AI if sender == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER\n                stored = [m for m in stored if m.type == expected_type]\n        else:\n            stored = await aget_messages(\n                sender=sender,\n                sender_name=sender_name,\n                session_id=session_id,\n                limit=n_messages,\n                order=order,\n            )\n        self.status = stored\n        return cast(Data, stored)\n\n    async def retrieve_messages_dataframe(self) -> DataFrame:\n        \"\"\"Convert the retrieved messages into a DataFrame.\n\n        Returns:\n            DataFrame: A DataFrame containing the message data.\n        \"\"\"\n        messages = await self.retrieve_messages()\n        return DataFrame(messages)\n\n    async def store_message(self) -> Message:\n        message = Message(text=self.message) if isinstance(self.message, str) else self.message\n\n        message.session_id = self.session_id or message.session_id\n        message.sender = self.sender or message.sender or MESSAGE_SENDER_AI\n        message.sender_name = self.sender_name or message.sender_name or MESSAGE_SENDER_NAME_AI\n\n        stored_messages: list[Message] = []\n\n        if self.memory:\n            self.memory.session_id = message.session_id\n            lc_message = message.to_lc_message()\n            await self.memory.aadd_messages([lc_message])\n\n            stored_messages = await self.memory.aget_messages() or []\n\n            stored_messages = [Message.from_lc_message(m) for m in stored_messages] if stored_messages else []\n\n            if message.sender:\n                stored_messages = [m for m in stored_messages if m.sender == message.sender]\n        else:\n            await astore_message(message, flow_id=self.graph.flow_id)\n            stored_messages = (\n                await aget_messages(\n                    session_id=message.session_id, sender_name=message.sender_name, sender=message.sender\n                )\n                or []\n            )\n\n        if not stored_messages:\n            msg = \"No messages were stored. Please ensure that the session ID and sender are properly set.\"\n            raise ValueError(msg)\n\n        stored_message = stored_messages[0]\n        self.status = stored_message\n        return stored_message\n\n    def update_build_config(\n        self,\n        build_config: dotdict,\n        field_value: Any,  # noqa: ARG002\n        field_name: str | None = None,  # noqa: ARG002\n    ) -> dotdict:\n        return set_current_fields(\n            build_config=build_config,\n            action_fields=self.mode_config,\n            selected_action=build_config[\"mode\"][\"value\"],\n            default_fields=self.default_keys,\n            func=set_field_display,\n        )\n"
+                "value": "from typing import Any, cast\n\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.inputs.inputs import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, TabInput\nfrom langflow.memory import aget_messages, astore_message\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\nfrom langflow.template.field.base import Output\nfrom langflow.utils.component_utils import set_current_fields, set_field_display\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER\n\n\nclass MemoryComponent(Component):\n    display_name = \"Message History\"\n    description = \"Stores or retrieves stored chat messages from Langflow tables or an external memory.\"\n    icon = \"message-square-more\"\n    name = \"Memory\"\n    default_keys = [\"mode\", \"memory\"]\n    mode_config = {\n        \"Store\": [\"message\", \"memory\", \"sender\", \"sender_name\", \"session_id\"],\n        \"Retrieve\": [\"n_messages\", \"order\", \"template\", \"memory\"],\n    }\n\n    inputs = [\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Retrieve\", \"Store\"],\n            value=\"Retrieve\",\n            info=\"Operation mode: Store messages or Retrieve messages.\",\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"message\",\n            display_name=\"Message\",\n            info=\"The chat message to be stored.\",\n            tool_mode=True,\n            dynamic=True,\n            show=False,\n        ),\n        HandleInput(\n            name=\"memory\",\n            display_name=\"External Memory\",\n            input_types=[\"Memory\"],\n            info=\"Retrieve messages from an external memory. If empty, it will use the Langflow tables.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender_type\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, \"Machine and User\"],\n            value=\"Machine and User\",\n            info=\"Filter by sender type.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender\",\n            display_name=\"Sender\",\n            info=\"The sender of the message. Might be Machine or User. \"\n            \"If empty, the current sender parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Filter by sender name.\",\n            advanced=True,\n            show=False,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Messages\",\n            value=100,\n            info=\"Number of messages to retrieve.\",\n            advanced=True,\n            show=False,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            value=\"\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"order\",\n            display_name=\"Order\",\n            options=[\"Ascending\", \"Descending\"],\n            value=\"Ascending\",\n            info=\"Order of the messages.\",\n            advanced=True,\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {sender} or any other key in the message data.\",\n            value=\"{sender_name}: {text}\",\n            advanced=True,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Message\", name=\"messages_text\", method=\"retrieve_messages_as_text\", dynamic=True),\n        Output(display_name=\"Dataframe\", name=\"dataframe\", method=\"retrieve_messages_dataframe\", dynamic=True),\n    ]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"Dynamically show only the relevant output based on the selected output type.\"\"\"\n        if field_name == \"mode\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n            if field_value == \"Store\":\n                frontend_node[\"outputs\"] = [\n                    Output(\n                        display_name=\"Stored Messages\",\n                        name=\"stored_messages\",\n                        method=\"store_message\",\n                        hidden=True,\n                        dynamic=True,\n                    )\n                ]\n            if field_value == \"Retrieve\":\n                frontend_node[\"outputs\"] = [\n                    Output(\n                        display_name=\"Messages\", name=\"messages_text\", method=\"retrieve_messages_as_text\", dynamic=True\n                    ),\n                    Output(\n                        display_name=\"Dataframe\", name=\"dataframe\", method=\"retrieve_messages_dataframe\", dynamic=True\n                    ),\n                ]\n        return frontend_node\n\n    async def store_message(self) -> Message:\n        message = Message(text=self.message) if isinstance(self.message, str) else self.message\n\n        message.session_id = self.session_id or message.session_id\n        message.sender = self.sender or message.sender or MESSAGE_SENDER_AI\n        message.sender_name = self.sender_name or message.sender_name or MESSAGE_SENDER_NAME_AI\n\n        stored_messages: list[Message] = []\n\n        if self.memory:\n            self.memory.session_id = message.session_id\n            lc_message = message.to_lc_message()\n            await self.memory.aadd_messages([lc_message])\n\n            stored_messages = await self.memory.aget_messages() or []\n\n            stored_messages = [Message.from_lc_message(m) for m in stored_messages] if stored_messages else []\n\n            if message.sender:\n                stored_messages = [m for m in stored_messages if m.sender == message.sender]\n        else:\n            await astore_message(message, flow_id=self.graph.flow_id)\n            stored_messages = (\n                await aget_messages(\n                    session_id=message.session_id, sender_name=message.sender_name, sender=message.sender\n                )\n                or []\n            )\n\n        if not stored_messages:\n            msg = \"No messages were stored. Please ensure that the session ID and sender are properly set.\"\n            raise ValueError(msg)\n\n        stored_message = stored_messages[0]\n        self.status = stored_message\n        return stored_message\n\n    async def retrieve_messages(self) -> Data:\n        sender_type = self.sender_type\n        sender_name = self.sender_name\n        session_id = self.session_id\n        n_messages = self.n_messages\n        order = \"DESC\" if self.order == \"Descending\" else \"ASC\"\n\n        if sender_type == \"Machine and User\":\n            sender_type = None\n\n        if self.memory and not hasattr(self.memory, \"aget_messages\"):\n            memory_name = type(self.memory).__name__\n            err_msg = f\"External Memory object ({memory_name}) must have 'aget_messages' method.\"\n            raise AttributeError(err_msg)\n        # Check if n_messages is None or 0\n        if n_messages == 0:\n            stored = []\n        elif self.memory:\n            # override session_id\n            self.memory.session_id = session_id\n\n            stored = await self.memory.aget_messages()\n            # langchain memories are supposed to return messages in ascending order\n            if order == \"DESC\":\n                stored = stored[::-1]\n            if n_messages:\n                stored = stored[:n_messages]\n            stored = [Message.from_lc_message(m) for m in stored]\n            if sender_type:\n                expected_type = MESSAGE_SENDER_AI if sender_type == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER\n                stored = [m for m in stored if m.type == expected_type]\n        else:\n            stored = await aget_messages(\n                sender=sender_type,\n                sender_name=sender_name,\n                session_id=session_id,\n                limit=n_messages,\n                order=order,\n            )\n        self.status = stored\n        return cast(Data, stored)\n\n    async def retrieve_messages_as_text(self) -> Message:\n        stored_text = data_to_text(self.template, await self.retrieve_messages())\n        self.status = stored_text\n        return Message(text=stored_text)\n\n    async def retrieve_messages_dataframe(self) -> DataFrame:\n        \"\"\"Convert the retrieved messages into a DataFrame.\n\n        Returns:\n            DataFrame: A DataFrame containing the message data.\n        \"\"\"\n        messages = await self.retrieve_messages()\n        return DataFrame(messages)\n\n    def update_build_config(\n        self,\n        build_config: dotdict,\n        field_value: Any,  # noqa: ARG002\n        field_name: str | None = None,  # noqa: ARG002\n    ) -> dotdict:\n        return set_current_fields(\n            build_config=build_config,\n            action_fields=self.mode_config,\n            selected_action=build_config[\"mode\"][\"value\"],\n            default_fields=self.default_keys,\n            func=set_field_display,\n        )\n"
               },
               "memory": {
                 "_input_type": "HandleInput",
@@ -896,6 +935,7 @@
                   "Memory"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "memory",
                 "placeholder": "",
                 "required": false,
@@ -956,11 +996,13 @@
                 "dynamic": false,
                 "info": "Number of messages to retrieve.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 100
@@ -969,6 +1011,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Order",
                 "dynamic": false,
                 "info": "Order of the messages.",
@@ -977,22 +1020,29 @@
                   "Ascending",
                   "Descending"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
               },
               "sender": {
-                "_input_type": "DropdownInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
                 "combobox": false,
-                "display_name": "Sender Type",
+                "display_name": "Sender",
                 "dynamic": false,
-                "info": "Filter by sender type.",
+                "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
                 "name": "sender",
                 "options": [
                   "Machine",
@@ -1018,17 +1068,43 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "sender_type": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "info": "Filter by sender type.",
+                "name": "sender_type",
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Machine and User"
               },
               "session_id": {
                 "_input_type": "MessageTextInput",
@@ -1040,6 +1116,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -1055,6 +1132,7 @@
               "template": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
@@ -1062,12 +1140,13 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "template",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -1199,6 +1278,7 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "template",
                 "placeholder": "",
                 "required": false,
@@ -1219,6 +1299,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "tool_placeholder",
                 "placeholder": "",
@@ -1492,9 +1573,11 @@
                 ],
                 "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1558,6 +1641,7 @@
               "system_message": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
@@ -1928,7 +2012,7 @@
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -1960,13 +2044,18 @@
                 "value": "Ascending"
               },
               "sender": {
-                "_input_type": "DropdownInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
                 "combobox": false,
                 "dialog_inputs": {},
                 "display_name": "Sender",
                 "dynamic": false,
                 "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
                 "name": "sender",
                 "options": [
                   "Machine",
@@ -1976,7 +2065,7 @@
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
-                "show": false,
+                "show": true,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
@@ -2047,7 +2136,7 @@
                 "name": "session_id",
                 "placeholder": "",
                 "required": false,
-                "show": false,
+                "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -2072,7 +2161,7 @@
                 "name": "template",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,

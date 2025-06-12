@@ -26,7 +26,14 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
+from langflow.base.constants import (
+    ADDITIVE_ATTRIBUTES,
+    CRITICAL_UPDATE_ATTRIBUTES,
+    FIELD_FORMAT_ATTRIBUTES,
+    NODE_FORMAT_ATTRIBUTES,
+    ORJSON_OPTIONS,
+    USER_PRESERVED_ATTRIBUTES,
+)
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -40,6 +47,95 @@ from langflow.utils.util import escape_json_dump
 # In the folder ./starter_projects we have a few JSON files that represent
 # starter projects. We want to load these into the database so that users
 # can use them as a starting point for their own projects.
+
+# Constants for logging
+MAX_LOG_VALUE_LENGTH = 50
+
+
+def update_field_with_preservation(
+    existing_field, latest_field, field_name: str, node_changes_log: dict, node_type: str
+):
+    """Update a field while preserving user customizations and applying smart merge logic.
+
+    Args:
+        existing_field: The current field configuration (dict or str)
+        latest_field: The latest field configuration from the template (dict or str)
+        field_name: Name of the field being updated
+        node_changes_log: Log for tracking changes
+        node_type: Type of the node for logging
+
+    Returns:
+        Updated field configuration
+    """
+    # Handle simple string fields or non-dict fields
+    if not isinstance(existing_field, dict) or not isinstance(latest_field, dict):
+        if existing_field != latest_field:
+            node_changes_log[node_type].append(
+                {
+                    "attr": field_name,
+                    "old_value": existing_field,
+                    "new_value": latest_field,
+                    "reason": "simple_field_update",
+                }
+            )
+        return latest_field
+
+    updated_field = existing_field.copy()
+
+    # Always preserve user-specific attributes
+    for attr in USER_PRESERVED_ATTRIBUTES:
+        if attr in existing_field:
+            updated_field[attr] = existing_field[attr]
+
+    # Update critical attributes that affect functionality
+    for attr in CRITICAL_UPDATE_ATTRIBUTES:
+        if attr in latest_field and latest_field[attr] != existing_field.get(attr):
+            node_changes_log[node_type].append(
+                {
+                    "attr": f"{field_name}.{attr}",
+                    "old_value": existing_field.get(attr),
+                    "new_value": latest_field[attr],
+                    "reason": "critical_update",
+                }
+            )
+            updated_field[attr] = latest_field[attr]
+
+    # Update format attributes (metadata, display properties)
+    for attr in FIELD_FORMAT_ATTRIBUTES:
+        if attr not in USER_PRESERVED_ATTRIBUTES and attr in latest_field:
+            if attr in ADDITIVE_ATTRIBUTES:
+                # Only update if it doesn't exist (for new fields or missing attributes)
+                if attr not in existing_field:
+                    updated_field[attr] = latest_field[attr]
+                    node_changes_log[node_type].append(
+                        {
+                            "attr": f"{field_name}.{attr}",
+                            "old_value": None,
+                            "new_value": latest_field[attr],
+                            "reason": "additive_update",
+                        }
+                    )
+            elif latest_field[attr] != existing_field.get(attr):
+                # Update if value has changed
+                node_changes_log[node_type].append(
+                    {
+                        "attr": f"{field_name}.{attr}",
+                        "old_value": existing_field.get(attr),
+                        "new_value": latest_field[attr],
+                        "reason": "format_update",
+                    }
+                )
+                updated_field[attr] = latest_field[attr]
+
+    # Add any completely new attributes from the latest template
+    for attr, value in latest_field.items():
+        if attr not in updated_field and attr not in USER_PRESERVED_ATTRIBUTES:
+            updated_field[attr] = value
+            node_changes_log[node_type].append(
+                {"attr": f"{field_name}.{attr}", "old_value": None, "new_value": value, "reason": "new_attribute"}
+            )
+
+    return updated_field
 
 
 def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
@@ -86,6 +182,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                     "attr": key,
                                     "old_value": None,
                                     "new_value": value,
+                                    "reason": "prompt_field_added",
                                 }
                             )
                             node_data["template"][key] = value
@@ -95,6 +192,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                     "attr": key,
                                     "old_value": node_data["template"][key],
                                     "new_value": value,
+                                    "reason": "prompt_value_updated",
                                 }
                             )
                             node_data["template"][key]["value"] = value["value"]
@@ -106,6 +204,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                         "attr": "_type",
                         "old_value": node_data["template"]["_type"],
                         "new_value": latest_template["_type"],
+                        "reason": "template_version_change",
                     }
                 )
             else:
@@ -120,31 +219,33 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                 "attr": attr,
                                 "old_value": node_data.get(attr),
                                 "new_value": latest_node[attr],
+                                "reason": "node_format_update",
                             }
                         )
                         node_data[attr] = latest_node[attr]
 
                 for field_name, field_dict in latest_template.items():
                     if field_name not in node_data["template"]:
+                        # Completely new field - add it with all attributes
                         node_data["template"][field_name] = field_dict
+                        node_changes_log[node_type].append(
+                            {
+                                "attr": f"{field_name}",
+                                "old_value": None,
+                                "new_value": "new_field_added",
+                                "reason": "new_field",
+                            }
+                        )
                         continue
-                    # The idea here is to update some attributes of the field
-                    to_check_attributes = FIELD_FORMAT_ATTRIBUTES
-                    for attr in to_check_attributes:
-                        if (
-                            attr in field_dict
-                            and attr in node_data["template"].get(field_name)
-                            # Check if it needs to be updated
-                            and field_dict[attr] != node_data["template"][field_name][attr]
-                        ):
-                            node_changes_log[node_type].append(
-                                {
-                                    "attr": f"{field_name}.{attr}",
-                                    "old_value": node_data["template"][field_name][attr],
-                                    "new_value": field_dict[attr],
-                                }
-                            )
-                            node_data["template"][field_name][attr] = field_dict[attr]
+
+                    # Use the new preservation logic for existing fields
+                    node_data["template"][field_name] = update_field_with_preservation(
+                        existing_field=node_data["template"][field_name],
+                        latest_field=field_dict,
+                        field_name=field_name,
+                        node_changes_log=node_changes_log,
+                        node_type=node_type,
+                    )
             # Remove fields that are not in the latest template
             if node_type != "Prompt":
                 for field_name in list(node_data["template"].keys()):
@@ -477,17 +578,44 @@ def update_edges_with_latest_component_versions(project_data):
 
 
 def log_node_changes(node_changes_log) -> None:
-    # The idea here is to log the changes that were made to the nodes in debug
-    # Something like:
-    # Node: "Node Name" was updated with the following changes:
-    # attr_name: old_value -> new_value
-    # let's create one log per node
+    """Log the changes that were made to the nodes in debug with detailed reasons.
+
+    Format:
+    Node: "Node Name" was updated with the following changes:
+    - attr_name: old_value -> new_value (reason: explanation)
+    """
     formatted_messages = []
     for node_name, changes in node_changes_log.items():
+        if not changes:
+            continue
+
         message = f"\nNode: {node_name} was updated with the following changes:"
+
+        # Group changes by reason for better readability
+        changes_by_reason = {}
         for change in changes:
-            message += f"\n- {change['attr']}: {change['old_value']} -> {change['new_value']}"
+            reason = change.get("reason", "standard_update")
+            if reason not in changes_by_reason:
+                changes_by_reason[reason] = []
+            changes_by_reason[reason].append(change)
+
+        for reason, reason_changes in changes_by_reason.items():
+            message += f"\n  {reason.replace('_', ' ').title()}:"
+            for change in reason_changes:
+                old_val = (
+                    str(change["old_value"])[:MAX_LOG_VALUE_LENGTH] + "..."
+                    if len(str(change["old_value"])) > MAX_LOG_VALUE_LENGTH
+                    else change["old_value"]
+                )
+                new_val = (
+                    str(change["new_value"])[:MAX_LOG_VALUE_LENGTH] + "..."
+                    if len(str(change["new_value"])) > MAX_LOG_VALUE_LENGTH
+                    else change["new_value"]
+                )
+                message += f"\n  - {change['attr']}: {old_val} -> {new_val}"
+
         formatted_messages.append(message)
+
     if formatted_messages:
         logger.debug("\n".join(formatted_messages))
 

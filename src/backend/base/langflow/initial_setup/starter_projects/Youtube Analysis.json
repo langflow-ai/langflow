@@ -380,11 +380,14 @@
                 "value": "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING, Any, cast\n\nimport toml  # type: ignore[import-untyped]\nfrom loguru import logger\n\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output\nfrom langflow.schema.dataframe import DataFrame\n\nif TYPE_CHECKING:\n    from langchain_core.runnables import Runnable\n\n\nclass BatchRunComponent(Component):\n    display_name = \"Batch Run\"\n    description = \"Runs an LLM on each row of a DataFrame column. If no column is specified, all columns are used.\"\n    icon = \"List\"\n\n    inputs = [\n        HandleInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Connect the 'Language Model' output from your LLM component here.\",\n            input_types=[\"LanguageModel\"],\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"Instructions\",\n            info=\"Multi-line system instruction for all rows in the DataFrame.\",\n            required=False,\n        ),\n        DataFrameInput(\n            name=\"df\",\n            display_name=\"DataFrame\",\n            info=\"The DataFrame whose column (specified by 'column_name') we'll treat as text messages.\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"column_name\",\n            display_name=\"Column Name\",\n            info=(\n                \"The name of the DataFrame column to treat as text messages. \"\n                \"If empty, all columns will be formatted in TOML.\"\n            ),\n            required=False,\n            advanced=False,\n        ),\n        MessageTextInput(\n            name=\"output_column_name\",\n            display_name=\"Output Column Name\",\n            info=\"Name of the column where the model's response will be stored.\",\n            value=\"model_response\",\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"enable_metadata\",\n            display_name=\"Enable Metadata\",\n            info=\"If True, add metadata to the output DataFrame.\",\n            value=False,\n            required=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"LLM Results\",\n            name=\"batch_results\",\n            method=\"run_batch\",\n            info=\"A DataFrame with all original columns plus the model's response column.\",\n        ),\n    ]\n\n    def _format_row_as_toml(self, row: dict[str, Any]) -> str:\n        \"\"\"Convert a dictionary (row) into a TOML-formatted string.\"\"\"\n        formatted_dict = {str(col): {\"value\": str(val)} for col, val in row.items()}\n        return toml.dumps(formatted_dict)\n\n    def _create_base_row(\n        self, original_row: dict[str, Any], model_response: str = \"\", batch_index: int = -1\n    ) -> dict[str, Any]:\n        \"\"\"Create a base row with original columns and additional metadata.\"\"\"\n        row = original_row.copy()\n        row[self.output_column_name] = model_response\n        row[\"batch_index\"] = batch_index\n        return row\n\n    def _add_metadata(\n        self, row: dict[str, Any], *, success: bool = True, system_msg: str = \"\", error: str | None = None\n    ) -> None:\n        \"\"\"Add metadata to a row if enabled.\"\"\"\n        if not self.enable_metadata:\n            return\n\n        if success:\n            row[\"metadata\"] = {\n                \"has_system_message\": bool(system_msg),\n                \"input_length\": len(row.get(\"text_input\", \"\")),\n                \"response_length\": len(row[self.output_column_name]),\n                \"processing_status\": \"success\",\n            }\n        else:\n            row[\"metadata\"] = {\n                \"error\": error,\n                \"processing_status\": \"failed\",\n            }\n\n    async def run_batch(self) -> DataFrame:\n        \"\"\"Process each row in df[column_name] with the language model asynchronously.\n\n        Returns:\n            DataFrame: A new DataFrame containing:\n                - All original columns\n                - The model's response column (customizable name)\n                - 'batch_index' column for processing order\n                - 'metadata' (optional)\n\n        Raises:\n            ValueError: If the specified column is not found in the DataFrame\n            TypeError: If the model is not compatible or input types are wrong\n        \"\"\"\n        model: Runnable = self.model\n        system_msg = self.system_message or \"\"\n        df: DataFrame = self.df\n        col_name = self.column_name or \"\"\n\n        # Validate inputs first\n        if not isinstance(df, DataFrame):\n            msg = f\"Expected DataFrame input, got {type(df)}\"\n            raise TypeError(msg)\n\n        if col_name and col_name not in df.columns:\n            msg = f\"Column '{col_name}' not found in the DataFrame. Available columns: {', '.join(df.columns)}\"\n            raise ValueError(msg)\n\n        try:\n            # Determine text input for each row\n            if col_name:\n                user_texts = df[col_name].astype(str).tolist()\n            else:\n                user_texts = [\n                    self._format_row_as_toml(cast(dict[str, Any], row)) for row in df.to_dict(orient=\"records\")\n                ]\n\n            total_rows = len(user_texts)\n            logger.info(f\"Processing {total_rows} rows with batch run\")\n\n            # Prepare the batch of conversations\n            conversations = [\n                [{\"role\": \"system\", \"content\": system_msg}, {\"role\": \"user\", \"content\": text}]\n                if system_msg\n                else [{\"role\": \"user\", \"content\": text}]\n                for text in user_texts\n            ]\n\n            # Configure the model with project info and callbacks\n            model = model.with_config(\n                {\n                    \"run_name\": self.display_name,\n                    \"project_name\": self.get_project_name(),\n                    \"callbacks\": self.get_langchain_callbacks(),\n                }\n            )\n            # Process batches and track progress\n            responses_with_idx = list(\n                zip(\n                    range(len(conversations)),\n                    await model.abatch(list(conversations)),\n                    strict=True,\n                )\n            )\n\n            # Sort by index to maintain order\n            responses_with_idx.sort(key=lambda x: x[0])\n\n            # Build the final data with enhanced metadata\n            rows: list[dict[str, Any]] = []\n            for idx, (original_row, response) in enumerate(\n                zip(df.to_dict(orient=\"records\"), responses_with_idx, strict=False)\n            ):\n                response_text = response[1].content if hasattr(response[1], \"content\") else str(response[1])\n                row = self._create_base_row(\n                    cast(dict[str, Any], original_row), model_response=response_text, batch_index=idx\n                )\n                self._add_metadata(row, success=True, system_msg=system_msg)\n                rows.append(row)\n\n                # Log progress\n                if (idx + 1) % max(1, total_rows // 10) == 0:\n                    logger.info(f\"Processed {idx + 1}/{total_rows} rows\")\n\n            logger.info(\"Batch processing completed successfully\")\n            return DataFrame(rows)\n\n        except (KeyError, AttributeError) as e:\n            # Handle data structure and attribute access errors\n            logger.error(f\"Data processing error: {e!s}\")\n            error_row = self._create_base_row({col: \"\" for col in df.columns}, model_response=\"\", batch_index=-1)\n            self._add_metadata(error_row, success=False, error=str(e))\n            return DataFrame([error_row])\n"
               },
               "column_name": {
-                "_input_type": "StrInput",
+                "_input_type": "MessageTextInput",
                 "advanced": false,
                 "display_name": "Column Name",
                 "dynamic": false,
                 "info": "The name of the DataFrame column to treat as text messages. If empty, all columns will be formatted in TOML.",
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -484,6 +487,7 @@
               "system_message": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Instructions",
                 "dynamic": false,
                 "info": "Multi-line system instruction for all rows in the DataFrame.",
@@ -682,6 +686,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -967,9 +972,11 @@
                 ],
                 "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1033,6 +1040,7 @@
               "system_message": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
@@ -1067,8 +1075,8 @@
                 "name": "temperature",
                 "placeholder": "",
                 "range_spec": {
-                  "max": 2,
-                  "min": 0,
+                  "max": 1.0,
+                  "min": 0.0,
                   "step": 0.01,
                   "step_type": "float"
                 },
@@ -1208,6 +1216,7 @@
               "agent_description": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
@@ -1256,6 +1265,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1450,7 +1460,7 @@
                 "name": "message",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": true,
                 "trace_as_input": true,
@@ -1525,6 +1535,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1541,7 +1552,7 @@
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -1585,6 +1596,7 @@
                 "required": true,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1609,13 +1621,18 @@
                 "value": 1
               },
               "sender": {
-                "_input_type": "DropdownInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
                 "combobox": false,
                 "dialog_inputs": {},
                 "display_name": "Sender",
                 "dynamic": false,
                 "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
                 "name": "sender",
                 "options": [
                   "Machine",
@@ -1647,7 +1664,7 @@
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -1706,6 +1723,7 @@
               "system_prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
@@ -1740,8 +1758,8 @@
                 "name": "temperature",
                 "placeholder": "",
                 "range_spec": {
-                  "max": 2,
-                  "min": 0,
+                  "max": 1.0,
+                  "min": 0.0,
                   "step": 0.01,
                   "step_type": "float"
                 },
@@ -1758,6 +1776,7 @@
               "template": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
@@ -1771,7 +1790,7 @@
                 "name": "template",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -2191,7 +2210,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Inputs",
                 "dynamic": false,
@@ -2212,7 +2231,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
@@ -2233,6 +2252,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2575,6 +2595,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2583,6 +2604,7 @@
               "url": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Video URL",
                 "dynamic": false,
                 "info": "Enter the YouTube video URL to get transcripts from.",
@@ -2788,6 +2810,7 @@
               "input_value": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Input Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
@@ -2825,6 +2848,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -3143,6 +3167,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -3258,6 +3283,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
