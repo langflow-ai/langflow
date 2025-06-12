@@ -59,9 +59,7 @@ def try_setting_streaming_options(langchain_object):
     return langchain_object
 
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
-    """
-    Single braces {var} is used as variableand double braces {{var}} is for escaping
-    """
+    """Extract variable names from a prompt string using single braces for variables and double braces for escaping."""
     variables: list[str] = []
 
     # one or more '{',   the identifier,   one or more '}'
@@ -72,7 +70,7 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     for m in brace_pattern.finditer(prompt):
         open_run, var_name, close_run = m.groups()
 
-        # “real” variable only when both sides have the same *odd* length
+        # "real" variable only when both sides have the same *odd* length
         if len(open_run) == len(close_run) and len(open_run) % 2 == 1:
             clean_name = var_name.strip()
             if clean_name not in seen:  # avoid duplicates
