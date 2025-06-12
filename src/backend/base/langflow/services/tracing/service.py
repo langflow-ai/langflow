@@ -5,6 +5,7 @@ import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -274,12 +275,20 @@ class TracingService(Service):
 
     @staticmethod
     def _cleanup_inputs(inputs: dict[str, Any]):
-        inputs = inputs.copy()
-        sensitive_keywords = ["api_key", "password", "server_url"]
-        for key in inputs:
-            if any(sensitive_word in key for sensitive_word in sensitive_keywords):
-                inputs[key] = "*****"  # avoid logging api_keys for security reasons
-        return inputs
+        inputs = deepcopy(inputs)
+        sensitive_keywords = {"api_key", "password", "server_url"}
+
+        def _mask(obj: Any):
+            if isinstance(obj, dict):
+                return {
+                    k: "*****" if any(word in k.lower() for word in sensitive_keywords) else _mask(v)
+                    for k, v in obj.items()
+                }
+            if isinstance(obj, list):
+                return [_mask(i) for i in obj]
+            return obj
+
+        return _mask(inputs)
 
     def _start_component_traces(
         self,
