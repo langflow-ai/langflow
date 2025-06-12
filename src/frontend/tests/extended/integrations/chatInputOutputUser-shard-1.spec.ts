@@ -103,7 +103,9 @@ test(
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
 
-    await page.getByTestId("handle-urlcomponent-shownode-extracted pages-right").click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
 
     await page.waitForTimeout(600);
 
@@ -128,7 +130,9 @@ test(
       exact: true,
     });
     await page.getByText("Close").first().click();
-    await page.getByTestId("handle-urlcomponent-shownode-extracted pages-right").click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
     await page
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
@@ -141,9 +145,13 @@ test(
       timeout: 30000 * 3,
     });
 
-    await page.getByTestId("handle-urlcomponent-shownode-extracted pages-right").click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
     await page.waitForTimeout(600);
-    await page.getByTestId("handle-urlcomponent-shownode-extracted pages-right").click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
 
     await page
       .getByTestId("output-inspection-extracted pages-urlcomponent")
@@ -176,7 +184,9 @@ test(
       timeout: 30000 * 3,
     });
     await page.waitForTimeout(600);
-    await page.getByTestId("output-inspection-extracted pages-urlcomponent").click();
+    await page
+      .getByTestId("output-inspection-extracted pages-urlcomponent")
+      .click();
     await page.getByText(`Inspect the output of the component below.`, {
       exact: true,
     });
