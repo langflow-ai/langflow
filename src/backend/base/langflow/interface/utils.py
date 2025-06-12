@@ -58,6 +58,7 @@ def try_setting_streaming_options(langchain_object):
 
     return langchain_object
 
+
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     """Extract variable names from a prompt string using single braces for variables and double braces for escaping."""
     variables: list[str] = []
