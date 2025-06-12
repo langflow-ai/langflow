@@ -31,7 +31,8 @@ def get_filtered_inputs(component_class):
 def process_inputs(component_data: Input):
     """Processes and modifies an input configuration based on its type or name.
 
-    Adjusts properties such as value, advanced status, real-time refresh, and additional information for specific input types or names to ensure correct behavior in the UI and provider integration.
+    Adjusts properties such as value, advanced status, real-time refresh, and additional information for specific
+    input types or names to ensure correct behavior in the UI and provider integration.
 
     Args:
         component_data: The input configuration to process.
