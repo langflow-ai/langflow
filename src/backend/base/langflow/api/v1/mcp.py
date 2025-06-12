@@ -19,6 +19,7 @@ from sqlmodel import select
 
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
+from langflow.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from langflow.base.mcp.util import get_flow_snake_case
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
@@ -186,13 +187,12 @@ async def handle_list_tools():
                     continue
 
                 base_name = "_".join(flow.name.lower().split())
-                max_length = 30
-                name = base_name[:max_length]
+                name = base_name[:MAX_MCP_TOOL_NAME_LENGTH]
                 if name in existing_names:
                     i = 1
                     while True:
                         suffix = f"_{i}"
-                        truncated_base = base_name[: max_length - len(suffix)]
+                        truncated_base = base_name[: MAX_MCP_TOOL_NAME_LENGTH - len(suffix)]
                         candidate = f"{truncated_base}{suffix}"
                         if candidate not in existing_names:
                             name = candidate

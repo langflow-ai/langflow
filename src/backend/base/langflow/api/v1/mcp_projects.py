@@ -30,11 +30,13 @@ from langflow.api.v1.mcp import (
     with_db_session,
 )
 from langflow.api.v1.schemas import MCPInstallRequest, MCPSettings, SimplifiedAPIRequest
-from langflow.base.mcp.util import get_flow_snake_case
+from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH, MAX_MCP_TOOL_NAME_LENGTH
+from langflow.base.mcp.util import get_flow_snake_case, get_unique_name
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, Folder, User
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME, NEW_FOLDER_NAME
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.services.storage.utils import build_content_type_from_extension
 
@@ -390,10 +392,17 @@ async def install_mcp_config(
             logger.debug("Windows detected, using cmd command")
 
         name = project.name
-        name = "Starter Project" if name == "My Projects" else name
+        name = NEW_FOLDER_NAME if name == DEFAULT_FOLDER_NAME else name
 
         # Create the MCP configuration
-        mcp_config = {"mcpServers": {f"lf-{name.lower().replace(' ', '_')[:26]}": {"command": command, "args": args}}}
+        mcp_config = {
+            "mcpServers": {
+                f"lf-{name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 3)]}": {
+                    "command": command,
+                    "args": args,
+                }
+            }
+        }
 
         # Determine the config file path based on the client and OS
         if body.client.lower() == "cursor":
@@ -457,7 +466,7 @@ async def check_installed_mcp_servers(
                 raise HTTPException(status_code=404, detail="Project not found")
 
         # Project server name pattern
-        project_server_name = f"lf-{project.name.lower().replace(' ', '_')[:26]}"
+        project_server_name = f"lf-{project.name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 3)]}"
 
         # Check configurations for different clients
         results = []
@@ -525,20 +534,7 @@ class ProjectMCPServer:
 
                         # Use action_name if available, otherwise construct from flow name
                         base_name = flow.action_name or "_".join(flow.name.lower().split())
-                        max_length = 30
-                        name = base_name[:max_length]
-                        if name in existing_names:
-                            # Find a unique name by appending a number
-                            i = 1
-                            while True:
-                                # Reserve space for the number and underscore
-                                suffix = f"_{i}"
-                                truncated_base = base_name[: max_length - len(suffix)]
-                                candidate = f"{truncated_base}{suffix}"
-                                if candidate not in existing_names:
-                                    name = candidate
-                                    break
-                                i += 1
+                        name = get_unique_name(base_name, MAX_MCP_TOOL_NAME_LENGTH, existing_names)
 
                         # Use action_description if available, otherwise use defaults
                         description = flow.action_description or (
