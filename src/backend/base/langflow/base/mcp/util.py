@@ -81,14 +81,25 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
 
 
 def get_unique_name(base_name, max_length, existing_names):
+    # Convert existing_names to a set for O(1) lookups if not already a set
+    if not isinstance(existing_names, set):
+        existing_names = set(existing_names)
     name = base_name[:max_length]
     if name not in existing_names:
         return name
     i = 1
+    prev_suffix_len = 0
+    # Cache the most recent truncated_base to avoid repeated slicing
+    truncated_base_cache = base_name[:max_length]
     while True:
-        suffix = f"_{i}"
-        truncated_base = base_name[: max_length - len(suffix)]
-        candidate = f"{truncated_base}{suffix}"
+        # Precompute the suffix only once per loop
+        suffix = "_" + str(i)
+        suffix_len = len(suffix)
+        # Only re-compute truncated_base if suffix_len changes
+        if suffix_len != prev_suffix_len:
+            truncated_base_cache = base_name[: max_length - suffix_len]
+            prev_suffix_len = suffix_len
+        candidate = truncated_base_cache + suffix
         if candidate not in existing_names:
             return candidate
         i += 1
