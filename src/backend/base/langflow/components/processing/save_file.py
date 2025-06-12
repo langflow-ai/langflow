@@ -96,7 +96,7 @@ class SaveToFileComponent(Component):
         # Return the final file path and confirmation message
         final_path = Path.cwd() / file_path if not file_path.is_absolute() else file_path
 
-        return f"{confirmation} at {final_path}"
+        return Message(text=f"{confirmation} at {final_path}")
 
     def _get_input_type(self) -> str:
         """Determine the input type based on the provided input."""
