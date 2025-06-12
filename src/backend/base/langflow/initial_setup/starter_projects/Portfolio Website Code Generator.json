@@ -25,9 +25,9 @@
         "id": "reactflow__edge-TextInput-5rO9p{œdataTypeœ:œTextInputœ,œidœ:œTextInput-5rO9pœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-Te07A{œfieldNameœ:œsystem_messageœ,œidœ:œAnthropicModel-Te07Aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-5rO9p",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-5rO9pœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-5rO9pœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-Te07A",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œAnthropicModel-Te07Aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œAnthropicModel-Te07Aœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-AnthropicModel-baay5{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-baay5œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-GJfDv{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-GJfDvœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AnthropicModel-baay5",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-baay5œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-baay5œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-GJfDv",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-GJfDvœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-GJfDvœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-ParserComponent-FPw08{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-FPw08œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-GJfDv{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-GJfDvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-FPw08",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-FPw08œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-FPw08œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-GJfDv",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-GJfDvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-GJfDvœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -110,9 +110,9 @@
         "id": "reactflow__edge-File-nhzgk{œdataTypeœ:œFileœ,œidœ:œFile-nhzgkœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-FPw08{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-FPw08œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-nhzgk",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-nhzgkœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-nhzgkœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-FPw08",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-FPw08œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-FPw08œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -140,9 +140,9 @@
         "id": "reactflow__edge-AnthropicModel-Te07A{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-Te07Aœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XN5RE{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XN5REœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "AnthropicModel-Te07A",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-Te07Aœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-Te07Aœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-XN5RE",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XN5REœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XN5REœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -168,9 +168,9 @@
         "id": "reactflow__edge-parser-8Jyry{œdataTypeœ:œparserœ,œidœ:œparser-8Jyryœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-Te07A{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-Te07Aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-8Jyry",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-8Jyryœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-8Jyryœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-Te07A",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-Te07Aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-Te07Aœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -196,9 +196,9 @@
         "id": "xy-edge__StructuredOutput-GJfDv{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-GJfDvœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-8Jyry{œfieldNameœ:œinput_dataœ,œidœ:œparser-8Jyryœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-GJfDv",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-GJfDvœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-GJfDvœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "parser-8Jyry",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-8Jyryœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-8Jyryœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -360,6 +360,7 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
+                "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"

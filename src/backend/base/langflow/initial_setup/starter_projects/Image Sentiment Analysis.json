@@ -25,9 +25,9 @@
         "id": "reactflow__edge-OpenAIModel-CD8HQ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-CD8HQœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-vliuW{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-vliuWœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIModel-CD8HQ",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-CD8HQœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-CD8HQœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-vliuW",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-vliuWœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-vliuWœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-parser-aS2Gl{œdataTypeœ:œparserœ,œidœ:œparser-aS2Glœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-hsLTH{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hsLTHœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-aS2Gl",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-aS2Glœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-aS2Glœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-hsLTH",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hsLTHœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-hsLTHœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "xy-edge__StructuredOutput-vliuW{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-vliuWœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-aS2Gl{œfieldNameœ:œinput_dataœ,œidœ:œparser-aS2Glœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-vliuW",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-vliuWœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-vliuWœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "parser-aS2Gl",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-aS2Glœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-aS2Glœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -110,9 +110,9 @@
         "id": "xy-edge__OpenAIModel-a1V9Z{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-a1V9Zœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-vliuW{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-vliuWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "OpenAIModel-a1V9Z",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-a1V9Zœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-a1V9Zœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-vliuW",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-vliuWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-vliuWœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -137,9 +137,9 @@
         "id": "xy-edge__Prompt-KyCGl{œdataTypeœ:œPromptœ,œidœ:œPrompt-KyCGlœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-a1V9Z{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-a1V9Zœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-KyCGl",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-KyCGlœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-KyCGlœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-a1V9Z",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-a1V9Zœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-a1V9Zœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -164,9 +164,9 @@
         "id": "xy-edge__ChatInput-x8DKD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-x8DKDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-a1V9Z{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-a1V9Zœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-x8DKD",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-x8DKDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-x8DKDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-a1V9Z",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-a1V9Zœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-a1V9Zœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -994,6 +994,7 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
+                "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"
@@ -1007,7 +1008,7 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "selected": "LanguageModel",
+                "selected": null,
                 "tool_mode": true,
                 "types": [
                   "LanguageModel"
@@ -1850,6 +1851,7 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "selected": null,
                 "tool_mode": true,
                 "types": [
                   "LanguageModel"

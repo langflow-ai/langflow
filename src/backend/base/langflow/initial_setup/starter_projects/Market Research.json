@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-xGZs1{œdataTypeœ:œChatInputœ,œidœ:œChatInput-xGZs1œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-GuZvV{œfieldNameœ:œinput_valueœ,œidœ:œAgent-GuZvVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-xGZs1",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-xGZs1œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-xGZs1œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-GuZvV",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-GuZvVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-GuZvVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-Agent-GuZvV{œdataTypeœ:œAgentœ,œidœ:œAgent-GuZvVœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-TgwNF{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-TgwNFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-GuZvV",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-GuZvVœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-GuZvVœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-TgwNF",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-TgwNFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-TgwNFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-TavilySearchComponent-oQBdN{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-oQBdNœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-GuZvV{œfieldNameœ:œtoolsœ,œidœ:œAgent-GuZvVœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TavilySearchComponent-oQBdN",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-oQBdNœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-oQBdNœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-GuZvV",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-GuZvVœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-GuZvVœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "reactflow__edge-OpenAIModel-kaJVR{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-kaJVRœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-TgwNF{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-TgwNFœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIModel-kaJVR",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-kaJVRœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-kaJVRœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-TgwNF",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-TgwNFœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-TgwNFœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -139,9 +139,9 @@
         "id": "reactflow__edge-parser-4iVNG{œdataTypeœ:œparserœ,œidœ:œparser-4iVNGœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-eTO66{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-eTO66œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-4iVNG",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-4iVNGœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-4iVNGœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-eTO66",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-eTO66œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-eTO66œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -167,9 +167,9 @@
         "id": "xy-edge__StructuredOutput-TgwNF{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-TgwNFœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-4iVNG{œfieldNameœ:œinput_dataœ,œidœ:œparser-4iVNGœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-TgwNF",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-TgwNFœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-TgwNFœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "parser-4iVNG",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-4iVNGœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-4iVNGœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -2278,6 +2278,7 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
+                "selected": null,
                 "tool_mode": true,
                 "types": [
                   "Message"
