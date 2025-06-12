@@ -10,6 +10,7 @@ from langflow.components.langchain_utilities import ToolCallingAgentComponent
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.graph.graph.base import Graph
+
 from pydantic import BaseModel
 
 
@@ -143,6 +144,7 @@ async def test_component_tool_with_api_key():
     assert "message_response" in tool_calling_agent._outputs_map["response"].value.get_text()
 
 @pytest.mark.api_key_required
+@pytest.mark.usefixtures("client")
 async def test_sql_component_to_toolkit(test_db):
     sql_component = SQLComponent()
     sql_component.set(database_url=f"sqlite:///{test_db}")
