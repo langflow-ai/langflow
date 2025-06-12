@@ -35,7 +35,13 @@ class GridGainVectorStoreComponent(LCVectorStoreComponent):
             required=True,
         ),
         StrInput(name="host", display_name="Host", info="GridGain server hostname or IP address", required=True),
-        IntInput(name="port", display_name="Port", info="GridGain server port number (default: 10800)", required=True),
+        IntInput(
+            name="port",
+            display_name="Port",
+            info="GridGain server port number (default: 10800)",
+            required=True,
+            value=10800,
+        ),
         FloatInput(
             name="score_threshold",
             display_name="Score Threshold",
