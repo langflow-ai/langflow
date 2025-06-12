@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.30cf3ea6.css">
-<script src="/assets/js/runtime~main.3f58fe66.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.766a5707.js" defer="defer"></script>
 <script src="/assets/js/main.8d713cb6.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -158,6 +158,7 @@ You can upload a file to Langflow one time, and use it with multiple flows.</li>
 <li>In <code>v2</code>, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.</li>
 <li>Responses from the <code>/v2</code> endpoint contain more descriptive metadata.</li>
 <li>The <code>v2</code> endpoints require authentication by an API key or JWT.</li>
+<li>The <code>/v2/files</code> endpoint does not support sending <strong>image</strong> files to flows through the API. To send <strong>image</strong> files to your flows through the API, follow the procedure in <a href="#upload-image-files-v1">Upload image files (v1)</a>.</li>
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="filesv1-endpoints">Files/V1 endpoints<a href="#filesv1-endpoints" class="hash-link" aria-label="Direct link to Files/V1 endpoints" title="Direct link to Files/V1 endpoints">​</a></h2>
 <p>Use the <code>/files</code> endpoint to add or delete files between your local machine and Langflow.</p>
@@ -214,12 +215,14 @@ You must include the ampersand (<code>@</code>) in the request to instruct curl 
 <p>The file is uploaded in the format <code>USER_ID/FILE_ID.FILE_EXTENSION</code>, and the API returns metadata about the uploaded file:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>{</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;id&quot;:&quot;d44dc2e1-9ae9-4cf6-9114-8d34a6126c94&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;name&quot;:&quot;engine_manual&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;path&quot;:&quot;07e5b864-e367-4f52-b647-a48035ae7e5e/d44dc2e1-9ae9-4cf6-9114-8d34a6126c94.pdf&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;size&quot;:851160,</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>  &quot;provider&quot;:null</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="send-files-to-your-flows-v2">Send files to your flows (v2)<a href="#send-files-to-your-flows-v2" class="hash-link" aria-label="Direct link to Send files to your flows (v2)" title="Direct link to Send files to your flows (v2)">​</a></h3>
+<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>The <code>/v2/files</code> endpoint does not support sending <strong>image</strong> files to flows.
+To send <strong>image</strong> files to your flows through the API, follow the procedure in <a href="#upload-image-files-v1">Upload image files (v1)</a>.</p></div></div>
 <p>Send a file to your flow for analysis using the <a href="/components-data#file">File</a> component and the API.
 Your flow must contain a <a href="/components-data#file">File</a> component to receive the file.</p>
 <p>The default file limit is 100 MB. To configure this value, change the <code>LANGFLOW_MAX_FILE_SIZE_UPLOAD</code> environment variable.
 For more information, see <a href="/environment-variables#supported-variables">Supported environment variables</a>.</p>
 <ol>
-<li>To send an image to your flow with the API, POST the image file to the <code>/api/v2/files</code> endpoint.
+<li>To send a file to your flow with the API, POST the file to the <code>/api/v2/files</code> endpoint.
 Replace <strong>FILE_NAME</strong> with the uploaded file name.
 This is the same step described in <a href="#upload-file-v2">Upload file (v2)</a>, but since you need the filename to upload to your flow, it is included here.</li>
 </ol>
