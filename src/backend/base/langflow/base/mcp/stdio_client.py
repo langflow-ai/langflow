@@ -7,9 +7,8 @@ from typing import Any, cast
 
 import aiofiles
 from anyio import Path
-from langchain_core.tools import StructuredTool
 from loguru import logger
-from mcp import ClientSession, StdioServerParameters
+from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 
 
@@ -28,7 +27,7 @@ class MCPStdioClient:
         self._connection_params: dict[str, Any] | None = None
         self._connected = False
 
-    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
+    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[types.Tool]:
         """Connect to an MCP server via STDIO transport.
 
         Args:
@@ -172,7 +171,7 @@ class MCPStdioClient:
                         msg = "Session is None after successful initialization"
                         raise RuntimeError(msg)
                     response = await self.session.list_tools()
-                    return self._normalize_tools(response.tools)
+                    return response.tools
 
             except FileNotFoundError as e:
                 # Command not found, provide clear error message
@@ -302,56 +301,4 @@ class MCPStdioClient:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.disconnect()
-
-    @staticmethod
-    def _normalize_tools(tools_raw: list) -> list[StructuredTool]:
-        """Convert MCP tools to StructuredTool objects for Langflow compatibility.
-
-        Note: This creates placeholder tool functions that just echo their inputs.
-        The actual tool execution happens via the run_tool method, which properly
-        routes calls to the MCP server. This design supports Langflow's tool
-        preview functionality while enabling real server round-trips.
-        """
-        structured_tools: list[StructuredTool] = []
-
-        for tool in tools_raw:
-            try:
-                if hasattr(tool, "name") and hasattr(tool, "description"):
-                    # MCP Tool object
-                    name = tool.name
-                    description = tool.description
-                    # input_schema = getattr(tool, "inputSchema", {})  # Unused, commenting out
-                elif isinstance(tool, dict):
-                    # Dictionary representation
-                    name = tool.get("name", "")
-                    description = tool.get("description", "")
-                    # input_schema = tool.get("inputSchema", {})  # Unused, commenting out
-                else:
-                    logger.warning(f"Skipping unrecognized tool format: {tool}")
-                    continue
-
-                if not name:
-                    logger.warning(f"Skipping tool with empty name: {tool}")
-                    continue
-
-                # Create a simple StructuredTool for Langflow
-                # Use closure to capture the current value of name
-                def create_tool_func(tool_name):
-                    def tool_func(**kwargs):
-                        return f"Tool {tool_name} called with {kwargs}"
-
-                    return tool_func
-
-                structured_tool = StructuredTool.from_function(
-                    func=create_tool_func(name),
-                    name=name,
-                    description=description or f"MCP tool: {name}",
-                )
-                structured_tools.append(structured_tool)
-
-            except (ValueError, TypeError, AttributeError) as e:
-                logger.warning(f"Error converting tool to StructuredTool: {e}")
-                continue
-
-        return structured_tools
+        await self.close()

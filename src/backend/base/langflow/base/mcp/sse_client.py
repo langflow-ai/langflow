@@ -361,7 +361,7 @@ class MCPSseClient:
         headers: dict[str, str] | None = None,
         timeout_seconds: int = 30,
         _sse_read_timeout_seconds: int = 30,  # Unused but kept for API compatibility
-    ) -> list[StructuredTool]:
+    ) -> list[types.Tool]:
         """Connect to MCP server with transport detection and fallback."""
         is_valid, error_msg = await self.validate_url(url)
         if not is_valid:
@@ -384,9 +384,8 @@ class MCPSseClient:
                 msg = "Session is None after successful initialization"
                 raise RuntimeError(msg)
             response = await self.session.list_tools()
-            tools_list = self._normalize_tools(response.tools)
-            logger.info(f"Successfully connected via Streamable HTTP, found {len(tools_list)} tools")
-            return tools_list
+            logger.info(f"Successfully connected via Streamable HTTP, found {len(response.tools)} tools")
+            return response.tools
 
         # Phase 2: Try HTTP+SSE (MCP 2024-11-05)
         logger.debug("Phase 2: Attempting HTTP+SSE transport")
@@ -402,7 +401,7 @@ class MCPSseClient:
 
             if "result" in tools_response and "tools" in tools_response["result"]:
                 raw_tools = tools_response["result"]["tools"]
-                tools_list = self._normalize_tools([types.Tool(**tool) for tool in raw_tools])
+                tools_list = [types.Tool(**tool) for tool in raw_tools]
                 logger.info(f"Successfully connected via HTTP+SSE, found {len(tools_list)} tools")
                 return tools_list
 
@@ -445,7 +444,7 @@ class MCPSseClient:
                     except (ValueError, TypeError) as exc:
                         logger.warning(f"Error parsing tool '{tool}': {exc}")
 
-                return self._normalize_tools(tool_objects)
+                return tool_objects
 
             logger.warning("HTTP+SSE server responded to tools/list but returned no tools")
             return []
@@ -469,7 +468,7 @@ class MCPSseClient:
             else:
                 raw_tools = response
 
-            return self._normalize_tools(raw_tools)
+            return raw_tools
 
         # No transport active
         msg = "Not connected to any transport. Call connect_to_server() first."
@@ -542,55 +541,3 @@ class MCPSseClient:
                 "version": self._version,
             },
         }
-
-    @staticmethod
-    def _normalize_tools(tools_raw: list) -> list[StructuredTool]:
-        """Convert MCP tools to StructuredTool objects for Langflow compatibility.
-
-        Note: This creates placeholder tool functions that just echo their inputs.
-        The actual tool execution happens via the run_tool/call_tool methods, which
-        properly route calls to the MCP server. This design supports Langflow's
-        tool preview functionality while enabling real server round-trips.
-        """
-        structured_tools: list[StructuredTool] = []
-
-        for tool in tools_raw:
-            try:
-                if hasattr(tool, "name") and hasattr(tool, "description"):
-                    # MCP Tool object
-                    name = tool.name
-                    description = tool.description
-                    # input_schema = getattr(tool, "inputSchema", {})  # Unused, commenting out
-                elif isinstance(tool, dict):
-                    # Dictionary representation
-                    name = tool.get("name", "")
-                    description = tool.get("description", "")
-                    # input_schema = tool.get("inputSchema", {})  # Unused, commenting out
-                else:
-                    logger.warning(f"Skipping unrecognized tool format: {tool}")
-                    continue
-
-                if not name:
-                    logger.warning(f"Skipping tool with empty name: {tool}")
-                    continue
-
-                # Create a simple StructuredTool for Langflow
-                # Use closure to capture the current value of name
-                def create_tool_func(tool_name):
-                    def tool_func(**kwargs):
-                        return f"Tool {tool_name} called with {kwargs}"
-
-                    return tool_func
-
-                structured_tool = StructuredTool.from_function(
-                    func=create_tool_func(name),
-                    name=name,
-                    description=description or f"MCP tool: {name}",
-                )
-                structured_tools.append(structured_tool)
-
-            except (ValueError, TypeError, AttributeError) as e:
-                logger.warning(f"Error converting tool to StructuredTool: {e}")
-                continue
-
-        return structured_tools
