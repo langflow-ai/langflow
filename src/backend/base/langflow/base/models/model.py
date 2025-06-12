@@ -195,6 +195,23 @@ class LCModelComponent(Component):
         input_value: str | Message | AsyncIterator | Iterator,
         system_message: str | None = None,
     ) -> Message:
+        """Get chat result from a language model.
+
+        This method handles the core logic of getting a response from a language model,
+        including handling different input types, streaming, and error handling.
+
+        Args:
+            runnable (LanguageModel): The language model to use for generating responses
+            stream (bool): Whether to stream the response
+            input_value (str | Message | AsyncIterator | Iterator): The input to send to the model
+            system_message (str | None, optional): System message to prepend. Defaults to None.
+
+        Returns:
+            The model response, either as a Message object or raw content
+
+        Raises:
+            ValueError: If the input message is empty or if there's an error during model invocation
+        """
         messages: list[BaseMessage] = []
         if not input_value and not system_message:
             msg = "The message you want to send to the model is empty."
@@ -236,27 +253,7 @@ class LCModelComponent(Component):
                 }
             )
             if stream:
-                if self.is_connected_to_chat_output():
-                    # Add a Message
-                    if hasattr(self, "graph"):
-                        session_id = self.graph.session_id
-                    elif hasattr(self, "_session_id"):
-                        session_id = self._session_id
-                    else:
-                        session_id = None
-                    model_message = Message(
-                        text=runnable.stream(inputs),
-                        sender=MESSAGE_SENDER_AI,
-                        sender_name="AI",
-                        properties={"icon": self.icon, "state": "partial"},
-                        session_id=session_id,
-                    )
-                    model_message.properties.source = self._build_source(self._id, self.display_name, self)
-                    lf_message = await self.send_message(model_message)
-                    result = lf_message.text
-                else:
-                    message = runnable.invoke(inputs)
-                    result = message.content if hasattr(message, "content") else message
+                lf_message, result = await self._handle_stream(runnable, inputs)
             else:
                 message = runnable.invoke(inputs)
                 result = message.content if hasattr(message, "content") else message
@@ -273,6 +270,40 @@ class LCModelComponent(Component):
                 raise ValueError(message) from e
             raise
         return lf_message or Message(text=result)
+
+    async def _handle_stream(self, runnable, inputs):
+        """Handle streaming responses from the language model.
+
+        Args:
+            runnable: The language model configured for streaming
+            inputs: The inputs to send to the model
+
+        Returns:
+            tuple: (Message object if connected to chat output, model result)
+        """
+        lf_message = None
+        if self.is_connected_to_chat_output():
+            # Add a Message
+            if hasattr(self, "graph"):
+                session_id = self.graph.session_id
+            elif hasattr(self, "_session_id"):
+                session_id = self._session_id
+            else:
+                session_id = None
+            model_message = Message(
+                text=runnable.stream(inputs),
+                sender=MESSAGE_SENDER_AI,
+                sender_name="AI",
+                properties={"icon": self.icon, "state": "partial"},
+                session_id=session_id,
+            )
+            model_message.properties.source = self._build_source(self._id, self.display_name, self)
+            lf_message = await self.send_message(model_message)
+            result = lf_message.text
+        else:
+            message = runnable.invoke(inputs)
+            result = message.content if hasattr(message, "content") else message
+        return lf_message, result
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
