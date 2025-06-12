@@ -170,7 +170,7 @@ class URLComponent(Component):
 
     outputs = [
         Output(display_name="Extracted Pages", name="page_results", method="fetch_content"),
-        Output(display_name="Raw Content", name="raw_results", method="fetch_content_as_message"),
+        Output(display_name="Raw Content", name="raw_results", method="fetch_content_as_message", tool_mode=True),
     ]
 
     @staticmethod
