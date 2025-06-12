@@ -142,7 +142,7 @@ async def test_component_tool_with_api_key():
     assert len(results) == 3
     assert "message_response" in tool_calling_agent._outputs_map["response"].value.get_text()
 
-
+@pytest.mark.api_key_required
 async def test_sql_component_to_toolkit(test_db):
     sql_component = SQLComponent()
     sql_component.set(database_url=f"sqlite:///{test_db}")
