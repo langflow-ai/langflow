@@ -788,8 +788,8 @@ class Component(CustomComponent):
     def _validate_outputs(self) -> None:
         # Raise Error if some rule isn't met
         if self.selected_output is not None:
-            output_names = [output.name for output in self.outputs]
-            if self.selected_output not in output_names:
+            if self.selected_output not in self._outputs_map:
+                output_names = ', '.join(list(self._outputs_map.keys()))
                 msg = f"selected_output '{self.selected_output}' is not valid. Must be one of: {output_names}"
                 raise ValueError(msg)
 
