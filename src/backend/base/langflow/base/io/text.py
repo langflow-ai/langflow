@@ -1,4 +1,4 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 
 
 class TextComponent(Component):

@@ -27,7 +27,7 @@ from langflow.utils.util import sync_to_async
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langflow.custom import Component
+    from langflow.custom.custom_component.component import Component
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.base import CycleEdge, Edge
     from langflow.graph.graph.base import Graph

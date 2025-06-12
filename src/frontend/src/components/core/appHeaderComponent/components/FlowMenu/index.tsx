@@ -197,7 +197,10 @@ export const MenuBar = memo((): JSX.Element => {
         sideOffset={15}
       >
         <span className="text-sm font-semibold">Flow Details</span>
-        <FlowSettingsComponent close={() => setOpenSettings(false)} />
+        <FlowSettingsComponent
+          close={() => setOpenSettings(false)}
+          open={openSettings}
+        />
       </PopoverContent>
     </Popover>
   ) : (

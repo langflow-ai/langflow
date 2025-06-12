@@ -11,7 +11,7 @@ from langflow.components.processing import ParseDataComponent
 from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.prompts import PromptComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
-from langflow.graph import Graph
+from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
