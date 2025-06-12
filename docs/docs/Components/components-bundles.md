@@ -11,6 +11,10 @@ For more information on bundled components, see the component provider's documen
 
 ## Agent components
 
+**Agents** use LLMs as a brain to analyze problems and select external tools.
+
+For more information, see [Agents](/agents-overview).
+
 ### CrewAI Agent
 
 This component represents an Agent of CrewAI allowing for the creation of specialized AI agents with defined roles goals and capabilities within a crew.
