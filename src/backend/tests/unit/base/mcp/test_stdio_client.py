@@ -241,14 +241,6 @@ class TestMCPStdioClientToolExecution:
         return client
 
     @pytest.mark.asyncio
-    async def test_run_tool_not_connected(self):
-        """Test tool execution when not connected."""
-        client = MCPStdioClient()
-
-        with pytest.raises(ValueError, match="Session not initialized"):
-            await client.run_tool("test_tool", {})
-
-    @pytest.mark.asyncio
     async def test_run_tool_connection_error(self, connected_client):
         """Test tool execution with connection errors."""
         with patch("langflow.base.mcp.stdio_client.stdio_client") as mock_stdio_client:
@@ -320,12 +312,3 @@ class TestMCPStdioClientLifecycle:
         with patch.object(client, "close") as mock_close:
             await client.disconnect()
             mock_close.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_context_manager(self, client):
-        """Test async context manager protocol."""
-        async with client as ctx_client:
-            assert ctx_client is client
-
-        # After exiting context, disconnect should have been called
-        # We can't easily test this without mocking, but the __aexit__ method calls disconnect

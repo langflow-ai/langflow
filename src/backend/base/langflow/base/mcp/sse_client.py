@@ -1,17 +1,18 @@
 import asyncio
 import json
-from contextlib import AsyncExitStack, suppress
+from contextlib import suppress
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
-from httpx import HTTPStatusError
 from httpx import codes as httpx_codes
 from langchain_core.tools import StructuredTool
 from loguru import logger
 
 # Core SDK re-exports
 from mcp import ClientSession, types
+
+from langflow.base.mcp.base_client import BaseMCPClient
 
 # SSE helper from core SDK
 from langflow.utils.version import get_version_info
@@ -32,7 +33,7 @@ class MCPTransportError(Exception):
     """Custom exception for MCP transport errors."""
 
 
-class MCPSseClient:
+class MCPSseClient(BaseMCPClient[dict[str, Any]]):
     """MCP SSE Client with support for multiple transport protocols.
 
     Supports:
@@ -40,12 +41,13 @@ class MCPSseClient:
     - HTTP+SSE dual-endpoint transport (MCP 2024-11-05)
 
     Features enhanced retry logic, timeout controls, and transport detection.
+    Inherits common functionality from BaseMCPClient while implementing SSE-specific
+    connection and tool execution logic.
     """
 
     def __init__(self) -> None:
+        super().__init__()
         self.sse = None
-        self.session: ClientSession | None = None
-        self.exit_stack = AsyncExitStack()
 
         # Enhanced retry configuration
         self.max_retries = 3
@@ -71,10 +73,6 @@ class MCPSseClient:
 
         # Get the project version
         self._version = get_version_info()["version"]
-
-        # Compatibility fields for existing API
-        self._connection_params: dict[str, Any] | None = None
-        self._connected = False
 
     def _calculate_retry_delay(self, attempt: int) -> float:
         """Calculate exponential backoff delay for retry attempts."""
@@ -200,63 +198,75 @@ class MCPSseClient:
                         elif line.startswith("data:"):
                             event_data_lines.append(line[5:].strip())
 
-                    # Join all data lines for complete event data (handles multi-line data per SSE spec)
-                    event_data = "\n".join(event_data_lines) if event_data_lines else None
-
-                    if event_type == "endpoint" and event_data and not endpoint_discovered:
-                        await endpoint_queue.put(("endpoint", event_data))
-                        endpoint_discovered = True
-
-                    elif event_type == "message" and event_data:
+                    if event_type and event_data_lines:
+                        # Join multi-line data and parse JSON
+                        event_data_str = "\n".join(event_data_lines)
                         try:
-                            response_json = json.loads(event_data)
-                            await endpoint_queue.put(("response", response_json))
+                            event_data = json.loads(event_data_str)
                         except json.JSONDecodeError as e:
-                            logger.warning(f"Invalid JSON in SSE message: {e}")
+                            logger.warning(f"Failed to parse SSE event data as JSON: {e}")
+                            await endpoint_queue.put(("error", f"Invalid JSON in SSE event: {event_data_str}"))
+                            return
 
-        except (httpx.HTTPError, asyncio.TimeoutError, ConnectionError) as e:
-            await endpoint_queue.put(("error", f"HTTP+SSE discovery handler error: {e}"))
+                        if event_type == "endpoint" and not endpoint_discovered:
+                            logger.debug(f"MCP HTTP+SSE endpoint discovered: {event_data}")
+                            await endpoint_queue.put(("endpoint", event_data))
+                            endpoint_discovered = True
+
+                        elif event_type == "message":
+                            # logger.debug(f"MCP HTTP+SSE message: {event_data}")
+                            await endpoint_queue.put(("message", event_data))
+
+        except (httpx.HTTPError, asyncio.TimeoutError, Exception) as e:
+            logger.debug(f"HTTP+SSE discovery handler error: {e}")
+            await endpoint_queue.put(("error", f"HTTP+SSE discovery error: {e}"))
 
     async def _mcp_http_sse_send_request(self, request_data: dict) -> dict:
-        """Send a request via HTTP+SSE pattern and wait for response."""
-        if not self.discovered_endpoint:
-            msg = "No discovered endpoint for HTTP+SSE requests"
+        """Send request via HTTP+SSE transport and wait for response."""
+        if self.discovered_endpoint is None or self.response_futures is None:
+            msg = "HTTP+SSE transport not initialized"
             raise RuntimeError(msg)
 
-        request_id = str(self.request_id_counter)
+        # Generate unique request ID
         self.request_id_counter += 1
-
+        request_id = str(self.request_id_counter)
         request_data["id"] = request_id
 
-        future: asyncio.Future[dict] = asyncio.Future()
-        self.response_futures[request_id] = future
+        # Create future for this request
+        response_future: asyncio.Future[dict] = asyncio.Future()
+        self.response_futures[request_id] = response_future
 
         try:
-            async with httpx.AsyncClient(timeout=self.request_timeout) as client:
-                response = await client.post(
+            # Send request to the discovered endpoint
+            async with (
+                httpx.AsyncClient(timeout=self.request_timeout) as client,
+                client.stream(
+                    "POST",
                     self.discovered_endpoint,
                     json=request_data,
                     headers={"Content-Type": "application/json"},
-                )
-
+                ) as response,
+            ):
                 if response.status_code != HTTP_STATUS_OK:
-                    # Include response context in error message for better debugging
-                    response_text = ""
-                    try:
-                        response_text = response.text[:200]  # Limit to first 200 chars
-                    except (AttributeError, UnicodeDecodeError, ValueError):
-                        response_text = "<unable to read response text>"
-                    msg = f"HTTP {response.status_code}: {response_text}"
-                    raise HTTPStatusError(msg, request=None, response=response)
+                    error_msg = f"HTTP+SSE request failed with status {response.status_code}"
+                    raise httpx.HTTPStatusError(error_msg, request=response.request, response=response)
 
-            # Wait for the response via SSE
-            return await asyncio.wait_for(future, timeout=self.request_timeout)
+                # Wait for response via the discovery handler
+                return await asyncio.wait_for(response_future, timeout=self.request_timeout)
 
-        except asyncio.TimeoutError as exc:
-            msg = f"Request {request_id} timed out"
-            raise TimeoutError(msg) from exc
-        finally:
+        except asyncio.TimeoutError:
+            # Clean up the future
             self.response_futures.pop(request_id, None)
+            if not response_future.done():
+                response_future.cancel()
+            msg = "HTTP+SSE request timed out"
+            raise asyncio.TimeoutError(msg) from None
+        except Exception:
+            # Clean up the future on any error
+            self.response_futures.pop(request_id, None)
+            if not response_future.done():
+                response_future.cancel()
+            raise
 
     async def _try_http_sse_transport(
         self,
@@ -267,59 +277,66 @@ class MCPSseClient:
         """Try to connect using HTTP+SSE transport (MCP 2024-11-05)."""
         logger.debug(f"Attempting HTTP+SSE transport (MCP 2024-11-05) at {url}")
 
-        endpoint_queue: asyncio.Queue[tuple[str, str | dict]] = asyncio.Queue()
-        discovery_task = None
-
         try:
-            discovery_task = asyncio.create_task(self._mcp_http_sse_discovery_handler(url, headers, endpoint_queue))
+            # Create queue for endpoint discovery
+            endpoint_queue: asyncio.Queue[tuple[str, str | dict]] = asyncio.Queue()
 
-            # Wait for either endpoint discovery or error
-            async with asyncio.timeout(self.discovery_timeout):
-                event_type, event_data = await endpoint_queue.get()
+            # Start discovery handler
+            self.discovery_task = asyncio.create_task(
+                self._mcp_http_sse_discovery_handler(url, headers, endpoint_queue)
+            )
 
-            if event_type == "error":
-                logger.debug(f"HTTP+SSE transport failed: {event_data}")
+            # Wait for endpoint discovery with timeout
+            try:
+                while True:
+                    event_type, event_data = await asyncio.wait_for(
+                        endpoint_queue.get(), timeout=self.discovery_timeout
+                    )
+
+                    if event_type == "error":
+                        logger.debug(f"HTTP+SSE transport error: {event_data}")
+                        return False
+
+                    if event_type == "endpoint":
+                        # Store discovered endpoint
+                        if isinstance(event_data, dict) and "uri" in event_data:
+                            self.discovered_endpoint = event_data["uri"]
+                            logger.debug(f"HTTP+SSE endpoint discovered: {self.discovered_endpoint}")
+
+                            # Initialize session via HTTP+SSE
+                            init_request = {
+                                "jsonrpc": "2.0",
+                                "method": "initialize",
+                                "params": self._get_initialize_request_params("2024-11-05"),
+                            }
+
+                            try:
+                                init_response = await self._mcp_http_sse_send_request(init_request)
+                                if "result" in init_response:
+                                    self.init_result = types.InitializeResult(**init_response["result"])
+                                    logger.info("HTTP+SSE session initialized successfully")
+                                    return True
+                            except (ConnectionError, OSError, httpx.HTTPError, asyncio.TimeoutError) as e:
+                                logger.debug(f"HTTP+SSE initialization failed: {e}")
+                                return False
+
+                    elif event_type == "message" and isinstance(event_data, dict) and "id" in event_data:
+                        # Handle responses to our requests
+                        request_id = str(event_data["id"])
+                        if request_id in self.response_futures:
+                            future = self.response_futures.pop(request_id)
+                            if not future.done():
+                                future.set_result(event_data)
+
+            except asyncio.TimeoutError:
+                logger.debug("HTTP+SSE endpoint discovery timed out")
                 return False
-            if event_type == "endpoint":
-                # event_data should be a string for endpoint events
-                if isinstance(event_data, str):
-                    self.discovered_endpoint = event_data
-                    logger.debug(f"Discovered HTTP+SSE endpoint: {event_data}")
-                else:
-                    logger.warning(f"Expected string for endpoint event, got {type(event_data)}: {event_data}")
-                    return False
 
-                # Set up response handler task
-                self.discovery_task = discovery_task
-
-                # Perform initialization handshake
-                init_request = {
-                    "jsonrpc": "2.0",
-                    "method": "initialize",
-                    "params": self._get_initialize_request_params("2024-11-05"),
-                }
-
-                init_response = await self._mcp_http_sse_send_request(init_request)
-
-                if "result" in init_response:
-                    self.init_result = types.InitializeResult(**init_response["result"])
-                    logger.info(f"Successfully connected using HTTP+SSE transport at {url}")
-                    return True
-                logger.debug("HTTP+SSE initialization failed: no result in response")
-                return False
-            return False  # noqa: TRY300
-
-        except asyncio.TimeoutError:
-            logger.debug(f"HTTP+SSE transport discovery timed out at {url}")
+        except (ConnectionError, OSError, httpx.HTTPError, asyncio.TimeoutError) as e:
+            logger.debug(f"HTTP+SSE transport setup failed: {e}")
             return False
-        except (ConnectionError, OSError, httpx.HTTPError) as exc:
-            logger.debug(f"HTTP+SSE transport failed at {url}: {exc}")
-            return False
-        finally:
-            if discovery_task and not self.discovery_task:
-                discovery_task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await discovery_task
+
+        return False
 
     async def connect_to_server_with_retry(
         self,
@@ -329,15 +346,8 @@ class MCPSseClient:
         sse_read_timeout_seconds: int = 30,
         max_retries: int | None = None,
     ):
-        """Connect with retry logic and exponential backoff."""
-        if max_retries is None:
-            max_retries = self.max_retries
-
-        is_valid, error_msg = await self.validate_url(url)
-        if not is_valid:
-            msg = f"Invalid URL: {error_msg}"
-            raise ValueError(msg)
-
+        """Connect to server with retry logic and exponential backoff."""
+        max_retries = max_retries or self.max_retries
         last_exception = None
 
         for attempt in range(max_retries + 1):
@@ -369,6 +379,13 @@ class MCPSseClient:
             raise ValueError(msg)
 
         url = await self.pre_check_redirect(url) or url
+
+        # Store connection parameters
+        self._connection_params = {
+            "url": url,
+            "headers": headers,
+            "timeout_seconds": timeout_seconds,
+        }
 
         # Phase 1: Try Streamable HTTP (MCP 2025-03-26)
         logger.debug("Phase 1: Attempting Streamable HTTP transport")
@@ -488,15 +505,19 @@ class MCPSseClient:
         msg = "Not connected to any transport"
         raise RuntimeError(msg)
 
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-        """Run a tool with the given arguments.
+    async def _execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+        """Execute a tool using SSE transport (reuses existing session).
 
-        Compatibility method for existing Langflow integration.
+        Args:
+            tool_name: Name of the tool to execute
+            arguments: Dictionary of arguments for the tool
+
+        Returns:
+            Result of the tool execution
+
+        Raises:
+            ValueError: For invalid tool parameters or execution failures
         """
-        if not self._connected:
-            msg = "Session not initialized or disconnected. Call connect_to_server first."
-            raise ValueError(msg)
-
         try:
             result = await self.call_tool(tool_name, arguments)
 
@@ -514,14 +535,11 @@ class MCPSseClient:
             self._connected = False
             raise
 
-    async def close(self):
-        """Close the connection and cleanup resources."""
+    async def _cleanup_transport(self):
+        """Perform SSE-specific cleanup operations."""
         await self._cleanup_discovery_task()
-        await self.exit_stack.aclose()
-        self.session = None
         self.connected_transport = None
         self.discovered_endpoint = None
-        self._connected = False
 
     async def _cleanup_discovery_task(self):
         """Clean up the discovery task if running."""

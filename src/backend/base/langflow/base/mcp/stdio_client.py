@@ -2,7 +2,6 @@ import asyncio
 import contextlib
 import os
 import platform
-from contextlib import AsyncExitStack
 from typing import Any, cast
 
 import aiofiles
@@ -11,21 +10,20 @@ from loguru import logger
 from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 
+from langflow.base.mcp.base_client import BaseMCPClient
 
-class MCPStdioClient:
+
+class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
     """MCP STDIO Client for process-based MCP servers.
 
     Features improved error handling, cancellation safety, and environment support.
+    Inherits common functionality from BaseMCPClient while implementing STDIO-specific
+    connection and tool execution logic.
     """
 
     def __init__(self) -> None:
-        self.session: ClientSession | None = None
-        self.exit_stack = AsyncExitStack()
+        super().__init__()
         self.timeout_seconds = 30  # default timeout
-
-        # Compatibility fields for existing API
-        self._connection_params: dict[str, Any] | None = None
-        self._connected = False
 
     async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[types.Tool]:
         """Connect to an MCP server via STDIO transport.
@@ -229,36 +227,35 @@ class MCPStdioClient:
         except (OSError, ConnectionError, ValueError) as exc:
             logger.debug(f"Error during STDIO client cleanup: {exc}")
 
-    async def close(self):
-        """Close the STDIO client and cleanup resources."""
+    async def _cleanup_transport(self):
+        """Perform STDIO-specific cleanup operations."""
+        # STDIO client doesn't have additional transport-specific cleanup beyond what _safe_cleanup does
+        # But we can call it to ensure proper cleanup
         await self._safe_cleanup()
-        self.session = None
-        self._connection_params = None
-        self._connected = False
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
         await self.close()
 
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-        """Run a tool with the given arguments.
+    async def _execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+        """Execute a tool using STDIO transport (creates new connection per tool).
 
         Args:
-            tool_name: Name of the tool to run
-            arguments: Dictionary of arguments to pass to the tool
+            tool_name: Name of the tool to execute
+            arguments: Dictionary of arguments for the tool
 
         Returns:
-            The result of the tool execution
+            Result of the tool execution
 
         Raises:
-            ValueError: If session is not initialized or tool execution fails
+            ValueError: For invalid tool parameters or execution failures
         """
-        if not self._connected or not self._connection_params:
-            msg = "Session not initialized or disconnected. Call connect_to_server first."
-            raise ValueError(msg)
-
         try:
             params = self._connection_params
+            if params is None:
+                msg = "Connection parameters are None"
+                raise ValueError(msg)
+
             command_str = params["command_str"]
             env = params["env"]
 
@@ -296,9 +293,3 @@ class MCPStdioClient:
             # Mark as disconnected on error
             self._connected = False
             raise ValueError(msg) from e
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.close()
