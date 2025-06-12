@@ -567,6 +567,7 @@ The `v2/files` version offers several improvements over `/v1`:
 - In `v2`, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
 - Responses from the `/v2` endpoint contain more descriptive metadata.
 - The `v2` endpoints require authentication by an API key or JWT.
+- The `/v2/files` endpoint does not support sending **image** files to flows through the API. To send **image** files to your flows through the API, follow the procedure in [Upload image files (v1)](#upload-image-files-v1).
 
 ## Files/V1 endpoints
 
@@ -779,13 +780,18 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API
 
 ### Send files to your flows (v2)
 
+:::important
+The `/v2/files` endpoint does not support sending **image** files to flows.
+To send **image** files to your flows through the API, follow the procedure in [Upload image files (v1)](#upload-image-files-v1).
+:::
+
 Send a file to your flow for analysis using the [File](/components-data#file) component and the API.
 Your flow must contain a [File](/components-data#file) component to receive the file.
 
 The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
 For more information, see [Supported environment variables](/environment-variables#supported-variables).
 
-1. To send an image to your flow with the API, POST the image file to the `/api/v2/files` endpoint.
+1. To send a file to your flow with the API, POST the file to the `/api/v2/files` endpoint.
    Replace **FILE_NAME** with the uploaded file name.
    This is the same step described in [Upload file (v2)](#upload-file-v2), but since you need the filename to upload to your flow, it is included here.
 
