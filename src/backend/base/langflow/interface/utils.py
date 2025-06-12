@@ -58,27 +58,22 @@ def try_setting_streaming_options(langchain_object):
 
     return langchain_object
 
+
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
-    """
-    Single braces {var} is used as variableand double braces {{var}} is for escaping
-    """
+    """Single braces {var} is used as variableand double braces {{var}} is for escaping"""
     variables: list[str] = []
-
-    # one or more '{',   the identifier,   one or more '}'
     brace_pattern = re.compile(r"(\{+)([^{}]+?)(\}+)")
-
     seen: set[str] = set()
-
-    for m in brace_pattern.finditer(prompt):
-        open_run, var_name, close_run = m.groups()
-
-        # “real” variable only when both sides have the same *odd* length
+    append_var = variables.append
+    add_seen = seen.add
+    for open_run, var_name, close_run in brace_pattern.findall(prompt):
+        # Strip the name once, before checking for duplicates
+        clean_name = var_name.strip()
+        # Only process if both sides are the same *odd* length and not a duplicate
         if len(open_run) == len(close_run) and len(open_run) % 2 == 1:
-            clean_name = var_name.strip()
-            if clean_name not in seen:  # avoid duplicates
-                variables.append(clean_name)
-                seen.add(clean_name)
-
+            if clean_name not in seen:
+                append_var(clean_name)
+                add_seen(clean_name)
     return variables
 
 
