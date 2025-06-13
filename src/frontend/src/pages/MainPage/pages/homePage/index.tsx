@@ -4,7 +4,10 @@ import { IS_MAC } from "@/constants/constants";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { CustomMcpServerTab } from "@/customization/components/custom-McpServerTab";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_MCP,
+} from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { FlowType } from "@/types/flow";
@@ -85,8 +88,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   }, []);
 
   const isEmptyFolder =
-    flows?.find((flow) => flow.folder_id === (folderId ?? myCollectionId)) ===
-    undefined;
+    flows?.find(
+      (flow) =>
+        flow.folder_id === (folderId ?? myCollectionId) &&
+        (ENABLE_MCP ? flow.is_component === false : true),
+    ) === undefined;
 
   const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
 
@@ -250,7 +256,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
               {isEmptyFolder ? (
                 <EmptyFolder setOpenModal={setNewProjectModal} />
               ) : (
-                <div className="">
+                <div className="flex h-full flex-col">
                   {isLoading ? (
                     view === "grid" ? (
                       <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
@@ -298,7 +304,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       </div>
                     )
                   ) : flowType === "flows" ? (
-                    <div className="pt-2 text-center text-sm text-secondary-foreground">
+                    <div className="pt-24 text-center text-sm text-secondary-foreground">
                       No flows in this project.{" "}
                       <a
                         onClick={() => setNewProjectModal(true)}
@@ -309,7 +315,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       , or browse the store.
                     </div>
                   ) : (
-                    <div className="pt-2 text-center text-sm text-secondary-foreground">
+                    <div className="pt-24 text-center text-sm text-secondary-foreground">
                       No saved or custom components. Learn more about{" "}
                       <a
                         href="https://docs.langflow.org/components-custom-components"

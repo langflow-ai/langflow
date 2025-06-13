@@ -11,9 +11,11 @@
 
 # - **Document:** The Document containing the JSON object.
 
+
 from langchain_core.documents import Document
 
-from langflow.custom import CustomComponent
+from langflow.custom.custom_component.custom_component import CustomComponent
+from langflow.io import HandleInput, StrInput
 from langflow.services.database.models.base import orjson_dumps
 
 
@@ -21,15 +23,21 @@ class JSONDocumentBuilder(CustomComponent):
     display_name: str = "JSON Document Builder"
     description: str = "Build a Document containing a JSON object using a key and another Document page content."
     name = "JSONDocumentBuilder"
-    legacy: bool = True
-
-    output_types: list[str] = ["Document"]
     documentation: str = "https://docs.langflow.org/components/utilities#json-document-builder"
+    legacy = True
 
-    field_config = {
-        "key": {"display_name": "Key"},
-        "document": {"display_name": "Document"},
-    }
+    inputs = [
+        StrInput(
+            name="key",
+            display_name="Key",
+            required=True,
+        ),
+        HandleInput(
+            name="document",
+            display_name="Document",
+            required=True,
+        ),
+    ]
 
     def build(
         self,
@@ -46,5 +54,6 @@ class JSONDocumentBuilder(CustomComponent):
         else:
             msg = f"Expected Document or list of Documents, got {type(document)}"
             raise TypeError(msg)
+
         self.repr_value = documents
         return documents

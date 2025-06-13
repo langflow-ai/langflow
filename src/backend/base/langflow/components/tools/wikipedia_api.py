@@ -5,8 +5,8 @@ from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
-from langflow.schema import Data
+from langflow.inputs.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
+from langflow.schema.data import Data
 
 
 class WikipediaAPIComponent(LCToolComponent):
