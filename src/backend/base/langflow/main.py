@@ -41,6 +41,7 @@ from langflow.services.deps import (
     get_telemetry_service,
 )
 from langflow.services.utils import initialize_services, teardown_services
+from langflow.utils.validate import cleanup_debug_code_directory
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
@@ -197,6 +198,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
             await asyncio.gather(*temp_dir_cleanups)
+            cleanup_debug_code_directory()
             # Final message
             logger.debug("Langflow shutdown complete")
 
