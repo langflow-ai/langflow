@@ -427,6 +427,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message",
           "type": "ChatInput"
         },
         "dragging": false,
@@ -1273,6 +1274,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "prompt",
           "type": "Prompt"
         },
         "dragging": false,
@@ -1667,6 +1669,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
           "type": "OpenAIModel"
         },
@@ -1791,6 +1794,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message_output",
           "showNode": true,
           "type": "TypeConverterComponent"
         },
@@ -2122,6 +2126,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "dataframe",
           "showNode": true,
           "type": "Memory"
         },

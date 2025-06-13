@@ -260,7 +260,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "id": "Prompt-0aGkQ",
@@ -687,7 +688,7 @@
               }
             ],
             "pinned": false,
-            "score": 7.568328950209746e-6,
+            "score": 7.568328950209746e-06,
             "template": {
               "_type": "Component",
               "code": {
@@ -824,7 +825,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "needle"
+          "type": "needle",
+          "selected_output": "component_as_tool"
         },
         "id": "needle-5GYmd",
         "measured": {
@@ -1135,7 +1137,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-cKEM6",
@@ -1921,7 +1924,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "id": "Agent-DBNrp",
         "measured": {

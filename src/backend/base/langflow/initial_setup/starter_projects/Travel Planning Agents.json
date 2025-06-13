@@ -470,7 +470,8 @@
               }
             }
           },
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "height": 262,
@@ -1389,7 +1390,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "URL"
+          "type": "URL",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "URL-4LSRv",
@@ -1535,7 +1537,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "CalculatorComponent"
+          "type": "CalculatorComponent",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "CalculatorComponent-hlWP4",
@@ -1799,7 +1802,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "SearchComponent"
+          "type": "SearchComponent",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "SearchComponent-kgsWf",
@@ -2567,7 +2571,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-H916j",
@@ -3335,7 +3340,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-zFKST",
@@ -4103,7 +4109,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-3tuWs",

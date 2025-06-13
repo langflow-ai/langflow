@@ -341,7 +341,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 779,
@@ -504,7 +505,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 260,
@@ -1233,7 +1235,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-xbTZw",

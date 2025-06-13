@@ -336,7 +336,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ArXivComponent"
+          "type": "ArXivComponent",
+          "selected_output": "dataframe"
         },
         "dragging": false,
         "id": "ArXivComponent-ylKFb",
@@ -674,7 +675,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "AnthropicModel"
+          "type": "AnthropicModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "AnthropicModel-G2MkR",
@@ -780,7 +782,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "MessagetoData"
+          "type": "MessagetoData",
+          "selected_output": "data"
         },
         "dragging": false,
         "id": "MessagetoData-jYebP",
@@ -1399,7 +1402,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-5o3G0",
@@ -1631,7 +1635,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ParserComponent"
+          "type": "ParserComponent",
+          "selected_output": "parsed_text"
         },
         "dragging": false,
         "id": "ParserComponent-ZhlLQ",
@@ -1749,7 +1754,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "LoopComponent"
+          "type": "LoopComponent",
+          "selected_output": "done"
         },
         "dragging": false,
         "id": "LoopComponent-9BK8B",

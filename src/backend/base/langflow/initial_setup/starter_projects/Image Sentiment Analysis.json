@@ -456,6 +456,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message",
           "type": "ChatInput"
         },
         "dragging": false,
@@ -923,6 +924,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "prompt",
           "type": "Prompt"
         },
         "dragging": false,
@@ -1318,6 +1320,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
           "type": "OpenAIModel"
         },
@@ -1596,6 +1599,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "structured_output_dataframe",
           "showNode": true,
           "type": "StructuredOutput"
         },
@@ -1771,6 +1775,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "parsed_text",
           "showNode": true,
           "type": "parser"
         },

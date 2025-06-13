@@ -564,7 +564,8 @@
               }
             }
           },
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "height": 234,
@@ -741,7 +742,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 433,
@@ -846,7 +848,8 @@
               }
             }
           },
-          "type": "TextInput"
+          "type": "TextInput",
+          "selected_output": "text"
         },
         "dragging": false,
         "height": 234,
@@ -999,7 +1002,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 347,
@@ -1993,7 +1997,8 @@
             },
             "tool_mode": false
           },
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "height": 650,
@@ -2170,7 +2175,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 433,
@@ -2806,7 +2812,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "TavilySearchComponent"
+          "type": "TavilySearchComponent",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "TavilySearchComponent-HW6b0",
@@ -3195,7 +3202,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-dqLbl",
@@ -3584,7 +3592,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-7yVxU",

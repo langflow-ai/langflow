@@ -301,7 +301,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 260,
@@ -598,7 +599,8 @@
               }
             }
           },
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "height": 234,
@@ -1030,7 +1032,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 260,
@@ -1158,7 +1161,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 260,
@@ -1627,7 +1631,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-lL9HA",
@@ -2016,7 +2021,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-JieGw",
@@ -2405,7 +2411,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-dXMRv",

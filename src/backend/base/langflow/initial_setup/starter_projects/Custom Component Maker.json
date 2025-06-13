@@ -524,7 +524,8 @@
             },
             "tool_mode": false
           },
-          "type": "Memory"
+          "type": "Memory",
+          "selected_output": "dataframe"
         },
         "dragging": false,
         "height": 262,
@@ -773,7 +774,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 685,
@@ -1194,7 +1196,8 @@
             },
             "tool_mode": false
           },
-          "type": "URL"
+          "type": "URL",
+          "selected_output": "text"
         },
         "dragging": false,
         "height": 365,
@@ -1556,7 +1559,8 @@
             },
             "tool_mode": false
           },
-          "type": "URL"
+          "type": "URL",
+          "selected_output": "text"
         },
         "dragging": false,
         "height": 661,
@@ -1912,7 +1916,8 @@
             },
             "tool_mode": false
           },
-          "type": "URL"
+          "type": "URL",
+          "selected_output": "text"
         },
         "dragging": false,
         "height": 365,
@@ -2255,7 +2260,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "AnthropicModel"
+          "type": "AnthropicModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "AnthropicModel-I7I40",
@@ -2567,7 +2573,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-gwwtq",
@@ -3004,7 +3011,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "TypeConverterComponent"
+          "type": "TypeConverterComponent",
+          "selected_output": "message_output"
         },
         "id": "TypeConverterComponent-Vb89B",
         "measured": {

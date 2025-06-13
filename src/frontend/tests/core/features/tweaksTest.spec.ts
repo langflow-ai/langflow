@@ -22,7 +22,7 @@ test(
     expect(clipboardContent.length).toBeGreaterThan(0);
     await page.getByTestId("tweaks-button").click();
     await page
-      .getByRole("heading", { name: "OpenAi" })
+      .getByRole("heading", { name: "Language Model" })
       .locator("div")
       .first()
       .click();

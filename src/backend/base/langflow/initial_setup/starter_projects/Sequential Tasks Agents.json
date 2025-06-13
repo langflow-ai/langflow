@@ -986,7 +986,8 @@
             },
             "tool_mode": false
           },
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "height": 650,
@@ -1678,7 +1679,8 @@
             },
             "tool_mode": false
           },
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "height": 650,
@@ -1812,7 +1814,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 260,
@@ -1946,7 +1949,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 260,
@@ -2129,7 +2133,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 433,
@@ -2432,7 +2437,8 @@
             },
             "tool_mode": false
           },
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "height": 234,
@@ -3196,7 +3202,8 @@
             },
             "tool_mode": false
           },
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "height": 650,
@@ -3571,7 +3578,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "YfinanceComponent"
+          "type": "YfinanceComponent",
+          "selected_output": "component_as_tool"
         },
         "dragging": true,
         "id": "YfinanceComponent-Adjq6",
@@ -3760,7 +3768,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "CalculatorComponent"
+          "type": "CalculatorComponent",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "CalculatorComponent-9O7Ap",
@@ -4224,7 +4233,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "TavilySearchComponent"
+          "type": "TavilySearchComponent",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "TavilySearchComponent-6ezaX",
