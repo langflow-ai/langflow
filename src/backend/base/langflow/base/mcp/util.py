@@ -421,7 +421,7 @@ class MCPSseClient:
         try:
             ssl_verify = server_config.get("ssl_verify", True)
 
-            async with httpx.AsyncClient(follow_redirects=False, verify=ssl_verify) as client:  # noqa: S501
+            async with httpx.AsyncClient(follow_redirects=False, verify=ssl_verify) as client:
                 response = await client.request("HEAD", url)
                 if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
                     return response.headers.get("Location", url)
@@ -507,7 +507,11 @@ class MCPSseClient:
             params = self._connection_params
             async with (
                 sse_client(
-                    params["url"], params["headers"], params["timeout_seconds"], params["sse_read_timeout_seconds"], verify=ssl_verify
+                    params["url"],
+                    params["headers"],
+                    params["timeout_seconds"],
+                    params["sse_read_timeout_seconds"],
+                    verify=ssl_verify,
                 ) as (read, write),
                 ClientSession(read, write) as session,
             ):
