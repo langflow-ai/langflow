@@ -65,6 +65,7 @@ class MCPToolsComponent(Component):
     sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
     _tool_cache: dict = {}
+    protocol_version: str | None = None
     default_keys: list[str] = [
         "code",
         "_type",
@@ -159,7 +160,7 @@ class MCPToolsComponent(Component):
                     self.tools = []
                     return []
 
-                _, tool_list, tool_cache, _ = await update_tools(
+                _, tool_list, tool_cache, protocol_info = await update_tools(
                     server_name=server_name,
                     server_config=server_config,
                     mcp_stdio_client=self.stdio_client,
@@ -168,6 +169,13 @@ class MCPToolsComponent(Component):
 
                 self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
                 self._tool_cache = tool_cache
+
+                # Remember the negotiated protocol version (if available)
+                if isinstance(protocol_info, dict):
+                    self.protocol_version = protocol_info.get("protocol_version")
+                else:
+                    self.protocol_version = None
+
                 return tool_list
         except Exception as e:
             msg = f"Error updating tool list: {e!s}"
@@ -220,6 +228,14 @@ class MCPToolsComponent(Component):
                     self.remove_non_default_keys(build_config)
                     return build_config
                 build_config["tool"]["placeholder"] = ""
+
+                # --- Surface protocol version information as helper text -----
+                if self.protocol_version:
+                    helper_text = f"Protocol version: {self.protocol_version}"
+                    build_config.setdefault("mcp_server", {})["helper_text"] = helper_text
+                else:
+                    build_config.get("mcp_server", {}).pop("helper_text", None)
+
                 if "tool" in build_config and len(self.tools) > 0 and not build_config["tools_metadata"]["show"]:
                     build_config["tool"]["show"] = True
                     build_config["tool"]["options"] = [tool.name for tool in self.tools]
@@ -237,7 +253,6 @@ class MCPToolsComponent(Component):
                         build_config["tool"]["show"] = True
                         build_config["tool"]["options"] = []
                         build_config["tool"]["value"] = ""
-                        build_config["tool"]["placeholder"] = "Error on MCP Server"
                     else:
                         build_config["tool"]["show"] = False
                 build_config["tool"]["placeholder"] = ""

@@ -122,10 +122,6 @@ async def get_servers(
             "status": "unknown",
             "error": None,
             "protocolVersion": None,
-            "transportType": None,
-            "capabilities": None,
-            "serverInfo": None,
-            "lastChecked": None,
         }
 
         try:
@@ -146,10 +142,6 @@ async def get_servers(
                     "toolsCount": len(tool_list),
                     "status": "connected",
                     "protocolVersion": protocol_info.get("protocol_version"),
-                    "transportType": protocol_info.get("transport_type"),
-                    "capabilities": protocol_info.get("capabilities"),
-                    "serverInfo": protocol_info.get("server_info"),
-                    "lastChecked": protocol_info.get("last_detected"),
                 }
             )
 

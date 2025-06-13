@@ -454,9 +454,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
 
         try_http_sse_first = await self._looks_like_http_sse(url, headers)
 
-        logger.debug(
-            "connect_to_server: initial probe indicates HTTP+SSE=%s", try_http_sse_first
-        )
+        logger.debug("connect_to_server: initial probe indicates HTTP+SSE=%s", try_http_sse_first)
 
         if not try_http_sse_first:
             # Phase 1: Try Streamable HTTP (MCP 2025-03-26)
