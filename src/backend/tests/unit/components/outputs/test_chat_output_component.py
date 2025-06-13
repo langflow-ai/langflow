@@ -1,5 +1,5 @@
 import pytest
-from langflow.components.outputs import ChatOutput
+from langflow.components.input_output import ChatOutput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message

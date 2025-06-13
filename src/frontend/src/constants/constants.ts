@@ -554,6 +554,8 @@ export const USER_PROJECTS_HEADER = "My Collection";
 export const DEFAULT_FOLDER = "Starter Project";
 export const DEFAULT_FOLDER_DEPRECATED = "My Projects";
 
+export const MAX_MCP_SERVER_NAME_LENGTH = 30;
+
 /**
  * Header text for admin page
  * @constant
@@ -660,6 +662,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "connect",
   "auth",
   "query",
+  "mcp",
   "tools",
 ]);
 

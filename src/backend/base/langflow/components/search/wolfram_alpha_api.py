@@ -2,10 +2,10 @@ from langchain_community.utilities.wolfram_alpha import WolframAlphaAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.helpers.data import data_to_dataframe
-from langflow.inputs import MultilineInput, SecretStrInput
+from langflow.inputs.inputs import MultilineInput, SecretStrInput
 from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
 
 class WolframAlphaAPIComponent(LCToolComponent):
@@ -51,4 +51,4 @@ topics, delivering structured responses."""
             DataFrame: A DataFrame containing the query results.
         """
         data = self.fetch_content()
-        return data_to_dataframe(data)
+        return DataFrame(data)

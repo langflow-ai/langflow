@@ -29,7 +29,12 @@ jobs:
         with:
           persist-credentials: true
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
       - name: Install the project
         run: uv sync
 

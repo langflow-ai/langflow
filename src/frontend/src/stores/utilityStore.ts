@@ -27,6 +27,9 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   maxFileSizeUpload: 100 * 1024 * 1024, // 100MB in bytes
   setMaxFileSizeUpload: (maxFileSizeUpload: number) =>
     set({ maxFileSizeUpload: maxFileSizeUpload * 1024 * 1024 }),
+  serializationMaxItemsLength: 100,
+  setSerializationMaxItemsLength: (serializationMaxItemsLength: number) =>
+    set({ serializationMaxItemsLength }),
   flowsPagination: {
     page: 1,
     size: 10,

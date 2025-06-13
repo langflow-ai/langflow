@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.schema import ResultData
-    from langflow.schema import Data
+    from langflow.schema.data import Data
     from langflow.services.chat.schema import GetCache, SetCache
     from langflow.services.tracing.service import TracingService
 
@@ -1585,6 +1585,7 @@ class Graph:
     async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: Vertex, *, cache: bool = True) -> list[str]:
         v_id = vertex.id
         v_successors_ids = vertex.successors_ids
+        self.run_manager.ran_at_least_once.add(v_id)
         async with lock:
             self.run_manager.remove_vertex_from_runnables(v_id)
             next_runnable_vertices = self.find_next_runnable_vertices(v_successors_ids)

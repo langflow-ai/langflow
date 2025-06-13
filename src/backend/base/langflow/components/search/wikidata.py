@@ -2,10 +2,11 @@ import httpx
 from httpx import HTTPError
 from langchain_core.tools import ToolException
 
-from langflow.custom import Component
-from langflow.helpers.data import data_to_dataframe
-from langflow.io import MultilineInput, Output
-from langflow.schema import Data, DataFrame
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import MultilineInput
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
+from langflow.template.field.base import Output
 
 
 class WikidataComponent(Component):
@@ -82,4 +83,4 @@ class WikidataComponent(Component):
 
     def fetch_content_dataframe(self) -> DataFrame:
         data = self.fetch_content()
-        return data_to_dataframe(data)
+        return DataFrame(data)
