@@ -5,11 +5,12 @@ from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
 from loguru import logger
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.data import safe_convert
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
-from langflow.schema import DataFrame, Message
+from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
 from langflow.services.deps import get_settings_service
 
 # Constants
@@ -17,7 +18,12 @@ DEFAULT_TIMEOUT = 30
 DEFAULT_MAX_DEPTH = 1
 DEFAULT_FORMAT = "Text"
 URL_REGEX = re.compile(
-    r"^(https?:\/\/)?" r"(www\.)?" r"([a-zA-Z0-9.-]+)" r"(\.[a-zA-Z]{2,})?" r"(:\d+)?" r"(\/[^\s]*)?$",
+    r"^(https?:\/\/)?"
+    r"(www\.)?"
+    r"([a-zA-Z0-9.-]+)"
+    r"(\.[a-zA-Z]{2,})?"
+    r"(:\d+)?"
+    r"(\/[^\s]*)?$",
     re.IGNORECASE,
 )
 
@@ -163,8 +169,8 @@ class URLComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Result", name="page_results", method="fetch_content"),
-        Output(display_name="Raw Result", name="raw_results", method="as_message"),
+        Output(display_name="Extracted Pages", name="page_results", method="fetch_content"),
+        Output(display_name="Raw Content", name="raw_results", method="fetch_content_as_message"),
     ]
 
     @staticmethod
@@ -291,7 +297,7 @@ class URLComponent(Component):
         """Convert the documents to a DataFrame."""
         return DataFrame(data=self.fetch_url_contents())
 
-    def as_message(self) -> Message:
+    def fetch_content_as_message(self) -> Message:
         """Convert the documents to a Message."""
         url_contents = self.fetch_url_contents()
         return Message(text="\n\n".join([x["text"] for x in url_contents]), data={"data": url_contents})

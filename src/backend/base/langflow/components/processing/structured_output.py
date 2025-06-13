@@ -2,10 +2,9 @@ from pydantic import BaseModel, Field, create_model
 from trustcall import create_extractor
 
 from langflow.base.models.chat_result import get_chat_result
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.io import (
-    BoolInput,
     HandleInput,
     MessageTextInput,
     MultilineInput,
@@ -13,16 +12,12 @@ from langflow.io import (
     TableInput,
 )
 from langflow.schema.data import Data
-from langflow.schema.dataframe import DataFrame
 from langflow.schema.table import EditMode
 
 
 class StructuredOutputComponent(Component):
     display_name = "Structured Output"
-    description = (
-        "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information "
-        "or creating consistent outputs."
-    )
+    description = "Uses an LLM to generate structured data. Ideal for extraction and consistency."
     name = "StructuredOutput"
     icon = "braces"
 
@@ -96,6 +91,14 @@ class StructuredOutputComponent(Component):
                     "options": ["str", "int", "float", "bool", "dict"],
                     "default": "str",
                 },
+                {
+                    "name": "multiple",
+                    "display_name": "As List",
+                    "type": "boolean",
+                    "description": "Set to True if this output field should be a list of the specified type.",
+                    "default": "False",
+                    "edit_mode": EditMode.INLINE,
+                },
             ],
             value=[
                 {
@@ -106,13 +109,6 @@ class StructuredOutputComponent(Component):
                 }
             ],
         ),
-        BoolInput(
-            name="multiple",
-            advanced=True,
-            display_name="Generate Multiple",
-            info="[Deprecated] Always set to True",
-            value=True,
-        ),
     ]
 
     outputs = [
@@ -120,11 +116,6 @@ class StructuredOutputComponent(Component):
             name="structured_output",
             display_name="Structured Output",
             method="build_structured_output",
-        ),
-        Output(
-            name="structured_output_dataframe",
-            display_name="DataFrame",
-            method="as_dataframe",
         ),
     ]
 
@@ -175,9 +166,3 @@ class StructuredOutputComponent(Component):
         output = self.build_structured_output_base()
 
         return Data(text_key="results", data={"results": output})
-
-    def as_dataframe(self) -> DataFrame:
-        output = self.build_structured_output_base()
-        if isinstance(output, list):
-            return DataFrame(data=output)
-        return DataFrame(data=[output])

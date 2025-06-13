@@ -158,7 +158,6 @@ class Component(CustomComponent):
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
-        self._set_output_required_inputs()
 
     def get_incoming_edge_by_target_param(self, target_param: str) -> str | None:
         """Get the source vertex ID for an incoming edge that targets a specific parameter.
@@ -539,7 +538,6 @@ class Component(CustomComponent):
             raise ValueError(msg)
         return_types = self._get_method_return_type(output.method)
         output.add_types(return_types)
-        output.set_selected()
 
     def _set_output_required_inputs(self) -> None:
         for output in self.outputs:
@@ -851,7 +849,6 @@ class Component(CustomComponent):
                 continue
             return_types = self._get_method_return_type(output.method)
             output.add_types(return_types)
-            output.set_selected()
 
         frontend_node.validate_component()
         frontend_node.set_base_classes_from_outputs()
@@ -1402,7 +1399,14 @@ class Component(CustomComponent):
                     case "error":
                         self._event_manager.on_error(data=data_dict)
                     case "remove_message":
-                        self._event_manager.on_remove_message(data={"id": data_dict["id"]})
+                        # Check if id exists in data_dict before accessing it
+                        if "id" in data_dict:
+                            self._event_manager.on_remove_message(data={"id": data_dict["id"]})
+                        else:
+                            # If no id, try to get it from the message object or id_ parameter
+                            message_id = getattr(message, "id", None) or id_
+                            if message_id:
+                                self._event_manager.on_remove_message(data={"id": message_id})
                     case _:
                         self._event_manager.on_message(data=data_dict)
 
