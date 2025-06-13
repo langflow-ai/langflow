@@ -1,7 +1,8 @@
-from langflow.custom import Component
-from langflow.io import HandleInput, Output
-from langflow.schema import Data
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import HandleInput
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
+from langflow.template.field.base import Output
 
 
 class LoopComponent(Component):
@@ -14,15 +15,15 @@ class LoopComponent(Component):
     inputs = [
         HandleInput(
             name="data",
-            display_name="Data or DataFrame",
+            display_name="Inputs",
             info="The initial list of Data objects or DataFrame to iterate over.",
-            input_types=["Data", "DataFrame"],
+            input_types=["DataFrame"],
         ),
     ]
 
     outputs = [
-        Output(display_name="Item", name="item", method="item_output", allows_loop=True),
-        Output(display_name="Done", name="done", method="done_output"),
+        Output(display_name="Item", name="item", method="item_output", allows_loop=True, group_outputs=True),
+        Output(display_name="Done", name="done", method="done_output", group_outputs=True),
     ]
 
     def initialize_data(self) -> None:
@@ -67,19 +68,26 @@ class LoopComponent(Component):
 
         if self.evaluate_stop_loop():
             self.stop("item")
-            return Data(text="")
+        else:
+            # Get data list and current index
+            data_list, current_index = self.loop_variables()
+            if current_index < len(data_list):
+                # Output current item and increment index
+                try:
+                    current_item = data_list[current_index]
+                except IndexError:
+                    current_item = Data(text="")
+            self.aggregated_output()
+            self.update_ctx({f"{self._id}_index": current_index + 1})
 
-        # Get data list and current index
-        data_list, current_index = self.loop_variables()
-        if current_index < len(data_list):
-            # Output current item and increment index
-            try:
-                current_item = data_list[current_index]
-            except IndexError:
-                current_item = Data(text="")
-        self.aggregated_output()
-        self.update_ctx({f"{self._id}_index": current_index + 1})
+        # Now we need to update the dependencies for the next run
+        self.update_dependency()
         return current_item
+
+    def update_dependency(self):
+        item_dependency_id = self.get_incoming_edge_by_target_param("item")
+
+        self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)
 
     def done_output(self) -> DataFrame:
         """Trigger the done output when iteration is complete."""

@@ -191,7 +191,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply form-input block w-full rounded-md border border-border bg-background px-3 text-left shadow-sm placeholder:text-placeholder-foreground hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
+    @apply form-input block w-full rounded-md border border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .input-edit-node {
@@ -1248,7 +1248,7 @@
   }
 
   .btn-add-input-list {
-    @apply flex h-8 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
+    @apply flex h-6 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
   }
 
   .btn-playground-actions {
@@ -1277,11 +1277,7 @@
 }
 
 .deploy-dropdown-item {
-  @apply h-11 cursor-pointer px-2.5 py-1 text-sm font-normal hover:bg-background !important;
-}
-
-.deploy-dropdown-item > :first-child {
-  @apply flex h-8 w-full items-center rounded-md px-2 py-1 !important;
+  @apply cursor-pointer rounded-none px-3 py-2 text-[13px] font-normal;
 }
 
 :root {

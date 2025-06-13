@@ -1,5 +1,5 @@
 from langflow.base.prompts.api_utils import process_prompt_template
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import DefaultPromptField
 from langflow.io import MessageTextInput, Output, PromptInput
 from langflow.schema.message import Message
@@ -9,7 +9,7 @@ from langflow.template.utils import update_template_values
 class PromptComponent(Component):
     display_name: str = "Prompt"
     description: str = "Create a prompt template with dynamic variables."
-    icon = "prompts"
+    icon = "braces"
     trace_type = "prompt"
     name = "Prompt"
 
@@ -25,7 +25,7 @@ class PromptComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Prompt Message", name="prompt", method="build_prompt"),
+        Output(display_name="Prompt", name="prompt", method="build_prompt"),
     ]
 
     async def build_prompt(self) -> Message:
