@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-w2VBv",
+            "id": "parser-tHYfH",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-kPIgV",
+            "id": "ChatOutput-xzQGq",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-w2VBv{œdataTypeœ:œparserœ,œidœ:œparser-w2VBvœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-kPIgV{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-kPIgVœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-tHYfH{œdataTypeœ:œparserœ,œidœ:œparser-tHYfHœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-xzQGq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-xzQGqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-w2VBv",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-w2VBvœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-kPIgV",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-kPIgVœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-tHYfH",
+        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-tHYfHœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-xzQGq",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-xzQGqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -37,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-yf2l2",
+            "id": "StructuredOutput-zBhjb",
             "name": "structured_output",
             "output_types": [
               "Data"
@@ -45,7 +45,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-w2VBv",
+            "id": "parser-tHYfH",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -53,12 +53,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-StructuredOutput-yf2l2{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-yf2l2œ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-w2VBv{œfieldNameœ:œinput_dataœ,œidœ:œparser-w2VBvœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-zBhjb{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-zBhjbœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-tHYfH{œfieldNameœ:œinput_dataœ,œidœ:œparser-tHYfHœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-yf2l2",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-yf2l2œ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "parser-w2VBv",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-w2VBvœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-zBhjb",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-zBhjbœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "target": "parser-tHYfH",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-tHYfHœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -66,7 +66,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-uq8Qt",
+            "id": "OpenAIModel-ATPgM",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -74,19 +74,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-yf2l2",
+            "id": "StructuredOutput-zBhjb",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-uq8Qt{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uq8Qtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-yf2l2{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-yf2l2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-ATPgM{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ATPgMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-zBhjb{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-zBhjbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-uq8Qt",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uq8Qtœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-yf2l2",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-yf2l2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "OpenAIModel-ATPgM",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ATPgMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutput-zBhjb",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-zBhjbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -94,7 +94,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-hxu0d",
+            "id": "Prompt-jpRGR",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -102,19 +102,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-uq8Qt",
+            "id": "OpenAIModel-ATPgM",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-hxu0d{œdataTypeœ:œPromptœ,œidœ:œPrompt-hxu0dœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-uq8Qt{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-uq8Qtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-jpRGR{œdataTypeœ:œPromptœ,œidœ:œPrompt-jpRGRœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ATPgM{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-ATPgMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-hxu0d",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-hxu0dœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-uq8Qt",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-uq8Qtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-jpRGR",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-jpRGRœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-ATPgM",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-ATPgMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -122,7 +122,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-aI9xO",
+            "id": "ChatInput-BdU29",
             "name": "message",
             "output_types": [
               "Message"
@@ -130,25 +130,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-uq8Qt",
+            "id": "OpenAIModel-ATPgM",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-aI9xO{œdataTypeœ:œChatInputœ,œidœ:œChatInput-aI9xOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-uq8Qt{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-uq8Qtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-BdU29{œdataTypeœ:œChatInputœ,œidœ:œChatInput-BdU29œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ATPgM{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ATPgMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-aI9xO",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-aI9xOœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-uq8Qt",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-uq8Qtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-BdU29",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-BdU29œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-ATPgM",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ATPgMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-vPf3S",
+            "id": "OpenAIModel-wYVeo",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -156,18 +158,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-yf2l2",
+            "id": "StructuredOutput-zBhjb",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__OpenAIModel-vPf3S{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-vPf3Sœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-yf2l2{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-yf2l2œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "source": "OpenAIModel-vPf3S",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-vPf3Sœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-yf2l2",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-yf2l2œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__OpenAIModel-wYVeo{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wYVeoœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-zBhjb{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-zBhjbœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "OpenAIModel-wYVeo",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-wYVeoœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "StructuredOutput-zBhjb",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-zBhjbœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
@@ -175,7 +178,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-aI9xO",
+          "id": "ChatInput-BdU29",
           "node": {
             "base_classes": [
               "Message"
@@ -201,7 +204,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -459,7 +462,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-aI9xO",
+        "id": "ChatInput-BdU29",
         "measured": {
           "height": 234,
           "width": 320
@@ -480,7 +483,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-kPIgV",
+          "id": "ChatOutput-xzQGq",
           "node": {
             "base_classes": [
               "Message"
@@ -506,7 +509,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -763,7 +766,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-kPIgV",
+        "id": "ChatOutput-xzQGq",
         "measured": {
           "height": 234,
           "width": 320
@@ -782,7 +785,7 @@
       },
       {
         "data": {
-          "id": "note-aQcfV",
+          "id": "note-xSk5l",
           "node": {
             "description": "# Image Sentiment Analysis\nWelcome to the Image Sentiment Classifier - an AI tool for quick image sentiment analysis!\n\n## Instructions\n\n1. **Prepare Your Image**\n   - Image should be clear and visible\n\n2. **Upload Options**\n   - Open the Playground\n   - Click file attachment icon\n   - Or drag and drop into playground\n\n3. **Wait for Analysis**\n   - System will process the image\n   - Uses zero-shot learning\n   - Classification happens automatically\n\n4. **Review Results**\n   - Get classification: Positive/Negative/Neutral\n   - Review confidence level\n   - Check reasoning if provided\n\n5. **Expected Classifications**\n   - Positive: Happy scenes, smiles, celebrations\n   - Negative: Sad scenes, problems, conflicts\n   - Neutral: Objects, landscapes, neutral scenes\n\nRemember: The clearer the image, the more accurate the classification! 📸✨",
             "display_name": "",
@@ -793,7 +796,7 @@
         },
         "dragging": false,
         "height": 583,
-        "id": "note-aQcfV",
+        "id": "note-xSk5l",
         "measured": {
           "height": 583,
           "width": 325
@@ -819,7 +822,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-hxu0d",
+          "id": "Prompt-jpRGR",
           "node": {
             "base_classes": [
               "Message"
@@ -839,7 +842,7 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -926,7 +929,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-hxu0d",
+        "id": "Prompt-jpRGR",
         "measured": {
           "height": 260,
           "width": 320
@@ -945,7 +948,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-vPf3S",
+          "id": "OpenAIModel-wYVeo",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -976,7 +979,7 @@
             "icon": "OpenAI",
             "key": "OpenAIModel",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {
               "keywords": [
                 "model",
@@ -995,7 +998,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"
@@ -1009,7 +1011,7 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "selected": null,
+                "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
                   "LanguageModel"
@@ -1028,7 +1030,7 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1321,7 +1323,7 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-vPf3S",
+        "id": "OpenAIModel-wYVeo",
         "measured": {
           "height": 540,
           "width": 320
@@ -1330,12 +1332,12 @@
           "x": 1660.0682518194599,
           "y": -12.77711705331307
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "StructuredOutput-yf2l2",
+          "id": "StructuredOutput-zBhjb",
           "node": {
             "base_classes": [
               "Data",
@@ -1361,7 +1363,7 @@
             "icon": "braces",
             "key": "StructuredOutput",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1599,7 +1601,7 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-yf2l2",
+        "id": "StructuredOutput-zBhjb",
         "measured": {
           "height": 349,
           "width": 320
@@ -1613,7 +1615,7 @@
       },
       {
         "data": {
-          "id": "parser-w2VBv",
+          "id": "parser-tHYfH",
           "node": {
             "base_classes": [
               "Message"
@@ -1636,7 +1638,7 @@
             "icon": "braces",
             "key": "parser",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1774,7 +1776,7 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-w2VBv",
+        "id": "parser-tHYfH",
         "measured": {
           "height": 361,
           "width": 320
@@ -1788,7 +1790,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-uq8Qt",
+          "id": "OpenAIModel-ATPgM",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1819,7 +1821,7 @@
             "icon": "OpenAI",
             "key": "OpenAIModel",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {
               "keywords": [
                 "model",
@@ -1871,7 +1873,7 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2164,7 +2166,7 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-uq8Qt",
+        "id": "OpenAIModel-ATPgM",
         "measured": {
           "height": 540,
           "width": 320
@@ -2178,14 +2180,14 @@
       }
     ],
     "viewport": {
-      "x": -394.48978663654907,
-      "y": 184.32033851888963,
-      "zoom": 0.5803621249210289
+      "x": -573.7682146692907,
+      "y": 192.3146196271159,
+      "zoom": 0.6168643921401024
     }
   },
   "description": "Analyzes images and categorizes them as positive, negative, or neutral using zero-shot learning.",
   "endpoint_name": null,
-  "id": "3ff494ff-fff5-450a-925c-741e58f802b6",
+  "id": "8ed367eb-b237-4204-aec1-f13469340ecc",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Image Sentiment Analysis",
