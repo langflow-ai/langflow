@@ -49,6 +49,10 @@ export function VoiceAssistant({
     localStorage.getItem("lf_preferred_language") || "en-US",
   );
   const [isEditingOpenAIKey, setIsEditingOpenAIKey] = useState<boolean>(false);
+  const [isLLMResponding, setIsLLMResponding] = useState(false);
+  const [lastAudioReceived, setLastAudioReceived] = useState<number>(0);
+  const [isLLMGenerating, setIsLLMGenerating] = useState(false);
+  const [isSpacePressed, setIsSpacePressed] = useState(false);
 
   const waveformRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -58,6 +62,7 @@ export function VoiceAssistant({
   const isPlayingRef = useRef(false);
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const isLLMRespondingRef = useRef<boolean>(false);
 
   const soundDetected = useVoiceStore((state) => state.soundDetected);
   const setIsVoiceAssistantActive = useVoiceStore(
@@ -118,8 +123,7 @@ export function VoiceAssistant({
   }, [variables, addKey]);
 
   useEffect(() => {
-    if (!isRecording && hasOpenAIAPIKey && !showSettingsModal) {
-      setIsRecording(true);
+    if (hasOpenAIAPIKey && !showSettingsModal) {
       initializeAudio();
     } else {
       stopRecording();
@@ -145,6 +149,7 @@ export function VoiceAssistant({
       workletCode,
       processorRef,
       setStatus,
+      isLLMRespondingRef,
     );
   };
 
@@ -183,6 +188,8 @@ export function VoiceAssistant({
       updateBuildStatus,
       hasOpenAIAPIKey,
       showErrorAlert,
+      setIsLLMGenerating,
+      setLastAudioReceived,
     );
   };
 
@@ -191,7 +198,6 @@ export function VoiceAssistant({
       flowId,
       wsRef,
       setStatus,
-      startRecording,
       handleWebSocketMessage,
       stopRecording,
       currentSessionId,
@@ -285,8 +291,24 @@ export function VoiceAssistant({
         audioContextRef.current.close();
         audioContextRef.current = null;
       }
+      setIsLLMResponding(false);
+      setIsLLMGenerating(false);
     };
   }, [setShowAudioInput]);
+
+  useEffect(() => {
+    const wsInstance = wsRef.current;
+    if (wsInstance) {
+      const originalOnClose = wsInstance.onclose;
+      wsInstance.onclose = (event) => {
+        setIsLLMResponding(false);
+        setIsLLMGenerating(false);
+        if (originalOnClose) {
+          originalOnClose.call(wsInstance, event);
+        }
+      };
+    }
+  }, [wsRef.current]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -333,8 +355,6 @@ export function VoiceAssistant({
 
         setTimeout(() => {
           initializeAudio();
-          startRecording();
-          setIsRecording(true);
         }, 100);
       }
     }
@@ -348,25 +368,29 @@ export function VoiceAssistant({
     }
   };
 
-  const handleToggleRecording = () => {
-    if (isRecording) {
-      if (microphoneRef?.current && microphoneRef?.current?.mediaStream) {
-        microphoneRef.current.mediaStream.getAudioTracks().forEach((track) => {
-          track.enabled = false;
-        });
-      }
-      setBarHeights(Array(30).fill(20));
-      setIsRecording(false);
-    } else {
-      if (microphoneRef?.current && microphoneRef?.current?.mediaStream) {
-        microphoneRef.current.mediaStream.getAudioTracks().forEach((track) => {
-          track.enabled = true;
-        });
-      } else {
-        startRecording();
-      }
-      setIsRecording(true);
+  const handleStopRecording = () => {
+    if (microphoneRef?.current && microphoneRef?.current?.mediaStream) {
+      microphoneRef.current.mediaStream.getAudioTracks().forEach((track) => {
+        track.enabled = false;
+      });
     }
+    setBarHeights(Array(30).fill(20));
+    setIsRecording(false);
+  };
+
+  const handleStartRecording = () => {
+    if (isLLMResponding) {
+      return;
+    }
+
+    if (microphoneRef?.current && microphoneRef?.current?.mediaStream) {
+      microphoneRef.current.mediaStream.getAudioTracks().forEach((track) => {
+        track.enabled = true;
+      });
+    } else {
+      startRecording();
+    }
+    setIsRecording(true);
   };
 
   useEffect(() => {
@@ -378,6 +402,109 @@ export function VoiceAssistant({
   const handleClickSaveOpenAIApiKey = async (openaiApiKey: string) => {
     await handleSaveApiKey(openaiApiKey, "OPENAI_API_KEY", false);
   };
+
+  useEffect(() => {
+    isLLMRespondingRef.current = isLLMResponding;
+
+    if (isLLMResponding) {
+      if (microphoneRef?.current && microphoneRef?.current?.mediaStream) {
+        microphoneRef.current.mediaStream.getAudioTracks().forEach((track) => {
+          track.enabled = false;
+        });
+      }
+
+      if (wsRef.current) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "input_audio_buffer.clear",
+          }),
+        );
+      }
+
+      setBarHeights(Array(30).fill(20));
+      setIsRecording(false);
+    }
+  }, [isLLMResponding]);
+
+  useEffect(() => {
+    const shouldBlock =
+      isLLMGenerating ||
+      isPlayingRef.current ||
+      audioQueueRef.current.length > 0;
+
+    if (shouldBlock !== isLLMResponding) {
+      console.log("🔄 Updating LLM responding state:", {
+        isLLMGenerating,
+        isPlaying: isPlayingRef.current,
+        audioQueueLength: audioQueueRef.current.length,
+        shouldBlock,
+      });
+      setIsLLMResponding(shouldBlock);
+    }
+  }, [isLLMGenerating, isLLMResponding]);
+
+  useEffect(() => {
+    if (isLLMResponding && !isLLMGenerating) {
+      const interval = setInterval(() => {
+        const shouldBlock =
+          isLLMGenerating ||
+          isPlayingRef.current ||
+          audioQueueRef.current.length > 0;
+        if (!shouldBlock) {
+          console.log("🔄 Audio playback finished, allowing user to speak");
+          setIsLLMResponding(false);
+        }
+      }, 100);
+
+      return () => clearInterval(interval);
+    }
+  }, [isLLMResponding, isLLMGenerating]);
+
+  useEffect(() => {
+    if (isLLMGenerating) {
+      const safetyTimeout = setTimeout(() => {
+        console.log("🔄 Safety timeout: Resetting LLM generation state");
+        setIsLLMGenerating(false);
+      }, 15000);
+
+      return () => clearTimeout(safetyTimeout);
+    }
+  }, [isLLMGenerating]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.code === "Space" &&
+        !["INPUT", "TEXTAREA"].includes(
+          (event.target as HTMLElement)?.tagName,
+        ) &&
+        !isLLMResponding &&
+        !isRecording
+      ) {
+        event.preventDefault();
+        setIsSpacePressed(true);
+        handleStartRecording();
+      }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.code === "Space" && (isRecording || isSpacePressed)) {
+        event.preventDefault();
+        setIsSpacePressed(false);
+        if (isRecording) {
+          handleStopRecording();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [isLLMResponding, isRecording, isSpacePressed]);
 
   return (
     <>
@@ -392,14 +519,39 @@ export function VoiceAssistant({
           )}
         >
           <ShadTooltip
-            content={isRecording ? "Mute" : "Unmute"}
+            content={
+              isLLMResponding
+                ? "AI is responding..."
+                : "Hold to talk or press Space"
+            }
             delayDuration={500}
           >
-            <Button unstyled onClick={handleToggleRecording}>
+            <Button
+              unstyled
+              onPointerDown={handleStartRecording}
+              onPointerUp={handleStopRecording}
+              onPointerLeave={handleStopRecording}
+              onTouchStart={handleStartRecording}
+              onTouchEnd={handleStopRecording}
+              disabled={isLLMResponding}
+              className={cn(
+                "select-none transition-opacity duration-200",
+                isLLMResponding
+                  ? "cursor-not-allowed opacity-60"
+                  : "cursor-pointer",
+              )}
+            >
               <IconComponent
-                name={isRecording ? "Mic" : "MicOff"}
+                name={
+                  isLLMResponding ? "Loader2" : isRecording ? "Mic" : "MicOff"
+                }
                 strokeWidth={ICON_STROKE_WIDTH}
-                className="h-4 w-4 text-placeholder-foreground"
+                className={cn(
+                  "h-4 w-4 text-placeholder-foreground transition-all duration-200 hover:text-foreground",
+                  isLLMResponding &&
+                    "animate-spin text-accent-amber-foreground",
+                  isRecording && !isLLMResponding && "text-red-foreground",
+                )}
               />
             </Button>
           </ShadTooltip>
@@ -412,17 +564,29 @@ export function VoiceAssistant({
               <div
                 key={index}
                 className={cn(
-                  "mx-[1px] w-[2px] rounded-sm transition-all duration-200",
-                  isRecording && soundDetected
-                    ? "bg-red-foreground"
-                    : "bg-placeholder-foreground",
+                  "mx-[1px] w-[2px] rounded-sm transition-all duration-500 ease-in-out",
+                  isLLMResponding
+                    ? "animate-pulse bg-accent-amber-foreground"
+                    : isRecording && soundDetected
+                      ? "bg-red-foreground"
+                      : "bg-placeholder-foreground",
                 )}
-                style={{ height: `${height}%` }}
+                style={{
+                  height: isLLMResponding ? "60%" : `${height}%`,
+                }}
               />
             ))}
           </div>
           <div className="min-w-[50px] cursor-default text-center font-mono text-sm font-medium text-placeholder-foreground">
-            {hasOpenAIAPIKey ? formatTime(recordingTime) : "--:--s"}
+            {hasOpenAIAPIKey
+              ? isLLMResponding
+                ? "AI"
+                : isRecording
+                  ? formatTime(recordingTime)
+                  : isSpacePressed
+                    ? "Space"
+                    : "PTT"
+              : "--:--s"}
           </div>
 
           <div>
