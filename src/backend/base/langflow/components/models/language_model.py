@@ -11,7 +11,7 @@ from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import BoolInput
-from langflow.io import DropdownInput, MessageTextInput, SecretStrInput, SliderInput
+from langflow.io import DropdownInput, MessageInput, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
 
 
@@ -47,7 +47,7 @@ class LanguageModelComponent(LCModelComponent):
             show=True,
             real_time_refresh=True,
         ),
-        MessageTextInput(
+        MessageInput(
             name="input_value",
             display_name="Input",
             info="The input text to send to the model",
