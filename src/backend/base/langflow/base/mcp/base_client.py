@@ -216,3 +216,62 @@ class BaseMCPClient(ABC, Generic[T]):
         concrete transport client.
         """
         await self.close()
+
+    # ---------------------------------------------------------------------
+    # Transport-agnostic helper utilities
+    # ---------------------------------------------------------------------
+
+    @staticmethod
+    def process_headers(headers: Any) -> dict[str, str]:  # type: ignore[arg-type]
+        r"""Return *headers* as a :class:`dict` \[str, str].
+
+        Accepts multiple input shapes (``dict``, JSON-serialisable list of
+        ``{"key": ..., "value": ...}`` dictionaries, or *None*) and normalises
+        them into a regular ``dict`` suitable for HTTP libraries.
+        """
+        if headers is None:
+            return {}
+
+        if isinstance(headers, dict):
+            # Filter out non-string keys/values for additional robustness
+            return {str(k): str(v) for k, v in headers.items()}
+
+        if isinstance(headers, list):
+            processed: dict[str, str] = {}
+            for item in headers:
+                if not (isinstance(item, dict) and "key" in item and "value" in item):
+                    continue
+                processed[str(item["key"])] = str(item["value"])
+            return processed
+
+        # Fallback - unsupported type, return empty mapping to avoid surprises
+        return {}
+
+    @staticmethod
+    async def validate_connection_params(mode: str, command: str | None = None, url: str | None = None) -> None:
+        """Validate connection parameters for either *Stdio* or *SSE* mode.
+
+        Raises:
+            ValueError: If parameters are inconsistent or missing.
+        """
+        import re
+        import shutil  # Local import keeps top-of-file clean
+
+        if mode not in ("Stdio", "SSE"):
+            _msg = f"Invalid mode: {mode}. Must be 'Stdio' or 'SSE'."
+            raise ValueError(_msg)
+
+        if mode == "Stdio":
+            if not command:
+                _msg = "'command' parameter required for Stdio mode."
+                raise ValueError(_msg)
+
+            # Basic safeguard: if command contains 'npx' but Node.js is missing
+            if re.search(r"\bnpx\b", command) and not shutil.which("node"):
+                _msg = "Node.js is not installed - required for 'npx' commands."
+                raise ValueError(_msg)
+
+        elif mode == "SSE":
+            if not url:
+                _msg = "'url' parameter required for SSE mode."
+                raise ValueError(_msg)
