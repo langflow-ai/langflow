@@ -394,6 +394,12 @@ class Settings(BaseSettings):
     @field_validator("components_path", mode="before")
     @classmethod
     def set_components_path(cls, value):
+        """Processes and updates the components path list, incorporating environment variable overrides.
+
+        If the `LANGFLOW_COMPONENTS_PATH` environment variable is set and points to an existing path, it is
+        appended to the provided list if not already present. If the input list is empty or missing, it is
+        set to an empty list.
+        """
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
             langflow_component_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
