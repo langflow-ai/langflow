@@ -19,9 +19,12 @@ export default function McpComponent({
     () =>
       mcpServers?.map((server) => ({
         name: server.name,
-        description: !server.toolsCount
-          ? "No actions found"
-          : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`,
+        description:
+          server.toolsCount === null
+            ? "Loading..."
+            : !server.toolsCount
+              ? "No actions found"
+              : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`,
       })),
     [mcpServers],
   );
