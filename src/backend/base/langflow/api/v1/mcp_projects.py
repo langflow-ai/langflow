@@ -365,7 +365,7 @@ async def install_mcp_config(
 
             # If we're in WSL and the host is localhost, we might need to adjust the URL
             # so Windows applications can reach the WSL service
-            if host in {"localhost", "localhost"}:
+            if host in {"localhost", "127.0.0.1"}:
                 try:
                     # Try to get the WSL IP address for host.docker.internal or similar access
 
