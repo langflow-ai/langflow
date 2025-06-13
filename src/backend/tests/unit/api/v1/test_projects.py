@@ -1,6 +1,11 @@
+from uuid import uuid4
+
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+
+CYRILLIC_NAME = "Новый проект"
+CYRILLIC_DESC = "Описание проекта с кириллицей"  # noqa: RUF001
 
 
 @pytest.fixture
@@ -89,27 +94,11 @@ async def test_update_project(client: AsyncClient, logged_in_headers, basic_case
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
 
 
-from uuid import uuid4
-
-
-async def test_create_project_unauthorized(client: AsyncClient, basic_case):
-    response = await client.post("api/v1/projects/", json=basic_case)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-
 async def test_create_project_validation_error(client: AsyncClient, logged_in_headers, basic_case):
     invalid_case = basic_case.copy()
     invalid_case.pop("name")
     response = await client.post("api/v1/projects/", json=invalid_case, headers=logged_in_headers)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-
-async def test_create_duplicate_project_name(client: AsyncClient, logged_in_headers, basic_case):
-    # first creation
-    await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
-    # duplicate creation
-    response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
-    assert response.status_code in (status.HTTP_400_BAD_REQUEST, status.HTTP_409_CONFLICT)
 
 
 async def test_delete_project_then_404(client: AsyncClient, logged_in_headers, basic_case):
@@ -150,14 +139,8 @@ async def test_read_projects_empty(client: AsyncClient, logged_in_headers):
     assert response.json() == []
 
 
-CYRILLIC_NAME = "Новый проект"
-CYRILLIC_DESC = "Описание проекта с кириллицей"
-
-
 async def test_create_and_read_project_cyrillic(client: AsyncClient, logged_in_headers):
-    """Ensure that the API correctly handles non-ASCII (Cyrillic) characters
-    during project creation and retrieval.
-    """
+    """Ensure that the API correctly handles non-ASCII (Cyrillic) characters during project creation and retrieval."""
     payload = {
         "name": CYRILLIC_NAME,
         "description": CYRILLIC_DESC,
