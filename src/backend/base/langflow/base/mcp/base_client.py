@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from contextlib import AsyncExitStack
+from enum import Enum, auto
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 if TYPE_CHECKING:
@@ -11,6 +12,30 @@ if TYPE_CHECKING:
 
 # Generic type for connection parameters - allows each transport to define its own parameter structure
 T = TypeVar("T")
+
+
+# -----------------------------------------------------------------------------
+# Exceptions
+# -----------------------------------------------------------------------------
+class NotConnectedError(RuntimeError):
+    """Raised when an operation requires an active MCP connection.
+
+    The error is emitted when the client attempts an action that needs a
+    successfully established connection (for example, querying protocol
+    metadata) before :py:meth:`connect_to_server` has completed.
+    """
+
+
+# -----------------------------------------------------------------------------
+# Connection state enum
+# -----------------------------------------------------------------------------
+class ConnectionState(Enum):
+    """Finite-state machine for a client-server connection lifecycle."""
+
+    DISCONNECTED = auto()
+    CONNECTING = auto()
+    CONNECTED = auto()
+    ERROR = auto()
 
 
 class BaseMCPClient(ABC, Generic[T]):
@@ -35,26 +60,50 @@ class BaseMCPClient(ABC, Generic[T]):
 
         # Connection state tracking
         self._connection_params: T | None = None
-        self._connected = False
+        # Internal enum based state machine.  Start disconnected.
+        self._state: ConnectionState = ConnectionState.DISCONNECTED
 
         # Protocol information tracking - added for US-003
         self.protocol_info: dict[str, Any] | None = None
 
-    def get_protocol_info(self) -> dict[str, Any]:
-        """Return protocol information for the connected session.
+    @property
+    def _connected(self) -> bool:
+        """Compatibility shim for legacy code/tests.
 
-        Returns:
-            Dictionary with protocol version, transport type, capabilities,
-            server info, and detection timestamp. If the client is not connected,
-            default ``None`` values are returned for each field.
+        Deprecated: prefer `connection_state is ConnectionState.CONNECTED`.
         """
-        return self.protocol_info or {
-            "protocol_version": None,
-            "transport_type": None,
-            "capabilities": None,
-            "server_info": None,
-            "last_detected": None,
-        }
+        return self._state is ConnectionState.CONNECTED
+
+    @_connected.setter
+    def _connected(self, value: bool) -> None:
+        # If a boolean is handed to us, update the enum accordingly.  If ``None``
+        # or any non-bool slips through just treat it as *False*.
+        self._state = ConnectionState.CONNECTED if bool(value) else ConnectionState.DISCONNECTED
+
+    # Public, idiomatic property for new callers ------------------------------------------------
+    @property
+    def connection_state(self) -> ConnectionState:
+        """Current connection state of this client."""
+        return self._state
+
+    def get_protocol_info(self) -> dict[str, Any]:
+        """Return protocol metadata reported by the remote MCP server.
+
+        The information is only available *after* a successful call to
+        :meth:`connect_to_server`.  Attempting to access it earlier now raises a
+        :class:`NotConnectedError` instead of returning a dict filled with
+        ``None`` placeholders.  This tightening of the contract surfaces logic
+        errors earlier and prevents silent mis-behaviour further down the call
+        stack.
+        """
+        if not self._connected:
+            msg = "Client is not connected - call 'connect_to_server' before accessing protocol info."
+            raise NotConnectedError(msg)
+
+        # The attribute is filled in by the concrete client once the handshake
+        # with the server completes.  Retain an empty dict fallback for extra
+        # robustness in case an implementation forgets to set it.
+        return self.protocol_info or {}
 
     @abstractmethod
     async def connect_to_server(self, *args, **kwargs) -> list[types.Tool]:
@@ -134,6 +183,7 @@ class BaseMCPClient(ABC, Generic[T]):
         await self.exit_stack.aclose()
         self.session = None
         self._connection_params = None
+        # Go through the property to keep the enum in sync
         self._connected = False
         self.protocol_info = None  # Clear protocol info on disconnect
 
