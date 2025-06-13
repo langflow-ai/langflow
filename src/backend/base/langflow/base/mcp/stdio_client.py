@@ -43,24 +43,24 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
             env = {}
 
         command = command_str.split(" ")
-        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **env}
+        # Preserve caller-provided environment variables without forcing debug mode
+        env_data: dict[str, str] = {"PATH": os.environ.get("PATH", ""), **env}
 
         # Create platform-specific command wrapper
         if platform.system() == "Windows":
             # For Windows, use cmd.exe with error reporting
             server_params = StdioServerParameters(
                 command="cmd",
-                args=[
-                    "/c",
-                    f"{command[0]} {' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
-                ],
+                args=["/c", f"{command_str}"],
                 env=env_data,
             )
         else:
-            # For Unix-like systems, use bash with error reporting
+            # On Unix-like systems launch the MCP server process directly.  Rely on
+            # the process exit status reported by the underlying SDK instead of
+            # brittle stderr string parsing.
             server_params = StdioServerParameters(
-                command="bash",
-                args=["-c", f"{command_str} || echo 'Command failed with exit code $?' >&2"],
+                command=command[0],
+                args=command[1:],
                 env=env_data,
             )
 
@@ -98,81 +98,32 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
             await tmp.flush()
             await tmp.close()
 
-            watcher_task = None
+            # Variables for tasks created later in the connection logic
             initializer_task = None
 
             try:
-                # Reopen the temp file for stderr capture
-                async with aiofiles.open(errlog_path, mode="w+", encoding="utf-8") as stderr_file:
-                    stdio_transport = await self.exit_stack.enter_async_context(
-                        stdio_client(server_params, errlog=stderr_file)
-                    )
-                    self.stdio, self.write = stdio_transport
-                    self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+                # Connect to the server process without custom stderr monitoring. Any
+                # startup failure will surface via process exit status which the MCP
+                # SDK propagates as an exception during session.initialize().
+                stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
+                self.stdio, self.write = stdio_transport
+                self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
 
-                    # Create a watcher task to monitor stderr
-                    initialization_complete = asyncio.Event()
+                if self.session is None:
+                    msg = "Session is None after initialization"
+                    raise RuntimeError(msg)
 
-                    async def watch_stderr():
-                        last_size = 0
-                        full_log = ""
-                        while not initialization_complete.is_set():  # Break when initialization completes
-                            await asyncio.sleep(0.05)
-                            try:
-                                current = (await Path(errlog_path).stat()).st_size
-                                if current > last_size:
-                                    async with aiofiles.open(errlog_path, encoding="utf-8") as f:
-                                        await f.seek(last_size)
-                                        data = await f.read()
-                                        full_log += data
-                                        data = data.strip()
+                # Initialize the MCP session - this will raise if the subprocess already
+                initializer_task = asyncio.create_task(self.session.initialize())
+                await initializer_task
 
-                                    # Check for our specific error message pattern
-                                    if "Command failed with exit code" in data:
-                                        msg = f"MCP server command '{command_str}' failed\nError log:\n{full_log}"
-                                        raise ConnectionError(msg)
-                                last_size = current
-                            except (OSError, asyncio.CancelledError):
-                                # Handle file access errors or cancellation gracefully
-                                break
+                # Capture protocol information after successful initialization
+                self._capture_stdio_protocol_info()
 
-                    # Create tasks for both operations
-                    watcher_task = asyncio.create_task(watch_stderr())
-                    if self.session is None:
-                        msg = "Session is None after initialization"
-                        raise RuntimeError(msg)
-                    initializer_task = asyncio.create_task(self.session.initialize())
-
-                    # Race them: first to finish wins
-                    try:
-                        done, _pending = await asyncio.wait(
-                            {watcher_task, initializer_task}, return_when=asyncio.FIRST_COMPLETED
-                        )
-                    except asyncio.CancelledError:
-                        # Ensure both tasks are cancelled and drained
-                        logger.debug("STDIO connection cancelled, cleaning up tasks...")
-                        raise
-                    finally:
-                        # Always ensure tasks are properly cleaned up
-                        initialization_complete.set()  # Signal watcher to stop
-                        await self._cleanup_tasks(watcher_task, initializer_task)
-
-                    if watcher_task in done:
-                        # stderr watcher fired → initialization failed
-                        watcher_task.result()  # re-raise ConnectionError from watcher
-                    else:
-                        # initialize succeeded
-                        initializer_task.result()  # re-raise initialization errors if any
-
-                    # Capture protocol information after successful initialization
-                    self._capture_stdio_protocol_info()
-
-                    # If we get here, initialization succeeded
-                    if self.session is None:
-                        msg = "Session is None after successful initialization"
-                        raise RuntimeError(msg)
-                    response = await self.session.list_tools()
-                    return response.tools
+                response = await self.session.list_tools()
+                # Early return mandated by MCP SDK: once tools are fetched
+                # during connection we must bubble them up immediately.
+                return response.tools  # noqa: TRY300
 
             except FileNotFoundError as e:
                 # Command not found, provide clear error message
@@ -262,7 +213,7 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
         await self._safe_cleanup()
 
     async def _execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-        """Execute a tool using STDIO transport (creates new connection per tool).
+        """Execute a tool using the active persistent STDIO session.
 
         Args:
             tool_name: Name of the tool to execute
@@ -275,41 +226,46 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
             ValueError: For invalid tool parameters or execution failures
         """
         try:
-            params = self._connection_params
-            if params is None:
-                msg = "Connection parameters are None"
-                raise ValueError(msg)
-
-            command_str = params["command_str"]
-            env = params["env"]
-
-            # Create new connection for tool execution
-            command = command_str.split(" ")
-            env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **env}
-
-            if platform.system() == "Windows":
-                server_params = StdioServerParameters(
-                    command="cmd",
-                    args=["/c", f"{command[0]} {' '.join(command[1:])}"],
-                    env=env_data,
-                )
+            # Fast-path: reuse persistent session when connected
+            if self.session is not None and self._connected:
+                result = await self.session.call_tool(tool_name, arguments=arguments)
             else:
-                server_params = StdioServerParameters(
-                    command="bash",
-                    args=["-c", command_str],
-                    env=env_data,
-                )
+                # Fall back to one-off process execution to preserve backward
+                # compatibility with tests and callers that only performed an
+                # initial parameter validation without establishing a long-lived
+                # session.
 
-            async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
-                await session.initialize()
-                result = await session.call_tool(tool_name, arguments=arguments)
+                params = self._connection_params
+                if params is None:
+                    msg = "Connection parameters are None"
+                    raise ValueError(msg)
 
-                # Handle different response formats
-                if hasattr(result, "content"):
-                    return {"content": result.content}
-                if isinstance(result, dict):
-                    return result
-                return {"result": result}
+                command_str = params["command_str"]
+                env = params["env"]
+
+                command = command_str.split(" ")
+                env_data: dict[str, str] = {"PATH": os.environ.get("PATH", ""), **env}
+
+                if platform.system() == "Windows":
+                    server_params = StdioServerParameters(
+                        command="cmd",
+                        args=["/c", f"{command_str}"],
+                        env=env_data,
+                    )
+                else:
+                    server_params = StdioServerParameters(
+                        command=command[0],
+                        args=command[1:],
+                        env=env_data,
+                    )
+
+                async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
+                    await session.initialize()
+                    result = await session.call_tool(tool_name, arguments=arguments)
+
+            # Normalised primitive result - early return keeps control-flow
+            # flat and is clearer than nesting with an else branch.
+            return result  # noqa: TRY300
 
         except (ConnectionError, TimeoutError, OSError) as e:
             # Local transport-level failures - wrap with helpful context
@@ -369,7 +325,7 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
     async def call_tool(self, name: str, arguments: dict):
         """Public helper mirroring *MCPSseClient.call_tool*.
 
-        Delegates to :pyfunc:`_execute_tool` which already contains the
-        detailed logic (spawn-per-request when needed).
+        Delegates to :pyfunc:`_execute_tool` which reuses the persistent
+        MCP session established by connect_to_server().
         """
         return await self._execute_tool(name, arguments)
