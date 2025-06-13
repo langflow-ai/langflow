@@ -358,23 +358,49 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
         self,
         url: str,
         headers: dict[str, str] | None = None,
-        timeout_seconds: int = 30,
+        timeout_seconds: int | None = None,
         sse_read_timeout_seconds: int = 30,
         max_retries: int | None = None,
+        *,
+        connect_timeout_seconds: int | None = 10,
     ):
-        """Connect to server with retry logic and exponential backoff."""
+        """Connect to server with retry logic and exponential backoff.
+
+        New in v0.5:
+            connect_timeout_seconds -- per-attempt connection timeout that is
+            enforced for the underlying ``connect_to_server`` call.  Keeping
+            this relatively small ensures that retries happen quickly when the
+            remote endpoint is still booting or temporarily unavailable.
+        """
+        # Resolve effective per-attempt timeout – explicit ``timeout_seconds``
+        # still wins for backwards-compatibility, otherwise fall back to the new
+        # ``connect_timeout_seconds`` shortcut.
+        if timeout_seconds is None:
+            timeout_seconds = connect_timeout_seconds
+
         max_retries = max_retries or self.max_retries
         last_exception = None
 
         for attempt in range(max_retries + 1):
+            attempt_started = asyncio.get_running_loop().time()
             try:
-                return await self.connect_to_server(url, headers, timeout_seconds, sse_read_timeout_seconds)
-            except (ConnectionError, OSError, httpx.HTTPError, asyncio.TimeoutError) as e:
+                return await self.connect_to_server(
+                    url,
+                    headers,
+                    timeout_seconds,
+                    sse_read_timeout_seconds,
+                )
+            except (ConnectionError, OSError, httpx.HTTPError, asyncio.TimeoutError, MCPTransportError) as e:
                 last_exception = e
                 if attempt < max_retries:
-                    delay = self._calculate_retry_delay(attempt)
-                    logger.debug(f"Connection attempt {attempt + 1} failed, retrying in {delay}s: {e}")
-                    await asyncio.sleep(delay)
+                    target_delay = self._calculate_retry_delay(attempt)
+                    logger.debug(
+                        "Connection attempt %d failed, sleeping %.2fs before next: %s",
+                        attempt + 1,
+                        target_delay,
+                        e,
+                    )
+                    await asyncio.sleep(target_delay)
                 else:
                     logger.error(f"Max retries ({max_retries}) exceeded for {url}")
 
@@ -423,20 +449,34 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
             streamable_session_cm = None
 
         if streamable_session_cm is not None:
-            self.session = await self.exit_stack.enter_async_context(streamable_session_cm)
-            self.connected_transport = "streamable_http"
-            self._connected = True
+            try:
+                self.session = await self.exit_stack.enter_async_context(streamable_session_cm)
+            except (ConnectionError, httpx.HTTPError, asyncio.TimeoutError, Exception) as exc:  # noqa: BLE001
+                # Streamable HTTP looked promising (context manager returned) but the
+                # actual handshake failed.  Log and continue with HTTP+SSE
+                logger.debug(
+                    "Streamable HTTP context enter failed – falling back to HTTP+SSE: %s",
+                    exc,
+                )
+                self.session = None
+                streamable_session_cm = None  # signal failure so we try fallback below
+            else:
+                self.connected_transport = "streamable_http"
+                self._connected = True
 
-            # Capture protocol information for Streamable HTTP transport
-            self._capture_streamable_http_protocol_info()
+                # Capture protocol information for Streamable HTTP transport
+                self._capture_streamable_http_protocol_info()
 
-            # Get tools from session
-            if self.session is None:
-                msg = "Session is None after successful initialization"
-                raise RuntimeError(msg)
-            response = await self.session.list_tools()
-            logger.info(f"Successfully connected via Streamable HTTP, found {len(response.tools)} tools")
-            return response.tools
+                # Get tools from session
+                if self.session is None:
+                    msg = "Session is None after successful initialization"
+                    raise RuntimeError(msg)
+                response = await self.session.list_tools()
+                logger.info(
+                    "Successfully connected via Streamable HTTP, found %d tools",
+                    len(response.tools),
+                )
+                return response.tools
 
         # Phase 2: Try HTTP+SSE (MCP 2024-11-05)
         logger.debug("Phase 2: Attempting HTTP+SSE transport")

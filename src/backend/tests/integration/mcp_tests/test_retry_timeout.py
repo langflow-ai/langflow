@@ -40,7 +40,6 @@ async def _delayed_start_server(port: int, delay: float):
 
 
 @pytest.mark.usefixtures("event_loop")
-@pytest.mark.xfail(reason="Flaky timing - refine client retry hooks", strict=False)
 async def test_connect_with_retry_success_on_second_attempt():
     port = _free_port()
     url = f"http://127.0.0.1:{port}/mcp"
