@@ -32,6 +32,9 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", a
 
 MINIMUM_KEY_LENGTH = 32
 
+AUTO_LOGIN_WARNING = "In v1.6 LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. Please update your authentication method."
+AUTO_LOGIN_ERROR = "Since v1.5, LANGFLOW_AUTO_LOGIN requires a valid API key. Please update your authentication method."
+
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
 async def api_key_security(
@@ -52,16 +55,11 @@ async def api_key_security(
             if not query_param and not header_param:
                 if settings_service.auth_settings.skip_auth_auto_login:
                     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
-                    logger.warning(
-                        "In v1.6 LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. "
-                        "Please update your authentication method."
-                    )
+                    logger.warning(AUTO_LOGIN_WARNING)
                 else:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
-                        detail=(
-                            "Since v1.5, AUTO_LOGIN requires a valid API key. Please update your authentication method."
-                        ),
+                        detail=AUTO_LOGIN_ERROR,
                     )
             result = await check_key(db, query_param or header_param)
 
@@ -103,16 +101,11 @@ async def ws_api_key_security(
             if not api_key:
                 if settings.auth_settings.skip_auth_auto_login:
                     result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
-                    logger.warning(
-                        "In v1.6 LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. "
-                        "Please update your authentication method."
-                    )
+                    logger.warning(AUTO_LOGIN_WARNING)
                 else:
                     raise WebSocketException(
                         code=status.WS_1008_POLICY_VIOLATION,
-                        reason=(
-                            "Since v1.5, AUTO_LOGIN requires a valid API key. Please update your authentication method."
-                        ),
+                        reason=AUTO_LOGIN_ERROR,
                     )
             result = await check_key(db, api_key)
 
