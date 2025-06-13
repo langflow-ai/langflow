@@ -88,11 +88,14 @@ async def test_update_project(client: AsyncClient, logged_in_headers, basic_case
     assert "id" in result, "The dictionary must contain a key called 'id'"
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
 
+
 from uuid import uuid4
+
 
 async def test_create_project_unauthorized(client: AsyncClient, basic_case):
     response = await client.post("api/v1/projects/", json=basic_case)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
 
 async def test_create_project_validation_error(client: AsyncClient, logged_in_headers, basic_case):
     invalid_case = basic_case.copy()
@@ -100,12 +103,14 @@ async def test_create_project_validation_error(client: AsyncClient, logged_in_he
     response = await client.post("api/v1/projects/", json=invalid_case, headers=logged_in_headers)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
+
 async def test_create_duplicate_project_name(client: AsyncClient, logged_in_headers, basic_case):
     # first creation
     await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
     # duplicate creation
     response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
     assert response.status_code in (status.HTTP_400_BAD_REQUEST, status.HTTP_409_CONFLICT)
+
 
 async def test_delete_project_then_404(client: AsyncClient, logged_in_headers, basic_case):
     create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
@@ -117,10 +122,12 @@ async def test_delete_project_then_404(client: AsyncClient, logged_in_headers, b
     get_resp = await client.get(f"api/v1/projects/{proj_id}", headers=logged_in_headers)
     assert get_resp.status_code == status.HTTP_404_NOT_FOUND
 
+
 async def test_read_project_invalid_id_format(client: AsyncClient, logged_in_headers):
     bad_id = "not-a-uuid"
     response = await client.get(f"api/v1/projects/{bad_id}", headers=logged_in_headers)
     assert response.status_code in (status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_400_BAD_REQUEST)
+
 
 async def test_read_projects_pagination(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/projects/?limit=1&offset=0", headers=logged_in_headers)
@@ -131,6 +138,7 @@ async def test_read_projects_pagination(client: AsyncClient, logged_in_headers):
     else:
         assert "items" in result
         assert result.get("limit") == 1
+
 
 async def test_read_projects_empty(client: AsyncClient, logged_in_headers):
     # Ensure DB is clean by fetching with a random header that forces each test transactional isolation
