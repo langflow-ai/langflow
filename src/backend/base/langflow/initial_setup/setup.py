@@ -130,7 +130,16 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                         continue
                     # The idea here is to update some attributes of the field
                     to_check_attributes = FIELD_FORMAT_ATTRIBUTES
+                    # Skip specific field attributes that should respect the starter project template values.
+                    # Currently we skip 'advanced' so that a field marked as advanced in the component code
+                    # will NOT overwrite the value specified in the starter project template. This preserves
+                    # the intended UX configuration of the starter projects.
+                    SKIPPED_FIELD_ATTRIBUTES = {"advanced"}
+                    # Iterate through the attributes we want to potentially update
                     for attr in to_check_attributes:
+                        # Respect the template value by not updating if the attribute is in the skipped set
+                        if attr in SKIPPED_FIELD_ATTRIBUTES:
+                            continue
                         if (
                             attr in field_dict
                             and attr in node_data["template"].get(field_name)
