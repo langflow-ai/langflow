@@ -1,9 +1,9 @@
 import asyncio
 import json
+import uuid
 from contextlib import suppress
 from typing import Any
-from urllib.parse import urlparse, urljoin
-import uuid
+from urllib.parse import urlparse
 
 import httpx
 from httpx import codes as httpx_codes
@@ -189,7 +189,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
                     if event_type and event_data_lines:
                         # Join multi-line data
                         event_data_str = "\n".join(event_data_lines)
-                        
+
                         if event_type == "endpoint" and not endpoint_discovered:
                             # Endpoint events contain plain URI strings, not JSON
                             logger.debug(f"MCP HTTP+SSE endpoint discovered: {event_data_str}")
@@ -201,7 +201,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
                             try:
                                 event_data = json.loads(event_data_str)
                                 logger.debug(f"MCP HTTP+SSE message received: {event_data}")
-                                
+
                                 # Check if this is a response to a pending request
                                 if isinstance(event_data, dict) and "id" in event_data:
                                     request_id = str(event_data["id"])
@@ -213,7 +213,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
                                             future.set_result(event_data)
                                     else:
                                         logger.debug(f"No pending future found for request ID: {request_id}")
-                                
+
                                 # Also put it in the queue for the transport handler
                                 await endpoint_queue.put(("message", event_data))
                             except json.JSONDecodeError as e:
@@ -228,7 +228,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
     async def _mcp_http_sse_send_request(self, request_data: dict) -> dict:
         """Send a JSON-RPC request via HTTP+SSE and wait for response."""
         if not self.discovered_endpoint:
-            msg = "No HTTP+SSE endpoint available"
+            msg = "No HTTP+SSE endpoint discovered"
             raise RuntimeError(msg)
 
         # Generate request ID if not present
@@ -247,17 +247,17 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
 
             # Wait for response via SSE stream (handled by discovery task)
             response = await asyncio.wait_for(response_future, timeout=30.0)
-            return response
-
-        except asyncio.TimeoutError:
-            # Clean up the future
+        except asyncio.TimeoutError as exc:
+            # Clean up the future and re-raise with clearer context
             self.response_futures.pop(request_id, None)
             msg = "HTTP+SSE request timed out"
-            raise asyncio.TimeoutError(msg)
-        except Exception as e:
-            # Clean up the future
+            raise asyncio.TimeoutError(msg) from exc
+        except Exception:
+            # Clean up the future and propagate the original error
             self.response_futures.pop(request_id, None)
-            raise e
+            raise
+        else:
+            return response
 
     async def _try_http_sse_transport(
         self,
@@ -281,7 +281,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
             while True:
                 try:
                     event_type, event_data = await asyncio.wait_for(endpoint_queue.get(), timeout=10.0)
-                    
+
                     if event_type == "endpoint" and isinstance(event_data, dict) and "uri" in event_data:
                         from urllib.parse import urljoin
 
@@ -304,33 +304,35 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
 
                             # Send the initialization request
                             await self._mcp_http_sse_send_request(init_request)
-                            
+
                             # Wait for the initialization response via SSE
                             while True:
                                 try:
-                                    response_type, response_data = await asyncio.wait_for(endpoint_queue.get(), timeout=30.0)
-                                    
+                                    response_type, response_data = await asyncio.wait_for(
+                                        endpoint_queue.get(), timeout=30.0
+                                    )
+
                                     if response_type == "message" and isinstance(response_data, dict):
                                         if response_data.get("id") == "init-1" and "result" in response_data:
                                             self.init_result = types.InitializeResult(**response_data["result"])
                                             logger.info("HTTP+SSE session initialized successfully")
-                                            
+
                                             # Store the discovery task for cleanup later
                                             self.discovery_task = discovery_task
                                             return True
-                                        elif response_data.get("id") == "init-1" and "error" in response_data:
+                                        if response_data.get("id") == "init-1" and "error" in response_data:
                                             logger.debug(f"HTTP+SSE initialization error: {response_data['error']}")
                                             break
                                     elif response_type == "error":
                                         logger.debug(f"HTTP+SSE initialization failed: {response_data}")
                                         break
-                                        
+
                                 except asyncio.TimeoutError:
                                     logger.debug("HTTP+SSE initialization timed out")
                                     break
-                                    
-                        except Exception as e:
-                            logger.debug(f"HTTP+SSE initialization failed: {e}")
+
+                        except Exception as exc:  # noqa: BLE001
+                            logger.debug(f"HTTP+SSE initialization failed: {exc}")
                             break
 
                     elif event_type == "error":
@@ -341,16 +343,14 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
                     logger.debug("HTTP+SSE endpoint discovery timed out")
                     break
 
-        except Exception as e:
-            logger.debug(f"HTTP+SSE transport setup failed: {e}")
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"HTTP+SSE transport setup failed: {exc}")
 
         # Clean up discovery task if initialization failed
-        if 'discovery_task' in locals():
+        if "discovery_task" in locals():
             discovery_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await discovery_task
-            except asyncio.CancelledError:
-                pass
 
         return False
 
@@ -372,17 +372,21 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
             this relatively small ensures that retries happen quickly when the
             remote endpoint is still booting or temporarily unavailable.
         """
-        # Resolve effective per-attempt timeout – explicit ``timeout_seconds``
-        # still wins for backwards-compatibility, otherwise fall back to the new
-        # ``connect_timeout_seconds`` shortcut.
+        # Resolve effective per-attempt timeout - explicit ``timeout_seconds`` still wins
+        # for backwards-compatibility, otherwise fall back to the new
+        # ``connect_timeout_seconds`` shortcut.  Ensure that the value is an ``int``
         if timeout_seconds is None:
             timeout_seconds = connect_timeout_seconds
+
+        # Guarantee that ``timeout_seconds`` is an ``int`` to satisfy type checkers
+        if not isinstance(timeout_seconds, int):
+            msg = "timeout_seconds must be an int"
+            raise TypeError(msg)
 
         max_retries = max_retries or self.max_retries
         last_exception = None
 
         for attempt in range(max_retries + 1):
-            attempt_started = asyncio.get_running_loop().time()
             try:
                 return await self.connect_to_server(
                     url,
@@ -437,7 +441,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
         # ------------------------------------------------------------------
 
         try_http_sse_first = await self._looks_like_http_sse(url, headers)
-        
+
         logger.debug(f"connect_to_server: heuristic result try_http_sse_first={try_http_sse_first}")
 
         if not try_http_sse_first:
@@ -451,11 +455,11 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
         if streamable_session_cm is not None:
             try:
                 self.session = await self.exit_stack.enter_async_context(streamable_session_cm)
-            except (ConnectionError, httpx.HTTPError, asyncio.TimeoutError, Exception) as exc:  # noqa: BLE001
+            except (ConnectionError, httpx.HTTPError, asyncio.TimeoutError, Exception) as exc:
                 # Streamable HTTP looked promising (context manager returned) but the
                 # actual handshake failed.  Log and continue with HTTP+SSE
                 logger.debug(
-                    "Streamable HTTP context enter failed – falling back to HTTP+SSE: %s",
+                    "Streamable HTTP context enter failed - falling back to HTTP+SSE: %s",
                     exc,
                 )
                 self.session = None
@@ -481,7 +485,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
         # Phase 2: Try HTTP+SSE (MCP 2024-11-05)
         logger.debug("Phase 2: Attempting HTTP+SSE transport")
         http_sse_success = await self._try_http_sse_transport(url, headers, timeout_seconds)
-        
+
         logger.debug(f"connect_to_server: HTTP+SSE result http_sse_success={http_sse_success}")
 
         if http_sse_success:
@@ -691,7 +695,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
     async def pre_check_redirect(self, url: str | None) -> str | None:
         """Follow a single HTTP redirect (3xx) and return the final URL.
 
-        This does not constitute speculative endpoint discovery –
+        This does not constitute speculative endpoint discovery -
         we only respect an explicit redirect response from the server.
 
         Args:
@@ -726,7 +730,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
     # Transport detection helpers
     # ---------------------------------------------------------------------
 
-    async def _looks_like_http_sse(self, url: str, headers: dict[str, str] | None) -> bool:  # noqa: C901 (complexity ok)
+    async def _looks_like_http_sse(self, url: str, headers: dict[str, str] | None) -> bool:
         """Return *True* if *url* appears to be an HTTP+SSE discovery stream.
 
         Heuristics (all driven by spec 2024-11-05):
@@ -738,49 +742,57 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
         Any failure (timeout, network error, unexpected status) is treated as
         *False* so we safely fall back to the normal Streamable-HTTP probe.
         """
-
         request_headers = {"Accept": "text/event-stream", **(headers or {})}
         logger.debug(f"_looks_like_http_sse: probing {url} with headers {request_headers}")
 
         try:
             async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
-                # Prefer HEAD when available – cheaper and side-effect free
+                # Prefer HEAD when available - cheaper and side-effect free
                 try:
                     head_resp = await client.head(url, headers=request_headers)
-                    logger.debug(f"_looks_like_http_sse: HEAD {url} -> {head_resp.status_code}, content-type: {head_resp.headers.get('content-type', 'NONE')}")
+                    logger.debug(
+                        "_looks_like_http_sse: HEAD %s -> %s, content-type: %s",
+                        url,
+                        head_resp.status_code,
+                        head_resp.headers.get("content-type", "NONE"),
+                    )
                     if "text/event-stream" in head_resp.headers.get("content-type", "").lower():
-                        logger.debug(f"_looks_like_http_sse: HEAD indicates SSE, returning True")
+                        logger.debug("_looks_like_http_sse: HEAD indicates SSE, returning True")
                         return True
-                    # Regardless of status code, continue with GET probe – some
+                    # Regardless of status code, continue with GET probe - some
                     # servers either don't implement HEAD correctly or return
                     # misleading headers.
                 except httpx.HTTPError as e:
                     logger.debug(f"_looks_like_http_sse: HEAD failed with {e}, falling through to GET")
-                    # Errors are not fatal for the heuristic – fall through to GET
-                    pass
+                    # Errors are not fatal for the heuristic - fall through to GET
 
                 # Fallback: open a GET stream but read no body (headers only)
                 try:
                     async with client.stream("GET", url, headers=request_headers) as resp_stream:
-                        logger.debug(f"_looks_like_http_sse: GET {url} -> {resp_stream.status_code}, content-type: {resp_stream.headers.get('content-type', 'NONE')}")
+                        logger.debug(
+                            "_looks_like_http_sse: GET %s -> %s, content-type: %s",
+                            url,
+                            resp_stream.status_code,
+                            resp_stream.headers.get("content-type", "NONE"),
+                        )
                         if "text/event-stream" in resp_stream.headers.get("content-type", "").lower():
-                            logger.debug(f"_looks_like_http_sse: GET indicates SSE, returning True")
+                            logger.debug("_looks_like_http_sse: GET indicates SSE, returning True")
                             return True
                 except httpx.HTTPError as e:
                     logger.debug(f"_looks_like_http_sse: GET failed with {e}")
-                    pass
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug(f"_looks_like_http_sse: outer exception {e}")
-            # Generic guard – any unknown failure means "not SSE"
+            # Generic guard - any unknown failure means "not SSE"
             return False
 
-        logger.debug(f"_looks_like_http_sse: no SSE detected, returning False")
+        logger.debug("_looks_like_http_sse: no SSE detected, returning False")
         return False
 
     async def _send_http_sse_request(self, request_data: dict) -> None:
         """Send a request to the HTTP+SSE messages endpoint."""
         if not self.discovered_endpoint:
-            raise RuntimeError("No HTTP+SSE endpoint discovered")
+            msg = "No HTTP+SSE endpoint discovered"
+            raise RuntimeError(msg)
 
         request_headers = {
             "Content-Type": "application/json",
@@ -793,7 +805,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
                 json=request_data,
                 headers=request_headers,
             )
-            
+
             if response.status_code not in (HTTP_STATUS_OK, 202):  # Accept both 200 OK and 202 Accepted
                 error_msg = f"HTTP+SSE request failed with status {response.status_code}"
                 raise httpx.HTTPStatusError(error_msg, request=response.request, response=response)

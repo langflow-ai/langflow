@@ -290,7 +290,7 @@ async def update_tools(
     mcp_sse_client: MCPSseClient | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool], dict[str, Any]]:
     """Fetch server config and update available tools.
-    
+
     Returns:
         Tuple containing:
         - mode: Connection mode ("Stdio" or "SSE")

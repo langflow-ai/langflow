@@ -41,11 +41,12 @@ class BaseMCPClient(ABC, Generic[T]):
         self.protocol_info: dict[str, Any] | None = None
 
     def get_protocol_info(self) -> dict[str, Any]:
-        """Get protocol information for the connected session.
-        
+        """Return protocol information for the connected session.
+
         Returns:
-            Dictionary containing protocol version, transport type, capabilities,
-            server info, and detection timestamp. Returns default values if not connected.
+            Dictionary with protocol version, transport type, capabilities,
+            server info, and detection timestamp. If the client is not connected,
+            default ``None`` values are returned for each field.
         """
         return self.protocol_info or {
             "protocol_version": None,

@@ -312,7 +312,7 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
                 return {"result": result}
 
         except (ConnectionError, TimeoutError, OSError) as e:
-            # Local transport-level failures – wrap with helpful context
+            # Local transport-level failures - wrap with helpful context
             msg = f"Failed to run tool '{tool_name}': {e}"
             logger.error(msg)
             self._connected = False
@@ -322,7 +322,7 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
         # NOTE:  AnyIO's TaskGroup wraps remote exceptions in an ExceptionGroup starting
         # from Python 3.11.  We attempt to unwrap such groups so the caller can inspect
         # the original error message (e.g. 'validation', 'runtime', 'timeout').
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             # Helper to recursively drill down the first non-group exception.
             def _unwrap(err: BaseException) -> BaseException:  # type: ignore[name-defined]
                 # Python ≥3.11: ExceptionGroup
@@ -352,7 +352,7 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
 
         try:
             response = await self.session.list_tools()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.error(f"Failed to list tools via STDIO transport: {exc}")
             return []
 

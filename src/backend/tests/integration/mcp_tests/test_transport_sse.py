@@ -12,11 +12,11 @@ async def test_http_sse_legacy_endpoint(http_sse_url):
     advertises *text/event-stream* and fall back to the HTTP+SSE transport.
     The reference server exposes two tools: *echo* and *simulate_error*.
     """
-
     client = MCPSseClient()
     try:
         tools = await client.connect_to_server(http_sse_url)
         names = [t.name for t in tools]
-        assert "echo" in names and "simulate_error" in names
+        assert "echo" in names
+        assert "simulate_error" in names
     finally:
         await client.disconnect()
