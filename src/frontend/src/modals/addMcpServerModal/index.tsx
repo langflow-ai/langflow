@@ -134,7 +134,7 @@ export default function AddMcpServerModal({
         "snake_case",
         "no_blank",
         "lowercase",
-      ]).slice(0, 20);
+      ]).slice(0, 30);
       try {
         await modifyMCPServer({
           name,
@@ -168,7 +168,7 @@ export default function AddMcpServerModal({
         "snake_case",
         "no_blank",
         "lowercase",
-      ]).slice(0, 20);
+      ]).slice(0, 30);
       try {
         await modifyMCPServer({
           name,
@@ -202,7 +202,7 @@ export default function AddMcpServerModal({
           "snake_case",
           "no_blank",
           "lowercase",
-        ]).slice(0, 20),
+        ]).slice(0, 30),
       }));
     } catch (e: any) {
       setError(e.message || "Invalid input");
