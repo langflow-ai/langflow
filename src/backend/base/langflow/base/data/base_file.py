@@ -7,9 +7,9 @@ from zipfile import ZipFile, is_zipfile
 
 import pandas as pd
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
@@ -175,6 +175,7 @@ class BaseFileComponent(Component, ABC):
 
     _base_outputs = [
         Output(display_name="Loaded Files", name="dataframe", method="load_files"),
+        Output(display_name="Raw Content", name="message", method="load_files_message"),
     ]
 
     @abstractmethod
@@ -235,6 +236,26 @@ class BaseFileComponent(Component, ABC):
         if not data_list:
             return [Data()]
         return data_list
+
+    def load_files_message(self) -> Message:
+        """Load files and return as Message.
+
+        Returns:
+            Message: Message containing all file data
+        """
+        data_list = self.load_files_core()
+        if not data_list:
+            return Message()  # No data -> empty message
+
+        sep: str = getattr(self, "separator", "\n\n") or "\n\n"
+
+        parts: list[str] = []
+        for d in data_list:
+            # Prefer explicit text if available, fall back to full dict, lastly str()
+            text = (getattr(d, "get_text", lambda: None)() or d.data.get("text")) if isinstance(d.data, dict) else None
+            parts.append(text if text is not None else str(d))
+
+        return Message(text=sep.join(parts))
 
     def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.

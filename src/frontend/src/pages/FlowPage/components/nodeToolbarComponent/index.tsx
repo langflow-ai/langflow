@@ -711,20 +711,6 @@ const NodeToolbarComponent = memo(
                     </span>
                   </div>
                 </SelectItem>
-                {hasToolMode && (
-                  <SelectItem value="toolMode">
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find((obj) => obj.name === "Tool Mode")
-                          ?.shortcut!
-                      }
-                      value={"Tool Mode"}
-                      icon={"Hammer"}
-                      dataTestId="tool-mode-button"
-                      style={`${toolMode ? "text-primary" : ""} transition-all`}
-                    />
-                  </SelectItem>
-                )}
               </SelectContentWithoutPortal>
             </Select>
           </div>

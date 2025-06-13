@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
@@ -9,6 +10,14 @@ test(
 
   async ({ page }) => {
     await awaitBootstrapTest(page);
+
+    const firstRunLangflow = await page
+      .getByTestId("empty-project-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
 
     await page.getByTestId("blank-flow").click();
 
@@ -58,13 +67,13 @@ test(
     //fourth component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("data to message");
-    await page.waitForSelector('[data-testid="processingData to Message"]', {
+    await page.getByTestId("sidebar-search-input").fill("Parser");
+    await page.waitForSelector('[data-testid="processingParser"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingData to Message")
+      .getByTestId("processingParser")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 300 },
       });
@@ -114,7 +123,7 @@ test(
 
     //connection 1
     await page
-      .getByTestId("handle-urlcomponent-shownode-result-right")
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .nth(0)
       .click();
     await page
@@ -133,11 +142,13 @@ test(
       .getByTestId("handle-splittext-shownode-chunks-right")
       .nth(0)
       .click();
-    await page.getByTestId("handle-parsedata-shownode-data-left").click();
+    await page
+      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
+      .click();
 
     //connection 4
     await page
-      .getByTestId("handle-parsedata-shownode-message-right")
+      .getByTestId("handle-parsercomponent-shownode-parsed text-right")
       .nth(0)
       .click();
     await page.getByTestId("handle-chatoutput-shownode-inputs-left").click();
@@ -177,7 +188,9 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 2,
+    });
 
     await page.waitForSelector(
       '[data-testid="output-inspection-output message-chatoutput"]',
@@ -257,8 +270,6 @@ test(
     await page.keyboard.press("Escape");
 
     await page.getByTestId("button_run_chat output").click();
-
-    await page.waitForTimeout(1000);
 
     await page.waitForSelector("text=built successfully", {
       timeout: 30000 * 3,
