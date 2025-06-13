@@ -291,7 +291,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "ScrapeGraphSearchApi"
+          "type": "ScrapeGraphSearchApi",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "ScrapeGraphSearchApi-vo1Yo",
@@ -600,7 +601,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-v88Su",
@@ -1071,7 +1073,7 @@
               }
             ],
             "pinned": false,
-            "score": 5.283996070936036e-7,
+            "score": 5.283996070936036e-07,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -1757,7 +1759,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-xgcha",

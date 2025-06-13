@@ -304,7 +304,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ApifyActors"
+          "type": "ApifyActors",
+          "selected_output": "tool"
         },
         "dragging": false,
         "id": "ApifyActors-t44sy",
@@ -506,7 +507,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ApifyActors"
+          "type": "ApifyActors",
+          "selected_output": "tool"
         },
         "dragging": false,
         "id": "ApifyActors-n0Tjo",
@@ -900,7 +902,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-9joxW",
@@ -2001,7 +2004,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-EePDq",

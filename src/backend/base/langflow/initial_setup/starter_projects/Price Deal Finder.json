@@ -414,7 +414,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-DwzkZ",
@@ -1178,7 +1179,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "TavilySearchComponent"
+          "type": "TavilySearchComponent",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "TavilySearchComponent-STQC5",
@@ -1585,7 +1587,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "AgentQL"
+          "type": "AgentQL",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "AgentQL-reBlu",
@@ -2320,7 +2323,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-oRYZX",

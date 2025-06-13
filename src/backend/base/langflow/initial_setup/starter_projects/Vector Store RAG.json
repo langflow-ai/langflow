@@ -553,6 +553,7 @@
               }
             }
           },
+          "selected_output": "message",
           "type": "ChatInput"
         },
         "dragging": false,
@@ -734,6 +735,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "prompt",
           "type": "Prompt"
         },
         "dragging": false,
@@ -939,6 +941,7 @@
               }
             }
           },
+          "selected_output": "chunks",
           "type": "SplitText"
         },
         "dragging": false,
@@ -1812,6 +1815,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "embeddings",
           "type": "OpenAIEmbeddings"
         },
         "dragging": false,
@@ -2344,6 +2348,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "embeddings",
           "type": "OpenAIEmbeddings"
         },
         "dragging": false,
@@ -2623,6 +2628,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "dataframe",
           "type": "File"
         },
         "dragging": false,
@@ -3113,6 +3119,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
           "type": "OpenAIModel"
         },
@@ -3288,6 +3295,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "parsed_text",
           "showNode": true,
           "type": "parser"
         },
@@ -3396,6 +3404,7 @@
               }
             ],
             "pinned": false,
+            "selected_output": "dataframe",
             "template": {
               "_type": "Component",
               "advanced_search_filter": {
@@ -4058,6 +4067,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "dataframe",
           "showNode": true,
           "type": "AstraDB"
         },

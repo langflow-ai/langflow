@@ -444,6 +444,7 @@
               }
             }
           },
+          "selected_output": "message",
           "type": "ChatInput"
         },
         "dragging": false,
@@ -1116,6 +1117,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "structured_output_dataframe",
           "type": "StructuredOutput"
         },
         "dragging": false,
@@ -1808,6 +1810,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "response",
           "type": "Agent"
         },
         "dragging": false,
@@ -2276,6 +2279,7 @@
             },
             "tool_mode": true
           },
+          "selected_output": "component_as_tool",
           "showNode": true,
           "type": "TavilySearchComponent"
         },
@@ -2666,6 +2670,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "model_output",
           "showNode": true,
           "type": "OpenAIModel"
         },
@@ -2840,6 +2845,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "parsed_text",
           "showNode": true,
           "type": "parser"
         },

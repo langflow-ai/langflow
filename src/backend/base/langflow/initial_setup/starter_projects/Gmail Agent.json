@@ -812,7 +812,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-BxJm3",
@@ -1125,7 +1126,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-buyiB",
@@ -2941,7 +2943,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "GmailAPI"
+          "type": "GmailAPI",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "GmailAPI-J65iP",
