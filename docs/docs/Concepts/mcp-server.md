@@ -9,7 +9,7 @@ import Icon from "@site/src/components/icon";
 
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) as both an MCP server and an MCP client.
 This page describes how to use Langflow as an *MCP server*.
-For information about using Langflow as an *MCP client*, see the [MCP connection component](/components-tools#mcp-connection).
+For information about using Langflow as an *MCP client*, see the [MCP connection component](/components-data#mcp-connection).
 
 As an MCP server, Langflow exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use use to take actions.
 
@@ -20,6 +20,11 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 * Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer to use MCP Inspector to [test and debug flows](#test-and-debug-flows).
 
 ## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
+
+:::tip
+As of Langflow 1.5, you can install Langflow MCP servers with a single click, instead of manually editing the client's JSON configuration file.
+For more information, see [Auto-install Langflow MCP servers](#auto-install).
+:::
 
 Langflow runs a separate MCP server for every [project](/concepts-overview#projects).
 The MCP server for each project exposes that project's flows as tools.
@@ -86,7 +91,7 @@ For example:
     ```
 
     The **MCP Server** tab automatically includes the correct `PROJECT_NAME`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` values.
-    The default Langflow server address is `http://127.0.0.1:7860` (`http://127.0.0.1:7868` if using Langflow for Desktop).
+    The default Langflow server address is `http://127.0.0.1:7860`.
 
     :::important
     If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
@@ -230,7 +235,7 @@ By default, Langflow isn't exposed to the public internet.
 However, you can forward Langflow server traffic with a forwarding platform like [ngrok](https://ngrok.com/docs/getting-started/) or [zrok](https://docs.zrok.io/docs/getting-started).
 
 The following procedure uses ngrok, but you can use any similar reverse proxy or forwarding platform.
-This procedure also assumes that you're using the default Langflow listening address `http://127.0.0.1:7860` (`http://127.0.0.1:7868` if using Langflow for Desktop).
+This procedure also assumes that you're using the default Langflow listening address `http://127.0.0.1:7860`.
 
 1. Sign up for an [ngrok account](https://dashboard.ngrok.com/signup).
 
@@ -347,3 +352,15 @@ To find your NPX path, run `which npx`.
 ```
   </TabItem>
 </Tabs>
+
+## Auto-install Langflow MCP servers {#auto-install}
+
+In the **MCP server** tab, an **Auto install** option is available for **Cursor** and **Claude**.
+
+To auto install your current Langflow project as an MCP server, click <Icon name="Plus" aria-hidden="True"/> **Add**.
+The installation adds the server's configuration file to the selected client's configuration file.
+
+Auto installation only works if your HTTP client and Langflow server are on the same local machine.
+You can still configure the client with the code in the **JSON** tab.
+
+You can add more than one Langflow MCP server to a single client.

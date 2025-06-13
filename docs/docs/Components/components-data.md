@@ -11,17 +11,27 @@ Data components load data from a source into your flow.
 
 They may perform some processing or type checking, like converting raw HTML data into text, or ensuring your loaded file is of an acceptable type.
 
-## Use a data component in a flow
+## Use data components in a flow
 
-The **URL** data component loads content from a list of URLs.
+Components like [News search](#news-search), [RSS reader](#rss-reader), and [Web search](#web-search) all fetch data into Langflow, and connect to Langflow in the same way. They can output the retrieved data in [DataFrame](/concepts-objects#dataframe-object) format, or can be connected to an **Agent** component to be used as tools.
 
-In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-label="Add"/>.
+For example, to connect all three components to an Agent, do the following:
 
-Alternatively, connect a component that outputs the `Message` type, like the **Chat Input** component, to supply your URLs from a component.
+1. Create the [Simple Agent starter flow](/starter-projects-simple-agent).
+2. In the **Agent** component, in the **OpenAI API Key** field, add your OpenAI API key.
+3. Add the **News search**, **RSS reader**, and **Web Search** components to your flow.
+4. In all three components, enable **Tool Mode**.
+5. Connect the three components to the **Agent** component's **Tools** port.
+The flow looks like this:
 
-In this example of a document ingestion pipeline, the URL component outputs raw HTML to a text splitter, which splits the raw content into chunks for a vector database to ingest.
+![Data components connected to agent](/img/connect-data-components-to-agent.png)
 
-![URL component in a data ingestion pipeline](/img/url-component.png)
+6. Open the **Playground** and ask `Use the websearch component to get me an RSS feed of the latest news.`
+The Agent uses the `perform_search` tool to return a list of RSS feeds.
+7. Ask for an RSS feed that interests you.
+The Agent uses the `read_rss` tool to fetch and summarize the latest RSS feed.
+
+Data components bring in data from many sources to Langflow, output as DataFrames or as tools for Agents to use.
 
 ## API Request
 
@@ -168,9 +178,106 @@ Archive formats (for bundling multiple files):
 - `.bz2` - Bzip2 compressed files
 - `.gz` - Gzip compressed files
 
-## SQL Query
 
-This component executes SQL queries on a specified database.
+## MCP connection {#mcp-connection}
+
+The **MCP connection** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
+
+In addition to being an MCP client that can leverage MCP servers, the **MCP connection** component's [SSE mode](#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-overview#projects) as tools within a flow.
+
+To use the **MCP connection** component with an agent component, follow these steps:
+
+1. Add the **MCP connection** component to your workflow.
+
+2. In the **MCP connection** component, in the **MCP Command** field, enter the command to start your MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
+
+    ```bash
+    uvx mcp-server-fetch
+    ```
+
+    `uvx` is included with `uv` in the Langflow package.
+    To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+    For an example of starting `npx` MCP servers, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
+
+    To include environment variables with your server command, add them to the **Env** field like this:
+
+    ```bash
+    ASTRA_DB_APPLICATION_TOKEN=AstraCS:...
+    ```
+
+    :::important
+    Langflow passes environment variables from the `.env` file to MCP, but not global variables declared in the UI.
+    To add a value for an environment variable as a global variable, add it to Langflow's `.env` file at startup.
+    For more information, see [global variables](/configuration-global-variables).
+    :::
+
+3. Click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
+
+4. In the **Tool** field, select the server tool you want the component to use.
+The available fields change based on the selected tool.
+For information on the parameters, see the MCP server's documentation.
+
+5. In the **MCP connection** component, enable **Tool mode**.
+Connect the **MCP connection** component's **Toolset** port to an **Agent** component's **Tools** port.
+
+    The flow looks similar to this:
+    ![MCP connection component](/img/component-mcp-stdio.png)
+
+6. Open the **Playground**.
+Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
+This confirms the MCP server is connected, and its tools are being used in Langflow.
+
+For more information, see [MCP server](/mcp-server).
+
+### MCP Server-Sent Events (SSE) mode {#mcp-sse-mode}
+
+:::important
+If you're using **Langflow for Desktop**, the default address is `http://127.0.0.1:7868/`.
+:::
+
+The MCP component's SSE mode connects your flow to the Langflow MCP server through the component.
+This allows you to use all flows within your [project](/concepts-overview#projects) as tools within a flow.
+
+1. In the **MCP connection** component, select **SSE**.
+A default address appears in the **MCP SSE URL** field.
+2. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
+The default value is `http://localhost:7860/api/v1/mcp/sse`.
+3. In the **MCP connection** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to retrieve the server's list of **Tools**.
+4. Click the **Tools** field.
+All of your flows are listed as tools.
+5. Enable **Tool Mode**, and then connect the **MCP connection** component to an agent component's tool port.
+The flow looks like this:
+![MCP component with SSE mode enabled](/img/component-mcp-sse-mode.png)
+6. Open the **Playground** and chat with your tool.
+The agent chooses the correct tool based on your query.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| command | String | The MCP command. Default: `uvx mcp-sse-shim@latest`. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| tools | List[Tool] | A list of tools exposed by the MCP server. |
+
+</details>
+
+## News search
+
+This component searches Google News with RSS and returns clean article data. The `clean_html` method parses the HTML content with the BeautifulSoup library, and then removes HTML markup and strips whitespace so the output data is clean.
+
+It returns news content as a DataFrame containing article titles, links, publication dates, and summaries. The component can also be used in **Tool Mode** with a connected **Agent**.
+
+To use this component in a flow, connect the **News Search** output to a component that accepts the DataFrame input.
+For example, connect the **News Search** component to a **Chat Output** component. Enter a search query, open the Playground, and click **Run Flow**.
+
+The latest content is returned in a structured DataFrame, with the key columns `title`, `link`, `published` and `summary`.
 
 <details>
 <summary>Parameters</summary>
@@ -179,17 +286,176 @@ This component executes SQL queries on a specified database.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| query | Query | The SQL query to execute. |
-| database_url | Database URL | The URL of the database. |
-| include_columns | Include Columns | Include columns in the result. |
-| passthrough | Passthrough | If an error occurs, return the query instead of raising an exception. |
-| add_error | Add Error | Add the error to the result. |
+| query | Search Query | Search keywords for news articles. |
+| hl | Language (hl) | Language code, e.g. en-US, fr, de. Default: `en-US`. |
+| gl | Country (gl) | Country code, e.g. US, FR, DE. Default: `US`. |
+| ceid | Country:Language (ceid) | e.g. US:en, FR:fr. Default: `US:en`. |
+| topic | Topic | One of: WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SCIENCE, SPORTS, HEALTH. |
+| location | Location (Geo) | City, state, or country for location-based news. Leave blank for keyword search. |
+| timeout | Timeout | Timeout for the request in seconds. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| result | Result | The result of the SQL query execution. |
+| articles | News Articles | A DataFrame containing article titles, links, publication dates, and summaries. |
+
+</details>
+
+## RSS Reader
+
+This component fetches and parses RSS feeds from any valid RSS feed URL. It returns the feed content as a DataFrame containing article titles, links, publication dates, and summaries. The component can also be used in **Tool Mode** with a connected **Agent**.
+
+To use this component in a flow, do the following:
+
+1. Connect the **RSS reader** output to a component that accepts the DataFrame input, such as a **Chat Output** component. 2. In the **RSS Feed URL** field, enter an RSS feed, such as `https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml` for the New York Times.
+3. Open the **Playground**, and then click **Run Flow**.
+
+The latest content is returned in a structured DataFrame, with the key columns `title`, `link`, `published` and `summary`.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| rss_url | RSS Feed URL | URL of the RSS feed to parse. |
+| timeout | Timeout | Timeout for the RSS feed request in seconds. Default: `5`. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| articles | Articles | A DataFrame containing article titles, links, publication dates, and summaries. |
+
+</details>
+
+## SQL database
+
+This component executes SQL queries on [SQLAlchemy-compatible databases](https://docs.sqlalchemy.org/en/20/). It supports any database that can be connected to using SQLAlchemy, including PostgreSQL, MySQL, SQLite, and others.
+
+To use this component in a flow, do the following:
+
+1. Create a test database called `test.db`.
+```shell
+sqlite3 test.db
+```
+
+2. Add values to the test database.
+```shell
+sqlite3 test.db "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT, age INTEGER); INSERT INTO users (name, email, age) VALUES ('John Doe', 'john@example.com', 30), ('Jane Smith', 'jane@example.com', 25), ('Bob Johnson', 'bob@example.com', 35);"
+```
+
+3. Verify that `test.db` has been created and contains your data.
+```shell
+sqlite3 test.db "SELECT * FROM users;"
+```
+
+Result:
+```shell
+1|John Doe|john@example.com
+2|Jane Smith|jane@example.com
+3|John Doe|john@example.com
+4|Jane Smith|jane@example.com
+```
+
+4. In the **SQL Database** component's **Database URL** field, add the connection string for `test.db`, such as `sqlite:///test.db`.
+
+With this connection established, the **SQL Query** field now accepts SQL queries.
+Instead of manually entering SQL queries, let's connect this database to an agent as a **Tool** to query it with natural language.
+
+5. In the **SQL Database** component, enable **Tool Mode**, and then connect it to an **Agent** component.
+The flow looks like this:
+
+![SQL database connected to agent](/img/component-sql-database.png)
+
+6. In the **Agent** component, in the **OpenAI API Key** field, add your OpenAI API key.
+7. Open the **Playground** and ask `What users are in my database?`
+The Agent uses the `run_sql_query` tool to retrieve the information, and additionally identifies the duplicate `users` entries.
+
+Result:
+```text
+Here are the users in your database:
+
+1. **John Doe** - Email: john@example.com
+2. **Jane Smith** - Email: jane@example.com
+3. **John Doe** - Email: john@example.com
+4. **Jane Smith** - Email: jane@example.com
+
+It seems there are duplicate entries for the users.
+
+> Finished chain.
+```
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| database_url | Database URL | The SQLAlchemy-compatible database connection URL. |
+| query | SQL Query | The SQL query to execute. |
+| include_columns | Include Columns | If enabled, includes column names in the result. Default: `true`. |
+| add_error | Add Error | If enabled, adds any error messages to the result. Default: `false`. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| run_sql_query | Result Table | The query results as a DataFrame. |
+
+</details>
+
+## Web search
+
+This component performs web searches using DuckDuckGo's HTML interface, and returns the search results as a [DataFrame](/concepts-objects#dataframe-object) containing the key columns `title`, `links`, and `snippets`. The component can also be used in **Tool Mode** with a connected **Agent**.
+
+To use this component in a flow, do the following:
+
+1. Add the **Web search** component to the [Basic prompting](/starter-projects-basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
+2. Connect the **Web search** component's output to a component that accepts the DataFrame input.
+3. Connect a **Type Convert** component to convert the DataFrame to a Message.
+4. In the **Type Convert** component, in the **Output Type** field, select **Message**.
+Your flow looks like this:
+
+![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
+
+5. In the **Language Model** component, in the **OpenAI API Key** field, add your OpenAI API key.
+6. Click **Playground**, and then ask about `latest news`.
+
+The search results are returned to the Playground as a message.
+
+Result:
+```text
+Latest news
+AI
+gpt-4o-mini
+Here are some of the latest news articles related to the environment:
+Ozone Pollution and Global Warming: A recent study highlights that ozone pollution is a significant global environmental concern, threatening human health and crop production while exacerbating global warming. Read more
+...
+```
+
+:::note
+This component uses web scraping and may be subject to rate limits. For production use, consider using an official search API.
+:::
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Search Query | Keywords to search for. |
+| timeout | Timeout | Timeout for the web search request in seconds. Default: `5`. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| results | Search Results | A DataFrame containing search results with titles, links, and snippets. |
 
 </details>
 
@@ -285,6 +551,7 @@ This mode passes the webhook's data as a string for the **Chat Output** componen
 7. Open the **Playground**.
 Your JSON data is posted to the **Chat Output** component, which indicates that the webhook component is correctly triggering the flow.
 
+For more information, see [Trigger flows with webhooks](/webhook).
 <details>
 <summary>Parameters</summary>
 
