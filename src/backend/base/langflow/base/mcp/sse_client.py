@@ -14,6 +14,9 @@ from loguru import logger
 from mcp import ClientSession, types
 
 from langflow.base.mcp.base_client import BaseMCPClient
+from langflow.base.mcp.constants import (
+    PROTOCOL_V_2025_03_26,
+)
 
 # SSE helper from core SDK
 from langflow.utils.version import get_version_info
@@ -25,6 +28,9 @@ HTTP_STATUS_OK = 200
 HTTP_STATUS_NOT_FOUND = 404
 HTTP_STATUS_SERVER_ERROR = 500
 
+# Probe buffer limit for discovering first SSE event (bytes/characters)
+PROBE_BUFFER_LIMIT = 2048
+
 
 class MCPConnectionError(Exception):
     """Custom exception for MCP connection errors."""
@@ -32,6 +38,10 @@ class MCPConnectionError(Exception):
 
 class MCPTransportError(Exception):
     """Custom exception for MCP transport errors."""
+
+
+class ProtocolError(ValueError):
+    """Raised when the server violates the MCP protocol contract."""
 
 
 class MCPSseClient(BaseMCPClient[dict[str, Any]]):
@@ -435,21 +445,25 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
         }
 
         # ------------------------------------------------------------------
-        # Heuristic: if the endpoint already advertises *text/event-stream*
-        # (legacy HTTP+SSE discovery stream), skip the Streamable-HTTP probe
-        # and proceed directly to HTTP+SSE.
+        # Quick optimisation:
+        # If the URL already serves ``text/event-stream`` (i.e. the legacy
+        # HTTP+SSE discovery stream) there is no point in first trying the
+        # newer Streamable-HTTP transport.  We therefore probe the headers and
+        # *start* with HTTP+SSE when it looks appropriate.
         # ------------------------------------------------------------------
 
         try_http_sse_first = await self._looks_like_http_sse(url, headers)
 
-        logger.debug(f"connect_to_server: heuristic result try_http_sse_first={try_http_sse_first}")
+        logger.debug(
+            "connect_to_server: initial probe indicates HTTP+SSE=%s", try_http_sse_first
+        )
 
         if not try_http_sse_first:
             # Phase 1: Try Streamable HTTP (MCP 2025-03-26)
-            logger.debug("Phase 1: Attempting Streamable HTTP transport")
+            logger.debug("Phase 1: Streamable-HTTP probe")
             streamable_session_cm = await self._try_streamable_http_transport(url, headers, timeout_seconds)
         else:
-            logger.debug("Phase 1: Skipping Streamable HTTP due to heuristic")
+            logger.debug("Phase 1 skipped: endpoint already looks like HTTP+SSE")
             streamable_session_cm = None
 
         if streamable_session_cm is not None:
@@ -523,7 +537,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
         if not self.session or not hasattr(self.session, "init_result"):
             # Fallback if init_result is not available
             self.protocol_info = {
-                "protocol_version": "2025-03-26",  # Streamable HTTP is 2025-03-26
+                "protocol_version": PROTOCOL_V_2025_03_26,  # default to latest known
                 "transport_type": "streamable_http",
                 "capabilities": {},
                 "server_info": {},
@@ -533,37 +547,36 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
 
         init_result = self.session.init_result
         self.protocol_info = {
-            "protocol_version": getattr(init_result, "protocolVersion", "2025-03-26"),
+            "protocol_version": getattr(init_result, "protocolVersion", PROTOCOL_V_2025_03_26),
             "transport_type": "streamable_http",
             "capabilities": getattr(init_result, "capabilities", {}),
             "server_info": getattr(init_result, "serverInfo", {}),
             "last_detected": datetime.now(timezone.utc).isoformat(),
         }
-        logger.debug(f"Captured Streamable HTTP protocol info: {self.protocol_info}")
+        logger.debug("Captured Streamable HTTP protocol info: %s", self.protocol_info)
 
     def _capture_http_sse_protocol_info(self) -> None:
-        """Capture protocol information for successful HTTP+SSE connection."""
+        """Capture protocol information for an HTTP+SSE handshake.
+
+        The MCP specification requires that the *init* event payload **MUST**
+        include a ``protocolVersion`` field.  Missing or unknown versions are
+        surfaced as :class:`ProtocolError` instead of being silently
+        defaulted.
+        """
         from datetime import datetime, timezone
 
-        if not self.init_result:
-            # Fallback if init_result is not available
-            self.protocol_info = {
-                "protocol_version": "2024-11-05",  # HTTP+SSE is 2024-11-05
-                "transport_type": "http_sse",
-                "capabilities": {},
-                "server_info": {},
-                "last_detected": datetime.now(timezone.utc).isoformat(),
-            }
-            return
+        if not self.init_result or not getattr(self.init_result, "protocolVersion", None):
+            msg = "Missing protocolVersion in server init event"
+            raise ProtocolError(msg)
 
         self.protocol_info = {
-            "protocol_version": getattr(self.init_result, "protocolVersion", "2024-11-05"),
+            "protocol_version": self.init_result.protocolVersion,
             "transport_type": "http_sse",
             "capabilities": getattr(self.init_result, "capabilities", {}),
             "server_info": getattr(self.init_result, "serverInfo", {}),
             "last_detected": datetime.now(timezone.utc).isoformat(),
         }
-        logger.debug(f"Captured HTTP+SSE protocol info: {self.protocol_info}")
+        logger.debug("Captured HTTP+SSE protocol info: %s", self.protocol_info)
 
     async def list_tools(self) -> list[StructuredTool]:
         """Return the list of available tools depending on the active transport."""
@@ -642,28 +655,27 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
         raise RuntimeError(msg)
 
     async def _execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-        """Execute a tool using SSE transport (reuses existing session).
+        """Execute *tool_name* with *arguments* and return the raw JSON-RPC envelope.
 
-        Args:
-            tool_name: Name of the tool to execute
-            arguments: Dictionary of arguments for the tool
-
-        Returns:
-            Result of the tool execution
-
-        Raises:
-            ValueError: For invalid tool parameters or execution failures
+        According to the JSON-RPC 2.0 spec the result **must** be wrapped in an
+        object that may contain either a ``result`` *or* an ``error`` key. This
+        behaviour always returns the full envelope so downstream code can handle
+        success and error cases uniformly.
         """
         try:
             result = await self.call_tool(tool_name, arguments)
 
-            # Handle different response formats
+            # Normalise *result* into a predictable structure:
+            #   • If JSON-RPC dict -> return as-is
+            #   • If LangChain content wrapper -> coerce into dict for
+            #     transport-agnostic handling
             if isinstance(result, dict):
-                if "result" in result:
-                    return result["result"]
                 return result
+
             if hasattr(result, "content"):
                 return {"content": result.content}
+
+            # Fallback to whatever the transport returned (str, dataclass, …)
             return result  # noqa: TRY300
 
         except Exception as e:
@@ -735,62 +747,63 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
     # ---------------------------------------------------------------------
 
     async def _looks_like_http_sse(self, url: str, headers: dict[str, str] | None) -> bool:
-        """Return *True* if *url* appears to be an HTTP+SSE discovery stream.
+        """Quick probe to see if *url* is an MCP **HTTP + SSE** discovery stream.
 
-        Heuristics (all driven by spec 2024-11-05):
+        Spec-driven approach (MCP 2024-11-05):
 
-        1.  HEAD returns *Content-Type: text/event-stream*
-        2.  If HEAD is not allowed (405) or the server sends 5xx, issue a GET
-            and examine the first response headers.
+        1. Send a `GET` request with ``Accept: text/event-stream``.
+        2. Verify the HTTP response is ``200`` and ``Content-Type`` contains
+           ``text/event-stream``.
+        3. Read *at most* the first event chunk (bounded to avoid hanging).
+        4. If the first event is ``event: init`` we can confidently assume the
+           endpoint is an MCP discovery stream.
 
-        Any failure (timeout, network error, unexpected status) is treated as
-        *False* so we safely fall back to the normal Streamable-HTTP probe.
+        Any network failure, timeout, or mismatching event leads to ``False`` so
+        the caller can safely fall back to Streamable-HTTP probing.
         """
         request_headers = {"Accept": "text/event-stream", **(headers or {})}
-        logger.debug(f"_looks_like_http_sse: probing {url} with headers {request_headers}")
+        logger.debug("_looks_like_http_sse: probing %s for init event", url)
 
         try:
-            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
-                # Prefer HEAD when available - cheaper and side-effect free
-                try:
-                    head_resp = await client.head(url, headers=request_headers)
-                    logger.debug(
-                        "_looks_like_http_sse: HEAD %s -> %s, content-type: %s",
-                        url,
-                        head_resp.status_code,
-                        head_resp.headers.get("content-type", "NONE"),
-                    )
-                    if "text/event-stream" in head_resp.headers.get("content-type", "").lower():
-                        logger.debug("_looks_like_http_sse: HEAD indicates SSE, returning True")
-                        return True
-                    # Regardless of status code, continue with GET probe - some
-                    # servers either don't implement HEAD correctly or return
-                    # misleading headers.
-                except httpx.HTTPError as e:
-                    logger.debug(f"_looks_like_http_sse: HEAD failed with {e}, falling through to GET")
-                    # Errors are not fatal for the heuristic - fall through to GET
+            async with (
+                httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client,
+                client.stream("GET", url, headers=request_headers) as resp,
+            ):
+                if resp.status_code != HTTP_STATUS_OK:
+                    logger.debug("_looks_like_http_sse: non-200 status %s", resp.status_code)
+                    return False
 
-                # Fallback: open a GET stream but read no body (headers only)
-                try:
-                    async with client.stream("GET", url, headers=request_headers) as resp_stream:
-                        logger.debug(
-                            "_looks_like_http_sse: GET %s -> %s, content-type: %s",
-                            url,
-                            resp_stream.status_code,
-                            resp_stream.headers.get("content-type", "NONE"),
-                        )
-                        if "text/event-stream" in resp_stream.headers.get("content-type", "").lower():
-                            logger.debug("_looks_like_http_sse: GET indicates SSE, returning True")
-                            return True
-                except httpx.HTTPError as e:
-                    logger.debug(f"_looks_like_http_sse: GET failed with {e}")
-        except (ConnectionError, OSError, httpx.HTTPError, asyncio.TimeoutError, ValueError) as exc:
-            # Generic guard for transport detection - any failure means "not SSE"
-            logger.debug(f"_looks_like_http_sse: outer exception {exc}")
-            # Generic guard - any unknown failure means "not SSE"
+                if "text/event-stream" not in resp.headers.get("content-type", "").lower():
+                    logger.debug(
+                        "_looks_like_http_sse: content-type %s not SSE",
+                        resp.headers.get("content-type"),
+                    )
+                    return False
+
+                # Read just enough bytes to capture the first SSE event
+                buffer = ""
+                async for chunk in resp.aiter_text():
+                    buffer += chunk
+                    if "\n\n" in buffer or len(buffer) > PROBE_BUFFER_LIMIT:
+                        break
+
+                event_type = None
+                data_lines = []
+                for line in buffer.splitlines():
+                    if line.startswith("event:"):
+                        event_type = line[6:].strip()
+                    elif line.startswith("data:"):
+                        data_lines.append(line[5:].strip())
+
+                if event_type == "init":
+                    logger.debug("_looks_like_http_sse: init event detected - SSE confirmed")
+                    return True
+
+        except (httpx.HTTPError, asyncio.TimeoutError, OSError, ConnectionError, ValueError) as exc:
+            logger.debug("_looks_like_http_sse: probe error - %s", exc)
             return False
 
-        logger.debug("_looks_like_http_sse: no SSE detected, returning False")
+        logger.debug("_looks_like_http_sse: init event not found - returning False")
         return False
 
     async def _send_http_sse_request(self, request_data: dict) -> None:

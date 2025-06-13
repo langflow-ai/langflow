@@ -152,6 +152,9 @@ class TestMCPSseClientTransportDetection:
             return_value={"result": {"tools": [{"name": "test_tool", "description": "Test tool", "inputSchema": {}}]}}
         )
 
+        # Provide a minimal init_result so protocol info capture succeeds
+        client.init_result = Mock(protocolVersion="2024-11-05", capabilities={}, serverInfo={})
+
         tools = await client.connect_to_server("http://example.com/mcp")
 
         assert client.connected_transport == "http_sse"
@@ -274,7 +277,7 @@ class TestMCPSseClientToolExecution:
 
         result = await client.run_tool("test_tool", {})
 
-        assert result == "success"
+        assert result == {"result": "success"}
 
     @pytest.mark.asyncio
     async def test_list_tools_streamable_http(self, connected_client):
