@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Literal
 import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
-from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema, create_input_schema_from_dict
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.serialization.serialization import serialize
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from langflow.io import Output
     from langflow.schema.content_block import ContentBlock
     from langflow.schema.dotdict import dotdict
-
 
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
 
@@ -108,9 +107,8 @@ def _build_output_function(component: Component, output_method: Callable, event_
             return result.get_text()
         if isinstance(result, Data):
             return result.data
-        if isinstance(result, BaseModel):
-            return result.model_dump()
-        return result
+        # removing the model_dump() call here because it is not serializable
+        return serialize(result)
 
     return _patch_send_message_decorator(component, output_function)
 
@@ -132,9 +130,8 @@ def _build_output_async_function(
             return result.get_text()
         if isinstance(result, Data):
             return result.data
-        if isinstance(result, BaseModel):
-            return result.model_dump()
-        return result
+        # removing the model_dump() call here because it is not serializable
+        return serialize(result)
 
     return _patch_send_message_decorator(component, output_function)
 
