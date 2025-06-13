@@ -216,10 +216,19 @@ function NodeOutputField({
   );
 
   useEffect(() => {
-    if (disabledOutput && hidden) {
+    const outputHasGroupOutputsFalse =
+      data.node?.outputs?.[index]?.group_outputs === false;
+
+    if (disabledOutput && hidden && !outputHasGroupOutputsFalse) {
       handleUpdateOutputHide(false);
     }
-  }, [disabledOutput, handleUpdateOutputHide, hidden]);
+  }, [
+    disabledOutput,
+    handleUpdateOutputHide,
+    hidden,
+    data.node?.outputs,
+    index,
+  ]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
 

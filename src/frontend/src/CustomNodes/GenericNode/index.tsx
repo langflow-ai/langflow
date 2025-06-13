@@ -317,6 +317,7 @@ function GenericNode({
           const selectedOutput = newNode.data.node.outputs[outputIndex]?.name;
           (newNode.data as NodeDataType).selected_output = selectedOutput;
         }
+
         return newNode;
       });
       updateNodeInternals(data.id);
