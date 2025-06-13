@@ -371,6 +371,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   GoogleSearchRun: "Google",
   GoogleSerperAPI: "Google",
   GridGain: "GridGain",
+  gridgain: "GridGain",
   group_components: "GradientUngroup",
   HNLoader: "HackerNews",
   HuggingFaceEmbeddings: "HuggingFace",

@@ -3,7 +3,5 @@ import GridGainSVG from "./GridGain";
 
 export const GridGainIcon = forwardRef<
   SVGSVGElement,
-  React.PropsWithChildren<{}>
->((props, ref) => {
-  return <GridGainSVG ref={ref} {...props} />;
-});
+  React.SVGProps<SVGSVGElement>
+>((props, ref) => <GridGainSVG ref={ref} {...props} />);

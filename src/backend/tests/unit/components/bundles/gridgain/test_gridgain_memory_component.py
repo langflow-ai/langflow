@@ -1,7 +1,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from base.langflow.components.memories.gridgain import GridGainChatMemory
+from base.langflow.components.gridgain import GridGainChatMemory
 from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.inputs import MessageTextInput
 
@@ -16,7 +16,7 @@ def test_gridgain_chat_memory_initialization():
 
     # Verify default values
     assert memory.host == "localhost"
-    assert memory.port == "10800"
+    assert memory.port == 10800
     assert memory.cache_name == "langchain_message_store"
     assert memory.client_type == "pygridgain"
     assert memory.icon == "GridGain"

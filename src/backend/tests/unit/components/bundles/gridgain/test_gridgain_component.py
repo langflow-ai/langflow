@@ -2,7 +2,7 @@ import uuid
 from unittest.mock import Mock, patch
 
 import pytest
-from base.langflow.components.vectorstores.gridgain import GridGainVectorStoreComponent  # Update with correct import
+from base.langflow.components.gridgain import GridGainVectorStoreComponent
 from langchain.schema import Document
 from pygridgain import Client
 
@@ -45,6 +45,8 @@ def sample_data():
 
 
 class TestGridGainVectorStoreComponent:
+    """Test cases for GridGainVectorStoreComponent."""
+
     def test_process_data_input_with_valid_data(self, component, sample_data):
         # Test processing valid data input
         result = component._process_data_input(sample_data)
@@ -83,7 +85,7 @@ class TestGridGainVectorStoreComponent:
         with patch("pygridgain.Client", return_value=mock_client):
             vector_store = component.build_vector_store()
 
-            client.connect("localhost", 10800)
+            client.connect(component.host, component.port)
             assert vector_store is not None
 
     def test_search_documents(self, component):
