@@ -34,6 +34,7 @@ export default function McpComponent({
 
   // Initialize selected item from value on mount or value/options change
   useEffect(() => {
+    if (!options) return;
     const selectedOption = value
       ? options?.find((option) => option.name === value)
       : null;
