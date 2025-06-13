@@ -375,8 +375,8 @@ def get_best_access_host(host: str, port: int) -> str:
                 result = s.connect_ex((preferred_host, port))
                 if result == 0:
                     return preferred_host
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Failed to connect to {preferred_host}:{port}: {exc}")
 
         # If localhost doesn't work, test the original host
         try:
@@ -385,8 +385,8 @@ def get_best_access_host(host: str, port: int) -> str:
                 result = s.connect_ex((host, port))
                 if result == 0:
                     return host
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Failed to connect to {host}:{port}: {exc}")
 
     # Default to localhost for loopback addresses
     return preferred_host
