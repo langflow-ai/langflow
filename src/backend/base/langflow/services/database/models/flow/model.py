@@ -198,6 +198,11 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     locked: bool | None = Field(default=False, nullable=True)
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     fs_path: str | None = Field(default=None, nullable=True)
+    git_repo: str | None = Field(default=None, nullable=True)
+    git_branch: str | None = Field(default=None, nullable=True)
+    git_file_path: str | None = Field(default=None, nullable=True)
+    github_api_token: str | None = Field(default=None, nullable=True)
+    github_sha: str | None = Field(default=None, nullable=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
 
     def to_data(self):
@@ -269,6 +274,11 @@ class FlowUpdate(SQLModel):
     action_description: str | None = None
     access_type: AccessTypeEnum | None = None
     fs_path: str | None = None
+    git_repo: str | None = None
+    git_branch: str | None = None
+    git_file_path: str | None = None
+    github_api_token: str | None = None
+    github_sha: str | None = None
 
     @field_validator("endpoint_name")
     @classmethod
