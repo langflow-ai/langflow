@@ -198,26 +198,26 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
 
     def _capture_stdio_protocol_info(self) -> None:
         """Capture protocol information for successful STDIO connection."""
-        from datetime import datetime
-        
-        if not self.session or not hasattr(self.session, 'init_result'):
+        from datetime import datetime, timezone
+
+        if not self.session or not hasattr(self.session, "init_result"):
             # Fallback if init_result is not available
             self.protocol_info = {
                 "protocol_version": "stdio",  # STDIO doesn't specify protocol version
                 "transport_type": "stdio",
                 "capabilities": {},
                 "server_info": {},
-                "last_detected": datetime.utcnow().isoformat()
+                "last_detected": datetime.now(timezone.utc).isoformat()
             }
             return
 
         init_result = self.session.init_result
         self.protocol_info = {
-            "protocol_version": getattr(init_result, 'protocolVersion', 'stdio'),
+            "protocol_version": getattr(init_result, "protocolVersion", "stdio"),
             "transport_type": "stdio",
-            "capabilities": getattr(init_result, 'capabilities', {}),
-            "server_info": getattr(init_result, 'serverInfo', {}),
-            "last_detected": datetime.utcnow().isoformat()
+            "capabilities": getattr(init_result, "capabilities", {}),
+            "server_info": getattr(init_result, "serverInfo", {}),
+            "last_detected": datetime.now(timezone.utc).isoformat()
         }
         logger.debug(f"Captured STDIO protocol info: {self.protocol_info}")
 
@@ -260,10 +260,6 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
         # STDIO client doesn't have additional transport-specific cleanup beyond what _safe_cleanup does
         # But we can call it to ensure proper cleanup
         await self._safe_cleanup()
-
-    async def disconnect(self):
-        """Properly close the connection and clean up resources."""
-        await self.close()
 
     async def _execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         """Execute a tool using STDIO transport (creates new connection per tool).
@@ -321,3 +317,29 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
             # Mark as disconnected on error
             self._connected = False
             raise ValueError(msg) from e
+
+    async def list_tools(self):
+        """Return the list of available tools from the active STDIO session."""
+        if self.session is None or not self._connected:
+            msg = "Not connected to any MCP STDIO server. Call connect_to_server() first."
+            raise RuntimeError(msg)
+
+        try:
+            response = await self.session.list_tools()
+        except Exception as exc:
+            logger.error(f"Failed to list tools via STDIO transport: {exc}")
+            return []
+
+        if hasattr(response, "tools"):
+            return response.tools  # type: ignore[attr-defined]
+        if isinstance(response, dict) and "tools" in response:
+            return response["tools"]
+        return response
+
+    async def call_tool(self, name: str, arguments: dict):
+        """Public helper mirroring *MCPSseClient.call_tool*.
+
+        Delegates to :pyfunc:`_execute_tool` which already contains the
+        detailed logic (spawn-per-request when needed).
+        """
+        return await self._execute_tool(name, arguments)

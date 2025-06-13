@@ -280,6 +280,38 @@ app.get('/mcp', async (req, res) => {
   }
 });
 
+// ----------------------------------------------------------------------
+// Graceful session-termination endpoint
+// ----------------------------------------------------------------------
+app.delete('/mcp', async (req, res) => {
+  const sessionId = req.headers['mcp-session-id'] || req.headers['x-mcp-session-id'];
+
+  // Unknown session → keep current behaviour (404) so callers know
+  if (!sessionId || !streamableTransports[sessionId]) {
+    return res.status(404).json({ error: 'Unknown session' });
+  }
+
+  try {
+    const transport = streamableTransports[sessionId];
+
+    // Ask the transport (and therefore the underlying MCP server) to shut down
+    // Some SDK versions expose `.close()`, others `.shutdown()`.  Both are
+    // safe to call inside a try/catch – pick whichever exists.
+    if (typeof transport.close === 'function') {
+      await transport.close();
+    } else if (typeof transport.shutdown === 'function') {
+      await transport.shutdown();
+    }
+
+    delete streamableTransports[sessionId];
+    console.log(`[Unified Server] Session terminated via DELETE: ${sessionId}`);
+    return res.sendStatus(204);   // No-Content → success
+  } catch (err) {
+    console.error('[Unified Server] Error during session terminate:', err);
+    return res.status(500).json({ error: 'Failed to terminate session' });
+  }
+});
+
 // =============================================================================
 // HTTP+SSE TRANSPORT (MCP 2024-11-05) - /sse and /messages endpoints
 // =============================================================================

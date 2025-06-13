@@ -153,3 +153,15 @@ class BaseMCPClient(ABC, Generic[T]):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit with cleanup."""
         await self.close()
+
+    # ---------------------------------------------------------------------
+    # Convenience aliases
+    # ---------------------------------------------------------------------
+
+    async def disconnect(self) -> None:
+        """Alias for :pyfunc:`close`. Some callers use *disconnect()* instead.
+
+        By defining it here we avoid repeating the same one-liner in every
+        concrete transport client.
+        """
+        await self.close()

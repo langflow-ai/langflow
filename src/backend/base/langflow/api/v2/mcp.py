@@ -110,8 +110,8 @@ async def get_servers(
     # Check all of the tool counts for each server concurrently
     async def check_server(server_name: str) -> dict:
         server_info = {
-            "name": server_name, 
-            "mode": "", 
+            "name": server_name,
+            "mode": "",
             "toolsCount": 0,
             "protocolVersion": None,
             "transportType": None,
@@ -128,14 +128,14 @@ async def get_servers(
             # Get the server configuration
             server_info["mode"] = mode.lower()
             server_info["toolsCount"] = len(tool_list)
-            
+
             # Add protocol information from US-003
             server_info["protocolVersion"] = protocol_info.get("protocol_version")
             server_info["transportType"] = protocol_info.get("transport_type")
             server_info["capabilities"] = protocol_info.get("capabilities")
             server_info["serverInfo"] = protocol_info.get("server_info")
             server_info["lastChecked"] = protocol_info.get("last_detected")
-            
+
         except Exception as e:  # noqa: BLE001
             logger.exception(f"Error checking server {server_name}: {e}")
 

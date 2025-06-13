@@ -1,8 +1,10 @@
-import asyncio
-import sys
-from typing import Any, Sequence
-import logging
+# ruff: noqa: T201, RUF001, RUF002, RUF003, BLE001, PGH003
+
 import argparse
+import asyncio
+import logging
+from collections.abc import Sequence
+from typing import Any
 
 """Demo MCP client for integration tests.
 
@@ -20,12 +22,14 @@ Once connected it:
 
 try:
     from mcp import ClientSession
-    from mcp.client.sse import sse_client  # type: ignore
-    from mcp.client.streamable_http import streamablehttp_client  # type: ignore
-    from mcp.client.stdio import stdio_client  # type: ignore
-    from mcp.client.stdio import StdioServerParameters  # type: ignore
-except ImportError as exc:  # pragma: no cover
-    print("[demo_mcp_client] MCP SDK not found. Add \"mcp>=1.6.0\" to your dependencies.")
+    from mcp.client.sse import sse_client  # type: ignore[import-not-found]
+    from mcp.client.stdio import (
+        StdioServerParameters,  # type: ignore[import-not-found]
+        stdio_client,  # type: ignore[import-not-found]
+    )
+    from mcp.client.streamable_http import streamablehttp_client  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover
+    print('[demo_mcp_client] MCP SDK not found. Add "mcp>=1.6.0" to your dependencies.')
     raise
 
 # ---------------------------------------------------------------------------
@@ -35,7 +39,6 @@ except ImportError as exc:  # pragma: no cover
 logging.basicConfig(level=logging.CRITICAL)
 for noisy in ("mcp", "httpx", "anyio", "urllib3"):
     logging.getLogger(noisy).setLevel(logging.CRITICAL)
-
 
 async def _normalize_tool_list(raw: Any) -> list[str]:
     """Return a list of tool names from whatever the SDK returns."""
@@ -56,7 +59,7 @@ async def _normalize_tool_list(raw: Any) -> list[str]:
             continue
         # Dataclass / namespace with .name
         if hasattr(item, "name"):
-            names.append(getattr(item, "name"))  # type: ignore[arg-type]
+            names.append(item.name)  # type: ignore[arg-type]
         # Dict style
         elif isinstance(item, dict) and "name" in item:
             names.append(str(item["name"]))
@@ -68,7 +71,6 @@ async def _normalize_tool_list(raw: Any) -> list[str]:
 
 async def run_demo(url: str) -> None:
     """Attempt Streamable HTTP first, fallback to SSE if necessary."""
-
     # Determine the transport order configured by main()
     order = globals().get("_transport_order")
     if not order:
@@ -111,7 +113,12 @@ async def run_demo(url: str) -> None:
 
 def main() -> None:  # pragma: no cover
     parser = argparse.ArgumentParser(description="Minimal MCP demo client")
-    parser.add_argument("--protocol", default="auto", choices=["auto", "streamable-http", "http+sse", "stdio"], help="Transport to use")
+    parser.add_argument(
+        "--protocol",
+        default="auto",
+        choices=["auto", "streamable-http", "http+sse", "stdio"],
+        help="Transport to use",
+    )
     parser.add_argument("--url", help="Server URL for HTTP/SSE transports; omit for stdio")
     parser.add_argument("command", nargs=argparse.REMAINDER, help="Command for stdio server (ex: node server.js)")
 
@@ -134,7 +141,7 @@ def main() -> None:  # pragma: no cover
 
         cmd, *cmd_args = args.command
 
-        def _stdio_factory(_ignored_url: str):  # noqa: D401
+        def _stdio_factory(_ignored_url: str):
             params = StdioServerParameters(command=cmd, args=cmd_args)
             return stdio_client(params)
 
@@ -153,4 +160,4 @@ def main() -> None:  # pragma: no cover
 
 
 if __name__ == "__main__":  # pragma: no cover
-    main() 
+    main()

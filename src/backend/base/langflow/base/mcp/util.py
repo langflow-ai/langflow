@@ -348,7 +348,7 @@ async def update_tools(
 
         # Capture protocol information from the connected client
         protocol_info = {}
-        if client and hasattr(client, 'get_protocol_info'):
+        if client and hasattr(client, "get_protocol_info"):
             protocol_info = client.get_protocol_info()
             logger.debug(f"Retrieved protocol info for '{server_name}': {protocol_info}")
 
