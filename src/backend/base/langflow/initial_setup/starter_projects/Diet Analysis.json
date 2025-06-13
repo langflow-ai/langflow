@@ -384,7 +384,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-Enwwh",
@@ -514,7 +515,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "id": "Prompt-YubZ1",
@@ -889,7 +891,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "NovitaModel"
+          "type": "NovitaModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "NovitaModel-20MWu",
