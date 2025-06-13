@@ -119,7 +119,7 @@ class StructuredOutputComponent(Component):
         ),
     ]
 
-    def build_structured_output_base(self) -> Data:
+    def build_structured_output_base(self):
         schema_name = self.schema_name or "OutputModel"
 
         if not hasattr(self.llm, "with_structured_output"):
@@ -142,6 +142,7 @@ class StructuredOutputComponent(Component):
         except NotImplementedError as exc:
             msg = f"{self.llm.__class__.__name__} does not support structured output."
             raise TypeError(msg) from exc
+
         config_dict = {
             "run_name": self.display_name,
             "project_name": self.get_project_name(),
@@ -153,16 +154,31 @@ class StructuredOutputComponent(Component):
             input_value=self.input_value,
             config=config_dict,
         )
-        if isinstance(result, BaseModel):
-            result = result.model_dump()
-        if responses := result.get("responses"):
-            result = responses[0].model_dump()
-        if result and "objects" in result:
-            return result["objects"]
 
-        return result
+        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure
+        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)
+        if not isinstance(result, dict):
+            return result
+
+        # Extract first response and convert BaseModel to dict
+        responses = result.get("responses", [])
+        if not responses:
+            return result
+
+        # Convert BaseModel to dict (creates the "objects" key)
+        first_response = responses[0]
+        structured_data = first_response.model_dump() if isinstance(first_response, BaseModel) else first_response
+
+        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)
+        return structured_data.get("objects", structured_data)
 
     def build_structured_output(self) -> Data:
         output = self.build_structured_output_base()
-
-        return Data(text_key="results", data={"results": output})
+        if not isinstance(output, list) or not output:
+            # handle empty or unexpected type case
+            msg = "No structured output returned"
+            raise ValueError(msg)
+        if len(output) != 1:
+            msg = "Multiple structured outputs returned"
+            raise ValueError(msg)
+        return Data(data=output[0])
