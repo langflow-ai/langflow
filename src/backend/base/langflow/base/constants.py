@@ -41,5 +41,5 @@ FIELD_FORMAT_ATTRIBUTES = [
     "advanced",
     "copy_field",
 ]
-
+SKIPPED_FIELD_ATTRIBUTES = ["advanced"]
 ORJSON_OPTIONS = orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS | orjson.OPT_OMIT_MICROSECONDS
