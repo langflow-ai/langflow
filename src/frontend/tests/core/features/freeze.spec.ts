@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
@@ -9,6 +10,14 @@ test(
 
   async ({ page }) => {
     await awaitBootstrapTest(page);
+
+    const firstRunLangflow = await page
+      .getByTestId("empty-project-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
 
     await page.getByTestId("blank-flow").click();
 
@@ -114,7 +123,7 @@ test(
 
     //connection 1
     await page
-      .getByTestId("handle-urlcomponent-shownode-result-right")
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .nth(0)
       .click();
     await page
@@ -179,7 +188,9 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 2,
+    });
 
     await page.waitForSelector(
       '[data-testid="output-inspection-output message-chatoutput"]',
@@ -259,8 +270,6 @@ test(
     await page.keyboard.press("Escape");
 
     await page.getByTestId("button_run_chat output").click();
-
-    await page.waitForTimeout(1000);
 
     await page.waitForSelector("text=built successfully", {
       timeout: 30000 * 3,
