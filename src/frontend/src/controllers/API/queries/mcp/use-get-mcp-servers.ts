@@ -75,7 +75,6 @@ export const useGetMCPServers: useQueryFunctionType<
         );
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryResult.data]);
 
   return queryResult;
