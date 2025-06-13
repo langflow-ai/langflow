@@ -1,3 +1,5 @@
+from fastapi import APIRouter
+
 from langflow.api.v1.api_key import router as api_key_router
 from langflow.api.v1.chat import router as chat_router
 from langflow.api.v1.endpoints import router as endpoints_router
@@ -16,22 +18,24 @@ from langflow.api.v1.validate import router as validate_router
 from langflow.api.v1.variable import router as variables_router
 from langflow.api.v1.voice_mode import router as voice_mode_router
 
-__all__ = [
-    "api_key_router",
-    "chat_router",
-    "endpoints_router",
-    "files_router",
-    "flows_router",
-    "folders_router",
-    "login_router",
-    "mcp_projects_router",
-    "mcp_router",
-    "monitor_router",
-    "projects_router",
-    "starter_projects_router",
-    "store_router",
-    "users_router",
-    "validate_router",
-    "variables_router",
-    "voice_mode_router",
-]
+router = APIRouter(prefix="/v1")
+router.include_router(api_key_router)
+router.include_router(chat_router)
+router.include_router(endpoints_router)
+router.include_router(files_router)
+router.include_router(flows_router)
+router.include_router(folders_router)
+router.include_router(login_router)
+router.include_router(mcp_projects_router)
+router.include_router(mcp_router)
+router.include_router(monitor_router)
+router.include_router(projects_router)
+router.include_router(starter_projects_router)
+router.include_router(store_router)
+router.include_router(users_router)
+router.include_router(validate_router)
+router.include_router(variables_router)
+router.include_router(voice_mode_router)
+
+
+__all__ = ["router"]

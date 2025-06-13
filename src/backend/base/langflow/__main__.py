@@ -24,6 +24,7 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
@@ -37,6 +38,46 @@ from langflow.utils.version import is_pre_release as langflow_is_pre_release
 console = Console()
 
 app = typer.Typer(no_args_is_help=True)
+
+# Add global variables to track the webapp process and shutdown state
+webapp_process = None
+shutdown_in_progress = False
+
+
+def handle_sigterm(signum, frame):  # noqa: ARG001
+    """Handle SIGTERM signal gracefully."""
+    global shutdown_in_progress
+    if shutdown_in_progress:
+        return  # Already shutting down, ignore
+    shutdown_in_progress = True
+    _shutdown_webapp_process()
+
+
+def handle_sigint(signum, frame):  # noqa: ARG001
+    """Handle SIGINT signal gracefully."""
+    global shutdown_in_progress
+    if shutdown_in_progress:
+        return  # Already shutting down, ignore
+    shutdown_in_progress = True
+    _shutdown_webapp_process()
+
+
+def _shutdown_webapp_process():
+    """Gracefully shutdown the webapp process."""
+    global webapp_process
+    if webapp_process and webapp_process.is_alive():
+        # Just terminate the process - the actual shutdown progress is handled
+        # by the FastAPI lifespan context in main.py
+        webapp_process.terminate()
+        # The long wait allows the process to finish setup, preventing it from
+        # getting in a state where background tasks continue to do work after termination
+        # is sent.
+        webapp_process.join(timeout=30)
+        if webapp_process.is_alive():
+            logger.warning("Process didn't terminate gracefully, killing it.")
+            webapp_process.kill()
+            webapp_process.join()
+    sys.exit(0)
 
 
 def get_number_of_workers(workers=None):
@@ -77,11 +118,19 @@ def set_var_for_macos_issue() -> None:
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
-def handle_sigterm(signum, frame):  # noqa: ARG001
-    """Handle SIGTERM signal gracefully."""
-    logger.info("Received SIGTERM signal. Performing graceful shutdown...")
-    # Raise SystemExit to trigger graceful shutdown
-    sys.exit(0)
+def wait_for_server_ready(host, port, protocol) -> None:
+    """Wait for the server to become ready by polling the health endpoint."""
+    status_code = 0
+    while status_code != httpx.codes.OK:
+        try:
+            status_code = httpx.get(
+                f"{protocol}://{host}:{port}/health", verify=host not in ("127.0.0.1", "localhost")
+            ).status_code
+        except HTTPError:
+            time.sleep(1)
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error while waiting for the server to become ready.")
+            time.sleep(1)
 
 
 @app.command()
@@ -102,7 +151,11 @@ def run(
         help="Path to the .env file containing environment variables.",
         show_default=False,
     ),
-    log_level: str | None = typer.Option(None, help="Logging level.", show_default=False),
+    log_level: str | None = typer.Option(
+        None,
+        help="Logging level. One of: [DEBUG, INFO, WARNING, ERROR, CRITICAL]. Defaults to INFO.",
+        show_default=False,
+    ),
     log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
     cache: str | None = typer.Option(  # noqa: ARG001
         None,
@@ -166,126 +219,147 @@ def run(
     ssl_key_file_path: str | None = typer.Option(None, help="Defines the SSL key file path.", show_default=False),
 ) -> None:
     """Run Langflow."""
-    # Register SIGTERM handler
+    global webapp_process
+
     signal.signal(signal.SIGTERM, handle_sigterm)
+    signal.signal(signal.SIGINT, handle_sigint)
 
     if env_file:
         load_dotenv(env_file, override=True)
 
+    log_level = log_level.upper() if log_level else "INFO"
+
+    # Must set as env var for child process to pick up
+    if os.environ.get("LANGFLOW_LOG_LEVEL") is None:
+        os.environ["LANGFLOW_LOG_LEVEL"] = log_level
+
     configure(log_level=log_level, log_file=log_file)
-    logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
-    set_var_for_macos_issue()
-    settings_service = get_settings_service()
 
-    for key, value in os.environ.items():
-        new_key = key.replace("LANGFLOW_", "")
-        if hasattr(settings_service.auth_settings, new_key):
-            setattr(settings_service.auth_settings, new_key, value)
+    # Create progress indicator (show verbose timing if log level is DEBUG)
+    verbose = log_level == "DEBUG"
+    progress = create_langflow_progress(verbose=verbose)
 
-    frame = inspect.currentframe()
-    valid_args: list = []
-    values: dict = {}
-    if frame is not None:
-        arguments, _, _, values = inspect.getargvalues(frame)
-        valid_args = [arg for arg in arguments if values[arg] is not None]
+    # Step 0: Initializing Langflow
+    with progress.step(0):
+        logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
+        set_var_for_macos_issue()
+        settings_service = get_settings_service()
 
-    for arg in valid_args:
-        if arg == "components_path":
-            settings_service.settings.update_settings(components_path=components_path)
-        elif hasattr(settings_service.settings, arg):
-            settings_service.set(arg, values[arg])
-        elif hasattr(settings_service.auth_settings, arg):
-            settings_service.auth_settings.set(arg, values[arg])
-        logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
+    # Step 1: Checking Environment
+    with progress.step(1):
+        for key, value in os.environ.items():
+            new_key = key.replace("LANGFLOW_", "")
+            if hasattr(settings_service.auth_settings, new_key):
+                setattr(settings_service.auth_settings, new_key, value)
 
-    host = settings_service.settings.host
-    port = settings_service.settings.port
-    workers = settings_service.settings.workers
-    worker_timeout = settings_service.settings.worker_timeout
-    log_level = settings_service.settings.log_level
-    frontend_path = settings_service.settings.frontend_path
-    backend_only = settings_service.settings.backend_only
-    ssl_cert_file_path = settings_service.settings.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
-    ssl_key_file_path = settings_service.settings.ssl_key_file if ssl_key_file_path is None else ssl_key_file_path
+        frame = inspect.currentframe()
+        valid_args: list = []
+        values: dict = {}
+        if frame is not None:
+            arguments, _, _, values = inspect.getargvalues(frame)
+            valid_args = [arg for arg in arguments if values[arg] is not None]
 
-    # create path object if frontend_path is provided
-    static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
+        for arg in valid_args:
+            if arg == "components_path":
+                settings_service.settings.update_settings(components_path=components_path)
+            elif hasattr(settings_service.settings, arg):
+                settings_service.set(arg, values[arg])
+            elif hasattr(settings_service.auth_settings, arg):
+                settings_service.auth_settings.set(arg, values[arg])
+            logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
-    app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
-    # check if port is being used
-    if is_port_in_use(port, host):
-        port = get_free_port(port)
+        # Get final values from settings
+        host = settings_service.settings.host
+        port = settings_service.settings.port
+        workers = settings_service.settings.workers
+        worker_timeout = settings_service.settings.worker_timeout
+        log_level = settings_service.settings.log_level
+        frontend_path = settings_service.settings.frontend_path
+        backend_only = settings_service.settings.backend_only
+        ssl_cert_file_path = (
+            settings_service.settings.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
+        )
+        ssl_key_file_path = settings_service.settings.ssl_key_file if ssl_key_file_path is None else ssl_key_file_path
 
-    options = {
-        "bind": f"{host}:{port}",
-        "workers": get_number_of_workers(workers),
-        "timeout": worker_timeout,
-        "certfile": ssl_cert_file_path,
-        "keyfile": ssl_key_file_path,
-    }
-    protocol = "https" if options["keyfile"] and options["certfile"] else "http"
+        # create path object if frontend_path is provided
+        static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
 
-    # Define an env variable to know if we are just testing the server
-    if "pytest" in sys.modules:
-        return
-    process: Process | None = None
-    try:
+    # Step 2: Starting Core Services
+    with progress.step(2):
+        app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
+
+    # Step 3: Connecting Database (this happens inside setup_app via dependencies)
+    with progress.step(3):
+        # check if port is being used
+        if is_port_in_use(port, host):
+            port = get_free_port(port)
+
+        protocol = "https" if ssl_cert_file_path and ssl_key_file_path else "http"
+
+    # Step 4: Loading Components (placeholder for components loading)
+    with progress.step(4):
+        pass  # Components are loaded during app startup
+
+    # Step 5: Adding Starter Projects (placeholder for starter projects)
+    with progress.step(5):
+        pass  # Starter projects are added during app startup
+
+    # Step 6: Launching Langflow
+    with progress.step(6):
         if platform.system() == "Windows":
-            # Run using uvicorn on MacOS and Windows
-            # Windows doesn't support gunicorn
-            # MacOS requires an env variable to be set to use gunicorn
-            run_on_windows(host, port, log_level, options, app, protocol)
+            # Windows doesn't support Gunicorn, use uvicorn directly
+            import uvicorn
+
+            uvicorn.run(
+                app,
+                host=host,
+                port=port,
+                log_level=log_level,
+                reload=False,
+                workers=get_number_of_workers(workers),
+                loop="asyncio",
+            )
         else:
-            # Run using gunicorn on Linux
-            process = run_on_mac_or_linux(host, port, log_level, options, app, protocol)
-        if open_browser and not backend_only:
-            click.launch(f"http://{host}:{port}")
-        if process:
-            process.join()
-    except (KeyboardInterrupt, SystemExit) as e:
-        logger.info("Shutting down server...")
-        if process is not None:
-            process.terminate()
-            process.join(timeout=15)  # Wait up to 15 seconds for process to terminate
-            if process.is_alive():
-                logger.warning("Process did not terminate gracefully, forcing...")
-                process.kill()
-        raise typer.Exit(0) from e
-    except Exception as e:
-        logger.exception(e)
-        if process is not None:
-            process.terminate()
-        raise typer.Exit(1) from e
+            # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
+            from langflow.server import LangflowApplication
 
+            options = {
+                "bind": f"{host}:{port}",
+                "workers": get_number_of_workers(workers),
+                "timeout": worker_timeout,
+                "certfile": ssl_cert_file_path,
+                "keyfile": ssl_key_file_path,
+                "log_level": log_level.lower(),
+            }
+            server = LangflowApplication(app, options)
 
-def wait_for_server_ready(host, port, protocol) -> None:
-    """Wait for the server to become ready by polling the health endpoint."""
-    status_code = 0
-    while status_code != httpx.codes.OK:
+            webapp_process = Process(target=server.run)
+            webapp_process.start()
+
+            # Wait for server to be ready
+            wait_for_server_ready(host, port, protocol)
+
+    # Show completion message
+    progress.print_summary()
+    print_banner(host, port, protocol)
+
+    # Handle browser opening after server starts (non-Windows only)
+    if platform.system() != "Windows" and open_browser and not backend_only:
+        click.launch(f"{protocol}://{host}:{port}")
+
+    # Handle process management for non-Windows
+    if platform.system() != "Windows":
         try:
-            status_code = httpx.get(
-                f"{protocol}://{host}:{port}/health", verify=host not in ("127.0.0.1", "localhost")
-            ).status_code
-        except HTTPError:
-            time.sleep(1)
-        except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error while waiting for the server to become ready.")
-            time.sleep(1)
-
-
-def run_on_mac_or_linux(host, port, log_level, options, app, protocol):
-    webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
-    webapp_process.start()
-    wait_for_server_ready(host, port, protocol)
-
-    print_banner(host, port, protocol)
-    return webapp_process
-
-
-def run_on_windows(host, port, log_level, options, app, protocol) -> None:
-    """Run the Langflow server on Windows."""
-    print_banner(host, port, protocol)
-    run_langflow(host, port, log_level, options, app)
+            webapp_process.join()
+        except KeyboardInterrupt:
+            # SIGINT should be handled by the signal handler, but leaving here for safety
+            logger.warning("KeyboardInterrupt caught in main thread")
+            _shutdown_webapp_process()
+        finally:
+            # Ensure cleanup happens
+            if webapp_process and webapp_process.is_alive():
+                webapp_process.terminate()
+                webapp_process.join()
 
 
 def is_port_in_use(port, host="localhost"):
@@ -421,47 +495,6 @@ def print_banner(host: str, port: int, protocol: str) -> None:
     message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
 
     console.print(Panel.fit(message, border_style="#7528FC", padding=(1, 2)))
-
-
-def run_langflow(host, port, log_level, options, app) -> None:
-    """Run Langflow server on localhost."""
-    if platform.system() == "Windows":
-        import uvicorn
-
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level=log_level.lower(),
-            loop="asyncio",
-            ssl_keyfile=options["keyfile"],
-            ssl_certfile=options["certfile"],
-        )
-    else:
-        from langflow.server import LangflowApplication
-
-        server = LangflowApplication(app, options)
-
-        def graceful_shutdown(signum, frame):  # noqa: ARG001
-            """Gracefully shutdown the server when receiving SIGTERM."""
-            # Suppress click exceptions during shutdown
-            import click
-
-            click.echo = lambda *args, **kwargs: None  # noqa: ARG005
-
-            logger.info("Gracefully shutting down server...")
-            # For Gunicorn workers, we raise SystemExit to trigger graceful shutdown
-            raise SystemExit(0)
-
-        # Register signal handlers
-        signal.signal(signal.SIGTERM, graceful_shutdown)
-        signal.signal(signal.SIGINT, graceful_shutdown)
-
-        try:
-            server.run()
-        except (KeyboardInterrupt, SystemExit):
-            # Suppress the exception output
-            sys.exit(0)
 
 
 @app.command()
