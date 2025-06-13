@@ -26,7 +26,12 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
+from langflow.base.constants import (
+    FIELD_FORMAT_ATTRIBUTES,
+    NODE_FORMAT_ATTRIBUTES,
+    ORJSON_OPTIONS,
+    SKIPPED_FIELD_ATTRIBUTES,
+)
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -134,7 +139,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                     # Currently we skip 'advanced' so that a field marked as advanced in the component code
                     # will NOT overwrite the value specified in the starter project template. This preserves
                     # the intended UX configuration of the starter projects.
-                    SKIPPED_FIELD_ATTRIBUTES = {"advanced"}
+                    # SKIPPED_FIELD_ATTRIBUTES = {"advanced"}
                     # Iterate through the attributes we want to potentially update
                     for attr in to_check_attributes:
                         # Respect the template value by not updating if the attribute is in the skipped set
