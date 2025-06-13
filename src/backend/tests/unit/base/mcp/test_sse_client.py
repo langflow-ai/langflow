@@ -407,15 +407,14 @@ class TestMCPSseClientHTTPSSETransport:
         expected_result = {"result": "success"}
 
         with (
-            patch("httpx.AsyncClient.stream") as mock_stream,
+            patch("httpx.AsyncClient.post", return_value=mock_response) as mock_post,
             patch("asyncio.wait_for", return_value=expected_result) as mock_wait_for,
         ):
-            # Set up the stream context manager
-            mock_stream.return_value.__aenter__.return_value = mock_response
-
             result = await client._mcp_http_sse_send_request({"method": "test"})
 
             assert result == expected_result
+            # Verify POST was called with correct parameters
+            mock_post.assert_called_once()
             # Verify wait_for was called with the correct timeout
             mock_wait_for.assert_called_once()
             args, kwargs = mock_wait_for.call_args
@@ -433,11 +432,8 @@ class TestMCPSseClientHTTPSSETransport:
         mock_response.request = Mock()
 
         with (
-            patch("httpx.AsyncClient.stream") as mock_stream,
+            patch("httpx.AsyncClient.post", return_value=mock_response),
             patch("asyncio.wait_for", side_effect=asyncio.TimeoutError("HTTP+SSE request timed out")),
         ):
-            # Set up the stream context manager
-            mock_stream.return_value.__aenter__.return_value = mock_response
-
             with pytest.raises(asyncio.TimeoutError, match="timed out"):
                 await client._mcp_http_sse_send_request({"method": "test"})
