@@ -313,6 +313,9 @@ function GenericNode({
             newNode.data.node.outputs[outputIndex].selected =
               output.selected ?? defaultType;
           }
+
+          const selectedOutput = newNode.data.node.outputs[outputIndex]?.name;
+          (newNode.data as NodeDataType).selected_output = selectedOutput;
         }
         return newNode;
       });
