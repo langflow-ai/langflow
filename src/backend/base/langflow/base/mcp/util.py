@@ -395,7 +395,9 @@ class MCPSseClient:
             if not parsed.scheme or not parsed.netloc:
                 return False, "Invalid URL format. Must include scheme (http/https) and host."
 
-            async with httpx.AsyncClient() as client:
+            ssl_verify = server_config.get("ssl_verify", True)
+
+            async with httpx.AsyncClient(verify=ssl_verify) as client:
                 try:
                     # First try a HEAD request to check if server is reachable
                     response = await client.head(url, timeout=5.0)
@@ -417,7 +419,9 @@ class MCPSseClient:
         if url is None:
             return url
         try:
-            async with httpx.AsyncClient(follow_redirects=False) as client:
+            ssl_verify = server_config.get("ssl_verify", True)
+
+            async with httpx.AsyncClient(follow_redirects=False, verify=ssl_verify) as client:  # noqa: S501
                 response = await client.request("HEAD", url)
                 if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
                     return response.headers.get("Location", url)
@@ -456,8 +460,10 @@ class MCPSseClient:
         }
 
         try:
+            ssl_verify = server_config.get("ssl_verify", True)
+
             async with (
-                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds) as (read, write),
+                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds, verify=ssl_verify) as (read, write),
                 ClientSession(read, write) as session,
             ):
                 await session.initialize()
@@ -496,10 +502,12 @@ class MCPSseClient:
         try:
             from mcp.client.sse import sse_client
 
+            ssl_verify = server_config.get("ssl_verify", True)
+
             params = self._connection_params
             async with (
                 sse_client(
-                    params["url"], params["headers"], params["timeout_seconds"], params["sse_read_timeout_seconds"]
+                    params["url"], params["headers"], params["timeout_seconds"], params["sse_read_timeout_seconds"], verify=ssl_verify
                 ) as (read, write),
                 ClientSession(read, write) as session,
             ):
