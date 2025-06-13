@@ -19,7 +19,6 @@ class LambdaFilterComponent(Component):
     description = "Uses an LLM to generate a function for filtering or transforming structured data."
     icon = "test-tube-diagonal"
     name = "Smart Function"
-    beta = True
 
     inputs = [
         DataInput(

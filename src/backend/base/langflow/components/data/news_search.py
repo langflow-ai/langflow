@@ -21,7 +21,6 @@ class NewsSearchComponent(Component):
             display_name="Search Query",
             info="Search keywords for news articles.",
             tool_mode=True,
-            input_types=[],
             required=True,
         ),
         MessageTextInput(
