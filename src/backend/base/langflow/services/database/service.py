@@ -337,7 +337,6 @@ class DatabaseService(Service):
             else:
                 logger.debug("Alembic initialized")
 
-
             try:
                 buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
                 command.check(alembic_cfg)
