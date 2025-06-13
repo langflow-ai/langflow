@@ -52,6 +52,10 @@ async def api_key_security(
             if not query_param and not header_param:
                 if settings_service.auth_settings.skip_auth_auto_login:
                     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+                    logger.warning(
+                        "In v1.6 LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. "
+                        "Please update your authentication method."
+                    )
                 else:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
@@ -99,6 +103,10 @@ async def ws_api_key_security(
             if not api_key:
                 if settings.auth_settings.skip_auth_auto_login:
                     result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
+                    logger.warning(
+                        "In v1.6 LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. "
+                        "Please update your authentication method."
+                    )
                 else:
                     raise WebSocketException(
                         code=status.WS_1008_POLICY_VIOLATION,
