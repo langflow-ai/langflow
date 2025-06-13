@@ -607,7 +607,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-X83ni",
@@ -1073,7 +1074,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "TavilySearchComponent"
+          "type": "TavilySearchComponent",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "TavilySearchComponent-7Y3yy",
@@ -1322,7 +1324,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "YfinanceComponent"
+          "type": "YfinanceComponent",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "YfinanceComponent-KpeWR",
@@ -2060,7 +2063,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "URL"
+          "type": "URL",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "URL-N9CXl",
@@ -2409,7 +2413,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "SambaNovaModel"
+          "type": "SambaNovaModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "SambaNovaModel-NEyqD",
@@ -3184,7 +3189,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-cGZsD",
@@ -3266,7 +3272,7 @@
               }
             ],
             "pinned": false,
-            "score": 5.283996070936036e-7,
+            "score": 5.283996070936036e-07,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -3959,7 +3965,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-wqbpC",
@@ -4136,7 +4143,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "id": "Prompt-er8QV",
@@ -4313,7 +4321,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "id": "Prompt-AdpTy",
