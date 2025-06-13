@@ -63,9 +63,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup Environment
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
       - name: Install the project
         run: uv sync
+      - name: Check for dependency incompatibility
+        run: uv pip check
       - name: Check Version
         id: check-version
         run: |
@@ -127,9 +134,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup Environment
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
       - name: Install the project
         run: uv sync
+      - name: Check for dependency incompatibility
+        run: uv pip check
 
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow

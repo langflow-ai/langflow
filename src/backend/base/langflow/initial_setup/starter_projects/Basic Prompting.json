@@ -3,6 +3,7 @@
     "edges": [
       {
         "animated": false,
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
@@ -30,6 +31,7 @@
         "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-ANJZnœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "animated": false,
         "className": "",
         "data": {
@@ -59,6 +61,7 @@
       },
       {
         "animated": false,
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
@@ -77,7 +80,7 @@
               "DataFrame",
               "Message"
             ],
-            "type": "str"
+            "type": "other"
           }
         },
         "id": "xy-edge__LanguageModelComponent-ANJZn{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-ANJZnœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-WjNSG{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-WjNSGœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
@@ -148,12 +151,14 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -169,12 +174,14 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -199,6 +206,7 @@
                 "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
+                "_input_type": "FileInput",
                 "advanced": true,
                 "display_name": "Files",
                 "dynamic": false,
@@ -230,6 +238,7 @@
                 "file_path": "",
                 "info": "Files to be sent with the message.",
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "files",
                 "placeholder": "",
                 "required": false,
@@ -241,12 +250,15 @@
                 "value": ""
               },
               "input_value": {
+                "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Input Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
                 "input_types": [],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "input_value",
@@ -254,13 +266,17 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Hello"
               },
               "sender": {
+                "_input_type": "DropdownInput",
                 "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -269,15 +285,19 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "User"
               },
               "sender_name": {
+                "_input_type": "MessageTextInput",
                 "advanced": true,
                 "display_name": "Sender Name",
                 "dynamic": false,
@@ -286,18 +306,21 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "User"
               },
               "session_id": {
+                "_input_type": "MessageTextInput",
                 "advanced": true,
                 "display_name": "Session ID",
                 "dynamic": false,
@@ -306,12 +329,14 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -324,11 +349,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -343,12 +370,14 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -363,6 +392,7 @@
         "id": "ChatInput-VBtrG",
         "measured": {
           "height": 234,
+          "width": 320
           "width": 320
         },
         "position": {
@@ -448,6 +478,7 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "template",
                 "placeholder": "",
@@ -469,6 +500,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "tool_placeholder",
                 "placeholder": "",
@@ -491,6 +523,7 @@
         "id": "Prompt-10zWr",
         "measured": {
           "height": 260,
+          "width": 320
           "width": 320
         },
         "position": {
@@ -559,6 +592,7 @@
         "id": "note-iylyn",
         "measured": {
           "height": 324,
+          "width": 324
           "width": 324
         },
         "position": {
@@ -638,6 +672,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -660,6 +695,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -718,6 +754,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "data_template",
                 "placeholder": "",
@@ -731,7 +768,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Inputs",
                 "dynamic": false,
@@ -742,6 +779,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -750,13 +788,14 @@
                 "title_case": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -765,10 +804,12 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -784,6 +825,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -806,6 +848,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -825,11 +868,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -844,6 +889,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -867,6 +913,7 @@
         "measured": {
           "height": 234,
           "width": 320
+          "width": 320
         },
         "position": {
           "x": 1460.070372772908,
@@ -876,7 +923,7 @@
           "x": 1444.936881624563,
           "y": 872.7273956769025
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 320
       },
@@ -889,8 +936,11 @@
               "Message"
             ],
             "beta": false,
+            "category": "models",
             "conditional_paths": [],
             "custom_fields": {},
+            "description": "Runs a language model given a specified provider. ",
+            "display_name": "Language Model",
             "description": "Runs a language model given a specified provider. ",
             "display_name": "Language Model",
             "documentation": "",
@@ -899,9 +949,13 @@
               "provider",
               "model_name",
               "api_key",
+              "provider",
+              "model_name",
+              "api_key",
               "input_value",
               "system_message",
               "stream",
+              "temperature"
               "temperature"
             ],
             "frozen": false,
@@ -926,7 +980,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -960,6 +1013,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "Model Provider API key",
+                "info": "Model Provider API key",
                 "input_types": [],
                 "load_from_db": false,
                 "name": "api_key",
@@ -967,9 +1021,12 @@
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
+                "real_time_refresh": true,
+                "required": false,
                 "show": true,
                 "title_case": false,
                 "type": "str",
+                "value": ""
                 "value": ""
               },
               "code": {
@@ -992,9 +1049,11 @@
               },
               "input_value": {
                 "_input_type": "MessageTextInput",
+                "_input_type": "MessageTextInput",
                 "advanced": false,
                 "display_name": "Input",
                 "dynamic": false,
+                "info": "The input text to send to the model",
                 "info": "The input text to send to the model",
                 "input_types": [
                   "Message"
@@ -1017,9 +1076,11 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": false,
+                "combobox": false,
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
+                "info": "Select the model to use",
                 "info": "Select the model to use",
                 "name": "model_name",
                 "options": [
@@ -1033,6 +1094,7 @@
                   "gpt-4-turbo-preview",
                   "gpt-4",
                   "gpt-3.5-turbo"
+                  "gpt-3.5-turbo"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -1040,11 +1102,19 @@
                 "show": true,
                 "title_case": false,
                 "toggle": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "gpt-4o-mini"
+                "value": "gpt-4o-mini"
               },
+              "provider": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Provider",
               "provider": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
@@ -1070,15 +1140,36 @@
                     "icon": "Google"
                   }
                 ],
+                "info": "Select the model provider",
+                "name": "provider",
+                "options": [
+                  "OpenAI",
+                  "Anthropic",
+                  "Google"
+                ],
+                "options_metadata": [
+                  {
+                    "icon": "OpenAI"
+                  },
+                  {
+                    "icon": "Anthropic"
+                  },
+                  {
+                    "icon": "Google"
+                  }
+                ],
                 "placeholder": "",
+                "real_time_refresh": true,
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "toggle": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
+                "value": "OpenAI"
                 "value": "OpenAI"
               },
               "stream": {
@@ -1086,6 +1177,7 @@
                 "advanced": true,
                 "display_name": "Stream",
                 "dynamic": false,
+                "info": "Whether to stream the response",
                 "info": "Whether to stream the response",
                 "list": false,
                 "list_add_label": "Add More",
@@ -1104,6 +1196,7 @@
                 "advanced": true,
                 "display_name": "System Message",
                 "dynamic": false,
+                "info": "A system message that helps set the behavior of the assistant",
                 "info": "A system message that helps set the behavior of the assistant",
                 "input_types": [
                   "Message"
@@ -1125,8 +1218,10 @@
               "temperature": {
                 "_input_type": "SliderInput",
                 "advanced": true,
+                "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
+                "info": "Controls randomness in responses",
                 "info": "Controls randomness in responses",
                 "max_label": "",
                 "max_label_icon": "",
@@ -1155,10 +1250,13 @@
           },
           "showNode": true,
           "type": "LanguageModelComponent"
+          "type": "LanguageModelComponent"
         },
         "dragging": false,
         "id": "LanguageModelComponent-ANJZn",
         "measured": {
+          "height": 534,
+          "width": 320
           "height": 534,
           "width": 320
         },
