@@ -53,8 +53,7 @@ async def api_key_security(
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=(
-                        "Since v1.5, AUTO_LOGIN requires a valid API key or JWT."
-                        " Please update your authentication method."
+                        "Since v1.5, AUTO_LOGIN requires a valid API key. Please update your authentication method."
                     ),
                 )
             result = await check_key(db, query_param or header_param)
