@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeCommentsComponent",
-            "id": "YouTubeCommentsComponent-g4VZV",
+            "id": "YouTubeCommentsComponent-4pxuY",
             "name": "comments",
             "output_types": [
               "DataFrame"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "df",
-            "id": "BatchRunComponent-kxOUU",
+            "id": "BatchRunComponent-jFt7j",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YouTubeCommentsComponent-g4VZV{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-g4VZVœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-kxOUU{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-kxOUUœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeCommentsComponent-4pxuY{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-4pxuYœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-jFt7j{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-jFt7jœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeCommentsComponent-g4VZV",
-        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-g4VZVœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "BatchRunComponent-kxOUU",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-kxOUUœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "YouTubeCommentsComponent-4pxuY",
+        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-4pxuYœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "BatchRunComponent-jFt7j",
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-jFt7jœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-0iBkZ",
+            "id": "OpenAIModel-3klNa",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "model",
-            "id": "BatchRunComponent-kxOUU",
+            "id": "BatchRunComponent-jFt7j",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-0iBkZ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-0iBkZœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-BatchRunComponent-kxOUU{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-kxOUUœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-3klNa{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-3klNaœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-BatchRunComponent-jFt7j{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-jFt7jœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-0iBkZ",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-0iBkZœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "BatchRunComponent-kxOUU",
-        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-kxOUUœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OpenAIModel-3klNa",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-3klNaœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "BatchRunComponent-jFt7j",
+        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-jFt7jœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-UAMac",
+            "id": "Prompt-tR2a7",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-0gW4Y",
+            "id": "Agent-A37q9",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-UAMac{œdataTypeœ:œPromptœ,œidœ:œPrompt-UAMacœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-0gW4Y{œfieldNameœ:œinput_valueœ,œidœ:œAgent-0gW4Yœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-tR2a7{œdataTypeœ:œPromptœ,œidœ:œPrompt-tR2a7œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-A37q9{œfieldNameœ:œinput_valueœ,œidœ:œAgent-A37q9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-UAMac",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-UAMacœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-0gW4Y",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-0gW4Yœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-tR2a7",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-tR2a7œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-A37q9",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-A37q9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-0gW4Y",
+            "id": "Agent-A37q9",
             "name": "response",
             "output_types": [
               "Message"
@@ -99,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-9nsTW",
+            "id": "ChatOutput-w4PAC",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,12 +108,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-0gW4Y{œdataTypeœ:œAgentœ,œidœ:œAgent-0gW4Yœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-9nsTW{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-9nsTWœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-A37q9{œdataTypeœ:œAgentœ,œidœ:œAgent-A37q9œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-w4PAC{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-w4PACœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-0gW4Y",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-0gW4Yœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-9nsTW",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-9nsTWœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-A37q9",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-A37q9œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-w4PAC",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-w4PACœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -121,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeTranscripts",
-            "id": "YouTubeTranscripts-QMIjk",
+            "id": "YouTubeTranscripts-Nbrx3",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -129,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-0gW4Y",
+            "id": "Agent-A37q9",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YouTubeTranscripts-QMIjk{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-QMIjkœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-0gW4Y{œfieldNameœ:œtoolsœ,œidœ:œAgent-0gW4Yœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeTranscripts-Nbrx3{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-Nbrx3œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-A37q9{œfieldNameœ:œtoolsœ,œidœ:œAgent-A37q9œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeTranscripts-QMIjk",
-        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-QMIjkœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-0gW4Y",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-0gW4Yœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YouTubeTranscripts-Nbrx3",
+        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-Nbrx3œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-A37q9",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-A37q9œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -149,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-XErsc",
+            "id": "ChatInput-jHqUS",
             "name": "message",
             "output_types": [
               "Message"
@@ -157,19 +157,19 @@
           },
           "targetHandle": {
             "fieldName": "input_text",
-            "id": "ConditionalRouter-7lzPh",
+            "id": "ConditionalRouter-SP1WC",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-XErsc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-XErscœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-7lzPh{œfieldNameœ:œinput_textœ,œidœ:œConditionalRouter-7lzPhœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-jHqUS{œdataTypeœ:œChatInputœ,œidœ:œChatInput-jHqUSœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-SP1WC{œfieldNameœ:œinput_textœ,œidœ:œConditionalRouter-SP1WCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-XErsc",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-XErscœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ConditionalRouter-7lzPh",
-        "targetHandle": "{œfieldNameœ: œinput_textœ, œidœ: œConditionalRouter-7lzPhœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-jHqUS",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-jHqUSœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ConditionalRouter-SP1WC",
+        "targetHandle": "{œfieldNameœ: œinput_textœ, œidœ: œConditionalRouter-SP1WCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -177,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-XErsc",
+            "id": "ChatInput-jHqUS",
             "name": "message",
             "output_types": [
               "Message"
@@ -185,19 +185,19 @@
           },
           "targetHandle": {
             "fieldName": "message",
-            "id": "ConditionalRouter-7lzPh",
+            "id": "ConditionalRouter-SP1WC",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-XErsc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-XErscœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-7lzPh{œfieldNameœ:œmessageœ,œidœ:œConditionalRouter-7lzPhœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-jHqUS{œdataTypeœ:œChatInputœ,œidœ:œChatInput-jHqUSœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-SP1WC{œfieldNameœ:œmessageœ,œidœ:œConditionalRouter-SP1WCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-XErsc",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-XErscœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ConditionalRouter-7lzPh",
-        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œConditionalRouter-7lzPhœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-jHqUS",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-jHqUSœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ConditionalRouter-SP1WC",
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œConditionalRouter-SP1WCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -205,7 +205,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ConditionalRouter",
-            "id": "ConditionalRouter-7lzPh",
+            "id": "ConditionalRouter-SP1WC",
             "name": "true_result",
             "output_types": [
               "Message"
@@ -213,19 +213,19 @@
           },
           "targetHandle": {
             "fieldName": "video_url",
-            "id": "YouTubeCommentsComponent-g4VZV",
+            "id": "YouTubeCommentsComponent-4pxuY",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ConditionalRouter-7lzPh{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-7lzPhœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-g4VZV{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-g4VZVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ConditionalRouter-SP1WC{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-SP1WCœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-4pxuY{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-4pxuYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ConditionalRouter-7lzPh",
-        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-7lzPhœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "YouTubeCommentsComponent-g4VZV",
-        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-g4VZVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ConditionalRouter-SP1WC",
+        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-SP1WCœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "YouTubeCommentsComponent-4pxuY",
+        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-4pxuYœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -233,7 +233,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ConditionalRouter",
-            "id": "ConditionalRouter-7lzPh",
+            "id": "ConditionalRouter-SP1WC",
             "name": "true_result",
             "output_types": [
               "Message"
@@ -241,26 +241,27 @@
           },
           "targetHandle": {
             "fieldName": "url",
-            "id": "Prompt-UAMac",
+            "id": "Prompt-tR2a7",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ConditionalRouter-7lzPh{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-7lzPhœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-Prompt-UAMac{œfieldNameœ:œurlœ,œidœ:œPrompt-UAMacœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ConditionalRouter-SP1WC{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-SP1WCœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-Prompt-tR2a7{œfieldNameœ:œurlœ,œidœ:œPrompt-tR2a7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ConditionalRouter-7lzPh",
-        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-7lzPhœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-UAMac",
-        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-UAMacœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ConditionalRouter-SP1WC",
+        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-SP1WCœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-tR2a7",
+        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-tR2a7œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "BatchRunComponent",
-            "id": "BatchRunComponent-kxOUU",
+            "id": "BatchRunComponent-jFt7j",
             "name": "batch_results",
             "output_types": [
               "DataFrame"
@@ -268,7 +269,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-r3iNU",
+            "id": "parser-LDaMh",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -276,19 +277,20 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__BatchRunComponent-kxOUU{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-kxOUUœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-parser-r3iNU{œfieldNameœ:œinput_dataœ,œidœ:œparser-r3iNUœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-BatchRunComponent-jFt7j{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-jFt7jœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-parser-LDaMh{œfieldNameœ:œinput_dataœ,œidœ:œparser-LDaMhœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "BatchRunComponent-kxOUU",
-        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-kxOUUœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "parser-r3iNU",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-r3iNUœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "BatchRunComponent-jFt7j",
+        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-jFt7jœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "parser-LDaMh",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-LDaMhœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-r3iNU",
+            "id": "parser-LDaMh",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -296,25 +298,25 @@
           },
           "targetHandle": {
             "fieldName": "analysis",
-            "id": "Prompt-UAMac",
+            "id": "Prompt-tR2a7",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__parser-r3iNU{œdataTypeœ:œparserœ,œidœ:œparser-r3iNUœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-UAMac{œfieldNameœ:œanalysisœ,œidœ:œPrompt-UAMacœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-LDaMh{œdataTypeœ:œparserœ,œidœ:œparser-LDaMhœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-tR2a7{œfieldNameœ:œanalysisœ,œidœ:œPrompt-tR2a7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-r3iNU",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-r3iNUœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-UAMac",
-        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-UAMacœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-LDaMh",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-LDaMhœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-tR2a7",
+        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-tR2a7œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "BatchRunComponent-kxOUU",
+          "id": "BatchRunComponent-jFt7j",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -512,9 +514,9 @@
           "type": "BatchRunComponent"
         },
         "dragging": false,
-        "id": "BatchRunComponent-kxOUU",
+        "id": "BatchRunComponent-jFt7j",
         "measured": {
-          "height": 399,
+          "height": 391,
           "width": 320
         },
         "position": {
@@ -526,7 +528,7 @@
       },
       {
         "data": {
-          "id": "YouTubeCommentsComponent-g4VZV",
+          "id": "YouTubeCommentsComponent-4pxuY",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -582,7 +584,7 @@
                 "dynamic": false,
                 "info": "Your YouTube Data API key.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -590,7 +592,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "YOUTUBE_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -717,9 +719,9 @@
           "type": "YouTubeCommentsComponent"
         },
         "dragging": false,
-        "id": "YouTubeCommentsComponent-g4VZV",
+        "id": "YouTubeCommentsComponent-4pxuY",
         "measured": {
-          "height": 497,
+          "height": 467,
           "width": 320
         },
         "position": {
@@ -731,7 +733,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-0iBkZ",
+          "id": "OpenAIModel-3klNa",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -762,7 +764,7 @@
             "icon": "OpenAI",
             "key": "OpenAIModel",
             "legacy": false,
-            "lf_version": "1.1.3",
+            "lf_version": "1.4.2",
             "metadata": {
               "keywords": [
                 "model",
@@ -822,7 +824,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1107,9 +1109,9 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-0iBkZ",
+        "id": "OpenAIModel-3klNa",
         "measured": {
-          "height": 525,
+          "height": 540,
           "width": 320
         },
         "position": {
@@ -1121,7 +1123,7 @@
       },
       {
         "data": {
-          "id": "Agent-0gW4Y",
+          "id": "Agent-A37q9",
           "node": {
             "base_classes": [
               "Message"
@@ -1276,7 +1278,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1842,9 +1844,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-0gW4Y",
+        "id": "Agent-A37q9",
         "measured": {
-          "height": 624,
+          "height": 594,
           "width": 320
         },
         "position": {
@@ -1856,7 +1858,7 @@
       },
       {
         "data": {
-          "id": "Prompt-UAMac",
+          "id": "Prompt-tR2a7",
           "node": {
             "base_classes": [
               "Message"
@@ -2019,9 +2021,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-UAMac",
+        "id": "Prompt-tR2a7",
         "measured": {
-          "height": 495,
+          "height": 449,
           "width": 320
         },
         "position": {
@@ -2033,7 +2035,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-9nsTW",
+          "id": "ChatOutput-w4PAC",
           "node": {
             "base_classes": [
               "Message"
@@ -2332,9 +2334,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-9nsTW",
+        "id": "ChatOutput-w4PAC",
         "measured": {
-          "height": 230,
+          "height": 204,
           "width": 320
         },
         "position": {
@@ -2346,7 +2348,7 @@
       },
       {
         "data": {
-          "id": "YouTubeTranscripts-QMIjk",
+          "id": "YouTubeTranscripts-Nbrx3",
           "node": {
             "base_classes": [
               "Data",
@@ -2368,6 +2370,7 @@
             "frozen": false,
             "icon": "YouTube",
             "legacy": false,
+            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -2376,6 +2379,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
+                "group_outputs": false,
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
@@ -2429,11 +2433,11 @@
                 "value": "import pandas as pd\nimport youtube_transcript_api\nfrom langchain_community.document_loaders import YoutubeLoader\nfrom langchain_community.document_loaders.youtube import TranscriptFormat\n\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.inputs.inputs import DropdownInput, IntInput, MultilineInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.template.field.base import Output\n\n\nclass YouTubeTranscriptsComponent(Component):\n    \"\"\"A component that extracts spoken content from YouTube videos as transcripts.\"\"\"\n\n    display_name: str = \"YouTube Transcripts\"\n    description: str = \"Extracts spoken content from YouTube videos with multiple output options.\"\n    icon: str = \"YouTube\"\n    name = \"YouTubeTranscripts\"\n\n    inputs = [\n        MultilineInput(\n            name=\"url\",\n            display_name=\"Video URL\",\n            info=\"Enter the YouTube video URL to get transcripts from.\",\n            tool_mode=True,\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_size_seconds\",\n            display_name=\"Chunk Size (seconds)\",\n            value=60,\n            info=\"The size of each transcript chunk in seconds.\",\n        ),\n        DropdownInput(\n            name=\"translation\",\n            display_name=\"Translation Language\",\n            advanced=True,\n            options=[\"\", \"en\", \"es\", \"fr\", \"de\", \"it\", \"pt\", \"ru\", \"ja\", \"ko\", \"hi\", \"ar\", \"id\"],\n            info=\"Translate the transcripts to the specified language. Leave empty for no translation.\",\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"dataframe\", display_name=\"Chunks\", method=\"get_dataframe_output\"),\n        Output(name=\"message\", display_name=\"Transcript\", method=\"get_message_output\"),\n        Output(name=\"data_output\", display_name=\"Transcript + Source\", method=\"get_data_output\"),\n    ]\n\n    def _load_transcripts(self, *, as_chunks: bool = True):\n        \"\"\"Internal method to load transcripts from YouTube.\"\"\"\n        loader = YoutubeLoader.from_youtube_url(\n            self.url,\n            transcript_format=TranscriptFormat.CHUNKS if as_chunks else TranscriptFormat.TEXT,\n            chunk_size_seconds=self.chunk_size_seconds,\n            translation=self.translation or None,\n        )\n        return loader.load()\n\n    def get_dataframe_output(self) -> DataFrame:\n        \"\"\"Provides transcript output as a DataFrame with timestamp and text columns.\"\"\"\n        try:\n            transcripts = self._load_transcripts(as_chunks=True)\n\n            # Create DataFrame with timestamp and text columns\n            data = []\n            for doc in transcripts:\n                start_seconds = int(doc.metadata[\"start_seconds\"])\n                start_minutes = start_seconds // 60\n                start_seconds %= 60\n                timestamp = f\"{start_minutes:02d}:{start_seconds:02d}\"\n                data.append({\"timestamp\": timestamp, \"text\": doc.page_content})\n\n            return DataFrame(pd.DataFrame(data))\n\n        except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:\n            return DataFrame(pd.DataFrame({\"error\": [f\"Failed to get YouTube transcripts: {exc!s}\"]}))\n\n    def get_message_output(self) -> Message:\n        \"\"\"Provides transcript output as continuous text.\"\"\"\n        try:\n            transcripts = self._load_transcripts(as_chunks=False)\n            result = transcripts[0].page_content\n            return Message(text=result)\n\n        except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:\n            error_msg = f\"Failed to get YouTube transcripts: {exc!s}\"\n            return Message(text=error_msg)\n\n    def get_data_output(self) -> Data:\n        \"\"\"Creates a structured data object with transcript and metadata.\n\n        Returns a Data object containing transcript text, video URL, and any error\n        messages that occurred during processing. The object includes:\n        - 'transcript': continuous text from the entire video (concatenated if multiple parts)\n        - 'video_url': the input YouTube URL\n        - 'error': error message if an exception occurs\n        \"\"\"\n        default_data = {\"transcript\": \"\", \"video_url\": self.url, \"error\": None}\n\n        try:\n            transcripts = self._load_transcripts(as_chunks=False)\n            if not transcripts:\n                default_data[\"error\"] = \"No transcripts found.\"\n                return Data(data=default_data)\n\n            # Combine all transcript parts\n            full_transcript = \" \".join(doc.page_content for doc in transcripts)\n            return Data(data={\"transcript\": full_transcript, \"video_url\": self.url})\n\n        except (\n            youtube_transcript_api.TranscriptsDisabled,\n            youtube_transcript_api.NoTranscriptFound,\n            youtube_transcript_api.CouldNotRetrieveTranscript,\n        ) as exc:\n            default_data[\"error\"] = str(exc)\n            return Data(data=default_data)\n"
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -2441,107 +2445,63 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": true,
-                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
-                      "disable_edit": false,
-                      "display_name": "Enable",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "status",
-                      "sortable": true,
-                      "type": "boolean"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "get_dataframe_output(url: Message) - Extracts spoken content from YouTube videos with multiple output options.",
-                    "name": "YouTubeTranscripts-get_dataframe_output",
+                    "args": {
+                      "url": {
+                        "description": "Enter the YouTube video URL to get transcripts from.",
+                        "title": "Url",
+                        "type": "string"
+                      }
+                    },
+                    "description": "YouTubeTranscripts. get_dataframe_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_description": "YouTubeTranscripts. get_dataframe_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_name": "get_dataframe_output",
+                    "name": "get_dataframe_output",
+                    "readonly": false,
+                    "status": true,
                     "tags": [
-                      "YouTubeTranscripts-get_dataframe_output"
+                      "get_dataframe_output"
                     ]
                   },
                   {
-                    "description": "get_message_output(url: Message) - Extracts spoken content from YouTube videos with multiple output options.",
-                    "name": "YouTubeTranscripts-get_message_output",
+                    "args": {
+                      "url": {
+                        "description": "Enter the YouTube video URL to get transcripts from.",
+                        "title": "Url",
+                        "type": "string"
+                      }
+                    },
+                    "description": "YouTubeTranscripts. get_message_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_description": "YouTubeTranscripts. get_message_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_name": "get_message_output",
+                    "name": "get_message_output",
+                    "readonly": false,
+                    "status": true,
                     "tags": [
-                      "YouTubeTranscripts-get_message_output"
+                      "get_message_output"
                     ]
                   },
                   {
-                    "description": "get_data_output(url: Message) - Extracts spoken content from YouTube videos with multiple output options.",
-                    "name": "YouTubeTranscripts-get_data_output",
+                    "args": {
+                      "url": {
+                        "description": "Enter the YouTube video URL to get transcripts from.",
+                        "title": "Url",
+                        "type": "string"
+                      }
+                    },
+                    "description": "YouTubeTranscripts. get_data_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_description": "YouTubeTranscripts. get_data_output - Extracts spoken content from YouTube videos with multiple output options.",
+                    "display_name": "get_data_output",
+                    "name": "get_data_output",
+                    "readonly": false,
+                    "status": true,
                     "tags": [
-                      "YouTubeTranscripts-get_data_output"
+                      "get_data_output"
                     ]
                   }
                 ]
@@ -2611,9 +2571,9 @@
           "type": "YouTubeTranscripts"
         },
         "dragging": false,
-        "id": "YouTubeTranscripts-QMIjk",
+        "id": "YouTubeTranscripts-Nbrx3",
         "measured": {
-          "height": 417,
+          "height": 328,
           "width": 320
         },
         "position": {
@@ -2625,7 +2585,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-XErsc",
+          "id": "ChatInput-jHqUS",
           "node": {
             "base_classes": [
               "Message"
@@ -2653,7 +2613,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.1.3",
+            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -2924,9 +2884,9 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-XErsc",
+        "id": "ChatInput-jHqUS",
         "measured": {
-          "height": 230,
+          "height": 204,
           "width": 320
         },
         "position": {
@@ -2938,7 +2898,7 @@
       },
       {
         "data": {
-          "id": "note-Cc4Ez",
+          "id": "note-UUFzO",
           "node": {
             "description": "# Batch Run component\n\nThis component processes a DataFrame by running each row through a Language Model (LLM). Perfect for batch analysis, sentiment scoring, or content generation at scale.\n\n## How It Works\n1. Accepts a DataFrame with text data.\n2. Routes each row through your chosen LLM.\n3. Returns new DataFrame with `text_input` and `model_response`.\n\n",
             "display_name": "",
@@ -2951,7 +2911,7 @@
         },
         "dragging": false,
         "height": 522,
-        "id": "note-Cc4Ez",
+        "id": "note-UUFzO",
         "measured": {
           "height": 522,
           "width": 325
@@ -2967,7 +2927,7 @@
       },
       {
         "data": {
-          "id": "note-fckWh",
+          "id": "note-sqTuK",
           "node": {
             "description": "## Set up the YouTube API\n1. Go to [Google Cloud Console](https://console.cloud.google.com).\n2. Create a new project or select existing one.\n3. Enable YouTube Data API v3:\n   - Navigate to APIs & Services > Library.\n   - Search \"YouTube Data API v3\".\n   - Click Enable.\n4. Create credentials:\n   - Go to APIs & Services > Credentials.\n   - Click Create Credentials > API Key.\n5. Copy your new API key for use in the component.\n\n⚠️ Remember to:\n- Restrict the API key to YouTube Data API v3 only.\n- Set appropriate quotas and restrictions.\n",
             "display_name": "",
@@ -2980,7 +2940,7 @@
         },
         "dragging": false,
         "height": 486,
-        "id": "note-fckWh",
+        "id": "note-sqTuK",
         "measured": {
           "height": 486,
           "width": 325
@@ -2996,7 +2956,7 @@
       },
       {
         "data": {
-          "id": "note-FZ1Fg",
+          "id": "note-Di19o",
           "node": {
             "description": "# 🎥 YouTube Video Analysis\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n\n## Prerequisites\n-  OpenAI API Key\n-  YouTube Data API v3 key",
             "display_name": "",
@@ -3009,7 +2969,7 @@
         },
         "dragging": false,
         "height": 454,
-        "id": "note-FZ1Fg",
+        "id": "note-Di19o",
         "measured": {
           "height": 454,
           "width": 433
@@ -3025,7 +2985,7 @@
       },
       {
         "data": {
-          "id": "ConditionalRouter-7lzPh",
+          "id": "ConditionalRouter-SP1WC",
           "node": {
             "base_classes": [
               "Message"
@@ -3270,9 +3230,9 @@
           "type": "ConditionalRouter"
         },
         "dragging": false,
-        "id": "ConditionalRouter-7lzPh",
+        "id": "ConditionalRouter-SP1WC",
         "measured": {
-          "height": 588,
+          "height": 429,
           "width": 320
         },
         "position": {
@@ -3284,7 +3244,7 @@
       },
       {
         "data": {
-          "id": "parser-r3iNU",
+          "id": "parser-LDaMh",
           "node": {
             "base_classes": [
               "Message"
@@ -3444,9 +3404,9 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-r3iNU",
+        "id": "parser-LDaMh",
         "measured": {
-          "height": 395,
+          "height": 361,
           "width": 320
         },
         "position": {
@@ -3458,16 +3418,16 @@
       }
     ],
     "viewport": {
-      "x": 69.36235934000024,
-      "y": -2491.3683867679606,
-      "zoom": 0.4827961559150896
+      "x": 442.6851065891309,
+      "y": -1378.1987686741775,
+      "zoom": 0.2815925120128663
     }
   },
   "description": "The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.",
   "endpoint_name": null,
-  "id": "5865d442-4b78-49a2-b561-c29b8286a981",
+  "id": "828f13a1-cb75-4c8f-90e7-6e948c2fd899",
   "is_component": false,
-  "last_tested_version": "1.2.0",
+  "last_tested_version": "1.4.2",
   "name": "Youtube Analysis",
   "tags": [
     "agents",
