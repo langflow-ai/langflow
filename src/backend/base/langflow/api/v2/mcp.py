@@ -101,27 +101,29 @@ async def get_servers(
     session: DbSession,
     storage_service=Depends(get_storage_service),
     settings_service=Depends(get_settings_service),
+    actionCount: bool = False,
 ):
     """Get the list of available servers."""
     import asyncio
 
     server_list = await get_server_list(current_user, session, storage_service, settings_service)
 
+    if not actionCount:
+        # Return only the server names, with mode and toolsCount as None
+        return [{"name": server_name, "mode": None, "toolsCount": None} for server_name in server_list["mcpServers"]]
+
     # Check all of the tool counts for each server concurrently
     async def check_server(server_name: str) -> dict:
-        server_info = {"name": server_name, "mode": "", "toolsCount": 0}
+        server_info = {"name": server_name, "mode": None, "toolsCount": None}
         try:
             mode, tool_list, _ = await update_tools(
                 server_name=server_name,
                 server_config=server_list["mcpServers"][server_name],
             )
-
-            # Get the server configuration
             server_info["mode"] = mode.lower()
             server_info["toolsCount"] = len(tool_list)
         except Exception as e:  # noqa: BLE001
             logger.exception(f"Error checking server {server_name}: {e}")
-
         return server_info
 
     # Run all server checks concurrently
