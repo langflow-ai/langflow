@@ -148,12 +148,14 @@ async def test_read_projects_empty(client: AsyncClient, logged_in_headers):
         pytest.skip("Pre-existing projects found; skipping empty list assertion")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == []
+
+
 CYRILLIC_NAME = "Новый проект"
 CYRILLIC_DESC = "Описание проекта с кириллицей"
 
+
 async def test_create_and_read_project_cyrillic(client: AsyncClient, logged_in_headers):
-    """
-    Ensure that the API correctly handles non-ASCII (Cyrillic) characters
+    """Ensure that the API correctly handles non-ASCII (Cyrillic) characters
     during project creation and retrieval.
     """
     payload = {
