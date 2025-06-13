@@ -50,12 +50,15 @@ async def api_key_security(
                     detail="Missing first superuser credentials",
                 )
             if not query_param and not header_param:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=(
-                        "Since v1.5, AUTO_LOGIN requires a valid API key. Please update your authentication method."
-                    ),
-                )
+                if settings_service.auth_settings.SKIP_AUTH_AUTO_LOGIN:
+                    result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=(
+                            "Since v1.5, AUTO_LOGIN requires a valid API key. Please update your authentication method."
+                        ),
+                    )
             result = await check_key(db, query_param or header_param)
 
         elif not query_param and not header_param:
@@ -94,13 +97,15 @@ async def ws_api_key_security(
                     reason="Missing first superuser credentials",
                 )
             if not api_key:
-                raise WebSocketException(
-                    code=status.WS_1008_POLICY_VIOLATION,
-                    reason=(
-                        "Since v1.5, AUTO_LOGIN requires a valid API key or JWT."
-                        " Please update your authentication method."
-                    ),
-                )
+                if settings.auth_settings.SKIP_AUTH_AUTO_LOGIN:
+                    result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
+                else:
+                    raise WebSocketException(
+                        code=status.WS_1008_POLICY_VIOLATION,
+                        reason=(
+                            "Since v1.5, AUTO_LOGIN requires a valid API key. Please update your authentication method."
+                        ),
+                    )
             result = await check_key(db, api_key)
 
         # normal path: must provide an API key
