@@ -56,14 +56,12 @@ test(
     });
 
     const disclosureTestIds = [
-      "disclosure-inputs",
-      "disclosure-outputs",
+      "disclosure-i/o",
       "disclosure-data",
       "disclosure-models",
       "disclosure-helpers",
       "disclosure-vector stores",
       "disclosure-agents",
-      "disclosure-memories",
       "disclosure-logic",
       "disclosure-tools",
       "disclosure-bundles-langchain",
@@ -72,7 +70,7 @@ test(
     ];
 
     const elementTestIds = [
-      "outputsChat Output",
+      "input_outputChat Output",
       "dataAPI Request",
       "vectorstoresAstra DB",
       "langchain_utilitiesTool Calling Agent",
@@ -84,7 +82,12 @@ test(
     ];
 
     await Promise.all(
-      disclosureTestIds.map((id) => expect(page.getByTestId(id)).toBeVisible()),
+      disclosureTestIds.map((id) => {
+        if (!expect(page.getByTestId(id)).toBeVisible()) {
+          console.error(`${id} is not visible`);
+        }
+        return expect(page.getByTestId(id)).toBeVisible();
+      }),
     );
 
     await Promise.all(
@@ -118,9 +121,12 @@ test(
     ];
 
     await Promise.all(
-      visibleModelSpecsTestIds.map((id) =>
-        expect(page.getByTestId(id)).toBeVisible(),
-      ),
+      visibleModelSpecsTestIds.map((id) => {
+        if (!expect(page.getByTestId(id)).toBeVisible()) {
+          console.error(`${id} is not visible`);
+        }
+        return expect(page.getByTestId(id)).toBeVisible();
+      }),
     );
 
     const chainInputElements1 = await page
@@ -157,7 +163,6 @@ test(
 
     await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
     await expect(page.getByTestId("disclosure-agents")).toBeVisible();
-    await expect(page.getByTestId("disclosure-memories")).toBeVisible();
     await expect(page.getByTestId("disclosure-logic")).toBeVisible();
   },
 );

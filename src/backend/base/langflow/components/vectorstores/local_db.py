@@ -1,5 +1,6 @@
 from copy import deepcopy
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from langchain_chroma import Chroma
 from loguru import logger
@@ -9,8 +10,11 @@ from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cache
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.inputs.inputs import MultilineInput
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, TabInput
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
 from langflow.template.field.base import Output
+
+if TYPE_CHECKING:
+    from langflow.schema.dataframe import DataFrame
 
 
 class LocalDBComponent(LCVectorStoreComponent):

@@ -29,36 +29,48 @@ test(
 
     await zoomOut(page, 3);
 
-    await page.getByTestId("dropdown_str_tool").isDisabled();
+    await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
-    let attempts = 0;
-    const maxAttempts = 3;
-    let dropdownEnabled = false;
-
-    while (attempts < maxAttempts && !dropdownEnabled) {
-      await page.getByTestId("refresh-button-command").click();
-      await page.waitForTimeout(3000);
-
-      try {
-        await page.waitForSelector(
-          '[data-testid="dropdown_str_tool"]:not([disabled])',
-          {
-            timeout: 10000,
-            state: "visible",
-          },
-        );
-        dropdownEnabled = true;
-      } catch (error) {
-        attempts++;
-        console.log(`Retry attempt ${attempts} for refresh button`);
-      }
+    try {
+      await page.getByText("Add MCP Server", { exact: true }).click({
+        timeout: 5000,
+      });
+    } catch (error) {
+      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
+      await page.getByText("Add MCP Server", { exact: true }).click({
+        timeout: 5000,
+      });
     }
 
-    if (!dropdownEnabled) {
-      throw new Error(
-        "Dropdown did not become enabled after multiple refresh attempts",
-      );
-    }
+    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+      state: "visible",
+      timeout: 30000,
+    });
+
+    await page.getByTestId("stdio-tab").click();
+
+    await page.waitForSelector('[data-testid="stdio-name-input"]', {
+      state: "visible",
+      timeout: 30000,
+    });
+
+    await page.getByTestId("stdio-name-input").fill("test server");
+
+    await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
+
+    await page.getByTestId("add-mcp-server-button").click();
+
+    await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
+      timeout: 30000,
+    });
+
+    await page.waitForSelector(
+      '[data-testid="dropdown_str_tool"]:not([disabled])',
+      {
+        timeout: 10000,
+        state: "visible",
+      },
+    );
 
     await page.getByTestId("dropdown_str_tool").click();
 
@@ -89,95 +101,86 @@ test(
 
     expect(urlOptionCount).toBeGreaterThan(0);
 
-    await page.getByTestId("tab_1_sse").click();
+    await page.getByTestId("user_menu_button").click({ timeout: 3000 });
 
-    await page.waitForSelector('[data-testid="textarea_str_sse_url"]', {
+    await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="sidebar-nav-MCP Connections"]', {
+      timeout: 30000,
+    });
+
+    await page
+      .getByTestId("sidebar-nav-MCP Connections")
+      .click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
+      timeout: 3000,
+    });
+
+    await expect(page.getByText("test_server")).toBeVisible({
+      timeout: 3000,
+    });
+
+    await page
+      .getByTestId(`mcp-server-menu-button-test_server`)
+      .click({ timeout: 3000 });
+
+    await page
+      .getByText("Edit", { exact: true })
+      .first()
+      .click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
       state: "visible",
       timeout: 30000,
     });
 
-    let sseURLCount = await page.getByTestId("textarea_str_sse_url").count();
-
-    expect(sseURLCount).toBeGreaterThan(0);
-
-    await page.waitForSelector('[data-testid="dropdown_str_tool"]:disabled', {
-      timeout: 30000,
+    await expect(page.getByTestId("json-tab")).toBeDisabled({
+      timeout: 3000,
     });
 
-    await page.getByTestId("tab_0_stdio").click();
-
-    await page.waitForTimeout(2000);
-
-    await page.getByTestId("fit_view").click();
-
-    attempts = 0;
-    dropdownEnabled = false;
-
-    while (attempts < maxAttempts && !dropdownEnabled) {
-      await page.getByTestId("refresh-button-command").click();
-      await page.waitForTimeout(3000);
-
-      try {
-        await page.waitForSelector(
-          '[data-testid="dropdown_str_tool"]:not([disabled])',
-          {
-            timeout: 10000,
-            state: "visible",
-          },
-        );
-        dropdownEnabled = true;
-      } catch (error) {
-        attempts++;
-        console.log(`Retry attempt ${attempts} for second refresh button`);
-      }
-    }
-
-    if (!dropdownEnabled) {
-      throw new Error(
-        "Dropdown did not become enabled after multiple refresh attempts",
-      );
-    }
-
-    await page.getByTestId("dropdown_str_tool").click();
-
-    fetchOptionCount = await page.getByTestId("fetch-0-option").count();
-
-    await page.getByTestId("fetch-0-option").click();
-
-    await page.waitForTimeout(2000);
-
-    await page.getByTestId("fit_view").click();
-
-    expect(fetchOptionCount).toBeGreaterThan(0);
-
-    await page.waitForSelector('[data-testid="int_int_max_length"]', {
-      state: "visible",
-      timeout: 30000,
+    await expect(page.getByTestId("stdio-tab")).not.toBeDisabled({
+      timeout: 3000,
     });
 
-    maxLengthOptionCount = await page.getByTestId("int_int_max_length").count();
-
-    expect(maxLengthOptionCount).toBeGreaterThan(0);
-
-    urlOptionCount = await page
-      .getByTestId("anchor-popover-anchor-input-url")
-      .count();
-
-    expect(urlOptionCount).toBeGreaterThan(0);
-
-    await page.getByTestId("tab_1_sse").click();
-
-    await page.waitForSelector('[data-testid="textarea_str_sse_url"]', {
-      state: "visible",
-      timeout: 30000,
+    await expect(page.getByTestId("sse-tab")).toBeDisabled({
+      timeout: 3000,
     });
 
-    sseURLCount = await page.getByTestId("textarea_str_sse_url").count();
+    expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
+      "uvx mcp-server-fetch",
+    );
 
-    expect(sseURLCount).toBeGreaterThan(0);
+    await page.getByTestId("add-mcp-server-button").click();
 
-    await page.waitForSelector('[data-testid="dropdown_str_tool"]:disabled', {
-      timeout: 30000,
+    await page
+      .getByTestId(`mcp-server-menu-button-test_server`)
+      .click({ timeout: 3000 });
+
+    await page
+      .getByText("Delete", { exact: true })
+      .first()
+      .click({ timeout: 3000 });
+
+    await page.waitForSelector(
+      '[data-testid="btn_delete_delete_confirmation_modal"]',
+      {
+        timeout: 3000,
+      },
+    );
+
+    await page
+      .getByTestId("btn_delete_delete_confirmation_modal")
+      .click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
+      timeout: 3000,
+    });
+
+    await page.waitForTimeout(3000);
+
+    await expect(page.getByText("test_server")).not.toBeVisible({
+      timeout: 3000,
     });
   },
 );
