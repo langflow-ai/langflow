@@ -109,35 +109,92 @@ async def get_servers(
 
     # Check all of the tool counts for each server concurrently
     async def check_server(server_name: str) -> dict:
+        """Return structured information (including error details) for *server_name*."""
+        from langflow.base.mcp.error_suggestions import (
+            get_connection_error_suggestions,
+            get_validation_error_suggestions,
+        )
+
         server_info = {
             "name": server_name,
             "mode": "",
             "toolsCount": 0,
+            "status": "unknown",
+            "error": None,
             "protocolVersion": None,
             "transportType": None,
             "capabilities": None,
             "serverInfo": None,
-            "lastChecked": None
+            "lastChecked": None,
         }
+
         try:
             mode, tool_list, _, protocol_info = await update_tools(
                 server_name=server_name,
                 server_config=server_list["mcpServers"][server_name],
             )
 
-            # Get the server configuration
-            server_info["mode"] = mode.lower()
-            server_info["toolsCount"] = len(tool_list)
+            # Detect connection failure when no mode or tools were returned
+            if not mode or not tool_list:
+                _msg = "Failed to connect or retrieve tools from server"
+                raise ConnectionError(_msg)
 
-            # Add protocol information from US-003
-            server_info["protocolVersion"] = protocol_info.get("protocol_version")
-            server_info["transportType"] = protocol_info.get("transport_type")
-            server_info["capabilities"] = protocol_info.get("capabilities")
-            server_info["serverInfo"] = protocol_info.get("server_info")
-            server_info["lastChecked"] = protocol_info.get("last_detected")
+            # Successful connection - fill in details
+            server_info.update(
+                {
+                    "mode": mode.lower(),
+                    "toolsCount": len(tool_list),
+                    "status": "connected",
+                    "protocolVersion": protocol_info.get("protocol_version"),
+                    "transportType": protocol_info.get("transport_type"),
+                    "capabilities": protocol_info.get("capabilities"),
+                    "serverInfo": protocol_info.get("server_info"),
+                    "lastChecked": protocol_info.get("last_detected"),
+                }
+            )
+
+        except ValueError as e:
+            # Configuration / validation errors detected before any connection attempt.
+            server_info.update(
+                {
+                    "status": "configuration_error",
+                    "error": {
+                        "type": "validation",
+                        "message": str(e),
+                        "suggestions": get_validation_error_suggestions(str(e)),
+                    },
+                }
+            )
+
+        except ConnectionError as e:
+            # Issues at connection time (network unreachable, timeout, …)
+            server_info.update(
+                {
+                    "status": "connection_failed",
+                    "error": {
+                        "type": "connection",
+                        "message": str(e),
+                        "suggestions": get_connection_error_suggestions(str(e)),
+                    },
+                }
+            )
 
         except Exception as e:  # noqa: BLE001
-            logger.exception(f"Error checking server {server_name}: {e}")
+            # Catch-all for any other unexpected errors.
+            logger.exception(f"Unexpected error checking server {server_name}")
+            server_info.update(
+                {
+                    "status": "error",
+                    "error": {
+                        "type": "unexpected",
+                        "message": f"Unexpected error: {e!s}",
+                        "suggestions": [
+                            "Check server logs for more details",
+                            "Contact support if the issue persists",
+                        ],
+                    },
+                }
+            )
 
         return server_info
 

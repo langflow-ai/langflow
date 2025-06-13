@@ -24,6 +24,7 @@ STDIO_SERVER_SCRIPT = REFERENCE_IMPL_DIR / "mcp_stdio_reference.js"
 # Utility helpers
 # ----------------------------------------------------------------------------
 
+
 def _require_executable(name: str) -> str:
     """Return the path to *name* if it exists in $PATH else skip the caller test."""
     path = shutil.which(name)
@@ -58,6 +59,7 @@ def _wait_for_http_health(url: str, timeout: float = 10.0) -> None:
 # ----------------------------------------------------------------------------
 # Session-scoped fixture spinning up the unified SSE/Streamable HTTP server
 # ----------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def sse_reference_server() -> Iterator[str]:
@@ -136,6 +138,7 @@ async def sse_client(sse_reference_server):  # type: ignore[override]
 # Fixture returning the command string for the STDIO reference server
 # ----------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="session")
 def stdio_reference_command() -> str:
     node_cmd = _require_executable("node")
@@ -172,6 +175,7 @@ async def stdio_client(stdio_reference_command: str):  # type: ignore[override]
 # Composite fixture: parameterise over both transports to run the same test twice
 # -----------------------------------------------------------------------------
 
+
 @pytest_asyncio.fixture(params=["sse", "stdio"])
 async def mcp_client(request, sse_client, stdio_client):  # type: ignore[override]
     """Yield (transport_name, client) for parametrised tests.
@@ -187,6 +191,7 @@ async def mcp_client(request, sse_client, stdio_client):  # type: ignore[overrid
 # -----------------------------------------------------------------------------
 # Derived URLs for HTTP+SSE endpoint tests
 # -----------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def http_sse_url(sse_reference_server):

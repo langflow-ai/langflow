@@ -40,6 +40,7 @@ logging.basicConfig(level=logging.CRITICAL)
 for noisy in ("mcp", "httpx", "anyio", "urllib3"):
     logging.getLogger(noisy).setLevel(logging.CRITICAL)
 
+
 async def _normalize_tool_list(raw: Any) -> list[str]:
     """Return a list of tool names from whatever the SDK returns."""
     if raw is None:

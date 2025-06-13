@@ -59,7 +59,8 @@ async def test_process_data(mcp_client):
 
     # If the blob is quoted with single quotes (repr artefact), strip them.
     if (json_blob.startswith("'{") and json_blob.endswith("'}")) or (
-        json_blob.startswith('"{') and json_blob.endswith('}"')):
+        json_blob.startswith('"{') and json_blob.endswith('}"')
+    ):
         json_blob = json_blob[1:-1]
 
     # Instead of strict JSON parsing (which can break due to double escaping

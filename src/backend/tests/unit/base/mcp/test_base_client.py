@@ -63,10 +63,12 @@ class TestBaseMCPClientAbstractMethods:
 
     def test_abstract_methods_raise_not_implemented(self):
         """Test that abstract methods raise NotImplementedError when not implemented."""
+
         # This should raise TypeError because we can't instantiate an abstract class
+        class IncompleteClient(BaseMCPClient):
+            """Subclass deliberately missing required abstract methods for test."""
+
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            class IncompleteClient(BaseMCPClient):
-                pass
             IncompleteClient()
 
     def test_concrete_implementation_works(self):

@@ -207,7 +207,7 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
                 "transport_type": "stdio",
                 "capabilities": {},
                 "server_info": {},
-                "last_detected": datetime.now(timezone.utc).isoformat()
+                "last_detected": datetime.now(timezone.utc).isoformat(),
             }
             return
 
@@ -217,7 +217,7 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
             "transport_type": "stdio",
             "capabilities": getattr(init_result, "capabilities", {}),
             "server_info": getattr(init_result, "serverInfo", {}),
-            "last_detected": datetime.now(timezone.utc).isoformat()
+            "last_detected": datetime.now(timezone.utc).isoformat(),
         }
         logger.debug(f"Captured STDIO protocol info: {self.protocol_info}")
 

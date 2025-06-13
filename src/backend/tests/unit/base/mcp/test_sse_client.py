@@ -434,6 +434,6 @@ class TestMCPSseClientHTTPSSETransport:
         with (
             patch("httpx.AsyncClient.post", return_value=mock_response),
             patch("asyncio.wait_for", side_effect=asyncio.TimeoutError("HTTP+SSE request timed out")),
+            pytest.raises(asyncio.TimeoutError, match="timed out"),
         ):
-            with pytest.raises(asyncio.TimeoutError, match="timed out"):
-                await client._mcp_http_sse_send_request({"method": "test"})
+            await client._mcp_http_sse_send_request({"method": "test"})

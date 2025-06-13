@@ -53,7 +53,7 @@ class BaseMCPClient(ABC, Generic[T]):
             "transport_type": None,
             "capabilities": None,
             "server_info": None,
-            "last_detected": None
+            "last_detected": None,
         }
 
     @abstractmethod

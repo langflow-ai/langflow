@@ -273,9 +273,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
             endpoint_queue: asyncio.Queue[tuple[str, str | dict]] = asyncio.Queue()
 
             # Start the discovery handler task
-            discovery_task = asyncio.create_task(
-                self._mcp_http_sse_discovery_handler(url, headers, endpoint_queue)
-            )
+            discovery_task = asyncio.create_task(self._mcp_http_sse_discovery_handler(url, headers, endpoint_queue))
 
             # Wait for endpoint discovery
             while True:
@@ -509,7 +507,11 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
 
         # Phase 3: Both transports failed
         error_msg = (
-            f"Both transport methods failed for {url}. Tried: Streamable HTTP (2025-03-26), HTTP+SSE (2024-11-05)"
+            f"Both transport methods failed for {url}. Tried: Streamable HTTP (2025-03-26), HTTP+SSE (2024-11-05)\n\n"
+            "Troubleshooting tips:\n"
+            "- Verify the server URL is correct and reachable.\n"
+            "- Ensure the server supports at least one of the above transport protocols.\n"
+            "- Check that the server process is running and not blocked by a firewall."
         )
         logger.error(error_msg)
         raise MCPTransportError(error_msg)
@@ -525,7 +527,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
                 "transport_type": "streamable_http",
                 "capabilities": {},
                 "server_info": {},
-                "last_detected": datetime.now(timezone.utc).isoformat()
+                "last_detected": datetime.now(timezone.utc).isoformat(),
             }
             return
 
@@ -535,7 +537,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
             "transport_type": "streamable_http",
             "capabilities": getattr(init_result, "capabilities", {}),
             "server_info": getattr(init_result, "serverInfo", {}),
-            "last_detected": datetime.now(timezone.utc).isoformat()
+            "last_detected": datetime.now(timezone.utc).isoformat(),
         }
         logger.debug(f"Captured Streamable HTTP protocol info: {self.protocol_info}")
 
@@ -550,7 +552,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
                 "transport_type": "http_sse",
                 "capabilities": {},
                 "server_info": {},
-                "last_detected": datetime.now(timezone.utc).isoformat()
+                "last_detected": datetime.now(timezone.utc).isoformat(),
             }
             return
 
@@ -559,7 +561,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
             "transport_type": "http_sse",
             "capabilities": getattr(self.init_result, "capabilities", {}),
             "server_info": getattr(self.init_result, "serverInfo", {}),
-            "last_detected": datetime.now(timezone.utc).isoformat()
+            "last_detected": datetime.now(timezone.utc).isoformat(),
         }
         logger.debug(f"Captured HTTP+SSE protocol info: {self.protocol_info}")
 
@@ -716,10 +718,10 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
 
             if response.status_code in {
                 httpx.codes.MOVED_PERMANENTLY,  # 301
-                httpx.codes.FOUND,              # 302
-                httpx.codes.SEE_OTHER,          # 303
-                httpx.codes.TEMPORARY_REDIRECT, # 307
-                httpx.codes.PERMANENT_REDIRECT, # 308
+                httpx.codes.FOUND,  # 302
+                httpx.codes.SEE_OTHER,  # 303
+                httpx.codes.TEMPORARY_REDIRECT,  # 307
+                httpx.codes.PERMANENT_REDIRECT,  # 308
             }:
                 return response.headers.get("Location", url)
 
