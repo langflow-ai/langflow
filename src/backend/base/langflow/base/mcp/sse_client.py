@@ -97,19 +97,6 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
 
         return True, ""
 
-    async def pre_check_redirect(self, url: str | None) -> str | None:
-        """Check for redirects and return the final URL."""
-        if url is None:
-            return url
-        try:
-            async with httpx.AsyncClient(follow_redirects=False, timeout=5.0) as client:
-                response = await client.head(url)
-                if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
-                    return response.headers.get("Location", url)
-        except (httpx.HTTPError, httpx.TimeoutException, ValueError) as e:
-            logger.debug(f"Error checking redirects for {url}: {e}")
-        return url
-
     async def _try_streamable_http_transport(
         self, url: str, headers: dict[str, str] | None, timeout_seconds: int = 15
     ) -> Any:
@@ -378,6 +365,7 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
             msg = f"Invalid URL: {error_msg}"
             raise ValueError(msg)
 
+        # Optionally follow a single redirect to respect standard web behaviour
         url = await self.pre_check_redirect(url) or url
 
         # Store connection parameters
@@ -614,3 +602,37 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
                 "version": self._version,
             },
         }
+
+    async def pre_check_redirect(self, url: str | None) -> str | None:
+        """Follow a single HTTP redirect (3xx) and return the final URL.
+
+        This does not constitute speculative endpoint discovery –
+        we only respect an explicit redirect response from the server.
+
+        Args:
+            url: Original URL provided by the caller.
+
+        Returns:
+            The final URL after applying a single redirect, or the original
+            URL if no redirect occurs / on any error.
+        """
+        if url is None:
+            return url
+
+        try:
+            async with httpx.AsyncClient(follow_redirects=False, timeout=5.0) as client:
+                response = await client.head(url)
+
+            if response.status_code in {
+                httpx.codes.MOVED_PERMANENTLY,  # 301
+                httpx.codes.FOUND,              # 302
+                httpx.codes.SEE_OTHER,          # 303
+                httpx.codes.TEMPORARY_REDIRECT, # 307
+                httpx.codes.PERMANENT_REDIRECT, # 308
+            }:
+                return response.headers.get("Location", url)
+
+        except (httpx.HTTPError, httpx.TimeoutException, ValueError) as exc:
+            logger.debug(f"Redirect check failed for {url}: {exc}")
+
+        return url
