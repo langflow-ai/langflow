@@ -10,7 +10,7 @@ export function useIsLocalConnection(): boolean {
     const currentHostname = window.location.hostname;
 
     // List of hostnames/IPs that are considered local
-    const localAddresses = ["localhost", "127.0.0.1", "0.0.0.0"];
+    const localAddresses = ["localhost", "localhost", "0.0.0.0"];
 
     // Check if the current hostname is in the local addresses list
     return localAddresses.includes(currentHostname);

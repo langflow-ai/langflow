@@ -86,7 +86,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
         api_url = self.get_api_url()
 
         is_local_url = (
-            api_url.startswith(("http://localhost", "http://127.0.0.1", "http://0.0.0.0", "http://docker"))
+            api_url.startswith(("http://localhost", "http://localhost", "http://0.0.0.0", "http://docker"))
             or "huggingface.co" not in api_url.lower()
         )
 
