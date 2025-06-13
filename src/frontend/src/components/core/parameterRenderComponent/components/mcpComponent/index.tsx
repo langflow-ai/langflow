@@ -66,39 +66,41 @@ export default function McpComponent({
 
   return (
     <div className="flex w-full flex-col gap-2">
+      {options == null || options.length > 0 ? (
+        <Button
+          variant="primary"
+          size="xs"
+          role="combobox"
+          onClick={handleOpenListSelectionDialog}
+          className="dropdown-component-outline input-edit-node w-full py-2"
+          data-testid="mcp-server-dropdown"
+          disabled={disabled || !options}
+        >
+          <div
+            className={cn(
+              "flex w-full items-center justify-start text-sm font-normal",
+            )}
+          >
+            <span className="truncate">
+              {!options
+                ? "Loading servers..."
+                : selectedItem[0]?.name
+                  ? selectedItem[0]?.name
+                  : "Select a server..."}
+            </span>
+            <ForwardedIconComponent
+              name="ChevronsUpDown"
+              className="ml-auto h-5 w-5 text-muted-foreground"
+            />
+          </div>
+        </Button>
+      ) : (
+        <Button size="sm" onClick={handleAddButtonClick}>
+          <span>Add MCP Server</span>
+        </Button>
+      )}
       {options && (
         <>
-          {options.length > 0 ? (
-            <Button
-              variant="primary"
-              size="xs"
-              role="combobox"
-              onClick={handleOpenListSelectionDialog}
-              className="dropdown-component-outline input-edit-node w-full py-2"
-              data-testid="mcp-server-dropdown"
-              disabled={disabled}
-            >
-              <div
-                className={cn(
-                  "flex w-full items-center justify-start text-sm font-normal",
-                )}
-              >
-                <span className="truncate">
-                  {selectedItem[0]?.name
-                    ? selectedItem[0]?.name
-                    : "Select a server..."}
-                </span>
-                <ForwardedIconComponent
-                  name="ChevronsUpDown"
-                  className="ml-auto h-5 w-5 text-muted-foreground"
-                />
-              </div>
-            </Button>
-          ) : (
-            <Button size="sm" onClick={handleAddButtonClick}>
-              <span>Add MCP Server</span>
-            </Button>
-          )}
           <ListSelectionComponent
             open={open}
             onClose={handleCloseListSelectionDialog}
@@ -116,13 +118,13 @@ export default function McpComponent({
             addButtonText="Add MCP Server"
             onAddButtonClick={handleAddButtonClick}
           />
+          <AddMcpServerModal
+            open={addOpen}
+            setOpen={setAddOpen}
+            onSuccess={handleSuccess}
+          />
         </>
       )}
-      <AddMcpServerModal
-        open={addOpen}
-        setOpen={setAddOpen}
-        onSuccess={handleSuccess}
-      />
     </div>
   );
 }
