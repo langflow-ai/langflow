@@ -727,6 +727,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message",
           "showNode": false,
           "type": "ChatInput"
         },
@@ -1243,6 +1244,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "structured_output_dataframe",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
@@ -1521,6 +1523,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "parsed_text",
           "showNode": true,
           "type": "StructuredOutput"
         },

@@ -511,7 +511,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "BatchRunComponent"
+          "type": "BatchRunComponent",
+          "selected_output": "batch_results"
         },
         "dragging": false,
         "id": "BatchRunComponent-jFt7j",
@@ -716,7 +717,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "YouTubeCommentsComponent"
+          "type": "YouTubeCommentsComponent",
+          "selected_output": "comments"
         },
         "dragging": false,
         "id": "YouTubeCommentsComponent-4pxuY",
@@ -1106,7 +1108,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "model_output"
         },
         "dragging": false,
         "id": "OpenAIModel-3klNa",
@@ -1841,7 +1844,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-A37q9",
@@ -2018,7 +2022,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "id": "Prompt-tR2a7",
@@ -2568,7 +2573,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "YouTubeTranscripts"
+          "type": "YouTubeTranscripts",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "YouTubeTranscripts-Nbrx3",
@@ -2881,7 +2887,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-jHqUS",
@@ -3227,7 +3234,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ConditionalRouter"
+          "type": "ConditionalRouter",
+          "selected_output": "true_result"
         },
         "dragging": false,
         "id": "ConditionalRouter-SP1WC",
@@ -3401,7 +3409,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "parser"
+          "type": "parser",
+          "selected_output": "parsed_text"
         },
         "dragging": false,
         "id": "parser-LDaMh",

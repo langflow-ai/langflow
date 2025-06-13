@@ -510,7 +510,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "AgentQL"
+          "type": "AgentQL",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "AgentQL-mAUuI",
@@ -823,7 +824,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-l2zGd",
@@ -1586,7 +1588,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-MtFB7",
@@ -1920,7 +1923,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatOutput"
+          "type": "ChatOutput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatOutput-ZC7ao",

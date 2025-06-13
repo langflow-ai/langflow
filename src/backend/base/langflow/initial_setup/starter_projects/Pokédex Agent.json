@@ -384,7 +384,8 @@
             "tool_mode": false
           },
           "showNode": false,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-ZNO2E",
@@ -1247,7 +1248,8 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "APIRequest"
+          "type": "APIRequest",
+          "selected_output": "component_as_tool"
         },
         "dragging": false,
         "id": "APIRequest-Yr0ij",
@@ -2018,7 +2020,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Agent"
+          "type": "Agent",
+          "selected_output": "response"
         },
         "dragging": false,
         "id": "Agent-iU8sJ",

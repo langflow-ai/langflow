@@ -526,6 +526,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message",
           "showNode": false,
           "type": "ChatInput"
         },
@@ -801,6 +802,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "structured_output_dataframe",
           "showNode": true,
           "type": "StructuredOutput"
         },
@@ -1194,6 +1196,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
           "type": "OpenAIModel"
         },
@@ -3043,6 +3046,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "dataframe",
           "showNode": true,
           "type": "AstraDB"
         },

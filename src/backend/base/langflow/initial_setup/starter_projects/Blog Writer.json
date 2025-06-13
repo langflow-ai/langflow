@@ -303,6 +303,7 @@
               }
             }
           },
+          "selected_output": "prompt",
           "type": "Prompt"
         },
         "dragging": false,
@@ -410,6 +411,7 @@
               }
             }
           },
+          "selected_output": "text",
           "type": "TextInput"
         },
         "dragging": false,
@@ -913,6 +915,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "parsed_text",
           "showNode": true,
           "type": "ParserComponent"
         },
@@ -1280,6 +1283,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "page_results",
           "showNode": true,
           "type": "URLComponent"
         },
