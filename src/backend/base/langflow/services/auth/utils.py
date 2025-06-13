@@ -50,7 +50,7 @@ async def api_key_security(
                     detail="Missing first superuser credentials",
                 )
             if not query_param and not header_param:
-                if settings_service.auth_settings.SKIP_AUTH_AUTO_LOGIN:
+                if settings_service.auth_settings.skip_auth_auto_login:
                     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
                 else:
                     raise HTTPException(
@@ -97,7 +97,7 @@ async def ws_api_key_security(
                     reason="Missing first superuser credentials",
                 )
             if not api_key:
-                if settings.auth_settings.SKIP_AUTH_AUTO_LOGIN:
+                if settings.auth_settings.skip_auth_auto_login:
                     result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
                 else:
                     raise WebSocketException(

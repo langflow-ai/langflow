@@ -50,8 +50,9 @@ class AuthSettings(BaseSettings):
     COOKIE_DOMAIN: str | None = None
     """The domain attribute of the cookies. If None, the domain is not set."""
 
-    SKIP_AUTH_AUTO_LOGIN: bool = True
-    """If True, the application will skip the authentication auto login. This will be removed in v1.6"""
+    skip_auth_auto_login: bool = True
+    """If True, the application will skip the authentication auto login, set this to False to revert to pre-v1.5
+    behavior. This will be removed in v1.6"""
 
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
