@@ -27,9 +27,9 @@
         "id": "reactflow__edge-parser-4vyMI{œdataTypeœ:œparserœ,œidœ:œparser-4vyMIœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HchFa{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HchFaœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-4vyMI",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-4vyMIœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-4vyMIœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-HchFa",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HchFaœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-HchFaœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-LanguageModelComponent-Pai0A{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Pai0Aœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-bNfmT{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-bNfmTœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-Pai0A",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Pai0Aœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-Pai0Aœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-bNfmT",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-bNfmTœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-bNfmTœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-ChatInput-iICUc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iICUcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-bNfmT{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-bNfmTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-iICUc",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iICUcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-iICUcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-bNfmT",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-bNfmTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-bNfmTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-StructuredOutput-bNfmT{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-bNfmTœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-4vyMI{œfieldNameœ:œinput_dataœ,œidœ:œparser-4vyMIœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-bNfmT",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-bNfmTœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-bNfmTœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "parser-4vyMI",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-4vyMIœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-4vyMIœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1019,8 +1019,7 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
+                "selected": null,
                 "tool_mode": true,
                 "types": [
                   "Message"
@@ -1034,8 +1033,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
