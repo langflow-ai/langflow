@@ -22,9 +22,6 @@ async def test_simulate_error_propagation(mcp_client, kind):
     transport, client = mcp_client
     msg = await _invoke_simulate_error(client, kind)
 
-    if transport == "stdio":
-        pytest.xfail("STDIO transport wraps errors in TaskGroup - improve parsing later.")
-
     assert kind in msg.lower()
 
 
