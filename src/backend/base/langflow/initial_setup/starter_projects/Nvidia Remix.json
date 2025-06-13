@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-HR8bc",
+            "id": "ChatInput-8XmJU",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-Y9N68",
+            "id": "Agent-9dON7",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-HR8bc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-HR8bcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-Y9N68{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-8XmJU{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8XmJUœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-9dON7{œfieldNameœ:œinput_valueœ,œidœ:œAgent-9dON7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-HR8bc",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-HR8bcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-Y9N68",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "source": "ChatInput-8XmJU",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8XmJUœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-9dON7",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-9dON7œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-Y9N68",
+            "id": "Agent-9dON7",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Z5mkj",
+            "id": "ChatOutput-o3obj",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,12 +52,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-Y9N68{œdataTypeœ:œAgentœ,œidœ:œAgent-Y9N68œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Z5mkj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Z5mkjœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Agent-9dON7{œdataTypeœ:œAgentœ,œidœ:œAgent-9dON7œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-o3obj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-o3objœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-Y9N68",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-Y9N68œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-Z5mkj",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Z5mkjœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "source": "Agent-9dON7",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-9dON7œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-o3obj",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-o3objœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-muf0Q",
+            "id": "Prompt-PrjbV",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -73,47 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "system_prompt",
-            "id": "Agent-Y9N68",
+            "id": "Agent-9dON7",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-muf0Q{œdataTypeœ:œPromptœ,œidœ:œPrompt-muf0Qœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-Y9N68{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-PrjbV{œdataTypeœ:œPromptœ,œidœ:œPrompt-PrjbVœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-9dON7{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-9dON7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-muf0Q",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-muf0Qœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-Y9N68",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "MCPTools",
-            "id": "MCPTools-OP04x",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-Y9N68",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-MCPTools-OP04x{œdataTypeœ:œMCPToolsœ,œidœ:œMCPTools-OP04xœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Y9N68{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "MCPTools-OP04x",
-        "sourceHandle": "{œdataTypeœ:œMCPToolsœ,œidœ:œMCPTools-OP04xœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-Y9N68",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "source": "Prompt-PrjbV",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-PrjbVœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-9dON7",
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-9dON7œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -121,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "RemixDocumentation",
-            "id": "RemixDocumentation-Fm0YC",
+            "id": "RemixDocumentation-DEIws",
             "name": "dataframe_output",
             "output_types": [
               "DataFrame"
@@ -129,7 +101,7 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "FAISS-B6D5I",
+            "id": "FAISS-Uz8O4",
             "inputTypes": [
               "Data",
               "DataFrame"
@@ -137,12 +109,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-RemixDocumentation-Fm0YC{œdataTypeœ:œRemixDocumentationœ,œidœ:œRemixDocumentation-Fm0YCœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-FAISS-B6D5I{œfieldNameœ:œingest_dataœ,œidœ:œFAISS-B6D5Iœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-RemixDocumentation-DEIws{œdataTypeœ:œRemixDocumentationœ,œidœ:œRemixDocumentation-DEIwsœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-FAISS-Uz8O4{œfieldNameœ:œingest_dataœ,œidœ:œFAISS-Uz8O4œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "RemixDocumentation-Fm0YC",
-        "sourceHandle": "{œdataTypeœ:œRemixDocumentationœ,œidœ:œRemixDocumentation-Fm0YCœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}",
-        "target": "FAISS-B6D5I",
-        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œFAISS-B6D5Iœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "source": "RemixDocumentation-DEIws",
+        "sourceHandle": "{œdataTypeœ: œRemixDocumentationœ, œidœ: œRemixDocumentation-DEIwsœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "FAISS-Uz8O4",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œFAISS-Uz8O4œ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -150,7 +122,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "EmbeddingModel",
-            "id": "EmbeddingModel-HFaq5",
+            "id": "EmbeddingModel-X6URU",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -158,19 +130,19 @@
           },
           "targetHandle": {
             "fieldName": "embedding",
-            "id": "FAISS-B6D5I",
+            "id": "FAISS-Uz8O4",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-EmbeddingModel-HFaq5{œdataTypeœ:œEmbeddingModelœ,œidœ:œEmbeddingModel-HFaq5œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-FAISS-B6D5I{œfieldNameœ:œembeddingœ,œidœ:œFAISS-B6D5Iœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-EmbeddingModel-X6URU{œdataTypeœ:œEmbeddingModelœ,œidœ:œEmbeddingModel-X6URUœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-FAISS-Uz8O4{œfieldNameœ:œembeddingœ,œidœ:œFAISS-Uz8O4œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "EmbeddingModel-HFaq5",
-        "sourceHandle": "{œdataTypeœ:œEmbeddingModelœ,œidœ:œEmbeddingModel-HFaq5œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
-        "target": "FAISS-B6D5I",
-        "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œFAISS-B6D5Iœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
+        "source": "EmbeddingModel-X6URU",
+        "sourceHandle": "{œdataTypeœ: œEmbeddingModelœ, œidœ: œEmbeddingModel-X6URUœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "FAISS-Uz8O4",
+        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œFAISS-Uz8O4œ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -178,7 +150,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "FAISS",
-            "id": "FAISS-B6D5I",
+            "id": "FAISS-Uz8O4",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -186,25 +158,53 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Y9N68",
+            "id": "Agent-9dON7",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-FAISS-B6D5I{œdataTypeœ:œFAISSœ,œidœ:œFAISS-B6D5Iœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Y9N68{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-FAISS-Uz8O4{œdataTypeœ:œFAISSœ,œidœ:œFAISS-Uz8O4œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-9dON7{œfieldNameœ:œtoolsœ,œidœ:œAgent-9dON7œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "FAISS-B6D5I",
-        "sourceHandle": "{œdataTypeœ:œFAISSœ,œidœ:œFAISS-B6D5Iœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-Y9N68",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-Y9N68œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "source": "FAISS-Uz8O4",
+        "sourceHandle": "{œdataTypeœ: œFAISSœ, œidœ: œFAISS-Uz8O4œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-9dON7",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-9dON7œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "MCPTools",
+            "id": "MCPTools-beHVJ",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-9dON7",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-MCPTools-beHVJ{œdataTypeœ:œMCPToolsœ,œidœ:œMCPTools-beHVJœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-9dON7{œfieldNameœ:œtoolsœ,œidœ:œAgent-9dON7œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "MCPTools-beHVJ",
+        "sourceHandle": "{œdataTypeœ: œMCPToolsœ, œidœ: œMCPTools-beHVJœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-9dON7",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-9dON7œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-HR8bc",
+          "id": "ChatInput-8XmJU",
           "node": {
             "base_classes": [
               "Message"
@@ -501,7 +501,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-HR8bc",
+        "id": "ChatInput-8XmJU",
         "measured": {
           "height": 47,
           "width": 192
@@ -515,7 +515,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-Z5mkj",
+          "id": "ChatOutput-o3obj",
           "node": {
             "base_classes": [
               "Message"
@@ -809,7 +809,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-Z5mkj",
+        "id": "ChatOutput-o3obj",
         "measured": {
           "height": 47,
           "width": 192
@@ -823,7 +823,7 @@
       },
       {
         "data": {
-          "id": "Agent-Y9N68",
+          "id": "Agent-9dON7",
           "node": {
             "base_classes": [
               "Message"
@@ -875,7 +875,6 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": false,
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
@@ -1510,7 +1509,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-Y9N68",
+        "id": "Agent-9dON7",
         "measured": {
           "height": 591,
           "width": 320
@@ -1524,29 +1523,653 @@
       },
       {
         "data": {
-          "id": "MCPTools-OP04x",
+          "id": "Prompt-PrjbV",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
             "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Connect to an MCP server to use its tools.",
-            "display_name": "RTX Remix Toolkit Connection",
+            "custom_fields": {
+              "template": [
+                "remix_documentation",
+                "remix_mcp_server",
+                "mcp_prompts"
+              ]
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
             "documentation": "",
             "edited": false,
+            "error": null,
             "field_order": [
-              "mode",
-              "command",
-              "env",
-              "sse_url",
-              "headers_input",
-              "tool",
+              "template",
               "tool_placeholder"
             ],
             "frozen": false,
-            "icon": "Mcp",
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "lf_version": "1.4.2",
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "priority": null,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "mcp_prompts": {
+                "advanced": false,
+                "display_name": "mcp_prompts",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "mcp_prompts",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "remix_documentation": {
+                "advanced": false,
+                "display_name": "remix_documentation",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "remix_documentation",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "FAISS"
+              },
+              "remix_mcp_server": {
+                "advanced": false,
+                "display_name": "remix_mcp_server",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "remix_mcp_server",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "RTX Remix Toolkit Connection"
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "# Background\n\nYou are a helpful assistant that must use tools to answer questions and perform tasks regarding RTX Remix.\n\n# Procedure\n\n- You MUST ABSOLUTELY ALWAYS search through the documentation before responding to the user. Follow the instructions in the \"Documentation Instructions\" section for instruction on using the documentation.\n- When the user asks how to do something, always assume they are asking about the RTX Remix Toolkit or Runtime Graphic User Interfaces unless specified otherwise (DO NOT mention the tools available to you).\n- If the user requested you take an action or provide information about the current project, you may follow the instructions in the \"RTX Remix Toolkit Instructions\" section.\n\n# Documentation Instructions\n\n- DO NOT ATTEMPT, UNDER ANY CIRCUMSTANCES TO PROVIDE AN ANSWER BASED ON YOUR TRAINING DATA.\n- Use the {remix_documentation} tool to fetch the requested information from the RTX Remix documentation.\n- Always provide the source you used to get to the answer provided to the user.\n- If the user asks a question that can be ambiguous, request that they provide more information.\n- If the user asks a question that cannot be answered using the documentation, simply say so and don't attempt to answer the question.\n\n# RTX Remix Toolkit Instructions\n\n- Use the tools provided by the \"{remix_mcp_server}\" MCP Server to interact with the RTX Remix Toolkit.\n- Always verify if a recipe provided in the \"MCP Server Recipes\" sub-section matches the current user request. \n    - If a recipe matches, follow the instructions as closely as possible\n    - If NO recipe matches the user request, try to use any combination of tools to complete the user's request\n\n## MCP Server Recipes\n\n{mcp_prompts}"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "id": "Prompt-PrjbV",
+        "measured": {
+          "height": 529,
+          "width": 320
+        },
+        "position": {
+          "x": -338.00443250004696,
+          "y": -753.7815399447686
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "RemixDocumentation-DEIws",
+          "node": {
+            "base_classes": [
+              "Data",
+              "DataFrame"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Fetch information from the NVIDIA RTX Remix documentation",
+            "display_name": "RTX Remix Documentation",
+            "documentation": "https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/index.html",
+            "edited": true,
+            "field_order": [
+              "exclude_paths"
+            ],
+            "frozen": false,
+            "icon": "NVIDIA",
+            "legacy": false,
+            "lf_version": "1.4.2",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "hidden": false,
+                "method": "fetch_documentation_dataframe",
+                "name": "dataframe_output",
+                "options": null,
+                "required_inputs": null,
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Data",
+                "hidden": null,
+                "method": "fetch_documentation_data",
+                "name": "data_output",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import httpx\r\nimport json\r\nimport re\r\nfrom langflow.custom import Component\r\nfrom langflow.io import Output, MessageTextInput\r\nfrom langflow.schema import DataFrame, Data\r\n\r\n\r\nclass RemixDocumentation(Component):\r\n    display_name = \"RTX Remix Documentation\"\r\n    description = \"Fetch information from the NVIDIA RTX Remix documentation\"\r\n    documentation: str = (\r\n        \"https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/index.html\"\r\n    )\r\n    icon = \"NVIDIA\"\r\n    name = \"RemixDocumentation\"\r\n\r\n    inputs = [\r\n        MessageTextInput(\r\n            name=\"exclude_paths\",\r\n            display_name=\"Exclude Paths\",\r\n            info=(\r\n                \"List of path prefixes to exclude from results. \"\r\n                \"Used to filter out sections of the documentation that are not typically relevant to user queries.\"\r\n            ),\r\n            is_list=True,\r\n            value=[\r\n                \"source\",\r\n                \"CHANGELOG.html\",\r\n                \"docs/changelog\",\r\n                \"docs/contributing/api.html\",\r\n            ],\r\n        ),\r\n    ]\r\n\r\n    outputs = [\r\n        Output(\r\n            display_name=\"DataFrame\",\r\n            name=\"dataframe_output\",\r\n            method=\"fetch_documentation_dataframe\",\r\n        ),\r\n        Output(\r\n            display_name=\"Data\", name=\"data_output\", method=\"fetch_documentation_data\"\r\n        ),\r\n    ]\r\n\r\n    _BASE_URL = \"https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/\"\r\n\r\n    def _fetch_all_documentation(self) -> list[Data]:\r\n        \"\"\"Fetch all documentation entries and return as list of Data objects.\"\"\"\r\n        # URL for the search index JavaScript file\r\n        search_index_url = self._BASE_URL + \"searchindex.js\"\r\n\r\n        # Fetch the search index file\r\n        response = httpx.get(search_index_url, follow_redirects=True)\r\n        response.raise_for_status()\r\n\r\n        # Extract the JSON data from the JavaScript file\r\n        # The file contains: const searchData = {...};\r\n        js_content = response.text\r\n\r\n        # Extract the JSON part using regex\r\n        match = re.search(r\"const searchData = ({.*});\", js_content, re.DOTALL)\r\n        if not match:\r\n            raise ValueError(\"Could not parse search index data\")\r\n\r\n        # Parse the JSON data\r\n        search_data = json.loads(match.group(1))\r\n\r\n        # Get the data array which contains all searchable items\r\n        data_items = search_data.get(\"data\", [])\r\n\r\n        results = []\r\n        for item in data_items:\r\n            filename = item.get(\"filename\", \"\")\r\n            text = item.get(\"content\", \"\")\r\n\r\n            if not text:\r\n                continue\r\n\r\n            # Check if filename should be excluded\r\n            should_exclude = False\r\n            for exclude_path in self.exclude_paths:\r\n                if filename.startswith(exclude_path):\r\n                    should_exclude = True\r\n                    break\r\n\r\n            if should_exclude:\r\n                continue\r\n\r\n            # Build URL with proper handling of empty anchors\r\n            anchor = item.get(\"anchor\", \"\")\r\n            if anchor:\r\n                url = f\"{self._BASE_URL}{filename}#{anchor}\"\r\n            else:\r\n                url = f\"{self._BASE_URL}{filename}\"\r\n\r\n            results.append(\r\n                Data(\r\n                    title=item.get(\"display_name\", \"\"),\r\n                    text=text,\r\n                    url=url,\r\n                )\r\n            )\r\n\r\n        # If no results found, create a single entry indicating no results\r\n        if not results:\r\n            data = Data(\r\n                title=\"No documentation found\",\r\n                text=\"No documentation entries were found in the search index\",\r\n                url=search_index_url,\r\n            )\r\n            results.append(data)\r\n\r\n        return results\r\n\r\n    def fetch_documentation_dataframe(self) -> DataFrame:\r\n        \"\"\"Fetch documentation and return as DataFrame.\"\"\"\r\n        results = self._fetch_all_documentation()\r\n        data_frame = DataFrame(results)\r\n        self.status = data_frame\r\n        return data_frame\r\n\r\n    def fetch_documentation_data(self) -> list[Data]:\r\n        \"\"\"Fetch documentation and return as list of Data objects.\"\"\"\r\n        results = self._fetch_all_documentation()\r\n        self.status = results\r\n        return results\r\n"
+              },
+              "exclude_paths": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Exclude Paths",
+                "dynamic": false,
+                "info": "List of path prefixes to exclude from results. Used to filter out sections of the documentation that are not typically relevant to user queries.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "exclude_paths",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": [
+                  "source",
+                  "docs/changelog",
+                  "CHANGELOG.html",
+                  "docs/contributing/api.html"
+                ]
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "RemixDocumentation"
+        },
+        "dragging": false,
+        "id": "RemixDocumentation-DEIws",
+        "measured": {
+          "height": 373,
+          "width": 320
+        },
+        "position": {
+          "x": -783.4316223978514,
+          "y": -373.75276518828326
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "description": "Generate embeddings using a specified provider.",
+          "display_name": "Embedding Model",
+          "id": "EmbeddingModel-X6URU",
+          "node": {
+            "base_classes": [
+              "Embeddings"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generate embeddings using a specified provider.",
+            "display_name": "Embedding Model",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "provider",
+              "model",
+              "api_key",
+              "api_base",
+              "dimensions",
+              "chunk_size",
+              "request_timeout",
+              "max_retries",
+              "show_progress_bar",
+              "model_kwargs"
+            ],
+            "frozen": false,
+            "icon": "binary",
+            "legacy": false,
+            "lf_version": "1.4.2",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Embeddings",
+                "method": "build_embeddings",
+                "name": "embeddings",
+                "required_inputs": [
+                  "api_key"
+                ],
+                "selected": "Embeddings",
+                "tool_mode": true,
+                "types": [
+                  "Embeddings"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_base": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "API Base URL",
+                "dynamic": false,
+                "info": "Base URL for the API. Leave empty for default.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "api_base",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "OpenAI API Key",
+                "dynamic": false,
+                "info": "Model Provider API key",
+                "input_types": [],
+                "load_from_db": false,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "chunk_size": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Chunk Size",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "chunk_size",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1000
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from typing import Any\n\nfrom langchain_openai import OpenAIEmbeddings\n\nfrom langflow.base.embeddings.model import LCEmbeddingsModel\nfrom langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES\nfrom langflow.field_typing import Embeddings\nfrom langflow.io import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageTextInput,\n    SecretStrInput,\n)\nfrom langflow.schema.dotdict import dotdict\n\n\nclass EmbeddingModelComponent(LCEmbeddingsModel):\n    display_name = \"Embedding Model\"\n    description = \"Generate embeddings using a specified provider.\"\n    icon = \"binary\"\n    name = \"EmbeddingModel\"\n    category = \"models\"\n\n    inputs = [\n        DropdownInput(\n            name=\"provider\",\n            display_name=\"Model Provider\",\n            options=[\"OpenAI\"],\n            value=\"OpenAI\",\n            info=\"Select the embedding model provider\",\n            real_time_refresh=True,\n            options_metadata=[{\"icon\": \"OpenAI\"}],\n        ),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model Name\",\n            options=OPENAI_EMBEDDING_MODEL_NAMES,\n            value=OPENAI_EMBEDDING_MODEL_NAMES[0],\n            info=\"Select the embedding model to use\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"Model Provider API key\",\n            required=True,\n            show=True,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"api_base\",\n            display_name=\"API Base URL\",\n            info=\"Base URL for the API. Leave empty for default.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", advanced=True, value=3),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        provider = self.provider\n        model = self.model\n        api_key = self.api_key\n        api_base = self.api_base\n        dimensions = self.dimensions\n        chunk_size = self.chunk_size\n        request_timeout = self.request_timeout\n        max_retries = self.max_retries\n        show_progress_bar = self.show_progress_bar\n        model_kwargs = self.model_kwargs or {}\n\n        if provider == \"OpenAI\":\n            if not api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n            return OpenAIEmbeddings(\n                model=model,\n                dimensions=dimensions or None,\n                base_url=api_base or None,\n                api_key=api_key,\n                chunk_size=chunk_size,\n                max_retries=max_retries,\n                timeout=request_timeout or None,\n                show_progress_bar=show_progress_bar,\n                model_kwargs=model_kwargs,\n            )\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        if field_name == \"provider\" and field_value == \"OpenAI\":\n            build_config[\"model\"][\"options\"] = OPENAI_EMBEDDING_MODEL_NAMES\n            build_config[\"model\"][\"value\"] = OPENAI_EMBEDDING_MODEL_NAMES[0]\n            build_config[\"api_key\"][\"display_name\"] = \"OpenAI API Key\"\n            build_config[\"api_base\"][\"display_name\"] = \"OpenAI API Base URL\"\n        return build_config\n"
+              },
+              "dimensions": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Dimensions",
+                "dynamic": false,
+                "info": "The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "dimensions",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": ""
+              },
+              "max_retries": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_retries",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 3
+              },
+              "model": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Name",
+                "dynamic": false,
+                "info": "Select the embedding model to use",
+                "name": "model",
+                "options": [
+                  "text-embedding-3-small",
+                  "text-embedding-3-large",
+                  "text-embedding-ada-002"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "text-embedding-3-small"
+              },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "provider": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Provider",
+                "dynamic": false,
+                "info": "Select the embedding model provider",
+                "name": "provider",
+                "options": [
+                  "OpenAI"
+                ],
+                "options_metadata": [
+                  {
+                    "icon": "OpenAI"
+                  }
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "OpenAI"
+              },
+              "request_timeout": {
+                "_input_type": "FloatInput",
+                "advanced": true,
+                "display_name": "Request Timeout",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "request_timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "float",
+                "value": ""
+              },
+              "show_progress_bar": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Show Progress Bar",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "show_progress_bar",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "EmbeddingModel"
+        },
+        "dragging": false,
+        "id": "EmbeddingModel-X6URU",
+        "measured": {
+          "height": 375,
+          "width": 320
+        },
+        "position": {
+          "x": -781.7797027471986,
+          "y": 80.22604713786116
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "FAISS-Uz8O4",
+          "node": {
+            "base_classes": [
+              "Data",
+              "DataFrame"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "FAISS Vector Store with search capabilities",
+            "display_name": "FAISS",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "index_name",
+              "persist_directory",
+              "ingest_data",
+              "search_query",
+              "should_cache_vector_store",
+              "allow_dangerous_deserialization",
+              "embedding",
+              "number_of_results"
+            ],
+            "frozen": false,
+            "icon": "FAISS",
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {},
@@ -1571,6 +2194,340 @@
               }
             ],
             "pinned": false,
+            "template": {
+              "_type": "Component",
+              "allow_dangerous_deserialization": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Allow Dangerous Deserialization",
+                "dynamic": false,
+                "info": "Set to True to allow loading pickle files from untrusted sources. Only enable this if you trust the source of the data.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "allow_dangerous_deserialization",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from pathlib import Path\n\nfrom langchain_community.vectorstores import FAISS\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers.data import docs_to_data\nfrom langflow.io import BoolInput, HandleInput, IntInput, StrInput\nfrom langflow.schema import Data\n\n\nclass FaissVectorStoreComponent(LCVectorStoreComponent):\n    \"\"\"FAISS Vector Store with search capabilities.\"\"\"\n\n    display_name: str = \"FAISS\"\n    description: str = \"FAISS Vector Store with search capabilities\"\n    name = \"FAISS\"\n    icon = \"FAISS\"\n\n    inputs = [\n        StrInput(\n            name=\"index_name\",\n            display_name=\"Index Name\",\n            value=\"langflow_index\",\n        ),\n        StrInput(\n            name=\"persist_directory\",\n            display_name=\"Persist Directory\",\n            info=\"Path to save the FAISS index. It will be relative to where Langflow is running.\",\n        ),\n        *LCVectorStoreComponent.inputs,\n        BoolInput(\n            name=\"allow_dangerous_deserialization\",\n            display_name=\"Allow Dangerous Deserialization\",\n            info=\"Set to True to allow loading pickle files from untrusted sources. \"\n            \"Only enable this if you trust the source of the data.\",\n            advanced=True,\n            value=True,\n        ),\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"]),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=4,\n        ),\n    ]\n\n    @staticmethod\n    def resolve_path(path: str) -> str:\n        \"\"\"Resolve the path relative to the Langflow root.\n\n        Args:\n            path: The path to resolve\n        Returns:\n            str: The resolved path as a string\n        \"\"\"\n        return str(Path(path).resolve())\n\n    def get_persist_directory(self) -> Path:\n        \"\"\"Returns the resolved persist directory path or the current directory if not set.\"\"\"\n        if self.persist_directory:\n            return Path(self.resolve_path(self.persist_directory))\n        return Path()\n\n    @check_cached_vector_store\n    def build_vector_store(self) -> FAISS:\n        \"\"\"Builds the FAISS object.\"\"\"\n        path = self.get_persist_directory()\n        path.mkdir(parents=True, exist_ok=True)\n\n        # Convert DataFrame to Data if needed using parent's method\n        self.ingest_data = self._prepare_ingest_data()\n\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                documents.append(_input)\n\n        faiss = FAISS.from_documents(documents=documents, embedding=self.embedding)\n        faiss.save_local(str(path), self.index_name)\n        return faiss\n\n    def search_documents(self) -> list[Data]:\n        \"\"\"Search for documents in the FAISS vector store.\"\"\"\n        path = self.get_persist_directory()\n        index_path = path / f\"{self.index_name}.faiss\"\n\n        if not index_path.exists():\n            vector_store = self.build_vector_store()\n        else:\n            vector_store = FAISS.load_local(\n                folder_path=str(path),\n                embeddings=self.embedding,\n                index_name=self.index_name,\n                allow_dangerous_deserialization=self.allow_dangerous_deserialization,\n            )\n\n        if not vector_store:\n            msg = \"Failed to load the FAISS index.\"\n            raise ValueError(msg)\n\n        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():\n            docs = vector_store.similarity_search(\n                query=self.search_query,\n                k=self.number_of_results,\n            )\n            return docs_to_data(docs)\n        return []\n"
+              },
+              "embedding": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Embedding",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Embeddings"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "embedding",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "index_name": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Index Name",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "index_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "langflow_index"
+              },
+              "ingest_data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Ingest Data",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Data",
+                  "DataFrame"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "ingest_data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "number_of_results": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Number of Results",
+                "dynamic": false,
+                "info": "Number of results to return.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "number_of_results",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 4
+              },
+              "persist_directory": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Persist Directory",
+                "dynamic": false,
+                "info": "Path to save the FAISS index. It will be relative to where Langflow is running.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "persist_directory",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "search_query": {
+                "_input_type": "QueryInput",
+                "advanced": false,
+                "display_name": "Search Query",
+                "dynamic": false,
+                "info": "Enter a query to run a similarity search.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "search_query",
+                "placeholder": "Enter a query...",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "query",
+                "value": ""
+              },
+              "should_cache_vector_store": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Cache Vector Store",
+                "dynamic": false,
+                "info": "If True, the vector store will be cached for the current build of the component. This is useful for components that have multiple output methods and want to share the same vector store.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_cache_vector_store",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "tools_metadata": {
+                "_input_type": "ToolsInput",
+                "advanced": false,
+                "display_name": "Actions",
+                "dynamic": false,
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tools",
+                "value": [
+                  {
+                    "args": {
+                      "search_query": {
+                        "default": "",
+                        "description": "Enter a query to run a similarity search.",
+                        "title": "Search Query",
+                        "type": "string"
+                      }
+                    },
+                    "description": "FAISS. search_documents - FAISS Vector Store with search capabilities",
+                    "display_description": "FAISS. search_documents - FAISS Vector Store with search capabilities",
+                    "display_name": "search_documents",
+                    "name": "search_documents",
+                    "readonly": false,
+                    "status": true,
+                    "tags": [
+                      "search_documents"
+                    ]
+                  },
+                  {
+                    "args": {
+                      "search_query": {
+                        "default": "",
+                        "description": "Enter a query to run a similarity search.",
+                        "title": "Search Query",
+                        "type": "string"
+                      }
+                    },
+                    "description": "FAISS. as_dataframe - FAISS Vector Store with search capabilities",
+                    "display_description": "FAISS. as_dataframe - FAISS Vector Store with search capabilities",
+                    "display_name": "as_dataframe",
+                    "name": "as_dataframe",
+                    "readonly": false,
+                    "status": true,
+                    "tags": [
+                      "as_dataframe"
+                    ]
+                  }
+                ]
+              }
+            },
+            "tool_mode": true
+          },
+          "showNode": true,
+          "type": "FAISS"
+        },
+        "dragging": false,
+        "id": "FAISS-Uz8O4",
+        "measured": {
+          "height": 503,
+          "width": 320
+        },
+        "position": {
+          "x": -344.50128361428034,
+          "y": -176.20680066416054
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "note-HQL5D",
+          "node": {
+            "description": "# RTX Remix Langflow Integration\n\nThis Langflow project provides an integration for the NVIDIA RTX Remix Toolkit through its REST API.\n\n## Prerequisites\n\nBefore using this project, ensure you have completed the following steps:\n\n1. **Install RTX Remix Toolkit**\n   You must have the RTX Remix Toolkit installed on your system. Follow the installation guide here:\n   [Installing the RTX Remix Toolkit](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/docs/installation/install-toolkit.html)\n\n2. **Run RTX Remix Toolkit**\n   Make sure the RTX Remix Toolkit application is running before using this Langflow project.\n\n3. **Create/Open a Project**\n   You must have an RTX Remix project opened within the Toolkit. Learn how to set up a project here:\n   [Setting Up a Project with the RTX Remix Toolkit](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/docs/gettingstarted/learning-toolkitsetup.html)\n\n### Quick Start Tutorial\n\nTo quickly get started with RTX Remix, follow the [Building Your First Mod for the RTX Remix Sample](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/docs/tutorials/tutorial-remixtool.html) tutorial.\n\nIt goes through the process of installing the various required parts, setting them up and getting a project up and running.\n\n## Getting Started\n\nOnce all prerequisites are met, the Langflow project should work without additional configuration.\n\n### Testing the Connection\n\nTo verify everything is working correctly:\n\n1. Open the Langflow project\n2. Locate the **RTX Remix MCP Connection** node\n3. Click the **refresh button** on the node\n4. Verify that the various REST API tools appear\n\nIf the REST API tools appear after refreshing, your connection to RTX Remix Toolkit is working properly and you can begin using the available tools.\n\n## Additional Resources\n\n- [RTX Remix Documentation](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/)\n- [RTX Remix MCP Documentation](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/docs/howto/learning-mcp.html)\n- [RTX Remix REST API Documentation](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/docs/howto/learning-restapi.html)",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "lime"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 1454,
+        "id": "note-HQL5D",
+        "measured": {
+          "height": 1454,
+          "width": 452
+        },
+        "position": {
+          "x": -1257.898918275863,
+          "y": -634.0975399601093
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 452
+      },
+      {
+        "data": {
+          "id": "MCPTools-beHVJ",
+          "node": {
+            "base_classes": [
+              "DataFrame"
+            ],
+            "beta": false,
+            "category": "data",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Connect to an MCP server to use its tools.",
+            "display_name": "MCP Connection",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "mode",
+              "command",
+              "env",
+              "sse_url",
+              "headers_input",
+              "tool",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "icon": "Mcp",
+            "key": "MCPTools",
+            "legacy": false,
+            "lf_version": "1.4.2",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": false,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.003932426697386162,
             "template": {
               "_type": "Component",
               "code": {
@@ -1696,7 +2653,6 @@
                 "display_name": "Mode",
                 "dynamic": false,
                 "info": "Select the connection mode",
-                "load_from_db": false,
                 "name": "mode",
                 "options": [
                   "Stdio",
@@ -1759,7 +2715,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "remix_lock_layer"
               },
               "tool_placeholder": {
                 "_input_type": "MessageTextInput",
@@ -1809,7 +2765,7 @@
                     "display_name": "remix__status_status_get",
                     "name": "remix__status_status_get",
                     "readonly": false,
-                    "status": true,
+                    "status": false,
                     "tags": [
                       "remix__status_status_get"
                     ]
@@ -1879,7 +2835,7 @@
                     "display_name": "remix__async_app_schema_endpoint_asyncapi_schema_get",
                     "name": "remix__async_app_schema_endpoint_asyncapi_sche",
                     "readonly": false,
-                    "status": false,
+                    "status": true,
                     "tags": [
                       "remix__async_app_schema_endpoint_asyncapi_schema_get"
                     ]
@@ -3723,7 +4679,7 @@
                     "display_name": "remix_ingest_model_asset",
                     "name": "remix_ingest_model_asset",
                     "readonly": false,
-                    "status": false,
+                    "status": true,
                     "tags": [
                       "remix_ingest_model_asset"
                     ]
@@ -4193,7 +5149,7 @@
                     "display_name": "remix_ingest_material_asset",
                     "name": "remix_ingest_material_asset",
                     "readonly": false,
-                    "status": false,
+                    "status": true,
                     "tags": [
                       "remix_ingest_material_asset"
                     ]
@@ -4207,983 +5163,28 @@
           "type": "MCPTools"
         },
         "dragging": false,
-        "id": "MCPTools-OP04x",
-        "measured": {
-          "height": 439,
-          "width": 320
-        },
-        "position": {
-          "x": -343.82914475668326,
-          "y": 419.82244566085546
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "Prompt-muf0Q",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {
-              "template": [
-                "remix_documentation",
-                "remix_mcp_server",
-                "mcp_prompts"
-              ]
-            },
-            "description": "Create a prompt template with dynamic variables.",
-            "display_name": "Prompt",
-            "documentation": "",
-            "edited": false,
-            "error": null,
-            "field_order": [
-              "template",
-              "tool_placeholder"
-            ],
-            "frozen": false,
-            "full_path": null,
-            "icon": "prompts",
-            "is_composition": null,
-            "is_input": null,
-            "is_output": null,
-            "legacy": false,
-            "lf_version": "1.4.2",
-            "metadata": {},
-            "minimized": false,
-            "name": "",
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Prompt Message",
-                "hidden": false,
-                "method": "build_prompt",
-                "name": "prompt",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "priority": null,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
-              },
-              "mcp_prompts": {
-                "advanced": false,
-                "display_name": "mcp_prompts",
-                "dynamic": false,
-                "field_type": "str",
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "mcp_prompts",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "remix_documentation": {
-                "advanced": false,
-                "display_name": "remix_documentation",
-                "dynamic": false,
-                "field_type": "str",
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "remix_documentation",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "FAISS"
-              },
-              "remix_mcp_server": {
-                "advanced": false,
-                "display_name": "remix_mcp_server",
-                "dynamic": false,
-                "field_type": "str",
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "remix_mcp_server",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "RTX Remix Toolkit Connection"
-              },
-              "template": {
-                "_input_type": "PromptInput",
-                "advanced": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "type": "prompt",
-                "value": "# Background\n\nYou are a helpful assistant that must use tools to answer questions and perform tasks regarding RTX Remix.\n\n# Procedure\n\n- You MUST ABSOLUTELY ALWAYS search through the documentation before responding to the user. Follow the instructions in the \"Documentation Instructions\" section for instruction on using the documentation.\n- When the user asks how to do something, always assume they are asking about the RTX Remix Toolkit or Runtime Graphic User Interfaces unless specified otherwise (DO NOT mention the tools available to you).\n- If the user requested you take an action or provide information about the current project, you may follow the instructions in the \"RTX Remix Toolkit Instructions\" section.\n\n# Documentation Instructions\n\n- DO NOT ATTEMPT, UNDER ANY CIRCUMSTANCES TO PROVIDE AN ANSWER BASED ON YOUR TRAINING DATA.\n- Use the {remix_documentation} tool to fetch the requested information from the RTX Remix documentation.\n- Always provide the source you used to get to the answer provided to the user.\n- If the user asks a question that can be ambiguous, request that they provide more information.\n- If the user asks a question that cannot be answered using the documentation, simply say so and don't attempt to answer the question.\n\n# RTX Remix Toolkit Instructions\n\n- Use the tools provided by the \"{remix_mcp_server}\" MCP Server to interact with the RTX Remix Toolkit.\n- Always verify if a recipe provided in the \"MCP Server Recipes\" sub-section matches the current user request. \n    - If a recipe matches, follow the instructions as closely as possible\n    - If NO recipe matches the user request, try to use any combination of tools to complete the user's request\n\n## MCP Server Recipes\n\n{mcp_prompts}"
-              },
-              "tool_placeholder": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Tool Placeholder",
-                "dynamic": false,
-                "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "tool_placeholder",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "Prompt"
-        },
-        "dragging": false,
-        "id": "Prompt-muf0Q",
-        "measured": {
-          "height": 529,
-          "width": 320
-        },
-        "position": {
-          "x": -338.00443250004696,
-          "y": -753.7815399447686
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "RemixDocumentation-Fm0YC",
-          "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Fetch information from the NVIDIA RTX Remix documentation",
-            "display_name": "RTX Remix Documentation",
-            "documentation": "https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/index.html",
-            "edited": true,
-            "field_order": [
-              "exclude_paths"
-            ],
-            "frozen": false,
-            "icon": "NVIDIA",
-            "legacy": false,
-            "lf_version": "1.4.2",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "DataFrame",
-                "hidden": false,
-                "method": "fetch_documentation_dataframe",
-                "name": "dataframe_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "DataFrame",
-                "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Data",
-                "hidden": null,
-                "method": "fetch_documentation_data",
-                "name": "data_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import httpx\r\nimport json\r\nimport re\r\nfrom langflow.custom import Component\r\nfrom langflow.io import Output, MessageTextInput\r\nfrom langflow.schema import DataFrame, Data\r\n\r\n\r\nclass RemixDocumentation(Component):\r\n    display_name = \"RTX Remix Documentation\"\r\n    description = \"Fetch information from the NVIDIA RTX Remix documentation\"\r\n    documentation: str = (\r\n        \"https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/index.html\"\r\n    )\r\n    icon = \"NVIDIA\"\r\n    name = \"RemixDocumentation\"\r\n\r\n    inputs = [\r\n        MessageTextInput(\r\n            name=\"exclude_paths\",\r\n            display_name=\"Exclude Paths\",\r\n            info=(\r\n                \"List of path prefixes to exclude from results. \"\r\n                \"Used to filter out sections of the documentation that are not typically relevant to user queries.\"\r\n            ),\r\n            is_list=True,\r\n            value=[\r\n                \"source\",\r\n                \"CHANGELOG.html\",\r\n                \"docs/changelog\",\r\n                \"docs/contributing/api.html\",\r\n            ],\r\n        ),\r\n    ]\r\n\r\n    outputs = [\r\n        Output(\r\n            display_name=\"DataFrame\",\r\n            name=\"dataframe_output\",\r\n            method=\"fetch_documentation_dataframe\",\r\n        ),\r\n        Output(\r\n            display_name=\"Data\", name=\"data_output\", method=\"fetch_documentation_data\"\r\n        ),\r\n    ]\r\n\r\n    _BASE_URL = \"https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/\"\r\n\r\n    def _fetch_all_documentation(self) -> list[Data]:\r\n        \"\"\"Fetch all documentation entries and return as list of Data objects.\"\"\"\r\n        # URL for the search index JavaScript file\r\n        search_index_url = self._BASE_URL + \"searchindex.js\"\r\n\r\n        # Fetch the search index file\r\n        response = httpx.get(search_index_url, follow_redirects=True)\r\n        response.raise_for_status()\r\n\r\n        # Extract the JSON data from the JavaScript file\r\n        # The file contains: const searchData = {...};\r\n        js_content = response.text\r\n\r\n        # Extract the JSON part using regex\r\n        match = re.search(r\"const searchData = ({.*});\", js_content, re.DOTALL)\r\n        if not match:\r\n            raise ValueError(\"Could not parse search index data\")\r\n\r\n        # Parse the JSON data\r\n        search_data = json.loads(match.group(1))\r\n\r\n        # Get the data array which contains all searchable items\r\n        data_items = search_data.get(\"data\", [])\r\n\r\n        results = []\r\n        for item in data_items:\r\n            filename = item.get(\"filename\", \"\")\r\n            text = item.get(\"content\", \"\")\r\n\r\n            if not text:\r\n                continue\r\n\r\n            # Check if filename should be excluded\r\n            should_exclude = False\r\n            for exclude_path in self.exclude_paths:\r\n                if filename.startswith(exclude_path):\r\n                    should_exclude = True\r\n                    break\r\n\r\n            if should_exclude:\r\n                continue\r\n\r\n            # Build URL with proper handling of empty anchors\r\n            anchor = item.get(\"anchor\", \"\")\r\n            if anchor:\r\n                url = f\"{self._BASE_URL}{filename}#{anchor}\"\r\n            else:\r\n                url = f\"{self._BASE_URL}{filename}\"\r\n\r\n            results.append(\r\n                Data(\r\n                    title=item.get(\"display_name\", \"\"),\r\n                    text=text,\r\n                    url=url,\r\n                )\r\n            )\r\n\r\n        # If no results found, create a single entry indicating no results\r\n        if not results:\r\n            data = Data(\r\n                title=\"No documentation found\",\r\n                text=\"No documentation entries were found in the search index\",\r\n                url=search_index_url,\r\n            )\r\n            results.append(data)\r\n\r\n        return results\r\n\r\n    def fetch_documentation_dataframe(self) -> DataFrame:\r\n        \"\"\"Fetch documentation and return as DataFrame.\"\"\"\r\n        results = self._fetch_all_documentation()\r\n        data_frame = DataFrame(results)\r\n        self.status = data_frame\r\n        return data_frame\r\n\r\n    def fetch_documentation_data(self) -> list[Data]:\r\n        \"\"\"Fetch documentation and return as list of Data objects.\"\"\"\r\n        results = self._fetch_all_documentation()\r\n        self.status = results\r\n        return results\r\n"
-              },
-              "exclude_paths": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Exclude Paths",
-                "dynamic": false,
-                "info": "List of path prefixes to exclude from results. Used to filter out sections of the documentation that are not typically relevant to user queries.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": true,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "exclude_paths",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": [
-                  "source",
-                  "docs/changelog",
-                  "CHANGELOG.html",
-                  "docs/contributing/api.html"
-                ]
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "RemixDocumentation"
-        },
-        "dragging": false,
-        "id": "RemixDocumentation-Fm0YC",
-        "measured": {
-          "height": 373,
-          "width": 320
-        },
-        "position": {
-          "x": -752.3770110461156,
-          "y": -384.10430230552856
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "EmbeddingModel-HFaq5",
-          "node": {
-            "base_classes": [
-              "Embeddings"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Generate embeddings using a specified provider.",
-            "display_name": "Embedding Model",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "provider",
-              "model",
-              "api_key",
-              "api_base",
-              "dimensions",
-              "chunk_size",
-              "request_timeout",
-              "max_retries",
-              "show_progress_bar",
-              "model_kwargs"
-            ],
-            "frozen": false,
-            "icon": "binary",
-            "legacy": false,
-            "lf_version": "1.4.2",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Embeddings",
-                "method": "build_embeddings",
-                "name": "embeddings",
-                "options": null,
-                "required_inputs": [
-                  "api_key"
-                ],
-                "selected": "Embeddings",
-                "tool_mode": true,
-                "types": [
-                  "Embeddings"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "api_base": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "API Base URL",
-                "dynamic": false,
-                "info": "Base URL for the API. Leave empty for default.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "api_base",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "Model Provider API key",
-                "input_types": [],
-                "load_from_db": false,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "chunk_size": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Chunk Size",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "chunk_size",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1000
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any\n\nfrom langchain_openai import OpenAIEmbeddings\n\nfrom langflow.base.embeddings.model import LCEmbeddingsModel\nfrom langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES\nfrom langflow.field_typing import Embeddings\nfrom langflow.io import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageTextInput,\n    SecretStrInput,\n)\nfrom langflow.schema.dotdict import dotdict\n\n\nclass EmbeddingModelComponent(LCEmbeddingsModel):\n    display_name = \"Embedding Model\"\n    description = \"Generate embeddings using a specified provider.\"\n    icon = \"binary\"\n    name = \"EmbeddingModel\"\n    category = \"models\"\n\n    inputs = [\n        DropdownInput(\n            name=\"provider\",\n            display_name=\"Model Provider\",\n            options=[\"OpenAI\"],\n            value=\"OpenAI\",\n            info=\"Select the embedding model provider\",\n            real_time_refresh=True,\n            options_metadata=[{\"icon\": \"OpenAI\"}],\n        ),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model Name\",\n            options=OPENAI_EMBEDDING_MODEL_NAMES,\n            value=OPENAI_EMBEDDING_MODEL_NAMES[0],\n            info=\"Select the embedding model to use\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"Model Provider API key\",\n            required=True,\n            show=True,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"api_base\",\n            display_name=\"API Base URL\",\n            info=\"Base URL for the API. Leave empty for default.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"dimensions\",\n            display_name=\"Dimensions\",\n            info=\"The number of dimensions the resulting output embeddings should have. \"\n            \"Only supported by certain models.\",\n            advanced=True,\n        ),\n        IntInput(name=\"chunk_size\", display_name=\"Chunk Size\", advanced=True, value=1000),\n        FloatInput(name=\"request_timeout\", display_name=\"Request Timeout\", advanced=True),\n        IntInput(name=\"max_retries\", display_name=\"Max Retries\", advanced=True, value=3),\n        BoolInput(name=\"show_progress_bar\", display_name=\"Show Progress Bar\", advanced=True),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n    ]\n\n    def build_embeddings(self) -> Embeddings:\n        provider = self.provider\n        model = self.model\n        api_key = self.api_key\n        api_base = self.api_base\n        dimensions = self.dimensions\n        chunk_size = self.chunk_size\n        request_timeout = self.request_timeout\n        max_retries = self.max_retries\n        show_progress_bar = self.show_progress_bar\n        model_kwargs = self.model_kwargs or {}\n\n        if provider == \"OpenAI\":\n            if not api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n            return OpenAIEmbeddings(\n                model=model,\n                dimensions=dimensions or None,\n                base_url=api_base or None,\n                api_key=api_key,\n                chunk_size=chunk_size,\n                max_retries=max_retries,\n                timeout=request_timeout or None,\n                show_progress_bar=show_progress_bar,\n                model_kwargs=model_kwargs,\n            )\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        if field_name == \"provider\" and field_value == \"OpenAI\":\n            build_config[\"model\"][\"options\"] = OPENAI_EMBEDDING_MODEL_NAMES\n            build_config[\"model\"][\"value\"] = OPENAI_EMBEDDING_MODEL_NAMES[0]\n            build_config[\"api_key\"][\"display_name\"] = \"OpenAI API Key\"\n            build_config[\"api_base\"][\"display_name\"] = \"OpenAI API Base URL\"\n        return build_config\n"
-              },
-              "dimensions": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Dimensions",
-                "dynamic": false,
-                "info": "The number of dimensions the resulting output embeddings should have. Only supported by certain models.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "dimensions",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": ""
-              },
-              "max_retries": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Retries",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_retries",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 3
-              },
-              "model": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
-                "dynamic": false,
-                "info": "Select the embedding model to use",
-                "name": "model",
-                "options": [
-                  "text-embedding-3-small",
-                  "text-embedding-3-large",
-                  "text-embedding-ada-002"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "text-embedding-3-small"
-              },
-              "model_kwargs": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "Additional keyword arguments to pass to the model.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "provider": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
-                "dynamic": false,
-                "info": "Select the embedding model provider",
-                "name": "provider",
-                "options": [
-                  "OpenAI"
-                ],
-                "options_metadata": [
-                  {
-                    "icon": "OpenAI"
-                  }
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "OpenAI"
-              },
-              "request_timeout": {
-                "_input_type": "FloatInput",
-                "advanced": true,
-                "display_name": "Request Timeout",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "request_timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "float",
-                "value": ""
-              },
-              "show_progress_bar": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Show Progress Bar",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "show_progress_bar",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "EmbeddingModel"
-        },
-        "dragging": false,
-        "id": "EmbeddingModel-HFaq5",
-        "measured": {
-          "height": 366,
-          "width": 320
-        },
-        "position": {
-          "x": -755.9008599540854,
-          "y": 109.55540230338941
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "FAISS-B6D5I",
-          "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "FAISS Vector Store with search capabilities",
-            "display_name": "FAISS",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "index_name",
-              "persist_directory",
-              "ingest_data",
-              "search_query",
-              "should_cache_vector_store",
-              "allow_dangerous_deserialization",
-              "embedding",
-              "number_of_results"
-            ],
-            "frozen": false,
-            "icon": "FAISS",
-            "legacy": false,
-            "lf_version": "1.4.2",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": false,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Tool",
-                "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "allow_dangerous_deserialization": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Allow Dangerous Deserialization",
-                "dynamic": false,
-                "info": "Set to True to allow loading pickle files from untrusted sources. Only enable this if you trust the source of the data.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "allow_dangerous_deserialization",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from pathlib import Path\n\nfrom langchain_community.vectorstores import FAISS\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers.data import docs_to_data\nfrom langflow.io import BoolInput, HandleInput, IntInput, StrInput\nfrom langflow.schema import Data\n\n\nclass FaissVectorStoreComponent(LCVectorStoreComponent):\n    \"\"\"FAISS Vector Store with search capabilities.\"\"\"\n\n    display_name: str = \"FAISS\"\n    description: str = \"FAISS Vector Store with search capabilities\"\n    name = \"FAISS\"\n    icon = \"FAISS\"\n\n    inputs = [\n        StrInput(\n            name=\"index_name\",\n            display_name=\"Index Name\",\n            value=\"langflow_index\",\n        ),\n        StrInput(\n            name=\"persist_directory\",\n            display_name=\"Persist Directory\",\n            info=\"Path to save the FAISS index. It will be relative to where Langflow is running.\",\n        ),\n        *LCVectorStoreComponent.inputs,\n        BoolInput(\n            name=\"allow_dangerous_deserialization\",\n            display_name=\"Allow Dangerous Deserialization\",\n            info=\"Set to True to allow loading pickle files from untrusted sources. \"\n            \"Only enable this if you trust the source of the data.\",\n            advanced=True,\n            value=True,\n        ),\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"]),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=4,\n        ),\n    ]\n\n    @staticmethod\n    def resolve_path(path: str) -> str:\n        \"\"\"Resolve the path relative to the Langflow root.\n\n        Args:\n            path: The path to resolve\n        Returns:\n            str: The resolved path as a string\n        \"\"\"\n        return str(Path(path).resolve())\n\n    def get_persist_directory(self) -> Path:\n        \"\"\"Returns the resolved persist directory path or the current directory if not set.\"\"\"\n        if self.persist_directory:\n            return Path(self.resolve_path(self.persist_directory))\n        return Path()\n\n    @check_cached_vector_store\n    def build_vector_store(self) -> FAISS:\n        \"\"\"Builds the FAISS object.\"\"\"\n        path = self.get_persist_directory()\n        path.mkdir(parents=True, exist_ok=True)\n\n        # Convert DataFrame to Data if needed using parent's method\n        self.ingest_data = self._prepare_ingest_data()\n\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                documents.append(_input)\n\n        faiss = FAISS.from_documents(documents=documents, embedding=self.embedding)\n        faiss.save_local(str(path), self.index_name)\n        return faiss\n\n    def search_documents(self) -> list[Data]:\n        \"\"\"Search for documents in the FAISS vector store.\"\"\"\n        path = self.get_persist_directory()\n        index_path = path / f\"{self.index_name}.faiss\"\n\n        if not index_path.exists():\n            vector_store = self.build_vector_store()\n        else:\n            vector_store = FAISS.load_local(\n                folder_path=str(path),\n                embeddings=self.embedding,\n                index_name=self.index_name,\n                allow_dangerous_deserialization=self.allow_dangerous_deserialization,\n            )\n\n        if not vector_store:\n            msg = \"Failed to load the FAISS index.\"\n            raise ValueError(msg)\n\n        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():\n            docs = vector_store.similarity_search(\n                query=self.search_query,\n                k=self.number_of_results,\n            )\n            return docs_to_data(docs)\n        return []\n"
-              },
-              "embedding": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Embedding",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Embeddings"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "embedding",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "index_name": {
-                "_input_type": "StrInput",
-                "advanced": false,
-                "display_name": "Index Name",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "index_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "langflow_index"
-              },
-              "ingest_data": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Ingest Data",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Data",
-                  "DataFrame"
-                ],
-                "list": true,
-                "list_add_label": "Add More",
-                "name": "ingest_data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "number_of_results": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Number of Results",
-                "dynamic": false,
-                "info": "Number of results to return.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "number_of_results",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 4
-              },
-              "persist_directory": {
-                "_input_type": "StrInput",
-                "advanced": false,
-                "display_name": "Persist Directory",
-                "dynamic": false,
-                "info": "Path to save the FAISS index. It will be relative to where Langflow is running.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "persist_directory",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "search_query": {
-                "_input_type": "QueryInput",
-                "advanced": false,
-                "display_name": "Search Query",
-                "dynamic": false,
-                "info": "Enter a query to run a similarity search.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "search_query",
-                "placeholder": "Enter a query...",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "query",
-                "value": ""
-              },
-              "should_cache_vector_store": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Cache Vector Store",
-                "dynamic": false,
-                "info": "If True, the vector store will be cached for the current build of the component. This is useful for components that have multiple output methods and want to share the same vector store.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "should_cache_vector_store",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "tools_metadata": {
-                "_input_type": "ToolsInput",
-                "advanced": false,
-                "display_name": "Actions",
-                "dynamic": false,
-                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tools",
-                "value": [
-                  {
-                    "args": {
-                      "search_query": {
-                        "default": "",
-                        "description": "Enter a query to run a similarity search.",
-                        "title": "Search Query",
-                        "type": "string"
-                      }
-                    },
-                    "description": "FAISS. search_documents - FAISS Vector Store with search capabilities",
-                    "display_description": "FAISS. search_documents - FAISS Vector Store with search capabilities",
-                    "display_name": "search_documents",
-                    "name": "search_documents",
-                    "readonly": false,
-                    "status": true,
-                    "tags": [
-                      "search_documents"
-                    ]
-                  },
-                  {
-                    "args": {
-                      "search_query": {
-                        "default": "",
-                        "description": "Enter a query to run a similarity search.",
-                        "title": "Search Query",
-                        "type": "string"
-                      }
-                    },
-                    "description": "FAISS. as_dataframe - FAISS Vector Store with search capabilities",
-                    "display_description": "FAISS. as_dataframe - FAISS Vector Store with search capabilities",
-                    "display_name": "as_dataframe",
-                    "name": "as_dataframe",
-                    "readonly": false,
-                    "status": true,
-                    "tags": [
-                      "as_dataframe"
-                    ]
-                  }
-                ]
-              }
-            },
-            "tool_mode": true
-          },
-          "showNode": true,
-          "type": "FAISS"
-        },
-        "dragging": false,
-        "id": "FAISS-B6D5I",
+        "id": "MCPTools-beHVJ",
         "measured": {
           "height": 455,
           "width": 320
         },
         "position": {
-          "x": -344.50128361428034,
-          "y": -176.20680066416054
+          "x": -350.67957241638305,
+          "y": 418.18424520697226
         },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-J4I1x",
-          "node": {
-            "description": "# RTX Remix Langflow Integration\n\nThis Langflow project provides an integration for the NVIDIA RTX Remix Toolkit through its REST API.\n\n## Prerequisites\n\nBefore using this project, ensure you have completed the following steps:\n\n1. **Install RTX Remix Toolkit**\n   You must have the RTX Remix Toolkit installed on your system. Follow the installation guide here:\n   [Installing the RTX Remix Toolkit](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/docs/installation/install-toolkit.html)\n\n2. **Run RTX Remix Toolkit**\n   Make sure the RTX Remix Toolkit application is running before using this Langflow project.\n\n3. **Create/Open a Project**\n   You must have an RTX Remix project opened within the Toolkit. Learn how to set up a project here:\n   [Setting Up a Project with the RTX Remix Toolkit](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/docs/gettingstarted/learning-toolkitsetup.html)\n\n## Getting Started\n\nOnce all prerequisites are met, the Langflow project should work without additional configuration.\n\n### Testing the Connection\n\nTo verify everything is working correctly:\n\n1. Open the Langflow project\n2. Locate the **RTX Remix MCP Connection** node\n3. Click the **refresh button** on the node\n4. Verify that the various REST API tools appear\n\nIf the REST API tools appear after refreshing, your connection to RTX Remix Toolkit is working properly and you can begin using the available tools.\n\n## Additional Resources\n\n- [RTX Remix Documentation](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/)\n- [RTX Remix REST API Guide](https://docs.omniverse.nvidia.com/kit/docs/rtx_remix/latest/docs/howto/using-rest-api.html)",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "neutral"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 1296,
-        "id": "note-J4I1x",
-        "measured": {
-          "height": 1296,
-          "width": 370
-        },
-        "position": {
-          "x": -1181.898918275863,
-          "y": -634.0975399601093
-        },
-        "resizing": false,
         "selected": true,
-        "type": "noteNode",
-        "width": 370
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 1219.0219300276187,
-      "y": 569.2965741651219,
-      "zoom": 0.6467573903452069
+      "x": 1262.8270031092698,
+      "y": 533.860647282749,
+      "zoom": 0.639257691715369
     }
   },
   "description": "Template workflow to integrate the NVIDIA RTX Remix Toolkit REST API and RTX Remix Documentation",
   "endpoint_name": null,
-  "id": "55bf6f1b-714a-4f93-b262-3d9862488be3",
+  "id": "faac3377-a15b-459b-a6bd-c47c318dcc78",
   "is_component": false,
   "last_tested_version": "1.4.2",
   "name": "NVIDIA RTX Remix Template",
