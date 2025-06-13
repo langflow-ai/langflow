@@ -331,7 +331,8 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
                                     logger.debug("HTTP+SSE initialization timed out")
                                     break
 
-                        except Exception as exc:  # noqa: BLE001
+                        except (ConnectionError, OSError, httpx.HTTPError, asyncio.TimeoutError, ValueError) as exc:
+                            # Transport initialization failed - expected during transport probing
                             logger.debug(f"HTTP+SSE initialization failed: {exc}")
                             break
 
@@ -343,7 +344,8 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
                     logger.debug("HTTP+SSE endpoint discovery timed out")
                     break
 
-        except Exception as exc:  # noqa: BLE001
+        except (ConnectionError, OSError, httpx.HTTPError, asyncio.TimeoutError, ValueError) as exc:
+            # Transport setup failed - expected during multi-transport connection attempts
             logger.debug(f"HTTP+SSE transport setup failed: {exc}")
 
         # Clean up discovery task if initialization failed
@@ -780,8 +782,9 @@ class MCPSseClient(BaseMCPClient[dict[str, Any]]):
                             return True
                 except httpx.HTTPError as e:
                     logger.debug(f"_looks_like_http_sse: GET failed with {e}")
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"_looks_like_http_sse: outer exception {e}")
+        except (ConnectionError, OSError, httpx.HTTPError, asyncio.TimeoutError, ValueError) as exc:
+            # Generic guard for transport detection - any failure means "not SSE"
+            logger.debug(f"_looks_like_http_sse: outer exception {exc}")
             # Generic guard - any unknown failure means "not SSE"
             return False
 

@@ -85,7 +85,7 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
 
 async def get_flow_snake_case(flow_name: str, user_id: str, session, is_action: bool | None = None) -> Flow | None:
     uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
-    stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
+    stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712 - SQLAlchemy ORM requires == False for proper SQL generation
     flows = (await session.exec(stmt)).all()
 
     for flow in flows:

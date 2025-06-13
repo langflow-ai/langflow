@@ -323,18 +323,7 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
         # from Python 3.11.  We attempt to unwrap such groups so the caller can inspect
         # the original error message (e.g. 'validation', 'runtime', 'timeout').
         except Exception as exc:
-            # Helper to recursively drill down the first non-group exception.
-            def _unwrap(err: BaseException) -> BaseException:  # type: ignore[name-defined]
-                # Python ≥3.11: ExceptionGroup
-                inner = getattr(err, "exceptions", None)
-                if inner:
-                    return _unwrap(inner[0])
-                # Fallback: look at __cause__ chain
-                if err.__cause__ is not None and err.__cause__ is not err:
-                    return _unwrap(err.__cause__)
-                return err
-
-            root_exc = _unwrap(exc)
+            root_exc = self._unwrap_exception_group(exc)
 
             # If unwrapping changed the exception, re-raise the underlying remote error
             # so callers (and tests) can assert on its message. Otherwise, propagate as-is.
@@ -344,6 +333,20 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
             # Otherwise propagate the original exception untouched.
             raise
 
+    def _unwrap_exception_group(self, err: BaseException) -> BaseException:
+        """Helper to recursively drill down the first non-group exception.
+
+        Python ≥3.11: ExceptionGroup wrapping from AnyIO's TaskGroup.
+        """
+        # Python ≥3.11: ExceptionGroup
+        inner = getattr(err, "exceptions", None)
+        if inner:
+            return self._unwrap_exception_group(inner[0])
+        # Fallback: look at __cause__ chain
+        if err.__cause__ is not None and err.__cause__ is not err:
+            return self._unwrap_exception_group(err.__cause__)
+        return err
+
     async def list_tools(self):
         """Return the list of available tools from the active STDIO session."""
         if self.session is None or not self._connected:
@@ -352,7 +355,8 @@ class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
 
         try:
             response = await self.session.list_tools()
-        except Exception as exc:  # noqa: BLE001
+        except (ConnectionError, OSError, asyncio.TimeoutError, ValueError) as exc:
+            # Transport-level failures when listing tools - expected during connectivity issues
             logger.error(f"Failed to list tools via STDIO transport: {exc}")
             return []
 
