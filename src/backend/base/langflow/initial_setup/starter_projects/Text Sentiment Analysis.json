@@ -181,7 +181,9 @@
             "dataType": "File",
             "id": "File-m5GWE",
             "name": "message",
-            "output_types": []
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
@@ -195,7 +197,7 @@
         "id": "xy-edge__File-m5GWE{œdataTypeœ:œFileœ,œidœ:œFile-m5GWEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Hl8vG{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Hl8vGœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "File-m5GWE",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-m5GWEœ, œnameœ: œmessageœ, œoutput_typesœ: []}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-m5GWEœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-Hl8vG",
         "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-Hl8vGœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
@@ -207,7 +209,9 @@
             "dataType": "File",
             "id": "File-m5GWE",
             "name": "message",
-            "output_types": []
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "text",
@@ -221,7 +225,7 @@
         "id": "xy-edge__File-m5GWE{œdataTypeœ:œFileœ,œidœ:œFile-m5GWEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-AJxY8{œfieldNameœ:œtextœ,œidœ:œPrompt-AJxY8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "File-m5GWE",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-m5GWEœ, œnameœ: œmessageœ, œoutput_typesœ: []}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-m5GWEœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-AJxY8",
         "targetHandle": "{œfieldNameœ: œtextœ, œidœ: œPrompt-AJxY8œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
@@ -272,6 +276,20 @@
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Raw Content",
+                "group_outputs": false,
+                "method": "load_files_message",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -494,7 +512,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "File"
+          "type": "File",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "File-m5GWE",
@@ -648,7 +667,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "id": "Prompt-nmNbi",
@@ -802,7 +822,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "id": "Prompt-AJxY8",
@@ -1191,7 +1212,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-zVeWr",
@@ -1580,7 +1602,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-Izkdb",
@@ -1710,7 +1733,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "id": "Prompt-LXvg7",
@@ -2099,7 +2123,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-Hl8vG",

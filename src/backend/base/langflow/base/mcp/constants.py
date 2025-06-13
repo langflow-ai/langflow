@@ -1,8 +1,5 @@
-"""Shared constants for the MCP client implementations.
-
-Keeping protocol version strings in a single location avoids accidental
-mismatches and magic values sprinkled throughout the codebase.
-"""
+MAX_MCP_SERVER_NAME_LENGTH = 30
+MAX_MCP_TOOL_NAME_LENGTH = 30
 
 # Supported MCP protocol versions
 PROTOCOL_V_2024_11_05 = "2024-11-05"
