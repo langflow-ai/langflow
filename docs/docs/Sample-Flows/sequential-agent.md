@@ -51,4 +51,4 @@ This question provides clear instructions to the agents about how to proceed and
 
 ## Next steps
 
-To create your own multi-agent flow, see [Create a problem solving agent](/agents-tool-calling-agent-component).
+To create your own multi-agent flow, see [Create a problem solving agent](/agents).
