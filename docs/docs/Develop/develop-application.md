@@ -140,7 +140,7 @@ For more information, see [Session ID](/session-id).
 
 ```bash
 curl --request POST \
-  --url 'http://127.0.0.1:7860/api/v1/run/e4167236-938f-4aca-845b-21de3f399858?stream=false' \
+  --url 'http://localhost:7860/api/v1/run/e4167236-938f-4aca-845b-21de3f399858?stream=false' \
   --header 'Content-Type: application/json' \
   --data '{
     "input_value": "Tell me about Charizard please",

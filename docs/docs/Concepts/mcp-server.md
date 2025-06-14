@@ -86,7 +86,7 @@ For example:
     ```
 
     The **MCP Server** tab automatically includes the correct `PROJECT_NAME`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` values.
-    The default Langflow server address is `http://127.0.0.1:7860` (`http://127.0.0.1:7868` if using Langflow for Desktop).
+    The default Langflow server address is `http://localhost:7860` (`http://localhost:7868` if using Langflow for Desktop).
 
     :::important
     If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
@@ -201,12 +201,12 @@ You can use MCP Inspector to monitor your flows and get insights into how they a
     For more information about configuring MCP Inspector, including specifying a proxy port, see the [MCP Inspector GitHub project](https://github.com/modelcontextprotocol/inspector).
 
 2. Open a web browser and navigate to the MCP Inspector UI.
-The default address is `http://127.0.0.1:6274`.
+The default address is `http://localhost:6274`.
 
 3. In the MCP Inspector UI, enter the connection details for your Langflow project's MCP server:
 
     - **Transport Type**: Select **SSE**.
-    - **URL**: Enter the Langflow MCP server's `sse` endpoint. For example: `http://127.0.0.1:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/sse`
+    - **URL**: Enter the Langflow MCP server's `sse` endpoint. For example: `http://localhost:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/sse`
 
     If you've [configured authentication for your MCP server](#authentication), fill out the following additional fields:
     - **Transport Type**: Select **STDIO**.
@@ -230,7 +230,7 @@ By default, Langflow isn't exposed to the public internet.
 However, you can forward Langflow server traffic with a forwarding platform like [ngrok](https://ngrok.com/docs/getting-started/) or [zrok](https://docs.zrok.io/docs/getting-started).
 
 The following procedure uses ngrok, but you can use any similar reverse proxy or forwarding platform.
-This procedure also assumes that you're using the default Langflow listening address `http://127.0.0.1:7860` (`http://127.0.0.1:7868` if using Langflow for Desktop).
+This procedure also assumes that you're using the default Langflow listening address `http://localhost:7860` (`http://localhost:7868` if using Langflow for Desktop).
 
 1. Sign up for an [ngrok account](https://dashboard.ngrok.com/signup).
 

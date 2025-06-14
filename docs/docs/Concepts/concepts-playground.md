@@ -43,7 +43,7 @@ To have more than one session in a single flow, pass a specific Session ID to a 
 To post a message to a flow with a specific Session ID with curl, enter the following command:
 
 ```bash
-   curl -X POST "http://127.0.0.1:7860/api/v1/run/$FLOW_ID" \
+   curl -X POST "http://localhost:7860/api/v1/run/$FLOW_ID" \
    -H 'Content-Type: application/json' \
    -d '{
        "session_id": "custom_session_123",
@@ -76,7 +76,7 @@ You can work with base64 images in the Playground in several ways:
 This example sends a base64-encoded image to the Playground using curl:
 
 ```bash
-curl -X POST "http://127.0.0.1:7860/api/v1/run/$FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/run/$FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
     "session_id": "custom_session_123",
