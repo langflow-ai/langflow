@@ -218,7 +218,6 @@ const SettingsVoiceModal = ({
   };
 
   const handleOpenAIKeyChange = (value: string) => {
-    if (!value) return;
     setOpenaiApiKey(value);
   };
 
@@ -263,7 +262,7 @@ const SettingsVoiceModal = ({
         <DropdownMenuContent
           className="w-[324px] rounded-xl shadow-lg"
           sideOffset={18}
-          alignOffset={-54}
+          alignOffset={-60}
           align="end"
         >
           <div ref={popupRef} className="rounded-3xl">
@@ -291,7 +290,7 @@ const SettingsVoiceModal = ({
                     <>
                       <InputComponent
                         isObjectOption={false}
-                        password={false}
+                        password
                         nodeStyle
                         popoverWidth="16rem"
                         placeholder={getPlaceholder(
