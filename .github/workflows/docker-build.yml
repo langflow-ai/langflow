@@ -48,7 +48,6 @@ on:
         type: string
         description: "Ref to check out. If not specified, will default to the main version or current branch."
 
-
 env:
   PYTHON_VERSION: "3.13"
   TEST_TAG: "langflowai/langflow:test"
@@ -207,10 +206,10 @@ jobs:
           fi
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v3
         with:
           version: latest
-          driver: docker-container
           driver-opts: |
             image=moby/buildkit:v0.22.0
             network=host
@@ -233,6 +232,7 @@ jobs:
             platforms: linux/amd64,linux/arm64
             cache-from: type=gha
             cache-to: type=gha,mode=max
+            builder: ${{ steps.buildx.outputs.name }}
 
       - name: Login to Github Container Registry
         uses: docker/login-action@v3
@@ -253,6 +253,7 @@ jobs:
             platforms: linux/amd64,linux/arm64
             cache-from: type=gha
             cache-to: type=gha,mode=max
+            builder: ${{ steps.buildx.outputs.name }}
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
@@ -262,7 +263,8 @@ jobs:
     needs: [build, get-version]
     strategy:
       matrix:
-        component: [docker-backend, docker-frontend, ghcr-backend, ghcr-frontend]
+        component:
+          [docker-backend, docker-frontend, ghcr-backend, ghcr-frontend]
         include:
           - component: docker-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
@@ -287,14 +289,13 @@ jobs:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v3
         with:
           version: latest
-          driver: docker-container
           driver-opts: |
             image=moby/buildkit:v0.22.0
             network=host
-
 
       - name: Login to Docker Hub
         if: ${{ matrix.component == 'docker-backend' }} || ${{ matrix.component == 'docker-frontend' }}
@@ -325,6 +326,7 @@ jobs:
               LANGFLOW_IMAGE=${{ matrix.langflow_image }}
             file: ${{ matrix.dockerfile }}
             tags: ${{ matrix.tags }}
+            builder: ${{ steps.buildx.outputs.name }}
             # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
             provenance: false
 
@@ -353,6 +355,3 @@ jobs:
       - name: Restart HuggingFace Spaces Build
         run: |
           uv run ./scripts/factory_restart_space.py --space "Langflow/Langflow" --token ${{ secrets.HUGGINGFACE_API_TOKEN }}
-
-
-
