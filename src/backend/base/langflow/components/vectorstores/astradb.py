@@ -800,7 +800,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         admin_client = client.get_admin()
         db_admin = admin_client.get_database_admin(self.get_api_endpoint(), token=self.token)
 
-        # We will try to get the reranking providers to see if its hybrid emabled
+        # We will try to get the reranking providers to see if its hybrid enabled
         try:
             providers = db_admin.find_reranking_providers()
             build_config["reranker"]["options"] = [

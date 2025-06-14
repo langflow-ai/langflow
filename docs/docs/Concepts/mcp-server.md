@@ -44,7 +44,7 @@ Alternatively, you can quickly access the **MCP Server** tab from within any flo
 
 4. Optional: Edit the **Flow Name** and **Flow Description**.
 
-    - **Flow Name**: Enter a name thats makes it clear what the flow does.
+    - **Flow Name**: Enter a name that makes it clear what the flow does.
 
     - **Flow Description**: Enter a description that accurately describes the specific action(s) the flow performs.
 

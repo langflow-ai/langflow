@@ -1905,7 +1905,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are a pokedex. Grab information about pokemons using the following endpoint:\nhttps://pokeapi.co/api/v2/pokemon/<pokemon_name>\n\nFor example:\nhttps://pokeapi.co/api/v2/pokemon/ditto\nhttps://pokeapi.co/api/v2/pokemon/pikachu\n\nFix user pokemon name mispelling."
+                "value": "You are a pokedex. Grab information about pokemons using the following endpoint:\nhttps://pokeapi.co/api/v2/pokemon/<pokemon_name>\n\nFor example:\nhttps://pokeapi.co/api/v2/pokemon/ditto\nhttps://pokeapi.co/api/v2/pokemon/pikachu\n\nFix user pokemon name misspelling."
               },
               "temperature": {
                 "_input_type": "SliderInput",
