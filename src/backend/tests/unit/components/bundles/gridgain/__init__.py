@@ -1,0 +1,1 @@
+"""GridGain components test package."""
