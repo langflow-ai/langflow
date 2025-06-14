@@ -17,7 +17,7 @@
 
 ## ✨ Highlight features
 
-1. **Visual Builder** to get started quickly and iterate. 
+1. **Visual Builder** to get started quickly and iterate.
 1. **Access to Code** so developers can tweak any component using Python.
 1. **Playground** to immediately test and iterate on their flows with step-by-step control.
 1. **Multi-agent** orchestration and conversation management and retrieval.
@@ -27,29 +27,27 @@
 
 ## ⚡️ Quickstart
 
-Langflow works with Python 3.10 to 3.13.
+Langflow requires [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/) and [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-Install with uv **(recommended)** 
+1. To install Langflow, run:
 
 ```shell
 uv pip install langflow
 ```
 
-Install with pip
+2. To run Langflow, run:
 
 ```shell
-pip install langflow
+uv run langflow run
 ```
+
+3. Go to the default Langflow URL at `http://127.0.0.1:7860`.
 
 ## 📦 Deployment
 
 ### Self-managed
 
 Langflow is completely open source and you can deploy it to all major deployment clouds. Follow this [guide](https://docs.langflow.org/deployment-docker) to learn how to use Docker to deploy Langflow.
-
-### Fully-managed by DataStax
-
-DataStax Langflow is a full-managed environment with zero setup. Developers can [sign up for a free account](https://astra.datastax.com/signup?type=langflow) to get started.
 
 ## ⭐ Stay up-to-date
 
