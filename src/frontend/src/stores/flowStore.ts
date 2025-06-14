@@ -1061,6 +1061,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
     set({ dismissedNodes: newDismissedNodes });
   },
+  helperLineEnabled: false,
+  setHelperLineEnabled: (helperLineEnabled: boolean) => {
+    set({ helperLineEnabled });
+  },
 }));
 
 export default useFlowStore;
