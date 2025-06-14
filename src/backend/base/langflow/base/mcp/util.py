@@ -107,16 +107,16 @@ async def get_flow_snake_case(flow_name: str, user_id: str, session, is_action: 
 
 
 def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseModel]:
-    """Dynamically build a Pydantic model from a JSON schema (with $defs).
+    """Dynamically build a Pydantic model from a JSON schema.
 
     Non-required fields become Optional[...] with default=None.
+    Nested objects are inlined as dictionaries for simplicity.
     """
     if schema.get("type") != "object":
         msg = "Root schema must be type 'object'"
         raise ValueError(msg)
 
     defs: dict[str, dict[str, Any]] = schema.get("$defs", {})
-    model_cache: dict[str, type[BaseModel]] = {}
 
     def resolve_ref(s: dict[str, Any] | None) -> dict[str, Any]:
         """Follow a $ref chain until you land on a real subschema."""
@@ -170,8 +170,15 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             return list[schema_type]
 
         if t == "object":
-            # inline object not in $defs ⇒ anonymous nested model
-            return _build_model(f"AnonModel{len(model_cache)}", s)
+            # For object types, just use dict[str, Any] to inline them
+            # This simplifies schema generation
+            additional_props = s.get("additionalProperties", False)
+            if additional_props:
+                # If additionalProperties is true, we definitely want a generic dict
+                return dict[str, Any]
+
+            # Even for objects with defined properties, use dict for simplicity
+            return dict[str, Any]
 
         # primitive fallback
         return {
@@ -183,48 +190,16 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             "array": list,
         }.get(t, Any)
 
-    def _build_model(name: str, subschema: dict[str, Any]) -> type[BaseModel]:
-        """Create (or fetch) a BaseModel subclass for the given object schema."""
-        # If this came via a named $ref, use that name
-        if "$ref" in subschema:
-            refname = subschema["$ref"].split("/")[-1]
-            if refname in model_cache:
-                return model_cache[refname]
-            target = defs.get(refname)
-            if not target:
-                msg = f"Definition '{refname}' not found"
-                raise ValueError(msg)
-            cls = _build_model(refname, target)
-            model_cache[refname] = cls
-            return cls
-
-        # Named anonymous or inline: avoid clashes by name
-        if name in model_cache:
-            return model_cache[name]
-
-        props = subschema.get("properties", {})
-        reqs = set(subschema.get("required", []))
-        fields: dict[str, Any] = {}
-
-        for prop_name, prop_schema in props.items():
-            py_type = parse_type(prop_schema)
-            is_required = prop_name in reqs
-            if not is_required:
-                py_type = py_type | None
-                default = prop_schema.get("default", None)
-            else:
-                default = ...  # required by Pydantic
-
-            fields[prop_name] = (py_type, Field(default, description=prop_schema.get("description")))
-
-        model_cls = create_model(name, **fields)
-        model_cache[name] = model_cls
-        return model_cls
-
-    # build the top - level "InputSchema" from the root properties
+    # build the top-level "InputSchema" from the root properties
     top_props = schema.get("properties", {})
     top_reqs = set(schema.get("required", []))
     top_fields: dict[str, Any] = {}
+
+    # Handle additionalProperties at the top level
+    additional_props = schema.get("additionalProperties", False)
+    model_config = {}
+    if additional_props:
+        model_config["extra"] = "allow"
 
     for fname, fdef in top_props.items():
         py_type = parse_type(fdef)
@@ -235,7 +210,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             default = ...
         top_fields[fname] = (py_type, Field(default, description=fdef.get("description")))
 
-    return create_model("InputSchema", **top_fields)
+    # Create the main model
+    return create_model("InputSchema", __config__=model_config, **top_fields)
 
 
 def _is_valid_key_value_item(item: Any) -> bool:
