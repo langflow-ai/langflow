@@ -223,6 +223,8 @@ class Settings(BaseSettings):
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
     webhook_polling_interval: int = 5000
     """The polling interval for the webhook in ms."""
+    root_path: str = ""
+    """The root path for the application."""
     fs_flows_polling_interval: int = 10000
     """The polling interval in milliseconds for synchronizing flows from the file system."""
     ssl_cert_file: str | None = None
@@ -259,6 +261,9 @@ class Settings(BaseSettings):
             logger.warning("Multi-worker environment detected, using direct event delivery")
             return "direct"
         return value
+    from dotenv import load_dotenv
+
+    load_dotenv(override=True)
 
     @field_validator("dev")
     @classmethod
