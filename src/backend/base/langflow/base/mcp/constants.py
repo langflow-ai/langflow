@@ -1,2 +1,9 @@
 MAX_MCP_SERVER_NAME_LENGTH = 30
 MAX_MCP_TOOL_NAME_LENGTH = 30
+
+# Supported MCP protocol versions
+PROTOCOL_V_2024_11_05 = "2024-11-05"
+PROTOCOL_V_2025_03_26 = "2025-03-26"
+
+# Latest protocol the client natively understands
+LATEST_PROTOCOL_VERSION = PROTOCOL_V_2025_03_26

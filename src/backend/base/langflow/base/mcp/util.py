@@ -1,20 +1,25 @@
+from __future__ import annotations
+
 import asyncio
-import os
-import platform
+import re
 import shutil
-from collections.abc import Awaitable, Callable
-from typing import Any
-from urllib.parse import urlparse
+from typing import TYPE_CHECKING, Any, NamedTuple
 from uuid import UUID
 
-import httpx
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
 from httpx import codes as httpx_codes
 from langchain_core.tools import StructuredTool
 from loguru import logger
-from mcp import ClientSession
 from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
 
+from langflow.base.mcp.base_client import BaseMCPClient, NotConnectedError
+
+# Import clients from their respective modules
+from langflow.base.mcp.sse_client import MCPSseClient
+from langflow.base.mcp.stdio_client import MCPStdioClient
 from langflow.services.database.models.flow.model import Flow
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
@@ -96,7 +101,7 @@ def get_unique_name(base_name, max_length, existing_names):
 
 async def get_flow_snake_case(flow_name: str, user_id: str, session, is_action: bool | None = None) -> Flow | None:
     uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
-    stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
+    stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712 - SQLAlchemy ORM requires == False for proper SQL generation
     flows = (await session.exec(stmt)).all()
 
     for flow in flows:
@@ -244,365 +249,196 @@ def _is_valid_key_value_item(item: Any) -> bool:
 
 
 def _process_headers(headers: Any) -> dict:
-    """Process the headers input into a valid dictionary.
+    """Wrapper around :py:meth:`BaseMCPClient.process_headers`."""
+    # Re-use new centralised implementation
+    from langflow.base.mcp.base_client import BaseMCPClient as _Base
 
-    Args:
-        headers: The headers to process, can be dict, str, or list
-    Returns:
-        Processed dictionary
-    """
-    if headers is None:
-        return {}
-    if isinstance(headers, dict):
-        return headers
-    if isinstance(headers, list):
-        processed_headers = {}
-        try:
-            for item in headers:
-                if not _is_valid_key_value_item(item):
-                    continue
-                key = item["key"]
-                value = item["value"]
-                processed_headers[key] = value
-        except (KeyError, TypeError, ValueError):
-            return {}  # Return empty dictionary instead of None
-        return processed_headers
-    return {}
+    return _Base.process_headers(headers)
 
 
 def _validate_node_installation(command: str) -> str:
-    """Validate the npx command."""
-    if "npx" in command and not shutil.which("node"):
+    """Validate the npx command using word boundaries to avoid false positives."""
+    if re.search(r"\bnpx\b", command) and not shutil.which("node"):
         msg = "Node.js is not installed. Please install Node.js to use npx commands."
         raise ValueError(msg)
     return command
 
 
 async def _validate_connection_params(mode: str, command: str | None = None, url: str | None = None) -> None:
-    """Validate connection parameters based on mode."""
-    if mode not in ["Stdio", "SSE"]:
-        msg = f"Invalid mode: {mode}. Must be either 'Stdio' or 'SSE'"
-        raise ValueError(msg)
+    """Backward-compatibility shim - delegate to BaseMCPClient helper."""
+    # Re-use new centralised implementation
+    from langflow.base.mcp.base_client import BaseMCPClient as _Base
 
-    if mode == "Stdio" and not command:
-        msg = "Command is required for Stdio mode"
-        raise ValueError(msg)
-    if mode == "Stdio" and command:
-        _validate_node_installation(command)
-    if mode == "SSE" and not url:
-        msg = "URL is required for SSE mode"
-        raise ValueError(msg)
+    await _Base.validate_connection_params(mode, command, url)
 
 
-class MCPStdioClient:
-    def __init__(self):
-        self.session: ClientSession | None = None
-        self._connection_params = None
-        self._connected = False
-
-    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
-        """Connect to MCP server using stdio transport (SDK style)."""
-        from mcp import StdioServerParameters
-        from mcp.client.stdio import stdio_client
-
-        command = command_str.split(" ")
-        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
-
-        if platform.system() == "Windows":
-            server_params = StdioServerParameters(
-                command="cmd",
-                args=[
-                    "/c",
-                    f"{command[0]} {' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
-                ],
-                env=env_data,
-            )
-        else:
-            server_params = StdioServerParameters(
-                command="bash",
-                args=["-c", f"{command_str} || echo 'Command failed with exit code $?' >&2"],
-                env=env_data,
-            )
-
-        # Store connection parameters for later use in run_tool
-        self._connection_params = server_params
-
-        try:
-            async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
-                await session.initialize()
-                response = await session.list_tools()
-                self._connected = True
-                return response.tools
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            logger.error(f"Failed to connect to MCP stdio server: {e}")
-            self._connection_params = None
-            self._connected = False
-            return []
-
-    async def disconnect(self):
-        """Properly close the connection and clean up resources."""
-        self.session = None
-        self._connection_params = None
-        self._connected = False
-
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-        """Run a tool with the given arguments.
-
-        Args:
-            tool_name: Name of the tool to run
-            arguments: Dictionary of arguments to pass to the tool
-
-        Returns:
-            The result of the tool execution
-
-        Raises:
-            ValueError: If session is not initialized or tool execution fails
-        """
-        if not self._connected or not self._connection_params:
-            msg = "Session not initialized or disconnected. Call connect_to_server first."
-            raise ValueError(msg)
-
-        try:
-            from mcp.client.stdio import stdio_client
-
-            async with stdio_client(self._connection_params) as (read, write), ClientSession(read, write) as session:
-                await session.initialize()
-                return await session.call_tool(tool_name, arguments=arguments)
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            msg = f"Failed to run tool '{tool_name}': {e}"
-            logger.error(msg)
-            # Mark as disconnected on error
-            self._connected = False
-            raise ValueError(msg) from e
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.disconnect()
+# ---------------------------------------------------------------------------
+# Public data structures
+# ---------------------------------------------------------------------------
 
 
-class MCPSseClient:
-    def __init__(self):
-        self.session: ClientSession | None = None
-        self._connection_params = None
-        self._connected = False
+class ToolCatalogue(NamedTuple):
+    """Strongly-typed container returned by :func:`update_tools`.
 
-    async def validate_url(self, url: str | None) -> tuple[bool, str]:
-        """Validate the SSE URL before attempting connection."""
-        try:
-            parsed = urlparse(url)
-            if not parsed.scheme or not parsed.netloc:
-                return False, "Invalid URL format. Must include scheme (http/https) and host."
+    The tuple nature preserves backward-compatibility with existing unpacking
+    (``mode, tool_list, tool_cache, protocol_info = await update_tools(...)``)
+    while also providing named attributes for readability.
+    """
 
-            async with httpx.AsyncClient() as client:
-                try:
-                    # First try a HEAD request to check if server is reachable
-                    response = await client.head(url, timeout=5.0)
-                    if response.status_code >= HTTP_ERROR_STATUS_CODE:
-                        return False, f"Server returned error status: {response.status_code}"
+    mode: str
+    tools: list[StructuredTool]
+    tool_cache: dict[str, StructuredTool]
+    protocol_info: dict[str, Any]
 
-                except httpx.TimeoutException:
-                    return False, "Connection timed out. Server may be down or unreachable."
-                except httpx.NetworkError:
-                    return False, "Network error. Could not reach the server."
-                else:
-                    return True, ""
 
-        except (httpx.HTTPError, ValueError, OSError) as e:
-            return False, f"URL validation error: {e!s}"
+# ---------------------------------------------------------------------------
+# Helper functions (split out of *update_tools* for clarity)
+# ---------------------------------------------------------------------------
 
-    async def pre_check_redirect(self, url: str | None) -> str | None:
-        """Check for redirects and return the final URL."""
-        if url is None:
-            return url
-        try:
-            async with httpx.AsyncClient(follow_redirects=False) as client:
-                response = await client.request("HEAD", url)
-                if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
-                    return response.headers.get("Location", url)
-        except (httpx.RequestError, httpx.HTTPError) as e:
-            logger.warning(f"Error checking redirects: {e}")
-        return url
 
-    async def connect_to_server(
-        self,
-        url: str | None,
-        headers: dict[str, str] | None = None,
-        timeout_seconds: int = 30,
-        sse_read_timeout_seconds: int = 30,
-    ) -> list[StructuredTool]:
-        """Connect to MCP server using SSE transport (SDK style)."""
-        from mcp.client.sse import sse_client
+def _detect_mode(server_config: dict[str, Any]) -> str:
+    """Return connection mode ("Stdio"/"SSE") inferred from *server_config*.
 
-        if headers is None:
-            headers = {}
-        if url is None:
-            msg = "URL is required for SSE mode"
-            raise ValueError(msg)
-        is_valid, error_msg = await self.validate_url(url)
-        if not is_valid:
-            msg = f"Invalid SSE URL ({url}): {error_msg}"
-            raise ValueError(msg)
+    Raises:
+        ValueError: If the configuration does not contain enough information to
+            unambiguously determine the mode.
+    """
+    if not server_config:
+        _msg = "Server configuration is empty."
+        raise ValueError(_msg)
 
-        url = await self.pre_check_redirect(url)
+    has_command = "command" in server_config
+    has_url = "url" in server_config
 
-        # Store connection parameters for later use in run_tool
-        self._connection_params = {
-            "url": url,
-            "headers": headers,
-            "timeout_seconds": timeout_seconds,
-            "sse_read_timeout_seconds": sse_read_timeout_seconds,
-        }
+    if has_command and has_url:
+        _msg = "Ambiguous server configuration - both 'command' and 'url' given."
+        raise ValueError(_msg)
+    if not has_command and not has_url:
+        _msg = "Incomplete server configuration - need either 'command' or 'url'."
+        raise ValueError(_msg)
 
-        try:
-            async with (
-                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds) as (read, write),
-                ClientSession(read, write) as session,
-            ):
-                await session.initialize()
-                response = await session.list_tools()
-                self._connected = True
-                return response.tools
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            logger.error(f"Failed to connect to MCP SSE server: {e}")
-            self._connection_params = None
-            self._connected = False
-            return []
+    return "Stdio" if has_command else "SSE"
 
-    async def disconnect(self):
-        """Properly close the connection and clean up resources."""
-        self.session = None
-        self._connection_params = None
-        self._connected = False
 
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-        """Run a tool with the given arguments.
+async def _connect_and_fetch_tools(
+    *,
+    mode: str,
+    server_config: dict[str, Any],
+    mcp_stdio_client: MCPStdioClient,
+    mcp_sse_client: MCPSseClient,
+) -> tuple[list[StructuredTool], BaseMCPClient]:
+    """Establish connection using *mode* and fetch raw tool definitions.
 
-        Args:
-            tool_name: Name of the tool to run
-            arguments: Dictionary of arguments to pass to the tool
+    Returns a tuple ``(tools, client_instance)`` so that the caller can later
+    query protocol information from the *client_instance*.
+    """
+    if mode == "Stdio":
+        command = server_config["command"]
+        args = server_config.get("args", [])
+        env = server_config.get("env", {})
+        full_command = " ".join([command, *args])
+        tools = await mcp_stdio_client.connect_to_server(full_command, env)
+        client: BaseMCPClient = mcp_stdio_client
+    elif mode == "SSE":
+        url = server_config["url"]
+        headers = _process_headers(server_config.get("headers"))
+        tools = await mcp_sse_client.connect_to_server(url, headers=headers)
+        client = mcp_sse_client
+    else:  # pragma: no cover - guarded by validation earlier
+        _msg = f"Unsupported mode: {mode}"
+        raise ValueError(_msg)
 
-        Returns:
-            The result of the tool execution
+    if not tools:
+        _msg = "No tools reported by MCP server."
+        raise ConnectionError(_msg)
 
-        Raises:
-            ValueError: If session is not initialized or tool execution fails
-        """
-        if not self._connected or not self._connection_params:
-            msg = "Session not initialized or disconnected. Call connect_to_server first."
-            raise ValueError(msg)
+    if not client._connected:  # type: ignore[attr-defined]
+        # Should not normally happen but guard against regressions in client
+        _msg = "Client reports disconnected state after connect."
+        raise ConnectionError(_msg)
 
-        try:
-            from mcp.client.sse import sse_client
-
-            params = self._connection_params
-            async with (
-                sse_client(
-                    params["url"], params["headers"], params["timeout_seconds"], params["sse_read_timeout_seconds"]
-                ) as (read, write),
-                ClientSession(read, write) as session,
-            ):
-                await session.initialize()
-                return await session.call_tool(tool_name, arguments=arguments)
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            msg = f"Failed to run tool '{tool_name}': {e}"
-            logger.error(msg)
-            # Mark as disconnected on error
-            self._connected = False
-            raise ValueError(msg) from e
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.disconnect()
+    return tools, client
 
 
 async def update_tools(
     server_name: str,
-    server_config: dict,
+    server_config: dict[str, Any],
     mcp_stdio_client: MCPStdioClient | None = None,
     mcp_sse_client: MCPSseClient | None = None,
-) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
-    """Fetch server config and update available tools."""
-    if server_config is None:
-        server_config = {}
+) -> ToolCatalogue:
+    """Return a catalogue of tools available from *server_name*.
+
+    This is a replacement for the previous implementation which used blank
+    return values to signal errors. The function now raises
+    :class:`ValueError` for configuration problems and :class:`ConnectionError`
+    for network/transport issues - callers are expected to catch these.
+    """
     if not server_name:
-        return "", [], {}
-    if mcp_stdio_client is None:
-        mcp_stdio_client = MCPStdioClient()
-    if mcp_sse_client is None:
-        mcp_sse_client = MCPSseClient()
+        _msg = "'server_name' must be provided and non-empty."
+        raise ValueError(_msg)
 
+    # Lazily construct clients if none were supplied (allowing re-use across calls)
+    mcp_stdio_client = mcp_stdio_client or MCPStdioClient()
+    mcp_sse_client = mcp_sse_client or MCPSseClient()
+
+    # 1. Determine connection mode -----------------------------------------------------------
+    mode = _detect_mode(server_config)
+
+    # 2. Validate minimal parameters ---------------------------------------------------------
+    command = server_config.get("command") if mode == "Stdio" else None
+    url = server_config.get("url") if mode == "SSE" else None
+
+    await _validate_connection_params(mode, command, url)
+
+    # 3. Establish connection & fetch tools --------------------------------------------------
+    tools, client = await _connect_and_fetch_tools(
+        mode=mode,
+        server_config=server_config,
+        mcp_stdio_client=mcp_stdio_client,
+        mcp_sse_client=mcp_sse_client,
+    )
+
+    # 4. Build LangChain StructuredTool wrappers ---------------------------------------------
+    tool_list: list[StructuredTool] = []
+    tool_cache: dict[str, StructuredTool] = {}
+
+    for tool in tools:
+        if not tool or not getattr(tool, "name", None):
+            logger.debug("Skipping invalid tool object without 'name' attribute.")
+            continue
+
+        args_schema = create_input_schema_from_json_schema(tool.inputSchema)
+
+        tool_obj = StructuredTool(
+            name=tool.name,
+            description=tool.description or "",
+            args_schema=args_schema,
+            func=create_tool_func(tool.name, args_schema, client),
+            coroutine=create_tool_coroutine(tool.name, args_schema, client),
+            tags=[tool.name],
+            metadata={"server_name": server_name},
+        )
+
+        tool_list.append(tool_obj)
+        tool_cache[tool.name] = tool_obj
+
+    if not tool_list:
+        _msg = "Successfully connected but zero tools were wrapped."
+        raise ConnectionError(_msg)
+
+    # 5. Capture protocol information --------------------------------------------------------
+    protocol_info: dict[str, Any] = {}
     try:
-        # Fetch server config from backend
-        mode = "Stdio" if "command" in server_config else "SSE" if "url" in server_config else ""
-        command = server_config.get("command", "")
-        url = server_config.get("url", "")
-        tools = []
-        headers = _process_headers(server_config.get("headers", {}))
+        protocol_info = client.get_protocol_info()
+    except NotConnectedError:  # Safeguard - should not happen after successful connect
+        logger.debug("Client not connected when attempting to fetch protocol info.")
 
-        try:
-            await _validate_connection_params(mode, command, url)
-        except ValueError as e:
-            logger.error(f"Invalid MCP server configuration for '{server_name}': {e}")
-            return "", [], {}
+    logger.info(
+        "Loaded %s tools from MCP server '%s' using mode '%s' (protocol=%s)",
+        len(tool_list),
+        server_name,
+        mode,
+        protocol_info.get("protocol_version"),
+    )
 
-        # Determine connection type and parameters
-        client: MCPStdioClient | MCPSseClient | None = None
-        try:
-            if mode == "Stdio":
-                # Stdio connection
-                args = server_config.get("args", [])
-                env = server_config.get("env", {})
-                full_command = " ".join([command, *args])
-                tools = await mcp_stdio_client.connect_to_server(full_command, env)
-                client = mcp_stdio_client
-            elif mode == "SSE":
-                # SSE connection
-                tools = await mcp_sse_client.connect_to_server(url, headers=headers)
-                client = mcp_sse_client
-            else:
-                logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")
-                return "", [], {}
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            logger.error(f"Failed to connect to MCP server '{server_name}': {e}")
-            return "", [], {}
-
-        if not tools or not client or not client._connected:
-            logger.warning(f"No tools available from MCP server '{server_name}' or connection failed")
-            return "", [], {}
-
-        tool_list = []
-        tool_cache: dict[str, StructuredTool] = {}
-        for tool in tools:
-            if not tool or not hasattr(tool, "name"):
-                continue
-            try:
-                args_schema = create_input_schema_from_json_schema(tool.inputSchema)
-                if not args_schema:
-                    logger.warning(f"Could not create schema for tool '{tool.name}' from server '{server_name}'")
-                    continue
-
-                tool_obj = StructuredTool(
-                    name=tool.name,
-                    description=tool.description or "",
-                    args_schema=args_schema,
-                    func=create_tool_func(tool.name, args_schema, client),
-                    coroutine=create_tool_coroutine(tool.name, args_schema, client),
-                    tags=[tool.name],
-                    metadata={"server_name": server_name},
-                )
-                tool_list.append(tool_obj)
-                tool_cache[tool.name] = tool_obj
-            except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-                logger.error(f"Failed to create tool '{tool.name}' from server '{server_name}': {e}")
-                continue
-
-        logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
-    except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-        logger.error(f"Unexpected error while updating tools for MCP server '{server_name}': {e}")
-        return "", [], {}
-    else:
-        return mode, tool_list, tool_cache
+    return ToolCatalogue(mode, tool_list, tool_cache, protocol_info)

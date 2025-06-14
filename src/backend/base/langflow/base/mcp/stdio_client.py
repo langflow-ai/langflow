@@ -1,0 +1,331 @@
+import asyncio
+import contextlib
+import os
+import platform
+from typing import Any, cast
+
+import aiofiles
+from anyio import Path
+from loguru import logger
+from mcp import ClientSession, StdioServerParameters, types
+from mcp.client.stdio import stdio_client
+
+from langflow.base.mcp.base_client import BaseMCPClient
+
+
+class MCPStdioClient(BaseMCPClient[dict[str, Any]]):
+    """MCP STDIO Client for process-based MCP servers.
+
+    Features improved error handling, cancellation safety, and environment support.
+    Inherits common functionality from BaseMCPClient while implementing STDIO-specific
+    connection and tool execution logic.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.timeout_seconds = 30  # default timeout
+
+    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[types.Tool]:
+        """Connect to an MCP server via STDIO transport.
+
+        Args:
+            command_str: Command to execute for the MCP server
+            env: Optional environment variables dictionary
+
+        Returns:
+            List of available tools from the server
+
+        Raises:
+            ValueError: For invalid input or command not found
+            ConnectionError: For connection failures or server errors
+        """
+        if env is None:
+            env = {}
+
+        command = command_str.split(" ")
+        # Preserve caller-provided environment variables without forcing debug mode
+        env_data: dict[str, str] = {"PATH": os.environ.get("PATH", ""), **env}
+
+        # Create platform-specific command wrapper
+        if platform.system() == "Windows":
+            # For Windows, use cmd.exe with error reporting
+            server_params = StdioServerParameters(
+                command="cmd",
+                args=["/c", f"{command_str}"],
+                env=env_data,
+            )
+        else:
+            # On Unix-like systems launch the MCP server process directly.  Rely on
+            # the process exit status reported by the underlying SDK instead of
+            # brittle stderr string parsing.
+            server_params = StdioServerParameters(
+                command=command[0],
+                args=command[1:],
+                env=env_data,
+            )
+
+        # Store connection parameters for later use
+        self._connection_params = {
+            "command_str": command_str,
+            "env": env,
+        }
+
+        # Wrap the entire connection logic to handle cancellation properly
+        try:
+            tools = await self._execute_connection(server_params, command_str)
+            self._connected = True
+        except asyncio.CancelledError as e:
+            # Ensure proper cleanup on cancellation
+            await self._safe_cleanup()
+            msg = f"MCP STDIO connection to '{command_str}' was cancelled"
+            raise ConnectionError(msg) from e
+        except Exception:
+            # Ensure cleanup on any error
+            await self._safe_cleanup()
+            self._connection_params = None
+            self._connected = False
+            raise
+        else:
+            return tools
+
+    async def _execute_connection(self, server_params: StdioServerParameters, command_str: str):
+        """Execute the STDIO connection with proper task management."""
+        # Create a temporary file to capture stderr
+        errlog_path = ""
+        async with aiofiles.tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=False) as tmp:
+            errlog_path = cast(str, tmp.name)
+            # Ensure temp file is flushed and closed for cross-platform compatibility
+            await tmp.flush()
+            await tmp.close()
+
+            # Variables for tasks created later in the connection logic
+            initializer_task = None
+
+            try:
+                # Connect to the server process without custom stderr monitoring. Any
+                # startup failure will surface via process exit status which the MCP
+                # SDK propagates as an exception during session.initialize().
+                stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
+                self.stdio, self.write = stdio_transport
+                self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+
+                if self.session is None:
+                    msg = "Session is None after initialization"
+                    raise RuntimeError(msg)
+
+                # Initialize the MCP session - this will raise if the subprocess already
+                initializer_task = asyncio.create_task(self.session.initialize())
+                await initializer_task
+
+                # Capture protocol information after successful initialization
+                self._capture_stdio_protocol_info()
+
+                response = await self.session.list_tools()
+                # Early return mandated by MCP SDK: once tools are fetched
+                # during connection we must bubble them up immediately.
+                return response.tools  # noqa: TRY300
+
+            except FileNotFoundError as e:
+                # Command not found, provide clear error message
+                msg = (
+                    f"Command not found: '{command_str.split()[0]}'. "
+                    "Please verify the command is installed and in your PATH."
+                )
+                raise ValueError(msg) from e
+            except OSError as e:
+                # Other OS errors (e.g., permission denied)
+                msg = f"Failed to start command '{command_str.split()[0]}': {e}"
+                raise ValueError(msg) from e
+            except ConnectionError:
+                # Re-raise ConnectionErrors as-is (from stderr watcher)
+                raise
+            except Exception as e:
+                msg = f"Failed to initialize MCP STDIO session with command '{command_str}': {e}"
+                logger.warning(msg)
+                raise ConnectionError(msg) from e
+            finally:
+                # Clean up the temp file with proper error suppression
+                await self._safe_file_cleanup(errlog_path)
+
+    def _capture_stdio_protocol_info(self) -> None:
+        """Capture protocol information for successful STDIO connection."""
+        from datetime import datetime, timezone
+
+        if not self.session or not hasattr(self.session, "init_result"):
+            # Fallback if init_result is not available
+            self.protocol_info = {
+                "protocol_version": "stdio",  # STDIO doesn't specify protocol version
+                "transport_type": "stdio",
+                "capabilities": {},
+                "server_info": {},
+                "last_detected": datetime.now(timezone.utc).isoformat(),
+            }
+            return
+
+        init_result = self.session.init_result
+        self.protocol_info = {
+            "protocol_version": getattr(init_result, "protocolVersion", "stdio"),
+            "transport_type": "stdio",
+            "capabilities": getattr(init_result, "capabilities", {}),
+            "server_info": getattr(init_result, "serverInfo", {}),
+            "last_detected": datetime.now(timezone.utc).isoformat(),
+        }
+        logger.debug(f"Captured STDIO protocol info: {self.protocol_info}")
+
+    async def _cleanup_tasks(self, watcher_task, initializer_task):
+        """Safely cleanup async tasks with proper cancellation handling."""
+        tasks_to_cleanup = []
+
+        if watcher_task is not None and not watcher_task.done():
+            watcher_task.cancel()
+            tasks_to_cleanup.append(watcher_task)
+
+        if initializer_task is not None and not initializer_task.done():
+            initializer_task.cancel()
+            tasks_to_cleanup.append(initializer_task)
+
+        if tasks_to_cleanup:
+            # Wait for all tasks to complete (either successfully or cancelled)
+            await asyncio.gather(*tasks_to_cleanup, return_exceptions=True)
+            logger.debug(f"Cleaned up {len(tasks_to_cleanup)} STDIO tasks")
+
+    async def _safe_file_cleanup(self, errlog_path: str):
+        """Safely clean up temporary file, suppressing cancellation errors."""
+        with contextlib.suppress(FileNotFoundError, PermissionError, asyncio.CancelledError, OSError):
+            # The surrounding task may already be cancelled; ignore
+            # cancellation during best-effort temp-file cleanup.
+            await Path(errlog_path).unlink()
+
+    async def _safe_cleanup(self):
+        """Safely cleanup the exit stack, suppressing cancellation errors."""
+        try:
+            await self.exit_stack.aclose()
+        except asyncio.CancelledError:
+            # Suppress cancellation during cleanup
+            pass
+        except (OSError, ConnectionError, ValueError) as exc:
+            logger.debug(f"Error during STDIO client cleanup: {exc}")
+
+    async def _cleanup_transport(self):
+        """Perform STDIO-specific cleanup operations."""
+        # STDIO client doesn't have additional transport-specific cleanup beyond what _safe_cleanup does
+        # But we can call it to ensure proper cleanup
+        await self._safe_cleanup()
+
+    async def _execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+        """Execute a tool using the active persistent STDIO session.
+
+        Args:
+            tool_name: Name of the tool to execute
+            arguments: Dictionary of arguments for the tool
+
+        Returns:
+            Result of the tool execution
+
+        Raises:
+            ValueError: For invalid tool parameters or execution failures
+        """
+        try:
+            # Fast-path: reuse persistent session when connected
+            if self.session is not None and self._connected:
+                result = await self.session.call_tool(tool_name, arguments=arguments)
+            else:
+                # Fall back to one-off process execution to preserve backward
+                # compatibility with tests and callers that only performed an
+                # initial parameter validation without establishing a long-lived
+                # session.
+
+                params = self._connection_params
+                if params is None:
+                    msg = "Connection parameters are None"
+                    raise ValueError(msg)
+
+                command_str = params["command_str"]
+                env = params["env"]
+
+                command = command_str.split(" ")
+                env_data: dict[str, str] = {"PATH": os.environ.get("PATH", ""), **env}
+
+                if platform.system() == "Windows":
+                    server_params = StdioServerParameters(
+                        command="cmd",
+                        args=["/c", f"{command_str}"],
+                        env=env_data,
+                    )
+                else:
+                    server_params = StdioServerParameters(
+                        command=command[0],
+                        args=command[1:],
+                        env=env_data,
+                    )
+
+                async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
+                    await session.initialize()
+                    result = await session.call_tool(tool_name, arguments=arguments)
+
+            # Normalised primitive result - early return keeps control-flow
+            # flat and is clearer than nesting with an else branch.
+            return result  # noqa: TRY300
+
+        except (ConnectionError, TimeoutError, OSError) as e:
+            # Local transport-level failures - wrap with helpful context
+            msg = f"Failed to run tool '{tool_name}': {e}"
+            logger.error(msg)
+            self._connected = False
+            raise ValueError(msg) from e
+
+        # -- Remote / JSON-RPC errors ---------------------------------------------------
+        # NOTE:  AnyIO's TaskGroup wraps remote exceptions in an ExceptionGroup starting
+        # from Python 3.11.  We attempt to unwrap such groups so the caller can inspect
+        # the original error message (e.g. 'validation', 'runtime', 'timeout').
+        except Exception as exc:
+            root_exc = self._unwrap_exception_group(exc)
+
+            # If unwrapping changed the exception, re-raise the underlying remote error
+            # so callers (and tests) can assert on its message. Otherwise, propagate as-is.
+            if root_exc is not exc:
+                raise root_exc from None
+
+            # Otherwise propagate the original exception untouched.
+            raise
+
+    def _unwrap_exception_group(self, err: BaseException) -> BaseException:
+        """Helper to recursively drill down the first non-group exception.
+
+        Python ≥3.11: ExceptionGroup wrapping from AnyIO's TaskGroup.
+        """
+        # Python ≥3.11: ExceptionGroup
+        inner = getattr(err, "exceptions", None)
+        if inner:
+            return self._unwrap_exception_group(inner[0])
+        # Fallback: look at __cause__ chain
+        if err.__cause__ is not None and err.__cause__ is not err:
+            return self._unwrap_exception_group(err.__cause__)
+        return err
+
+    async def list_tools(self):
+        """Return the list of available tools from the active STDIO session."""
+        if self.session is None or not self._connected:
+            msg = "Not connected to any MCP STDIO server. Call connect_to_server() first."
+            raise RuntimeError(msg)
+
+        try:
+            response = await self.session.list_tools()
+        except (ConnectionError, OSError, asyncio.TimeoutError, ValueError) as exc:
+            # Transport-level failures when listing tools - expected during connectivity issues
+            logger.error(f"Failed to list tools via STDIO transport: {exc}")
+            return []
+
+        if hasattr(response, "tools"):
+            return response.tools  # type: ignore[attr-defined]
+        if isinstance(response, dict) and "tools" in response:
+            return response["tools"]
+        return response
+
+    async def call_tool(self, name: str, arguments: dict):
+        """Public helper mirroring *MCPSseClient.call_tool*.
+
+        Delegates to :pyfunc:`_execute_tool` which reuses the persistent
+        MCP session established by connect_to_server().
+        """
+        return await self._execute_tool(name, arguments)

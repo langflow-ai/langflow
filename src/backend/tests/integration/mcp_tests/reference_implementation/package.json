@@ -1,0 +1,10 @@
+{
+  "name": "langflow-mcp-reference",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest",
+    "express": "^4.19.0",
+    "zod": "^3.23.8"
+  }
+} 

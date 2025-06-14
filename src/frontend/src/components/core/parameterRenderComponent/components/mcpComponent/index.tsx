@@ -6,6 +6,7 @@ import { cn } from "../../../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { InputProps } from "../../types";
+import HelperTextComponent from "../helperTextComponent";
 
 export default function McpComponent({
   value,
@@ -13,6 +14,8 @@ export default function McpComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
+  helperText,
+  helperMetadata,
 }: InputProps<string, any>): JSX.Element {
   const { data: mcpServers } = useGetMCPServers();
   const options = useMemo(
@@ -114,6 +117,12 @@ export default function McpComponent({
             onAddButtonClick={handleAddButtonClick}
           />
         </>
+      )}
+      {helperText && (
+        <HelperTextComponent
+          helperText={helperText}
+          helperMetadata={helperMetadata}
+        />
       )}
       <AddMcpServerModal
         open={addOpen}
