@@ -6,6 +6,22 @@ import remarkGfm from "remark-gfm";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
+import { api } from "@/controllers/API/api";
+import { createForm } from '@formily/core'
+import { FormProvider, createSchemaField } from '@formily/react'
+import {
+  FormItem,
+  Input,
+  ArrayTable,
+  FormButtonGroup,
+  Submit,
+  Select,
+  Switch,
+  Radio,
+  NumberPicker,
+} from '@formily/antd-v5'
+import { Rate } from "antd";
+
 
 export default function ContentDisplay({
   content,
@@ -253,6 +269,43 @@ export default function ContentDisplay({
             />
           ))}
           {content.caption && <div>{content.caption}</div>}
+        </div>
+      );
+      break;
+
+    case "hil":
+      const flow_id = content.data.flow_id.trim()
+      const run_id = content.data.run_id.trim()
+      const form_schema = content.data.form_schema
+      
+      const form = createForm()
+      let SchemaField = createSchemaField({
+        components: {
+          Input,
+          ArrayTable,
+          FormButtonGroup,
+          Submit,
+          Select,
+          Switch,
+          Radio,
+          FormItem,
+          Rate,
+          NumberPicker,
+        }
+      })
+      
+      let handleSubmit = () => {
+        api.post(`/api/v1/hil_submit/${flow_id}/${run_id}`, form.values)
+      }
+
+      contentData = (
+        <div>
+          <FormProvider form={form}>
+            <div>
+              <SchemaField schema={form_schema} />
+            </div>
+            <Submit onClick={handleSubmit}>Submit</Submit>
+          </FormProvider>
         </div>
       );
       break;
