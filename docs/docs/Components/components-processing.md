@@ -112,7 +112,7 @@ All operations in the component require at least one [Data](/concepts-objects#da
 For example, send this request to the **Webhook** component.
 Replace `YOUR_FLOW_ID` with your flow ID.
 ```bash
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
   "id": 1,
@@ -205,7 +205,7 @@ This example connects a **Webhook** component to convert `text` and `data` into 
 Replace `YOUR_FLOW_ID` with your flow ID.
 This example uses the default Langflow server address.
 ```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
     "text": "Alex Cruz - Employee Profile",
@@ -227,7 +227,7 @@ The **Data to DataFrame** component converts the webhook request into a `DataFra
 
 5. Send another employee data object.
 ```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
     "text": "Kalani Smith - Employee Profile",
@@ -446,7 +446,7 @@ For example, if the selected `file_format` is `csv`, and you enter `file_path` a
 Replace `YOUR_FLOW_ID` with your flow ID.
 This example uses the default Langflow server address.
 ```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
     "Name": ["Alex Cruz", "Kalani Smith", "Noam Johnson"],

@@ -19,7 +19,7 @@ If you set a custom session ID in a payload, all downstream components use the u
 
 ```
 curl --request POST \
-  --url 'http://127.0.0.1:7860/api/v1/run/$FLOW_ID' \
+  --url 'http://localhost:7860/api/v1/run/$FLOW_ID' \
   --header 'Content-Type: application/json' \
   --data '{
   "input_value": "Hello",
