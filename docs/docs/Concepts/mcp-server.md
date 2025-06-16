@@ -1,5 +1,5 @@
 ---
-title: Model Context Protocol (MCP) server
+title:  Use Langflow as an MCP server
 slug: /mcp-server
 ---
 
@@ -8,8 +8,10 @@ import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) as both an MCP server and an MCP client.
-This page describes how to use Langflow as an *MCP server*.
-For information about using Langflow as an *MCP client*, see the [MCP connection component](/components-tools#mcp-connection).
+
+This page describes how to use Langflow as an MCP server.
+
+For information about using Langflow as an MCP client, see [Use Langflow as an MCP client](../Components/mcp-client.md).
 
 As an MCP server, Langflow exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use use to take actions.
 
@@ -350,5 +352,5 @@ To find your NPX path, run `which npx`.
 
 ## See also
 
-- [MCP connection component](../Components/components-tools.md#mcp-connection)
+- [Use Langflow as an MCP client](../Components/mcp-client.md)
 - [Use a DataStax Astra DB MCP server](../Integrations/mcp-component-astra.md)

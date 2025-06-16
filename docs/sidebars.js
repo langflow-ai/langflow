@@ -78,6 +78,7 @@ module.exports = {
       label: "Model Context Protocol (MCP)",
       items: [
         "Concepts/mcp-server",
+        "Components/mcp-client",
       ],
     },
     {
