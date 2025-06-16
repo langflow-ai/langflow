@@ -6,3 +6,5 @@ curl --request POST \
 		           "input_type": "chat",
 		           "input_value": "hello world!"
 		         }'
+
+# A 200 response confirms the call succeeded.

@@ -8,13 +8,6 @@ def ask_agent(question):
         "output_type": "chat",
         "input_type": "chat",
         "input_value": question,
-        "tweaks": {
-            "Agent-ZOknz": {
-                "agent_llm": "Groq",
-                "api_key": "GROQ_API_KEY",
-                "model_name": "llama-3.1-8b-instant"
-            }
-        }
     }
 
     headers = {"Content-Type": "application/json"}
