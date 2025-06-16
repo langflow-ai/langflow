@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from langflow.base.data import BaseFileComponent
 from langflow.inputs import IntInput, NestedDictInput, StrInput
+from langflow.inputs.inputs import FloatInput
 from langflow.schema import Data
 
 
@@ -70,6 +71,13 @@ class DoclingRemoteComponent(BaseFileComponent):
             advanced=True,
             value=2,
         ),
+        FloatInput(
+            name="max_poll_timeout",
+            display_name="Maximum poll time",
+            info="Maximum waiting time for the document conversion to complete.",
+            advanced=True,
+            value=3600,
+        ),
         NestedDictInput(
             name="api_headers",
             display_name="HTTP headers",
@@ -110,17 +118,34 @@ class DoclingRemoteComponent(BaseFileComponent):
             task = response.json()
 
             http_failures = 0
-            retry_status_code = 500
+            retry_status_start = 500
+            retry_status_end = 600
+            start_wait_time = time.monotonic()
             while task["task_status"] not in ("success", "failure"):
+                # Check if processing exceeds the maximum poll timeout
+                processing_time = time.monotonic() - start_wait_time
+                if processing_time >= self.max_poll_timeout:
+                    msg = (
+                        f"Processing time {processing_time=} exceeds the maximum poll timeout {self.max_poll_timeout=}."
+                        "Please increase the max_poll_timeout parameter or review why the processing "
+                        "takes long on the server."
+                    )
+                    self.log(msg)
+                    raise RuntimeError(msg)
+
+                # Call for a new status update
                 time.sleep(2)
                 response = client.get(f"{base_url}/status/poll/{task['task_id']}")
-                if response.status_code >= retry_status_code:
+
+                # Check if the status call gets into 5xx errors and retry
+                if retry_status_start <= response.status_code < retry_status_end:
                     http_failures += 1
                     if http_failures > self.MAX_500_RETRIES:
                         self.log(f"The status requests got a http response {response.status_code} too many times.")
                         return None
                     continue
 
+                # Update task status
                 task = response.json()
 
             result_resp = client.get(f"{base_url}/result/{task['task_id']}")
