@@ -321,30 +321,17 @@ def custom_params(
 
 
 async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | None) -> tuple[User, uuid.UUID]:
-    """Verify a public flow request and generate a deterministic flow ID.
-
-    This utility function:
-    1. Checks that a client_id cookie is provided
-    2. Verifies the flow exists and is marked as PUBLIC
-    3. Creates a deterministic UUID based on client_id and original flow_id
-    4. Retrieves the flow owner user for permission purposes
-
-    This function is used to support public flow endpoints that don't require
-    authentication but still need to operate within the permission model.
-
+    """
+    Validates a public flow request and returns the flow owner and a deterministic flow ID.
+    
+    Checks that a client ID is provided, verifies the flow exists and is public, generates a deterministic UUID based on the client and flow IDs, and retrieves the flow owner's user object. Raises an HTTPException if any validation fails.
+    
     Args:
-        flow_id: The original flow ID to verify
-        client_id: The client ID from the request cookie
-
+        flow_id: The UUID of the flow to verify.
+        client_id: The client identifier from the request cookie.
+    
     Returns:
-        tuple: (flow owner user, deterministic flow ID for tracking)
-
-    Raises:
-        HTTPException:
-            - 400 if no client_id is provided
-            - 403 if flow doesn't exist or isn't public
-            - 403 if unable to retrieve the flow owner user
-            - 403 if user is not found for public flow
+        A tuple containing the flow owner user and a deterministic flow ID for tracking.
     """
     if not client_id:
         raise HTTPException(status_code=400, detail="No client_id cookie found")
@@ -381,6 +368,12 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
 
 
 def get_voice_mode_enabled() -> bool:
+    """
+    Checks if voice mode is enabled by verifying the presence of the `webrtcvad` package.
+    
+    Returns:
+        True if `webrtcvad` is installed and importable; otherwise, False.
+    """
     try:
         import webrtcvad  # noqa: F401
     except ImportError:

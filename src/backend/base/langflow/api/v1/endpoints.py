@@ -746,6 +746,11 @@ async def custom_component_update(
 
 @router.get("/config", response_model=ConfigResponse)
 async def get_config():
+    """
+    Retrieves the application's configuration settings.
+    
+    Returns a dictionary containing feature flags, application settings, and the voice mode enabled status. Raises an HTTP 500 error if configuration retrieval fails.
+    """
     try:
         settings_service: SettingsService = get_settings_service()
 
