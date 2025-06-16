@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "raw-loader": "^4.0.2"
+  }
+}
