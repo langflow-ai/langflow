@@ -29,6 +29,8 @@ export type FlowsManagerStoreType = {
   IOModalOpen: boolean;
   setIOModalOpen: (IOModalOpen: boolean) => void;
   resetStore: () => void;
+  voiceModeEnabled: boolean;
+  setVoiceModeEnabled: (voiceModeEnabled: boolean) => void;
 };
 
 export type UseUndoRedoOptions = {
