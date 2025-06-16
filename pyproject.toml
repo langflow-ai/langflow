@@ -238,7 +238,7 @@ filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-markers = ["async_test", "api_key_required", "no_blockbuster", "benchmark"]
+markers = ["async_test", "api_key_required", "no_blockbuster", "benchmark", "no_leaks"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
