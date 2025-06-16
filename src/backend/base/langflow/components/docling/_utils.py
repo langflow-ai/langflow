@@ -11,8 +11,10 @@ def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_ke
             msg = "DataFrame is empty"
             raise TypeError(msg)
 
+        if doc_key not in data_inputs.columns:
+            raise TypeError(f"Column '{doc_key}' not found in DataFrame")
         try:
-            documents = data_inputs[doc_key].to_list()
+            documents = data_inputs[doc_key].tolist()
         except Exception as e:
             msg = f"Error extracting DoclingDocument from DataFrame: {e}"
             raise TypeError(msg) from e
