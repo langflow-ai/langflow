@@ -189,7 +189,7 @@ class Settings(BaseSettings):
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
     # Config
-    host: str = "127.0.0.1"
+    host: str = "localhost"
     """The host on which Langflow will run."""
     port: int = 7860
     """The port on which Langflow will run."""
