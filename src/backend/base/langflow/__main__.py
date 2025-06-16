@@ -377,10 +377,9 @@ def get_best_access_host(host: str, port: int) -> str:
 
     if host != "localhost" and can_connect("localhost", port):
         return "localhost"
-    elif can_connect(host, port):
+    if can_connect(host, port):
         return host
-    else:
-        return "localhost"
+    return "localhost"
 
 
 def get_letter_from_version(version: str) -> str | None:
