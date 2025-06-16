@@ -69,7 +69,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
         data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
       );
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
-      setVoiceModeEnabled(data.voice_mode_enabled);
+      setVoiceModeEnabled(Boolean(data.voice_mode_enabled));
     }
     return data;
   };
