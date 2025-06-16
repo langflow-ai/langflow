@@ -73,13 +73,13 @@ export default function SessionSelector({
         {
           onSuccess: () => {
             if (isVisible) {
-              updateVisibleSession(editedSession);
+              updateVisibleSession(editedSession.trim());
             }
             if (
               selectedView?.type === "Session" &&
               selectedView?.id === session
             ) {
-              setSelectedView({ type: "Session", id: editedSession });
+              setSelectedView({ type: "Session", id: editedSession.trim() });
             }
           },
         },
@@ -132,7 +132,6 @@ export default function SessionSelector({
       data-testid="session-selector"
       onClick={(e) => {
         setNewSessionCloseVoiceAssistant(true);
-        setNewChatOnPlayground(true);
         if (isEditing) e.stopPropagation();
         else toggleVisibility();
       }}

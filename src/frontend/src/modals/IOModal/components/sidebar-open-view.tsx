@@ -76,7 +76,7 @@ export const SidebarOpenView = ({
                 setvisibleSession(session);
               }}
               toggleVisibility={() => {
-                setActiveSession(session);
+                setvisibleSession(session);
               }}
               isVisible={visibleSession === session}
               inspectSession={(session) => {
