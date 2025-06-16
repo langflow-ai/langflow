@@ -101,9 +101,14 @@ export default function IOModal({
 
   useEffect(() => {
     if (sessionsFromDb && !sessionsLoading) {
-      setSessions(sessionsFromDb.sessions);
+      const sessions = [...sessionsFromDb.sessions];
+      // Always include the currentFlowId as the default session if it's not already present
+      if (!sessions.includes(currentFlowId)) {
+        sessions.unshift(currentFlowId);
+      }
+      setSessions(sessions);
     }
-  }, [sessionsFromDb, sessionsLoading]);
+  }, [sessionsFromDb, sessionsLoading, currentFlowId]);
 
   useEffect(() => {
     setIOModalOpen(open);
@@ -126,7 +131,15 @@ export default function IOModal({
           });
           deleteSession(session_id);
           if (visibleSession === session_id) {
-            setvisibleSession(undefined);
+            // After deleting the visible session, check if other sessions exist
+            const remainingSessions = sessions.filter((s) => s !== session_id);
+            if (remainingSessions.length > 0) {
+              // If other sessions exist, set the first one as visible
+              setvisibleSession(remainingSessions[0]);
+            } else {
+              // If no other sessions exist, default to currentFlowId (Default Session)
+              setvisibleSession(currentFlowId);
+            }
           }
         },
         onError: () => {
@@ -225,9 +238,7 @@ export default function IOModal({
 
   useEffect(() => {
     if (!visibleSession) {
-      setSessionId(
-        `Session ${new Date().toLocaleString("en-US", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, second: "2-digit", timeZone: "UTC" })}`,
-      );
+      setSessionId(currentFlowId);
       setCurrentSessionId(currentFlowId);
     } else if (visibleSession) {
       setSessionId(visibleSession);

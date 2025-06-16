@@ -36,6 +36,12 @@ export const useGetSessionsFromFlowQuery: useQueryFunctionType<
         data.map((msg: any) => msg.session_id).filter(Boolean),
       );
       const sessionIds = Array.from(sessionIdsSet);
+
+      // Always include the flow ID as the default session if it's not already present
+      if (id && !sessionIds.includes(id)) {
+        sessionIds.unshift(id);
+      }
+
       return {
         data: sessionIds,
       };
