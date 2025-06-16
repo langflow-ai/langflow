@@ -11,7 +11,7 @@ def ask_agent(question):
         "tweaks": {
             "Agent-ZOknz": {
                 "agent_llm": "Groq",
-                "api_key": "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",
+                "api_key": "GROQ_API_KEY",
                 "model_name": "llama-3.1-8b-instant"
             }
         }
