@@ -536,7 +536,7 @@ def build_custom_components(components_paths: list[str]):
         return {}
 
     logger.info(f"Building custom components from {components_paths}")
-    
+
     custom_components_from_file: dict = {}
     processed_paths = set()
     for path in components_paths:

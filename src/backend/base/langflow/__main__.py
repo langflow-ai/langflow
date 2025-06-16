@@ -67,7 +67,7 @@ def _shutdown_webapp_process():
     """Gracefully shutdown the webapp process."""
     global webapp_process
     if webapp_process and webapp_process.is_alive():
-        # Just terminate the process - the actual shutdown progress is handled 
+        # Just terminate the process - the actual shutdown progress is handled
         # by the FastAPI lifespan context in main.py
         webapp_process.terminate()
         # The long wait allows the process to finish setup, preventing it from
@@ -237,11 +237,11 @@ def run(
         os.environ["LANGFLOW_LOG_LEVEL"] = os.environ.get("LANGFLOW_LOG_LEVEL").lower()
 
     configure(log_level=log_level, log_file=log_file)
-    
+
     # Create progress indicator (show verbose timing if log level is DEBUG)
     verbose = log_level == "debug"
     progress = create_langflow_progress(verbose=verbose)
-    
+
     # Step 0: Initializing Langflow
     with progress.step(0):
         logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
@@ -279,7 +279,9 @@ def run(
         log_level = settings_service.settings.log_level
         frontend_path = settings_service.settings.frontend_path
         backend_only = settings_service.settings.backend_only
-        ssl_cert_file_path = settings_service.settings.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
+        ssl_cert_file_path = (
+            settings_service.settings.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
+        )
         ssl_key_file_path = settings_service.settings.ssl_key_file if ssl_key_file_path is None else ssl_key_file_path
 
         # create path object if frontend_path is provided
@@ -327,6 +329,7 @@ def run(
         else:
             # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
             from langflow.server import LangflowApplication
+
             options = {
                 "bind": f"{host}:{port}",
                 "workers": get_number_of_workers(workers),
