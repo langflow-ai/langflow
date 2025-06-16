@@ -47,7 +47,7 @@ class ChunkDoclingDocumentComponent(Component):
     def chunk_documents(self) -> list[Data]:
         from docling.chunking import BaseChunker, DocMeta, HierarchicalChunker, HybridChunker
 
-        from ._utils import extract_docling_documents
+        from langflow.components.docling._utils import extract_docling_documents
 
         documents = extract_docling_documents(self.data_inputs, self.doc_key)
 

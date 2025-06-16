@@ -66,7 +66,7 @@ class ExportDoclingDocumentComponent(Component):
     def export_document(self) -> list[Data]:
         from docling_core.types.doc import ImageRefMode
 
-        from ._utils import extract_docling_documents
+        from langflow.components.docling._utils import extract_docling_documents
 
         documents = extract_docling_documents(self.data_inputs, self.doc_key)
 
