@@ -61,7 +61,7 @@ python -m langflow run
 </TabItem>
 </Tabs>
 
-3. To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
+3. To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://localhost:7860`.
 
 After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
 

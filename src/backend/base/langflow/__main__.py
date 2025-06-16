@@ -8,6 +8,7 @@ import sys
 import time
 import warnings
 from contextlib import suppress
+from ipaddress import ip_address
 from pathlib import Path
 
 import click
@@ -326,7 +327,6 @@ def run(
         else:
             # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
             from langflow.server import LangflowApplication
-
             options = {
                 "bind": f"{host}:{port}",
                 "workers": get_number_of_workers(workers),
@@ -336,7 +336,6 @@ def run(
                 "log_level": log_level.lower(),
             }
             server = LangflowApplication(app, options)
-
             webapp_process = Process(target=server.run)
             webapp_process.start()
 
@@ -390,6 +389,80 @@ def get_free_port(port):
     while is_port_in_use(port):
         port += 1
     return port
+
+
+def is_loopback_address(host: str) -> bool:
+    """Check if a host is a loopback address (localhost, 127.0.0.1, ::1, etc.).
+
+    Args:
+        host: The host address to check
+
+    Returns:
+        bool: True if the host is a loopback address, False otherwise
+    """
+    # Check if it's exactly "localhost"
+    if host == "localhost":
+        return True
+
+    # Check if it's exactly "0.0.0.0" (which binds to all interfaces)
+    if host == "0.0.0.0":  # noqa: S104
+        return True
+
+    try:
+        # Convert string to IP address object
+        ip = ip_address(host)
+        # Check if it's a loopback address (127.0.0.0/8 for IPv4, ::1 for IPv6)
+        return bool(ip.is_loopback)
+    except ValueError:
+        # If the IP address is invalid, default to False
+        return False
+
+
+def get_best_access_host(host: str, port: int) -> str:
+    """Get the best host to use for accessing the server.
+
+    For loopback addresses, we prefer 'localhost' over IP addresses like '127.0.0.1'
+    because 'localhost' is more universally supported across different operating systems
+    and network configurations.
+
+    Args:
+        host: The original host address
+        port: The port number
+        protocol: The protocol (http or https)
+
+    Returns:
+        str: The best host address to use for access
+    """
+    if not is_loopback_address(host):
+        return host
+
+    # For loopback addresses, prefer localhost
+    preferred_host = "localhost"
+
+    # Test connectivity to both localhost and the original host if it's different
+    if host != preferred_host:
+        # Test if localhost works
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(1)  # 1 second timeout
+                result = s.connect_ex((preferred_host, port))
+                if result == 0:
+                    return preferred_host
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Failed to connect to {preferred_host}:{port}: {exc}")
+
+        # If localhost doesn't work, test the original host
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(1)  # 1 second timeout
+                result = s.connect_ex((host, port))
+                if result == 0:
+                    return host
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Failed to connect to {host}:{port}: {exc}")
+
+    # Default to localhost for loopback addresses
+    return preferred_host
 
 
 def get_letter_from_version(version: str) -> str | None:
@@ -491,7 +564,7 @@ def print_banner(host: str, port: int, protocol: str) -> None:
             "To contribute, set: [bold]DO_NOT_TRACK=false[/bold] in your environment."
         )
     )
-    access_host = host if host != "0.0.0.0" else "localhost"  # noqa: S104
+    access_host = get_best_access_host(host, port)
     access_link = f"[bold]🟢 Open Langflow →[/bold] [link={protocol}://{access_host}:{port}]{protocol}://{access_host}:{port}[/link]"
 
     message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
