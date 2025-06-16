@@ -11,13 +11,13 @@ Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontext
 
 This page describes how to use Langflow as an MCP server.
 
-For information about using Langflow as an MCP client, see [Use Langflow as an MCP client](../Components/mcp-client.md).
+For information about using Langflow as an MCP client, see [Use Langflow as an MCP client](/mcp-client).
 
 As an MCP server, Langflow exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use use to take actions.
 
 ## Prerequisites
 
-* A Langflow project with at least one flow created.
+* A Langflow project with at least one flow.
 
 * Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer to use MCP Inspector to [test and debug flows](#test-and-debug-flows).
 
@@ -352,5 +352,5 @@ To find your NPX path, run `which npx`.
 
 ## See also
 
-- [Use Langflow as an MCP client](../Components/mcp-client.md)
-- [Use a DataStax Astra DB MCP server](../Integrations/mcp-component-astra.md)
+- [Use Langflow as an MCP client](/mcp-client)
+- [Use a DataStax Astra DB MCP server](/mcp-component-astra)
