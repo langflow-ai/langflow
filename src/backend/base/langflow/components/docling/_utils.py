@@ -12,7 +12,8 @@ def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_ke
             raise TypeError(msg)
 
         if doc_key not in data_inputs.columns:
-            raise TypeError(f"Column '{doc_key}' not found in DataFrame")
+            msg = f"Column '{doc_key}' not found in DataFrame"
+            raise TypeError(msg)
         try:
             documents = data_inputs[doc_key].tolist()
         except Exception as e:
@@ -33,7 +34,9 @@ def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_ke
                 documents = [
                     input_.data[doc_key]
                     for input_ in data_inputs
-                    if isinstance(input_, Data) and doc_key in input_.data
+                    if isinstance(input_, Data)
+                    and doc_key in input_.data
+                    and isinstance(input_.data[doc_key], DoclingDocument)
                 ]
                 if not documents:
                     msg = f"No valid Data inputs found in {type(data_inputs)}"
