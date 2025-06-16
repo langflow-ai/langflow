@@ -350,39 +350,31 @@ def run(
             }
             server = LangflowApplication(app, options)
 
-        # if platform.system() == "Windows":
-        #     # Uvicorn is a blocking process, so we need to print the summary and banner before starting
-        #     progress.print_summary()
-        #     print_banner(host, port, protocol)
-        #     webapp_process = Process(target=server.run)
-        #     webapp_process.start()
-        # else:
-    if True:
-        webapp_process = Process(target=server.run)
-        webapp_process.start()
+    webapp_process = Process(target=server.run)
+    webapp_process.start()
 
-        # Wait for server to be ready
-        wait_for_server_ready(host, port, protocol)
+    # Wait for server to be ready
+    wait_for_server_ready(host, port, protocol)
 
-        # Print summary and banner after server is ready
-        progress.print_summary()
-        print_banner(host, port, protocol)
+    # Print summary and banner after server is ready
+    progress.print_summary()
+    print_banner(host, port, protocol)
 
-        # Handle browser opening
-        if open_browser and not backend_only:
-            click.launch(f"{protocol}://{host}:{port}")
+    # Handle browser opening
+    if open_browser and not backend_only:
+        click.launch(f"{protocol}://{host}:{port}")
 
-        try:
+    try:
+        webapp_process.join()
+    except KeyboardInterrupt:
+        # SIGINT should be handled by the signal handler, but leaving here for safety
+        logger.warning("KeyboardInterrupt caught in main thread")
+        _shutdown_webapp_process()
+    finally:
+        # Ensure cleanup happens
+        if webapp_process and webapp_process.is_alive():
+            webapp_process.terminate()
             webapp_process.join()
-        except KeyboardInterrupt:
-            # SIGINT should be handled by the signal handler, but leaving here for safety
-            logger.warning("KeyboardInterrupt caught in main thread")
-            _shutdown_webapp_process()
-        finally:
-            # Ensure cleanup happens
-            if webapp_process and webapp_process.is_alive():
-                webapp_process.terminate()
-                webapp_process.join()
 
 
 def is_port_in_use(port, host="localhost"):
