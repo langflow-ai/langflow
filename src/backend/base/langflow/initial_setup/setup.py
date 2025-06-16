@@ -907,9 +907,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
         new_folder = await get_or_create_starter_folder(session)
         starter_projects = await load_starter_projects()
 
-        do_update_starter_projects = (
-            os.environ.get("LANGFLOW_UPDATE_STARTER_PROJECTS", "true").lower() == "true"
-        )
+        do_update_starter_projects = os.environ.get("LANGFLOW_UPDATE_STARTER_PROJECTS", "true").lower() == "true"
 
         if do_update_starter_projects:
             logger.debug("Updating starter projects")
