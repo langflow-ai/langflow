@@ -9,10 +9,12 @@ from langflow.base.models.model_input_constants import (
     MODELS_METADATA,
 )
 from langflow.base.models.model_utils import get_model_name
-from langflow.components.helpers import CurrentDateComponent
+from langflow.components.helpers.current_date import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
+from langflow.field_typing import Tool
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.logging import logger
 from langflow.schema.dotdict import dotdict
@@ -85,16 +87,12 @@ class AgentComponent(ToolCallingAgentComponent):
                     msg = "CurrentDateComponent must be converted to a StructuredTool"
                     raise TypeError(msg)
                 self.tools.append(current_date_tool)
-
-            # Validate tools
-            if not self.tools:
-                msg = "Tools are required to run the agent. Please add at least one tool."
-                raise ValueError(msg)
+            # note the tools are not required to run the agent, hence the validation removed.
 
             # Set up and run agent
             self.set(
                 llm=llm_model,
-                tools=self.tools,
+                tools=self.tools or [],
                 chat_history=self.chat_history,
                 input_value=self.input_value,
                 system_prompt=self.system_prompt,
@@ -144,7 +142,10 @@ class AgentComponent(ToolCallingAgentComponent):
             raise ValueError(msg) from e
 
     def _build_llm_model(self, component, inputs, prefix=""):
-        model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
+        model_kwargs = {}
+        for input_ in inputs:
+            if hasattr(self, f"{prefix}{input_.name}"):
+                model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
         return component.set(**model_kwargs).build_model()
 
     def set_component_params(self, component):
@@ -268,3 +269,16 @@ class AgentComponent(ToolCallingAgentComponent):
                         component_class, build_config, field_value, "model_name"
                     )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
+
+    async def _get_tools(self) -> list[Tool]:
+        component_toolkit = _get_component_toolkit()
+        tools_names = self._build_tools_names()
+        agent_description = self.get_tool_description()
+        # TODO: Agent Description Depreciated Feature to be removed
+        description = f"{agent_description}{tools_names}"
+        tools = component_toolkit(component=self).get_tools(
+            tool_name="Call_Agent", tool_description=description, callbacks=self.get_langchain_callbacks()
+        )
+        if hasattr(self, "tools_metadata"):
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+        return tools

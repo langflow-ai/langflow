@@ -72,7 +72,7 @@ If it detects a supported environment variable, then it automatically adopts the
     LANGFLOW_DEV=false
     LANGFLOW_FALLBACK_TO_ENV_VAR=false
     LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5
-    LANGFLOW_HOST=127.0.0.1
+    LANGFLOW_HOST=localhost
     LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
     LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000
     LANGFLOW_LOG_LEVEL=error
@@ -191,11 +191,12 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_DB_MAX_OVERFLOW"/><span class="env-prefix">LANGFLOW_</span>DB_MAX_OVERFLOW | Integer | `20` | **DEPRECATED:** Use <span class="env-prefix">LANGFLOW_</span>DB_CONNECTION_SETTINGS instead. The number of connections to allow that can be opened beyond the pool size. |
 | <Link id="LANGFLOW_DB_CONNECT_TIMEOUT"/><span class="env-prefix">LANGFLOW_</span>DB_CONNECT_TIMEOUT | Integer | `20` | The number of seconds to wait before giving up on a lock to be released or establishing a connection to the database. |
 | <Link id="LANGFLOW_DB_CONNECTION_SETTINGS"/><span class="env-prefix">LANGFLOW_</span>DB_CONNECTION_SETTINGS | JSON | Not set | A JSON dictionary to centralize database connection parameters. Example: `{"pool_size": 10, "max_overflow": 20}` |
+| <Link id="LANGFLOW_DISABLE_TRACK_APIKEY_USAGE"/><span class="env-prefix">LANGFLOW_</span>DISABLE_TRACK_APIKEY_USAGE | Boolean | `false` | If set to `true`, disables tracking of API key usage (`total_uses` and `last_used_at`) to avoid database contention under high concurrency. |
 | <Link id="LANGFLOW_ENABLE_LOG_RETRIEVAL"/><span class="env-prefix">LANGFLOW_</span>ENABLE_LOG_RETRIEVAL | Boolean | `false` | Enable log retrieval functionality. |
 | <Link id="LANGFLOW_FALLBACK_TO_ENV_VAR"/><span class="env-prefix">LANGFLOW_</span>FALLBACK_TO_ENV_VAR | Boolean | `true` | If enabled, [global variables](../Configuration/configuration-global-variables.md) set in the Langflow UI fall back to an environment variable with the same name when Langflow fails to retrieve the variable value. |
 | <Link id="LANGFLOW_FRONTEND_PATH"/><span class="env-prefix">LANGFLOW_</span>FRONTEND_PATH | String | `./frontend` | Path to the frontend directory containing build files. This is for development purposes only.<br/>See [`--frontend-path` option](./configuration-cli.md#run-frontend-path). |
 | <Link id="LANGFLOW_HEALTH_CHECK_MAX_RETRIES"/><span class="env-prefix">LANGFLOW_</span>HEALTH_CHECK_MAX_RETRIES | Integer | `5` | Set the maximum number of retries for the health check.<br/>See [`--health-check-max-retries` option](./configuration-cli.md#run-health-check-max-retries). |
-| <Link id="LANGFLOW_HOST"/><span class="env-prefix">LANGFLOW_</span>HOST | String | `127.0.0.1` | The host on which the Langflow server will run.<br/>See [`--host` option](./configuration-cli.md#run-host). |
+| <Link id="LANGFLOW_HOST"/><span class="env-prefix">LANGFLOW_</span>HOST | String | `localhost` | The host on which the Langflow server will run.<br/>See [`--host` option](./configuration-cli.md#run-host). |
 | <Link id="LANGFLOW_LANGCHAIN_CACHE"/><span class="env-prefix">LANGFLOW_</span>LANGCHAIN_CACHE | String | `InMemoryCache` | Type of cache to use. Possible values: `InMemoryCache`, `SQLiteCache`.<br/>See [`--cache` option](./configuration-cli.md#run-cache). |
 | <Link id="LANGFLOW_LOG_LEVEL"/><span class="env-prefix">LANGFLOW_</span>LOG_LEVEL | String | `INFO` | Set the logging level for Langflow. Possible values: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
 | <Link id="LANGFLOW_LOG_FILE"/><span class="env-prefix">LANGFLOW_</span>LOG_FILE | String | Not set | Path to the log file. If this option is not set, logs are written to stdout. |
@@ -255,7 +256,7 @@ LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
 LANGFLOW_DEV=false
 LANGFLOW_FALLBACK_TO_ENV_VAR=false
 LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5
-LANGFLOW_HOST=127.0.0.1
+LANGFLOW_HOST=localhost
 LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
 LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000
 LANGFLOW_LOG_LEVEL=error
@@ -294,7 +295,7 @@ Environment="LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/lan
 Environment="LANGFLOW_DEV=false"
 Environment="LANGFLOW_FALLBACK_TO_ENV_VAR=false"
 Environment="LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5"
-Environment="LANGFLOW_HOST=127.0.0.1"
+Environment="LANGFLOW_HOST=localhost"
 Environment="LANGFLOW_LANGCHAIN_CACHE=InMemoryCache"
 Environment="LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000"
 Environment="LANGFLOW_LOG_ENV=container_json"

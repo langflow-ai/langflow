@@ -29,14 +29,14 @@ test(
     //---------------------------------- CHAT INPUT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
-    await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 2000,
     });
 
     await zoomOut(page, 6);
 
     await page
-      .getByTestId("inputsChat Input")
+      .getByTestId("input_outputChat Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -164,11 +164,14 @@ test(
     //---------------------------------- OPENAI
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
-    await page.waitForSelector('[data-testid="modelsOpenAI"]', {
-      timeout: 2000,
-    });
+    await page.waitForSelector(
+      '[data-testid="languagemodels_openai_draggable"]',
+      {
+        timeout: 2000,
+      },
+    );
     await page
-      .getByTestId("modelsOpenAI")
+      .getByTestId("languagemodelsOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 300 },
       });
@@ -187,29 +190,29 @@ test(
     //---------------------------------- CHAT OUTPUT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 800, y: 300 },
       });
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     //---------------------------------- CHAT OUTPUT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 800, y: 400 },
       });
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     //----------------------------------
@@ -245,7 +248,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-chatinput-noshownode-message-source")
+      .getByTestId("handle-chatinput-noshownode-chat message-source")
       .nth(0)
       .click();
     await page
@@ -278,7 +281,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-prompt-shownode-prompt message-right")
+      .getByTestId("handle-prompt-shownode-prompt-right")
       .first()
       .click();
     await page
@@ -286,7 +289,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-message-right")
+      .getByTestId("handle-openaimodel-shownode-model response-right")
       .nth(0)
       .click();
     await page
@@ -319,12 +322,6 @@ test(
       .getByTestId("handle-pass-shownode-ignored message-left")
       .nth(1)
       .click();
-
-    await page.getByTestId("dropdown-output-conditionalrouter").click();
-    await page
-      .getByTestId("dropdown-item-output-conditionalrouter-false")
-      .click();
-
     await page
       .getByTestId("handle-conditionalrouter-shownode-false-right")
       .nth(0)
@@ -338,7 +335,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(0)
       .click();
     await page
@@ -346,7 +343,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
       .click();
     const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");

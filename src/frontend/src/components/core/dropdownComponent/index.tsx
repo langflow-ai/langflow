@@ -45,6 +45,7 @@ export default function Dropdown({
   optionsMetaData,
   combobox,
   onSelect,
+  placeholder,
   editNode = false,
   id = "",
   children,
@@ -122,7 +123,7 @@ export default function Dropdown({
       // If search is cleared, show all options
       // Preserve any custom values that were in filteredOptions
       const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option),
+        (option) => !validOptions.includes(option) && option === customValue,
       );
       setFilteredOptions([...validOptions, ...customValuesInFiltered]);
       setFilteredMetadata(optionsMetaData);
@@ -222,7 +223,7 @@ export default function Dropdown({
     if (open) {
       // Check if filteredOptions contains any custom values not in validOptions
       const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option),
+        (option) => !validOptions.includes(option) && option === customValue,
       );
 
       // If there are custom values, preserve them when resetting filtered options
@@ -330,7 +331,7 @@ export default function Dropdown({
                 <>
                   {value && filteredOptions.includes(value)
                     ? value
-                    : SELECT_AN_OPTION}{" "}
+                    : placeholder || SELECT_AN_OPTION}{" "}
                 </>
               )}
             </span>
