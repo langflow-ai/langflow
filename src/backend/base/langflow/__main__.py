@@ -8,6 +8,7 @@ import sys
 import time
 import warnings
 from contextlib import suppress
+from functools import lru_cache
 from ipaddress import ip_address
 from pathlib import Path
 
@@ -327,34 +328,29 @@ def is_loopback_address(host: str) -> bool:
     Returns:
         bool: True if the host is a loopback address, False otherwise
     """
-    # Check if it's exactly "localhost"
-    if host == "localhost":
+    if host in _LOOPBACK_NAMES or host in _LOOPBACK_IPS:
         return True
-
-    # Check if it's exactly "0.0.0.0" (which binds to all interfaces)
-    if host == "0.0.0.0":  # noqa: S104
-        return True
-
-    try:
-        # Convert string to IP address object
-        ip = ip_address(host)
-        # Check if it's a loopback address (127.0.0.0/8 for IPv4, ::1 for IPv6)
-        return bool(ip.is_loopback)
-    except ValueError:
-        # If the IP address is invalid, default to False
-        return False
+    ip = _cached_ip_address(host)
+    if ip is not None:
+        return ip.is_loopback
+    return False
 
 
 def can_connect(host: str, port: int, timeout: float = 1.0) -> bool:
-    try:
-        for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
-            family, socktype, proto, _, sa = res
+    addrinfo = _cached_getaddrinfo(host, port)
+    if not addrinfo:
+        return False
+    for res in addrinfo:
+        family, socktype, proto, _, sa = res
+        try:
             with socket.socket(family, socktype, proto) as s:
                 s.settimeout(timeout)
                 if s.connect_ex(sa) == 0:
                     return True
-    except Exception:  # noqa: BLE001
-        logger.exception(f"Failed to connect to {host}:{port}")
+        except Exception:
+            # Only log once (per combination) for repeated failures due to caching
+            logger.exception("Failed to connect to %s:%s", host, port)
+            break  # Avoid spamming logs on multiple res
     return False
 
 
@@ -374,10 +370,10 @@ def get_best_access_host(host: str, port: int) -> str:
     """
     if not is_loopback_address(host):
         return host
-
+    # If already "localhost", use as-is (do not call can_connect again).
     if host != "localhost" and can_connect("localhost", port):
         return "localhost"
-    if can_connect(host, port):
+    if host != "localhost" and can_connect(host, port):
         return host
     return "localhost"
 
@@ -730,9 +726,29 @@ def main() -> None:
         app()
 
 
+@lru_cache(maxsize=256)
+def _cached_ip_address(host: str):
+    try:
+        return ip_address(host)
+    except ValueError:
+        return None
+
+
+@lru_cache(maxsize=64)
+def _cached_getaddrinfo(host, port):
+    try:
+        return socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
+    except Exception:
+        return None
+
+
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
         logger.exception(e)
         raise typer.Exit(1) from e
+
+_LOOPBACK_NAMES = {"localhost", "0.0.0.0"}
+
+_LOOPBACK_IPS = {"127.0.0.1", "::1"}
