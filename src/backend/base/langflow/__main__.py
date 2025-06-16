@@ -312,12 +312,12 @@ def run(
         if platform.system() == "Windows":
             # Windows doesn't support Gunicorn, use uvicorn directly
             import uvicorn
-            
+
             class WindowsServer:
                 def __init__(self, app, options):
                     self.app = app
                     self.options = options
-                
+
                 def run(self):
                     uvicorn.run(
                         self.app,
