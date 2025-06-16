@@ -350,13 +350,21 @@ def run(
             }
             server = LangflowApplication(app, options)
 
+        # if platform.system() == "Windows":
+        #     # Uvicorn is a blocking process, so we need to print the summary and banner before starting
+        #     progress.print_summary()
+        #     print_banner(host, port, protocol)
+        #     webapp_process = Process(target=server.run)
+        #     webapp_process.start()
+        # else:
+    if True:
         webapp_process = Process(target=server.run)
         webapp_process.start()
 
         # Wait for server to be ready
         wait_for_server_ready(host, port, protocol)
 
-        # Show completion message
+        # Print summary and banner after server is ready
         progress.print_summary()
         print_banner(host, port, protocol)
 
