@@ -1,18 +1,17 @@
 //import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
-import { EventDeliveryType } from "@/constants/enums";
-import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import {
   useDeleteMessages,
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
+import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { v5 as uuidv5 } from "uuid";
 import { useShallow } from "zustand/react/shallow";
 import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
@@ -46,6 +45,13 @@ export default function IOModal({
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
   const isBuilding = useFlowStore((state) => state.isBuilding);
+  const newChatOnPlayground = useFlowStore(
+    (state) => state.newChatOnPlayground,
+  );
+  const setNewChatOnPlayground = useFlowStore(
+    (state) => state.setNewChatOnPlayground,
+  );
+
   const { flowIcon, flowId, flowGradient, flowName } = useFlowStore(
     useShallow((state) => ({
       flowIcon: state.currentFlow?.icon,
@@ -81,6 +87,23 @@ export default function IOModal({
     currentFlowId,
   );
   const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
+
+  const {
+    data: sessionsFromDb,
+    isLoading: sessionsLoading,
+    refetch: refetchSessions,
+  } = useGetSessionsFromFlowQuery(
+    {
+      id: currentFlowId,
+    },
+    { enabled: open },
+  );
+
+  useEffect(() => {
+    if (sessionsFromDb && !sessionsLoading) {
+      setSessions(sessionsFromDb.sessions);
+    }
+  }, [sessionsFromDb, sessionsLoading]);
 
   useEffect(() => {
     setIOModalOpen(open);
@@ -132,30 +155,23 @@ export default function IOModal({
   >(startView());
 
   const messages = useMessagesStore((state) => state.messages);
-  const [sessions, setSessions] = useState<string[]>(
-    Array.from(
-      new Set(
-        messages
-          .filter((message) => message.flow_id === currentFlowId)
-          .map((message) => message.session_id),
-      ),
-    ),
-  );
+  const [sessions, setSessions] = useState<string[]>([]);
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
   const setCurrentSessionId = useUtilityStore(
     (state) => state.setCurrentSessionId,
   );
 
-  const { isFetched: messagesFetched } = useGetMessagesQuery(
-    {
-      mode: "union",
-      id: currentFlowId,
-      params: {
-        session_id: visibleSession,
+  const { isFetched: messagesFetched, refetch: refetchMessages } =
+    useGetMessagesQuery(
+      {
+        mode: "union",
+        id: currentFlowId,
+        params: {
+          session_id: visibleSession,
+        },
       },
-    },
-    { enabled: open },
-  );
+      { enabled: open },
+    );
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
@@ -188,21 +204,23 @@ export default function IOModal({
   );
 
   useEffect(() => {
-    const sessions = new Set<string>();
-    messages
-      .filter((message) => message.flow_id === currentFlowId)
-      .forEach((row) => {
-        sessions.add(row.session_id);
-      });
-    setSessions((prev) => {
-      if (prev.length < Array.from(sessions).length) {
-        // set the new session as visible
-        setvisibleSession(
-          Array.from(sessions)[Array.from(sessions).length - 1],
-        );
-      }
-      return Array.from(sessions);
-    });
+    if (newChatOnPlayground && !sessionsLoading) {
+      const handleRefetchAndSetSession = async () => {
+        try {
+          const result = await refetchSessions();
+          if (result.data?.sessions && result.data.sessions.length > 0) {
+            setvisibleSession(
+              result.data.sessions[result.data.sessions.length - 1],
+            );
+          }
+        } catch (error) {
+          console.error("Error refetching sessions:", error);
+        }
+      };
+
+      handleRefetchAndSetSession();
+      setNewChatOnPlayground(false);
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -274,6 +292,35 @@ export default function IOModal({
       : getNumberFromString(flowGradient ?? flowId ?? "")) %
     swatchColors.length;
 
+  const setActiveSession = (session: string) => {
+    setvisibleSession((prev) => {
+      if (prev === session) {
+        return undefined;
+      }
+      return session;
+    });
+  };
+
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const prevVisibleSessionRef = useRef<string | undefined>(visibleSession);
+
+  useEffect(() => {
+    if (!hasInitialized) {
+      setHasInitialized(true);
+      prevVisibleSessionRef.current = visibleSession;
+      return;
+    }
+    if (
+      open &&
+      visibleSession &&
+      prevVisibleSessionRef.current !== visibleSession
+    ) {
+      refetchMessages();
+    }
+
+    prevVisibleSessionRef.current = visibleSession;
+  }, [visibleSession]);
+
   return (
     <BaseModal
       open={open}
@@ -339,7 +386,7 @@ export default function IOModal({
                     </Button>
                   </ShadTooltip>
                 </div>
-                {sidebarOpen && (
+                {sidebarOpen && !sessionsLoading && (
                   <SidebarOpenView
                     sessions={sessions}
                     setSelectedViewField={setSelectedViewField}
@@ -348,6 +395,7 @@ export default function IOModal({
                     visibleSession={visibleSession}
                     selectedViewField={selectedViewField}
                     playgroundPage={!!playgroundPage}
+                    setActiveSession={setActiveSession}
                   />
                 )}
                 {sidebarOpen && showPublishOptions && (
@@ -386,7 +434,7 @@ export default function IOModal({
               </div>
             )}
             <div className="flex h-full min-w-96 flex-grow bg-background">
-              {selectedViewField && (
+              {selectedViewField && !sessionsLoading && (
                 <SelectedViewField
                   selectedViewField={selectedViewField}
                   setSelectedViewField={setSelectedViewField}

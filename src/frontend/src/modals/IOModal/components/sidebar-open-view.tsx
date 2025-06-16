@@ -1,5 +1,6 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
+import useFlowStore from "@/stores/flowStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import IconComponent from "../../../components/common/genericIconComponent";
 import { SidebarOpenViewProps } from "../types/sidebar-open-view";
@@ -13,9 +14,14 @@ export const SidebarOpenView = ({
   visibleSession,
   selectedViewField,
   playgroundPage,
+  setActiveSession,
 }: SidebarOpenViewProps) => {
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
     (state) => state.setNewSessionCloseVoiceAssistant,
+  );
+
+  const setNewChatOnPlayground = useFlowStore(
+    (state) => state.setNewChatOnPlayground,
   );
 
   return (
@@ -40,6 +46,7 @@ export const SidebarOpenView = ({
                     setvisibleSession(undefined);
                     setSelectedViewField(undefined);
                     setNewSessionCloseVoiceAssistant(true);
+                    setNewChatOnPlayground(true);
                   }}
                 >
                   <IconComponent
@@ -69,7 +76,7 @@ export const SidebarOpenView = ({
                 setvisibleSession(session);
               }}
               toggleVisibility={() => {
-                setvisibleSession(session);
+                setActiveSession(session);
               }}
               isVisible={visibleSession === session}
               inspectSession={(session) => {
@@ -77,6 +84,9 @@ export const SidebarOpenView = ({
                   id: session,
                   type: "Session",
                 });
+              }}
+              setActiveSession={(session) => {
+                setActiveSession(session);
               }}
             />
           ))}
