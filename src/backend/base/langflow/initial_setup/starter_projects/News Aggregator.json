@@ -1758,11 +1758,11 @@
                 "info": "Select the file format to save the input. If not provided, the default format will be used.",
                 "name": "file_format",
                 "options": [
-                  "csv",
                   "markdown",
                   "excel",
-                  "json",
-                  "txt"
+                  "txt",
+                  "csv",
+                  "json"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
