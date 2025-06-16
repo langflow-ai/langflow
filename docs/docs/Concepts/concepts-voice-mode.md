@@ -52,7 +52,7 @@ Be aware of the following considerations when using voice mode:
 * Voice mode only maintains context within the conversation session you are currently in.
 If you exit a conversation and close the **Playground**, your conversational context is not available in the next chat session.
 
-## Voice mode endpoints
+## Langflow voice mode endpoints
 
 Langflow exposes OpenAI Realtime API-compatible websocket endpoints for your flows. You can build voice applications against these endpoints the same way you would build against [OpenAI Realtime API websockets](https://platform.openai.com/docs/guides/realtime#connect-with-websockets).
 
