@@ -259,7 +259,10 @@ function GenericNode({
   }, [data.node?.outputs]);
 
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
-    () => data.node?.outputs?.find((output) => output.selected) || null,
+    () =>
+      data.node?.outputs?.find(
+        (output) => output.name === data?.selected_output,
+      ) || null,
   );
 
   const handleSelectOutput = useCallback(
@@ -310,7 +313,11 @@ function GenericNode({
             newNode.data.node.outputs[outputIndex].selected =
               output.selected ?? defaultType;
           }
+
+          const selectedOutput = newNode.data.node.outputs[outputIndex]?.name;
+          (newNode.data as NodeDataType).selected_output = selectedOutput;
         }
+
         return newNode;
       });
       updateNodeInternals(data.id);
@@ -587,45 +594,22 @@ function GenericNode({
                 showHiddenOutputs={showHiddenOutputs}
                 selectedOutput={selectedOutput}
                 handleSelectOutput={handleSelectOutput}
+                hasExistingHiddenOutputs={
+                  !!hiddenOutputs && hiddenOutputs.length > 0
+                }
               />
-              {showHiddenOutputs && (
-                <MemoizedNodeOutputs
-                  outputs={hiddenOutputs}
-                  keyPrefix="hidden"
-                  data={data}
-                  types={types}
-                  selected={selected ?? false}
-                  showNode={showNode}
-                  isToolMode={isToolMode}
-                  showHiddenOutputs={true}
-                  selectedOutput={selectedOutput}
-                  handleSelectOutput={handleSelectOutput}
-                />
-              )}
-              {hiddenOutputs && hiddenOutputs.length > 0 && (
-                <ShadTooltip
-                  content={
-                    showHiddenOutputs
-                      ? `${TOOLTIP_HIDDEN_OUTPUTS} (${hiddenOutputs?.length})`
-                      : `${TOOLTIP_OPEN_HIDDEN_OUTPUTS} (${hiddenOutputs?.length})`
-                  }
-                >
-                  <div
-                    className={cn(
-                      "absolute left-1/2 flex -translate-x-1/2 justify-center",
-                      (shownOutputs && shownOutputs.length > 0) ||
-                        showHiddenOutputs
-                        ? "bottom-[-0.8rem]"
-                        : "bottom-[-0.8rem]",
-                    )}
-                  >
-                    <HiddenOutputsButton
-                      showHiddenOutputs={showHiddenOutputs}
-                      onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
-                    />
-                  </div>
-                </ShadTooltip>
-              )}
+              <MemoizedNodeOutputs
+                outputs={hiddenOutputs}
+                keyPrefix="hidden"
+                data={data}
+                types={types}
+                selected={selected ?? false}
+                showNode={showNode}
+                isToolMode={isToolMode}
+                showHiddenOutputs={true}
+                selectedOutput={selectedOutput}
+                handleSelectOutput={handleSelectOutput}
+              />
             </>
           </div>
         )}
