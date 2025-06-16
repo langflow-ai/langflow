@@ -49,7 +49,6 @@ router_v1.include_router(monitor_router)
 router_v1.include_router(folders_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(starter_projects_router)
-router_v1.include_router(voice_mode_router)
 router_v1.include_router(mcp_router)
 router_v1.include_router(mcp_projects_router)
 
@@ -58,3 +57,6 @@ router_v2.include_router(mcp_router_v2)
 
 router.include_router(router_v1)
 router.include_router(router_v2)
+
+if voice_mode_router is not None:
+    router_v1.include_router(voice_mode_router)
