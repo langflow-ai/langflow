@@ -308,6 +308,10 @@ def run(
             # Windows doesn't support Gunicorn, use uvicorn directly
             import uvicorn
 
+            # Uvicorn is a blocking process, so we need to print the summary and banner before starting
+            progress.print_summary()
+            print_banner(host, port, protocol)
+
             uvicorn.run(
                 app,
                 host=host,
@@ -337,27 +341,25 @@ def run(
             # Wait for server to be ready
             wait_for_server_ready(host, port, protocol)
 
-    # Show completion message
-    progress.print_summary()
-    print_banner(host, port, protocol)
-    
-    # Handle browser opening after server starts (non-Windows only)
-    if platform.system() != "Windows" and open_browser and not backend_only:
-        click.launch(f"{protocol}://{host}:{port}")
+            # Show completion message
+            progress.print_summary()
+            print_banner(host, port, protocol)
 
-    # Handle process management for non-Windows
-    if platform.system() != "Windows":
-        try:
-            webapp_process.join()
-        except KeyboardInterrupt:
-            # SIGINT should be handled by the signal handler, but leaving here for safety
-            logger.warning("KeyboardInterrupt caught in main thread")
-            _shutdown_webapp_process()
-        finally:
-            # Ensure cleanup happens
-            if webapp_process and webapp_process.is_alive():
-                webapp_process.terminate()
+            # Handle browser opening
+            if open_browser and not backend_only:
+                click.launch(f"{protocol}://{host}:{port}")
+
+            try:
                 webapp_process.join()
+            except KeyboardInterrupt:
+                # SIGINT should be handled by the signal handler, but leaving here for safety
+                logger.warning("KeyboardInterrupt caught in main thread")
+                _shutdown_webapp_process()
+            finally:
+                # Ensure cleanup happens
+                if webapp_process and webapp_process.is_alive():
+                    webapp_process.terminate()
+                    webapp_process.join()
 
 
 def is_port_in_use(port, host="localhost"):
