@@ -80,28 +80,33 @@ class DoclingInlineComponent(BaseFileComponent):
         from docling.models.factories import get_ocr_factory
         from docling.pipeline.vlm_pipeline import VlmPipeline
 
-        def _get_converter() -> DocumentConverter:
-            pipeline_options: PdfPipelineOptions | VlmPipelineOptions
-            if self.pipeline == "standard":
-                pipeline_options = PdfPipelineOptions()
-                pipeline_options.do_ocr = self.ocr_engine != ""
-                if pipeline_options.do_ocr:
-                    ocr_factory = get_ocr_factory(
-                        allow_external_plugins=False,
-                    )
-
-                    ocr_options: OcrOptions = ocr_factory.create_options(
-                        kind=self.ocr_engine,
-                    )
-                    pipeline_options.ocr_options = ocr_options
-
-                pdf_format_option = PdfFormatOption(
-                    pipeline_options=pipeline_options,
+        # Configure the standard PDF pipeline
+        def _get_standard_opts() -> PdfPipelineOptions:
+            pipeline_options = PdfPipelineOptions()
+            pipeline_options.do_ocr = self.ocr_engine != ""
+            if pipeline_options.do_ocr:
+                ocr_factory = get_ocr_factory(
+                    allow_external_plugins=False,
                 )
 
+                ocr_options: OcrOptions = ocr_factory.create_options(
+                    kind=self.ocr_engine,
+                )
+                pipeline_options.ocr_options = ocr_options
+            return pipeline_options
+
+        # Configure the VLM pipeline
+        def _get_vlm_opts() -> VlmPipelineOptions:
+            return VlmPipelineOptions()
+
+        # Configure the main format options and create the DocumentConverter()
+        def _get_converter() -> DocumentConverter:
+            if self.pipeline == "standard":
+                pdf_format_option = PdfFormatOption(
+                    pipeline_options=_get_standard_opts(),
+                )
             elif self.pipeline == "vlm":
-                pipeline_options = VlmPipelineOptions()
-                pdf_format_option = PdfFormatOption(pipeline_cls=VlmPipeline, pipeline_options=pipeline_options)
+                pdf_format_option = PdfFormatOption(pipeline_cls=VlmPipeline, pipeline_options=_get_vlm_opts())
 
             format_options: dict[InputFormat, FormatOption] = {
                 InputFormat.PDF: pdf_format_option,
