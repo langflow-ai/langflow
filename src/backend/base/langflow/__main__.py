@@ -153,7 +153,7 @@ def run(
     ),
     log_level: str | None = typer.Option(
         None,
-        help="Logging level. One of: [DEBUG, INFO, WARNING, ERROR, CRITICAL]. Defaults to INFO.",
+        help="Logging level. One of: [debug, info, warning, error, critical]. Defaults to info.",
         show_default=False,
     ),
     log_file: Path | None = typer.Option(None, help="Path to the log file.", show_default=False),
@@ -227,7 +227,7 @@ def run(
     if env_file:
         load_dotenv(env_file, override=True)
 
-    log_level = log_level.upper() if log_level else "INFO"
+    log_level = log_level.lower() if log_level else "info"
 
     # Must set as env var for child process to pick up
     if os.environ.get("LANGFLOW_LOG_LEVEL") is None:
@@ -236,7 +236,7 @@ def run(
     configure(log_level=log_level, log_file=log_file)
     
     # Create progress indicator (show verbose timing if log level is DEBUG)
-    verbose = log_level == "DEBUG"
+    verbose = log_level == "debug"
     progress = create_langflow_progress(verbose=verbose)
     
     # Step 0: Initializing Langflow
