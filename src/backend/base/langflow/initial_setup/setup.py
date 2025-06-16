@@ -903,8 +903,6 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
         # this is intended to be used to skip all startup project logic.
         return
 
-    logger.debug("Creating or updating starter projects")
-
     async with session_scope() as session:
         new_folder = await get_or_create_starter_folder(session)
         starter_projects = await load_starter_projects()
@@ -914,22 +912,13 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
         )
 
         if do_update_starter_projects:
+            logger.debug("Updating starter projects")
             # 1. Delete all existing starter projects
             successfully_updated_projects = 0
             await delete_starter_projects(session, new_folder.id)
             await copy_profile_pictures()
 
             # 2. Update all starter projects with the latest component versions (this modifies the actual file data)
-            for project_path, project in starter_projects:
-                updated_project_data = update_projects_components_with_latest_component_versions(
-                    project_data.copy(), all_types_dict
-                )
-                updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
-                if updated_project_data != project_data:
-                    project_data = updated_project_data
-                    await update_project_file(project_path, project, updated_project_data)
-
-            # 3. Create the updated starter projects
             for project_path, project in starter_projects:
                 (
                     project_name,
@@ -942,7 +931,16 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                     project_gradient,
                     project_tags,
                 ) = get_project_data(project)
+                updated_project_data = update_projects_components_with_latest_component_versions(
+                    project_data.copy(), all_types_dict
+                )
+                updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
+                if updated_project_data != project_data:
+                    project_data = updated_project_data
+                    await update_project_file(project_path, project, updated_project_data)
+
                 try:
+                    # Create the updated starter project
                     create_new_project(
                         session=session,
                         project_name=project_name,
@@ -963,6 +961,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
             logger.debug(f"Successfully updated {successfully_updated_projects} starter projects")
         else:
             # Even if we're not updating starter projects, we still need to create any that don't exist
+            logger.debug("Creating new starter projects")
             successfully_created_projects = 0
             existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
             existing_flow_names = [existing_flow.name for existing_flow in existing_flows]
