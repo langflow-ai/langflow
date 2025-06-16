@@ -17,9 +17,9 @@ class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
     icon = "Slackbot"
     documentation: str = "https://docs.composio.dev"
     app_name = "slackbot"
-    
+
     _actions_data: dict = {
-                "SLACKBOT_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION": {
+        "SLACKBOT_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION": {
             "display_name": "List Users",
             "action_fields": [
                 "SLACKBOT_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION_limit",
@@ -121,9 +121,9 @@ class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
             ],
         },
     }
-    
+
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
-    
+
     _bool_variables = {
         "SLACKBOT_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION_include_locale",
         "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL_as_user",
@@ -141,7 +141,7 @@ class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
         "SLACKBOT_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS_exclude_archived",
         "SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_highlight",
     }
-    
+
     inputs = [
         *ComposioBaseComponent._base_inputs,
         IntInput(
@@ -535,7 +535,7 @@ class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
             show=False,
         ),
     ]
-    
+
     def execute_action(self):
         """Execute action and return response as Message."""
         toolset = self._build_wrapper()
@@ -573,29 +573,30 @@ class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
 
             result_data = result.get("data", {})
             actions_data = self._actions_data.get(action_key, {})
-            
+
             # If 'get_result_field' is True and 'result_field' is specified, extract the data
             # using 'result_field'. Otherwise, fall back to the entire 'data' field in the response.
             if actions_data.get("get_result_field") and actions_data.get("result_field"):
                 result_data = result_data.get(actions_data.get("result_field"), result.get("data", []))
-            elif actions_data.get("get_result_field") and not actions_data.get("result_field"):
+            elif actions_data.get("get_result_field") and not actions_data.get("result_field"):  # noqa: SIM102
                 # If get_result_field is True but no specific result_field is defined,
                 # validate that we have a dict with a single key
                 if isinstance(result_data, dict) and len(result_data) != 1:
                     msg = f"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}"
                     raise ValueError(msg)
-            
+
             # Transform list actions to numbered dictionary
-            if (action_key in ["SLACKBOT_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS", 
-                             "SLACKBOT_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION"] 
-                and isinstance(result_data, list)):
+            if action_key in [
+                "SLACKBOT_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
+                "SLACKBOT_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
+            ] and isinstance(result_data, list):
                 # Convert array to numbered dictionary
                 numbered_dict = {}
                 for index, item in enumerate(result_data):
                     numbered_dict[str(index + 1)] = item
                 result_data = numbered_dict
-            
-            return result_data
+
+            return result_data  # noqa: TRY300
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)

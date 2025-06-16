@@ -1,4 +1,3 @@
-import { SlackbotIcon } from "../icons/slackbot";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { GradientSave } from "@/icons/GradientSparkles";
 import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
@@ -6,6 +5,7 @@ import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
+import { SlackbotIcon } from "../icons/slackbot";
 
 const iconCache = new Map<string, any>();
 

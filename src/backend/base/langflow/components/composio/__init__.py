@@ -12,6 +12,6 @@ __all__ = [
     "ComposioGmailAPIComponent",
     "ComposioGoogleCalendarAPIComponent",
     "ComposioOutlookAPIComponent",
-    "ComposioSlackAPIComponent",
     "ComposioSLACKBOTAPIComponent",
+    "ComposioSlackAPIComponent",
 ]
