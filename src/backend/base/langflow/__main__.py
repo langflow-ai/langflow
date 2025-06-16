@@ -40,22 +40,22 @@ console = Console()
 
 app = typer.Typer(no_args_is_help=True)
 
+
 class ProcessManager:
-    """
-    Manages the lifecycle of the backend process.
-    """
+    """Manages the lifecycle of the backend process."""
+
     def __init__(self):
         self.webapp_process = None
         self.shutdown_in_progress = False
 
-    def handle_sigterm(self, signum, frame):  # noqa: ARG001
+    def handle_sigterm(self, signum, frame):
         """Handle SIGTERM signal gracefully."""
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
         self.shutdown_in_progress = True
         self.shutdown()
 
-    def handle_sigint(self, signum, frame):  # noqa: ARG001
+    def handle_sigint(self, signum, frame):
         """Handle SIGINT signal gracefully."""
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
@@ -78,12 +78,14 @@ class ProcessManager:
                 self.webapp_process.join()
         sys.exit(0)
 
+
 # Create a single instance of ProcessManager
 process_manager = ProcessManager()
 
 # Update signal handlers to use the instance methods
 signal.signal(signal.SIGTERM, process_manager.handle_sigterm)
 signal.signal(signal.SIGINT, process_manager.handle_sigint)
+
 
 def get_number_of_workers(workers=None):
     if workers == -1 or workers is None:
@@ -348,7 +350,6 @@ def run(
                 "log_level": log_level.lower(),
             }
             server = LangflowApplication(app, options)
-
 
         # Start the webapp process
         process_manager.webapp_process = Process(target=server.run)
