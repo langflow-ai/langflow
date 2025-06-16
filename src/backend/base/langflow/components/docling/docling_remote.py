@@ -142,7 +142,7 @@ class DoclingRemoteComponent(BaseFileComponent):
             "to_formats": ["json"],
             "image_export_mode": "placeholder",
             "return_as_file": False,
-            **self.docling_serve_opts,
+            **(self.docling_serve_opts or {}),
         }
 
         processed_data: list[Data | None] = []
