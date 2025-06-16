@@ -347,3 +347,8 @@ To find your NPX path, run `which npx`.
 ```
   </TabItem>
 </Tabs>
+
+## See also
+
+- [MCP connection component](../Components/components-tools.md#mcp-connection)
+- [Use a DataStax Astra DB MCP server](../Integrations/mcp-component-astra.md)
