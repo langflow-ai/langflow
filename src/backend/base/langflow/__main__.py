@@ -40,46 +40,50 @@ console = Console()
 
 app = typer.Typer(no_args_is_help=True)
 
-# Add global variables to track the webapp process and shutdown state
-webapp_process = None
-shutdown_in_progress = False
+class ProcessManager:
+    """
+    Manages the lifecycle of the backend process.
+    """
+    def __init__(self):
+        self.webapp_process = None
+        self.shutdown_in_progress = False
 
+    def handle_sigterm(self, signum, frame):  # noqa: ARG001
+        """Handle SIGTERM signal gracefully."""
+        if self.shutdown_in_progress:
+            return  # Already shutting down, ignore
+        self.shutdown_in_progress = True
+        self.shutdown()
 
-def handle_sigterm(signum, frame):  # noqa: ARG001
-    """Handle SIGTERM signal gracefully."""
-    global shutdown_in_progress
-    if shutdown_in_progress:
-        return  # Already shutting down, ignore
-    shutdown_in_progress = True
-    _shutdown_webapp_process()
+    def handle_sigint(self, signum, frame):  # noqa: ARG001
+        """Handle SIGINT signal gracefully."""
+        if self.shutdown_in_progress:
+            return  # Already shutting down, ignore
+        self.shutdown_in_progress = True
+        self.shutdown()
 
+    def shutdown(self):
+        """Gracefully shutdown the webapp process."""
+        if self.webapp_process and self.webapp_process.is_alive():
+            # Just terminate the process - the actual shutdown progress is handled
+            # by the FastAPI lifespan context in main.py
+            self.webapp_process.terminate()
+            # The long wait allows the process to finish setup, preventing it from
+            # getting in a state where background tasks continue to do work after termination
+            # is sent.
+            self.webapp_process.join(timeout=30)
+            if self.webapp_process.is_alive():
+                logger.warning("Process didn't terminate gracefully, killing it.")
+                self.webapp_process.kill()
+                self.webapp_process.join()
+        sys.exit(0)
 
-def handle_sigint(signum, frame):  # noqa: ARG001
-    """Handle SIGINT signal gracefully."""
-    global shutdown_in_progress
-    if shutdown_in_progress:
-        return  # Already shutting down, ignore
-    shutdown_in_progress = True
-    _shutdown_webapp_process()
+# Create a single instance of ProcessManager
+process_manager = ProcessManager()
 
-
-def _shutdown_webapp_process():
-    """Gracefully shutdown the webapp process."""
-    global webapp_process
-    if webapp_process and webapp_process.is_alive():
-        # Just terminate the process - the actual shutdown progress is handled
-        # by the FastAPI lifespan context in main.py
-        webapp_process.terminate()
-        # The long wait allows the process to finish setup, preventing it from
-        # getting in a state where background tasks continue to do work after termination
-        # is sent.
-        webapp_process.join(timeout=30)
-        if webapp_process.is_alive():
-            logger.warning("Process didn't terminate gracefully, killing it.")
-            webapp_process.kill()
-            webapp_process.join()
-    sys.exit(0)
-
+# Update signal handlers to use the instance methods
+signal.signal(signal.SIGTERM, process_manager.handle_sigterm)
+signal.signal(signal.SIGINT, process_manager.handle_sigint)
 
 def get_number_of_workers(workers=None):
     if workers == -1 or workers is None:
@@ -220,11 +224,6 @@ def run(
     ssl_key_file_path: str | None = typer.Option(None, help="Defines the SSL key file path.", show_default=False),
 ) -> None:
     """Run Langflow."""
-    global webapp_process
-
-    signal.signal(signal.SIGTERM, handle_sigterm)
-    signal.signal(signal.SIGINT, handle_sigint)
-
     if env_file:
         load_dotenv(env_file, override=True)
 
@@ -350,11 +349,14 @@ def run(
             }
             server = LangflowApplication(app, options)
 
-    webapp_process = Process(target=server.run)
-    webapp_process.start()
 
-    # Wait for server to be ready
-    wait_for_server_ready(host, port, protocol)
+        # Start the webapp process
+        process_manager.webapp_process = Process(target=server.run)
+        process_manager.webapp_process.start()
+
+        # Note: Leave wait within the with progress.step(6) block
+        # Wait for server to be ready
+        wait_for_server_ready(host, port, protocol)
 
     # Print summary and banner after server is ready
     progress.print_summary()
@@ -365,16 +367,12 @@ def run(
         click.launch(f"{protocol}://{host}:{port}")
 
     try:
-        webapp_process.join()
+        process_manager.webapp_process.join()
     except KeyboardInterrupt:
         # SIGINT should be handled by the signal handler, but leaving here for safety
         logger.warning("KeyboardInterrupt caught in main thread")
-        _shutdown_webapp_process()
     finally:
-        # Ensure cleanup happens
-        if webapp_process and webapp_process.is_alive():
-            webapp_process.terminate()
-            webapp_process.join()
+        process_manager.shutdown()
 
 
 def is_port_in_use(port, host="localhost"):
