@@ -199,7 +199,7 @@ export default function CodeAreaModal({
           aria-hidden="true"
         />
       </BaseModal.Header>
-      <BaseModal.Content className="overflow-hidden">
+      <BaseModal.Content overflowHidden={true}>
         <Input
           value={code}
           readOnly
