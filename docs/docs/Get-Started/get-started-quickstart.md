@@ -323,4 +323,183 @@ This response confirms the call succeeded, but let's do something more with the 
 The following example builds on the API pane's example code to create a question-and-answer chat in your terminal that stores the Agent's previous answer.
 
 3. Copy the code into your terminal, and run it.
-4. To view the Agent's previous answer, type `compare`. To close the terminal chat, type `
+4. To view the Agent's previous answer, type `compare`. To close the terminal chat, type `exit`.
+
+<Tabs groupId="Languages">
+  <TabItem value="Python" label="Python" default>
+
+```python
+import requests
+import json
+
+url = "http://localhost:7860/api/v1/run/29deb764-af3f-4d7d-94a0-47491ed241d6"
+
+def ask_agent(question):
+    payload = {
+        "output_type": "chat",
+        "input_type": "chat",
+        "input_value": question,
+    }
+
+    headers = {"Content-Type": "application/json"}
+
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+
+        # Get the response message
+        data = response.json()
+        message = data["outputs"][0]["outputs"][0]["outputs"]["message"]["message"]
+        return message
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+def extract_message(data):
+    try:
+        return data["outputs"][0]["outputs"][0]["outputs"]["message"]["message"]
+    except (KeyError, IndexError):
+        return None
+
+# Store the previous answer
+previous_answer = None
+
+while True:
+    # Get user input
+    print("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?')")
+    print("Type 'quit' to exit or 'compare' to see the previous answer")
+    user_question = input("Your question: ")
+    
+    if user_question.lower() == 'quit':
+        break
+    elif user_question.lower() == 'compare':
+        if previous_answer:
+            print(f"\nPrevious answer was: {previous_answer}")
+        else:
+            print("\nNo previous answer to compare with!")
+        continue
+    
+    # Get and display the answer
+    result = ask_agent(user_question)
+    print(f"\nAgent's answer: {result}")    
+    # Store the answer for comparison
+    previous_answer = result
+```
+
+  </TabItem>
+  <TabItem value="JavaScript" label="JavaScript">
+
+```js
+const readline = require('readline');
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+const url = 'http://localhost:7860/api/v1/run/29deb764-af3f-4d7d-94a0-47491ed241d6';
+
+// Store the previous answer
+let previousAnswer = null;
+
+async function askAgent(question) {
+    const payload = {
+        "output_type": "chat",
+        "input_type": "chat",
+        "input_value": question
+    };
+
+    const options = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    };
+
+    try {
+        const response = await fetch(url, options);
+        const data = await response.json();
+        
+        // Extract the message from the nested response
+        const message = data.outputs[0].outputs[0].outputs.message.message;
+        return message;
+    } catch (error) {
+        return `Error: ${error.message}`;
+    }
+}
+
+async function startChat() {
+    console.log("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?'");
+    console.log("Type 'quit' to exit or 'compare' to see the previous answer");
+
+    const askQuestion = () => {
+        rl.question('\nYour question: ', async (userQuestion) => {
+            if (userQuestion.toLowerCase() === 'quit') {
+                rl.close();
+                return;
+            }
+
+            if (userQuestion.toLowerCase() === 'compare') {
+                if (previousAnswer) {
+                    console.log(`\nPrevious answer was: ${previousAnswer}`);
+                } else {
+                    console.log("\nNo previous answer to compare with!");
+                }
+                askQuestion();
+                return;
+            }
+
+            const result = await askAgent(userQuestion);
+            console.log(`\nAgent's answer: ${result}`);
+            previousAnswer = result;
+            askQuestion();
+        });
+    };
+
+    askQuestion();
+}
+
+startChat(); 
+```
+
+  </TabItem>
+</Tabs>
+
+## Apply temporary overrides to a flow run
+
+To change a flow's values at runtime, Langflow offers **Temporary Overrides**, also called **Tweaks**.
+Tweaks are added to the API request to the `/run` endpoint, and temporarily change component parameters within your flow.
+They don't modify the underlying flow configuration or persist between runs.
+
+The easiest way to modify your request with tweaks to the `/run` endpoint is in the **API access** pane, in the **Input schema** pane.
+
+1. In the **Input schema** pane, select the parameter you want to modify in your next request.
+Enabling parameters in the **Input schema** pane does not **allow** modifications to the listed parameters. It only adds them to the example code.
+2. For example, to change the LLM provider from OpenAI to Groq, and include your Groq API key with the request, select the values **Model Providers**, **Model**, and **Groq API Key**.
+The parameters are added to the sample code in the API pane's request.
+Inspect your request's payload with the added tweaks.
+
+```json
+payload = {
+    "output_type": "chat",
+    "input_type": "chat",
+    "input_value": "hello world!",
+    "tweaks": {
+        "Agent-ZOknz": {
+            "agent_llm": "Groq",
+            "api_key": "GROQ_API_KEY",
+            "model_name": "llama-3.1-8b-instant"
+        }
+    }
+}
+```
+
+3. Copy the code snippet from the **API access** pane into your terminal.
+Replace `GROQ_API_KEY` with your Groq API key, and run your application.
+You have run your flow without modifying the components themselves, by only passing tweaks with the request.
+
+
+
+
+
