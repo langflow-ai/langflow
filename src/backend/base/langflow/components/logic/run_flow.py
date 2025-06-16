@@ -4,7 +4,7 @@ from loguru import logger
 
 from langflow.base.tools.run_flow import RunFlowBaseComponent
 from langflow.helpers.flow import run_flow
-from langflow.schema import dotdict
+from langflow.schema.dotdict import dotdict
 
 
 class RunFlowComponent(RunFlowBaseComponent):
