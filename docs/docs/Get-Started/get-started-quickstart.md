@@ -6,7 +6,11 @@ slug: /get-started-quickstart
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-
+import CodeBlock from '@theme/CodeBlock';
+import getStartedJavascript from '!!raw-loader!./examples/get-started.js';
+import getStartedPython from '!!raw-loader!./examples/get-started.py';
+import playgroundJavascriptCode from '!!raw-loader!./examples/playground-default.js';
+import playgroundPythonCode from '!!raw-loader!./examples/playground-default.py';
 
 Get started quickly with Langflow by loading a flow and running it.
 
@@ -55,41 +59,12 @@ Choose your language and follow along.
 <Tabs groupId="Language">
 <TabItem value="Python" label="Python">
 
-### Python
+The default code in the API access pane
 
 <details open>
 <summary>Python</summary>
 
-```python
-import requests
-
-url = "http://127.0.0.1:7861/api/v1/run/0373ff1f-0173-4314-b6b6-959e5f39987b"  # The complete API endpoint URL for this flow
-
-# Request payload configuration
-payload = {
-    "output_type": "chat",
-    "input_type": "chat",
-    "input_value": "hello world!"
-}
-
-# Request headers
-headers = {
-    "Content-Type": "application/json"
-}
-
-try:
-    # Send API request
-    response = requests.request("POST", url, json=payload, headers=headers)
-    response.raise_for_status()  # Raise exception for bad status codes
-
-    # Print response
-    print(response.text)
-
-except requests.exceptions.RequestException as e:
-    print(f"Error making API request: {e}")
-except ValueError as e:
-    print(f"Error parsing response: {e}")
-```
+<CodeBlock language="Python" title="examples/playground-default.py">{playgroundPythonCode}</CodeBlock>
 
 </details>
 
@@ -122,92 +97,19 @@ This response confirms the call succeeded, but let's do something more with the 
 
 This example creates a question-and-answer chat in your terminal, and stores the previous answer. To view the previous answer, type `compare`.
 
-```python
-import requests
-import json
+<details open>
 
-url = "http://127.0.0.1:7861/api/v1/run/0373ff1f-0173-4314-b6b6-959e5f39987b"
+<summary>Python</summary>
 
-def ask_agent(question):
-    payload = {
-        "output_type": "chat",
-        "input_type": "chat",
-        "input_value": question
-    }
+<CodeBlock language="Python" title="examples/get-started.py">{getStartedPython}</CodeBlock>
 
-    headers = {"Content-Type": "application/json"}
-
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-
-        # Get the response message
-        data = response.json()
-        message = data["outputs"][0]["outputs"][0]["outputs"]["message"]["message"]
-        return message
-
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-def extract_message(data):
-    try:
-        return data["outputs"][0]["outputs"][0]["outputs"]["message"]["message"]
-    except (KeyError, IndexError):
-        return None
-
-# Store the previous answer
-previous_answer = None
-
-while True:
-    # Get user input
-    print("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?')")
-    print("Type 'quit' to exit or 'compare' to see the previous answer")
-    user_question = input("Your question: ")
-    
-    if user_question.lower() == 'quit':
-        break
-    elif user_question.lower() == 'compare':
-        if previous_answer:
-            print(f"\nPrevious answer was: {previous_answer}")
-        else:
-            print("\nNo previous answer to compare with!")
-        continue
-    
-    # Get and display the answer
-    result = ask_agent(user_question)
-    print(f"\nAgent's answer: {result}")    
-    # Store the answer for comparison
-    previous_answer = result
-
-```
+</details>
 
 </TabItem>
 
 <TabItem value="JavaScript" label="JavaScript">
 
-### JavaScript
-
-```js
-const payload = {
-    "output_type": "chat",
-    "input_type": "chat",
-    "input_value": "hello world!",
-    "session_id": "user_1"
-};
-
-const options = {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-};
-
-fetch('http://localhost:7860/api/v1/run/29deb764-af3f-4d7d-94a0-47491ed241d6', options)
-    .then(response => response.json())
-    .then(response => console.log(response))
-    .catch(err => console.error(err));
-```
+<CodeBlock language="JavaScript" title="examples/playground-default.js">{playgroundJavascriptCode}</CodeBlock>
 
 The `url` value at the `/api/v1/run/` endpoint is the endpoint your application passes the values in `payload` to.
 The `payload` is the request data. The payload schema is defined in [schemas.py](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/schemas.py#L354). The endpoint accepts these parameters.
@@ -238,79 +140,7 @@ This response confirms the call succeeded, but let's do something more with the 
 
 This example creates a question-and-answer chat in your terminal, and stores the previous answer. To view the previous answer, type `compare`.
 
-```js
-const readline = require('readline');
-
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-const url = 'http://localhost:7860/api/v1/run/29deb764-af3f-4d7d-94a0-47491ed241d6';
-
-// Store the previous answer
-let previousAnswer = null;
-
-async function askAgent(question) {
-    const payload = {
-        "output_type": "chat",
-        "input_type": "chat",
-        "input_value": question
-    };
-
-    const options = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    };
-
-    try {
-        const response = await fetch(url, options);
-        const data = await response.json();
-
-        // Extract the message from the nested response
-        const message = data.outputs[0].outputs[0].outputs.message.message;
-        return message;
-    } catch (error) {
-        return `Error: ${error.message}`;
-    }
-}
-
-async function startChat() {
-    console.log("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?'");
-    console.log("Type 'quit' to exit or 'compare' to see the previous answer");
-
-    const askQuestion = () => {
-        rl.question('\nYour question: ', async (userQuestion) => {
-            if (userQuestion.toLowerCase() === 'quit') {
-                rl.close();
-                return;
-            }
-
-            if (userQuestion.toLowerCase() === 'compare') {
-                if (previousAnswer) {
-                    console.log(`\nPrevious answer was: ${previousAnswer}`);
-                } else {
-                    console.log("\nNo previous answer to compare with!");
-                }
-                askQuestion();
-                return;
-            }
-
-            const result = await askAgent(userQuestion);
-            console.log(`\nAgent's answer: ${result}`);
-            previousAnswer = result;
-            askQuestion();
-        });
-    };
-
-    askQuestion();
-}
-
-startChat();
-```
+<CodeBlock language="JavaScript" title="examples/get-started.js">{getStartedJavascript}</CodeBlock>
 
 </TabItem>
 
