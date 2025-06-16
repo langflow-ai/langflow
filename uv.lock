@@ -4746,7 +4746,6 @@ dependencies = [
     { name = "upstash-vector" },
     { name = "uv" },
     { name = "weaviate-client" },
-    { name = "webrtcvad" },
     { name = "wikipedia" },
     { name = "wolframalpha" },
     { name = "yfinance" },
@@ -4755,6 +4754,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+audio = [
+    { name = "webrtcvad" },
+]
 cassio = [
     { name = "cassio" },
 ]
@@ -4898,7 +4900,7 @@ requires-dist = [
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
     { name = "markdown", specifier = "==3.7" },
     { name = "markupsafe", specifier = "==3.0.2" },
-    { name = "mcp", specifier = ">=0.9.1" },
+    { name = "mcp", specifier = ">=1.9.4" },
     { name = "mem0ai", specifier = "==0.1.34" },
     { name = "metal-sdk", specifier = "==2.5.1" },
     { name = "metaphor-python", specifier = "==0.1.23" },
@@ -4940,14 +4942,14 @@ requires-dist = [
     { name = "upstash-vector", specifier = "==0.6.0" },
     { name = "uv", specifier = ">=0.5.7" },
     { name = "weaviate-client", specifier = "==4.10.2" },
-    { name = "webrtcvad", specifier = ">=2.0.10" },
+    { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
     { name = "wikipedia", specifier = "==1.4.0" },
     { name = "wolframalpha", specifier = "==5.1.3" },
     { name = "yfinance", specifier = "==0.2.50" },
     { name = "youtube-transcript-api", specifier = "==0.6.3" },
     { name = "zep-python", specifier = "==2.0.2" },
 ]
-provides-extras = ["couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
+provides-extras = ["audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -5073,7 +5075,6 @@ dependencies = [
     { name = "uncurl" },
     { name = "uvicorn" },
     { name = "validators" },
-    { name = "webrtcvad" },
 ]
 
 [package.optional-dependencies]
@@ -5081,6 +5082,9 @@ all = [
     { name = "ctransformers" },
     { name = "llama-cpp-python" },
     { name = "sentence-transformers" },
+]
+audio = [
+    { name = "webrtcvad" },
 ]
 local = [
     { name = "ctransformers" },
@@ -5210,9 +5214,9 @@ requires-dist = [
     { name = "uncurl", specifier = ">=0.0.11,<1.0.0" },
     { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
     { name = "validators", specifier = ">=0.34.0" },
-    { name = "webrtcvad", specifier = ">=2.0.10" },
+    { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
 ]
-provides-extras = ["postgresql", "local", "all"]
+provides-extras = ["audio", "postgresql", "local", "all"]
 
 [package.metadata.requires-dev]
 dev = [
