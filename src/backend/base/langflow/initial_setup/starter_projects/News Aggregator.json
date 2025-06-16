@@ -1759,9 +1759,9 @@
                 "name": "file_format",
                 "options": [
                   "markdown",
-                  "excel",
                   "txt",
                   "csv",
+                  "excel",
                   "json"
                 ],
                 "options_metadata": [],
