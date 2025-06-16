@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.30cf3ea6.css">
-<script src="/assets/js/runtime~main.766a5707.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.35999d25.js" defer="defer"></script>
 <script src="/assets/js/main.8d713cb6.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -105,7 +105,7 @@ This opens Cursor&#x27;s global MCP configuration file, <code>mcp.json</code>.</
 For example:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>{</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>  &quot;mcpServers&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>    &quot;PROJECT_NAME&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>      &quot;command&quot;: &quot;uvx&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>      &quot;args&quot;: [</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>        &quot;mcp-proxy&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>        &quot;http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>      ]</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>    }</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>  }</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div>
 <p>The <strong>MCP Server</strong> tab automatically includes the correct <code>PROJECT_NAME</code>, <code>LANGFLOW_SERVER_ADDRESS</code>, and <code>PROJECT_ID</code> values.
-The default Langflow server address is <code>http://127.0.0.1:7860</code> (<code>http://127.0.0.1:7868</code> if using Langflow for Desktop).</p>
+The default Langflow server address is <code>http://localhost:7860</code> (<code>http://localhost:7868</code> if using Langflow for Desktop).</p>
 <div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>If your Langflow server <a href="/configuration-authentication">requires authentication</a> (<a href="/environment-variables#LANGFLOW_AUTO_LOGIN"><code>LANGFLOW_AUTO_LOGIN</code></a> is set to <code>false</code>), you must include your Langflow API key in the configuration.
 For more information, see <a href="#authentication">MCP server authentication and environment variables</a>.</p></div></div>
 </li>
@@ -160,13 +160,13 @@ You can use MCP Inspector to monitor your flows and get insights into how they a
 </li>
 <li>
 <p>Open a web browser and navigate to the MCP Inspector UI.
-The default address is <code>http://127.0.0.1:6274</code>.</p>
+The default address is <code>http://localhost:6274</code>.</p>
 </li>
 <li>
 <p>In the MCP Inspector UI, enter the connection details for your Langflow project&#x27;s MCP server:</p>
 <ul>
 <li><strong>Transport Type</strong>: Select <strong>SSE</strong>.</li>
-<li><strong>URL</strong>: Enter the Langflow MCP server&#x27;s <code>sse</code> endpoint. For example: <code>http://127.0.0.1:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/sse</code></li>
+<li><strong>URL</strong>: Enter the Langflow MCP server&#x27;s <code>sse</code> endpoint. For example: <code>http://localhost:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/sse</code></li>
 </ul>
 <p>If you&#x27;ve <a href="#authentication">configured authentication for your MCP server</a>, fill out the following additional fields:</p>
 <ul>
@@ -190,7 +190,7 @@ From this tab, you can monitor how your flows are being registered as tools by M
 <p>By default, Langflow isn&#x27;t exposed to the public internet.
 However, you can forward Langflow server traffic with a forwarding platform like <a href="https://ngrok.com/docs/getting-started/" target="_blank" rel="noopener noreferrer">ngrok</a> or <a href="https://docs.zrok.io/docs/getting-started" target="_blank" rel="noopener noreferrer">zrok</a>.</p>
 <p>The following procedure uses ngrok, but you can use any similar reverse proxy or forwarding platform.
-This procedure also assumes that you&#x27;re using the default Langflow listening address <code>http://127.0.0.1:7860</code> (<code>http://127.0.0.1:7868</code> if using Langflow for Desktop).</p>
+This procedure also assumes that you&#x27;re using the default Langflow listening address <code>http://localhost:7860</code> (<code>http://localhost:7868</code> if using Langflow for Desktop).</p>
 <ol>
 <li>
 <p>Sign up for an <a href="https://dashboard.ngrok.com/signup" target="_blank" rel="noopener noreferrer">ngrok account</a>.</p>
