@@ -1,13 +1,20 @@
 import requests
 import json
 
-url = "http://127.0.0.1:7861/api/v1/run/0373ff1f-0173-4314-b6b6-959e5f39987b"
+url = "http://localhost:7860/api/v1/run/29deb764-af3f-4d7d-94a0-47491ed241d6"
 
 def ask_agent(question):
     payload = {
         "output_type": "chat",
         "input_type": "chat",
-        "input_value": question
+        "input_value": question,
+        "tweaks": {
+            "Agent-ZOknz": {
+                "agent_llm": "Groq",
+                "api_key": "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",
+                "model_name": "llama-3.1-8b-instant"
+            }
+        }
     }
 
     headers = {"Content-Type": "application/json"}
