@@ -963,7 +963,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
             successfully_created_projects = 0
             existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
             existing_flow_names = [existing_flow.name for existing_flow in existing_flows]
-            for project_path, project in starter_projects:
+            for _, project in starter_projects:
                 (
                     project_name,
                     project_description,
