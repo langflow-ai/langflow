@@ -9,6 +9,7 @@ from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
+from langflow.custom.custom_component.component import Component
 from langflow.io.schema import create_input_schema, create_input_schema_from_dict
 from langflow.schema.data import Data
 from langflow.schema.message import Message
@@ -38,7 +39,8 @@ def _get_input_type(input_: InputTypes):
 
 
 def build_description(component: Component) -> str:
-    return f"{component.description}"
+    # Directly return the description attribute without using f-string formatting
+    return component.description
 
 
 async def send_message_noop(
