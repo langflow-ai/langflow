@@ -11,8 +11,8 @@ from loguru import logger
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema.data import Data
 from langflow.schema.message import Message
-from langflow.serialization import serialize
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
+from langflow.serialization.serialization import serialize
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
 from langflow.services.database.models.transactions.model import TransactionBase
 from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build

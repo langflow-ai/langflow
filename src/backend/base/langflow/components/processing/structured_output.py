@@ -2,10 +2,9 @@ from pydantic import BaseModel, Field, create_model
 from trustcall import create_extractor
 
 from langflow.base.models.chat_result import get_chat_result
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.io import (
-    BoolInput,
     HandleInput,
     MessageTextInput,
     MultilineInput,
@@ -13,16 +12,12 @@ from langflow.io import (
     TableInput,
 )
 from langflow.schema.data import Data
-from langflow.schema.dataframe import DataFrame
 from langflow.schema.table import EditMode
 
 
 class StructuredOutputComponent(Component):
     display_name = "Structured Output"
-    description = (
-        "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information "
-        "or creating consistent outputs."
-    )
+    description = "Uses an LLM to generate structured data. Ideal for extraction and consistency."
     name = "StructuredOutput"
     icon = "braces"
 
@@ -96,6 +91,14 @@ class StructuredOutputComponent(Component):
                     "options": ["str", "int", "float", "bool", "dict"],
                     "default": "str",
                 },
+                {
+                    "name": "multiple",
+                    "display_name": "As List",
+                    "type": "boolean",
+                    "description": "Set to True if this output field should be a list of the specified type.",
+                    "default": "False",
+                    "edit_mode": EditMode.INLINE,
+                },
             ],
             value=[
                 {
@@ -106,13 +109,6 @@ class StructuredOutputComponent(Component):
                 }
             ],
         ),
-        BoolInput(
-            name="multiple",
-            advanced=True,
-            display_name="Generate Multiple",
-            info="[Deprecated] Always set to True",
-            value=True,
-        ),
     ]
 
     outputs = [
@@ -121,14 +117,9 @@ class StructuredOutputComponent(Component):
             display_name="Structured Output",
             method="build_structured_output",
         ),
-        Output(
-            name="structured_output_dataframe",
-            display_name="DataFrame",
-            method="as_dataframe",
-        ),
     ]
 
-    def build_structured_output_base(self) -> Data:
+    def build_structured_output_base(self):
         schema_name = self.schema_name or "OutputModel"
 
         if not hasattr(self.llm, "with_structured_output"):
@@ -151,6 +142,7 @@ class StructuredOutputComponent(Component):
         except NotImplementedError as exc:
             msg = f"{self.llm.__class__.__name__} does not support structured output."
             raise TypeError(msg) from exc
+
         config_dict = {
             "run_name": self.display_name,
             "project_name": self.get_project_name(),
@@ -162,22 +154,31 @@ class StructuredOutputComponent(Component):
             input_value=self.input_value,
             config=config_dict,
         )
-        if isinstance(result, BaseModel):
-            result = result.model_dump()
-        if responses := result.get("responses"):
-            result = responses[0].model_dump()
-        if result and "objects" in result:
-            return result["objects"]
 
-        return result
+        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure
+        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)
+        if not isinstance(result, dict):
+            return result
+
+        # Extract first response and convert BaseModel to dict
+        responses = result.get("responses", [])
+        if not responses:
+            return result
+
+        # Convert BaseModel to dict (creates the "objects" key)
+        first_response = responses[0]
+        structured_data = first_response.model_dump() if isinstance(first_response, BaseModel) else first_response
+
+        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)
+        return structured_data.get("objects", structured_data)
 
     def build_structured_output(self) -> Data:
         output = self.build_structured_output_base()
-
-        return Data(text_key="results", data={"results": output})
-
-    def as_dataframe(self) -> DataFrame:
-        output = self.build_structured_output_base()
-        if isinstance(output, list):
-            return DataFrame(data=output)
-        return DataFrame(data=[output])
+        if not isinstance(output, list) or not output:
+            # handle empty or unexpected type case
+            msg = "No structured output returned"
+            raise ValueError(msg)
+        if len(output) != 1:
+            msg = "Multiple structured outputs returned"
+            raise ValueError(msg)
+        return Data(data=output[0])
