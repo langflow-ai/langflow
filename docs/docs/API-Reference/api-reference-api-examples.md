@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 This page provides examples and practices for managing Langflow using the Langflow API.
 
 The Langflow API's OpenAPI spec can be viewed and tested at your Langflow deployment's `docs` endpoint.
-For example, `http://127.0.0.1:7860/docs`.
+For example, `http://localhost:7860/docs`.
 
 ## Export values
 
@@ -18,10 +18,10 @@ You might find it helpful to set the following environment variables in your ter
 The examples in this guide use environment variables for these values.
 
 - Export your Langflow URL in your terminal.
-  Langflow starts by default at `http://127.0.0.1:7860`.
+  Langflow starts by default at `http://localhost:7860`.
 
 ```bash
-export LANGFLOW_URL="http://127.0.0.1:7860"
+export LANGFLOW_URL="http://localhost:7860"
 ```
 
 - Export the `flow-id` in your terminal.
