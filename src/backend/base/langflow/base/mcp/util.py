@@ -3,6 +3,7 @@ import os
 import platform
 import shutil
 from collections.abc import Awaitable, Callable
+from ssl import SSLContext
 from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID
@@ -15,7 +16,11 @@ from mcp import ClientSession
 from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
 
+# from langflow internal modules
 from langflow.services.database.models.flow.model import Flow
+
+# Settings gives us access to VERIFY_SSL (env → settings)
+from langflow.services.settings.base import Settings
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
@@ -383,10 +388,13 @@ class MCPStdioClient:
 
 
 class MCPSseClient:
-    def __init__(self):
+    # If ssl_verify is omitted we fall back to global Settings.verify_ssl
+    def __init__(self, ssl_verify: bool | str | SSLContext | None = None):
         self.session: ClientSession | None = None
         self._connection_params = None
         self._connected = False
+        # Pull global default from Settings when caller doesn't provide one
+        self._ssl_verify = ssl_verify if ssl_verify is not None else getattr(Settings(), "verify_ssl", True)
 
     async def validate_url(self, url: str | None) -> tuple[bool, str]:
         """Validate the SSE URL before attempting connection."""
@@ -395,9 +403,7 @@ class MCPSseClient:
             if not parsed.scheme or not parsed.netloc:
                 return False, "Invalid URL format. Must include scheme (http/https) and host."
 
-            ssl_verify = server_config.get("ssl_verify", True)
-
-            async with httpx.AsyncClient(verify=ssl_verify) as client:
+            async with httpx.AsyncClient(verify=self._ssl_verify) as client:
                 try:
                     # First try a HEAD request to check if server is reachable
                     response = await client.head(url, timeout=5.0)
@@ -419,9 +425,7 @@ class MCPSseClient:
         if url is None:
             return url
         try:
-            ssl_verify = server_config.get("ssl_verify", True)
-
-            async with httpx.AsyncClient(follow_redirects=False, verify=ssl_verify) as client:
+            async with httpx.AsyncClient(follow_redirects=False, verify=self._ssl_verify) as client:
                 response = await client.request("HEAD", url)
                 if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
                     return response.headers.get("Location", url)
@@ -460,10 +464,11 @@ class MCPSseClient:
         }
 
         try:
-            ssl_verify = server_config.get("ssl_verify", True)
-
             async with (
-                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds, verify=ssl_verify) as (read, write),
+                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds, verify=self._ssl_verify) as (
+                    read,
+                    write,
+                ),
                 ClientSession(read, write) as session,
             ):
                 await session.initialize()
@@ -502,8 +507,6 @@ class MCPSseClient:
         try:
             from mcp.client.sse import sse_client
 
-            ssl_verify = server_config.get("ssl_verify", True)
-
             params = self._connection_params
             async with (
                 sse_client(
@@ -511,7 +514,7 @@ class MCPSseClient:
                     params["headers"],
                     params["timeout_seconds"],
                     params["sse_read_timeout_seconds"],
-                    verify=ssl_verify,
+                    verify=self._ssl_verify,
                 ) as (read, write),
                 ClientSession(read, write) as session,
             ):
@@ -544,8 +547,14 @@ async def update_tools(
         return "", [], {}
     if mcp_stdio_client is None:
         mcp_stdio_client = MCPStdioClient()
+    # Pick per-server override if present, otherwise fall back to global VERIFY_SSL
+    global_verify_ssl = getattr(Settings(), "verify_ssl", True)
+    ssl_verify = server_config.get("ssl_verify", global_verify_ssl)
     if mcp_sse_client is None:
-        mcp_sse_client = MCPSseClient()
+        mcp_sse_client = MCPSseClient(ssl_verify)
+    else:
+        # Keep the client's SSL setting in sync with the current config
+        mcp_sse_client._ssl_verify = ssl_verify
 
     try:
         # Fetch server config from backend

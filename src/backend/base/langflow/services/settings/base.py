@@ -249,6 +249,17 @@ class Settings(BaseSettings):
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
 
+    verify_ssl: bool | str = Field(default=True, alias="VERIFY_SSL")
+    """Whether Langflow should verify TLS certificates when making HTTP(S)
+    requests  (MCP SSE/REST, web-hooks, etc.).
+
+    - True    - verify against system CA bundle (default)
+    - False   - do NOT verify (development / self-signed)
+    ToDo: add support for custom CA bundle (.pem) Needs Testing.
+    - <path>  - string pointing to a custom CA bundle (.pem)
+    The value is taken from the environment variable `VERIFY_SSL`
+    (or `LANGFLOW_VERIFY_SSL` when the standard prefix is used)."""
+
     @field_validator("event_delivery", mode="before")
     @classmethod
     def set_event_delivery(cls, value, info):
@@ -419,6 +430,19 @@ class Settings(BaseSettings):
 
         logger.debug(f"Components path: {value}")
         return value
+
+    @field_validator("verify_ssl", mode="before")
+    @classmethod
+    def _coerce_verify_ssl(cls, v):
+        env_v = os.getenv("VERIFY_SSL")
+        if v is None and env_v is not None:
+            v = env_v
+        if isinstance(v, str):
+            if v.lower() in {"false", "0", "no"}:
+                return False
+            if v.lower() in {"true", "1", "yes"}:
+                return True
+        return v
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
