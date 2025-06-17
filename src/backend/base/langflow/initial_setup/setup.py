@@ -66,7 +66,11 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
 
-            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") == "Agent"
+            is_tool_or_agent = (
+                node_data.get("tool_mode", False)
+                or node_data.get("key") == "Agent"
+                or node_data.get("key") == "Language Model"
+            )
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
                 # Set selected output as the previous selected output
