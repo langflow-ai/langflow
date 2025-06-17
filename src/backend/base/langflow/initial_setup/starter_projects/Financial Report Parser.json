@@ -27,9 +27,9 @@
         "id": "reactflow__edge-parser-ZMjjt{œdataTypeœ:œparserœ,œidœ:œparser-ZMjjtœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DHgU9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DHgU9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-ZMjjt",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-ZMjjtœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-ZMjjtœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-DHgU9",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DHgU9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-DHgU9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-LanguageModelComponent-jtKdb{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-jtKdbœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-2t0FB{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-2t0FBœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-jtKdb",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-jtKdbœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-jtKdbœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-2t0FB",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-2t0FBœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-2t0FBœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-ChatInput-VaLgK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VaLgKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-2t0FB{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-2t0FBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-VaLgK",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VaLgKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-VaLgKœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-2t0FB",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-2t0FBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-2t0FBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-StructuredOutput-2t0FB{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-2t0FBœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-ZMjjt{œfieldNameœ:œinput_dataœ,œidœ:œparser-ZMjjtœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-2t0FB",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-2t0FBœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-2t0FBœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "parser-ZMjjt",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-ZMjjtœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-ZMjjtœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1019,8 +1019,7 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
+                "selected": null,
                 "tool_mode": true,
                 "types": [
                   "Message"
@@ -1034,8 +1033,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
