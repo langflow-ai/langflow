@@ -506,7 +506,7 @@
             "tool_mode": false
           },
           "type": "Memory",
-          "selected_output": "dataframe"
+          "selected_output": "message"
         },
         "dragging": false,
         "height": 262,
