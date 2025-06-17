@@ -5,7 +5,7 @@ slug: /starter-projects-simple-agent
 
 import Icon from "@site/src/components/icon";
 
-Build a **Simple Agent** flow for an agentic application using the [Agent](/agent) component.
+Build a **Simple Agent** flow for an agentic application using the [Agent](/components-agents) component.
 
 An **agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
 
