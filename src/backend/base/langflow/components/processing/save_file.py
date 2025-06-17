@@ -45,7 +45,7 @@ class SaveToFileComponent(Component):
         DropdownInput(
             name="file_format",
             display_name="File Format",
-            options=list(set(DATA_FORMAT_CHOICES + MESSAGE_FORMAT_CHOICES)),
+            options=list(dict.fromkeys(DATA_FORMAT_CHOICES + MESSAGE_FORMAT_CHOICES)),
             info="Select the file format to save the input. If not provided, the default format will be used.",
             value="",
             advanced=True,
