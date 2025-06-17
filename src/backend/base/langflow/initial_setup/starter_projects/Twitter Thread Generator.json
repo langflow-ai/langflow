@@ -6,181 +6,8 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-eClq5",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "CONTENT_GUIDELINES",
-            "id": "Prompt-AWZtN",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-TextInput-eClq5{œdataTypeœ:œTextInputœ,œidœ:œTextInput-eClq5œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-AWZtN{œfieldNameœ:œCONTENT_GUIDELINESœ,œidœ:œPrompt-AWZtNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "TextInput-eClq5",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-eClq5œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AWZtN",
-        "targetHandle": "{œfieldNameœ: œCONTENT_GUIDELINESœ, œidœ: œPrompt-AWZtNœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-IpoG7",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "OUTPUT_FORMAT",
-            "id": "Prompt-AWZtN",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-TextInput-IpoG7{œdataTypeœ:œTextInputœ,œidœ:œTextInput-IpoG7œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-AWZtN{œfieldNameœ:œOUTPUT_FORMATœ,œidœ:œPrompt-AWZtNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "TextInput-IpoG7",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-IpoG7œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AWZtN",
-        "targetHandle": "{œfieldNameœ: œOUTPUT_FORMATœ, œidœ: œPrompt-AWZtNœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-npraC",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "OUTPUT_LANGUAGE",
-            "id": "Prompt-AWZtN",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-TextInput-npraC{œdataTypeœ:œTextInputœ,œidœ:œTextInput-npraCœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-AWZtN{œfieldNameœ:œOUTPUT_LANGUAGEœ,œidœ:œPrompt-AWZtNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "TextInput-npraC",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-npraCœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AWZtN",
-        "targetHandle": "{œfieldNameœ: œOUTPUT_LANGUAGEœ, œidœ: œPrompt-AWZtNœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-EZaR7",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "PROFILE_DETAILS",
-            "id": "Prompt-AWZtN",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-TextInput-EZaR7{œdataTypeœ:œTextInputœ,œidœ:œTextInput-EZaR7œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-AWZtN{œfieldNameœ:œPROFILE_DETAILSœ,œidœ:œPrompt-AWZtNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "TextInput-EZaR7",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-EZaR7œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AWZtN",
-        "targetHandle": "{œfieldNameœ: œPROFILE_DETAILSœ, œidœ: œPrompt-AWZtNœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-fKGcs",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "PROFILE_TYPE",
-            "id": "Prompt-AWZtN",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-TextInput-fKGcs{œdataTypeœ:œTextInputœ,œidœ:œTextInput-fKGcsœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-AWZtN{œfieldNameœ:œPROFILE_TYPEœ,œidœ:œPrompt-AWZtNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "TextInput-fKGcs",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-fKGcsœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AWZtN",
-        "targetHandle": "{œfieldNameœ: œPROFILE_TYPEœ, œidœ: œPrompt-AWZtNœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-92vEK",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "TONE_AND_STYLE",
-            "id": "Prompt-AWZtN",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-TextInput-92vEK{œdataTypeœ:œTextInputœ,œidœ:œTextInput-92vEKœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-AWZtN{œfieldNameœ:œTONE_AND_STYLEœ,œidœ:œPrompt-AWZtNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "TextInput-92vEK",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-92vEKœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AWZtN",
-        "targetHandle": "{œfieldNameœ: œTONE_AND_STYLEœ, œidœ: œPrompt-AWZtNœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-ECcN8",
+            "id": "ChatInput-Nc96R",
             "name": "message",
             "output_types": [
               "Message"
@@ -188,26 +15,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-p0R9m",
+            "id": "OpenAIModel-MWChI",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-ECcN8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ECcN8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-p0R9m{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-p0R9mœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-Nc96R{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Nc96Rœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-MWChI{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-MWChIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-ECcN8",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ECcN8œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-p0R9m",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-p0R9mœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-Nc96R",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Nc96Rœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-MWChI",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-MWChIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-AWZtN",
+            "id": "Prompt-A9sdo",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -215,26 +43,175 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-p0R9m",
+            "id": "OpenAIModel-MWChI",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-AWZtN{œdataTypeœ:œPromptœ,œidœ:œPrompt-AWZtNœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-p0R9m{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-p0R9mœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-A9sdo{œdataTypeœ:œPromptœ,œidœ:œPrompt-A9sdoœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-MWChI{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-MWChIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-AWZtN",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-AWZtNœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-p0R9m",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-p0R9mœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-A9sdo",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-A9sdoœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-MWChI",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-MWChIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
-        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TextInput",
+            "id": "TextInput-dT9gY",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "CONTENT_GUIDELINES",
+            "id": "Prompt-A9sdo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__TextInput-dT9gY{œdataTypeœ:œTextInputœ,œidœ:œTextInput-dT9gYœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-A9sdo{œfieldNameœ:œCONTENT_GUIDELINESœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "TextInput-dT9gY",
+        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-dT9gYœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-A9sdo",
+        "targetHandle": "{œfieldNameœ:œCONTENT_GUIDELINESœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "TextInput",
+            "id": "TextInput-P6Y5P",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "OUTPUT_FORMAT",
+            "id": "Prompt-A9sdo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__TextInput-P6Y5P{œdataTypeœ:œTextInputœ,œidœ:œTextInput-P6Y5Pœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-A9sdo{œfieldNameœ:œOUTPUT_FORMATœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "TextInput-P6Y5P",
+        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-P6Y5Pœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-A9sdo",
+        "targetHandle": "{œfieldNameœ:œOUTPUT_FORMATœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "TextInput",
+            "id": "TextInput-tdmMc",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "OUTPUT_LANGUAGE",
+            "id": "Prompt-A9sdo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__TextInput-tdmMc{œdataTypeœ:œTextInputœ,œidœ:œTextInput-tdmMcœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-A9sdo{œfieldNameœ:œOUTPUT_LANGUAGEœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "TextInput-tdmMc",
+        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-tdmMcœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-A9sdo",
+        "targetHandle": "{œfieldNameœ:œOUTPUT_LANGUAGEœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "TextInput",
+            "id": "TextInput-ckIBW",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "PROFILE_DETAILS",
+            "id": "Prompt-A9sdo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__TextInput-ckIBW{œdataTypeœ:œTextInputœ,œidœ:œTextInput-ckIBWœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-A9sdo{œfieldNameœ:œPROFILE_DETAILSœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "TextInput-ckIBW",
+        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-ckIBWœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-A9sdo",
+        "targetHandle": "{œfieldNameœ:œPROFILE_DETAILSœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "TextInput",
+            "id": "TextInput-NMYg2",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "PROFILE_TYPE",
+            "id": "Prompt-A9sdo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__TextInput-NMYg2{œdataTypeœ:œTextInputœ,œidœ:œTextInput-NMYg2œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-A9sdo{œfieldNameœ:œPROFILE_TYPEœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "TextInput-NMYg2",
+        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-NMYg2œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-A9sdo",
+        "targetHandle": "{œfieldNameœ:œPROFILE_TYPEœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "TextInput",
+            "id": "TextInput-73TPV",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "TONE_AND_STYLE",
+            "id": "Prompt-A9sdo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__TextInput-73TPV{œdataTypeœ:œTextInputœ,œidœ:œTextInput-73TPVœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-A9sdo{œfieldNameœ:œTONE_AND_STYLEœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "TextInput-73TPV",
+        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-73TPVœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-A9sdo",
+        "targetHandle": "{œfieldNameœ:œTONE_AND_STYLEœ,œidœ:œPrompt-A9sdoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-p0R9m",
+            "id": "OpenAIModel-MWChI",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -242,27 +219,26 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-0jDYx",
+            "id": "ChatOutput-MWGi2",
             "inputTypes": [
               "Data",
               "DataFrame",
               "Message"
             ],
-            "type": "str"
+            "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-p0R9m{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-p0R9mœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-0jDYx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-0jDYxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "OpenAIModel-p0R9m",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-p0R9mœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-0jDYx",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-0jDYxœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__OpenAIModel-MWChI{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-MWChIœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-MWGi2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-MWGi2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "source": "OpenAIModel-MWChI",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-MWChIœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-MWGi2",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-MWGi2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-ECcN8",
+          "id": "ChatInput-Nc96R",
           "node": {
             "base_classes": [
               "Message"
@@ -288,8 +264,8 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
             "metadata": {},
+            "minimized": true,
             "output_types": [],
             "outputs": [
               {
@@ -299,6 +275,8 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -320,12 +298,14 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -341,12 +321,14 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -403,6 +385,7 @@
                 "file_path": "",
                 "info": "Files to be sent with the message.",
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "files",
                 "placeholder": "",
                 "required": false,
@@ -416,11 +399,13 @@
               "input_value": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Input Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
                 "input_types": [],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "input_value",
@@ -428,6 +413,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -437,6 +423,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -445,10 +432,13 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "User"
@@ -463,12 +453,14 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -484,12 +476,14 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -502,11 +496,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -521,25 +517,27 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
               }
-            }
+            },
+            "tool_mode": false
           },
-          "type": "ChatInput",
-          "selected_output": "message"
+          "type": "ChatInput"
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-ECcN8",
+        "id": "ChatInput-Nc96R",
         "measured": {
           "height": 234,
           "width": 320
@@ -558,7 +556,7 @@
       },
       {
         "data": {
-          "id": "TextInput-eClq5",
+          "id": "TextInput-dT9gY",
           "node": {
             "base_classes": [
               "Message"
@@ -640,12 +638,11 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
-        "id": "TextInput-eClq5",
+        "id": "TextInput-dT9gY",
         "measured": {
           "height": 234,
           "width": 320
@@ -666,7 +663,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-0jDYx",
+          "id": "ChatOutput-MWGi2",
           "node": {
             "base_classes": [
               "Message"
@@ -687,13 +684,14 @@
               "data_template",
               "background_color",
               "chat_icon",
-              "text_color"
+              "text_color",
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
             "metadata": {},
+            "minimized": true,
             "output_types": [],
             "outputs": [
               {
@@ -703,6 +701,8 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -724,6 +724,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -746,6 +747,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -804,6 +806,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "data_template",
                 "placeholder": "",
@@ -817,7 +820,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Inputs",
                 "dynamic": false,
@@ -828,21 +831,21 @@
                   "Message"
                 ],
                 "list": false,
-                "load_from_db": false,
+                "list_add_label": "Add More",
                 "name": "input_value",
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
-                "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -851,10 +854,12 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -870,6 +875,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -892,6 +898,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -911,11 +918,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -930,6 +939,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -949,7 +959,7 @@
         },
         "dragging": true,
         "height": 234,
-        "id": "ChatOutput-0jDYx",
+        "id": "ChatOutput-MWGi2",
         "measured": {
           "height": 234,
           "width": 320
@@ -968,7 +978,7 @@
       },
       {
         "data": {
-          "id": "TextInput-IpoG7",
+          "id": "TextInput-P6Y5P",
           "node": {
             "base_classes": [
               "Message"
@@ -1050,12 +1060,11 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
-        "id": "TextInput-IpoG7",
+        "id": "TextInput-P6Y5P",
         "measured": {
           "height": 234,
           "width": 320
@@ -1074,7 +1083,7 @@
       },
       {
         "data": {
-          "id": "TextInput-npraC",
+          "id": "TextInput-tdmMc",
           "node": {
             "base_classes": [
               "Message"
@@ -1156,12 +1165,11 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
-        "id": "TextInput-npraC",
+        "id": "TextInput-tdmMc",
         "measured": {
           "height": 234,
           "width": 320
@@ -1180,7 +1188,7 @@
       },
       {
         "data": {
-          "id": "TextInput-EZaR7",
+          "id": "TextInput-ckIBW",
           "node": {
             "base_classes": [
               "Message"
@@ -1262,12 +1270,11 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
-        "id": "TextInput-EZaR7",
+        "id": "TextInput-ckIBW",
         "measured": {
           "height": 234,
           "width": 320
@@ -1286,7 +1293,7 @@
       },
       {
         "data": {
-          "id": "TextInput-92vEK",
+          "id": "TextInput-73TPV",
           "node": {
             "base_classes": [
               "Message"
@@ -1368,12 +1375,11 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
-        "id": "TextInput-92vEK",
+        "id": "TextInput-73TPV",
         "measured": {
           "height": 234,
           "width": 320
@@ -1392,7 +1398,7 @@
       },
       {
         "data": {
-          "id": "TextInput-fKGcs",
+          "id": "TextInput-NMYg2",
           "node": {
             "base_classes": [
               "Message"
@@ -1474,12 +1480,11 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
-        "id": "TextInput-fKGcs",
+        "id": "TextInput-NMYg2",
         "measured": {
           "height": 234,
           "width": 320
@@ -1498,7 +1503,7 @@
       },
       {
         "data": {
-          "id": "note-OjsTI",
+          "id": "note-KIIoo",
           "node": {
             "description": "# Twitter Thread Generator\n\nWelcome to the Twitter Thread Generator! This flow helps you create compelling Twitter threads by transforming your structured inputs into engaging content.\n\n## Instructions\n\n1. Prepare Your Inputs\n   - Fill in the \"Context\" with your main message or story\n   - Define \"Content Guidelines\" for thread structure and style\n   - Specify \"Profile Type\" and \"Profile Details\" to reflect your brand identity\n   - Set \"Tone and Style\" to guide the communication approach\n   - Choose \"Output Format\" (thread) and desired language\n\n2. Configure the Prompt\n   - The flow uses a specialized prompt template to generate content\n   - Ensure all input fields are connected to the prompt node\n\n3. Run the Generation\n   - Execute the flow to process your inputs\n   - The OpenAI model will create the thread based on your specifications\n\n4. Review and Refine\n   - Examine the output in the Chat Output node\n   - If needed, adjust your inputs and re-run for better results\n\n5. Finalize and Post\n   - Once satisfied, copy the generated thread\n   - Post to Twitter, maintaining the structure and flow\n\nRemember: Be specific in your context and guidelines for the best results! 🚀\n",
             "display_name": "",
@@ -1511,10 +1516,10 @@
         },
         "dragging": false,
         "height": 800,
-        "id": "note-OjsTI",
+        "id": "note-KIIoo",
         "measured": {
-          "height": 784,
-          "width": 324
+          "height": 800,
+          "width": 325
         },
         "position": {
           "x": 675.0099418843004,
@@ -1537,7 +1542,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-AWZtN",
+          "id": "Prompt-A9sdo",
           "node": {
             "base_classes": [
               "Message"
@@ -1559,13 +1564,14 @@
             "documentation": "",
             "edited": false,
             "field_order": [
-              "template"
+              "template",
+              "tool_placeholder"
             ],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
             "metadata": {},
+            "minimized": false,
             "output_types": [],
             "outputs": [
               {
@@ -1575,6 +1581,8 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1594,8 +1602,7 @@
                 "file_path": "",
                 "info": "",
                 "input_types": [
-                  "Message",
-                  "Text"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
@@ -1617,8 +1624,7 @@
                 "file_path": "",
                 "info": "",
                 "input_types": [
-                  "Message",
-                  "Text"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
@@ -1640,8 +1646,7 @@
                 "file_path": "",
                 "info": "",
                 "input_types": [
-                  "Message",
-                  "Text"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
@@ -1663,8 +1668,7 @@
                 "file_path": "",
                 "info": "",
                 "input_types": [
-                  "Message",
-                  "Text"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
@@ -1686,8 +1690,7 @@
                 "file_path": "",
                 "info": "",
                 "input_types": [
-                  "Message",
-                  "Text"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
@@ -1709,8 +1712,7 @@
                 "file_path": "",
                 "info": "",
                 "input_types": [
-                  "Message",
-                  "Text"
+                  "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
@@ -1749,6 +1751,7 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "template",
                 "placeholder": "",
@@ -1770,6 +1773,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "tool_placeholder",
                 "placeholder": "",
@@ -1785,12 +1789,11 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt",
-          "selected_output": "prompt"
+          "type": "Prompt"
         },
         "dragging": false,
         "height": 779,
-        "id": "Prompt-AWZtN",
+        "id": "Prompt-A9sdo",
         "measured": {
           "height": 779,
           "width": 320
@@ -1809,14 +1812,13 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-p0R9m",
+          "id": "OpenAIModel-MWChI",
           "node": {
             "base_classes": [
               "LanguageModel",
               "Message"
             ],
             "beta": false,
-            "category": "models",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Generates text using OpenAI LLMs.",
@@ -1834,11 +1836,12 @@
               "openai_api_base",
               "api_key",
               "temperature",
-              "seed"
+              "seed",
+              "max_retries",
+              "timeout"
             ],
             "frozen": false,
             "icon": "OpenAI",
-            "key": "OpenAIModel",
             "legacy": false,
             "metadata": {
               "keywords": [
@@ -1858,6 +1861,8 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1872,6 +1877,8 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1881,7 +1888,6 @@
               }
             ],
             "pinned": false,
-            "score": 0.14285714285714285,
             "template": {
               "_type": "Component",
               "api_key": {
@@ -1899,7 +1905,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -2028,6 +2034,7 @@
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "",
+                "load_from_db": false,
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -2044,9 +2051,11 @@
                 ],
                 "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2110,6 +2119,7 @@
               "system_message": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
@@ -2181,13 +2191,12 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel",
-          "selected_output": "text_output"
+          "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-p0R9m",
+        "id": "OpenAIModel-MWChI",
         "measured": {
-          "height": 653,
+          "height": 540,
           "width": 320
         },
         "position": {
@@ -2199,19 +2208,17 @@
       }
     ],
     "viewport": {
-      "x": -37.82574897322547,
-      "y": -72.05604403499899,
-      "zoom": 0.47946922686660903
+      "x": -278.7766404298163,
+      "y": 10.819984229855208,
+      "zoom": 0.3560523658348389
     }
   },
   "description": "Transform structured inputs into engaging Twitter threads with this prompt-based flow, maintaining brand voice and technical accuracy.",
   "endpoint_name": null,
-  "gradient": "4",
-  "icon": "TwitterLogoIcon",
-  "id": "e73336f0-7ac5-42a5-827c-4b060a0556c6",
+  "id": "e8386fc1-42bf-47af-a704-c4b397e075a0",
   "is_component": false,
-  "last_tested_version": "1.0.19.post2",
-  "name": "Twitter Thread Generator",
+  "last_tested_version": "1.4.3",
+  "name": "Twitter Thread Generator (3)",
   "tags": [
     "chatbots",
     "content-generation"

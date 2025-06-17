@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-AJxY8",
+            "id": "Prompt-sa3c2",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-zVeWr",
+            "id": "OpenAIModel-DMlQQ",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-AJxY8{œdataTypeœ:œPromptœ,œidœ:œPrompt-AJxY8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-zVeWr{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-zVeWrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-sa3c2{œdataTypeœ:œPromptœ,œidœ:œPrompt-sa3c2œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-DMlQQ{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-DMlQQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-AJxY8",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-AJxY8œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-zVeWr",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-zVeWrœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-sa3c2",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-sa3c2œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-DMlQQ",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-DMlQQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-zVeWr",
+            "id": "OpenAIModel-DMlQQ",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "summary",
-            "id": "Prompt-nmNbi",
+            "id": "Prompt-OoI7p",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-zVeWr{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-zVeWrœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-nmNbi{œfieldNameœ:œsummaryœ,œidœ:œPrompt-nmNbiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-DMlQQ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-DMlQQœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-OoI7p{œfieldNameœ:œsummaryœ,œidœ:œPrompt-OoI7pœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-zVeWr",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-zVeWrœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-nmNbi",
-        "targetHandle": "{œfieldNameœ: œsummaryœ, œidœ: œPrompt-nmNbiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "OpenAIModel-DMlQQ",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-DMlQQœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-OoI7p",
+        "targetHandle": "{œfieldNameœ:œsummaryœ,œidœ:œPrompt-OoI7pœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-nmNbi",
+            "id": "Prompt-OoI7p",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-Izkdb",
+            "id": "OpenAIModel-7B6Zn",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-nmNbi{œdataTypeœ:œPromptœ,œidœ:œPrompt-nmNbiœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Izkdb{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-Izkdbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-OoI7p{œdataTypeœ:œPromptœ,œidœ:œPrompt-OoI7pœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-7B6Zn{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-7B6Znœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-nmNbi",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-nmNbiœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-Izkdb",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-Izkdbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-OoI7p",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-OoI7pœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-7B6Zn",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-7B6Znœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-LXvg7",
+            "id": "Prompt-xndIp",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -99,19 +99,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-Hl8vG",
+            "id": "OpenAIModel-xUMDy",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-LXvg7{œdataTypeœ:œPromptœ,œidœ:œPrompt-LXvg7œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Hl8vG{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-Hl8vGœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-xndIp{œdataTypeœ:œPromptœ,œidœ:œPrompt-xndIpœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-xUMDy{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-xUMDyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-LXvg7",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-LXvg7œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-Hl8vG",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-Hl8vGœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-xndIp",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-xndIpœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-xUMDy",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-xUMDyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -119,7 +119,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-Hl8vG",
+            "id": "OpenAIModel-xUMDy",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -127,7 +127,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-NS8z5",
+            "id": "ChatOutput-BSWnd",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -136,12 +136,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-Hl8vG{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Hl8vGœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-NS8z5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NS8z5œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-xUMDy{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-xUMDyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-BSWnd{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-BSWndœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-Hl8vG",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Hl8vGœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-NS8z5",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-NS8z5œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "OpenAIModel-xUMDy",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-xUMDyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-BSWnd",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-BSWndœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -149,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-Izkdb",
+            "id": "OpenAIModel-7B6Zn",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -157,7 +157,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-GzAXT",
+            "id": "ChatOutput-6LyME",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -166,48 +166,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-Izkdb{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Izkdbœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-GzAXT{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-GzAXTœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-7B6Zn{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-7B6Znœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-6LyME{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-6LyMEœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-Izkdb",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Izkdbœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-GzAXT",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-GzAXTœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "OpenAIModel-7B6Zn",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-7B6Znœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-6LyME",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-6LyMEœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-m5GWE",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-Hl8vG",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__File-m5GWE{œdataTypeœ:œFileœ,œidœ:œFile-m5GWEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Hl8vG{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Hl8vGœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "File-m5GWE",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-m5GWEœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-Hl8vG",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-Hl8vGœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "File",
-            "id": "File-m5GWE",
+            "id": "File-mlkyp",
             "name": "message",
             "output_types": [
               "Message"
@@ -215,31 +185,55 @@
           },
           "targetHandle": {
             "fieldName": "text",
-            "id": "Prompt-AJxY8",
+            "id": "Prompt-sa3c2",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__File-m5GWE{œdataTypeœ:œFileœ,œidœ:œFile-m5GWEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-AJxY8{œfieldNameœ:œtextœ,œidœ:œPrompt-AJxY8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "File-m5GWE",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-m5GWEœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AJxY8",
-        "targetHandle": "{œfieldNameœ: œtextœ, œidœ: œPrompt-AJxY8œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__File-mlkyp{œdataTypeœ:œFileœ,œidœ:œFile-mlkypœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-sa3c2{œfieldNameœ:œtextœ,œidœ:œPrompt-sa3c2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "File-mlkyp",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-mlkypœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-sa3c2",
+        "targetHandle": "{œfieldNameœ:œtextœ,œidœ:œPrompt-sa3c2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "File",
+            "id": "File-mlkyp",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-xUMDy",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__File-mlkyp{œdataTypeœ:œFileœ,œidœ:œFile-mlkypœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-xUMDy{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-xUMDyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "File-mlkyp",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-mlkypœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-xUMDy",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-xUMDyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "File-m5GWE",
+          "id": "File-mlkyp",
           "node": {
             "base_classes": [
-              "Data"
+              "DataFrame",
+              "Message"
             ],
             "beta": false,
-            "category": "data",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Loads content from one or more files as a DataFrame.",
@@ -249,6 +243,7 @@
             "field_order": [
               "path",
               "file_path",
+              "separator",
               "silent_errors",
               "delete_server_file_after_processing",
               "ignore_unsupported_extensions",
@@ -258,9 +253,7 @@
             ],
             "frozen": false,
             "icon": "file-text",
-            "key": "File",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -272,7 +265,8 @@
                 "group_outputs": false,
                 "method": "load_files",
                 "name": "dataframe",
-                "selected": "DataFrame",
+                "options": null,
+                "required_inputs": null,
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
@@ -284,8 +278,11 @@
                 "cache": true,
                 "display_name": "Raw Content",
                 "group_outputs": false,
+                "hidden": null,
                 "method": "load_files_message",
                 "name": "message",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -295,7 +292,6 @@
               }
             ],
             "pinned": false,
-            "score": 0.0004124940109183525,
             "template": {
               "_type": "Component",
               "code": {
@@ -511,26 +507,26 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message",
           "showNode": true,
-          "type": "File",
-          "selected_output": "message"
+          "type": "File"
         },
         "dragging": false,
-        "id": "File-m5GWE",
+        "id": "File-mlkyp",
         "measured": {
-          "height": 336,
+          "height": 230,
           "width": 320
         },
         "position": {
-          "x": -2283.1962393600293,
-          "y": 660.3497479382216
+          "x": -2075.8440291126244,
+          "y": 685.6366028464417
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Prompt-nmNbi",
+          "id": "Prompt-OoI7p",
           "node": {
             "base_classes": [
               "Message"
@@ -546,22 +542,15 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "error": null,
             "field_order": [
               "template",
               "tool_placeholder"
             ],
             "frozen": false,
-            "full_path": null,
             "icon": "braces",
-            "is_composition": null,
-            "is_input": null,
-            "is_output": null,
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
-            "name": "",
             "output_types": [],
             "outputs": [
               {
@@ -571,6 +560,8 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -630,6 +621,7 @@
                 "info": "",
                 "list": false,
                 "list_add_label": "Add More",
+                "load_from_db": false,
                 "name": "template",
                 "placeholder": "",
                 "required": false,
@@ -667,13 +659,12 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt",
-          "selected_output": "prompt"
+          "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-nmNbi",
+        "id": "Prompt-OoI7p",
         "measured": {
-          "height": 413,
+          "height": 367,
           "width": 320
         },
         "position": {
@@ -685,7 +676,7 @@
       },
       {
         "data": {
-          "id": "Prompt-AJxY8",
+          "id": "Prompt-sa3c2",
           "node": {
             "base_classes": [
               "Message"
@@ -701,22 +692,15 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "error": null,
             "field_order": [
               "template",
               "tool_placeholder"
             ],
             "frozen": false,
-            "full_path": null,
             "icon": "braces",
-            "is_composition": null,
-            "is_input": null,
-            "is_output": null,
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
-            "name": "",
             "output_types": [],
             "outputs": [
               {
@@ -726,6 +710,8 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -763,6 +749,7 @@
                 "info": "",
                 "list": false,
                 "list_add_label": "Add More",
+                "load_from_db": false,
                 "name": "template",
                 "placeholder": "",
                 "required": false,
@@ -822,13 +809,12 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt",
-          "selected_output": "prompt"
+          "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-AJxY8",
+        "id": "Prompt-sa3c2",
         "measured": {
-          "height": 413,
+          "height": 367,
           "width": 320
         },
         "position": {
@@ -840,7 +826,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-zVeWr",
+          "id": "OpenAIModel-DMlQQ",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -871,7 +857,6 @@
             "frozen": false,
             "icon": "OpenAI",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {
               "keywords": [
                 "model",
@@ -890,6 +875,8 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -904,6 +891,8 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -930,7 +919,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1059,6 +1048,7 @@
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "",
+                "load_from_db": false,
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -1075,9 +1065,11 @@
                 ],
                 "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1141,6 +1133,7 @@
               "system_message": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
@@ -1212,13 +1205,12 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel",
-          "selected_output": "text_output"
+          "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-zVeWr",
+        "id": "OpenAIModel-DMlQQ",
         "measured": {
-          "height": 525,
+          "height": 540,
           "width": 320
         },
         "position": {
@@ -1230,7 +1222,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-Izkdb",
+          "id": "OpenAIModel-7B6Zn",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1261,7 +1253,6 @@
             "frozen": false,
             "icon": "OpenAI",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {
               "keywords": [
                 "model",
@@ -1280,6 +1271,8 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1294,6 +1287,8 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1320,7 +1315,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1449,6 +1444,7 @@
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "",
+                "load_from_db": false,
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -1465,9 +1461,11 @@
                 ],
                 "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1531,6 +1529,7 @@
               "system_message": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
@@ -1602,13 +1601,12 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel",
-          "selected_output": "text_output"
+          "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-Izkdb",
+        "id": "OpenAIModel-7B6Zn",
         "measured": {
-          "height": 525,
+          "height": 540,
           "width": 320
         },
         "position": {
@@ -1620,7 +1618,7 @@
       },
       {
         "data": {
-          "id": "Prompt-LXvg7",
+          "id": "Prompt-xndIp",
           "node": {
             "base_classes": [
               "Message"
@@ -1634,22 +1632,15 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "error": null,
             "field_order": [
               "template",
               "tool_placeholder"
             ],
             "frozen": false,
-            "full_path": null,
             "icon": "braces",
-            "is_composition": null,
-            "is_input": null,
-            "is_output": null,
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
-            "name": "",
             "output_types": [],
             "outputs": [
               {
@@ -1659,6 +1650,8 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1696,6 +1689,7 @@
                 "info": "",
                 "list": false,
                 "list_add_label": "Add More",
+                "load_from_db": false,
                 "name": "template",
                 "placeholder": "",
                 "required": false,
@@ -1733,13 +1727,12 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "Prompt",
-          "selected_output": "prompt"
+          "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-LXvg7",
+        "id": "Prompt-xndIp",
         "measured": {
-          "height": 330,
+          "height": 284,
           "width": 320
         },
         "position": {
@@ -1751,7 +1744,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-Hl8vG",
+          "id": "OpenAIModel-xUMDy",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1782,7 +1775,6 @@
             "frozen": false,
             "icon": "OpenAI",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {
               "keywords": [
                 "model",
@@ -1801,6 +1793,8 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1815,6 +1809,8 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1841,7 +1837,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1970,6 +1966,7 @@
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "",
+                "load_from_db": false,
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -1986,9 +1983,11 @@
                 ],
                 "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2052,6 +2051,7 @@
               "system_message": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
@@ -2123,13 +2123,12 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel",
-          "selected_output": "text_output"
+          "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-Hl8vG",
+        "id": "OpenAIModel-xUMDy",
         "measured": {
-          "height": 525,
+          "height": 540,
           "width": 320
         },
         "position": {
@@ -2141,7 +2140,7 @@
       },
       {
         "data": {
-          "id": "note-D3g3A",
+          "id": "note-ySbA6",
           "node": {
             "description": "# Sentiment Analysis Flow  \n\nThis flow processes text data, analyzes sentiment, and provides structured insights.  \n\n## Prerequisite\n\n* [OpenAI API key](https://platform.openai.com/docs/)\n\n## Quickstart\n\n1. Add your [OpenAI API key](https://platform.openai.com/docs/) to the OpenAI model components.\n2. In the **File Component**, load text data in `.txt`, `.csv`, or `.json` formats.\n3. Open the **Playground** to see the analysis and recommendation the flow constructs.\n\n## How It Works  \n\n1. The **Data to Message** component converts raw data into structured messages. \n\n2. The **NLP expert** prompt provides sentiment analysis, while the **Analyzing messages** prompt summarizes messages from a discussion board.\n\n3. The final **Prompt Component** creates a structured recommendation prompt to ensure that the AI model receives well-formatted input.  \n\n4. The **OpenAI Model Component** processes the text and classifies the sentiment as **Positive, Neutral, or Negative**.  \n\n",
             "display_name": "",
@@ -2152,7 +2151,7 @@
         },
         "dragging": false,
         "height": 574,
-        "id": "note-D3g3A",
+        "id": "note-ySbA6",
         "measured": {
           "height": 574,
           "width": 413
@@ -2168,7 +2167,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-NS8z5",
+          "id": "ChatOutput-BSWnd",
           "node": {
             "base_classes": [
               "Message"
@@ -2195,7 +2194,6 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -2207,6 +2205,8 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2363,6 +2363,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2462,9 +2463,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-NS8z5",
+        "id": "ChatOutput-BSWnd",
         "measured": {
-          "height": 192,
+          "height": 166,
           "width": 320
         },
         "position": {
@@ -2476,7 +2477,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-GzAXT",
+          "id": "ChatOutput-6LyME",
           "node": {
             "base_classes": [
               "Message"
@@ -2503,7 +2504,6 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -2515,6 +2515,8 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2671,6 +2673,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2770,9 +2773,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-GzAXT",
+        "id": "ChatOutput-6LyME",
         "measured": {
-          "height": 192,
+          "height": 166,
           "width": 320
         },
         "position": {
@@ -2784,7 +2787,7 @@
       },
       {
         "data": {
-          "id": "note-Sg6zZ",
+          "id": "note-TNFEi",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2797,7 +2800,7 @@
         },
         "dragging": false,
         "height": 326,
-        "id": "note-Sg6zZ",
+        "id": "note-TNFEi",
         "measured": {
           "height": 326,
           "width": 352
@@ -2813,7 +2816,7 @@
       },
       {
         "data": {
-          "id": "note-oCG60",
+          "id": "note-jGiDe",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2825,7 +2828,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-oCG60",
+        "id": "note-jGiDe",
         "measured": {
           "height": 324,
           "width": 324
@@ -2839,7 +2842,7 @@
       },
       {
         "data": {
-          "id": "note-hEufz",
+          "id": "note-VE7Uk",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2851,7 +2854,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-hEufz",
+        "id": "note-VE7Uk",
         "measured": {
           "height": 324,
           "width": 324
@@ -2865,17 +2868,17 @@
       }
     ],
     "viewport": {
-      "x": 1195.5900912340421,
-      "y": 170.90395042473165,
-      "zoom": 0.5503258036709812
+      "x": 1369.7403318965323,
+      "y": -154.47644807499785,
+      "zoom": 0.5931935803975317
     }
   },
   "description": "Load text data from various file formats, process it into structured messages, and analyze sentiment using AI-powered classification.",
   "endpoint_name": null,
-  "id": "ee875a1c-3b8a-4500-8a6b-bb5d1534b5de",
+  "id": "b74fb5dd-c1c6-4174-ac8d-2be28eb68f38",
   "is_component": false,
-  "last_tested_version": "1.2.0",
-  "name": "Text Sentiment Analysis",
+  "last_tested_version": "1.4.3",
+  "name": "Text Sentiment Analysis (4)",
   "tags": [
     "classification"
   ]
