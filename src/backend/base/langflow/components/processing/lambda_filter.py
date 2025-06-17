@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class SmartFunctionComponent(Component):
+class LambdaFilterComponent(Component):
     display_name = "Smart Function"
     description = "Uses an LLM to generate a function for filtering or transforming structured data."
     icon = "test-tube-diagonal"

@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from langflow.components.processing.smart_function import SmartFunctionComponent
+from langflow.components.processing.lambda_filter import LambdaFilterComponent
 from langflow.schema import Data
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -10,7 +10,7 @@ from tests.base import ComponentTestBaseWithoutClient
 class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
-        return SmartFunctionComponent
+        return LambdaFilterComponent
 
     @pytest.fixture
     def default_kwargs(self):

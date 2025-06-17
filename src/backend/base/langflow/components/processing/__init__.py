@@ -7,6 +7,7 @@ from .data_operations import DataOperationsComponent
 from .extract_key import ExtractDataKeyComponent
 from .filter_data_values import DataFilterComponent
 from .json_cleaner import JSONCleaner
+from .lambda_filter import LambdaFilterComponent
 from .llm_router import LLMRouterComponent
 from .merge_data import MergeDataComponent
 from .message_to_data import MessageToDataComponent
@@ -16,7 +17,6 @@ from .parser import ParserComponent
 from .python_repl_core import PythonREPLComponent
 from .regex import RegexExtractorComponent
 from .select_data import SelectDataComponent
-from .smart_function import SmartFunctionComponent
 from .split_text import SplitTextComponent
 from .structured_output import StructuredOutputComponent
 from .update_data import UpdateDataComponent
@@ -31,6 +31,7 @@ __all__ = [
     "ExtractDataKeyComponent",
     "JSONCleaner",
     "LLMRouterComponent",
+    "LambdaFilterComponent",
     "MergeDataComponent",
     "MessageToDataComponent",
     "ParseDataComponent",
@@ -40,7 +41,6 @@ __all__ = [
     "PythonREPLComponent",
     "RegexExtractorComponent",
     "SelectDataComponent",
-    "SmartFunctionComponent",
     "SplitTextComponent",
     "StructuredOutputComponent",
     "TypeConverterComponent",
