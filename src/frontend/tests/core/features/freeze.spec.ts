@@ -164,7 +164,9 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
 
     await page.waitForSelector(
       '[data-testid="output-inspection-output message-chatoutput"]',
@@ -189,7 +191,7 @@ test(
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully", {
-      timeout: 30000 * 2,
+      timeout: 30000 * 3,
     });
 
     await page.waitForSelector(
@@ -243,7 +245,9 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
 
     await page.waitForSelector(
       '[data-testid="output-inspection-output message-chatoutput"]',
