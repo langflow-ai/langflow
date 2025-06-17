@@ -113,7 +113,7 @@ async def test_get_sessions_with_flow_id_filter(client: AsyncClient, logged_in_h
 
 
 @pytest.mark.api_key_required
-async def test_get_sessions_with_different_flow_id_filter(client: AsyncClient, logged_in_headers, messages_with_flow_ids):
+async def test_get_sessions_with_different_flow_id(client: AsyncClient, logged_in_headers, messages_with_flow_ids):
     """Test getting sessions filtered by a different flow_id."""
     flow_id_2 = messages_with_flow_ids["flow_id_2"]
     
@@ -135,7 +135,7 @@ async def test_get_sessions_with_different_flow_id_filter(client: AsyncClient, l
 
 
 @pytest.mark.api_key_required
-async def test_get_sessions_with_non_existent_flow_id(client: AsyncClient, logged_in_headers, messages_with_flow_ids):
+async def test_get_sessions_with_non_existent_flow_id(client: AsyncClient, logged_in_headers):
     """Test getting sessions with a non-existent flow_id returns empty list."""
     non_existent_flow_id = uuid4()
     
@@ -163,7 +163,7 @@ async def test_get_sessions_empty_database(client: AsyncClient, logged_in_header
 
 
 @pytest.mark.api_key_required
-async def test_get_sessions_invalid_flow_id_format(client: AsyncClient, logged_in_headers, messages_with_flow_ids):
+async def test_get_sessions_invalid_flow_id_format(client: AsyncClient, logged_in_headers):
     """Test getting sessions with invalid flow_id format returns 422."""
     response = await client.get(
         "api/v1/monitor/sessions", 
