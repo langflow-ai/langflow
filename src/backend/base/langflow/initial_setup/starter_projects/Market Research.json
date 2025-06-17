@@ -2809,7 +2809,7 @@
   "id": "33ed74a4-250a-45d3-aebd-8eea096cc3c5",
   "is_component": false,
   "last_tested_version": "1.4.3",
-  "name": "Market Research (1)",
+  "name": "Market Research",
   "tags": [
     "assistants",
     "agents"
