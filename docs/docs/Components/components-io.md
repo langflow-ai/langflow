@@ -229,7 +229,7 @@ curl --request POST \
   --url 'http://localhost:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
   --header 'Content-Type: application/json' \
   --data '{
-  "input_value": "Whats the recommended way to install Docker on Mac M1",
+  "input_value": "What's the recommended way to install Docker on Mac M1",
   "session_id": "docker-question-on-m1",
   "output_type": "chat",
   "input_type": "chat"

@@ -727,7 +727,7 @@ export function sortShortcuts(a: string, b: string) {
 }
 export function addPlusSignes(array: string[]): string[] {
   const exceptions = SHORTCUT_KEYS;
-  // add + sign to the shortcuts beetwen characters that are not in the exceptions
+  // add + sign to the shortcuts between characters that are not in the exceptions
   return array.map((key, index) => {
     if (index === 0) return key;
     if (

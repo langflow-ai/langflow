@@ -703,7 +703,7 @@ export const TOOLTIP_HIDDEN_OUTPUTS = "Collapse hidden outputs";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 
-export const SUCCESS_BUILD = "Built sucessfully ✨";
+export const SUCCESS_BUILD = "Built successfully ✨";
 
 export const ALERT_SAVE_WITH_API =
   "Caution: Unchecking this box only removes API keys from fields specifically designated for API keys.";
@@ -711,8 +711,8 @@ export const ALERT_SAVE_WITH_API =
 export const SAVE_WITH_API_CHECKBOX = "Save with my API keys";
 export const EDIT_TEXT_MODAL_TITLE = "Edit Text";
 export const EDIT_TEXT_PLACEHOLDER = "Type message here.";
-export const INPUT_HANDLER_HOVER = "Avaliable input components:";
-export const OUTPUT_HANDLER_HOVER = "Avaliable output components:";
+export const INPUT_HANDLER_HOVER = "Available input components:";
+export const OUTPUT_HANDLER_HOVER = "Available output components:";
 export const TEXT_INPUT_MODAL_TITLE = "Inputs";
 export const OUTPUTS_MODAL_TITLE = "Outputs";
 export const LANGFLOW_CHAT_TITLE = "Langflow Chat";
