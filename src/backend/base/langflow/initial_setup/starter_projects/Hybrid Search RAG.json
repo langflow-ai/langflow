@@ -6,36 +6,8 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-l1uIW",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "StructuredOutput-1rtpO",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-l1uIW{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-l1uIWœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-1rtpO{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-1rtpOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "OpenAIModel-l1uIW",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-l1uIWœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-1rtpO",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-1rtpOœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-SdntI",
+            "id": "ChatInput-dXMps",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-l1uIW",
+            "id": "OpenAIModel-5QHvF",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-SdntI{œdataTypeœ:œChatInputœ,œidœ:œChatInput-SdntIœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-l1uIW{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-l1uIWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-dXMps{œdataTypeœ:œChatInputœ,œidœ:œChatInput-dXMpsœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-5QHvF{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-5QHvFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-SdntI",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-SdntIœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-l1uIW",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-l1uIWœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-dXMps",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-dXMpsœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-5QHvF",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-5QHvFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-pDI4x",
+            "id": "ParserComponent-mha9t",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -71,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-urBPo",
+            "id": "ChatOutput-UE4R2",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -80,12 +52,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ParserComponent-pDI4x{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-pDI4xœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-urBPo{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-urBPoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ParserComponent-mha9t{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-mha9tœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-UE4R2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-UE4R2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ParserComponent-pDI4x",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-pDI4xœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-urBPo",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-urBPoœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "ParserComponent-mha9t",
+        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-mha9tœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-UE4R2",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-UE4R2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -93,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-1rtpO",
+            "id": "StructuredOutput-QBpXS",
             "name": "structured_output",
             "output_types": [
               "Data"
@@ -101,7 +73,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-l4oSV",
+            "id": "ParserComponent-CMGxQ",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -109,12 +81,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__StructuredOutput-1rtpO{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-1rtpOœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParserComponent-l4oSV{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-l4oSVœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-QBpXS{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-QBpXSœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParserComponent-CMGxQ{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-CMGxQœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-1rtpO",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-1rtpOœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParserComponent-l4oSV",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-l4oSVœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-QBpXS",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-QBpXSœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "target": "ParserComponent-CMGxQ",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-CMGxQœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -122,7 +94,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-zELFJ",
+            "id": "OpenAIModel-mi1qQ",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -130,19 +102,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-1rtpO",
+            "id": "StructuredOutput-QBpXS",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__OpenAIModel-zELFJ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-zELFJœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-1rtpO{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-1rtpOœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-mi1qQ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-mi1qQœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-QBpXS{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-QBpXSœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-zELFJ",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-zELFJœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-1rtpO",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-1rtpOœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OpenAIModel-mi1qQ",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-mi1qQœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "StructuredOutput-QBpXS",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-QBpXSœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -150,7 +122,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-SdntI",
+            "id": "ChatInput-dXMps",
             "name": "message",
             "output_types": [
               "Message"
@@ -158,19 +130,19 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "AstraDB-Uc4H7",
+            "id": "AstraDB-Z0JmY",
             "inputTypes": [
               "Message"
             ],
             "type": "query"
           }
         },
-        "id": "xy-edge__ChatInput-SdntI{œdataTypeœ:œChatInputœ,œidœ:œChatInput-SdntIœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-Uc4H7{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-Uc4H7œ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "id": "reactflow__edge-ChatInput-dXMps{œdataTypeœ:œChatInputœ,œidœ:œChatInput-dXMpsœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-Z0JmY{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-Z0JmYœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
-        "source": "ChatInput-SdntI",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-SdntIœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-Uc4H7",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-Uc4H7œ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "source": "ChatInput-dXMps",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-dXMpsœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "AstraDB-Z0JmY",
+        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-Z0JmYœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}"
       },
       {
         "animated": false,
@@ -178,7 +150,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-l4oSV",
+            "id": "ParserComponent-CMGxQ",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -186,19 +158,19 @@
           },
           "targetHandle": {
             "fieldName": "lexical_terms",
-            "id": "AstraDB-Uc4H7",
+            "id": "AstraDB-Z0JmY",
             "inputTypes": [
               "Message"
             ],
             "type": "query"
           }
         },
-        "id": "xy-edge__ParserComponent-l4oSV{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-l4oSVœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AstraDB-Uc4H7{œfieldNameœ:œlexical_termsœ,œidœ:œAstraDB-Uc4H7œ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "id": "reactflow__edge-ParserComponent-CMGxQ{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-CMGxQœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AstraDB-Z0JmY{œfieldNameœ:œlexical_termsœ,œidœ:œAstraDB-Z0JmYœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
-        "source": "ParserComponent-l4oSV",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-l4oSVœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-Uc4H7",
-        "targetHandle": "{œfieldNameœ: œlexical_termsœ, œidœ: œAstraDB-Uc4H7œ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "source": "ParserComponent-CMGxQ",
+        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-CMGxQœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "AstraDB-Z0JmY",
+        "targetHandle": "{œfieldNameœ:œlexical_termsœ,œidœ:œAstraDB-Z0JmYœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}"
       },
       {
         "animated": false,
@@ -206,7 +178,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-Uc4H7",
+            "id": "AstraDB-Z0JmY",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -214,7 +186,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-pDI4x",
+            "id": "ParserComponent-mha9t",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -222,18 +194,46 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__AstraDB-Uc4H7{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-Uc4H7œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-pDI4x{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-pDI4xœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AstraDB-Z0JmY{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-Z0JmYœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-mha9t{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-mha9tœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AstraDB-Uc4H7",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-Uc4H7œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParserComponent-pDI4x",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-pDI4xœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "AstraDB-Z0JmY",
+        "sourceHandle": "{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-Z0JmYœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "ParserComponent-mha9t",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-mha9tœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-5QHvF",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "StructuredOutput-QBpXS",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__OpenAIModel-5QHvF{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-5QHvFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-QBpXS{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-QBpXSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "OpenAIModel-5QHvF",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-5QHvFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutput-QBpXS",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-QBpXSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-SdntI",
+          "id": "ChatInput-dXMps",
           "node": {
             "base_classes": [
               "Message"
@@ -531,7 +531,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-SdntI",
+        "id": "ChatInput-dXMps",
         "measured": {
           "height": 48,
           "width": 192
@@ -547,7 +547,7 @@
         "data": {
           "description": "Uses an LLM to generate structured data. Ideal for extraction and consistency.",
           "display_name": "Structured Output",
-          "id": "StructuredOutput-1rtpO",
+          "id": "StructuredOutput-QBpXS",
           "node": {
             "base_classes": [
               "Data"
@@ -807,7 +807,7 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-1rtpO",
+        "id": "StructuredOutput-QBpXS",
         "measured": {
           "height": 348,
           "width": 320
@@ -821,7 +821,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-l1uIW",
+          "id": "OpenAIModel-5QHvF",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -873,7 +873,7 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "selected": null,
+                "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"
@@ -887,7 +887,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
                   "LanguageModel"
@@ -1201,7 +1200,7 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-l1uIW",
+        "id": "OpenAIModel-5QHvF",
         "measured": {
           "height": 539,
           "width": 320
@@ -1215,7 +1214,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-l4oSV",
+          "id": "ParserComponent-CMGxQ",
           "node": {
             "base_classes": [
               "Message"
@@ -1374,7 +1373,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-l4oSV",
+        "id": "ParserComponent-CMGxQ",
         "measured": {
           "height": 328,
           "width": 320
@@ -1388,7 +1387,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-urBPo",
+          "id": "ChatOutput-UE4R2",
           "node": {
             "base_classes": [
               "Message"
@@ -1682,7 +1681,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-urBPo",
+        "id": "ChatOutput-UE4R2",
         "measured": {
           "height": 48,
           "width": 192
@@ -1696,7 +1695,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-pDI4x",
+          "id": "ParserComponent-mha9t",
           "node": {
             "base_classes": [
               "Message"
@@ -1855,7 +1854,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-pDI4x",
+        "id": "ParserComponent-mha9t",
         "measured": {
           "height": 246,
           "width": 320
@@ -1869,7 +1868,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-zELFJ",
+          "id": "OpenAIModel-mi1qQ",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2243,11 +2242,12 @@
             },
             "tool_mode": false
           },
+          "selected_output": "model_output",
           "showNode": true,
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-zELFJ",
+        "id": "OpenAIModel-mi1qQ",
         "measured": {
           "height": 539,
           "width": 320
@@ -2256,12 +2256,12 @@
           "x": 305.2080280860764,
           "y": -156.18621302613224
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "AstraDB-Uc4H7",
+          "id": "AstraDB-Z0JmY",
           "node": {
             "base_classes": [
               "Data",
@@ -2314,7 +2314,9 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "selected": null,
+                "options": null,
+                "required_inputs": null,
+                "selected": "Data",
                 "tool_mode": true,
                 "types": [
                   "Data"
@@ -2328,6 +2330,8 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
+                "options": null,
+                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -2343,7 +2347,9 @@
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "selected": null,
+                "options": null,
+                "required_inputs": null,
+                "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
                   "VectorStore"
@@ -2390,7 +2396,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "https://f3166ac4-3e2f-4b32-880c-231d1f9e3f3e-us-east-2.apps.astra.datastax.com"
+                "value": ""
               },
               "astradb_vectorstore_kwargs": {
                 "_input_type": "NestedDictInput",
@@ -2576,7 +2582,7 @@
                 "real_time_refresh": true,
                 "refresh_button": true,
                 "required": true,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
@@ -3051,9 +3057,9 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-Uc4H7",
+        "id": "AstraDB-Z0JmY",
         "measured": {
-          "height": 685,
+          "height": 621,
           "width": 320
         },
         "position": {
@@ -3065,14 +3071,14 @@
       }
     ],
     "viewport": {
-      "x": 191.81503357023166,
-      "y": 225.7540514347844,
-      "zoom": 0.4686956304976618
+      "x": 119.72851772315664,
+      "y": 142.91047788497636,
+      "zoom": 0.5433137721608965
     }
   },
   "description": "Uncover Business Opportunities with NLP.",
   "endpoint_name": null,
-  "id": "aa161556-a712-4228-bee4-034e61658a50",
+  "id": "f7c0f0da-f007-493c-a0ab-7d1cfb226c4a",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Hybrid Search RAG",
