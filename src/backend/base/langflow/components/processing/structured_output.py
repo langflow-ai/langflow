@@ -40,7 +40,8 @@ class StructuredOutputComponent(Component):
             name="system_prompt",
             display_name="Format Instructions",
             info="The instructions to the language model for formatting the output.",
-            value=("""
+            value=(
+                """
                     You are an AI that extracts one structured JSON object from unstructured text.
                         •	Use a predefined schema with expected types (string, integer, float, date).
                         •	If multiple structures exist, extract only the first most complete one.
