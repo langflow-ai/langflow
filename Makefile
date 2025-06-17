@@ -75,10 +75,10 @@ build_frontend: ## build the frontend static files
 	@cp -r src/frontend/build/. src/backend/base/langflow/frontend
 	@echo '==== Frontend build complete ===='
 
-init: check_tools clean_python_cache clean_npm_cache ## initialize the project
+init: check_tools ## initialize the project
 	@make install_backend
 	@make install_frontend
-	@make build_frontend
+	@uvx pre-commit install
 	@echo "$(GREEN)All requirements are installed.$(NC)"
 
 ######################
