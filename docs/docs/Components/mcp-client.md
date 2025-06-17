@@ -13,25 +13,26 @@ This page describes how to use Langflow as an MCP client with the **MCP connecti
 
 For information about using Langflow as an MCP server, see [Use Langflow as an MCP server](/mcp-server).
 
-## MCP connection component
+## Use the MCP connection component
 
 The **MCP connection** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for [Langflow agents](/agents-overview).
 
-In addition to serving external MCP servers, you can use the component in [SSE mode](#mcp-sse-mode) to make all flows within your [project](/concepts-overview#projects) available as tools within a flow.
+This component has two modes, depending on the type of server you want to access:
 
-### Use the MCP connection component with an Agent component (Stdio mode)
+* To access tools provided by external, non-Langflow MCP servers, [use Stdio mode](#mcp-stdio-mode).
+* To use flows from your [Langflow projects](/concepts-overview#projects) as MCP tools, [use SSE mode](#mcp-sse-mode).
+
+### Use Stdio mode {#mcp-stdio-mode}
 
 1. Add an **MCP connection** component to your flow.
 
-2. Make sure **Stdio** mode is selected.
-
-3. In the **MCP Command** field, enter the command to start the MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is `uvx mcp-server-fetch`.
+2. In the **MCP Command** field, enter the command to start the MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is `uvx mcp-server-fetch`.
 
     `uvx` is included with `uv` in the Langflow package.
     To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
     For an example of an `npx` MCP server in Langflow, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
 
-4. To use environment variables in your server command, enter each variable in the **Env** fields as you would define them in a script, such as `VARIABLE=value`. If the **Env** field isn't shown, enable it in the component's **Controls** in the [component menu](/concepts-components#component-menu).
+3. To use environment variables in your server command, enter each variable in the **Env** fields as you would define them in a script, such as `VARIABLE=value`. If the **Env** field isn't shown, enable it in the component's **Controls** in the [component menu](/concepts-components#component-menu).
 
     :::important
     Langflow passes environment variables from the `.env` file to MCP, but it doesn't pass  global variables declared in the Langflow UI.
@@ -39,33 +40,33 @@ In addition to serving external MCP servers, you can use the component in [SSE m
     For more information, see [global variables](/configuration-global-variables).
     :::
 
-5. Click <Icon name="RefreshCw" aria-label="Refresh"/> to test the command and retrieve the list of tools provided by the MCP server.
+4. Click <Icon name="RefreshCw" aria-label="Refresh"/> to test the command and retrieve the list of tools provided by the MCP server.
 
-6. In the **Tool** field, select a tool that you want this component to use or leave the field blank to allow access to all tools provided by the MCP server.
+5. In the **Tool** field, select a tool that you want this component to use or leave the field blank to allow access to all tools provided by the MCP server.
 
     If you select a specific tool, you might need to configure additional tool-specific fields. For information about tool-specific fields, see your MCP server's documentation.
 
     At this point, the **MCP connection** component is serving a tool, but nothing is using the tool. The next steps explain how to make the tool available to an [**Agent** component](/components-agents), so that the agent can use the tool in its responses.
 
-7. In the [component menu](/concepts-components#component-menu), enable **Tool mode** so you can use the component with an agent.
+6. In the [component menu](/concepts-components#component-menu), enable **Tool mode** so you can use the component with an agent.
 
-8. Connect the **MCP connection** component's **Toolset** port to an **Agent** component's **Tools** port.
+7. Connect the **MCP connection** component's **Toolset** port to an **Agent** component's **Tools** port.
 
     If not already present in your flow, make sure you also attach **Chat input** and **Chat output** components to the **Agent** component.
 
     ![MCP connection component](/img/component-mcp-stdio.png)
 
-9. Test your flow to make sure the MCP server is connected and the selected tool is used by the agent: Click **Playground**, and then enter a prompt that uses the tool you connected through the **MCP connection** component.
+8.  Test your flow to make sure the MCP server is connected and the selected tool is used by the agent: Click **Playground**, and then enter a prompt that uses the tool you connected through the **MCP connection** component.
 For example, if you use `mcp-server-fetch` with the `fetch` tool, you could ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch`, and then returns the response.
 
-10. If you want the agent to be able to use more tools, repeat these steps to add more **MCP connection** components with different servers or tools.
+1. If you want the agent to be able to use more tools, repeat these steps to add more **MCP connection** components with different servers or tools.
 
-### Use the MCP connection component in Server-Sent Events (SSE) mode {#mcp-sse-mode}
+### Use SSE mode {#mcp-sse-mode}
 
 Every Langflow project runs a separate MCP server that exposes the project's flows as MCP tools.
 For more information about your projects' MCP servers, including how to manage exposed flows, see [Use Langflow as an MCP server](/mcp-server).
 
-To leverage flows-as-tools, use the **MCP connection** component in **SSE** mode to connect to a project's `/api/v1/mcp/sse` endpoint:
+To leverage flows-as-tools, use the **MCP connection** component in **Server-Sent Events (SSE)** mode to connect to a project's `/api/v1/mcp/sse` endpoint:
 
 1. Add an **MCP connection** component to your flow, and then select **SSE** mode.
 A default address appears in the **MCP SSE URL** field.
