@@ -1,5 +1,5 @@
 ---
-title: Trigger Flows with Webhooks
+title: Trigger flows with webhooks
 slug: /webhook
 ---
 
