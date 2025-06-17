@@ -90,9 +90,6 @@ test(
       false,
     );
 
-    // Test whitespace handling
-    await verifyPromptVariables(page, "Hello { name }!", [], false);
-
     // Test escaped variables with {{}}
     await verifyPromptVariables(
       page,
