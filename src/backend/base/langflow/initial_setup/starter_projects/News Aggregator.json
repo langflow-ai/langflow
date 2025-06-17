@@ -1759,10 +1759,10 @@
                 "name": "file_format",
                 "options": [
                   "csv",
+                  "excel",
                   "json",
                   "txt",
-                  "markdown",
-                  "excel"
+                  "markdown"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
