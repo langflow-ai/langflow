@@ -126,6 +126,7 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
+    "docling>=2.36.1",
 ]
 
 [dependency-groups]
@@ -174,6 +175,12 @@ dev = [
     'elevenlabs>=1.52.0; python_version != "3.12"',
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
+]
+
+[tool.uv]
+override-dependencies = [
+    # temporary force a newer python-pptx
+    "python-pptx>=1.0.2"
 ]
 
 [tool.uv.sources]
@@ -281,7 +288,7 @@ ignore = [
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
+    "A005", # Module shadows a built-in
     # Rules that are TODOs
     "ANN",
 ]

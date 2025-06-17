@@ -7,6 +7,12 @@ import chardet
 import orjson
 import yaml
 from defusedxml import ElementTree
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import (
+    PdfPipelineOptions,
+)
+from docling.document_converter import DocumentConverter, ImageFormatOption, PdfFormatOption
+from docling_core.types.doc.base import ImageRefMode
 
 from langflow.schema.data import Data
 
@@ -120,67 +126,201 @@ def read_text_file(file_path: str) -> str:
     return file_path_.read_text(encoding=encoding)
 
 
-def read_docx_file(file_path: str) -> str:
-    from docx import Document
-
-    doc = Document(file_path)
-    return "\n\n".join([p.text for p in doc.paragraphs])
-
-
-def parse_pdf_to_text(file_path: str) -> str:
-    from pypdf import PdfReader
-
-    with Path(file_path).open("rb") as f:
-        reader = PdfReader(f)
-        return "\n\n".join([page.extract_text() for page in reader.pages])
-
-
-def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+def convert_json_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
     try:
-        if file_path.endswith(".pdf"):
-            text = parse_pdf_to_text(file_path)
-        elif file_path.endswith(".docx"):
-            text = read_docx_file(file_path)
-        else:
-            text = read_text_file(file_path)
+        _text = read_text_file(file_path=file_path)
 
-        # if file is json, yaml, or xml, we can parse it
-        if file_path.endswith(".json"):
-            loaded_json = orjson.loads(text)
-            if isinstance(loaded_json, dict):
-                loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
-            elif isinstance(loaded_json, list):
-                loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
-            text = orjson.dumps(loaded_json).decode("utf-8")
+        loaded_json = orjson.loads(_text)
+        if isinstance(loaded_json, dict):
+            loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
+        elif isinstance(loaded_json, list):
+            loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
 
-        elif file_path.endswith((".yaml", ".yml")):
-            text = yaml.safe_load(text)
-        elif file_path.endswith(".xml"):
-            xml_element = ElementTree.fromstring(text)
-            text = ElementTree.tostring(xml_element, encoding="unicode")
-    except Exception as e:
+        text = orjson.dumps(loaded_json).decode("utf-8")
+        return Data(data={"file_path": file_path, "text": text})
+    except Exception as exc:
         if not silent_errors:
-            msg = f"Error loading file {file_path}: {e}"
-            raise ValueError(msg) from e
-        return None
+            msg = f"Could not parse json file {file_path}: {exc}"
+            raise ValueError(msg) from exc
 
-    return Data(data={"file_path": file_path, "text": text})
+    return None
 
 
-# ! Removing unstructured dependency until
-# ! 3.12 is supported
-# def get_elements(
-#     file_paths: List[str],
-#     silent_errors: bool,
-#     max_concurrency: int,
-#     use_multithreading: bool,
-# ) -> List[Optional[Data]]:
-#     if use_multithreading:
-#         data = parallel_load_data(file_paths, silent_errors, max_concurrency)
-#     else:
-#         data = [partition_file_to_data(file_path, silent_errors) for file_path in file_paths]
-#     data = list(filter(None, data))
-#     return data
+def convert_yaml_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
+    try:
+        _text = read_text_file(file_path=file_path)
+        loaded_yaml = yaml.safe_load(_text)
+        text = yaml.dump(loaded_yaml, default_flow_style=False)
+        return Data(data={"file_path": file_path, "text": text})
+    except Exception as exc:
+        if not silent_errors:
+            msg = f"Could not parse yaml file {file_path}: {exc}"
+            raise ValueError(msg) from exc
+
+    return None
+
+
+def convert_xml_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
+    try:
+        _text = read_text_file(file_path=file_path)
+
+        xml_element = ElementTree.fromstring(_text)
+        text = ElementTree.tostring(xml_element, encoding="unicode")
+        return Data(data={"file_path": file_path, "text": text})
+    except Exception as exc:
+        if not silent_errors:
+            msg = f"Could not parse xml file {file_path}: {exc}"
+            raise ValueError(msg) from exc
+
+    return None
+
+
+def convert_pdf_to_text(
+    file_path: str,
+    *,
+    silent_errors: bool = False,
+    do_ocr: bool = False,
+    ocr_lang: list[str] | None = None,
+    do_table_structure: bool = False,
+    do_picture_classification: bool = False,
+) -> Data | None:
+    try:
+        # fall back to english, pick your language here: https://www.jaided.ai/easyocr/
+        if ocr_lang is None:
+            ocr_lang = ["en"]
+
+        # OPTIMIZAION: could be better to "cache" the converters ...
+        pipeline_options = PdfPipelineOptions()
+        # pipeline_options.images_scale = 2
+        pipeline_options.generate_page_images = False
+        pipeline_options.do_picture_classification = do_picture_classification
+        pipeline_options.do_ocr = do_ocr
+        pipeline_options.do_table_structure = do_table_structure
+        pipeline_options.table_structure_options.do_cell_matching = True
+        pipeline_options.ocr_options.lang = ocr_lang
+        # pipeline_options.accelerator_options = AcceleratorOptions(num_threads=1, device=AcceleratorDevice.AUTO)
+
+        converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
+            }
+        )
+
+        result = converter.convert(source=Path(file_path))
+        markdown_text = result.document.export_to_markdown(
+            image_mode=ImageRefMode.PLACEHOLDER,
+            image_placeholder="<!-- image -->",
+        )
+
+        return Data(data={"file_path": file_path, "text": markdown_text})
+
+    except Exception as exc:
+        if not silent_errors:
+            msg = f"Could not parse pdf file {file_path}: {exc}"
+            raise ValueError(msg) from exc
+
+    return None
+
+
+def convert_img_to_text(
+    file_path: str,
+    *,
+    silent_errors: bool = False,
+    ocr_lang: list[str] | None = None,
+    do_table_structure: bool = False,
+    do_picture_classification: bool = False,
+) -> Data | None:
+    try:
+        # fall back to english, pick your language here: https://www.jaided.ai/easyocr/
+        if ocr_lang is None:
+            ocr_lang = ["en"]
+
+        # OPTIMIZAION: could be better to "cache" the converters ...
+        pipeline_options = PdfPipelineOptions()
+        # pipeline_options.images_scale = 2
+        pipeline_options.generate_page_images = False
+        pipeline_options.do_picture_classification = do_picture_classification
+        pipeline_options.do_ocr = True
+        pipeline_options.do_table_structure = do_table_structure
+        pipeline_options.table_structure_options.do_cell_matching = True
+        pipeline_options.ocr_options.lang = ocr_lang
+        # pipeline_options.accelerator_options = AcceleratorOptions(num_threads=1, device=AcceleratorDevice.AUTO)
+
+        converter = DocumentConverter(
+            format_options={
+                InputFormat.IMAGE: ImageFormatOption(pipeline_options=pipeline_options),
+            }
+        )
+
+        result = converter.convert(source=Path(file_path))
+        markdown_text = result.document.export_to_markdown(
+            image_mode=ImageRefMode.PLACEHOLDER,
+            image_placeholder="<!-- image -->",
+        )
+
+        return Data(data={"file_path": file_path, "text": markdown_text})
+
+    except Exception as exc:
+        if not silent_errors:
+            msg = f"Could not parse image file {file_path}: {exc}"
+            raise ValueError(msg) from exc
+
+    return None
+
+
+def convert_docx_to_text(file_path: str, *, silent_errors: bool) -> Data | None:
+    try:
+        converter = DocumentConverter(allowed_formats=[InputFormat.DOCX])
+
+        result = converter.convert(source=Path(file_path))
+        markdown_text = result.document.export_to_markdown()
+
+        return Data(data={"file_path": file_path, "text": markdown_text})
+
+    except Exception as exc:
+        if not silent_errors:
+            msg = f"Could not parse docx file {file_path}: {exc}"
+            raise ValueError(msg) from exc
+
+    return None
+
+
+def convert_file_to_data(
+    file_path: str, *, silent_errors: bool, do_ocr: bool = False, ocr_lang: list[str] | None = None
+) -> Data | None:
+    try:
+        if file_path.endswith(".json"):
+            return convert_json_to_text(file_path=file_path, silent_errors=silent_errors)
+
+        if file_path.endswith((".yaml", ".yml")):
+            return convert_yaml_to_text(file_path=file_path, silent_errors=silent_errors)
+
+        if file_path.endswith(".xml"):
+            return convert_xml_to_text(file_path=file_path, silent_errors=silent_errors)
+
+        if file_path.endswith(".pdf"):
+            return convert_pdf_to_text(
+                file_path=file_path, silent_errors=silent_errors, do_ocr=do_ocr, ocr_lang=ocr_lang
+            )
+
+        if file_path.endswith(".docx"):
+            return convert_docx_to_text(file_path=file_path, silent_errors=silent_errors)
+
+        # Handle image files
+        if do_ocr and (any(file_path.endswith(f".{ext}") for ext in IMG_FILE_TYPES)):
+            return convert_img_to_text(file_path=file_path, silent_errors=silent_errors, ocr_lang=ocr_lang)
+
+        # Handle plain text and other text-based files
+        if any(file_path.endswith(f".{ext}") for ext in TEXT_FILE_TYPES):
+            text = read_text_file(file_path)
+            return Data(data={"file_path": file_path, "text": text})
+
+    except Exception as exc:
+        if not silent_errors:
+            msg = f"Error loading file {file_path}: {exc}"
+            raise ValueError(msg) from exc
+
+    return None
 
 
 def parallel_load_data(
@@ -188,11 +328,22 @@ def parallel_load_data(
     *,
     silent_errors: bool,
     max_concurrency: int,
-    load_function: Callable = parse_text_file_to_data,
+    load_function: Callable = convert_file_to_data,
+    do_table_structure: bool = False,  # We try to keep conversion as light as possible
+    do_picture_classification: bool = False,
+    do_ocr: bool = False,
+    ocr_lang: list[str] | None = None,
 ) -> list[Data | None]:
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
         loaded_files = executor.map(
-            lambda file_path: load_function(file_path, silent_errors=silent_errors),
+            lambda file_path: load_function(
+                file_path,
+                silent_errors=silent_errors,
+                do_ocr=do_ocr,
+                ocr_lang=ocr_lang,
+                do_table_structure=do_table_structure,
+                do_picture_classification=do_picture_classification,
+            ),
             file_paths,
         )
     # loaded_files is an iterator, so we need to convert it to a list
