@@ -2964,7 +2964,7 @@
   "id": "dabce029-ba7b-4ca0-ab3c-2b413c72e1a1",
   "is_component": false,
   "last_tested_version": "1.4.2",
-  "name": "Custom Component Generator (17)",
+  "name": "Custom Component Generator",
   "tags": [
     "coding",
     "web-scraping"
