@@ -406,7 +406,7 @@ class ComposioLinearAPIComponent(ComposioBaseComponent):
             show=False,
             advanced=True,
         ),
-        MessageTextIproject_idnput(
+        MessageTextInput(
             name="LINEAR_UPDATE_ISSUE_",
             display_name="Project Id",
             info="ID of the project",
