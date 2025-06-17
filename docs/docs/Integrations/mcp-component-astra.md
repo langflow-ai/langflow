@@ -48,9 +48,9 @@ The flow should look like this:
     ASTRA_DB_API_ENDPOINT=https://...-us-east-2.apps.astra.datastax.com
     ```
 
-10.   In the **Agent** component, add your **OpenAI API key**.
+10. In the **Agent** component, add your **OpenAI API key**.
 
-11.   Open the **Playground**, and then ask the agent, `What collections are available?`
+11. Open the **Playground**, and then ask the agent, `What collections are available?`
 
     Since Langflow is connected to your Astra DB database through the MCP, the agent chooses the correct tool and connects to your database to retrieve the answer.
 

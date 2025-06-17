@@ -13,7 +13,7 @@ This page describes how to use Langflow as an MCP server.
 
 For information about using Langflow as an MCP client, see [Use Langflow as an MCP client](/mcp-client).
 
-As an MCP server, Langflow exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use use to take actions.
+As an MCP server, Langflow exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use to take actions.
 
 ## Prerequisites
 

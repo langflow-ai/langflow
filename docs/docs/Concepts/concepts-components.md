@@ -40,7 +40,7 @@ To run a single component, click <Icon name="Play" aria-label="Play button" /> *
 
 Running a single component with the **Play** button is different from running the entire flow. In a single component run, the `build_vertex` function is called, which builds and runs only the single component with direct inputs provided through the UI (the `inputs_dict` parameter). The `VertexBuildResult` data is passed to the `build_and_run` method, which calls the component's `build` method and runs it. Unlike running the full flow, running a single component does not automatically execute its upstream dependencies.
 
-A <Icon name="Check" aria-label="Checkmark" />**Checkmark** indicates that the component ran successfully.
+A <Icon name="Check" aria-label="Checkmark" /> **Checkmark** indicates that the component ran successfully.
 
 ## Component ports
 

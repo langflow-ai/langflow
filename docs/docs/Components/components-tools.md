@@ -315,7 +315,7 @@ The **MCP connection** component exposes Model Context Protocol (MCP) servers, i
 
 ### MCP Tools (deprecated)
 
-The **MCP Tools (stdio)** and **MCP Tools (SSE)** components were deprecated in Langflow version 1.3.
+The **MCP Tools (stdio)** and **MCP Tools (SSE)** components are deprecated as of Langflow version 1.3.
 They are replaced by the [MCP connection component](/mcp-client).
 
 ## Wikidata
