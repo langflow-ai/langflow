@@ -103,7 +103,7 @@ python -m langflow run [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| <Link id="run-host"/>`--host` | `localhost` | String | The host on which the Langflow server will run.<br/>See [`LANGFLOW_HOST` variable](./environment-variables.md#LANGFLOW_HOST). |
+| <Link id="run-host"/>`--host` | `127.0.0.1` | String | The host on which the Langflow server will run.<br/>See [`LANGFLOW_HOST` variable](./environment-variables.md#LANGFLOW_HOST). |
 | <Link id="run-workers"/>`--workers` | `1` | Integer | Number of worker processes.<br/>See [`LANGFLOW_WORKERS` variable](./environment-variables.md#LANGFLOW_WORKERS). |
 | <Link id="run-worker-timeout"/>`--worker-timeout` | `300` | Integer | Worker timeout in seconds.<br/>See [`LANGFLOW_WORKER_TIMEOUT` variable](./environment-variables.md#LANGFLOW_WORKER_TIMEOUT). |
 | <Link id="run-port"/>`--port` | `7860` | Integer | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use.<br/>See [`LANGFLOW_PORT` variable](./environment-variables.md#LANGFLOW_PORT). |

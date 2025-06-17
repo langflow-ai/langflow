@@ -1,11 +1,6 @@
 import numpy as np
 import pytest
-
-try:
-    import webrtcvad
-except ImportError:
-    pytestmark = pytest.mark.skip(reason="webrtcvad is not installed. Skipping voice mode tests.")
-
+import webrtcvad
 from langflow.utils.voice_utils import (
     BYTES_PER_16K_FRAME,
     BYTES_PER_24K_FRAME,

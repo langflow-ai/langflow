@@ -53,7 +53,7 @@ The service will start, and you will may notice a dialog in the lower right indi
 │ We collect anonymous usage data to improve Langflow.                  │
 │ To opt out, set: DO_NOT_TRACK=true in your environment.               │
 │                                                                       │
-│ 🟢 Open Langflow → http://localhost:7860                               │
+│ 🟢 Open Langflow → http://127.0.0.1:7860                               │
 ╰───────────────────────────────────────────────────────────────────────╯
 ```
 

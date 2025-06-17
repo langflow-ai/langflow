@@ -14,7 +14,7 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, get_voice_mode_enabled, parse_value
+from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -544,7 +544,7 @@ async def experimental_run_flow(
         try:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)
+            stmt = select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
             flow = (await session.exec(stmt)).first()
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
@@ -752,7 +752,6 @@ async def get_config():
         return {
             "feature_flags": FEATURE_FLAGS,
             **settings_service.settings.model_dump(),
-            "voice_mode_enabled": get_voice_mode_enabled(),
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

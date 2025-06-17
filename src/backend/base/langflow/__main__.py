@@ -266,7 +266,7 @@ def wait_for_server_ready(host, port, protocol) -> None:
     while status_code != httpx.codes.OK:
         try:
             status_code = httpx.get(
-                f"{protocol}://{host}:{port}/health", verify=host not in ("localhost", "127.0.0.1")
+                f"{protocol}://{host}:{port}/health", verify=host not in ("127.0.0.1", "localhost")
             ).status_code
         except HTTPError:
             time.sleep(1)
@@ -353,8 +353,8 @@ def can_connect(host: str, port: int, timeout: float = 1.0) -> bool:
                 s.settimeout(timeout)
                 if s.connect_ex(sa) == 0:
                     return True
-    except Exception:  # noqa: BLE001
-        logger.exception(f"Failed to connect to {host}:{port}")
+    except Exception as e:
+        logger.debug(f"Failed to connect to {host}:{port}: {e}")
     return False
 
 

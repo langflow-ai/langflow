@@ -420,7 +420,7 @@ For a list of Ollama embeddings models, see the [Ollama documentation](https://o
 To use this component in a flow, connect Langflow to your locally running Ollama server and select an embeddings model.
 
 1. In the Ollama component, in the **Ollama Base URL** field, enter the address for your locally running Ollama server.
-This value is set as the `OLLAMA_HOST` environment variable in Ollama. The default base URL is `http://localhost:11434`.
+This value is set as the `OLLAMA_HOST` environment variable in Ollama. The default base URL is `http://127.0.0.1:11434`.
 2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
 3. In the **Ollama Model** field, select an embeddings model. This example uses `all-minilm:latest`.
 4. Connect the **Ollama** embeddings component to a flow.

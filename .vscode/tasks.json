@@ -48,7 +48,7 @@
     {
       "label": "Install Backend",
       "type": "shell",
-      "command": "make install_backend EXTRA_ARGS='--extra audio'"
+      "command": "make install_backend"
     }
   ]
 }

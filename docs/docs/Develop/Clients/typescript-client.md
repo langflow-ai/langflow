@@ -71,7 +71,7 @@ The `input` string is the message you're sending to your flow.
 ```tsx
 import { LangflowClient } from "@datastax/langflow-client";
 
-const baseUrl = "http://localhost:7860";
+const baseUrl = "http://127.0.0.1:7860";
 const client = new LangflowClient({ baseUrl });
 
 async function runFlow() {
@@ -148,7 +148,7 @@ Replace `baseUrl` and `flowId` with values from your deployment.
 ```tsx
 import { LangflowClient } from "@datastax/langflow-client";
 
-const baseUrl = "http://localhost:7860";
+const baseUrl = "http://127.0.0.1:7860";
 const client = new LangflowClient({ baseUrl });
 
 async function runFlow() {
@@ -264,7 +264,7 @@ Replace `baseUrl` and `flowId` with values from your deployment.
 ```tsx
 import { LangflowClient } from "@datastax/langflow-client";
 
-const baseUrl = "http://localhost:7863";
+const baseUrl = "http://127.0.0.1:7863";
 const flowId = "86f0bf45-0544-4e88-b0b1-8e622da7a7f0";
 
 async function runFlow(client: LangflowClient) {
