@@ -57,7 +57,7 @@ A **component** is a single building block within a flow and consists of inputs,
 
 To add a component to your flow, drag it from the sidebar onto the workspace.
 
-To connect components, drag a line from the output handle (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }}/>) of a component to the input handle of the same color <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }}/> of another.
+To connect components, drag a line from the output handle (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }}/>) of a component to the input handle of the same color (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }}/>) of another.
 
 For example, to connect **Chat Input**, **Language Model**, and **Chat Output** components, connect the blue **Message** handles to each other:
 
@@ -72,7 +72,7 @@ For more information, see [Components](/concepts-components).
 
 If a **Chat Input** component is in your current flow, the **Playground** enables you to run your flow, chat with your flow, view inputs and outputs, and modify your AI's memories to tune your responses in real time.
 
-For example, click **Playground** in a flow that includes **Chat Input**, **Language Model**, and **Chat Output** components to chat with the LLM.
+For example, click <Icon name="Play" aria-hidden="true"/> **Playground** in a flow that includes **Chat Input**, **Language Model**, and **Chat Output** components to chat with the LLM.
 
 ![Playground window](/img/playground.png)
 

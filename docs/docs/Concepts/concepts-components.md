@@ -33,7 +33,7 @@ Running a single component with the **Run component** button is different from r
 
 ## Component ports
 
-Handles (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" />) on the side of a component indicate the types of inputs and outputs that can be connected at that port. Hover over a handle to see connection details.
+Handles (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }}/>) on the side of a component indicate the types of inputs and outputs that can be connected at that port. Hover over a handle to see connection details.
 
 ![Prompt component with multiple inputs](/img/prompt-component.png)
 
