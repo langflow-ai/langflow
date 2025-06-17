@@ -319,7 +319,6 @@ def run(
             progress.print_summary()
             print_banner(host, port, protocol)
 
-            # Blocking call
             uvicorn.run(
                 app,
                 host=host,
@@ -329,8 +328,6 @@ def run(
                 workers=get_number_of_workers(workers),
                 loop="asyncio",
             )
-
-            progress.print_shutdown_summary()
     else:
         with progress.step(7):
             # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
