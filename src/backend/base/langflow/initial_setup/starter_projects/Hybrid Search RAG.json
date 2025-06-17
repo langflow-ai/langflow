@@ -2840,7 +2840,7 @@
               },
               "lexical_terms": {
                 "_input_type": "QueryInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Lexical Terms",
                 "dynamic": false,
                 "info": "Add additional terms/keywords to augment search precision.",
