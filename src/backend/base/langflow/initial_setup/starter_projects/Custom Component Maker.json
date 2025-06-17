@@ -2700,7 +2700,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "claude-opus-4-20250514"
+                "value": "gpt-4o-mini"
               },
               "provider": {
                 "_input_type": "DropdownInput",
@@ -2736,7 +2736,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "Anthropic"
+                "value": "OpenAI"
               },
               "stream": {
                 "_input_type": "BoolInput",
@@ -2830,9 +2830,9 @@
       }
     ],
     "viewport": {
-      "x": -975.2178595104976,
-      "y": -103.38326940227336,
-      "zoom": 0.5945028261798528
+      "x": -538.7009624065022,
+      "y": 2.363869700967541,
+      "zoom": 0.5327615715289074
     }
   },
   "description": "Generates well-structured code for custom components following Langflow's specifications.",
