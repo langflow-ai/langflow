@@ -354,7 +354,7 @@ def can_connect(host: str, port: int, timeout: float = 1.0) -> bool:
                 if s.connect_ex(sa) == 0:
                     return True
     except Exception as e:  # noqa: BLE001
-        logger.exception(f"Failed to connect to %s:%s", host, port, exc_info=e)
+        logger.exception("Failed to connect to %s:%s", host, port, exc_info=e)
     return False
 
 
