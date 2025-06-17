@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { runChatOutput } from "../../utils/run-chat-output";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -162,7 +163,7 @@ test(
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.lipsum.com/");
 
-    await page.getByTestId("button_run_chat output").click();
+    await runChatOutput(page);
 
     await page.waitForSelector("text=built successfully", {
       timeout: 30000 * 3,
@@ -188,7 +189,7 @@ test(
 
     await page.getByTestId("textarea_str_input_value").first().fill(",");
 
-    await page.getByTestId("button_run_chat output").click();
+    await runChatOutput(page);
 
     await page.waitForSelector("text=built successfully", {
       timeout: 30000 * 3,
@@ -237,13 +238,9 @@ test(
       .first()
       .fill("lorem ipsum");
 
-    await page.waitForSelector('[data-testid="button_run_chat output"]', {
-      timeout: 1000,
-    });
-
     await page.waitForTimeout(2000);
 
-    await page.getByTestId("button_run_chat output").click();
+    await runChatOutput(page);
 
     await page.waitForSelector("text=built successfully", {
       timeout: 30000 * 3,
@@ -273,7 +270,7 @@ test(
 
     await page.keyboard.press("Escape");
 
-    await page.getByTestId("button_run_chat output").click();
+    await runChatOutput(page);
 
     await page.waitForSelector("text=built successfully", {
       timeout: 30000 * 3,
