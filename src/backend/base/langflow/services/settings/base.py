@@ -248,7 +248,7 @@ class Settings(BaseSettings):
     lazy_load_components: bool = False
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
-    
+
     # Starter Projects
     create_starter_projects: bool = True
     """If set to True, Langflow will create starter projects. If False, skips all starter project setup.
