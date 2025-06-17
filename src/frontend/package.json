@@ -116,7 +116,7 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://127.0.0.1:7860",
+  "proxy": "http://localhost:7860",
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "@swc/cli": "^0.5.2",
