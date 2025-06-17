@@ -12,7 +12,6 @@ const VoiceButton = ({ toggleRecording }: VoiceButtonProps) => {
     (state) => state.setNewSessionCloseVoiceAssistant,
   );
 
-
   return (
     <>
       <div>
