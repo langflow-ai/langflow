@@ -309,35 +309,30 @@ def run(
         pass  # Starter projects are added during app startup
 
     # Step 6: Launching Langflow
-    with progress.step(6):
-        if platform.system() == "Windows":
-            # Windows doesn't support Gunicorn, use uvicorn directly
+    if platform.system() == "Windows":
+        with progress.step(6):
             import uvicorn
 
-            class WindowsServer:
-                def __init__(self, app, options):
-                    self.app = app
-                    self.options = options
+            # Print summary and banner before starting the server, since uvicorn is a blocking call.
+            # We _may_ be able to subprocess, but with window's spawn behavior, we'd have to move all
+            # non-picklable code to the subprocess. 
+            progress.print_summary()
+            print_banner(host, port, protocol)
 
-                def run(self):
-                    uvicorn.run(
-                        self.app,
-                        host=self.options["host"],
-                        port=self.options["port"],
-                        log_level=self.options["log_level"],
-                        reload=False,
-                        workers=self.options["workers"],
-                        loop="asyncio",
-                    )
+            # Blocking call
+            uvicorn.run(
+                app,
+                host=host,
+                port=port,
+                log_level=log_level,
+                reload=False,
+                workers=get_number_of_workers(workers),
+                loop="asyncio",
+            )
 
-            options = {
-                "host": host,
-                "port": port,
-                "log_level": log_level,
-                "workers": get_number_of_workers(workers),
-            }
-            server = WindowsServer(app, options)
-        else:
+            progress.print_shutdown_summary()
+    else:
+        with progress.step(7):
             # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
             from langflow.server import LangflowApplication
 
@@ -351,29 +346,27 @@ def run(
             }
             server = LangflowApplication(app, options)
 
-        # Start the webapp process
-        process_manager.webapp_process = Process(target=server.run)
-        process_manager.webapp_process.start()
+            # Start the webapp process
+            process_manager.webapp_process = Process(target=server.run)
+            process_manager.webapp_process.start()
 
-        # Note: Leave wait within the with progress.step(6) block
-        # Wait for server to be ready
-        wait_for_server_ready(host, port, protocol)
+            wait_for_server_ready(host, port, protocol)
 
-    # Print summary and banner after server is ready
-    progress.print_summary()
-    print_banner(host, port, protocol)
+        # Print summary and banner after server is ready
+        progress.print_summary()
+        print_banner(host, port, protocol)
 
-    # Handle browser opening
-    if open_browser and not backend_only:
-        click.launch(f"{protocol}://{host}:{port}")
+        # Handle browser opening
+        if open_browser and not backend_only:
+            click.launch(f"{protocol}://{host}:{port}")
 
-    try:
-        process_manager.webapp_process.join()
-    except KeyboardInterrupt:
-        # SIGINT should be handled by the signal handler, but leaving here for safety
-        logger.warning("KeyboardInterrupt caught in main thread")
-    finally:
-        process_manager.shutdown()
+        try:
+            process_manager.webapp_process.join()
+        except KeyboardInterrupt:
+            # SIGINT should be handled by the signal handler, but leaving here for safety
+            logger.warning("KeyboardInterrupt caught in main thread")
+        finally:
+            process_manager.shutdown()
 
 
 def is_port_in_use(port, host="localhost"):

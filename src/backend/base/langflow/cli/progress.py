@@ -195,7 +195,8 @@ def create_langflow_progress(verbose: bool = False) -> ProgressIndicator:
         ("Connecting Database", "Setting up database connection and migrations"),
         ("Loading Components", "Caching component types and custom components"),
         ("Adding Starter Projects", "Creating or updating starter project templates"),
-        ("Launching Langflow", "Starting server and final setup"),
+        ("Launching Langflow (WINDOWS)", "Starting server and final setup"),
+        ("Launching Langflow (MAC)", "Starting server and final setup"),
     ]
 
     for title, description in steps:
