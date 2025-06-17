@@ -52,7 +52,9 @@ class TestSlackbotComponent(ComponentTestBaseWithoutClient):
 
     def test_execute_action_send_message_to_channel(self, component_class, default_kwargs, monkeypatch):
         monkeypatch.setattr(
-            Action, "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL", MockAction.SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL
+            Action,
+            "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+            MockAction.SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL,
         )
 
         component = component_class(**default_kwargs)
@@ -127,14 +129,16 @@ class TestSlackbotComponent(ComponentTestBaseWithoutClient):
 
     def test_as_dataframe(self, component_class, default_kwargs, monkeypatch):
         monkeypatch.setattr(
-            Action, "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL", MockAction.SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL
+            Action,
+            "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+            MockAction.SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL,
         )
 
         component = component_class(**default_kwargs)
         component.api_key = "test_key"
         component.action = [{"name": "Post Message To Channel"}]
-        component.SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL_channel = "random"
-        component.SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL_text = "Test Body"
+        component.SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL_channel = "random"
+        component.SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL_text = "Test Body"
 
         mock_slack_messages = [
             {"channel": "channel1", "user": "user1", "text": "text message 1", "ts": "ts1", "team": "team1"},
