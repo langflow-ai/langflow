@@ -73,17 +73,6 @@ class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
                 "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL_username",
             ],
         },
-        "SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY": {
-            "display_name": "Search Messages Endpoint",
-            "action_fields": [
-                "SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_count",
-                "SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_highlight",
-                "SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_page",
-                "SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_query",
-                "SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_sort",
-                "SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_sort_dir",
-            ],
-        },
         "SLACKBOT_FETCH_CONVERSATION_HISTORY": {
             "display_name": "Retrieve conversation history",
             "action_fields": [
@@ -112,13 +101,24 @@ class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
                 "SLACKBOT_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME_unfurl_media",
             ],
         },
-        "SLACKBOT_CREATE_A_REMINDER": {
-            "display_name": "Add Reminder For User",
+        "SLACKBOT_RETRIEVE_CONVERSATION_MEMBERS_LIST": {
+            "display_name": "Get Conversation Members",
             "action_fields": [
-                "SLACKBOT_CREATE_A_REMINDER_text",
-                "SLACKBOT_CREATE_A_REMINDER_time",
-                "SLACKBOT_CREATE_A_REMINDER_user",
+                "SLACKBOT_RETRIEVE_CONVERSATION_MEMBERS_LIST_channel",
+                "SLACKBOT_RETRIEVE_CONVERSATION_MEMBERS_LIST_limit",
+                "SLACKBOT_RETRIEVE_CONVERSATION_MEMBERS_LIST_cursor",
             ],
+            "get_result_field": True,
+            "result_field": "members",
+        },
+        "SLACKBOT_RETRIEVE_DETAILED_USER_INFORMATION": {
+            "display_name": "Retrieve Detailed User Information",
+            "action_fields": [
+                "SLACKBOT_RETRIEVE_DETAILED_USER_INFORMATION_include_locale",
+                "SLACKBOT_RETRIEVE_DETAILED_USER_INFORMATION_user",
+            ],
+            "get_result_field": True,
+            "result_field": "user",
         },
     }
 
@@ -139,7 +139,7 @@ class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
         "SLACKBOT_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME_unfurl_links",
         "SLACKBOT_SCHEDULES_A_MESSAGE_TO_A_CHANNEL_AT_A_SPECIFIED_TIME_unfurl_media",
         "SLACKBOT_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS_exclude_archived",
-        "SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_highlight",
+        "SLACKBOT_RETRIEVE_DETAILED_USER_INFORMATION_include_locale",
     }
 
     inputs = [
@@ -471,68 +471,39 @@ class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
             show=False,
             advanced=True,
         ),
-        IntInput(
-            name="SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_count",
-            display_name="Count",
-            info="Pass the number of results you want per 'page'. Maximum of `100`.",
+        MessageTextInput(
+            name="SLACKBOT_RETRIEVE_CONVERSATION_MEMBERS_LIST_channel",
+            display_name="Channel",
+            info="ID of the conversation (public channel, private channel, direct message, or multi-person direct message) for which to retrieve the member list. Public channel IDs typically start with 'C', private channels or multi-person direct messages (MPIMs) with 'G', and direct messages (DMs) with 'D'.",  # noqa: E501
             show=False,
-            value=1,
+            required=True,
+        ),
+        IntInput(
+            name="SLACKBOT_RETRIEVE_CONVERSATION_MEMBERS_LIST_limit",
+            display_name="Limit",
+            info="The maximum number of members to return per page. Fewer items may be returned than the requested limit, even if more members exist and the end of the list hasn't been reached.",  # noqa: E501
+            show=False,
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="SLACKBOT_RETRIEVE_CONVERSATION_MEMBERS_LIST_cursor",
+            display_name="Cursor",
+            info="Pagination cursor value for fetching specific pages of results. To retrieve the next page, provide the `next_cursor` value obtained from the `response_metadata` of the previous API call. If omitted or empty, the first page of members is fetched.",  # noqa: E501
+            show=False,
             advanced=True,
         ),
         BoolInput(
-            name="SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_highlight",
-            display_name="Highlight",
-            info="Pass a value of `true` to enable query highlight markers",
+            name="SLACKBOT_RETRIEVE_DETAILED_USER_INFORMATION_include_locale",
+            display_name="Include Locale",
+            info="Set to `true` to include the user's locale (e.g., `en-US`) in the response. Defaults to `false`.",
             show=False,
-            advanced=True,
-        ),
-        IntInput(
-            name="SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_page",
-            display_name="Page",
-            info="Page",
-            show=False,
-            advanced=True,
         ),
         MessageTextInput(
-            name="SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_query",
-            display_name="Query",
-            info="Search query.",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_sort",
-            display_name="Sort",
-            info="Return matches sorted by either `score` or `timestamp`.",
-            show=False,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY_sort_dir",
-            display_name="Sort Dir",
-            info="Change sort direction to ascending (`asc`) or descending (`desc`).",
-            show=False,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="SLACKBOT_CREATE_A_REMINDER_text",
-            display_name="Text",
-            info="The content of the reminder",
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="SLACKBOT_CREATE_A_REMINDER_time",
-            display_name="Time",
-            info="When this reminder should happen: the Unix timestamp (up to five years from now), the number of seconds until the reminder (if within 24 hours), or a natural language description (Ex. 'in 15 minutes,' or 'every Thursday') ",  # noqa: E501
-            show=False,
-            required=True,
-        ),
-        MessageTextInput(
-            name="SLACKBOT_CREATE_A_REMINDER_user",
+            name="SLACKBOT_RETRIEVE_DETAILED_USER_INFORMATION_user",
             display_name="User",
-            info="The user who will receive the reminder. If no user is specified, the reminder will go to user who created it. ",  # noqa: E501
+            info="The ID of the user to retrieve information for.",
             show=False,
+            required=True,
         ),
     ]
 
@@ -589,6 +560,7 @@ class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
             if action_key in [
                 "SLACKBOT_LIST_ALL_SLACK_TEAM_CHANNELS_WITH_VARIOUS_FILTERS",
                 "SLACKBOT_LIST_ALL_SLACK_TEAM_USERS_WITH_PAGINATION",
+                "SLACKBOT_RETRIEVE_CONVERSATION_MEMBERS_LIST",
             ] and isinstance(result_data, list):
                 # Convert array to numbered dictionary
                 numbered_dict = {}
@@ -609,5 +581,4 @@ class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
     def set_default_tools(self):
         self._default_tools = {
             self.sanitize_action_name("SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL").replace(" ", "-"),
-            self.sanitize_action_name("SLACKBOT_SEARCH_FOR_MESSAGES_WITH_QUERY").replace(" ", "-"),
         }
