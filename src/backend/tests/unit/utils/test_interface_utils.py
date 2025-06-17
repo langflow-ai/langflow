@@ -13,9 +13,9 @@ from langflow.interface.utils import extract_input_variables_from_prompt
         ("No variables here", []),
         # Duplicate variables
         ("Hello {name}! How are you {name}?", ["name"]),
-        # Whitespace handling
-        ("Hello { name }!", ["name"]),
-        ("Hi {  name  }, bye", ["name"]),
+        # Whitespace handling - Formatter preserves whitespace in field names
+        ("Hello { name }!", [" name "]),
+        ("Hi {  name  }, bye", ["  name  "]),
         # Multiple braces (escaping)
         ("Escaped {{not_a_var}}", []),
         ("Mixed {{escaped}} and {real_var}", ["real_var"]),
@@ -28,9 +28,6 @@ from langflow.interface.utils import extract_input_variables_from_prompt
         ("{single}", ["single"]),
         ("{{double}}", []),
         ("{{{}}}", []),
-        ("}{", []),
-        ("{incomplete", []),
-        ("incomplete}", []),
         # Multiple variables with various spacing
         (
             """
@@ -46,3 +43,18 @@ def test_extract_input_variables(prompt, expected):
     """Test the extract_input_variables_from_prompt function with various cases."""
     result = extract_input_variables_from_prompt(prompt)
     assert sorted(result) == sorted(expected), f"Failed for prompt: {prompt}"
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        # Malformed format strings that should raise ValueError
+        "}{",
+        "{incomplete",
+        "incomplete}",
+    ],
+)
+def test_extract_input_variables_malformed(prompt):
+    """Test that malformed format strings raise ValueError."""
+    with pytest.raises(ValueError):
+        extract_input_variables_from_prompt(prompt)
