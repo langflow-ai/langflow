@@ -6,6 +6,7 @@ from langflow.schema.message import Message
 class TextInputComponent(TextComponent):
     display_name = "Text Input"
     description = "Get user text inputs."
+    documentation: str = "http://docs.langflow.org/components-io#text-input"
     icon = "type"
     name = "TextInput"
 

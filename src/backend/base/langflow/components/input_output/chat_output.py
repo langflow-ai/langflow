@@ -22,6 +22,7 @@ from langflow.utils.constants import (
 class ChatOutput(ChatComponent):
     display_name = "Chat Output"
     description = "Display a chat message in the Playground."
+    documentation: str = "http://docs.langflow.org/components-io#chat-output"
     icon = "MessagesSquare"
     name = "ChatOutput"
     minimized = True
