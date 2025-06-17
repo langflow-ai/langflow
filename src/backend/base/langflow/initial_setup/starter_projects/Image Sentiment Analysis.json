@@ -19,8 +19,6 @@
             "inputTypes": [
               "Data",
               "DataFrame",
-              "Data",
-              "DataFrame",
               "Message"
             ],
             "type": "str"
@@ -43,7 +41,6 @@
             "name": "structured_output",
             "output_types": [
               "Data"
-              "Data"
             ]
           },
           "targetHandle": {
@@ -52,10 +49,7 @@
             "inputTypes": [
               "DataFrame",
               "Data"
-              "DataFrame",
-              "Data"
             ],
-            "type": "other"
             "type": "other"
           }
         },
@@ -1185,7 +1179,6 @@
         "id": "StructuredOutput-ySLyY",
         "measured": {
           "height": 349,
-          "height": 349,
           "width": 320
         },
         "position": {
@@ -1360,7 +1353,6 @@
         "dragging": false,
         "id": "parser-OWd2X",
         "measured": {
-          "height": 361,
           "height": 361,
           "width": 320
         },
