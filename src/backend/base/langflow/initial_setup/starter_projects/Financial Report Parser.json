@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-4vyMI",
+            "id": "parser-ZMjjt",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-HchFa",
+            "id": "ChatOutput-DHgU9",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-4vyMI{œdataTypeœ:œparserœ,œidœ:œparser-4vyMIœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HchFa{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HchFaœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-ZMjjt{œdataTypeœ:œparserœ,œidœ:œparser-ZMjjtœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DHgU9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DHgU9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-4vyMI",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-4vyMIœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-HchFa",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-HchFaœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-ZMjjt",
+        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-ZMjjtœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-DHgU9",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DHgU9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -37,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-Pai0A",
+            "id": "LanguageModelComponent-jtKdb",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -45,19 +45,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-bNfmT",
+            "id": "StructuredOutput-2t0FB",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-Pai0A{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Pai0Aœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-bNfmT{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-bNfmTœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-jtKdb{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-jtKdbœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-2t0FB{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-2t0FBœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LanguageModelComponent-Pai0A",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-Pai0Aœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-bNfmT",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-bNfmTœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-jtKdb",
+        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-jtKdbœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "StructuredOutput-2t0FB",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-2t0FBœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-iICUc",
+            "id": "ChatInput-VaLgK",
             "name": "message",
             "output_types": [
               "Message"
@@ -73,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-bNfmT",
+            "id": "StructuredOutput-2t0FB",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-iICUc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iICUcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-bNfmT{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-bNfmTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-VaLgK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VaLgKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-2t0FB{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-2t0FBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-iICUc",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-iICUcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-bNfmT",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-bNfmTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-VaLgK",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VaLgKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutput-2t0FB",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-2t0FBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-bNfmT",
+            "id": "StructuredOutput-2t0FB",
             "name": "structured_output",
             "output_types": [
               "Data"
@@ -101,7 +101,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-4vyMI",
+            "id": "parser-ZMjjt",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -109,18 +109,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-StructuredOutput-bNfmT{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-bNfmTœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-4vyMI{œfieldNameœ:œinput_dataœ,œidœ:œparser-4vyMIœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-2t0FB{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-2t0FBœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-ZMjjt{œfieldNameœ:œinput_dataœ,œidœ:œparser-ZMjjtœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-bNfmT",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-bNfmTœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "parser-4vyMI",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-4vyMIœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-2t0FB",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-2t0FBœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "target": "parser-ZMjjt",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-ZMjjtœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatOutput-HchFa",
+          "id": "ChatOutput-DHgU9",
           "node": {
             "base_classes": [
               "Message"
@@ -418,7 +418,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-HchFa",
+        "id": "ChatOutput-DHgU9",
         "measured": {
           "height": 48,
           "width": 192
@@ -432,7 +432,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-iICUc",
+          "id": "ChatInput-VaLgK",
           "node": {
             "base_classes": [
               "Message"
@@ -732,7 +732,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-iICUc",
+        "id": "ChatInput-VaLgK",
         "measured": {
           "height": 48,
           "width": 192
@@ -746,7 +746,7 @@
       },
       {
         "data": {
-          "id": "note-fN1HO",
+          "id": "note-O8fhi",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -758,7 +758,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-fN1HO",
+        "id": "note-O8fhi",
         "measured": {
           "height": 324,
           "width": 324
@@ -772,7 +772,7 @@
       },
       {
         "data": {
-          "id": "note-FamXg",
+          "id": "note-2715s",
           "node": {
             "description": "\n# Financial Report Parser\n\nThis template extracts key financial metrics from a given financial report text using OpenAI's GPT-4o-mini model. The extracted data is structured and formatted for chat consumption.\n\n## Prerequisites\n\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your OpenAI API key to the Language model.\n2. To run the flow, click **Playground**.\nThe **Chat Input** component in this template is pre-loaded with a sample financial report for demonstrating how structured data is extracted.\n\n* The **Language Model** model component identifies and retrieves Gross Profit, EBITDA, Net Income, and Operating Expenses from the financial report.\n* The **Structured Output** component formats extracted data into a structured format for better readability and further processing.\n* The **Parser** component converts extracted data into formatted messages for chat consumption.\n\n\n\n\n\n",
             "display_name": "",
@@ -783,7 +783,7 @@
         },
         "dragging": false,
         "height": 688,
-        "id": "note-FamXg",
+        "id": "note-2715s",
         "measured": {
           "height": 688,
           "width": 620
@@ -799,7 +799,7 @@
       },
       {
         "data": {
-          "id": "parser-4vyMI",
+          "id": "parser-ZMjjt",
           "node": {
             "base_classes": [
               "Message"
@@ -929,7 +929,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "EBITDA: {results[0][EBITDA]}  ,  Net Income: {results[0][NET_INCOME]} , GROSS_PROFIT: {results[0][GROSS_PROFIT]}"
+                "value": "EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}"
               },
               "sep": {
                 "_input_type": "MessageTextInput",
@@ -961,7 +961,7 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-4vyMI",
+        "id": "parser-ZMjjt",
         "measured": {
           "height": 360,
           "width": 320
@@ -970,12 +970,12 @@
           "x": 1765.290752395121,
           "y": 164.78283431885177
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "LanguageModelComponent-Pai0A",
+          "id": "LanguageModelComponent-jtKdb",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1019,7 +1019,8 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "selected": null,
+                "options": null,
+                "required_inputs": null,
                 "tool_mode": true,
                 "types": [
                   "Message"
@@ -1033,6 +1034,8 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1244,12 +1247,12 @@
             },
             "tool_mode": false
           },
-          "selected_output": "structured_output_dataframe",
+          "selected_output": "model_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-Pai0A",
+        "id": "LanguageModelComponent-jtKdb",
         "measured": {
           "height": 450,
           "width": 320
@@ -1263,7 +1266,7 @@
       },
       {
         "data": {
-          "id": "StructuredOutput-bNfmT",
+          "id": "StructuredOutput-2t0FB",
           "node": {
             "base_classes": [
               "Data"
@@ -1528,7 +1531,7 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-bNfmT",
+        "id": "StructuredOutput-2t0FB",
         "measured": {
           "height": 348,
           "width": 320
@@ -1542,14 +1545,14 @@
       }
     ],
     "viewport": {
-      "x": -101.94001725759381,
-      "y": 333.4551039081521,
+      "x": -287.9400172575938,
+      "y": 302.4551039081521,
       "zoom": 0.6307952275474222
     }
   },
   "description": "Extracts key financial metrics like Gross Profit, EBITDA, and Net Income from financial reports and structures them for easy analysis, using Structured Output Component",
   "endpoint_name": null,
-  "id": "af682643-5291-4d2b-8e5b-68483131c946",
+  "id": "f63a6251-214d-4f5f-8b20-20e354463908",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Financial Report Parser",

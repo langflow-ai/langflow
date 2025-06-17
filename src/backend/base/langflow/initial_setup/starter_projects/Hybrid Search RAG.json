@@ -27,9 +27,9 @@
         "id": "reactflow__edge-ParserComponent-3Xb72{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-3Xb72œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HL6J1{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HL6J1œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ParserComponent-3Xb72",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-3Xb72œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-3Xb72œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-HL6J1",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HL6J1œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-HL6J1œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-ChatInput-nObH7{œdataTypeœ:œChatInputœ,œidœ:œChatInput-nObH7œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-8MbYw{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-8MbYwœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
         "source": "ChatInput-nObH7",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-nObH7œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-nObH7œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AstraDB-8MbYw",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-8MbYwœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-8MbYwœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-AstraDB-8MbYw{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-8MbYwœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-3Xb72{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-3Xb72œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AstraDB-8MbYw",
-        "sourceHandle": "{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-8MbYwœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-8MbYwœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-3Xb72",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-3Xb72œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-3Xb72œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "xy-edge__LanguageModelComponent-CXvuM{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-CXvuMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-38AOi{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-38AOiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-CXvuM",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-CXvuMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-CXvuMœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-38AOi",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-38AOiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-38AOiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -141,9 +141,9 @@
         "id": "xy-edge__StructuredOutput-38AOi{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-38AOiœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParserComponent-MDCBV{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-MDCBVœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-38AOi",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-38AOiœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-38AOiœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParserComponent-MDCBV",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-MDCBVœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-MDCBVœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -169,9 +169,9 @@
         "id": "xy-edge__LanguageModelComponent-3anZE{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-3anZEœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-38AOi{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-38AOiœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-3anZE",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-3anZEœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-3anZEœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-38AOi",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-38AOiœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-38AOiœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1196,8 +1196,6 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1212,8 +1210,6 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -1229,8 +1225,6 @@
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "options": null,
-                "required_inputs": null,
                 "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
@@ -1713,10 +1707,7 @@
                 "info": "Optional keyspace within Astra DB to use for the collection.",
                 "load_from_db": false,
                 "name": "keyspace",
-                "options": [
-                  "default_keyspace",
-                  "test"
-                ],
+                "options": [],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -1781,9 +1772,7 @@
                 "info": "Post-retrieval model that re-scores results for optimal relevance ranking.",
                 "load_from_db": false,
                 "name": "reranker",
-                "options": [
-                  "nvidia/llama-3.2-nv-rerankqa-1b-v2"
-                ],
+                "options": [],
                 "options_metadata": [
                   {
                     "icon": "NVIDIA"
@@ -2001,8 +1990,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2017,8 +2004,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -2293,8 +2278,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2309,8 +2292,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
