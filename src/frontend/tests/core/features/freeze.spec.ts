@@ -161,7 +161,7 @@ test(
 
     await page
       .getByTestId("inputlist_str_urls_0")
-      .fill("https://www.lipsum.com/");
+      .fill("https://www.lipsum.com/feed/html");
 
     await runChatOutput(page);
 
