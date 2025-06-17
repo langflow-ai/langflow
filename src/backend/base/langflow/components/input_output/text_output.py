@@ -6,7 +6,7 @@ from langflow.schema.message import Message
 class TextOutputComponent(TextComponent):
     display_name = "Text Output"
     description = "Sends text output via API."
-    documentation: str = "http://docs.langflow.org/components-io#text-output"
+    documentation: str = "https://docs.langflow.org/components-io#text-output"
     icon = "type"
     name = "TextOutput"
 
