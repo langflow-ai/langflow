@@ -119,13 +119,15 @@ class SaveToFileComponent(Component):
 
     def _get_input_type(self) -> str:
         """Determine the input type based on the provided input."""
-        if isinstance(self.input, DataFrame):
+        # Use exact type checking (type() is) instead of isinstance() to avoid inheritance issues.
+        # Since Message inherits from Data, isinstance(message, Data) would return True for Message objects,
+        # causing Message inputs to be incorrectly identified as Data type.
+        if type(self.input) is DataFrame:
             return "DataFrame"
-        if isinstance(self.input, Data):
-            return "Data"
-        if isinstance(self.input, Message):
+        if type(self.input) is Message:
             return "Message"
-
+        if type(self.input) is Data:
+            return "Data"
         msg = f"Unsupported input type: {type(self.input)}"
         raise ValueError(msg)
 
