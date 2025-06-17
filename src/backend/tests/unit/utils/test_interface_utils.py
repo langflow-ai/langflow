@@ -46,15 +46,15 @@ def test_extract_input_variables(prompt, expected):
 
 
 @pytest.mark.parametrize(
-    "prompt",
+    ("prompt", "expected_error"),
     [
         # Malformed format strings that should raise ValueError
-        "}{",
-        "{incomplete",
-        "incomplete}",
+        ("}{", "Single '}' encountered in format string"),
+        ("{incomplete", "expected '}' before end of string"),
+        ("incomplete}", "Single '}' encountered in format string"),
     ],
 )
-def test_extract_input_variables_malformed(prompt):
+def test_extract_input_variables_malformed(prompt, expected_error):
     """Test that malformed format strings raise ValueError."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=expected_error):
         extract_input_variables_from_prompt(prompt)

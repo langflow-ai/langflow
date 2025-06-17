@@ -75,7 +75,7 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     seen_add = seen.add
     seen_contains = seen.__contains__
 
-    for literal_text, field_name, format_spec, conversion in formatter.parse(prompt):
+    for _, field_name, _, _ in formatter.parse(prompt):
         if field_name and not seen_contains(field_name):
             variables_append(field_name)
             seen_add(field_name)
