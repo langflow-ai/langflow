@@ -6,16 +6,8 @@ This security policy applies to all public projects under the langflow-ai organi
 
 ### Security/Bugfix Versions
 
-- Fixes are released either as part of the next minor version or as an on-demand patch version
+- Fixes are released either as part of the next minor version (e.g., 1.3.0 → 1.4.0) or as an on-demand patch version (e.g., 1.3.0 → 1.3.1)
 - Security fixes are given priority and might be enough to cause a new version to be released
-
-## Known Vulnerabilities
-
-### Code Execution Vulnerability (Fixed in 1.3.0)
-
-Langflow allows users to define and run **custom code components** through endpoints like `/api/v1/validate/code`. In versions < 1.3.0, this endpoint did not enforce authentication or proper sandboxing, allowing **unauthenticated arbitrary code execution**.
-
-This means an attacker could send malicious code to the endpoint and have it executed on the server—leading to full system compromise, including data theft, remote shell access, or lateral movement within the network.
 
 ## Reporting a Vulnerability
 
@@ -47,3 +39,13 @@ Use the "Report a vulnerability" button under the "Security" tab of the [Langflo
   - Details about Langflow employees, contractors, or partners
 
 We appreciate your efforts in helping us maintain a secure platform and look forward to working together to resolve any issues responsibly.
+
+## Known Vulnerabilities
+
+### Code Execution Vulnerability (Fixed in 1.3.0)
+
+Langflow allows users to define and run **custom code components** through endpoints like `/api/v1/validate/code`. In versions < 1.3.0, this endpoint did not enforce authentication or proper sandboxing, allowing **unauthenticated arbitrary code execution**.
+
+This means an attacker could send malicious code to the endpoint and have it executed on the server—leading to full system compromise, including data theft, remote shell access, or lateral movement within the network.
+
+To address, upgrade to >= 1.3.0.
