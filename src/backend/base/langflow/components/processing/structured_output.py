@@ -47,7 +47,7 @@ class StructuredOutputComponent(Component):
                 "Fill missing or ambiguous values with defaults: null for missing values, "
                 "0 for numeric fields, and 'N/A' for strings. "
                 "Ignore duplicates and partial repeats. "
-                "Always return one valid JSON—never throw errors or return multiple objects."
+                "Always return one valid JSON, never throw errors or return multiple objects."
                 "Output: A single well-formed JSON object, and nothing else."
             ),
             required=True,
