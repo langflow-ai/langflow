@@ -74,7 +74,7 @@ class AgentQLQueryDocument(BaseFileComponent):
     outputs = [*BaseFileComponent._base_outputs]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
-        endpoint = "https://api.agentql.com/v1/query-document-body"
+        endpoint = "https://api.agentql.com/v1/query-document"
         headers = {
             "X-API-Key": self.api_key,
             "X-TF-Request-Origin": "langflow",
