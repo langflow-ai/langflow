@@ -77,7 +77,7 @@ Once the application is running, the command output should look similar to:
 │ We collect anonymous usage data to improve Langflow.                  │
 │ To opt out, set: DO_NOT_TRACK=true in your environment.               │
 │                                                                       │
-│ 🟢 Open Langflow → http://127.0.0.1:7860                               │
+│ 🟢 Open Langflow → http://localhost:7860                               │
 ╰───────────────────────────────────────────────────────────────────────╯
 ```
 
