@@ -755,8 +755,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt",
-          "selected_output": "prompt"
+          "selected_output": "prompt",
+          "type": "Prompt"
         },
         "dragging": false,
         "height": 685,
@@ -1201,8 +1201,8 @@
             },
             "tool_mode": false
           },
-          "type": "URL",
-          "selected_output": "text"
+          "selected_output": "text",
+          "type": "URL"
         },
         "dragging": false,
         "height": 365,
@@ -1588,8 +1588,8 @@
             },
             "tool_mode": false
           },
-          "type": "URL",
-          "selected_output": "text"
+          "selected_output": "text",
+          "type": "URL"
         },
         "dragging": false,
         "height": 661,
@@ -1969,8 +1969,8 @@
             },
             "tool_mode": false
           },
-          "type": "URL",
-          "selected_output": "text"
+          "selected_output": "text",
+          "type": "URL"
         },
         "dragging": false,
         "height": 365,
@@ -2312,9 +2312,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
-          "type": "AnthropicModel",
-          "selected_output": "text_output"
+          "type": "AnthropicModel"
         },
         "dragging": false,
         "id": "AnthropicModel-lHsal",
@@ -2625,9 +2625,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message",
           "showNode": false,
-          "type": "ChatInput",
-          "selected_output": "message"
+          "type": "ChatInput"
         },
         "dragging": false,
         "id": "ChatInput-anwBz",
