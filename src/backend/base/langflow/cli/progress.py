@@ -4,6 +4,7 @@ import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
+import platform
 
 import click
 
@@ -21,7 +22,19 @@ class ProgressIndicator:
         self.running = False
         self._stop_animation = False
         self._animation_thread = None
-        self._animation_chars = ["□", "▢", "▣", "■"]
+        
+        # Use Windows-safe characters on Windows to prevent encoding issues
+        if platform.system() == "Windows":
+            self._animation_chars = ["-", "\\", "|", "/"]  # ASCII spinner
+            self._success_icon = "+"  # ASCII plus sign
+            self._failure_icon = "x"  # ASCII x
+            self._farewell_emoji = ":)"  # ASCII smiley
+        else:
+            self._animation_chars = ["□", "▢", "▣", "■"]  # Unicode squares
+            self._success_icon = "✓"  # Unicode checkmark
+            self._failure_icon = "✗"  # Unicode cross
+            self._farewell_emoji = "👋"  # Unicode wave
+            
         self._animation_index = 0
 
     def add_step(self, title: str, description: str = "") -> None:
@@ -98,10 +111,10 @@ class ProgressIndicator:
         sys.stdout.write("\r")
 
         if success:
-            icon = click.style("✓", fg="green", bold=True)
+            icon = click.style(self._success_icon, fg="green", bold=True)
             title = click.style(step["title"], fg="green")
         else:
-            icon = click.style("✗", fg="red", bold=True)
+            icon = click.style(self._failure_icon, fg="red", bold=True)
             title = click.style(step["title"], fg="red")
 
         duration = ""
@@ -166,7 +179,7 @@ class ProgressIndicator:
     def print_farewell_message(self) -> None:
         """Print a nice farewell message after shutdown is complete."""
         click.echo()
-        farewell = click.style("👋 See you next time!", fg="bright_blue", bold=True)
+        farewell = click.style(f"{self._farewell_emoji} See you next time!", fg="bright_blue", bold=True)
         click.echo(farewell)
 
 
