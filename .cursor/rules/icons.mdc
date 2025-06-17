@@ -1,8 +1,14 @@
 ---
-description: Rules and checklist for adding and using langflow component icons.
+description: "Rules for creating and implementing component icons in Langflow, covering both backend Python component icon attributes and frontend React icon implementation."
 globs:
+  - "src/frontend/src/icons/**/*"
+  - "src/frontend/src/icons/lazyIconImports.ts"
+  - "src/backend/**/*component*.py"
+  - "src/backend/**/components/**/*.py"
 alwaysApply: false
 ---
+
+
 # Component Icon Rules
 
 ## Purpose

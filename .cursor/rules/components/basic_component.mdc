@@ -1,8 +1,12 @@
 ---
-description: Rules and checklist for creating a basic Langflow Component
+description: "Guide for creating a basic Langflow component, including requirements gathering, component structure, and implementation best practices."
 globs:
+  - "src/backend/**/components/**/*.py"
+  - "src/backend/base/langflow/components/**/*.py"
 alwaysApply: false
 ---
+
+
 # Rule: How to Create a Basic Langflow Component
 
 ## Purpose

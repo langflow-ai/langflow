@@ -341,7 +341,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 779,
@@ -504,7 +505,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 260,
@@ -910,7 +912,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -925,9 +926,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1237,7 +1235,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-xbTZw",
