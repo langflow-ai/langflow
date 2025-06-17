@@ -64,7 +64,6 @@ test(
       timeout: 3000,
     });
 
-    // Add prompt component to canvas
     await page
       .locator('//*[@id="promptsPrompt"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
