@@ -9,10 +9,9 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.output_parsers import BaseOutputParser
 
 from langflow.base.constants import STREAM_INFO_TEXT
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import LanguageModel
-from langflow.inputs import MessageInput
-from langflow.inputs.inputs import BoolInput, InputTypes, MultilineInput
+from langflow.inputs.inputs import BoolInput, InputTypes, MessageInput, MultilineInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 
@@ -50,7 +49,7 @@ class LCModelComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Message", name="text_output", method="text_response"),
+        Output(display_name="Model Response", name="text_output", method="text_response"),
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
@@ -175,7 +174,7 @@ class LCModelComponent(Component):
         stream: bool,
         input_value: str | Message,
         system_message: str | None = None,
-    ):
+    ) -> Message:
         if getattr(self, "detailed_thinking", False):
             system_message = DETAILED_THINKING_PREFIX + (system_message or "")
 
@@ -193,7 +192,7 @@ class LCModelComponent(Component):
         stream: bool,
         input_value: str | Message,
         system_message: str | None = None,
-    ):
+    ) -> Message:
         messages: list[BaseMessage] = []
         if not input_value and not system_message:
             msg = "The message you want to send to the model is empty."
@@ -249,7 +248,7 @@ class LCModelComponent(Component):
                 raise ValueError(message) from e
             raise
 
-        return result
+        return Message(text=result)
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

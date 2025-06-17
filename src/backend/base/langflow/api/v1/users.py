@@ -15,8 +15,8 @@ from langflow.services.auth.utils import (
     get_password_hash,
     verify_password,
 )
-from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
+from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")

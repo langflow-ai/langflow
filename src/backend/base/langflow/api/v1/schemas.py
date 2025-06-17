@@ -14,7 +14,7 @@ from pydantic import (
 )
 
 from langflow.graph.schema import RunOutputs
-from langflow.schema import dotdict
+from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
 from langflow.serialization import constants as serialization_constants
@@ -22,8 +22,8 @@ from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.serialization.serialization import serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
-from langflow.services.database.models.flow import FlowCreate, FlowRead
-from langflow.services.database.models.user import UserRead
+from langflow.services.database.models.flow.model import FlowCreate, FlowRead
+from langflow.services.database.models.user.model import UserRead
 from langflow.services.settings.feature_flags import FeatureFlags
 from langflow.services.tracing.schema import Log
 
@@ -377,7 +377,7 @@ class FlowDataRequest(BaseModel):
 
 class ConfigResponse(BaseModel):
     feature_flags: FeatureFlags
-    serialization_max_items_lenght: int = serialization_constants.MAX_ITEMS_LENGTH
+    serialization_max_items_length: int = serialization_constants.MAX_ITEMS_LENGTH
     serialization_max_text_length: int = serialization_constants.MAX_TEXT_LENGTH
     frontend_timeout: int
     auto_saving: bool
@@ -388,6 +388,7 @@ class ConfigResponse(BaseModel):
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     event_delivery: Literal["polling", "streaming", "direct"]
+    voice_mode_enabled: bool
 
 
 class CancelFlowResponse(BaseModel):
@@ -406,3 +407,7 @@ class MCPSettings(BaseModel):
     action_description: str | None = None
     name: str | None = None
     description: str | None = None
+
+
+class MCPInstallRequest(BaseModel):
+    client: str

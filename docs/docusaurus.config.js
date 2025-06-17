@@ -259,6 +259,10 @@ const config = {
             from: "/integrations-mcp",
           },
           {
+            to: "/integrations-nvidia-g-assist",
+            from: "/integrations-nvidia-system-assist",
+          },
+          {
             to: "/deployment-kubernetes-dev",
             from: [
               "/deployment-kubernetes",
@@ -292,8 +296,8 @@ const config = {
         hideOnScroll: true,
         logo: {
           alt: "Langflow",
-          src: "img/langflow-logo-black.svg",
-          srcDark: "img/langflow-logo-white.svg",
+          src: "img/lf-docs-light.svg",
+          srcDark: "img/lf-docs-dark.svg",
         },
         items: [
           // right
@@ -346,8 +350,8 @@ const config = {
       footer: {
         logo: {
           alt: "Langflow",
-          src: "img/langflow-logo-black.svg",
-          srcDark: "img/langflow-logo-white.svg",
+          src: "img/lf-docs-light.svg",
+          srcDark: "img/lf-docs-dark.svg",
           width: 160,
           height: 40,
         },

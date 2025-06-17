@@ -38,7 +38,6 @@ import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
 
-// Memoize IconComponent instances
 const EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
     <IconComponent
@@ -52,54 +51,6 @@ const EyeIcon = memo(
 const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
 ));
-
-// Memoize Button components
-const HideShowButton = memo(
-  ({
-    disabled,
-    onClick,
-    hidden,
-    isToolMode,
-    title,
-  }: {
-    disabled: boolean;
-    onClick: () => void;
-    hidden: boolean;
-    isToolMode: boolean;
-    title: string;
-  }) => (
-    <Button
-      disabled={disabled}
-      unstyled
-      onClick={onClick}
-      data-testid={`input-inspection-${title.toLowerCase()}`}
-    >
-      <ShadTooltip
-        content={
-          disabled
-            ? "Connected outputs can't be hidden."
-            : hidden
-              ? "Show output"
-              : "Hide output"
-        }
-      >
-        <div>
-          <EyeIcon
-            hidden={hidden}
-            className={cn(
-              "icon-size",
-              disabled
-                ? "text-placeholder-foreground opacity-60"
-                : isToolMode
-                  ? "text-background hover:text-secondary-hover"
-                  : "text-placeholder-foreground hover:text-primary-hover",
-            )}
-          />
-        </div>
-      </ShadTooltip>
-    </Button>
-  ),
-);
 
 const InspectButton = memo(
   forwardRef(
@@ -178,14 +129,12 @@ function NodeOutputField({
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
 
-  // Use selective store subscriptions
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const flowPool = useFlowStore((state) => state.flowPool);
   const myData = useTypesStore((state) => state.data);
 
-  // Memoize computed values
   const { flowPoolId, internalOutputName } = useMemo(() => {
     if (data.node?.flow && outputProxy) {
       const realOutput = getGroupOutputNodeId(
@@ -267,10 +216,19 @@ function NodeOutputField({
   );
 
   useEffect(() => {
-    if (disabledOutput && hidden) {
+    const outputHasGroupOutputsFalse =
+      data.node?.outputs?.[index]?.group_outputs === false;
+
+    if (disabledOutput && hidden && !outputHasGroupOutputsFalse) {
       handleUpdateOutputHide(false);
     }
-  }, [disabledOutput, handleUpdateOutputHide, hidden]);
+  }, [
+    disabledOutput,
+    handleUpdateOutputHide,
+    hidden,
+    data.node?.outputs,
+    index,
+  ]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
 
@@ -450,9 +408,7 @@ function NodeOutputField({
                   errorOutput={errorOutput ?? false}
                   isToolMode={isToolMode}
                   title={title}
-                  onClick={() => {
-                    //just to trigger the memoization
-                  }}
+                  onClick={() => {}}
                   id={data?.type}
                 />
               </OutputModal>

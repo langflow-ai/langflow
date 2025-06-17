@@ -124,7 +124,7 @@ export default function ToolsComponent({
 
         {visibleActions.length === 0 && !isAction && value && (
           <Button
-            disabled={disabled}
+            disabled={disabled || value.length === 0}
             size={editNode ? "xs" : "default"}
             className={
               "w-full " +
@@ -132,7 +132,9 @@ export default function ToolsComponent({
             }
             onClick={() => setIsModalOpen(true)}
           >
-            <span>Select actions</span>
+            <span>
+              {value.length === 0 ? "No actions available" : "Select actions"}
+            </span>
           </Button>
         )}
       </div>

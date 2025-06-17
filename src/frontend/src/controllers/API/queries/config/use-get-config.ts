@@ -19,7 +19,9 @@ export interface ConfigResponse {
   max_file_size_upload: number;
   feature_flags: Record<string, any>;
   webhook_polling_interval: number;
+  serialization_max_items_length: number;
   event_delivery: EventDeliveryType;
+  voice_mode_enabled: boolean;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
@@ -35,11 +37,17 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
   const setMaxFileSizeUpload = useUtilityStore(
     (state) => state.setMaxFileSizeUpload,
   );
+  const setSerializationMaxItemsLength = useUtilityStore(
+    (state) => state.setSerializationMaxItemsLength,
+  );
   const setFeatureFlags = useUtilityStore((state) => state.setFeatureFlags);
   const setWebhookPollingInterval = useUtilityStore(
     (state) => state.setWebhookPollingInterval,
   );
   const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
+  const setVoiceModeEnabled = useFlowsManagerStore(
+    (state) => state.setVoiceModeEnabled,
+  );
   const { query } = UseRequestProcessor();
 
   const getConfigFn = async () => {
@@ -56,10 +64,12 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
       setHealthCheckMaxRetries(data.health_check_max_retries);
       setMaxFileSizeUpload(data.max_file_size_upload);
       setFeatureFlags(data.feature_flags);
+      setSerializationMaxItemsLength(data.serialization_max_items_length);
       setWebhookPollingInterval(
         data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
       );
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
+      setVoiceModeEnabled(Boolean(data.voice_mode_enabled));
     }
     return data;
   };
