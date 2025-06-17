@@ -40,15 +40,15 @@ class StructuredOutputComponent(Component):
             name="system_prompt",
             display_name="Format Instructions",
             info="The instructions to the language model for formatting the output.",
-            value=("""
-                    You are an AI that extracts one structured JSON object from unstructured text.
-                        •	Use a predefined schema with expected types (string, integer, float, date).
-                        •	If multiple structures exist, extract only the first most complete one.
-                        •	Fill missing/ambiguous values with defaults: null (missing), 0 (numeric), 'N/A' (string).
-                        •	Ignore duplicates and partial repeats.
-                        •	Always return one valid JSON—never throw errors or return multiple objects.
-
-                    Output: A single well-formed JSON object, and nothing else."""
+            value=(
+                "You are an AI that extracts one structured JSON object from unstructured text. "
+                "Use a predefined schema with expected types (string, integer, float, date). "
+                "If multiple structures exist, extract only the first most complete one. "
+                "Fill missing or ambiguous values with defaults: null for missing values, "
+                "0 for numeric fields, and 'N/A' for strings. "
+                "Ignore duplicates and partial repeats. "
+                "Always return one valid JSON—never throw errors or return multiple objects."
+                "Output: A single well-formed JSON object, and nothing else."
             ),
             required=True,
             advanced=True,
