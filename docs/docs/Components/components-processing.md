@@ -71,45 +71,45 @@ All operations in the component require at least one [Data](/concepts-objects#da
 2. In the **Operations** field, select the operation you want to perform.
 For example, send this request to the **Webhook** component.
 Replace `YOUR_FLOW_ID` with your flow ID.
-    ```bash
-    curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
-    -H 'Content-Type: application/json' \
-    -d '{
-      "id": 1,
-      "name": "Leanne Graham",
-      "username": "Bret",
-      "email": "Sincere@april.biz",
-      "address": {
-        "street": "Kulas Light",
-        "suite": "Apt. 556",
-        "city": "Gwenborough",
-        "zipcode": "92998-3874",
-        "geo": {
-          "lat": "-37.3159",
-          "lng": "81.1496"
-        }
-      },
-      "phone": "1-770-736-8031 x56442",
-      "website": "hildegard.org",
-      "company": {
-        "name": "Romaguera-Crona",
-        "catchPhrase": "Multi-layered client-server neural-net",
-        "bs": "harness real-time e-markets"
-      }
-    }'
-    ```
+```bash
+curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+  "id": 1,
+  "name": "Leanne Graham",
+  "username": "Bret",
+  "email": "Sincere@april.biz",
+  "address": {
+    "street": "Kulas Light",
+    "suite": "Apt. 556",
+    "city": "Gwenborough",
+    "zipcode": "92998-3874",
+    "geo": {
+      "lat": "-37.3159",
+      "lng": "81.1496"
+    }
+  },
+  "phone": "1-770-736-8031 x56442",
+  "website": "hildegard.org",
+  "company": {
+    "name": "Romaguera-Crona",
+    "catchPhrase": "Multi-layered client-server neural-net",
+    "bs": "harness real-time e-markets"
+  }
+}'
+```
 
 3. In the **Data Operations** component, select the **Select Keys** operation to extract specific user information.
 To add additional keys, click <Icon name="Plus" aria-label="Add"/> **Add More**.
 ![A webhook and data operations component](/img/component-data-operations-select-key.png)
 4. Filter by `name`, `username`, and `email` to select the values from the request.
-    ```json
-    {
-      "name": "Leanne Graham",
-      "username": "Bret",
-      "email": "Sincere@april.biz"
-    }
-    ```
+```json
+{
+  "name": "Leanne Graham",
+  "username": "Bret",
+  "email": "Sincere@april.biz"
+}
+```
 
 ### Operations
 
@@ -165,7 +165,7 @@ This example fetches JSON data from an API. The **Smart Filter** component extra
 For this example, the desired data is nested within the `result` field.
 2. Connect a **Smart Filter** to the API request component, and a **Language model** to the **Smart Filter**. This example connects a **Groq** model component.
 3. In the **Groq** model component, add your **Groq** API key.
-4. To filter the data, in the **Smart filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
+4. To filter the data, in the **Smart function** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
 For this example, enter:
 ```
 I want to explode the result column out into a Data object
@@ -240,43 +240,7 @@ This component can perform the following operations on Pandas [DataFrame](https:
 
 ## LLM router
 
-This component routes requests to the most appropriate LLM based on [OpenRouter](https://openrouter.ai/docs/quickstart) model specifications.
-
-The judge LLM analyzed your input message to understand the evaluation context, and then selects the most appropriate model from your LLM pool.
-
-The selected model processes your input and returns the response.
-
-To use the **LLM Router** component in a flow, do the following:
-
-1. Connect multiple **Language Model** components to the **LLM Router**'s **Language Models** input.
-
-2. Connect a **Judge LLM** component to the **Judge LLM** input.
-
-3. Connect **Chat Input** and **Chat Output** components to the **LLM Router**.
-The flow looks like this:
-
-![LLM router component](/img/component-llm-router.png)
-
-4. In the LLM Router component, set your **Optimization** preference:
-   - **Quality**: Prioritizes the highest quality response.
-   - **Speed**: Prioritizes the fastest response time.
-   - **Cost**: Prioritizes the most cost-effective option.
-   - **Balanced**: Strikes a balance between quality, speed, and cost.
-
-5. Run the flow.
-Your input is the task that the LLM router evaluates the models against, such as `Write a story about horses` or `How do I parse data objects out of JSON?`.
-6. In the LLM Router component, select the **Model Selection Decision** output to view the router's reasoning.
-
-    ```text
-    Model Selection Decision:
-    - Selected Model Index: 0
-    - Selected Langflow Model Name: gpt-4o-mini
-    - Selected API Model ID (if resolved): openai/gpt-4o-mini
-    - Optimization Preference: cost
-    - Input Query Length: 27 characters (~5 tokens)
-    - Number of Models Considered: 2
-    - Specifications Source: OpenRouter API
-    ```
+This component routes requests to the most appropriate LLM based on OpenRouter model specifications.
 
 <details>
 <summary>Parameters</summary>
@@ -527,18 +491,18 @@ For `Message` inputs, the component can create:
 ## Smart function
 
 :::tip
-Prior to Langflow 1.5, this component was named the Lambda filter.
+Prior to Langflow 1.5, the **Smart Filter** component was named the **Lambda Filter** component.
 :::
 
-This component uses an LLM to generate a function for filtering or transforming structured data.
+This component uses an LLM to generate a Lambda function for filtering or transforming structured data.
 
-To use the **Smart function** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
+To use the **Smart Filter** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
 
-This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
-The **Instructions** field in the **Smart function** component specifies the task `extract emails`.
+This example retrieves JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
+The **Instructions** field in the **Smart Filter** component specifies the task `extract emails`.
 The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
 
-![Smart function connected to an LLM](/img/component-lambda-filter.png)
+![Smart function](/img/component-lambda-filter.png)
 
 <details>
 <summary>Parameters</summary>
@@ -714,7 +678,7 @@ Keys are columns, and each dictionary (a collection of key-value pairs) in the l
 
 To use this component in a flow, do the following:
 
-1. Add the **Web search** component to the [Basic prompting](/basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
+1. Add the **Web search** component to the [Basic prompting](/starter-projects-basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
 2. Connect the **Web search** component's output to a component that accepts the DataFrame input.
 This example uses a **Prompt** component to give the chatbot context, so you must convert the **Web search** component's DataFrame output to a Message type.
 3. Connect a **Type Convert** component to convert the DataFrame to a Message.
@@ -1134,6 +1098,8 @@ This component extracts patterns from text using regular expressions. It can be 
 To use this component in a flow:
 
 1. Connect the **Regex Extractor** to a **URL** component and a **Chat Output** component.
+
+![Regex extractor connected to url component](/img/component-url-regex.png)
 
 2. In the **Regex Extractor** tool, enter a pattern to extract text from the **URL** component's raw output.
 This example extracts the first paragraph from the "In the News" section of `https://en.wikipedia.org/wiki/Main_Page`:
