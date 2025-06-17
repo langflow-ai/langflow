@@ -37,14 +37,13 @@ class ChunkDoclingDocumentComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Chunks", name="chunks", method="chunk_documents"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="DataFrame", name="dataframe", method="chunk_documents"),
     ]
 
     def _docs_to_data(self, docs) -> list[Data]:
         return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
 
-    def chunk_documents(self) -> list[Data]:
+    def chunk_documents(self) -> DataFrame:
         from docling.chunking import BaseChunker, DocMeta, HierarchicalChunker, HybridChunker
 
         from langflow.components.docling._utils import extract_docling_documents
@@ -78,7 +77,4 @@ class ChunkDoclingDocumentComponent(Component):
             msg = f"Error splitting text: {e}"
             raise TypeError(msg) from e
 
-        return results
-
-    def as_dataframe(self) -> DataFrame:
-        return DataFrame(self.chunk_documents())
+        return DataFrame(results)
