@@ -80,7 +80,6 @@ init: check_tools clean_python_cache clean_npm_cache ## initialize the project
 	@make install_frontend
 	@make build_frontend
 	@echo "$(GREEN)All requirements are installed.$(NC)"
-	@uv run langflow run
 
 ######################
 # CLEAN PROJECT
