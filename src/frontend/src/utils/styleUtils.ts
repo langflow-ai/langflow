@@ -213,6 +213,7 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Models", name: "models", icon: "BrainCog" },
   { display_name: "Data", name: "data", icon: "Database" },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
+
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Agents", name: "agents", icon: "Bot" },
   { display_name: "Chains", name: "chains", icon: "Link" },
@@ -316,11 +317,12 @@ export const categoryIcons: Record<string, string> = {
 
 export const nodeIconToDisplayIconMap: Record<string, string> = {
   //Category Icons
+  input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
   prompts: "Braces",
   data: "Database",
-  models: "BrainCircuit",
+  models: "BrainCog",
   helpers: "Wand2",
   vectorstores: "Layers",
   embeddings: "Binary",
@@ -422,6 +424,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   advanced: "Laptop2",
   chat: "MessageCircle",
   saved_components: "GradientSave",
+  input_output: "Cable",
   vectorsearch: "TextSearch",
   wrappers: "Gift",
   unknown: "HelpCircle",

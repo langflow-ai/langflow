@@ -1,3 +1,4 @@
+from .composio_api import ComposioAPIComponent
 from .github_composio import ComposioGitHubAPIComponent
 from .gmail_composio import ComposioGmailAPIComponent
 from .googlecalendar_composio import ComposioGoogleCalendarAPIComponent
