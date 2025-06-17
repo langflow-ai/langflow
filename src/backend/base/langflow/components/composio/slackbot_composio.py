@@ -11,7 +11,7 @@ from langflow.inputs import (
 from langflow.logging import logger
 
 
-class ComposioSLACKBOTAPIComponent(ComposioBaseComponent):
+class ComposioSlackbotAPIComponent(ComposioBaseComponent):
     display_name: str = "Slackbot"
     description: str = "Slackbot API"
     icon = "Slackbot"
