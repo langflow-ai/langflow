@@ -17,6 +17,8 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  voiceModeEnabled: false,
+  setVoiceModeEnabled: (voiceModeEnabled: boolean) => set({ voiceModeEnabled }),
   IOModalOpen: false,
   setIOModalOpen: (IOModalOpen: boolean) => {
     set({ IOModalOpen });
