@@ -25,9 +25,9 @@
         "id": "reactflow__edge-File-fosKE{œdataTypeœ:œFileœ,œidœ:œFile-fosKEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-3IzFz{œfieldNameœ:œtextœ,œidœ:œPrompt-3IzFzœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "File-fosKE",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-fosKEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-fosKEœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-3IzFz",
-        "targetHandle": "{œfieldNameœ:œtextœ,œidœ:œPrompt-3IzFzœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œtextœ, œidœ: œPrompt-3IzFzœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -52,9 +52,9 @@
         "id": "xy-edge__Prompt-3IzFz{œdataTypeœ:œPromptœ,œidœ:œPrompt-3IzFzœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-oBZy3{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-oBZy3œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-3IzFz",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-3IzFzœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-3IzFzœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-oBZy3",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-oBZy3œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-oBZy3œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -79,9 +79,9 @@
         "id": "xy-edge__LanguageModelComponent-oBZy3{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-oBZy3œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-roFWL{œfieldNameœ:œsummaryœ,œidœ:œPrompt-roFWLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-oBZy3",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-oBZy3œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-oBZy3œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-roFWL",
-        "targetHandle": "{œfieldNameœ:œsummaryœ,œidœ:œPrompt-roFWLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsummaryœ, œidœ: œPrompt-roFWLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -106,9 +106,9 @@
         "id": "xy-edge__Prompt-roFWL{œdataTypeœ:œPromptœ,œidœ:œPrompt-roFWLœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-k9uIC{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-k9uICœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-roFWL",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-roFWLœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-roFWLœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-k9uIC",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-k9uICœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-k9uICœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -135,9 +135,9 @@
         "id": "xy-edge__LanguageModelComponent-k9uIC{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-k9uICœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-C9zZD{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-C9zZDœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-k9uIC",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-k9uICœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-k9uICœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-C9zZD",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-C9zZDœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-C9zZDœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -162,9 +162,9 @@
         "id": "xy-edge__Prompt-ryDcq{œdataTypeœ:œPromptœ,œidœ:œPrompt-ryDcqœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-e7Tpe{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-e7Tpeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-ryDcq",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-ryDcqœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ryDcqœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-e7Tpe",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-e7Tpeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-e7Tpeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -189,9 +189,9 @@
         "id": "xy-edge__File-fosKE{œdataTypeœ:œFileœ,œidœ:œFile-fosKEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-e7Tpe{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-e7Tpeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "File-fosKE",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-fosKEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-fosKEœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-e7Tpe",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-e7Tpeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-e7Tpeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -218,9 +218,9 @@
         "id": "xy-edge__LanguageModelComponent-e7Tpe{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-e7Tpeœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-0vZ51{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-0vZ51œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-e7Tpe",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-e7Tpeœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-e7Tpeœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-0vZ51",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-0vZ51œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-0vZ51œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1710,8 +1710,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1726,8 +1724,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -2005,8 +2001,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2021,8 +2015,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -2300,8 +2292,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2316,8 +2306,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [

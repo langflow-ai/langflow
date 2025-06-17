@@ -26,9 +26,9 @@
         "id": "reactflow__edge-ChatInput-tRpGS{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tRpGSœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-LP6ZK{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-LP6ZKœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-tRpGS",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tRpGSœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tRpGSœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-LP6ZK",
-        "targetHandle": "{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-LP6ZKœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-LP6ZKœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-Memory-IT5fe{œdataTypeœ:œMemoryœ,œidœ:œMemory-IT5feœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-LP6ZK{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-LP6ZKœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Memory-IT5fe",
-        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-IT5feœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-IT5feœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-LP6ZK",
-        "targetHandle": "{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-LP6ZKœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-LP6ZKœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-URL-xVH1K{œdataTypeœ:œURLœ,œidœ:œURL-xVH1Kœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-LP6ZK{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-LP6ZKœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-xVH1K",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-xVH1Kœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-xVH1Kœ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-LP6ZK",
-        "targetHandle": "{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-LP6ZKœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-LP6ZKœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-URL-zaZjn{œdataTypeœ:œURLœ,œidœ:œURL-zaZjnœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-LP6ZK{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-LP6ZKœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-zaZjn",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-zaZjnœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-zaZjnœ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-LP6ZK",
-        "targetHandle": "{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-LP6ZKœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-LP6ZKœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -141,9 +141,9 @@
         "id": "xy-edge__URL-rtu5e{œdataTypeœ:œURLœ,œidœ:œURL-rtu5eœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-LP6ZK{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-LP6ZKœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-rtu5e",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-rtu5eœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-rtu5eœ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-LP6ZK",
-        "targetHandle": "{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-LP6ZKœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-LP6ZKœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -168,9 +168,9 @@
         "id": "xy-edge__Prompt-LP6ZK{œdataTypeœ:œPromptœ,œidœ:œPrompt-LP6ZKœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-yhq4v{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-yhq4vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-LP6ZK",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-LP6ZKœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-LP6ZKœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-yhq4v",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-yhq4vœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-yhq4vœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -197,9 +197,9 @@
         "id": "xy-edge__LanguageModelComponent-yhq4v{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-yhq4vœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-0tmsi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-0tmsiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-yhq4v",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-yhq4vœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-yhq4vœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-0tmsi",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-0tmsiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-0tmsiœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -2584,8 +2584,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2600,8 +2598,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -2618,7 +2614,7 @@
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
-                "display_name": "Anthropic API Key",
+                "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
@@ -2684,13 +2680,16 @@
                 "info": "Select the model to use",
                 "name": "model_name",
                 "options": [
-                  "claude-opus-4-20250514",
-                  "claude-sonnet-4-20250514",
-                  "claude-3-7-sonnet-latest",
-                  "claude-3-5-sonnet-latest",
-                  "claude-3-5-haiku-latest",
-                  "claude-3-opus-latest",
-                  "claude-3-sonnet-20240229"
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
+                  "gpt-4.5-preview",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
