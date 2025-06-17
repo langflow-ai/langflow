@@ -381,8 +381,7 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
 
 
 def get_voice_mode_enabled() -> bool:
-    try:
-        import webrtcvad  # noqa: F401
-    except ImportError:
-        return False
-    return True
+    return _VOICE_MODE_ENABLED
+
+
+_VOICE_MODE_ENABLED = False
