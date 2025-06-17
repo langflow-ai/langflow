@@ -897,7 +897,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
     Args:
         all_types_dict (dict): Dictionary containing all component types and their templates
     """
-    if os.environ.get("LANGFLOW_CREATE_STARTER_PROJECTS", "true").lower() == "false":
+    if not get_settings_service().settings.create_starter_projects:
         # no-op for environments that don't want to create starter projects.
         # note that this doesn't check if the starter projects are already loaded in the db;
         # this is intended to be used to skip all startup project logic.
@@ -907,9 +907,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
         new_folder = await get_or_create_starter_folder(session)
         starter_projects = await load_starter_projects()
 
-        do_update_starter_projects = os.environ.get("LANGFLOW_UPDATE_STARTER_PROJECTS", "true").lower() == "true"
-
-        if do_update_starter_projects:
+        if get_settings_service().settings.update_starter_projects:
             logger.debug("Updating starter projects")
             # 1. Delete all existing starter projects
             successfully_updated_projects = 0
