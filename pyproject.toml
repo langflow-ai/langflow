@@ -80,10 +80,10 @@ dependencies = [
     "langchain-cohere==0.3.3",
     "langchain-anthropic==0.3.14",
     "langchain-astradb~=0.6.0",
-    "langchain-openai==0.2.12",
+    "langchain-openai>=0.2.12",
     "langchain-google-vertexai==2.0.7",
     "langchain-groq==0.2.1",
-    "langchain-pinecone==0.2.2",
+    "langchain-pinecone>=0.2.8",
     "langchain-mistralai==0.2.3",
     "langchain-chroma==0.1.4",
     "langchain-aws==0.2.7",
@@ -108,7 +108,6 @@ dependencies = [
     "crewai==0.102.0",
     "mcp>=0.9.1",
     "uv>=0.5.7",
-    "webrtcvad>=2.0.10",
     "scipy>=1.14.1",
     "ag2>=0.1.0",
     "scrapegraph-py>=1.12.0",
@@ -191,6 +190,10 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
+audio = [
+    "webrtcvad>=2.0.10",
+]
+
 couchbase = [
     "couchbase>=4.2.1"
 ]
@@ -214,7 +217,6 @@ nv-ingest = [
 postgresql = [
   "sqlalchemy[postgresql_psycopg2binary]",
     "sqlalchemy[postgresql_psycopg]",
-
 ]
 
 [project.scripts]
