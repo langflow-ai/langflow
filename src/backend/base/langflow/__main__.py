@@ -345,6 +345,19 @@ def is_loopback_address(host: str) -> bool:
         return False
 
 
+def can_connect(host: str, port: int, timeout: float = 1.0) -> bool:
+    try:
+        for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
+            family, socktype, proto, _, sa = res
+            with socket.socket(family, socktype, proto) as s:
+                s.settimeout(timeout)
+                if s.connect_ex(sa) == 0:
+                    return True
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Failed to connect to %s:%s", host, port, exc_info=e)
+    return False
+
+
 def get_best_access_host(host: str, port: int) -> str:
     """Get the best host to use for accessing the server.
 
@@ -355,7 +368,6 @@ def get_best_access_host(host: str, port: int) -> str:
     Args:
         host: The original host address
         port: The port number
-        protocol: The protocol (http or https)
 
     Returns:
         str: The best host address to use for access
@@ -363,33 +375,11 @@ def get_best_access_host(host: str, port: int) -> str:
     if not is_loopback_address(host):
         return host
 
-    # For loopback addresses, prefer localhost
-    preferred_host = "localhost"
-
-    # Test connectivity to both localhost and the original host if it's different
-    if host != preferred_host:
-        # Test if localhost works
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(1)  # 1 second timeout
-                result = s.connect_ex((preferred_host, port))
-                if result == 0:
-                    return preferred_host
-        except Exception as exc:  # noqa: BLE001
-            logger.debug(f"Failed to connect to {preferred_host}:{port}: {exc}")
-
-        # If localhost doesn't work, test the original host
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(1)  # 1 second timeout
-                result = s.connect_ex((host, port))
-                if result == 0:
-                    return host
-        except Exception as exc:  # noqa: BLE001
-            logger.debug(f"Failed to connect to {host}:{port}: {exc}")
-
-    # Default to localhost for loopback addresses
-    return preferred_host
+    if host != "localhost" and can_connect("localhost", port):
+        return "localhost"
+    if can_connect(host, port):
+        return host
+    return "localhost"
 
 
 def get_letter_from_version(version: str) -> str | None:
