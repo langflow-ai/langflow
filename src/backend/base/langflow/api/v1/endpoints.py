@@ -544,7 +544,7 @@ async def experimental_run_flow(
         try:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            stmt = select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
+            stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)
             flow = (await session.exec(stmt)).first()
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
