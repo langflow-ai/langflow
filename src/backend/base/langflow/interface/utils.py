@@ -4,6 +4,7 @@ import os
 import re
 from io import BytesIO
 from pathlib import Path
+from string import Formatter
 
 import yaml
 from langchain_core.language_models import BaseLanguageModel
@@ -60,24 +61,26 @@ def try_setting_streaming_options(langchain_object):
 
 
 def extract_input_variables_from_prompt(prompt: str) -> list[str]:
-    """Extract variable names from a prompt string using single braces for variables and double braces for escaping."""
+    """Extract variable names from a prompt string using Python's built-in string formatter.
+    
+    Uses the same convention as Python's .format() method:
+    - Single braces {name} are variable placeholders
+    - Double braces {{name}} are escape sequences that render as literal {name}
+    """
+    formatter = Formatter()
     variables: list[str] = []
-
-    # one or more '{',   the identifier,   one or more '}'
-    brace_pattern = re.compile(r"(\{+)([^{}]+?)(\}+)")
-
     seen: set[str] = set()
-
-    for m in brace_pattern.finditer(prompt):
-        open_run, var_name, close_run = m.groups()
-
-        # "real" variable only when both sides have the same *odd* length
-        if len(open_run) == len(close_run) and len(open_run) % 2 == 1:
-            clean_name = var_name.strip()
-            if clean_name not in seen:  # avoid duplicates
-                variables.append(clean_name)
-                seen.add(clean_name)
-
+    
+    # Use local bindings for micro-optimization
+    variables_append = variables.append
+    seen_add = seen.add
+    seen_contains = seen.__contains__
+    
+    for literal_text, field_name, format_spec, conversion in formatter.parse(prompt):
+        if field_name and not seen_contains(field_name):
+            variables_append(field_name)
+            seen_add(field_name)
+    
     return variables
 
 
