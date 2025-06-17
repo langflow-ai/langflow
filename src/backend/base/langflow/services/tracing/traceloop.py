@@ -112,8 +112,12 @@ class TraceloopTracer(BaseTracer):
             from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
 
             project_name = "LANGFLOW"
-            attributes = {"p_name": project_name, "model_id": project_name}
-            resource = Resource.create(attributes=attributes)
+            resource_attributes = {
+                "service.name": os.getenv("OTEL_SERVICE_NAME", "langflow-application"),
+                "project_name": project_name,
+                "model_id": project_name,
+            }
+            resource = Resource(attributes=resource_attributes)
             tracer_provider = TracerProvider(resource=resource)
 
             # Traceloop
