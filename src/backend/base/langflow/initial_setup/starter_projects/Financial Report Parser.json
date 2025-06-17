@@ -1553,6 +1553,8 @@
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Financial Report Parser",
+  "last_tested_version": "1.4.3",
+  "name": "Financial Report Parser",
   "tags": [
     "chatbots",
     "content-generation"
