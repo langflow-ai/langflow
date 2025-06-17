@@ -196,7 +196,7 @@ def convert_pdf_to_text(
         pipeline_options.do_picture_classification = do_picture_classification
         pipeline_options.do_ocr = do_ocr
         pipeline_options.do_table_structure = do_table_structure
-        pipeline_options.table_structure_options.do_cell_matching = False
+        pipeline_options.table_structure_options.do_cell_matching = True
         pipeline_options.ocr_options.lang = ocr_lang
         # pipeline_options.accelerator_options = AcceleratorOptions(num_threads=1, device=AcceleratorDevice.AUTO)
 
@@ -242,7 +242,7 @@ def convert_img_to_text(
         pipeline_options.do_picture_classification = do_picture_classification
         pipeline_options.do_ocr = True
         pipeline_options.do_table_structure = do_table_structure
-        pipeline_options.table_structure_options.do_cell_matching = False
+        pipeline_options.table_structure_options.do_cell_matching = True
         pipeline_options.ocr_options.lang = ocr_lang
         # pipeline_options.accelerator_options = AcceleratorOptions(num_threads=1, device=AcceleratorDevice.AUTO)
 
