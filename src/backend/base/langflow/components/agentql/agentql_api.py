@@ -4,7 +4,7 @@ from langflow.components.agentql.utils import (
     AGENTQL_QUERY_DOCUMENTATION,
     AGENTQL_REST_API_DOCUMENTATION,
     NO_INPUT_MESSAGE,
-    SINGLE_INPUT_MESSAGE,
+    DOUBLE_INPUT_MESSAGE,
     handle_agentql_error,
 )
 from langflow.custom import Component
@@ -134,7 +134,7 @@ class AgentQL(Component):
             self.status = NO_INPUT_MESSAGE
             raise ValueError(self.status)
         if self.prompt and self.query:
-            self.status = SINGLE_INPUT_MESSAGE
+            self.status = DOUBLE_INPUT_MESSAGE
             raise ValueError(self.status)
 
         try:
