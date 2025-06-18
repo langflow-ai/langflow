@@ -381,7 +381,7 @@ app.post("/messages", async (req, res) => {
 // Get port from command line argument or default to 8000
 const port = process.argv[2] ? parseInt(process.argv[2]) : 8000;
 
-app.listen(port, '127.0.0.1', () => {
+const httpServer = app.listen(port, '127.0.0.1', () => {
   console.log(`🚀 Langflow Unified MCP Test Server starting...`);
   console.log(`   Name: Langflow Unified MCP Test Server`);
   console.log(`   Version: 1.0.0`);
@@ -395,6 +395,12 @@ app.listen(port, '127.0.0.1', () => {
   console.log(`     - Debug: http://localhost:${port}/debug`);
   console.log(`   Test Suite: langflow-integration`);
   console.log(`✅ Unified MCP Test Server ready`);
+});
+
+// Handle server startup errors
+httpServer.on('error', (error) => {
+  console.error('Failed to start MCP SSE server:', error);
+  process.exit(1);
 });
 
 // Graceful shutdown

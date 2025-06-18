@@ -7,6 +7,8 @@ import pytest
 from langflow.components.data.mcp_component import MCPToolsComponent
 from langflow.schema.dataframe import DataFrame
 
+from tests.integration.utils import run_single_component
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -92,11 +94,45 @@ async def test_mcp_component_error_handling():
     component.tool = "nonexistent_tool"
     component.tools = []
 
-    # Should handle missing tool gracefully
-    try:
-        result = await component.build_output()
-        # Should get some kind of result, even if it's an error
-        assert isinstance(result, DataFrame)
-    except Exception as e:
-        # Error handling is implementation dependent
-        assert "tool" in str(e).lower() or "error" in str(e).lower()
+    # Should handle missing tool gracefully by returning an error DataFrame
+    result = await component.build_output()
+    assert isinstance(result, DataFrame)
+    assert len(result) > 0  # Use len() on DataFrame directly
+
+    # Check that the error is about the tool not being found
+    # Use to_dict('records') to get the original data back
+    data_records = result.to_dict("records")
+    assert len(data_records) > 0
+    error_content = str(data_records[0]).lower()
+    assert "error" in error_content
+    assert "tool" in error_content or "not found" in error_content
+
+
+# TODO: Add more tests for MCPToolsComponent
+@pytest.mark.asyncio
+async def test_mcp_component():
+    from langflow.components.data.mcp_component import MCPToolsComponent
+
+    inputs = {}
+
+    # The component should now handle missing MCP server gracefully
+    # and return an error in the response rather than raising an exception
+    result = await run_single_component(
+        MCPToolsComponent,
+        inputs=inputs,
+    )
+
+    # Check that we get a result with an error message
+    assert result is not None
+    response = result.get("response")
+    assert response is not None
+
+    # The response should contain an error about missing tool selection
+    # Use to_dict('records') to get the original data back from Langflow DataFrame
+    data_records = response.to_dict("records")
+    assert len(data_records) > 0
+
+    # Check that the error message is about tool selection
+    error_content = str(data_records[0]).lower()
+    assert "error" in error_content
+    assert "tool" in error_content or "select" in error_content

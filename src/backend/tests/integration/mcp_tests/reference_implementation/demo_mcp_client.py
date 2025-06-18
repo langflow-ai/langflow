@@ -41,7 +41,7 @@ for noisy in ("mcp", "httpx", "anyio", "urllib3"):
     logging.getLogger(noisy).setLevel(logging.CRITICAL)
 
 
-async def _normalize_tool_list(raw: Any) -> list[str]:
+def _normalize_tool_list(raw: Any) -> list[str]:
     """Return a list of tool names from whatever the SDK returns."""
     if raw is None:
         return []
@@ -93,7 +93,7 @@ async def run_demo(url: str) -> None:
                     print("[demo_mcp_client] Session initialized ✔️")
 
                     tools_resp = await session.list_tools()
-                    tool_names = await _normalize_tool_list(tools_resp)
+                    tool_names = _normalize_tool_list(tools_resp)
                     print("[demo_mcp_client] Tools:", tool_names)
 
                     if "echo" in tool_names:

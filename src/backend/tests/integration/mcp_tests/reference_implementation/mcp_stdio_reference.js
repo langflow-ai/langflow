@@ -98,6 +98,11 @@ server.tool(
 // Bootstrap – connect to stdio transport
 // ---------------------------------------------------------------------------
 (async () => {
-  const transport = new StdioServerTransport(process.stdin, process.stdout);
-  await server.connect(transport);
-})(); 
+  try {
+    const transport = new StdioServerTransport(process.stdin, process.stdout);
+    await server.connect(transport);
+  } catch (error) {
+    console.error("Failed to start MCP stdio server:", error);
+    process.exit(1);
+  }
+})();
