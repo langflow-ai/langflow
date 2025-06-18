@@ -66,7 +66,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
-            # skip components that are having dynamic values that need to be persisited for templates
+            # skip components that are having dynamic values that need to be persisted for templates
 
             if node_data.get("key") in SKIPPED_COMPONENTS:
                 continue
