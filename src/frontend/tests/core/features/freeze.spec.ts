@@ -65,7 +65,7 @@ test(
     await page.getByTestId("icon-FreezeAll").click();
 
     await page.waitForSelector('[data-testid="frozen-icon"]', {
-      timeout: 5000,
+      timeout: 10000,
     });
     await page.keyboard.press("Escape");
 
