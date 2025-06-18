@@ -44,9 +44,8 @@ uv run langflow run
 3. Go to the default Langflow URL at `http://127.0.0.1:7860`.
 
 For more information about installing Langflow, including Docker and Desktop options, see [Install Langflow](https://docs.langflow.org/get-started-installation).
-## 📦 Deployment
 
-### Self-managed
+## 📦 Deployment
 
 Langflow is completely open source and you can deploy it to all major deployment clouds. Follow this [guide](https://docs.langflow.org/deployment-docker) to learn how to use Docker to deploy Langflow.
 

@@ -24,11 +24,13 @@ Langflow can be installed in multiple ways:
   1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
   2. Click *Download Langflow*, enter your **Name**, **Email address**, and **Company**, and then click **Download**.
   3. Mount and install the Langflow application.
-  6. Open the Langflow application.
-Initial startup can take a few minutes while Langflow Desktop checks your local environment and Langflow Desktop configuration, including [uv] and your preferred Langflow version.
+  4. When the installation completes, open the Langflow application.
 
   </TabItem>
   <TabItem value="Windows" label="Windows">
+    :::important
+    Windows installations of Langflow Desktop require a C++ compiler, such as [Visual Studio](https://visualstudio.microsoft.com/downloads/), that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or visit the Visual Studio download link above.
+    :::
 
   1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
   2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
@@ -40,8 +42,6 @@ Initial startup can take a few minutes while Langflow Desktop checks your local 
   </TabItem>
 
 </Tabs>
-
-The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, and then starts.
 
 ### Manage your version of Langflow Desktop
 
@@ -77,10 +77,11 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
 To install and run Langflow OSS, you need the following:
 
-- [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/)
+- [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/) for macOS/Linux, and Python 3.10 to 3.12 for Windows
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - At minimum, a dual-core CPU and 2 GB RAM, but a multi-core CPU and at least 4 GB RAM are recommended
-- A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments)
+
+1. Create a virtual environment with [uv](https://docs.astral.sh/uv/pip/environments).
 
 <details>
 <summary>Need help with virtual environments?</summary>
@@ -89,7 +90,7 @@ Virtual environments ensure Langflow is installed in an isolated, fresh environm
 To create a new virtual environment, do the following.
 
 <Tabs groupId="os">
-  <TabItem value="macOS" label="macOS">
+  <TabItem value="macOS/Linux" label="macOS/Linux" default>
     1. Navigate to where you want your virtual environment to be created, and create it with `uv`.
 Replace `VENV_NAME` with your preferred name for your virtual environment.
 ```
@@ -124,69 +125,21 @@ Your shell's prompt changes to display that you're currently working in a virtua
 To delete the virtual environment, type `Remove-Item VENV_NAME`.
   </TabItem>
   </Tabs>
-  <TabItem value="Linux" label="Linux">
-    1. Navigate to where you want your virtual environment to be created, and create it with `uv`.
-Replace `VENV_NAME` with your preferred name for your virtual environment.
-```
-uv venv VENV_NAME
-```
-2. Start the virtual environment.
-```
-source VENV_NAME/bin/activate
-```
-Your shell's prompt changes to display that you're currently working in a virtual environment.
-```
-(VENV_NAME) ➜  langflow git:(main) ✗
-```
-3. To deactivate the virtual environment and return to your regular shell, type `deactivate`.
-To delete the virtual environment, type `rm -rf VENV_NAME`.
-  </TabItem>
+
 </details>
 
-
-<Tabs groupId="os">
-  <TabItem value="macOS" label="macOS">
-
-    1. To install Langflow, run the following command.
+2. To install Langflow, run the following command.
     ```bash
     uv pip install langflow
     ```
 
-  </TabItem>
-  <TabItem value="Windows" label="Windows">
-  :::important
-  Windows installations of Langflow OSS require a C++ compiler, such as [Visual Studio](https://visualstudio.microsoft.com/downloads/), that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or visit the Visual Studio download link above.
-  :::
+3. After installation, start Langflow:
 
-      1. To install Langflow, run the following command.
-      ```bash
-      uv pip install langflow
-      ```
+    ```bash
+    uv run langflow run
+    ```
 
-  :::tip
-  If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in the virtual environment, and then try installing again.
-  :::
-
-
-  </TabItem>
-  <TabItem value="Linux" label="Linux">
-
-      1. To install Langflow, run the following command.
-      ```bash
-      uv pip install langflow
-      ```
-
-  </TabItem>
-
-</Tabs>
-
-2. After installation, start Langflow:
-
-```bash
-uv run langflow run
-```
-
-3. To confirm that a local Langflow instance is running, navigate to the default Langflow URL`http://127.0.0.1:7860`.
+4. To confirm that a local Langflow instance is running, navigate to the default Langflow URL`http://127.0.0.1:7860`.
 
 After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
 
@@ -210,11 +163,14 @@ To reinstall Langflow and all of its dependencies, add the `--force-reinstall` f
 uv pip install langflow --force-reinstall
 ```
 
-### Install optional dependencies for Langflow OSS
+### Manage Langflow OSS dependencies
 
 Langflow OSS provides optional dependency groups that extend its functionality.
 
 These dependencies are listed in the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L191) file under `[project.optional-dependencies]`.
+
+<details closed>
+<summary>Install dependency groups</summary>
 
 Install dependency groups using pip's `[extras]` syntax. For example, to install Langflow with the `postgresql` dependency group, enter the following command:
 
@@ -230,11 +186,7 @@ uv pip install "langflow[deploy,local,postgresql]"
 
 To add your own custom dependencies, see [Install custom dependencies](/install-custom-dependencies).
 
-### Stop Langflow OSS
-
-To stop Langflow, in the terminal where it's running, enter `Ctrl+C`.
-
-To deactivate your virtual environment, enter `deactivate`.
+</details>
 
 ### Common OSS installation issues
 
@@ -325,3 +277,7 @@ sudo apt-get install build-essential python3-dev
 ```bash
 sudo apt-get install gcc
 ```
+
+#### Installation failure from `webrtcvad` package
+
+If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in the virtual environment, and then try installing again.
