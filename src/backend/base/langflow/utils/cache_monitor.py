@@ -13,7 +13,10 @@ from collections import deque
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 from langflow.utils.validate import get_cache_stats
 
@@ -144,6 +147,10 @@ class ClassConstructorCacheMonitor:
 
     def update_memory_usage(self):
         """Update memory usage statistics."""
+        if psutil is None:
+            logger.debug("psutil not available, skipping memory usage update")
+            return
+
         try:
             process = psutil.Process()
             memory_info = process.memory_info()
