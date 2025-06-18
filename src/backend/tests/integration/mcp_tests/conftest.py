@@ -10,8 +10,7 @@ from pathlib import Path
 import httpx
 import pytest
 import pytest_asyncio
-
-from langflow.base.mcp.util import MCPStdioClient, MCPSseClient
+from langflow.base.mcp.util import MCPSseClient, MCPStdioClient
 
 # ----------------------------------------------------------------------------
 # Paths
@@ -140,7 +139,7 @@ async def stdio_client(stdio_reference_command: str):  # type: ignore[override]
 
 
 # ----------------------------------------------------------------------------
-# Async fixture providing a connected MCPSseClient instance  
+# Async fixture providing a connected MCPSseClient instance
 # ----------------------------------------------------------------------------
 
 
@@ -162,11 +161,16 @@ async def sse_client(sse_reference_server: str):  # type: ignore[override]
 # -----------------------------------------------------------------------------
 
 
-@pytest_asyncio.fixture(params=["stdio", pytest.param("sse", marks=pytest.mark.xfail(reason="SSE implementation has connection validation bug"))])
+@pytest_asyncio.fixture(
+    params=[
+        "stdio",
+        pytest.param("sse", marks=pytest.mark.xfail(reason="SSE implementation has connection validation bug")),
+    ]
+)
 async def mcp_client(request, sse_reference_server, stdio_reference_command):  # type: ignore[override]
     """Yield a connected MCP client for the requested transport.
 
-    * "stdio" → Launch reference stdio server command  
+    * "stdio" → Launch reference stdio server command
     * "sse"   → HTTP+SSE connection to /sse endpoint
     """
     if request.param == "stdio":
@@ -194,4 +198,4 @@ async def mcp_client(request, sse_reference_server, stdio_reference_command):  #
 @pytest.fixture(scope="session")
 def http_sse_url(sse_reference_server):
     """Return the /sse endpoint for the reference server (legacy transport)."""
-    return sse_reference_server 
+    return sse_reference_server

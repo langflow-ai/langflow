@@ -17,7 +17,7 @@ async def test_echo_roundtrip(mcp_client):
     """Test basic echo functionality across transports."""
     transport, client = mcp_client
     payload = {"message": "integration"}
-    
+
     try:
         result = await client.run_tool("echo", payload)
         assert "integration" in str(result).lower(), f"Echo failed for {transport}: {result}"
@@ -28,10 +28,10 @@ async def test_echo_roundtrip(mcp_client):
 async def test_add_numbers(mcp_client):
     """Test add_numbers tool across transports."""
     transport, client = mcp_client
-    
+
     try:
         result = await client.run_tool("add_numbers", {"a": 1, "b": 2})
-        
+
         # The reference server returns text like "Result: 3" wrapped in a dict;
         # make the assertion flexible.
         result_str = str(result)
@@ -46,10 +46,10 @@ async def test_process_data(mcp_client):
     """Test process_data tool with complex nested parameters."""
     transport, client = mcp_client
     data = {"name": "test", "values": [1, 2, 3]}
-    
+
     try:
         result = await client.run_tool("process_data", {"data": data})
-        
+
         # Normalise result into raw text that should contain the JSON blob.
         if isinstance(result, dict) and "content" in result:
             # Handle dict style: {"content": [ {"text": "..."}, ... ] }
@@ -89,7 +89,7 @@ async def test_process_data(mcp_client):
             '"count": 3',
         ]:
             assert snippet in json_blob.replace("\n", " "), f"{snippet} missing in {json_blob} for {transport}"
-            
+
     except Exception as e:
         pytest.fail(f"Process data tool failed on {transport}: {e}")
 
@@ -97,20 +97,20 @@ async def test_process_data(mcp_client):
 async def test_get_server_info(mcp_client):
     """Test server info tool to verify server identification."""
     transport, client = mcp_client
-    
+
     try:
         result = await client.run_tool("get_server_info", {})
-        
+
         # Server info should contain transport-specific information
         result_str = str(result).lower()
         assert "test server" in result_str or "mcp" in result_str, f"Server info missing for {transport}: {result}"
-        
+
         # Transport-specific checks
         if transport == "stdio":
             assert "stdio" in result_str, f"STDIO server info should mention stdio: {result}"
         elif transport == "sse":
             assert "sse" in result_str or "http" in result_str, f"SSE server info should mention sse or http: {result}"
-            
+
     except Exception as e:
         # Some implementations might not have get_server_info, so we'll warn but not fail
         pytest.skip(f"Server info tool not available or failed on {transport}: {e}")
@@ -119,15 +119,15 @@ async def test_get_server_info(mcp_client):
 async def test_client_reconnection(mcp_client):
     """Test that clients can handle reconnection scenarios."""
     transport, client = mcp_client
-    
+
     # First, verify connection works
     try:
         result1 = await client.run_tool("echo", {"message": "first"})
         assert "first" in str(result1).lower()
-        
+
         # Disconnect and reconnect (simulate reconnection)
         await client.disconnect()
-        
+
         if transport == "stdio":
             # For stdio, we need to provide the command again
             # This test may need adjustment based on actual client implementation
@@ -135,6 +135,6 @@ async def test_client_reconnection(mcp_client):
         elif transport == "sse":
             # For SSE, reconnection might work differently
             pass  # Skip reconnection test for sse for now
-            
+
     except Exception as e:
-        pytest.skip(f"Reconnection test not supported or failed on {transport}: {e}") 
+        pytest.skip(f"Reconnection test not supported or failed on {transport}: {e}")

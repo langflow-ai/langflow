@@ -21,7 +21,7 @@ async def _invoke_simulate_error(client, kind):
 async def test_simulate_error_propagation(mcp_client, kind):
     """Test that different error types are properly propagated across transports."""
     transport, client = mcp_client
-    
+
     try:
         msg = await _invoke_simulate_error(client, kind)
         # Should contain the error type somewhere in the message
@@ -37,7 +37,7 @@ async def test_simulate_error_propagation(mcp_client, kind):
 async def test_session_survives_error(mcp_client):
     """Test that MCP sessions remain functional after encountering errors."""
     transport, client = mcp_client
-    
+
     # First, trigger a runtime error (if the tool exists)
     try:
         _ = await _invoke_simulate_error(client, "runtime")
@@ -57,7 +57,7 @@ async def test_session_survives_error(mcp_client):
 async def test_invalid_tool_name(mcp_client):
     """Test handling of invalid tool names."""
     transport, client = mcp_client
-    
+
     try:
         await client.run_tool("nonexistent_tool_12345", {})
         pytest.fail(f"Expected exception for nonexistent tool on {transport}")
@@ -65,14 +65,16 @@ async def test_invalid_tool_name(mcp_client):
         # Should get some kind of error for invalid tool
         error_msg = str(e).lower()
         expected_words = ["not found", "unknown", "invalid", "tool", "error"]
-        assert any(word in error_msg for word in expected_words), f"Unexpected error message format for {transport}: {e}"
+        assert any(word in error_msg for word in expected_words), (
+            f"Unexpected error message format for {transport}: {e}"
+        )
 
 
 @pytest.mark.xfail(reason="ExceptionGroup wrapping in Python 3.11+ hides actual MCP error message")
 async def test_invalid_parameters(mcp_client):
     """Test handling of invalid parameters for valid tools."""
     transport, client = mcp_client
-    
+
     try:
         # Try to call add_numbers with invalid parameter names
         await client.run_tool("add_numbers", {"x": 1, "y": 2})  # Wrong parameter names (should be 'a' and 'b')
@@ -89,7 +91,7 @@ async def test_invalid_parameters(mcp_client):
 async def test_missing_required_parameters(mcp_client):
     """Test handling of missing required parameters."""
     transport, client = mcp_client
-    
+
     try:
         # Try to call add_numbers without any parameters
         await client.run_tool("add_numbers", {})
@@ -98,14 +100,16 @@ async def test_missing_required_parameters(mcp_client):
         error_msg = str(e).lower()
         # Should indicate missing/required parameter error
         expected_words = ["required", "missing", "parameter", "validation", "argument"]
-        assert any(word in error_msg for word in expected_words), f"Unexpected error message for missing params on {transport}: {e}"
+        assert any(word in error_msg for word in expected_words), (
+            f"Unexpected error message for missing params on {transport}: {e}"
+        )
 
 
 @pytest.mark.xfail(reason="ExceptionGroup wrapping in Python 3.11+ hides actual MCP error message")
 async def test_malformed_arguments(mcp_client):
     """Test handling of malformed argument types."""
     transport, client = mcp_client
-    
+
     try:
         # Try to call add_numbers with string instead of numbers
         await client.run_tool("add_numbers", {"a": "not_a_number", "b": "also_not_a_number"})
@@ -121,30 +125,30 @@ async def test_malformed_arguments(mcp_client):
 async def test_client_state_after_error(mcp_client):
     """Test that client remains in a good state after various errors."""
     transport, client = mcp_client
-    
+
     # Verify client is initially connected
     assert client._connected, f"Client should be connected initially on {transport}"
-    
+
     # Try various error scenarios
     error_scenarios = [
         ("nonexistent_tool", {}),
         ("add_numbers", {}),  # Missing params
         ("echo", {"wrong_param": "value"}),  # Wrong param name
     ]
-    
+
     for tool_name, params in error_scenarios:
         try:
             await client.run_tool(tool_name, params)
         except Exception:
             # Errors are expected, just continue
             pass
-        
+
         # Client should still be connected after each error
         assert client._connected, f"Client should remain connected after error with {tool_name} on {transport}"
-    
+
     # Final test - client should still work for valid operations
     try:
         result = await client.run_tool("echo", {"message": "still_working"})
         assert "still_working" in str(result).lower(), f"Client not functional after errors on {transport}"
     except Exception as e:
-        pytest.fail(f"Client not functional after error scenarios on {transport}: {e}") 
+        pytest.fail(f"Client not functional after error scenarios on {transport}: {e}")

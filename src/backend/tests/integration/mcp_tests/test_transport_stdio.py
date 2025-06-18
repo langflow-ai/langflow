@@ -26,4 +26,4 @@ async def test_stdio_client_context_manager(stdio_reference_command):
     async with MCPStdioClient() as client:
         await client.connect_to_server(stdio_reference_command)
         result = await client.run_tool("echo", {"message": "context_manager"})
-        assert "context_manager" in str(result).lower() 
+        assert "context_manager" in str(result).lower()
