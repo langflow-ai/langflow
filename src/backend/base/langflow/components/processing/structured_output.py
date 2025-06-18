@@ -42,7 +42,7 @@ class StructuredOutputComponent(Component):
             info="The instructions to the language model for formatting the output.",
             value=(
                 "You are an AI that extracts one structured JSON object from unstructured text. "
-                "Use a predefined schema with expected types (string, integer, float, date). "
+                "Use a predefined schema with expected types (str, int, float, bool, dict). "
                 "If multiple structures exist, extract only the first most complete one. "
                 "Fill missing or ambiguous values with defaults: null for missing values, "
                 "0 for numeric fields, and 'N/A' for strings. "
