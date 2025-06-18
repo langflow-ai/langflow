@@ -7,7 +7,7 @@ import traceback
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
-from functools import partial
+from functools import lru_cache, partial
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -82,6 +82,7 @@ CLIENT_TO_LF = "Client → LF"
 # --- Helper Functions ---
 
 
+@lru_cache(maxsize=1)
 def get_vad():
     import webrtcvad
 
