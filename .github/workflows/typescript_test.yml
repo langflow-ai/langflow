@@ -220,12 +220,12 @@ jobs:
 
           echo "Total tests to run: $TEST_COUNT"
 
-          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 10
+          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 40
           SHARD_COUNT=$(( (TEST_COUNT + 4) / 5 ))
           if [ $SHARD_COUNT -lt 1 ]; then
             SHARD_COUNT=1
-          elif [ $SHARD_COUNT -gt 10 ]; then
-            SHARD_COUNT=10
+          elif [ $SHARD_COUNT -gt 40 ]; then
+            SHARD_COUNT=40
           fi
 
           # Create the matrix combinations string
@@ -292,11 +292,16 @@ jobs:
           cd ./src/frontend
           npx playwright install --with-deps chromium
 
-      - name: Setup Python Environment with UV
-        uses: ./.github/actions/setup-uv
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
 
       - name: Install Python Dependencies
-        run: uv sync
+        run: uv sync --extra audio
 
       - name: Configure Environment Variables
         run: |
