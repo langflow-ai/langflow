@@ -119,7 +119,7 @@ class SaveToFileComponent(Component):
         if self._get_input_type() == "Data":
             return "json"
         if self._get_input_type() == "Message":
-            return "markdown"
+            return "json"
         return "json"  # Fallback
 
     def _adjust_file_path_with_format(self, path: Path, fmt: str) -> Path:
