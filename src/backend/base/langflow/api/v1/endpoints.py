@@ -14,7 +14,7 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, get_voice_mode_enabled, parse_value
+from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -752,7 +752,6 @@ async def get_config():
         return {
             "feature_flags": FEATURE_FLAGS,
             **settings_service.settings.model_dump(),
-            "voice_mode_enabled": get_voice_mode_enabled(),
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
