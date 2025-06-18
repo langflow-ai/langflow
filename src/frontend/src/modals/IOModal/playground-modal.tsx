@@ -26,6 +26,7 @@ import { IOModalPropsType } from "../../types/components";
 import { cn, getNumberFromString } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
+import { createNewSessionName } from "./components/chatView/chatInput/components/voice-assistant/helpers/create-new-session-name";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
 
@@ -88,6 +89,8 @@ export default function IOModal({
   );
   const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
 
+  console.log(visibleSession);
+
   const {
     data: sessionsFromDb,
     isLoading: sessionsLoading,
@@ -131,13 +134,10 @@ export default function IOModal({
           });
           deleteSession(session_id);
           if (visibleSession === session_id) {
-            // After deleting the visible session, check if other sessions exist
             const remainingSessions = sessions.filter((s) => s !== session_id);
             if (remainingSessions.length > 0) {
-              // If other sessions exist, set the first one as visible
               setvisibleSession(remainingSessions[0]);
             } else {
-              // If no other sessions exist, default to currentFlowId (Default Session)
               setvisibleSession(currentFlowId);
             }
           }
@@ -238,7 +238,7 @@ export default function IOModal({
 
   useEffect(() => {
     if (!visibleSession) {
-      setSessionId(currentFlowId);
+      setSessionId(createNewSessionName());
       setCurrentSessionId(currentFlowId);
     } else if (visibleSession) {
       setSessionId(visibleSession);
