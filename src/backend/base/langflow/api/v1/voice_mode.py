@@ -7,14 +7,13 @@ import traceback
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
-from functools import partial
+from functools import lru_cache, partial
 from typing import Any
 from uuid import UUID, uuid4
 
 import numpy as np
 import requests
 import sqlalchemy
-import webrtcvad
 import websockets
 from cryptography.fernet import InvalidToken
 from elevenlabs import ElevenLabs
@@ -83,6 +82,13 @@ CLIENT_TO_LF = "Client → LF"
 # --- Helper Functions ---
 
 
+@lru_cache(maxsize=1)
+def get_vad():
+    import webrtcvad
+
+    return webrtcvad.Vad(mode=3)
+
+
 async def authenticate_and_get_openai_key(session: DbSession, user: User, websocket: WebSocket):
     """Authenticate the user using a token or API key and retrieve the OpenAI API key.
 
@@ -129,7 +135,7 @@ class VoiceConfig:
         self.elevenlabs_model = "eleven_multilingual_v2"
         self.elevenlabs_client = None
         self.elevenlabs_key = None
-        self.barge_in_enabled = False
+        self._barge_in_enabled = False
         self.progress_enabled = True
 
         self.default_openai_realtime_session = {
@@ -150,6 +156,12 @@ class VoiceConfig:
             "tool_choice": "auto",
         }
         self.openai_realtime_session: dict[str, Any] = {}
+
+    @property
+    def barge_in_enabled(self):
+        # Later on we may want to tie this value
+        # to the availability of the webrtcvad package.
+        return self._barge_in_enabled
 
     def get_session_dict(self):
         return dict(self.default_openai_realtime_session)
@@ -765,11 +777,11 @@ async def flow_as_tool_websocket(
             vad_queue: asyncio.Queue = asyncio.Queue()
             vad_audio_buffer = bytearray()
             bot_speaking_flag = [False]
-            vad = webrtcvad.Vad(mode=3)
 
             async def process_vad_audio() -> None:
                 nonlocal vad_audio_buffer
                 last_speech_time = datetime.now(tz=timezone.utc)
+                vad = get_vad()
                 while True:
                     base64_data = await vad_queue.get()
                     raw_chunk_24k = base64.b64decode(base64_data)

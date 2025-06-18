@@ -388,7 +388,6 @@ class ConfigResponse(BaseModel):
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     event_delivery: Literal["polling", "streaming", "direct"]
-    voice_mode_enabled: bool
 
 
 class CancelFlowResponse(BaseModel):
