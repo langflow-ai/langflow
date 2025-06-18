@@ -39,14 +39,32 @@ class VertexBuildBase(SQLModel):
 
     @field_serializer("data")
     def serialize_data(self, data) -> dict:
+        """
+        Serializes the `data` field with enforced limits on text length and item count.
+        
+        Returns:
+            dict: The serialized representation of the data field.
+        """
         return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("artifacts")
     def serialize_artifacts(self, data) -> dict:
+        """
+        Serializes the artifacts field, applying limits on text length and item count.
+        
+        Returns:
+            dict: The serialized artifacts dictionary with enforced size constraints.
+        """
         return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("params")
     def serialize_params(self, data) -> str:
+        """
+        Serialize the `params` field to a string with enforced limits on text length and item count.
+        
+        Returns:
+            str: The serialized representation of the `params` data.
+        """
         return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 

@@ -29,16 +29,31 @@ UNSERIALIZABLE_SENTINEL = _UnserializableSentinel()
 
 @lru_cache(maxsize=1)
 def get_max_text_length() -> int:
+    """
+    Return the maximum allowed text length for serialization from the current settings.
+    """
     return get_settings_service().settings.max_text_length
 
 
 @lru_cache(maxsize=1)
 def get_max_items_length() -> int:
+    """
+    Return the maximum allowed number of items for serialization, as defined in the current settings.
+    """
     return get_settings_service().settings.max_items_length
 
 
 def _serialize_str(obj: str, max_length: int | None, _) -> str:
-    """Truncate long strings with ellipsis if max_length provided."""
+    """
+    Truncates a string to the specified maximum length, appending an ellipsis if truncation occurs.
+    
+    Parameters:
+        obj (str): The string to be truncated.
+        max_length (int | None): The maximum allowed length of the string. If None, no truncation is performed.
+    
+    Returns:
+        str: The original or truncated string, with an ellipsis appended if truncated.
+    """
     if max_length is None or len(obj) <= max_length:
         return obj
     return obj[:max_length] + "..."

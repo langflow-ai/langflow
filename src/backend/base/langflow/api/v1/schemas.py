@@ -275,12 +275,22 @@ class ResultDataResponse(BaseModel):
     @field_serializer("results")
     @classmethod
     def serialize_results(cls, v):
-        """Serialize results with custom handling for special types and truncation."""
+        """
+        Serializes the results value with custom handling for special types and applies truncation limits.
+        
+        Returns:
+            The serialized representation of the input value, truncated according to configured maximum text length and item count.
+        """
         return serialize(v, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @model_serializer(mode="plain")
     def serialize_model(self) -> dict:
-        """Custom serializer for the entire model."""
+        """
+        Serialize the entire model into a dictionary with truncation applied to large fields.
+        
+        Returns:
+            dict: A dictionary representation of the model with serialized and truncated results, outputs, logs, message, and artifacts.
+        """
         return {
             "results": self.serialize_results(self.results),
             "outputs": serialize(self.outputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
@@ -308,6 +318,15 @@ class VertexBuildResponse(BaseModel):
 
     @field_serializer("data")
     def serialize_data(self, data: ResultDataResponse) -> dict:
+        """
+        Serialize a ResultDataResponse object into a dictionary with enforced maximum text and item lengths.
+        
+        Parameters:
+            data (ResultDataResponse): The data object to serialize.
+        
+        Returns:
+            dict: The serialized representation of the data with truncation applied.
+        """
         return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
