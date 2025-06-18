@@ -388,7 +388,7 @@ class MCPSseClient:
         self._connection_params = None
         self._connected = False
 
-    async def validate_url(self, url: str | None) -> tuple[bool, str]:
+    async def validate_url(self, url: str | None, timeout: float = 5.0) -> tuple[bool, str]:
         """Validate the SSE URL before attempting connection."""
         try:
             parsed = urlparse(url)
@@ -398,7 +398,7 @@ class MCPSseClient:
             async with httpx.AsyncClient() as client:
                 try:
                     # First try a HEAD request to check if server is reachable
-                    response = await client.head(url, timeout=5.0)
+                    response = await client.head(url, timeout=timeout)
                     if response.status_code >= HTTP_ERROR_STATUS_CODE:
                         return False, f"Server returned error status: {response.status_code}"
 
@@ -440,7 +440,7 @@ class MCPSseClient:
         if url is None:
             msg = "URL is required for SSE mode"
             raise ValueError(msg)
-        is_valid, error_msg = await self.validate_url(url)
+        is_valid, error_msg = await self.validate_url(url, timeout=timeout_seconds)
         if not is_valid:
             msg = f"Invalid SSE URL ({url}): {error_msg}"
             raise ValueError(msg)

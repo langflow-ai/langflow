@@ -362,7 +362,14 @@ class MCPToolsComponent(Component):
         """Build output with improved error handling and validation."""
         try:
             self.tools = await self.update_tool_list()
-            if self.tool != "":
+            if self.tool != "" and self.tool is not None:
+                # Check if tool exists in cache
+                if self.tool not in self._tool_cache:
+                    available_tools = list(self._tool_cache.keys())
+                    msg = f"Tool '{self.tool}' not found in tool cache. Available tools: {available_tools}"
+                    logger.warning(msg)
+                    return DataFrame(data=[{"error": msg}])
+
                 exec_tool = self._tool_cache[self.tool]
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
                 kwargs = {}
