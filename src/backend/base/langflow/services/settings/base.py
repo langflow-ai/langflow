@@ -20,6 +20,7 @@ from pydantic_settings import (
 )
 from typing_extensions import override
 
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from langflow.utils.util_strings import is_valid_database_url
 
@@ -229,6 +230,10 @@ class Settings(BaseSettings):
     """Path to the SSL certificate file on the local system."""
     ssl_key_file: str | None = None
     """Path to the SSL key file on the local system."""
+    max_text_length: int = MAX_TEXT_LENGTH
+    """The maximum text length for the upload in MB."""
+    max_items_length: int = MAX_ITEMS_LENGTH
+    """The maximum items length for the upload in MB."""
 
     # MCP Server
     mcp_server_enabled: bool = True
