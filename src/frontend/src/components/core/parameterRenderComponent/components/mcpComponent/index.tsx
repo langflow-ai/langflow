@@ -1,3 +1,4 @@
+import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,6 +16,7 @@ export default function McpComponent({
   id = "",
 }: InputProps<string, any>): JSX.Element {
   const { data: mcpServers } = useGetMCPServers();
+  const { mutate: addMcpServer } = useAddMCPServer();
   const options = useMemo(
     () =>
       mcpServers?.map((server) => ({
@@ -31,25 +33,49 @@ export default function McpComponent({
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
+  const { name, config } = useMemo(
+    () => value ?? { name: "", config: {} },
+    [value],
+  );
 
   // Initialize selected item from value on mount or value/options change
+  const selectedOption = useMemo(
+    () =>
+      name
+        ? (options?.find((option) => option.name === name) ?? { name: null })
+        : null,
+    [name, options],
+  );
+
   useEffect(() => {
     if (!options) return;
-    const selectedOption = value
-      ? options?.find((option) => option.name === value)
+    const selectedOption = name
+      ? options?.find((option) => option.name === name)
       : null;
-    setSelectedItem(
-      selectedOption ? [{ name: selectedOption.name }] : [{ name: "" }],
-    );
-    if (value !== selectedOption?.name) {
-      handleOnNewValue({ value: "" }, { skipSnapshot: true });
+
+    if (
+      name !== selectedOption?.name &&
+      Object.keys(config ?? {}).length === 0
+    ) {
+      setSelectedItem(
+        selectedOption ? [{ name: selectedOption.name }] : [{ name: "" }],
+      );
+      handleOnNewValue(
+        { value: { name: "", config: {} } },
+        { skipSnapshot: true },
+      );
+      return;
     }
-  }, [value, options]);
+    setSelectedItem([{ name }]);
+  }, [name, options]);
 
   // Handle selection from dialog
   const handleSelection = (item: any) => {
     setSelectedItem([{ name: item.name }]);
-    handleOnNewValue({ value: item.name }, { skipSnapshot: true });
+    handleOnNewValue(
+      { value: { name: item.name, config: {} } },
+      { skipSnapshot: true },
+    );
     setOpen(false);
   };
 
@@ -57,44 +83,92 @@ export default function McpComponent({
     setAddOpen(true);
   };
 
-  const handleOpenListSelectionDialog = () => setOpen(true);
+  const handleSaveButtonClick = () => {
+    addMcpServer(
+      {
+        name,
+        ...(config ?? {}),
+      },
+      {
+        onSuccess: () => {
+          handleSuccess(name);
+        },
+      },
+    );
+  };
+
+  const handleRemoveButtonClick = () => {
+    handleOnNewValue({ value: { name: "", config: {} } });
+  };
+
+  const handleOpenListSelectionDialog = () => {
+    setOpen(true);
+  };
   const handleCloseListSelectionDialog = () => setOpen(false);
 
   const handleSuccess = (server: string) => {
-    handleOnNewValue({ value: server });
+    handleOnNewValue({ value: { name: server, config: {} } });
     setOpen(false);
   };
+
+  const showSaveButton = useMemo(() => {
+    return !selectedOption?.name && Object.keys(config ?? {}).length > 0;
+  }, [selectedOption, config]);
 
   return (
     <div className="flex w-full flex-col gap-2">
       {options == null || options.length > 0 ? (
-        <Button
-          variant="primary"
-          size="xs"
-          role="combobox"
-          onClick={handleOpenListSelectionDialog}
-          className="dropdown-component-outline input-edit-node w-full py-2"
-          data-testid="mcp-server-dropdown"
-          disabled={disabled || !options}
-        >
-          <div
+        <div className="flex w-full gap-2">
+          <Button
+            variant={!showSaveButton ? "primary" : "secondary"}
+            size="xs"
+            role="combobox"
+            onClick={
+              !showSaveButton
+                ? handleOpenListSelectionDialog
+                : handleRemoveButtonClick
+            }
             className={cn(
-              "flex w-full items-center justify-start text-sm font-normal",
+              !showSaveButton
+                ? "dropdown-component-outline input-edit-node"
+                : "",
+              "w-full py-2",
             )}
+            data-testid="mcp-server-dropdown"
+            disabled={disabled || !options}
           >
-            <span className="truncate">
-              {!options
-                ? "Loading servers..."
-                : selectedItem[0]?.name
-                  ? selectedItem[0]?.name
-                  : "Select a server..."}
-            </span>
-            <ForwardedIconComponent
-              name="ChevronsUpDown"
-              className="ml-auto h-5 w-5 text-muted-foreground"
-            />
-          </div>
-        </Button>
+            <div
+              className={cn(
+                "flex w-full items-center justify-start text-sm font-normal",
+              )}
+            >
+              <span className="truncate">
+                {!options
+                  ? "Loading servers..."
+                  : selectedItem[0]?.name
+                    ? selectedItem[0]?.name
+                    : "Select a server..."}
+              </span>
+              <ForwardedIconComponent
+                name={!showSaveButton ? "ChevronsUpDown" : "X"}
+                className="ml-auto h-5 w-5 text-muted-foreground"
+              />
+            </div>
+          </Button>
+          {showSaveButton && (
+            <Button
+              variant="primary"
+              size="iconMd"
+              className="px-2.5"
+              onClick={handleSaveButtonClick}
+            >
+              <ForwardedIconComponent
+                name="Save"
+                className="h-5 w-5 text-muted-foreground"
+              />
+            </Button>
+          )}
+        </div>
       ) : (
         <Button size="sm" onClick={handleAddButtonClick}>
           <span>Add MCP Server</span>
@@ -111,7 +185,7 @@ export default function McpComponent({
             options={options}
             limit={1}
             id={id}
-            value={value}
+            value={name}
             editNode={editNode}
             headerSearchPlaceholder="Search MCP Servers..."
             handleOnNewValue={handleOnNewValue}
