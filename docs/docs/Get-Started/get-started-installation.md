@@ -59,8 +59,8 @@ The application restarts with the new version installed.
 
 ## Install and run Langflow with Docker {#install-and-run-langflow-docker}
 
-[Docker](https://docs.docker.com/) provides the simplest way to run Langflow in an isolated environment to ensure consistent behavior across different systems and eliminate dependency conflicts.
-The Langflow Docker image is available on [Docker Hub](https://hub.docker.com/r/langflowai/langflow).
+You can use the [Langflow Docker image](https://hub.docker.com/r/langflowai/langflow) to run Langflow in an isolated environment.
+Running applications in [Docker](https://docs.docker.com/) containers ensures consistent behavior across different systems and eliminates dependency conflicts.
 
 1. With Docker installed and running on your system, run this command to pull the `latest` Langflow image and start it:
 
