@@ -16,10 +16,9 @@ Get started with Langflow by loading a flow, running it, and then serving your f
 
 ## Run the Simple Agent template flow
 
-
 1. In Langflow, click **New Flow**, and then select the **Simple Agent** template.
 
-![Simple agent starter flow](/img/starter-flow-simple-agent.png)
+![Simple agent starter flow](/img/quickstart-simple-agent-flow.png)
 
 This flow connects [Chat I/O](/components-io) components with an [Agent](/components-agents) component.
 As you ask the agent questions, it calls the connected [Calculator](/components-helpers#calculator) and [URL](/components-data#url) tools for answers, depending on the question.
@@ -36,7 +35,7 @@ In this case, a math question causes the agent to select the Calculator tool and
 5. To test the URL tool, ask the agent about current events.
 For this request, the agent selects the URL tool's `fetch_content` action, and then returns a summary of current news headlines.
 
-6. When you are done testing the flow, click <X ICON> **Close**.
+6. When you are done testing the flow, click <Icon name="X" aria-hidden="true"/>**Close**.
 
 Now that you've run your first flow, try these next steps:
 
