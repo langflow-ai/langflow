@@ -6,7 +6,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.io import DictInput, DropdownInput, FloatInput, IntInput, SliderInput, StrInput
+from langflow.io import DictInput, DropdownInput, FloatInput, IntInput, SliderInput, StrInput, SecretStrInput
 
 # TODO: langchain_community.llms.huggingface_endpoint is depreciated.
 #  Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
@@ -23,17 +23,35 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
 
     inputs = [
         *LCModelComponent._base_inputs,
-        StrInput(
-            name="inference_endpoint",
-            display_name="Inference Endpoint",
-            value="https://api-inference.huggingface.co/models/",
-            info="Custom inference endpoint URL. For local deployment, use http://localhost:8080",
-            required=True,
+        DropdownInput(
+            name="model_id",
+            display_name="Model ID",
+            info="Select a model from HuggingFace Hub",
+            options=[
+                DEFAULT_MODEL,
+                "mistralai/Mixtral-8x7B-Instruct-v0.1",
+                "mistralai/Mistral-7B-Instruct-v0.3",
+                "meta-llama/Llama-3.1-8B-Instruct",
+                "Qwen/Qwen2.5-Coder-32B-Instruct",
+                "Qwen/QwQ-32B-Preview",
+                "openai-community/gpt2",
+                "custom",
+            ],
+            value=DEFAULT_MODEL,
+            real_time_refresh=True,
         ),
         StrInput(
-            name="model_name",
-            display_name="Model Name",
-            info="The name of the model to use (e.g., 'mistralai/Mixtral-8x7B-Instruct-v0.1')",
+            name="custom_model",
+            display_name="Custom Model ID",
+            info="Enter a custom model ID from HuggingFace Hub",
+            value="",
+            show=False,
+        ),
+        StrInput(
+            name="endpoint_url",
+            display_name="Endpoint URL",
+            value="https://api-inference.huggingface.co/models/",
+            info="Custom inference endpoint URL. For local deployment, use http://localhost:8080",
             required=True,
         ),
         IntInput(
@@ -95,6 +113,11 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             advanced=True,
             info="The task to call the model with. Should be a task that returns `generated_text` or `summary_text`.",
         ),
+        SecretStrInput(
+            name="huggingfacehub_api_token",
+            display_name="HuggingFace API Token",
+            info="Your HuggingFace API token. Not required for local deployments.",
+        ),
         DictInput(
             name="model_kwargs",
             display_name="Model Keyword Arguments",
@@ -111,14 +134,51 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     ]
 
     def get_api_url(self) -> str:
-        """Get the full API URL for the model."""
-        endpoint = self.inference_endpoint.rstrip("/")
-        model_name = self.model_name.strip()
-        return f"{endpoint}/{model_name}"
+        # If the endpoint is custom (does not contain 'huggingface'),
+        # return the custom URL directly. This is used for local or private deployments.
+        if "huggingface" not in self.inference_endpoint.lower():
+            return self.inference_endpoint
+        # If using the standard HuggingFace API, return only the model_id or custom_model.
+        # The HuggingFaceEndpoint library will construct the full URL internally.
+        if self.model_id == "custom":
+            if not self.custom_model:
+                raise ValueError("Custom model ID is required when 'custom' is selected")
+            return self.custom_model
+        return self.model_id
+
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        """Update build configuration based on field updates."""
+        try:
+            if field_name is None or field_name == "model_id":
+                # If model_id is custom, show custom model field
+                if field_value == "custom":
+                    build_config["custom_model"]["show"] = True
+                    build_config["custom_model"]["required"] = True
+                else:
+                    build_config["custom_model"]["show"] = False
+                    build_config["custom_model"]["value"] = ""
+
+        except (KeyError, AttributeError) as e:
+            self.log(f"Error updating build config: {e!s}")
+        return build_config
+    
+    def _get_model_param(self):
+        """Restituisce il parametro corretto da passare a HuggingFaceEndpoint: model, endpoint_url o repo_id."""
+        # Se endpoint_url è custom (non contiene 'huggingface'), usalo come endpoint_url
+        if "huggingface" not in self.endpoint_url.lower():
+            return {"endpoint_url": self.endpoint_url}
+        # Se model_id è custom, usa custom_model come repo_id
+        if self.model_id == "custom":
+            if not self.custom_model:
+                raise ValueError("Custom model ID is required when 'custom' is selected")
+            return {"repo_id": self.custom_model}
+        # Altrimenti usa model_id come repo_id
+        return {"repo_id": self.model_id}
 
     def create_huggingface_endpoint(
         self,
         task: str | None,
+        huggingfacehub_api_token: str | None,
         model_kwargs: dict[str, Any],
         max_new_tokens: int,
         top_k: int | None,
@@ -127,30 +187,23 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         temperature: float | None,
         repetition_penalty: float | None,
     ) -> HuggingFaceEndpoint:
-        """Create a HuggingFaceEndpoint instance with retry logic."""
+        """Crea un'istanza di HuggingFaceEndpoint seguendo la signature della reference."""
         retry_attempts = self.retry_attempts
-        endpoint_url = self.get_api_url()
-
-        # Prepare model kwargs
-        model_kwargs = model_kwargs or {}
-        if top_k is not None:
-            model_kwargs["top_k"] = top_k
-        if top_p is not None:
-            model_kwargs["top_p"] = top_p
-        if typical_p is not None:
-            model_kwargs["typical_p"] = typical_p
-        if temperature is not None:
-            model_kwargs["temperature"] = temperature
-        if repetition_penalty is not None:
-            model_kwargs["repetition_penalty"] = repetition_penalty
+        model_param = self._get_model_param()
 
         @retry(stop=stop_after_attempt(retry_attempts), wait=wait_fixed(2))
         def _attempt_create():
             return HuggingFaceEndpoint(
-                endpoint_url=endpoint_url,
+                **model_param,
                 task=task,
                 model_kwargs=model_kwargs,
                 max_new_tokens=max_new_tokens,
+                huggingfacehub_api_token=huggingfacehub_api_token,
+                top_k=top_k,
+                top_p=top_p,
+                typical_p=typical_p,
+                temperature=temperature,
+                repetition_penalty=repetition_penalty,
             )
 
         return _attempt_create()
@@ -169,6 +222,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         try:
             llm = self.create_huggingface_endpoint(
                 task=task,
+                huggingfacehub_api_token=self.huggingfacehub_api_token,
                 model_kwargs=model_kwargs,
                 max_new_tokens=max_new_tokens,
                 top_k=top_k,
