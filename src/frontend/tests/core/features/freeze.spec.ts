@@ -63,10 +63,7 @@ test(
     });
 
     await page.getByTestId("icon-FreezeAll").click();
-
-    await page.waitForSelector('[data-testid="frozen-icon"]', {
-      timeout: 30000,
-    });
+    await expect(page.getByTestId("frozen-icon")).toBeVisible();
     await page.keyboard.press("Escape");
 
     await page.getByTestId("div-generic-node").getByRole("button").click();
