@@ -65,8 +65,9 @@ test(
     });
 
     await page.getByTestId("icon-FreezeAll").click();
-    // Wait 3 seconds just to be sure the freeze is applied
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="frozen-icon"]', {
+      timeout: 20000,
+    });
     await expect(page.getByTestId("frozen-icon")).toBeVisible();
     await page.keyboard.press("Escape");
 
