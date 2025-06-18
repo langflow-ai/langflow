@@ -231,9 +231,11 @@ class Settings(BaseSettings):
     ssl_key_file: str | None = None
     """Path to the SSL key file on the local system."""
     max_text_length: int = MAX_TEXT_LENGTH
-    """The maximum text length for the upload in MB."""
+    """Maximum number of characters to store and display in the UI. Responses longer than this
+    will be truncated when displayed in the UI. Does not truncate responses between components nor outputs."""
     max_items_length: int = MAX_ITEMS_LENGTH
-    """The maximum items length for the upload in MB."""
+    """Maximum number of items to store and display in the UI. Lists longer than this
+    will be truncated when displayed in the UI. Does not affect data passed between components nor outputs."""
 
     # MCP Server
     mcp_server_enabled: bool = True
