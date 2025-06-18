@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator, Generator, Iterator
 from datetime import datetime, timezone
 from decimal import Decimal
+from functools import lru_cache
 from typing import Any, cast
 from uuid import UUID
 
@@ -12,6 +13,7 @@ from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
 
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
+from langflow.services.deps import get_settings_service
 
 
 # Sentinel variable to signal a failed serialization.
@@ -23,6 +25,16 @@ class _UnserializableSentinel:
 
 
 UNSERIALIZABLE_SENTINEL = _UnserializableSentinel()
+
+
+@lru_cache(maxsize=1)
+def get_max_text_length() -> int:
+    return get_settings_service().settings.max_text_length
+
+
+@lru_cache(maxsize=1)
+def get_max_items_length() -> int:
+    return get_settings_service().settings.max_items_length
 
 
 def _serialize_str(obj: str, max_length: int | None, _) -> str:
