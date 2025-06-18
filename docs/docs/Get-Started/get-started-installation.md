@@ -180,13 +180,13 @@ To delete the virtual environment, type `rm -rf VENV_NAME`.
 
 </Tabs>
 
-2. After installation, to run Langflow, use the following command:
+2. After installation, start Langflow:
 
 ```bash
 uv run langflow run
 ```
 
-3. To confirm that a local Langflow instance starts, go to the default Langflow URL at `http://127.0.0.1:7860`.
+3. To confirm that a local Langflow instance is running, navigate to the default Langflow URL`http://127.0.0.1:7860`.
 
 After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
 
