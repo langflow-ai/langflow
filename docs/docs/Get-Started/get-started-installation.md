@@ -192,7 +192,8 @@ To add your own custom dependencies, see [Install custom dependencies](/install-
 
 This is a list of possible issues that you may encounter when installing and running Langflow.
 
-#### No `langflow.__main__` module
+<details>
+<summary>No <code>langflow.__main__</code> module</summary>
 
 When you try to run Langflow with the command `langflow run`, you encounter the following error:
 
@@ -204,7 +205,10 @@ When you try to run Langflow with the command `langflow run`, you encounter the 
 2. If that doesn't work, reinstall the latest Langflow version with `uv pip install langflow -U`.
 3. If that doesn't work, reinstall Langflow and its dependencies with `uv pip install langflow --pre -U --force-reinstall`.
 
-#### Langflow runTraceback
+</details>
+
+<details>
+<summary>Langflow runTraceback</summary>
 
 When you try to run Langflow using the command `langflow run`, you encounter the following error:
 
@@ -217,7 +221,10 @@ There are two possible reasons for this error:
 1. You've installed Langflow using `pip install langflow` but you already had a previous version of Langflow installed in your system. In this case, you might be running the wrong executable. To solve this issue, run the correct executable by running `python -m langflow run` instead of `langflow run`. If that doesn't work, try uninstalling and reinstalling Langflow with `uv pip install langflow --pre -U`.
 2. Some version conflicts might have occurred during the installation process. Run `python -m pip install langflow --pre -U --force-reinstall` to reinstall Langflow and its dependencies.
 
-#### Something went wrong running migrations
+</details>
+
+<details>
+<summary>Something went wrong running migrations</summary>
 
 ```bash
 > Something went wrong running migrations. Please, run 'langflow migration --fix'
@@ -234,7 +241,10 @@ This error can occur during Langflow upgrades when the new version can't overrid
 
 If you wish to retain your files, back them up before clearing the folder.
 
-#### Langflow installation freezes at pip dependency resolution
+</details>
+
+<details>
+<summary>Langflow installation freezes at pip dependency resolution</summary>
 
 Installing Langflow with `pip install langflow` slowly fails with this error message:
 
@@ -254,7 +264,10 @@ To run Langflow with uv:
 uv run langflow run
 ```
 
-#### Failed to build required package
+</details>
+
+<details>
+<summary>Failed to build required package</summary>
 
 When you try to install Langflow on Linux, installation fails because of outdated or missing packages.
 
@@ -278,6 +291,11 @@ sudo apt-get install build-essential python3-dev
 sudo apt-get install gcc
 ```
 
-#### Installation failure from `webrtcvad` package
+</details>
+
+<details>
+<summary>Installation failure from <code>webrtcvad</code> package</summary>
 
 If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in the virtual environment, and then try installing again.
+
+</details>
