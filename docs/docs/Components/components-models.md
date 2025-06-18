@@ -417,6 +417,34 @@ For more information, see [LM Studio documentation](https://lmstudio.ai/).
 
 </details>
 
+## Swama
+
+This component generates text using [Swama](https://github.com/Trans-N-ai/swama) as an OpenAI-compatible API server.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| base_url | String | The URL where Swama is running. Default: `"http://localhost:8080/v1"`. |
+| max_tokens | Integer | Maximum number of tokens to generate in the response. Default: `512`. |
+| temperature | Float | Controls randomness in the output. Range: `[0.0, 2.0]`. Default: `0.7`. |
+| top_p | Float | Controls diversity via nucleus sampling. Range: `[0.0, 1.0]`. Default: `1.0`. |
+| stop | List[String] | List of strings that stop generation when encountered. |
+| stream | Boolean | Whether to stream the response. Default: `False`. |
+| presence_penalty | Float | Penalizes repeated tokens. Range: `[-2.0, 2.0]`. Default: `0.0`. |
+| frequency_penalty | Float | Penalizes frequent tokens. Range: `[-2.0, 2.0]`. Default: `0.0`. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | LanguageModel | An instance of Swama configured with the specified parameters. |
+
+</details>
+
 ## Maritalk
 
 This component generates text using Maritalk LLMs.
