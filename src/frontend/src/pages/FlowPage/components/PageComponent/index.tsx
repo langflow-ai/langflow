@@ -1,12 +1,6 @@
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
-
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import CanvasControls, {
-  CustomControlButton,
-} from "@/components/core/canvasControlsComponent";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
@@ -17,21 +11,19 @@ import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { useAddComponent } from "@/hooks/useAddComponent";
+import { useAddComponent } from "@/hooks/use-add-component";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import {
-  Background,
   Connection,
   Edge,
   OnNodeDrag,
   OnSelectionChangeParams,
-  Panel,
   ReactFlow,
   reconnectEdge,
   SelectionDragHandler,
-  SelectionMode,
 } from "@xyflow/react";
+import { AnimatePresence } from "framer-motion";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -68,6 +60,13 @@ import {
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
+import FlowBuildingComponent from "../flowBuildingComponent";
+import {
+  MemoizedBackground,
+  MemoizedCanvasControls,
+  MemoizedLogCanvasControls,
+  MemoizedSidebarTrigger,
+} from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -130,6 +129,12 @@ export default function Page({
     useState<OnSelectionChangeParams | null>(null);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
+  useEffect(() => {
+    if (currentFlowId !== "") {
+      isEmptyFlow.current = nodes.length === 0;
+    }
+  }, [currentFlowId]);
+
   const [isAddingNote, setIsAddingNote] = useState(false);
 
   const addComponent = useAddComponent();
@@ -139,11 +144,12 @@ export default function Page({
   const shadowBoxHeight = NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1);
   const shadowBoxBackgroundColor = COLOR_OPTIONS[Object.keys(COLOR_OPTIONS)[0]];
 
-  function handleGroupNode() {
+  const handleGroupNode = useCallback(() => {
     takeSnapshot();
-    if (validateSelection(lastSelection!, edges).length === 0) {
-      const clonedNodes = cloneDeep(nodes);
-      const clonedEdges = cloneDeep(edges);
+    const edgesState = useFlowStore.getState().edges;
+    if (validateSelection(lastSelection!, edgesState).length === 0) {
+      const clonedNodes = cloneDeep(useFlowStore.getState().nodes);
+      const clonedEdges = cloneDeep(edgesState);
       const clonedSelection = cloneDeep(lastSelection);
       updateIds({ nodes: clonedNodes, edges: clonedEdges }, clonedSelection!);
       const { newFlow } = generateFlow(
@@ -167,10 +173,10 @@ export default function Page({
     } else {
       setErrorData({
         title: INVALID_SELECTION_ERROR_ALERT,
-        list: validateSelection(lastSelection!, edges),
+        list: validateSelection(lastSelection!, edgesState),
       });
     }
-  }
+  }, [lastSelection, setNodes, setErrorData, takeSnapshot]);
 
   useEffect(() => {
     const handleMouseMove = (event) => {
@@ -543,10 +549,36 @@ export default function Page({
 
   const componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
 
+  const MIN_ZOOM = 0.2;
+  const MAX_ZOOM = 8;
+  const fitViewOptions = {
+    minZoom: MIN_ZOOM,
+    maxZoom: MAX_ZOOM,
+  };
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
         <div id="react-flow-id" className="h-full w-full bg-canvas">
+          {!view && (
+            <>
+              <MemoizedLogCanvasControls />
+              <MemoizedCanvasControls
+                setIsAddingNote={setIsAddingNote}
+                position={position.current}
+                shadowBoxWidth={shadowBoxWidth}
+                shadowBoxHeight={shadowBoxHeight}
+              />
+              <FlowToolbar />
+            </>
+          )}
+          <MemoizedSidebarTrigger />
+          <SelectionMenu
+            lastSelection={lastSelection}
+            isVisible={selectionMenuVisible}
+            nodes={lastSelection?.nodes}
+            onClick={handleGroupNode}
+          />
           <ReactFlow<AllNodeType, EdgeType>
             nodes={nodes}
             edges={edges}
@@ -571,74 +603,23 @@ export default function Page({
             onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
-            selectionMode={SelectionMode.Partial}
             deleteKeyCode={[]}
-            multiSelectionKeyCode={["Shift"]}
             fitView={isEmptyFlow.current ? false : true}
-            fitViewOptions={{
-              minZoom: 0.2,
-              maxZoom: 8,
-            }}
+            fitViewOptions={fitViewOptions}
             className="theme-attribution"
-            minZoom={0.2}
-            maxZoom={3}
-            panOnDrag={[1, 2]}
-            panOnScroll={!view}
-            selectionOnDrag={!view}
+            minZoom={MIN_ZOOM}
+            maxZoom={MAX_ZOOM}
+            zoomOnScroll={!view}
+            zoomOnPinch={!view}
+            panOnDrag={!view}
             panActivationKeyCode={""}
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
             onEdgeClick={handleEdgeClick}
           >
-            <Background size={2} gap={20} className="" />
-            {!view && (
-              <>
-                <CanvasControls>
-                  <CustomControlButton
-                    iconName="sticky-note"
-                    tooltipText="Add Note"
-                    onClick={() => {
-                      setIsAddingNote(true);
-                      const shadowBox = document.getElementById("shadow-box");
-                      if (shadowBox) {
-                        shadowBox.style.display = "block";
-                        shadowBox.style.left = `${position.current.x - shadowBoxWidth / 2}px`;
-                        shadowBox.style.top = `${position.current.y - shadowBoxHeight / 2}px`;
-                      }
-                    }}
-                    iconClasses="text-primary"
-                    testId="add_note"
-                  />
-                </CanvasControls>
-                <FlowToolbar />
-              </>
-            )}
-            <Panel
-              className={cn(
-                "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
-                "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
-              )}
-              position="top-left"
-            >
-              <SidebarTrigger className="h-fit w-fit px-3 py-1.5">
-                <ForwardedIconComponent
-                  name="PanelRightClose"
-                  className="h-4 w-4"
-                />
-                <span className="text-foreground">Components</span>
-              </SidebarTrigger>
-            </Panel>
-            <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
-              <UpdateAllComponents />
-            </div>
-            <SelectionMenu
-              lastSelection={lastSelection}
-              isVisible={selectionMenuVisible}
-              nodes={lastSelection?.nodes}
-              onClick={() => {
-                handleGroupNode();
-              }}
-            />
+            <FlowBuildingComponent />
+            <UpdateAllComponents />
+            <MemoizedBackground />
           </ReactFlow>
           <div
             id="shadow-box"

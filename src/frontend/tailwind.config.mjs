@@ -33,12 +33,14 @@ const config = {
       center: true,
       screens: {
         "2xl": "1400px",
+        "3xl": "1500px",
       },
     },
     extend: {
       screens: {
         xl: "1200px",
         "2xl": "1400px",
+        "3xl": "1500px",
       },
       keyframes: {
         // Overlay animations
@@ -91,6 +93,10 @@ const config = {
             "offset-distance": "100%",
           },
         },
+        "pulse-pink": {
+          "0%, 100%": { backgroundColor: "hsla(var(--accent-pink), 1)" },
+          "50%": { backgroundColor: "hsla(var(--accent-pink), 0.4)" },
+        },
       },
       animation: {
         // Animation definitions
@@ -99,6 +105,7 @@ const config = {
         contentShow: "contentShow 400ms cubic-bezier(0.16, 1, 0.3, 1)",
         contentHide: "contentHide 500ms cubic-bezier(0.16, 1, 0.3, 1)",
         wiggle: "wiggle 150ms ease-in-out 1",
+        "pulse-pink": "pulse-pink 2s linear infinite",
         "slow-wiggle": "wiggle 500ms ease-in-out 1",
         "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
       },
@@ -163,6 +170,8 @@ const config = {
         "success-foreground": "var(--success-foreground)",
         "accent-pink": "hsl(var(--accent-pink))",
         "accent-pink-foreground": "hsl(var(--accent-pink-foreground))",
+        "accent-purple-foreground": "hsl(var(--accent-purple-foreground))",
+        "accent-red-foreground": "hsl(var(--accent-red-foreground))",
         filter: {
           foreground: "var(--filter-foreground)",
           background: "var(--filter-background)",
@@ -309,6 +318,8 @@ const config = {
         "slider-input-border": "var(--slider-input-border)",
         "zinc-foreground": "hsl(var(--zinc-foreground))",
         "red-foreground": "hsl(var(--red-foreground))",
+        "indigo-foreground": "hsl(var(--indigo-foreground))",
+        "discord-color": "var(--discord-color)",
       },
       borderRadius: {
         lg: `var(--radius)`,
@@ -339,6 +350,10 @@ const config = {
         90: "90",
         100: "100",
         999: "999",
+      },
+      fontSize: {
+        xxs: "11px",
+        mmd: "13px",
       },
     },
   },
@@ -463,6 +478,7 @@ const config = {
             acc[`.truncate-${className}`] = {
               position: "relative",
               overflow: "hidden",
+              pointerEvents: "none",
               "&::after": {
                 content: '""',
                 position: "absolute",
@@ -476,6 +492,7 @@ const config = {
               acc[`.truncate-${className}`] = {
                 position: "relative",
                 overflow: "hidden",
+                pointerEvents: "none",
                 "&::after": {
                   content: '""',
                   position: "absolute",

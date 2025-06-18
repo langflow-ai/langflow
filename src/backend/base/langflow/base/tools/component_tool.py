@@ -7,13 +7,12 @@ from typing import TYPE_CHECKING, Literal
 import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
-from loguru import logger
-from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema, create_input_schema_from_dict
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.serialization.serialization import serialize
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -27,7 +26,6 @@ if TYPE_CHECKING:
     from langflow.schema.content_block import ContentBlock
     from langflow.schema.dotdict import dotdict
 
-
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
 
 
@@ -39,22 +37,8 @@ def _get_input_type(input_: InputTypes):
     return input_.field_type
 
 
-def build_description(component: Component, output: Output) -> str:
-    if not output.required_inputs:
-        logger.warning(f"Output {output.name} does not have required inputs defined")
-
-    if output.required_inputs:
-        args = ", ".join(
-            sorted(
-                [
-                    f"{input_name}: {_get_input_type(component._inputs[input_name])}"
-                    for input_name in output.required_inputs
-                ]
-            )
-        )
-    else:
-        args = ""
-    return f"{output.method}({args}) - {component.description}"
+def build_description(component: Component) -> str:
+    return f"{component.description}"
 
 
 async def send_message_noop(
@@ -122,9 +106,8 @@ def _build_output_function(component: Component, output_method: Callable, event_
             return result.get_text()
         if isinstance(result, Data):
             return result.data
-        if isinstance(result, BaseModel):
-            return result.model_dump()
-        return result
+        # removing the model_dump() call here because it is not serializable
+        return serialize(result)
 
     return _patch_send_message_decorator(component, output_function)
 
@@ -146,9 +129,8 @@ def _build_output_async_function(
             return result.get_text()
         if isinstance(result, Data):
             return result.data
-        if isinstance(result, BaseModel):
-            return result.model_dump()
-        return result
+        # removing the model_dump() call here because it is not serializable
+        return serialize(result)
 
     return _patch_send_message_decorator(component, output_function)
 
@@ -211,6 +193,8 @@ class ComponentToolkit:
                     inputs=flow_mode_inputs,
                     param_key="flow_tweak_data",
                 )
+            elif tool_mode_inputs:
+                args_schema = create_input_schema(tool_mode_inputs)
             elif output.required_inputs:
                 inputs = [
                     self.component._inputs[input_name]
@@ -220,6 +204,7 @@ class ComponentToolkit:
                 # If any of the required inputs are not in tool mode, this means
                 # that when the tool is called it will raise an error.
                 # so we should raise an error here.
+                # TODO: This logic might need to be improved, example if the required is an api key.
                 if not all(getattr(_input, "tool_mode", False) for _input in inputs):
                     non_tool_mode_inputs = [
                         input_.name
@@ -234,36 +219,43 @@ class ComponentToolkit:
                     )
                     raise ValueError(msg)
                 args_schema = create_input_schema(inputs)
-            elif tool_mode_inputs:
-                args_schema = create_input_schema(tool_mode_inputs)
+
             else:
                 args_schema = create_input_schema(self.component.inputs)
 
-            name = f"{self.component.name or self.component.__class__.__name__ or ''}.{output.method}".strip(".")
+            name = f"{output.method}".strip(".")
             formatted_name = _format_tool_name(name)
             event_manager = self.component._event_manager
             if asyncio.iscoroutinefunction(output_method):
                 tools.append(
                     StructuredTool(
                         name=formatted_name,
-                        description=build_description(self.component, output),
+                        description=build_description(self.component),
                         coroutine=_build_output_async_function(self.component, output_method, event_manager),
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
+                        metadata={
+                            "display_name": formatted_name,
+                            "display_description": build_description(self.component),
+                        },
                     )
                 )
             else:
                 tools.append(
                     StructuredTool(
                         name=formatted_name,
-                        description=build_description(self.component, output),
+                        description=build_description(self.component),
                         func=_build_output_function(self.component, output_method, event_manager),
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
+                        metadata={
+                            "display_name": formatted_name,
+                            "display_description": build_description(self.component),
+                        },
                     )
                 )
         if len(tools) == 1 and (tool_name or tool_description):

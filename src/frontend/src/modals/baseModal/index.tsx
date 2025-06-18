@@ -4,6 +4,7 @@ import React from "react";
 import {
   Dialog,
   DialogContent,
+  DialogContentWithouFixed,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -167,10 +168,13 @@ interface BaseModalProps {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   size?:
+    | "notice"
     | "x-small"
     | "retangular"
     | "smaller"
     | "small"
+    | "small-update"
+    | "small-query"
     | "medium"
     | "medium-tall"
     | "large"
@@ -193,6 +197,7 @@ interface BaseModalProps {
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
   closeButtonClassName?: string;
+  dialogContentWithouFixed?: boolean;
 }
 function BaseModal({
   className,
@@ -205,6 +210,7 @@ function BaseModal({
   onSubmit,
   onEscapeKeyDown,
   closeButtonClassName,
+  dialogContentWithouFixed = false,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -259,27 +265,51 @@ function BaseModal({
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent
-            onClick={(e) => e.stopPropagation()}
-            onOpenAutoFocus={(event) => event.preventDefault()}
-            onEscapeKeyDown={onEscapeKeyDown}
-            className={contentClasses}
-            closeButtonClassName={closeButtonClassName}
-          >
-            {onSubmit ? (
-              <Form.Root
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  onSubmit();
-                }}
-                className={formClasses}
-              >
-                {modalContent}
-              </Form.Root>
-            ) : (
-              modalContent
-            )}
-          </DialogContent>
+          {dialogContentWithouFixed ? (
+            <DialogContentWithouFixed
+              onClick={(e) => e.stopPropagation()}
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              onEscapeKeyDown={onEscapeKeyDown}
+              className={contentClasses}
+              closeButtonClassName={closeButtonClassName}
+            >
+              {onSubmit ? (
+                <Form.Root
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    onSubmit();
+                  }}
+                  className={formClasses}
+                >
+                  {modalContent}
+                </Form.Root>
+              ) : (
+                modalContent
+              )}
+            </DialogContentWithouFixed>
+          ) : (
+            <DialogContent
+              onClick={(e) => e.stopPropagation()}
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              onEscapeKeyDown={onEscapeKeyDown}
+              className={contentClasses}
+              closeButtonClassName={closeButtonClassName}
+            >
+              {onSubmit ? (
+                <Form.Root
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    onSubmit();
+                  }}
+                  className={formClasses}
+                >
+                  {modalContent}
+                </Form.Root>
+              ) : (
+                modalContent
+              )}
+            </DialogContent>
+          )}
         </Dialog>
       )}
     </>

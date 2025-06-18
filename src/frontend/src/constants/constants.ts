@@ -37,7 +37,13 @@ export const INVALID_CHARACTERS = [
  * It matches the variables in the text that are between {{}} or {}.
  */
 
-export const regexHighlight = /\{\{(.*?)\}\}|\{([^{}]+)\}/g;
+/**
+ *  p1 – fenced code block ```...```
+ *  p2 – opening brace run (one or more)
+ *  p3 – variable name  (no braces)
+ *  p4 – closing brace run (one or more)
+ */
+export const regexHighlight = /(```[\s\S]*?```)|(\{+)([^{}]+)(\}+)/g;
 export const specialCharsRegex = /[!@#$%^&*()\-_=+[\]{}|;:'",.<>/?\\`´]/;
 
 export const programmingLanguages: languageMap = {
@@ -551,7 +557,10 @@ export const NOUNS: string[] = [
  */
 export const USER_PROJECTS_HEADER = "My Collection";
 
-export const DEFAULT_FOLDER = "My Projects";
+export const DEFAULT_FOLDER = "Starter Project";
+export const DEFAULT_FOLDER_DEPRECATED = "My Projects";
+
+export const MAX_MCP_SERVER_NAME_LENGTH = 30;
 
 /**
  * Header text for admin page
@@ -658,6 +667,9 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "sortableList",
   "connect",
   "auth",
+  "query",
+  "mcp",
+  "tools",
 ]);
 
 export const FLEX_VIEW_TYPES = ["bool"];
@@ -766,7 +778,9 @@ export const BROKEN_EDGES_WARNING =
 
 export const SAVE_DEBOUNCE_TIME = 300;
 
-export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
+export const IS_MAC =
+  typeof navigator !== "undefined" &&
+  navigator.userAgent.toUpperCase().includes("MAC");
 
 export const defaultShortcuts = [
   {
@@ -1004,6 +1018,7 @@ export const GRADIENT_CLASS_DISABLED =
   "linear-gradient(to right, hsl(var(--muted) / 0.3), hsl(var(--muted)))";
 
 export const RECEIVING_INPUT_VALUE = "Receiving input";
+export const SELECT_AN_OPTION = "Select an option";
 
 export const ICON_STROKE_WIDTH = 1.5;
 
@@ -1018,7 +1033,7 @@ export const POLLING_MESSAGES = {
   STREAMING_NOT_SUPPORTED: "Streaming not supported",
 } as const;
 
-export const POLLING_INTERVAL = 100;
+export const BUILD_POLLING_INTERVAL = 25;
 
 export const IS_AUTO_LOGIN =
   !process?.env?.LANGFLOW_AUTO_LOGIN ||
@@ -1067,3 +1082,11 @@ export const OPENAI_VOICES = [
 export const DEFAULT_POLLING_INTERVAL = 5000;
 export const DEFAULT_TIMEOUT = 30000;
 export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;
+export const DISCORD_URL = "https://discord.com/invite/EqksyE2EX9";
+export const GITHUB_URL = "https://github.com/langflow-ai/langflow";
+export const TWITTER_URL = "https://x.com/langflow_ai";
+export const DOCS_URL = "https://docs.langflow.org";
+export const DATASTAX_DOCS_URL =
+  "https://docs.datastax.com/en/langflow/index.html";
+
+export const UUID_PARSING_ERROR = "uuid_parsing";

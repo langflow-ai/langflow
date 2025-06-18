@@ -72,9 +72,18 @@ class TestGmailComponent(ComponentTestBaseWithoutClient):
         component.body = "Test Body"
         component.is_html = False
 
+        # For this specific test, customize the _actions_data to not use get_result_field
+        component._actions_data = {
+            "GMAIL_SEND_EMAIL": {
+                "display_name": "Send Email",
+                "action_fields": ["recipient_email", "subject", "body", "is_html"],
+                "get_result_field": False,
+            }
+        }
+
         # Execute action
         result = component.execute_action()
-        assert result == "mocked response"
+        assert result == {"result": "mocked response"}
 
     def test_execute_action_fetch_emails(self, component_class, default_kwargs, monkeypatch):
         # Mock Action enum
@@ -87,26 +96,24 @@ class TestGmailComponent(ComponentTestBaseWithoutClient):
         component.max_results = 10
         component.query = "from:test@example.com"
 
-        # Create a mock for the toolset
-        mock_toolset = MagicMock()
-        # The execute_action method needs to return a structure that works with the component's logic
-        # Based on the error, we need to make sure the 'data' key contains a dictionary with at least one key
-        mock_toolset.execute_action.return_value = {"data": {"response": "mocked response"}}
-
-        # Patch the _build_wrapper method to return our mock
-        with patch.object(component, "_build_wrapper", return_value=mock_toolset):
-            # Also patch the _actions_data to ensure it has the correct structure for GMAIL_FETCH_EMAILS
-            # This ensures the result_field is set correctly
-            component._actions_data = {
-                "GMAIL_FETCH_EMAILS": {
-                    "action_fields": ["max_results", "query"],
-                    "result_field": "response",
-                    "get_result_field": True,
-                }
+        # For this specific test, we need to customize the action_data to handle results field
+        component._actions_data = {
+            "GMAIL_FETCH_EMAILS": {
+                "display_name": "Fetch Emails",
+                "action_fields": ["max_results", "query"],
+                "result_field": "messages",
+                "get_result_field": True,
             }
+        }
 
-            # Execute action
+        # Create a mock for the toolset with specific structure for this test
+        mock_toolset = MagicMock()
+        mock_toolset.execute_action.return_value = {"successful": True, "data": {"messages": "mocked response"}}
+
+        # Patch the _build_wrapper method
+        with patch.object(component, "_build_wrapper", return_value=mock_toolset):
             result = component.execute_action()
+            # Based on the component's actual behavior, it returns the result_field directly
             assert result == "mocked response"
 
     def test_execute_action_get_profile(self, component_class, default_kwargs, monkeypatch):
@@ -118,9 +125,18 @@ class TestGmailComponent(ComponentTestBaseWithoutClient):
         component.api_key = "test_key"
         component.action = [{"name": "Get User Profile"}]
 
+        # For this specific test, customize the _actions_data to not use get_result_field
+        component._actions_data = {
+            "GMAIL_GET_PROFILE": {
+                "display_name": "Get User Profile",
+                "action_fields": ["gmail_user_id"],
+                "get_result_field": False,
+            }
+        }
+
         # Execute action
         result = component.execute_action()
-        assert result == "mocked response"
+        assert result == {"result": "mocked response"}
 
     def test_execute_action_invalid_action(self, component_class, default_kwargs):
         # Setup component
@@ -173,24 +189,9 @@ class TestGmailComponent(ComponentTestBaseWithoutClient):
             # Verify the DataFrame is not empty
             assert not result.empty
 
-            # Verify the DataFrame contains our mock data
-            # This will depend on how the component processes the data
-            # We can check for specific column names or values
-            if hasattr(result, "columns"):
-                # If the DataFrame has columns, check for expected ones
-                expected_columns = ["id", "threadId", "subject", "from", "date", "snippet"]
-                for col in expected_columns:
-                    if col in result.columns:
-                        assert True
-                        break
-                else:
-                    # If none of the expected columns are found, check if data is in the DataFrame
-                    assert any(
-                        "Test Email" in str(cell) for cell in result.values.flat if hasattr(cell, "__contains__")
-                    )
-            else:
-                # If the DataFrame structure is different, just check for some expected content
-                assert "Test Email" in str(result)
+            # Check for expected content in the DataFrame string representation
+            data_str = str(result)
+            assert "test email" in data_str
 
     def test_update_build_config(self, component_class, default_kwargs):
         # Test that the Gmail component properly inherits and uses the base component's

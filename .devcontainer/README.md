@@ -44,17 +44,17 @@ Open a new Terminal, and type `uv run langflow run`.
 The service will start, and you will may notice a dialog in the lower right indicating there is a port available to connect to. However, the service will not be ready until you see the welcome banner:
 
 ```
-╭───────────────────────────────────────────────────────────────────╮
-│ Welcome to ⛓ Langflow                                             │
-│                                                                   │
-│                                                                   │
-│ Collaborate, and contribute at our GitHub Repo 🌟                 │
-│                                                                   │
-│ We collect anonymous usage data to improve Langflow.              │
-│ You can opt-out by setting DO_NOT_TRACK=true in your environment. │
-│                                                                   │
-│ Access http://127.0.0.1:7860                                      │
-╰───────────────────────────────────────────────────────────────────╯
+╭───────────────────────────────────────────────────────────────────────╮
+│ Welcome to Langflow                                                   │
+│                                                                       │
+│ 🌟 GitHub: Star for updates → https://github.com/langflow-ai/langflow  │
+│ 💬 Discord: Join for support → https://discord.com/invite/EqksyE2EX9   │
+│                                                                       │
+│ We collect anonymous usage data to improve Langflow.                  │
+│ To opt out, set: DO_NOT_TRACK=true in your environment.               │
+│                                                                       │
+│ 🟢 Open Langflow → http://localhost:7860                               │
+╰───────────────────────────────────────────────────────────────────────╯
 ```
 
 At this point you can connect to the service via the port, or if the dialog is gone you can find the "Forwarded Address" on the "Ports" tab (which is next the "Terminal" tab). If there is no port forwarded, you can click the "Forward a Port" button on the "Ports" tab, and forward `7860`. 

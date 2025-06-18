@@ -35,6 +35,9 @@ class FieldTypes(str, Enum):
     LINK = "link"
     SLIDER = "slider"
     TAB = "tab"
+    QUERY = "query"
+    TOOLS = "tools"
+    MCP = "mcp"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -142,6 +145,11 @@ class AuthMixin(BaseModel):
     auth_tooltip: str | None = Field(default="")
 
 
+class QueryMixin(BaseModel):
+    separator: str | None = Field(default=None)
+    """Separator for the query input. Defaults to None."""
+
+
 # Specific mixin for fields needing file interaction
 class FileMixin(BaseModel):
     file_path: list[str] | str | None = Field(default="")
@@ -196,6 +204,20 @@ class DropDownMixin(BaseModel):
     """Variable that defines if the user can insert custom values in the dropdown."""
     dialog_inputs: dict[str, Any] | None = None
     """Dictionary of dialog inputs for the field. Default is an empty object."""
+    toggle: bool = False
+    """Variable that defines if a toggle button is shown."""
+    toggle_value: bool | None = None
+    """Variable that defines the value of the toggle button. Defaults to None."""
+    toggle_disable: bool | None = None
+    """Variable that defines if the toggle button is disabled. Defaults to None."""
+
+    @field_validator("toggle_value")
+    @classmethod
+    def validate_toggle_value(cls, v):
+        if v is not None and not isinstance(v, bool):
+            msg = "toggle_value must be a boolean or None"
+            raise ValueError(msg)
+        return v
 
 
 class SortableListMixin(BaseModel):

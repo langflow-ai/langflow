@@ -1,6 +1,6 @@
 from typing import Any
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import (
     BoolInput,
@@ -10,7 +10,7 @@ from langflow.inputs.inputs import (
     MessageTextInput,
 )
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 
 
@@ -20,6 +20,7 @@ class UpdateDataComponent(Component):
     name: str = "UpdateData"
     MAX_FIELDS = 15  # Define a constant for maximum number of fields
     icon = "FolderSync"
+    legacy = True
 
     inputs = [
         DataInput(

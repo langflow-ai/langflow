@@ -20,6 +20,7 @@ from pydantic_settings import (
 )
 from typing_extensions import override
 
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from langflow.utils.util_strings import is_valid_database_url
 
@@ -134,6 +135,7 @@ class Settings(BaseSettings):
     prometheus_port: int = 9090
     """The port on which Langflow will expose Prometheus metrics. 9090 is the default port."""
 
+    disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
     components_path: list[str] = []
     langchain_cache: str = "InMemoryCache"
@@ -188,7 +190,7 @@ class Settings(BaseSettings):
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
     # Config
-    host: str = "127.0.0.1"
+    host: str = "localhost"
     """The host on which Langflow will run."""
     port: int = 7860
     """The port on which Langflow will run."""
@@ -224,6 +226,16 @@ class Settings(BaseSettings):
     """The polling interval for the webhook in ms."""
     fs_flows_polling_interval: int = 10000
     """The polling interval in milliseconds for synchronizing flows from the file system."""
+    ssl_cert_file: str | None = None
+    """Path to the SSL certificate file on the local system."""
+    ssl_key_file: str | None = None
+    """Path to the SSL key file on the local system."""
+    max_text_length: int = MAX_TEXT_LENGTH
+    """Maximum number of characters to store and display in the UI. Responses longer than this
+    will be truncated when displayed in the UI. Does not truncate responses between components nor outputs."""
+    max_items_length: int = MAX_ITEMS_LENGTH
+    """Maximum number of items to store and display in the UI. Lists longer than this
+    will be truncated when displayed in the UI. Does not affect data passed between components nor outputs."""
 
     # MCP Server
     mcp_server_enabled: bool = True
@@ -238,7 +250,7 @@ class Settings(BaseSettings):
     public_flow_expiration: int = Field(default=86400, gt=600)
     """The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup.
     Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes)."""
-    event_delivery: Literal["polling", "streaming", "direct"] = "polling"
+    event_delivery: Literal["polling", "streaming", "direct"] = "streaming"
     """How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'."""
     lazy_load_components: bool = False
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
@@ -389,6 +401,12 @@ class Settings(BaseSettings):
     @field_validator("components_path", mode="before")
     @classmethod
     def set_components_path(cls, value):
+        """Processes and updates the components path list, incorporating environment variable overrides.
+
+        If the `LANGFLOW_COMPONENTS_PATH` environment variable is set and points to an existing path, it is
+        appended to the provided list if not already present. If the input list is empty or missing, it is
+        set to an empty list.
+        """
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
             langflow_component_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
@@ -403,11 +421,8 @@ class Settings(BaseSettings):
                     logger.debug(f"Appending {langflow_component_path} to components_path")
 
         if not value:
-            value = [BASE_COMPONENTS_PATH]
-            logger.debug("Setting default components path to components_path")
-        elif BASE_COMPONENTS_PATH not in value:
-            value.append(BASE_COMPONENTS_PATH)
-            logger.debug("Adding default components path to components_path")
+            value = []
+            logger.debug("Setting empty components path")
 
         logger.debug(f"Components path: {value}")
         return value

@@ -1,4 +1,5 @@
 import { GRADIENT_CLASS } from "@/constants/constants";
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
 import ComponentTextModal from "@/modals/textAreaModal";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,6 +21,10 @@ const inputClasses = {
 };
 
 const WEBHOOK_VALUE = "CURL_WEBHOOK";
+const MCP_SSE_VALUE = "MCP_SSE";
+
+const { protocol, host } = customGetHostProtocol();
+const URL_MCP_SSE = `${protocol}//${host}/api/v1/mcp/sse`;
 
 const externalLinkIconClasses = {
   gradient: ({
@@ -75,6 +80,11 @@ export default function TextAreaComponent({
     [nodeInformationMetadata?.nodeType],
   );
 
+  const isMCPSSE = useMemo(
+    () => nodeInformationMetadata?.nodeType === "mcp_sse",
+    [nodeInformationMetadata?.nodeType],
+  );
+
   useEffect(() => {
     if (isWebhook && value === WEBHOOK_VALUE) {
       const curlWebhookCode = getCurlWebhookCode({
@@ -84,8 +94,11 @@ export default function TextAreaComponent({
         format: "singleline",
       });
       handleOnNewValue({ value: curlWebhookCode });
+    } else if (value === MCP_SSE_VALUE) {
+      const mcpSSEUrl = `${URL_MCP_SSE}`;
+      handleOnNewValue({ value: mcpSSEUrl });
     }
-  }, [isWebhook]);
+  }, [isWebhook, value, nodeInformationMetadata, handleOnNewValue]);
 
   const getInputClassName = () => {
     return cn(

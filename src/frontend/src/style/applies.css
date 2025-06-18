@@ -191,7 +191,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply form-input block w-full rounded-md border border-border bg-background px-3 text-left shadow-sm placeholder:text-placeholder-foreground hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
+    @apply form-input block w-full rounded-md border border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .input-edit-node {
@@ -320,18 +320,6 @@
   }
   .generic-node-div {
     @apply flex flex-col justify-center bg-background transition-all;
-  }
-  .generic-node-div-title {
-    @apply flex flex-1 items-center gap-2 overflow-hidden;
-  }
-  .generic-node-title-arrangement {
-    @apply flex-max-width items-center truncate;
-  }
-  .generic-node-icon {
-    @apply h-12 w-12 rounded;
-  }
-  .generic-node-tooltip-div {
-    @apply ml-2 flex w-full truncate;
   }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
@@ -546,7 +534,7 @@
     @apply flex justify-between;
   }
   .edit-flow-span {
-    @apply ml-10 animate-pulse text-status-red;
+    @apply ml-8 text-mmd font-normal text-status-red;
   }
 
   .float-component-pointer {
@@ -561,12 +549,6 @@
     @apply flex max-w-[110px] cursor-pointer items-center gap-2 lg:max-w-[150px];
   }
 
-  .header-menu-bar-display-2 {
-    @apply flex cursor-pointer items-center gap-2;
-  }
-  .header-menu-flow-name-2 {
-    @apply flex-1;
-  }
   .header-menu-flow-name {
     @apply flex-1 truncate;
   }
@@ -1189,23 +1171,7 @@
   }
 
   .button-run-bg {
-    @apply flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm bg-transparent p-0 hover:bg-muted hover:p-1;
-  }
-
-  .play-button-icon {
-    @apply h-4 w-4 transition-all group-hover/node:opacity-100;
-  }
-
-  .lucide-icon {
-    @apply h-5 w-5;
-  }
-
-  .bg-lucide-icon {
-    @apply flex h-8 w-8 items-center justify-center rounded-md bg-muted p-[6px];
-  }
-
-  .integration-icon {
-    @apply h-8 w-8 rounded-md;
+    @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm bg-transparent hover:bg-muted;
   }
 
   .show-node-icon {
@@ -1257,6 +1223,10 @@
     @apply h-7 w-7 rounded-md;
   }
 
+  .hit-area-hover {
+    @apply transition-colors duration-200 hover:bg-muted hover:text-foreground;
+  }
+
   .node-toolbar-buttons {
     @apply flex w-max items-center gap-1 rounded-lg text-foreground;
   }
@@ -1270,7 +1240,7 @@
   }
 
   .playground-btn-flow-toolbar {
-    @apply relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition-all duration-500 ease-in-out;
+    @apply relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-normal transition-all duration-500 ease-in-out;
   }
 
   .input-slider-text {
@@ -1278,11 +1248,19 @@
   }
 
   .btn-add-input-list {
-    @apply flex h-8 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
+    @apply flex h-6 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
   }
 
   .btn-playground-actions {
     @apply flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all;
+  }
+
+  .no-focus-visible {
+    @apply focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0;
+    --tw-ring-offset-width: none !important;
+    --tw-ring-shadow: none !important;
+    --tw-ring-offset-shadow: none !important;
+    --tw-ring-color: none !important;
   }
 }
 
@@ -1299,11 +1277,7 @@
 }
 
 .deploy-dropdown-item {
-  @apply h-11 cursor-pointer px-2.5 py-1 text-[14px] font-normal hover:bg-background !important;
-}
-
-.deploy-dropdown-item > :first-child {
-  @apply flex h-8 w-full items-center rounded-md px-2 py-1 !important;
+  @apply cursor-pointer rounded-none px-3 py-2 text-[13px] font-normal;
 }
 
 :root {

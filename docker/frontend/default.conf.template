@@ -5,6 +5,7 @@ events {}
 http {
     include /etc/nginx/mime.types;
     default_type text/plain;
+    client_max_body_size ${LANGFLOW_MAX_FILE_SIZE_UPLOAD}M;
 
     types {
         text/html html;
@@ -27,7 +28,15 @@ http {
             root /usr/share/nginx/html;
             index index.html index.htm;
             try_files $uri $uri/ /index.html =404;
+            expires 1d;
+            add_header Cache-Control "public";
         }
+        location = /index.html {
+            root /usr/share/nginx/html;
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+            etag on;
+        }
+        
         location /api {
             proxy_pass ${BACKEND_URL};
         }

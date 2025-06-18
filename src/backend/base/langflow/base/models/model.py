@@ -9,10 +9,9 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.output_parsers import BaseOutputParser
 
 from langflow.base.constants import STREAM_INFO_TEXT
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing import LanguageModel
-from langflow.inputs import MessageInput
-from langflow.inputs.inputs import BoolInput, InputTypes, MultilineInput
+from langflow.inputs.inputs import BoolInput, InputTypes, MessageInput, MultilineInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 
@@ -26,6 +25,14 @@ class LCModelComponent(Component):
     display_name: str = "Model Name"
     description: str = "Model Description"
     trace_type = "llm"
+    metadata = {
+        "keywords": [
+            "model",
+            "llm",
+            "language model",
+            "large language model",
+        ],
+    }
 
     # Optional output parser to pass to the runnable. Subclasses may allow the user to input an `output_parser`
     output_parser: BaseOutputParser | None = None
@@ -42,7 +49,7 @@ class LCModelComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Message", name="text_output", method="text_response"),
+        Output(display_name="Model Response", name="text_output", method="text_response"),
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
@@ -167,7 +174,7 @@ class LCModelComponent(Component):
         stream: bool,
         input_value: str | Message,
         system_message: str | None = None,
-    ):
+    ) -> Message:
         if getattr(self, "detailed_thinking", False):
             system_message = DETAILED_THINKING_PREFIX + (system_message or "")
 
@@ -185,7 +192,7 @@ class LCModelComponent(Component):
         stream: bool,
         input_value: str | Message,
         system_message: str | None = None,
-    ):
+    ) -> Message:
         messages: list[BaseMessage] = []
         if not input_value and not system_message:
             msg = "The message you want to send to the model is empty."
@@ -241,7 +248,7 @@ class LCModelComponent(Component):
                 raise ValueError(message) from e
             raise
 
-        return result
+        return Message(text=result)
 
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -276,9 +283,17 @@ class LCModelComponent(Component):
             # Ensure component_inputs is a list of the expected types
             if not isinstance(component_inputs, list):
                 component_inputs = []
-            models_module = importlib.import_module("langflow.components.models")
-            component_class = getattr(models_module, str(module_name))
-            component = component_class()
+
+            import warnings
+
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
+                )
+                warnings.filterwarnings("ignore", message="Valid config keys have changed in V2", category=UserWarning)
+                models_module = importlib.import_module("langflow.components.models")
+                component_class = getattr(models_module, str(module_name))
+                component = component_class()
 
             return self.build_llm_model_from_inputs(component, component_inputs)
         except Exception as e:

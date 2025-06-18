@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from cryptography.fernet import Fernet
-from fastapi import Depends, HTTPException, Security, status
+from fastapi import Depends, HTTPException, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from loguru import logger
@@ -49,8 +49,19 @@ async def api_key_security(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Missing first superuser credentials",
                 )
-
-            result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+            warnings.warn(
+                (
+                    "In v1.5, the default behavior of AUTO_LOGIN authentication will change to require a valid API key"
+                    " or JWT. If you integrated with Langflow prior to v1.5, make sure to update your code to pass an "
+                    "API key or JWT when authenticating with protected endpoints."
+                ),
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if query_param or header_param:
+                result = await check_key(db, query_param or header_param)
+            else:
+                result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -73,6 +84,55 @@ async def api_key_security(
             return UserRead.model_validate(result, from_attributes=True)
     msg = "Invalid result type"
     raise ValueError(msg)
+
+
+async def ws_api_key_security(
+    api_key: str | None,
+) -> UserRead:
+    settings = get_settings_service()
+    async with get_db_service().with_session() as db:
+        if settings.auth_settings.AUTO_LOGIN:
+            if not settings.auth_settings.SUPERUSER:
+                # internal server misconfiguration
+                raise WebSocketException(
+                    code=status.WS_1011_INTERNAL_ERROR,
+                    reason="Missing first superuser credentials",
+                )
+            warnings.warn(
+                ("In v1.5, AUTO_LOGIN will *require* a valid API key or JWT. Please update your clients accordingly."),
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if api_key:
+                result = await check_key(db, api_key)
+            else:
+                result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
+
+        # normal path: must provide an API key
+        else:
+            if not api_key:
+                raise WebSocketException(
+                    code=status.WS_1008_POLICY_VIOLATION,
+                    reason="An API key must be passed as query or header",
+                )
+            result = await check_key(db, api_key)
+
+        # key was invalid or missing
+        if not result:
+            raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Invalid or missing API key",
+            )
+
+        # convert SQL-model User → pydantic UserRead
+        if isinstance(result, User):
+            return UserRead.model_validate(result, from_attributes=True)
+
+    # fallback: something unexpected happened
+    raise WebSocketException(
+        code=status.WS_1011_INTERNAL_ERROR,
+        reason="Authentication subsystem error",
+    )
 
 
 async def get_current_user(
@@ -156,16 +216,28 @@ async def get_current_user_by_jwt(
 
 async def get_current_user_for_websocket(
     websocket: WebSocket,
-    db: Annotated[AsyncSession, Depends(get_session)],
-    query_param: Annotated[str, Security(api_key_query)],
-) -> User | None:
-    token = websocket.query_params.get("token")
-    api_key = websocket.query_params.get("x-api-key")
+    db: AsyncSession,
+) -> User | UserRead:
+    token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
     if token:
-        return await get_current_user_by_jwt(token, db)
+        user = await get_current_user_by_jwt(token, db)
+        if user:
+            return user
+
+    api_key = (
+        websocket.query_params.get("x-api-key")
+        or websocket.query_params.get("api_key")
+        or websocket.headers.get("x-api-key")
+        or websocket.headers.get("api_key")
+    )
     if api_key:
-        return await api_key_security(api_key, query_param)
-    return None
+        user_read = await ws_api_key_security(api_key)
+        if user_read:
+            return user_read
+
+    raise WebSocketException(
+        code=status.WS_1008_POLICY_VIOLATION, reason="Missing or invalid credentials (cookie, token or API key)."
+    )
 
 
 async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):

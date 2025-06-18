@@ -46,7 +46,7 @@ export const useGetFolderQuery: useQueryFunctionType<
       }
     }
 
-    const url = addQueryParams(`${getURL("FOLDERS")}/${params.id}`, params);
+    const url = addQueryParams(`${getURL("PROJECTS")}/${params.id}`, params);
     const { data } = await api.get<PaginatedFolderType>(url);
 
     const { flows } = processFlows(data.flows.items);

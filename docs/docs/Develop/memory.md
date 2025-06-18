@@ -15,7 +15,13 @@ This page details the following memory configuration options in Langflow.
 
 ## Local Langflow database tables
 
-The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database located at `langflow/src/backend/base/langflow/langflow.db`. The following tables are stored in `langflow.db`:
+The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) database stored in your system's cache directory:
+
+- Linux/WSL: `~/.cache/langflow/langflow.db`
+- macOS: `/Users/<username>/Library/Caches/langflow/langflow.db`
+- Windows: `%LOCALAPPDATA%\langflow\langflow\Cache\langflow.db`
+
+The following tables are stored in `langflow.db`:
 
 • **User** - Stores user account information including credentials, permissions, and profiles. For more information, see [Authentication](/configuration-authentication).
 
@@ -27,7 +33,7 @@ The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) da
 
 • **ApiKey** - Manages API authentication keys for users. For more information, see [API keys](/configuration-api-keys).
 
-• **Folder** - Provides a structure for flow storage. For more information, see [Projects and folders](/concepts-overview#projects-and-folders).
+• **Project** - Provides a structure for flow storage. For more information, see [Projects](/concepts-overview#projects).
 
 • **Variables** - Stores global encrypted values and credentials. For more information, see [Global variables](/configuration-global-variables).
 
@@ -78,16 +84,11 @@ LANGFLOW_DB_CONNECT_TIMEOUT=20
 
 ## Configure cache memory
 
-Langflow provides multiple caching options that can be configured using the `LANGFLOW_CACHE_TYPE` environment variable.
+The default Langflow caching behavior is an asynchronous, in-memory cache.
+```
+LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
+LANGFLOW_CACHE_TYPE=Async
+```
 
-| Type | Description | Storage Location | Persistence |
-|------|-------------|------------------|-------------|
-| `async` (default) | Asynchronous in-memory cache | Application memory | Cleared on restart |
-| `memory` | Thread-safe in-memory cache | Application memory | Cleared on restart |
-| `disk` | File system-based cache | System cache directory* | Persists after restart |
-| `redis` | Distributed cache | Redis server | Persists in Redis |
-
-*System cache directory locations:
-- Linux/WSL: `~/.cache/langflow/`
-- macOS: `/Users/<username>/Library/Caches/langflow/`
-- Windows: `%LOCALAPPDATA%\langflow\langflow\Cache`
+Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache are not supported.
+The default behavior is suitable for most use cases.

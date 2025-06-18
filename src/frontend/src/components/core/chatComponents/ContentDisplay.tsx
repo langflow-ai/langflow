@@ -4,7 +4,7 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import ForwardedIconComponent from "../../common/genericIconComponent";
-import SimplifiedCodeTabComponent from "../codeTabsComponent/ChatCodeTabComponent";
+import SimplifiedCodeTabComponent from "../codeTabsComponent";
 import DurationDisplay from "./DurationDisplay";
 
 export default function ContentDisplay({
@@ -32,7 +32,7 @@ export default function ContentDisplay({
             <Markdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeMathjax]}
-              className="inline-block w-fit max-w-full text-[14px] font-semibold text-foreground"
+              className="inline-block w-fit max-w-full text-sm font-semibold text-foreground"
             >
               {content.header.title}
             </Markdown>
@@ -57,7 +57,7 @@ export default function ContentDisplay({
             remarkPlugins={[remarkGfm]}
             linkTarget="_blank"
             rehypePlugins={[rehypeMathjax]}
-            className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+            className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
             components={{
               p({ node, ...props }) {
                 return (
@@ -154,7 +154,7 @@ export default function ContentDisplay({
             <Markdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeMathjax]}
-              className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+              className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
               components={{
                 pre({ node, ...props }) {
                   return <>{props.children}</>;
@@ -203,7 +203,7 @@ export default function ContentDisplay({
           <Markdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeMathjax]}
-            className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+            className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
           >
             **Input:**
           </Markdown>
@@ -216,7 +216,7 @@ export default function ContentDisplay({
               <Markdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeMathjax]}
-                className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+                className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
               >
                 **Output:**
               </Markdown>
@@ -228,7 +228,7 @@ export default function ContentDisplay({
               <Markdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeMathjax]}
-                className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+                className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
               >
                 **Error:**
               </Markdown>

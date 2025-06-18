@@ -8,6 +8,7 @@ import sys
 import time
 import warnings
 from contextlib import suppress
+from ipaddress import ip_address
 from pathlib import Path
 
 import click
@@ -19,7 +20,6 @@ from multiprocess import cpu_count
 from multiprocess.context import Process
 from packaging import version as pkg_version
 from rich import box
-from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -161,6 +161,10 @@ def run(
         help="Defines the polling interval for the webhook.",
         show_default=False,
     ),
+    ssl_cert_file_path: str | None = typer.Option(
+        None, help="Defines the SSL certificate file path.", show_default=False
+    ),
+    ssl_key_file_path: str | None = typer.Option(None, help="Defines the SSL key file path.", show_default=False),
 ) -> None:
     """Run Langflow."""
     # Register SIGTERM handler
@@ -202,6 +206,8 @@ def run(
     log_level = settings_service.settings.log_level
     frontend_path = settings_service.settings.frontend_path
     backend_only = settings_service.settings.backend_only
+    ssl_cert_file_path = settings_service.settings.ssl_cert_file if ssl_cert_file_path is None else ssl_cert_file_path
+    ssl_key_file_path = settings_service.settings.ssl_key_file if ssl_key_file_path is None else ssl_key_file_path
 
     # create path object if frontend_path is provided
     static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
@@ -215,7 +221,10 @@ def run(
         "bind": f"{host}:{port}",
         "workers": get_number_of_workers(workers),
         "timeout": worker_timeout,
+        "certfile": ssl_cert_file_path,
+        "keyfile": ssl_key_file_path,
     }
+    protocol = "https" if options["keyfile"] and options["certfile"] else "http"
 
     # Define an env variable to know if we are just testing the server
     if "pytest" in sys.modules:
@@ -226,12 +235,13 @@ def run(
             # Run using uvicorn on MacOS and Windows
             # Windows doesn't support gunicorn
             # MacOS requires an env variable to be set to use gunicorn
-            run_on_windows(host, port, log_level, options, app)
+            run_on_windows(host, port, log_level, options, app, protocol)
         else:
             # Run using gunicorn on Linux
-            process = run_on_mac_or_linux(host, port, log_level, options, app)
+            process = run_on_mac_or_linux(host, port, log_level, options, app, protocol)
         if open_browser and not backend_only:
-            click.launch(f"http://{host}:{port}")
+            browser_host = get_best_access_host(host, port)
+            click.launch(f"{protocol}://{browser_host}:{port}")
         if process:
             process.join()
     except (KeyboardInterrupt, SystemExit) as e:
@@ -250,12 +260,14 @@ def run(
         raise typer.Exit(1) from e
 
 
-def wait_for_server_ready(host, port) -> None:
+def wait_for_server_ready(host, port, protocol) -> None:
     """Wait for the server to become ready by polling the health endpoint."""
     status_code = 0
     while status_code != httpx.codes.OK:
         try:
-            status_code = httpx.get(f"http://{host}:{port}/health").status_code
+            status_code = httpx.get(
+                f"{protocol}://{host}:{port}/health", verify=host not in ("localhost", "127.0.0.1")
+            ).status_code
         except HTTPError:
             time.sleep(1)
         except Exception:  # noqa: BLE001
@@ -263,18 +275,18 @@ def wait_for_server_ready(host, port) -> None:
             time.sleep(1)
 
 
-def run_on_mac_or_linux(host, port, log_level, options, app):
+def run_on_mac_or_linux(host, port, log_level, options, app, protocol):
     webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
     webapp_process.start()
-    wait_for_server_ready(host, port)
+    wait_for_server_ready(host, port, protocol)
 
-    print_banner(host, port)
+    print_banner(host, port, protocol)
     return webapp_process
 
 
-def run_on_windows(host, port, log_level, options, app) -> None:
+def run_on_windows(host, port, log_level, options, app, protocol) -> None:
     """Run the Langflow server on Windows."""
-    print_banner(host, port)
+    print_banner(host, port, protocol)
     run_langflow(host, port, log_level, options, app)
 
 
@@ -304,6 +316,70 @@ def get_free_port(port):
     while is_port_in_use(port):
         port += 1
     return port
+
+
+def is_loopback_address(host: str) -> bool:
+    """Check if a host is a loopback address (localhost, 127.0.0.1, ::1, etc.).
+
+    Args:
+        host: The host address to check
+
+    Returns:
+        bool: True if the host is a loopback address, False otherwise
+    """
+    # Check if it's exactly "localhost"
+    if host == "localhost":
+        return True
+
+    # Check if it's exactly "0.0.0.0" (which binds to all interfaces)
+    if host == "0.0.0.0":  # noqa: S104
+        return True
+
+    try:
+        # Convert string to IP address object
+        ip = ip_address(host)
+        # Check if it's a loopback address (127.0.0.0/8 for IPv4, ::1 for IPv6)
+        return bool(ip.is_loopback)
+    except ValueError:
+        # If the IP address is invalid, default to False
+        return False
+
+
+def can_connect(host: str, port: int, timeout: float = 1.0) -> bool:
+    try:
+        for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
+            family, socktype, proto, _, sa = res
+            with socket.socket(family, socktype, proto) as s:
+                s.settimeout(timeout)
+                if s.connect_ex(sa) == 0:
+                    return True
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Failed to connect to %s:%s", host, port, exc_info=e)
+    return False
+
+
+def get_best_access_host(host: str, port: int) -> str:
+    """Get the best host to use for accessing the server.
+
+    For loopback addresses, we prefer 'localhost' over IP addresses like '127.0.0.1'
+    because 'localhost' is more universally supported across different operating systems
+    and network configurations.
+
+    Args:
+        host: The original host address
+        port: The port number
+
+    Returns:
+        str: The best host address to use for access
+    """
+    if not is_loopback_address(host):
+        return host
+
+    if host != "localhost" and can_connect("localhost", port):
+        return "localhost"
+    if can_connect(host, port):
+        return host
+    return "localhost"
 
 
 def get_letter_from_version(version: str) -> str | None:
@@ -358,7 +434,7 @@ def stylize_text(text: str, to_style: str, *, is_prerelease: bool) -> str:
     return text.replace(to_style, styled_text)
 
 
-def print_banner(host: str, port: int) -> None:
+def print_banner(host: str, port: int, protocol: str) -> None:
     notices = []
     package_names = []  # Track package names for pip install instructions
     is_pre_release = False  # Track if any package is a pre-release
@@ -384,25 +460,33 @@ def print_banner(host: str, port: int) -> None:
     if notices:
         notices.append(f"Run '{pip_command}' to update.")
 
-    styled_notices = [f"[bold]{notice}[/bold]" for notice in notices if notice]
+    [f"[bold]{notice}[/bold]" for notice in notices if notice]
     styled_package_name = stylize_text(
         package_name, package_name, is_prerelease=any("pre-release" in notice for notice in notices)
     )
 
-    title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
+    title = f"[bold]Welcome to {styled_package_name}[/bold]\n"
     info_text = (
-        "Collaborate, and contribute at our "
-        "[bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :star2:"
+        ":star2: GitHub: Star for updates → https://github.com/langflow-ai/langflow\n"
+        ":speech_balloon: Discord: Join for support → https://discord.com/invite/EqksyE2EX9"
     )
     telemetry_text = (
-        "We collect anonymous usage data to improve Langflow.\n"
-        "You can opt-out by setting [bold]DO_NOT_TRACK=true[/bold] in your environment."
+        (
+            "We collect anonymous usage data to improve Langflow.\n"
+            "To opt out, set: [bold]DO_NOT_TRACK=true[/bold] in your environment."
+        )
+        if os.getenv("DO_NOT_TRACK", os.getenv("LANGFLOW_DO_NOT_TRACK", "False")).lower() != "true"
+        else (
+            "We are [bold]not[/bold] collecting anonymous usage data to improve Langflow.\n"
+            "To contribute, set: [bold]DO_NOT_TRACK=false[/bold] in your environment."
+        )
     )
-    access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
+    access_host = get_best_access_host(host, port)
+    access_link = f"[bold]🟢 Open Langflow →[/bold] [link={protocol}://{access_host}:{port}]{protocol}://{access_host}:{port}[/link]"
 
-    panel_content = "\n\n".join([title, *styled_notices, info_text, telemetry_text, access_link])
-    panel = Panel(panel_content, box=box.ROUNDED, border_style="blue", expand=False)
-    rprint(panel)
+    message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
+
+    console.print(Panel.fit(message, border_style="#7528FC", padding=(1, 2)))
 
 
 def run_langflow(host, port, log_level, options, app) -> None:
@@ -416,6 +500,8 @@ def run_langflow(host, port, log_level, options, app) -> None:
             port=port,
             log_level=log_level.lower(),
             loop="asyncio",
+            ssl_keyfile=options["keyfile"],
+            ssl_certfile=options["certfile"],
         )
     else:
         from langflow.server import LangflowApplication
@@ -576,8 +662,8 @@ def api_key(
                     "Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
                 )
                 return None
-            from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
             from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
+            from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 
             stmt = select(ApiKey).where(ApiKey.user_id == superuser.id)
             api_key = (await session.exec(stmt)).first()

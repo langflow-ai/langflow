@@ -16,17 +16,17 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
 
-    await page.waitForSelector('[data-testid="modelsOllama"]', {
+    await page.waitForSelector('[data-testid="languagemodelsOllama"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsOllama")
+      .getByTestId("languagemodelsOllama")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
 
-    await page.locator('//*[@id="react-flow-id"]/div/div[2]/button[3]').click();
+    await page.getByTestId("fit_view").click();
 
     await adjustScreenView(page);
     await page.getByTestId("generic-node-title-arrangement").click();

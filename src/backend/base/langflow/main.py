@@ -23,6 +23,7 @@ from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router
+from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -156,7 +157,10 @@ def get_lifespan(*, fix_migration=False, version=None):
             await create_or_update_starter_projects(all_types_dict)
             logger.debug(f"Starter projects updated in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Starting telemetry service")
             telemetry_service.start()
+            logger.debug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
             logger.debug("Loading flows")
@@ -166,6 +170,11 @@ def get_lifespan(*, fix_migration=False, version=None):
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
             logger.debug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            logger.debug("Loading mcp servers for projects")
+            await init_mcp_servers()
+            logger.debug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             total_time = asyncio.get_event_loop().time() - start_time
             logger.debug(f"Total initialization time: {total_time:.2f}s")
@@ -182,7 +191,10 @@ def get_lifespan(*, fix_migration=False, version=None):
                 sync_flows_from_fs_task.cancel()
                 await asyncio.wait([sync_flows_from_fs_task])
             await teardown_services()
+
+            await asyncio.sleep(0.1)  # let logger flush async logs
             await logger.complete()
+
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
             await asyncio.gather(*temp_dir_cleanups)
             # Final message
@@ -198,7 +210,11 @@ def create_app():
     __version__ = get_version_info()["version"]
     configure()
     lifespan = get_lifespan(version=__version__)
-    app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    app = FastAPI(
+        title="Langflow",
+        version=__version__,
+        lifespan=lifespan,
+    )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
@@ -374,7 +390,7 @@ if __name__ == "__main__":
     configure()
     uvicorn.run(
         "langflow.main:create_app",
-        host="127.0.0.1",
+        host="localhost",
         port=7860,
         workers=get_number_of_workers(),
         log_level="error",

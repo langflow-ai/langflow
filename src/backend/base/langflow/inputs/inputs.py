@@ -24,6 +24,7 @@ from .input_mixin import (
     ListableInputMixin,
     MetadataTraceMixin,
     MultilineMixin,
+    QueryMixin,
     RangeMixin,
     SerializableFieldTypes,
     SliderMixin,
@@ -84,6 +85,21 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
 
     input_types: list[str] = Field(default_factory=list)
     field_type: SerializableFieldTypes = FieldTypes.OTHER
+
+
+class ToolsInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents an Input that contains a list of tools to activate, deactivate, or edit.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input.
+        value (list[dict]): The value of the input.
+
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.TOOLS
+    value: list[dict] = Field(default_factory=list)
+    is_list: bool = True
+    real_time_refresh: bool = True
 
 
 class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
@@ -279,7 +295,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.PASSWORD
     password: CoalesceBool = Field(default=True)
-    input_types: list[str] = ["Message"]
+    input_types: list[str] = []
     load_from_db: CoalesceBool = True
 
     @field_validator("value")
@@ -427,7 +443,7 @@ class NestedDictInput(
     """
 
     field_type: SerializableFieldTypes = FieldTypes.NESTED_DICT
-    value: dict | Data | None = {}
+    value: dict | None = {}
 
 
 class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
@@ -442,7 +458,10 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
     """
 
     field_type: SerializableFieldTypes = FieldTypes.DICT
-    value: dict | None = {}
+    # value: dict | None = {"key": "value"}
+    # Note do not set value to an empty dict, it will break the component in dynamic update build config
+    # value: dict | None = {}
+    value: dict = Field(default_factory=dict)
 
 
 class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
@@ -458,6 +477,8 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
         options_metadata (Optional[list[dict[str, str]]): List of dictionaries with metadata for each option.
             Default is None.
         combobox (CoalesceBool): Variable that defines if the user can insert custom values in the dropdown.
+        toggle (CoalesceBool): Variable that defines if a toggle button is shown.
+        toggle_value (CoalesceBool | None): Variable that defines the value of the toggle button. Defaults to None.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
@@ -465,6 +486,9 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     options_metadata: list[dict[str, Any]] = Field(default_factory=list)
     combobox: CoalesceBool = False
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
+    toggle: bool = False
+    toggle_disable: bool | None = None
+    toggle_value: bool | None = None
 
 
 class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolModeMixin):
@@ -490,6 +514,22 @@ class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.AUTH
     show: bool = False
+
+
+class QueryInput(MessageTextInput, QueryMixin):
+    """Represents a query input field.
+
+    This class represents an query input field and provides functionality for handling search values.
+    It inherits from the `BaseInputMixin` and `QueryMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.SEARCH.
+        separator (str | None): The separator for the query input. Defaults to None.
+        value (str): The value for the query input. Defaults to an empty string.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.QUERY
+    separator: str | None = Field(default=None)
 
 
 class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
@@ -582,6 +622,20 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     field_type: SerializableFieldTypes = FieldTypes.FILE
 
 
+class McpInput(BaseInputMixin, MetadataTraceMixin):
+    """Represents a mcp input field.
+
+    This class represents a mcp input and provides functionality for handling mcp values.
+    It inherits from the `BaseInputMixin` and `MetadataTraceMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.MCP.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.MCP
+    value: str = Field(default="")
+
+
 class LinkInput(BaseInputMixin, LinkMixin):
     field_type: SerializableFieldTypes = FieldTypes.LINK
 
@@ -606,6 +660,7 @@ class DefaultPromptField(Input):
 InputTypes: TypeAlias = (
     Input
     | AuthInput
+    | QueryInput
     | DefaultPromptField
     | BoolInput
     | DataInput
@@ -618,9 +673,11 @@ InputTypes: TypeAlias = (
     | FloatInput
     | HandleInput
     | IntInput
+    | McpInput
     | MultilineInput
     | MultilineSecretInput
     | NestedDictInput
+    | ToolsInput
     | PromptInput
     | CodeInput
     | SecretStrInput

@@ -2,6 +2,10 @@ export const switchCaseModalSize = (size: string) => {
   let minWidth: string;
   let height: string;
   switch (size) {
+    case "notice":
+      minWidth = "min-w-[400px] max-w-[400px]";
+      height = "";
+      break;
     case "x-small":
       minWidth = "min-w-[20vw]";
       height = "";
@@ -14,12 +18,20 @@ export const switchCaseModalSize = (size: string) => {
       minWidth = "min-w-[40vw]";
       height = "";
       break;
+    case "small-update":
+      minWidth = "min-w-[480px] max-w-[480px]";
+      height = "";
+      break;
     case "small":
       minWidth = "min-w-[40vw]";
       height = "h-[40vh]";
       break;
+    case "small-query":
+      minWidth = "min-w-[35vw]";
+      height = "h-fit";
+      break;
     case "medium-small-tall":
-      minWidth = "min-w-[50vw]";
+      minWidth = "w-[900px] max-w-[98vw]";
       height = "h-[70vh]";
       break;
     case "small-h-full":

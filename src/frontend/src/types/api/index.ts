@@ -91,6 +91,7 @@ export type InputFieldType = {
   icon?: string;
   text?: string;
   temp_file?: boolean;
+  separator?: string;
 };
 
 export type OutputFieldProxyType = {
@@ -103,6 +104,8 @@ export type OutputFieldType = {
   types: Array<string>;
   selected?: string;
   name: string;
+  group_outputs?: boolean;
+  method?: string;
   display_name: string;
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
@@ -156,6 +159,12 @@ export type changeUser = {
   is_superuser?: boolean;
   password?: string;
   profile_image?: string;
+  optins?: {
+    github_starred?: boolean;
+    discord_clicked?: boolean;
+    dialog_dismissed?: boolean;
+    mcp_dialog_dismissed?: boolean;
+  };
 };
 
 export type resetPasswordType = {
@@ -171,6 +180,12 @@ export type Users = {
   profile_image: string;
   create_at: Date;
   updated_at: Date;
+  optins?: {
+    github_starred?: boolean;
+    discord_clicked?: boolean;
+    dialog_dismissed?: boolean;
+    mcp_dialog_dismissed?: boolean;
+  };
 };
 
 export type Component = {
@@ -313,6 +328,7 @@ export type FieldParserType =
   | "uppercase"
   | "no_blank"
   | "valid_csv"
+  | "space_case"
   | "commands";
 
 export type TableOptionsTypeAPI = {

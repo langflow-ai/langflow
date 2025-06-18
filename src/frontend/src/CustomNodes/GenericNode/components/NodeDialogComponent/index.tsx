@@ -85,6 +85,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     if (dialogTemplate[fieldKey].real_time_refresh) {
       mutateTemplate(
         { [fieldKey]: newValue },
+        nodeId,
         nodeClass,
         setNodeClass,
         postTemplateValue,
@@ -136,6 +137,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
 
     await mutateTemplate(
       fieldValues,
+      nodeId,
       nodeClass,
       setNodeClass,
       postTemplateValue,

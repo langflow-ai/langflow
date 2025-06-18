@@ -24,7 +24,7 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: 2,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  timeout: 3 * 60 * 1000,
+  timeout: 3 * 60 * 750,
   // reporter: [
   //   ["html", { open: "never", outputFolder: "playwright-report/test-results" }],
   // ],
@@ -103,7 +103,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "uv run uvicorn --factory langflow.main:create_app --host 127.0.0.1 --port 7860 --loop asyncio",
+        "uv run uvicorn --factory langflow.main:create_app --host localhost --port 7860 --loop asyncio",
       port: 7860,
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
@@ -112,13 +112,13 @@ export default defineConfig({
       stdout: "ignore",
 
       reuseExistingServer: true,
-      timeout: 120 * 1000,
+      timeout: 120 * 750,
     },
     {
       command: "npm start",
       port: PORT || 3000,
       env: {
-        VITE_PROXY_TARGET: "http://127.0.0.1:7860",
+        VITE_PROXY_TARGET: "http://localhost:7860",
       },
     },
   ],

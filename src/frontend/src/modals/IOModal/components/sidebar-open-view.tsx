@@ -28,7 +28,7 @@ export const SidebarOpenView = ({
                 name="MessagesSquare"
                 className="h-[18px] w-[18px] text-ring"
               />
-              <div className="text-[13px] font-normal">Chat</div>
+              <div className="text-mmd font-normal">Chat</div>
             </div>
             <ShadTooltip styleClasses="z-50" content="New Chat">
               <div>

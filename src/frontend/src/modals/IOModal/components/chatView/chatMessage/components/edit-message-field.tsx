@@ -66,7 +66,7 @@ export default function EditMessageField({
               Cancel
             </Button>
           </div>
-          <div className="text-[13px] font-medium text-muted-foreground word-break-break-word">
+          <div className="text-mmd font-medium text-muted-foreground word-break-break-word">
             Editing messages will update the memory but won't restart the
             conversation.
           </div>

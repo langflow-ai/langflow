@@ -5,7 +5,7 @@ from pathlib import Path
 
 import boto3
 import pytest
-from langflow.components.data.s3_bucket_uploader import S3BucketUploaderComponent
+from langflow.components.amazon.s3_bucket_uploader import S3BucketUploaderComponent
 from langflow.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient

@@ -46,7 +46,10 @@ export const useGetTransactionsQuery: useQueryFunctionType<
   };
 
   const getTransactionsFn = async () => {
+    if (!id) return { pagination: {}, rows: [], columns: [] };
+
     const config = {};
+
     config["params"] = { flow_id: id };
     if (params) {
       config["params"] = { ...config["params"], ...params };

@@ -1,14 +1,14 @@
 from typing_extensions import TypedDict
 
 from langflow.base.models.model import LCModelComponent
-from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
-from langflow.components.models.anthropic import AnthropicModelComponent
-from langflow.components.models.azure_openai import AzureChatOpenAIComponent
-from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
-from langflow.components.models.groq import GroqModel
-from langflow.components.models.nvidia import NVIDIAModelComponent
-from langflow.components.models.openai_chat_model import OpenAIModelComponent
-from langflow.components.models.sambanova import SambaNovaComponent
+from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+from langflow.components.languagemodels.anthropic import AnthropicModelComponent
+from langflow.components.languagemodels.azure_openai import AzureChatOpenAIComponent
+from langflow.components.languagemodels.google_generative_ai import GoogleGenerativeAIComponent
+from langflow.components.languagemodels.groq import GroqModel
+from langflow.components.languagemodels.nvidia import NVIDIAModelComponent
+from langflow.components.languagemodels.openai_chat_model import OpenAIModelComponent
+from langflow.components.languagemodels.sambanova import SambaNovaComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
 
@@ -29,10 +29,25 @@ def get_filtered_inputs(component_class):
 
 
 def process_inputs(component_data: Input):
+    """Processes and modifies an input configuration based on its type or name.
+
+    Adjusts properties such as value, advanced status, real-time refresh, and additional information for specific
+    input types or names to ensure correct behavior in the UI and provider integration.
+
+    Args:
+        component_data: The input configuration to process.
+
+    Returns:
+        The modified input configuration.
+    """
     if isinstance(component_data, SecretStrInput):
         component_data.value = ""
         component_data.load_from_db = False
-    elif component_data.name in {"temperature", "tool_model_enabled", "base_url"}:
+        component_data.real_time_refresh = True
+    elif component_data.name == "tool_model_enabled":
+        component_data.advanced = True
+        component_data.value = True
+    elif component_data.name in {"temperature", "base_url"}:
         component_data = set_advanced_true(component_data)
     elif component_data.name == "model_name":
         component_data = set_real_time_refresh_false(component_data)
@@ -71,7 +86,7 @@ def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Inpu
 
 def _get_google_generative_ai_inputs_and_fields():
     try:
-        from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
+        from langflow.components.languagemodels.google_generative_ai import GoogleGenerativeAIComponent
 
         google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
     except ImportError as e:
@@ -85,7 +100,7 @@ def _get_google_generative_ai_inputs_and_fields():
 
 def _get_openai_inputs_and_fields():
     try:
-        from langflow.components.models.openai_chat_model import OpenAIModelComponent
+        from langflow.components.languagemodels.openai_chat_model import OpenAIModelComponent
 
         openai_inputs = get_filtered_inputs(OpenAIModelComponent)
     except ImportError as e:
@@ -96,7 +111,7 @@ def _get_openai_inputs_and_fields():
 
 def _get_azure_inputs_and_fields():
     try:
-        from langflow.components.models.azure_openai import AzureChatOpenAIComponent
+        from langflow.components.languagemodels.azure_openai import AzureChatOpenAIComponent
 
         azure_inputs = get_filtered_inputs(AzureChatOpenAIComponent)
     except ImportError as e:
@@ -107,7 +122,7 @@ def _get_azure_inputs_and_fields():
 
 def _get_groq_inputs_and_fields():
     try:
-        from langflow.components.models.groq import GroqModel
+        from langflow.components.languagemodels.groq import GroqModel
 
         groq_inputs = get_filtered_inputs(GroqModel)
     except ImportError as e:
@@ -118,7 +133,7 @@ def _get_groq_inputs_and_fields():
 
 def _get_anthropic_inputs_and_fields():
     try:
-        from langflow.components.models.anthropic import AnthropicModelComponent
+        from langflow.components.languagemodels.anthropic import AnthropicModelComponent
 
         anthropic_inputs = get_filtered_inputs(AnthropicModelComponent)
     except ImportError as e:
@@ -129,7 +144,7 @@ def _get_anthropic_inputs_and_fields():
 
 def _get_nvidia_inputs_and_fields():
     try:
-        from langflow.components.models.nvidia import NVIDIAModelComponent
+        from langflow.components.languagemodels.nvidia import NVIDIAModelComponent
 
         nvidia_inputs = get_filtered_inputs(NVIDIAModelComponent)
     except ImportError as e:
@@ -140,7 +155,7 @@ def _get_nvidia_inputs_and_fields():
 
 def _get_amazon_bedrock_inputs_and_fields():
     try:
-        from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
+        from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 
         amazon_bedrock_inputs = get_filtered_inputs(AmazonBedrockComponent)
     except ImportError as e:
@@ -151,7 +166,7 @@ def _get_amazon_bedrock_inputs_and_fields():
 
 def _get_sambanova_inputs_and_fields():
     try:
-        from langflow.components.models.sambanova import SambaNovaComponent
+        from langflow.components.languagemodels.sambanova import SambaNovaComponent
 
         sambanova_inputs = get_filtered_inputs(SambaNovaComponent)
     except ImportError as e:

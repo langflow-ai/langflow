@@ -6,13 +6,17 @@ import NodeOutputField from "../NodeOutputfield";
 
 export const OutputParameter = ({
   output,
+  outputs = [],
   idx,
   lastOutput,
   data,
   types,
   selected,
   showNode,
+  showHiddenOutputs,
   isToolMode,
+  hidden,
+  handleSelectOutput,
 }) => {
   const id = useMemo(
     () => ({
@@ -36,6 +40,7 @@ export const OutputParameter = ({
 
   return (
     <NodeOutputField
+      hidden={hidden}
       index={idx}
       lastOutput={lastOutput}
       selected={selected}
@@ -49,8 +54,11 @@ export const OutputParameter = ({
       type={output.types.join("|")}
       showNode={showNode}
       outputName={output.name}
+      outputs={outputs}
+      handleSelectOutput={handleSelectOutput}
       colorName={colorNames}
       isToolMode={isToolMode}
+      showHiddenOutputs={showHiddenOutputs}
     />
   );
 };

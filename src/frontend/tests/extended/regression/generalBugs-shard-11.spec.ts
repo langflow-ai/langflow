@@ -49,14 +49,14 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("search api");
-    await page.waitForSelector('[data-testid="toolsSearch API"]', {
+    await page.waitForSelector('[data-testid="searchSearch API"]', {
       timeout: 1000,
     });
 
     await zoomOut(page, 3);
 
     await page
-      .getByTestId("toolsSearch API")
+      .getByTestId("searchSearch API")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });

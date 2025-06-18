@@ -1,6 +1,6 @@
+import CustomFileCard from "@/customization/components/custom-file-card";
 import { useState } from "react";
 import ForwardedIconComponent from "../../../../../../components/common/genericIconComponent";
-import FileCard from "../../fileComponent/components/file-card";
 import formatFileName from "../../fileComponent/utils/format-file-name";
 
 export default function FileCardWrapper({
@@ -33,7 +33,7 @@ export default function FileCardWrapper({
         {formatFileName(name, 50)}
         <ForwardedIconComponent name={show ? "ChevronDown" : "ChevronRight"} />
       </span>
-      <FileCard
+      <CustomFileCard
         showFile={show}
         fileName={name}
         fileType={type}

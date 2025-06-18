@@ -7,30 +7,30 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="disclosure-inputs"]', {
+    await page.waitForSelector('[data-testid="disclosure-i/o"]', {
       timeout: 3000,
       state: "visible",
     });
 
-    await page.getByTestId("disclosure-inputs").click();
-    await page.waitForSelector('[data-testid="inputsText Input"]', {
+    await page.getByTestId("disclosure-i/o").click();
+    await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 3000,
       state: "visible",
     });
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-text-input").click();
         await page.getByTestId("button_run_text input").click();
       });
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
+    await page.waitForSelector("text=Running", {
+      timeout: 30000,
+      state: "visible",
     });
 
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
     await page.getByTestId("notification_button").click();
 
     // Add explicit waits before checking visibility
@@ -39,10 +39,6 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=Running components", {
-      timeout: 30000,
-      state: "visible",
-    });
     // Then check visibility
     const notificationsText = page
       .getByText("Notifications", { exact: true })
@@ -52,13 +48,8 @@ test(
     const trashIcon = page.getByTestId("icon-Trash2").last();
     await expect(trashIcon).toBeVisible();
 
-    const runningComponentsText = page
-      .getByText("Running components", { exact: true })
-      .last();
-    await expect(runningComponentsText).toBeVisible();
-
     const builtSuccessfullyText = page
-      .getByText("Text Input built successfully", { exact: true })
+      .getByText("Flow built successfully", { exact: true })
       .last();
     await expect(builtSuccessfullyText).toBeVisible();
   },

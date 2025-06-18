@@ -1,11 +1,9 @@
 import IconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTweaksStore } from "@/stores/tweaksStore";
-import { AllNodeType } from "@/types/flow";
 import { tabsArrayType } from "@/types/tabs";
 import { hasStreaming } from "@/utils/reactflowUtils";
 import { useEffect, useState } from "react";
@@ -14,13 +12,18 @@ import {
   oneDark,
   oneLight,
 } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { useShallow } from "zustand/react/shallow";
 import { useDarkStore } from "../../../stores/darkStore";
+import { formatPayloadTweaks } from "../utils/filter-tweaks";
 import { getNewCurlCode } from "../utils/get-curl-code";
 import { getNewJsApiCode } from "../utils/get-js-api-code";
 import { getNewPythonApiCode } from "../utils/get-python-api-code";
 
 export default function APITabsComponent() {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
+  const endpointName = useFlowStore(
+    useShallow((state) => state.currentFlow?.endpoint_name),
+  );
   const dark = useDarkStore((state) => state.dark);
   const nodes = useFlowStore((state) => state.nodes);
   const flowId = useFlowStore((state) => state.currentFlow?.id);
@@ -39,17 +42,30 @@ export default function APITabsComponent() {
   }
   const streaming = hasStreaming(nodes);
   const tweaks = useTweaksStore((state) => state.tweaks);
+  const activeTweaks = Object.values(tweaks).some(
+    (tweak) => Object.keys(tweak).length > 0,
+  );
+
+  const includeTopLevelInputValue = formatPayloadTweaks(tweaks);
+  const processedPayload: any = {
+    output_type: hasChatOutput ? "chat" : "text",
+    input_type: hasChatInput ? "chat" : "text",
+  };
+
+  if (includeTopLevelInputValue) {
+    processedPayload.input_value = input_value;
+  }
+
+  if (activeTweaks && tweaks && Object.keys(tweaks).length > 0) {
+    processedPayload.tweaks = tweaks;
+  }
+
   const codeOptions = {
+    endpointName: endpointName || "",
     streaming: streaming,
     flowId: flowId || "",
     isAuthenticated: !autologin || false,
-    input_value: input_value,
-    input_type: hasChatInput ? "chat" : "text",
-    output_type: hasChatOutput ? "chat" : "text",
-    tweaksObject: tweaks,
-    activeTweaks: Object.values(tweaks).some(
-      (tweak) => Object.keys(tweak).length > 0,
-    ),
+    processedPayload: processedPayload,
   };
   const tabsList: tabsArrayType = [
     {
@@ -109,7 +125,7 @@ export default function APITabsComponent() {
               <TabsTrigger
                 key={index}
                 value={index.toString()}
-                className="flex items-center gap-2.5 rounded-md !border-0 px-4 py-2 !text-[14px] data-[state=active]:bg-background"
+                className="flex items-center gap-2.5 rounded-md !border-0 px-4 py-2 !text-sm data-[state=active]:bg-background"
               >
                 <IconComponent name={tab.icon} className="h-4 w-4" />
                 {tab.title}

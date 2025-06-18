@@ -19,7 +19,7 @@ from langflow.inputs.inputs import (
     MultilineInput,
 )
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 
 

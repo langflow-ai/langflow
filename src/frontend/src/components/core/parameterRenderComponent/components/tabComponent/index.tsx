@@ -1,4 +1,5 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import { testIdCase } from "@/utils/utils";
 import { useEffect, useState } from "react";
 import { InputProps, TabComponentType } from "../../types";
 
@@ -49,6 +50,7 @@ export default function TabComponent({
               value={tab}
               className="block flex-1 truncate px-2"
               disabled={disabled}
+              data-testid={`tab_${index}_${testIdCase(tab)}`}
             >
               {tab}
             </TabsTrigger>

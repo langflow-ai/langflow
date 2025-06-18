@@ -1,4 +1,5 @@
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -64,7 +65,7 @@ export default function ChatInput({
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
   ) => {
-    if (playgroundPage) {
+    if (playgroundPage && !ENABLE_IMAGE_ON_PLAYGROUND) {
       return;
     }
 

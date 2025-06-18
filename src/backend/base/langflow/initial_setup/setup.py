@@ -26,7 +26,12 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
+from langflow.base.constants import (
+    FIELD_FORMAT_ATTRIBUTES,
+    NODE_FORMAT_ATTRIBUTES,
+    ORJSON_OPTIONS,
+    SKIPPED_FIELD_ATTRIBUTES,
+)
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -56,22 +61,24 @@ def update_projects_components_with_latest_component_versions(project_data, all_
         node_data = node.get("data").get("node")
         node_type = node.get("data").get("type")
 
-        # Skip updating if tool_mode is True
-        if node_data.get("tool_mode", False) or node_data.get("key") == "Agent":
-            continue
-
-        # Skip nodes with outputs of the specified format
-        # NOTE: to account for the fact that the Simple Agent has dynamic outputs
-        if any(output.get("types") == ["Tool"] for output in node_data.get("outputs", [])):
-            continue
-
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
 
-            if "outputs" in latest_node:
+            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") == "Agent"
+            has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
+            if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
+                # Set selected output as the previous selected output
+                for output in latest_node["outputs"]:
+                    node_data_output = next(
+                        (output_ for output_ in node_data["outputs"] if output_["name"] == output["name"]),
+                        None,
+                    )
+                    if node_data_output:
+                        output["selected"] = node_data_output.get("selected")
                 node_data["outputs"] = latest_node["outputs"]
+
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
                 if node_type != "Prompt":
@@ -128,7 +135,16 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                         continue
                     # The idea here is to update some attributes of the field
                     to_check_attributes = FIELD_FORMAT_ATTRIBUTES
+                    # Skip specific field attributes that should respect the starter project template values.
+                    # Currently we skip 'advanced' so that a field marked as advanced in the component code
+                    # will NOT overwrite the value specified in the starter project template. This preserves
+                    # the intended UX configuration of the starter projects.
+                    # SKIPPED_FIELD_ATTRIBUTES = {"advanced"}
+                    # Iterate through the attributes we want to potentially update
                     for attr in to_check_attributes:
+                        # Respect the template value by not updating if the attribute is in the skipped set
+                        if attr in SKIPPED_FIELD_ATTRIBUTES:
+                            continue
                         if (
                             attr in field_dict
                             and attr in node_data["template"].get(field_name)
@@ -146,13 +162,18 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             # Remove fields that are not in the latest template
             if node_type != "Prompt":
                 for field_name in list(node_data["template"].keys()):
-                    if field_name not in latest_template:
+                    is_tool_mode_and_field_is_tools_metadata = (
+                        node_data.get("tool_mode", False) and field_name == "tools_metadata"
+                    )
+                    if field_name not in latest_template and not is_tool_mode_and_field_is_tools_metadata:
                         node_data["template"].pop(field_name)
     log_node_changes(node_changes_log)
     return project_data_copy
 
 
 def scape_json_parse(json_string: str) -> dict:
+    if json_string is None:
+        return {}
     if isinstance(json_string, dict):
         return json_string
     parsed_string = json_string.replace("œ", '"')
@@ -488,6 +509,7 @@ def log_node_changes(node_changes_log) -> None:
 async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, dict]]:
     starter_projects = []
     folder = anyio.Path(__file__).parent / "starter_projects"
+    logger.debug("Loading starter projects")
     async for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
@@ -496,7 +518,6 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
             try:
                 project = orjson.loads(content)
                 starter_projects.append((file, project))
-                logger.info(f"Loaded starter project {file}")
                 break  # Break if load is successful
             except orjson.JSONDecodeError as e:
                 attempt += 1
@@ -504,6 +525,7 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
                     msg = f"Error loading starter project {file}: {e}"
                     raise ValueError(msg) from e
                 await asyncio.sleep(delay)  # Wait before retrying
+    logger.debug(f"Loaded {len(starter_projects)} starter projects")
     return starter_projects
 
 
@@ -561,8 +583,6 @@ async def copy_profile_pictures() -> None:
             if str(rel_path) not in target_files:
                 dst_file = target / rel_path
                 tasks.append(copy_file(src_file, dst_file, rel_path))
-            else:
-                logger.debug(f"Skipped existing file: '{rel_path}'")
 
         if tasks:
             await asyncio.gather(*tasks)
@@ -605,7 +625,7 @@ async def update_project_file(project_path: anyio.Path, project: dict, updated_p
     project["data"] = updated_project_data
     async with async_open(str(project_path), "w", encoding="utf-8") as f:
         await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
-    logger.info(f"Updated starter project {project['name']} file")
+    logger.debug(f"Updated starter project {project['name']} file")
 
 
 def update_existing_project(
@@ -641,7 +661,6 @@ def create_new_project(
     project_icon_bg_color,
     new_folder_id,
 ) -> None:
-    logger.debug(f"Creating starter project {project_name}")
     new_project = FlowCreate(
         name=project_name,
         description=project_description,
@@ -879,51 +898,59 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
         all_types_dict (dict): Dictionary containing all component types and their templates
         do_create (bool, optional): Whether to create new projects. Defaults to True.
     """
+    successfully_created_projects = 0
     async with session_scope() as session:
         new_folder = await create_starter_folder(session)
         starter_projects = await load_starter_projects()
         await delete_start_projects(session, new_folder.id)
         await copy_profile_pictures()
         for project_path, project in starter_projects:
-            (
-                project_name,
-                project_description,
-                project_is_component,
-                updated_at_datetime,
-                project_data,
-                project_icon,
-                project_icon_bg_color,
-                project_gradient,
-                project_tags,
-            ) = get_project_data(project)
-            do_update_starter_projects = os.environ.get("LANGFLOW_UPDATE_STARTER_PROJECTS", "true").lower() == "true"
-            if do_update_starter_projects:
-                updated_project_data = update_projects_components_with_latest_component_versions(
-                    project_data.copy(), all_types_dict
+            try:
+                (
+                    project_name,
+                    project_description,
+                    project_is_component,
+                    updated_at_datetime,
+                    project_data,
+                    project_icon,
+                    project_icon_bg_color,
+                    project_gradient,
+                    project_tags,
+                ) = get_project_data(project)
+                do_update_starter_projects = (
+                    os.environ.get("LANGFLOW_UPDATE_STARTER_PROJECTS", "true").lower() == "true"
                 )
-                updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
-                if updated_project_data != project_data:
-                    project_data = updated_project_data
-                    # We also need to update the project data in the file
-                    await update_project_file(project_path, project, updated_project_data)
-            if do_create and project_name and project_data:
-                existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
-                for existing_project in existing_flows:
-                    await session.delete(existing_project)
+                if do_update_starter_projects:
+                    updated_project_data = update_projects_components_with_latest_component_versions(
+                        project_data.copy(), all_types_dict
+                    )
+                    updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
+                    if updated_project_data != project_data:
+                        project_data = updated_project_data
+                        # We also need to update the project data in the file
+                        await update_project_file(project_path, project, updated_project_data)
+                if do_create and project_name and project_data:
+                    existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
+                    for existing_project in existing_flows:
+                        await session.delete(existing_project)
 
-                create_new_project(
-                    session=session,
-                    project_name=project_name,
-                    project_description=project_description,
-                    project_is_component=project_is_component,
-                    updated_at_datetime=updated_at_datetime,
-                    project_data=project_data,
-                    project_icon=project_icon,
-                    project_icon_bg_color=project_icon_bg_color,
-                    project_gradient=project_gradient,
-                    project_tags=project_tags,
-                    new_folder_id=new_folder.id,
-                )
+                    create_new_project(
+                        session=session,
+                        project_name=project_name,
+                        project_description=project_description,
+                        project_is_component=project_is_component,
+                        updated_at_datetime=updated_at_datetime,
+                        project_data=project_data,
+                        project_icon=project_icon,
+                        project_icon_bg_color=project_icon_bg_color,
+                        project_gradient=project_gradient,
+                        project_tags=project_tags,
+                        new_folder_id=new_folder.id,
+                    )
+                    successfully_created_projects += 1
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Error while creating starter project {project_name}")
+    logger.debug(f"Successfully created {successfully_created_projects} starter projects")
 
 
 async def initialize_super_user_if_needed() -> None:

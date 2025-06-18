@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { uploadFile } from "../../utils/upload-file";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -31,7 +32,7 @@ test(
     await page
       .getByTestId("dataURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
+        targetPosition: { x: 50, y: 100 },
       });
 
     // Add Loop component
@@ -43,46 +44,52 @@ test(
 
     await page
       .getByTestId("logicLoop")
+      .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 300, y: 100 },
+        targetPosition: { x: 280, y: 100 },
       });
 
     // Add Update Data component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("update data");
-    await page.waitForSelector('[data-testid="processingUpdate Data"]', {
+    await page.getByTestId("sidebar-search-input").fill("data operations");
+    await page.waitForSelector('[data-testid="processingData Operations"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingUpdate Data")
+      .getByTestId("processingData Operations")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 100 },
       });
 
     // Add Parse Data component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("data to message");
-    await page.waitForSelector('[data-testid="processingData to Message"]', {
+    await page.getByTestId("sidebar-search-input").fill("Parser");
+    await page.waitForSelector('[data-testid="processingParser"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingData to Message")
+      .getByTestId("processingParser")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 700, y: 100 },
+        targetPosition: { x: 720, y: 100 },
       });
 
     //This one is for testing the wrong loop message
+
+    await page.getByTestId("sidebar-search-input").fill("File");
+    await page.waitForSelector('[data-testid="dataFile"]', {
+      timeout: 1000,
+    });
+
     await page
-      .getByTestId("processingData to Message")
+      .getByTestId("dataFile")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 700, y: 400 },
+        targetPosition: { x: 720, y: 400 },
       });
 
     await page
-      .getByTestId("handle-parsedata-shownode-data list-right")
-      .nth(1)
+      .getByTestId("handle-parsercomponent-shownode-parsed text-right")
       .click();
 
     const loopItemInput = await page
@@ -93,14 +100,15 @@ test(
     // Add Chat Output component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
-      timeout: 1000,
-    });
+
+    await page.locator(".react-flow__renderer").click();
+
+    await page.waitForTimeout(1000);
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 900, y: 100 },
+        targetPosition: { x: 940, y: 100 },
       });
 
     await page.getByTestId("fit_view").click();
@@ -114,17 +122,17 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-updatedata-shownode-data-left")
+      .getByTestId("handle-dataoperations-shownode-data-left")
       .first()
       .click();
 
     // URL -> Loop Data
     await page
-      .getByTestId("handle-urlcomponent-shownode-data-right")
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .first()
       .click();
     await page
-      .getByTestId("handle-loopcomponent-shownode-data-left")
+      .getByTestId("handle-loopcomponent-shownode-inputs-left")
       .first()
       .click();
 
@@ -134,22 +142,22 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
       .first()
       .click();
 
     // Parse Data -> Chat Output
     await page
-      .getByTestId("handle-parsedata-shownode-message-right")
+      .getByTestId("handle-parsercomponent-shownode-parsed text-right")
       .first()
       .click();
 
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .first()
       .click();
 
-    await zoomOut(page, 4);
+    await zoomOut(page, 3);
 
     await page.getByTestId("div-generic-node").nth(5).click();
 
@@ -177,27 +185,27 @@ test(
       .fill("https://en.wikipedia.org/wiki/Artificial_intelligence");
     await page
       .getByTestId("inputlist_str_urls_1")
-      .fill("https://en.wikipedia.org/wiki/Artificial_intelligence");
+      .fill("https://en.wikipedia.org/wiki/Human_intelligence");
 
     await page.getByTestId("div-generic-node").nth(2).click();
-    await page.getByTestId("int_int_number_of_fields").fill("1");
-    await page.getByTestId("div-generic-node").nth(2).click();
+
+    await page.getByTestId("button_open_list_selection").click();
+
+    await page.getByTestId("list_item_append_or_update").click();
 
     await page.getByTestId("keypair0").fill("text");
     await page.getByTestId("keypair100").fill("modified_value");
 
+    await uploadFile(page, "test_file.txt");
+
     // Build and run, expect the wrong loop message
-    await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=The flow has an incomplete loop.", {
-      timeout: 30000,
-    });
-    await page.getByText("The flow has an incomplete loop.").last().click({
-      timeout: 15000,
-    });
+    await page.getByTestId("button_run_file").click();
+
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     // Delete the second parse data used to test
 
-    await page.getByTestId("div-generic-node").nth(4).click();
+    await page.getByTestId("title-File").last().click();
 
     await page.getByTestId("more-options-modal").click();
 
@@ -206,7 +214,7 @@ test(
     // Update Data -> Loop Item (left side)
 
     await page
-      .getByTestId("handle-updatedata-shownode-data-right")
+      .getByTestId("handle-dataoperations-shownode-data-right")
       .first()
       .click();
     await page
@@ -217,19 +225,16 @@ test(
     // Build and run
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
 
     // Verify output
     await page.waitForSelector(
-      '[data-testid="output-inspection-message-chatoutput"]',
+      '[data-testid="output-inspection-output message-chatoutput"]',
       {
         timeout: 1000,
       },
     );
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 

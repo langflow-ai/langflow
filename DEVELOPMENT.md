@@ -68,17 +68,17 @@ This will set up the development environment by installing backend and frontend 
 Once the application is running, the command output should look similar to:
 
 ```
-╭───────────────────────────────────────────────────────────────────╮
-│ Welcome to ⛓ Langflow                                             │
-│                                                                   │
-│                                                                   │
-│ Collaborate, and contribute at our GitHub Repo 🌟                 │
-│                                                                   │
-│ We collect anonymous usage data to improve Langflow.              │
-│ You can opt-out by setting DO_NOT_TRACK=true in your environment. │
-│                                                                   │
-│ Access http://127.0.0.1:7860                                      │
-╰───────────────────────────────────────────────────────────────────╯
+╭───────────────────────────────────────────────────────────────────────╮
+│ Welcome to Langflow                                                   │
+│                                                                       │
+│ 🌟 GitHub: Star for updates → https://github.com/langflow-ai/langflow  │
+│ 💬 Discord: Join for support → https://discord.com/invite/EqksyE2EX9   │
+│                                                                       │
+│ We collect anonymous usage data to improve Langflow.                  │
+│ To opt out, set: DO_NOT_TRACK=true in your environment.               │
+│                                                                       │
+│ 🟢 Open Langflow → http://localhost:7860                               │
+╰───────────────────────────────────────────────────────────────────────╯
 ```
 
 At this point, validate you can access the UI by opening the URL shown.

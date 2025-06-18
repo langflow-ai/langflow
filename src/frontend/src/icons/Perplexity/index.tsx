@@ -1,5 +1,5 @@
 import React, { forwardRef } from "react";
-import PerplexitySVG from "./perplexity";
+import PerplexitySVG from "./Perplexity";
 
 export const PerplexityIcon = forwardRef<
   SVGSVGElement,

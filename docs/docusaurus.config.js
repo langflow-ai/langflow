@@ -5,6 +5,8 @@ const lightCodeTheme = require("prism-react-renderer/themes/github");
 const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 const { remarkCodeHike } = require("@code-hike/mdx");
 
+const isProduction = process.env.NODE_ENV === "production";
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "Langflow Documentation",
@@ -31,7 +33,48 @@ const config = {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
       },
-    }
+    },
+    ...(isProduction
+      ? [
+          // Ketch consent management script
+          {
+            tagName: "script",
+            attributes: {},
+            innerHTML: `!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}();`,
+          },
+          // Ketch jurisdiction dynamic link and GA4 consent tracking
+          {
+            tagName: "script",
+            attributes: {
+              defer: "true",
+            },
+            innerHTML: `
+          ;(function () {
+            const onKetchConsentGtagTrack = (consent) => {
+              if (window.gtag &&
+                  consent.purposes &&
+                  'analytics' in consent.purposes &&
+                  'targeted_advertising' in consent.purposes
+              ) {
+                const analyticsString = consent.purposes.analytics === true ? 'granted' : 'denied'
+                const targetedAdsString = consent.purposes.targeted_advertising === true ? 'granted' : 'denied'
+                const gtagObject = {
+                  analytics_storage: analyticsString,
+                  ad_personalization: targetedAdsString,
+                  ad_storage: targetedAdsString,
+                  ad_user_data: targetedAdsString,
+                }
+                window.gtag('consent', 'update', gtagObject)
+              }
+            }
+            if (window.ketch) {
+              window.ketch('on', 'consent', onKetchConsentGtagTrack)
+            }
+          })()
+        `,
+          },
+        ]
+      : []),
   ],
 
   presets: [
@@ -64,9 +107,10 @@ const config = {
           lastmod: "datetime",
           changefreq: null,
           priority: null,
+          ignorePatterns: ["/preferences"],
         },
         gtag: {
-          trackingID: "G-L8Y98PSEMQ",
+          trackingID: "G-SLQFLQ3KPT",
         },
         blog: false,
         theme: {
@@ -96,7 +140,7 @@ const config = {
               "/whats-new-a-new-chapter-langflow",
               "/👋 Welcome-to-Langflow",
               "/getting-started-welcome-to-langflow",
-              "/guides-new-to-llms"
+              "/guides-new-to-llms",
             ],
           },
           {
@@ -122,10 +166,7 @@ const config = {
           },
           {
             to: "/concepts-components",
-            from: [
-              "/components",
-              "/components-overview"
-            ],
+            from: ["/components", "/components-overview"],
           },
           {
             to: "/configuration-global-variables",
@@ -141,45 +182,36 @@ const config = {
           },
           {
             to: "/concepts-objects",
-            from: [
-              "/guides-data-message",
-              "/configuration-objects",
-            ]
+            from: ["/guides-data-message", "/configuration-objects"],
           },
           {
             to: "/blog-writer",
-            from: [
-              "/starter-projects-blog-writer",
-              "/tutorials-blog-writer"
-            ],
+            from: ["/starter-projects-blog-writer", "/tutorials-blog-writer"],
           },
           {
             to: "/memory-chatbot",
             from: [
               "/starter-projects-memory-chatbot",
-              "/tutorials-memory-chatbot"
+              "/tutorials-memory-chatbot",
             ],
           },
           {
             to: "/document-qa",
-            from: [
-              "/starter-projects-document-qa",
-              "/tutorials-document-qa"
-            ],
+            from: ["/starter-projects-document-qa", "/tutorials-document-qa"],
           },
           {
             to: "/starter-projects-simple-agent",
             from: [
               "/math-agent",
               "/starter-projects-math-agent",
-              "/tutorials-math-agent"
+              "/tutorials-math-agent",
             ],
           },
           {
             to: "/sequential-agent",
             from: [
               "/starter-projects-sequential-agent",
-              "/tutorials-sequential-agent"
+              "/tutorials-sequential-agent",
             ],
           },
           {
@@ -198,7 +230,7 @@ const config = {
             to: "/configuration-authentication",
             from: [
               "/configuration-security-best-practices",
-              "/Configuration/configuration-security-best-practices"
+              "/Configuration/configuration-security-best-practices",
             ],
           },
           {
@@ -207,19 +239,34 @@ const config = {
               "/configuration-auto-saving",
               "/Configuration/configuration-auto-saving",
               "/configuration-backend-only",
-              "/Configuration/configuration-backend-only"
+              "/Configuration/configuration-backend-only",
             ],
           },
           {
             to: "/concepts-publish",
-            from: [
-              "/concepts-api",
-              "/workspace-api",
-            ]
+            from: ["/concepts-api", "/workspace-api"],
           },
           {
             to: "/components-custom-components",
             from: "/components/custom",
+          },
+          {
+            to: "/components-bundle-components",
+            from: "/components-loaders",
+          },
+          {
+            to: "/mcp-server",
+            from: "/integrations-mcp",
+          },
+          {
+            to: "/integrations-nvidia-g-assist",
+            from: "/integrations-nvidia-system-assist",
+          },
+          {
+            to: "/deployment-kubernetes-dev",
+            from: [
+              "/deployment-kubernetes",
+            ],
           },
           // add more redirects like this
           // {
@@ -249,8 +296,8 @@ const config = {
         hideOnScroll: true,
         logo: {
           alt: "Langflow",
-          src: "img/langflow-logo-black.svg",
-          srcDark: "img/langflow-logo-white.svg",
+          src: "img/lf-docs-light.svg",
+          srcDark: "img/lf-docs-dark.svg",
         },
         items: [
           // right
@@ -300,14 +347,36 @@ const config = {
           hideable: false,
         },
       },
+      footer: {
+        logo: {
+          alt: "Langflow",
+          src: "img/lf-docs-light.svg",
+          srcDark: "img/lf-docs-dark.svg",
+          width: 160,
+          height: 40,
+        },
+        links: [
+          {
+            title: null,
+            items: [
+              {
+                html: `<div class="footer-links">
+                  <span>© ${new Date().getFullYear()} Langflow</span>
+                  <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
+                  </div>`,
+              },
+            ],
+          },
+        ],
+      },
       algolia: {
-        appId: 'UZK6BDPCVY',
+        appId: "UZK6BDPCVY",
         // public key, safe to commit
-        apiKey: 'adbd7686dceb1cd510d5ce20d04bf74c',
-        indexName: 'langflow',
+        apiKey: "adbd7686dceb1cd510d5ce20d04bf74c",
+        indexName: "langflow",
         contextualSearch: true,
         searchParameters: {},
-        searchPagePath: 'search',
+        searchPagePath: "search",
       },
     }),
 };

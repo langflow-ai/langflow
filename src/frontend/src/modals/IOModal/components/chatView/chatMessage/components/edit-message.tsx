@@ -4,7 +4,7 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
-import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent/ChatCodeTabComponent";
+import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
 
 type MarkdownFieldProps = {
   chat: any;
@@ -39,7 +39,7 @@ export const MarkdownField = ({
         linkTarget="_blank"
         rehypePlugins={[rehypeMathjax, rehypeRaw]}
         className={cn(
-          "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
+          "markdown prose flex w-full max-w-full flex-col items-baseline text-sm font-normal word-break-break-word dark:prose-invert",
           isEmpty ? "text-muted-foreground" : "text-primary",
         )}
         components={{

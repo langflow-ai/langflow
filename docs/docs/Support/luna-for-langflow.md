@@ -17,8 +17,8 @@ Visit the [Luna for Langflow](https://www.datastax.com/products/luna-langflow) p
 
 Luna for Langflow support covers only the following software versions for Langflow.
 
-Last updated: 2025-03-11
+Last updated: May 1, 2025
 
 ## Core information
-- **Langflow Version**: `1.3.0`
+- **Langflow Version**: `1.4.x`
 - **Python Version Required**: `>=3.10, <3.14`

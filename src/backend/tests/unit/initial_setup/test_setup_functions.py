@@ -8,23 +8,23 @@ from langflow.services.database.models.folder.model import FolderRead
 
 @pytest.mark.usefixtures("client")
 async def test_get_or_create_default_folder_creation() -> None:
-    """Test that a default folder is created for a new user.
+    """Test that a default project is created for a new user.
 
-    This test verifies that when no default folder exists for a given user,
+    This test verifies that when no default project exists for a given user,
     get_or_create_default_folder creates one with the expected name and assigns it an ID.
     """
     test_user_id = uuid4()
     async with session_scope() as session:
         folder = await get_or_create_default_folder(session, test_user_id)
-        assert folder.name == DEFAULT_FOLDER_NAME, "The folder name should match the default."
-        assert hasattr(folder, "id"), "The folder should have an 'id' attribute after creation."
+        assert folder.name == DEFAULT_FOLDER_NAME, "The project name should match the default."
+        assert hasattr(folder, "id"), "The project should have an 'id' attribute after creation."
 
 
 @pytest.mark.usefixtures("client")
 async def test_get_or_create_default_folder_idempotency() -> None:
-    """Test that subsequent calls to get_or_create_default_folder return the same folder.
+    """Test that subsequent calls to get_or_create_default_folder return the same project.
 
-    The function should be idempotent such that if a default folder already exists,
+    The function should be idempotent such that if a default project already exists,
     calling the function again does not create a new one.
     """
     test_user_id = uuid4()
@@ -39,7 +39,7 @@ async def test_get_or_create_default_folder_concurrent_calls() -> None:
     """Test concurrent invocations of get_or_create_default_folder.
 
     This test ensures that when multiple concurrent calls are made for the same user,
-    only one default folder is created, demonstrating idempotency under concurrent access.
+    only one default project is created, demonstrating idempotency under concurrent access.
     """
     test_user_id = uuid4()
 

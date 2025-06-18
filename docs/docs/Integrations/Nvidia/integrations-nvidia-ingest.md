@@ -1,19 +1,23 @@
 ---
-title:  Integrate NVIDIA Ingest with Langflow
+title:  Integrate NVIDIA Retriever Extraction with Langflow
 slug: /integrations-nvidia-ingest
 ---
 
-The **NVIDIA Ingest** component integrates with the [NVIDIA nv-ingest](https://github.com/NVIDIA/nv-ingest) microservice for data ingestion, processing, and extraction of text files.
+:::note
+NVIDIA Retriever Extraction is also known as NV-Ingest and NeMo Retriever Extraction.
+:::
+
+The **NVIDIA Retriever Extraction** component integrates with the [NVIDIA nv-ingest](https://github.com/NVIDIA/nv-ingest) microservice for data ingestion, processing, and extraction of text files.
 
 The `nv-ingest` service supports multiple extraction methods for PDF, DOCX, and PPTX file types, and includes pre-  and post-processing services like splitting, chunking, and embedding generation.
 
-The **NVIDIA Ingest** component imports the NVIDIA `Ingestor` client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of [Data](/concepts-objects#data-object) objects. `Ingestor` accepts additional configuration options for data extraction from other text formats. To configure these options, see the [component parameters](/integrations-nvidia-ingest#parameters).
+The **NVIDIA Retriever Extraction** component imports the NVIDIA `Ingestor` client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of [Data](/concepts-objects#data-object) objects. `Ingestor` accepts additional configuration options for data extraction from other text formats. To configure these options, see the [component parameters](/integrations-nvidia-ingest#parameters).
 
 ## Prerequisites
 
 * An NVIDIA Ingest endpoint. For more information on setting up an NVIDIA Ingest endpoint, see the [NVIDIA Ingest quickstart](https://github.com/NVIDIA/nv-ingest?tab=readme-ov-file#quickstart).
 
-* The **NVIDIA Ingest** component requires the installation of additional dependencies to your Langflow environment. To install the dependencies in a virtual environment, run the following commands.
+* The **NVIDIA Retriever Extraction** component requires the installation of additional dependencies to your Langflow environment. To install the dependencies in a virtual environment, run the following commands.
 
   * If you have the Langflow repository cloned and installed from source:
   ```bash
@@ -21,7 +25,7 @@ The **NVIDIA Ingest** component imports the NVIDIA `Ingestor` client, ingests fi
   uv sync --extra nv-ingest
   uv run langflow run
   ```
-  
+
   * If you are installing Langflow from the Python Package Index:
   ```bash
   source **YOUR_LANGFLOW_VENV**/bin/activate
@@ -29,36 +33,36 @@ The **NVIDIA Ingest** component imports the NVIDIA `Ingestor` client, ingests fi
   uv run langflow run
   ```
 
-## Use the NVIDIA Ingest component in a flow
+## Use the NVIDIA Retriever Extraction component in a flow
 
-The **NVIDIA Ingest** component accepts **Message** inputs and outputs **Data**. The component calls a NVIDIA Ingest microservice's endpoint to ingest a local file and extract the text.
+The **NVIDIA Retriever Extraction** component accepts **Message** inputs and outputs **Data**. The component calls an NVIDIA Ingest microservice's endpoint to ingest a local file and extract the text.
 
-To use the NVIDIA Ingest component in your flow, follow these steps:
-1. In the component library, click the **NVIDIA Ingest** component, and then drag it onto the canvas.
-2. In the **NVIDIA Ingestion URL** field, enter the URL of the NVIDIA Ingest endpoint.
+To use the NVIDIA Retriever Extraction component in your flow, follow these steps:
+1. In the component library, click the **NVIDIA Retriever Extraction** component, and then drag it onto the canvas.
+2. In the **Base URL** field, enter the URL of the NVIDIA Ingest endpoint.
 Optionally, add the endpoint URL as a **Global variable**:
     1. Click **Settings**, and then click **Global Variables**.
     2. Click **Add New**.
     3. Name your variable. Paste your endpoint in the **Value** field.
-    4. In the **Apply To Fields** field, select the field you want to globally apply this variable to. In this case, select **NVIDIA Ingestion URL**.
+    4. In the **Apply To Fields** field, select the field you want to globally apply this variable to. In this case, select **NVIDIA Base URL**.
     5. Click **Save Variable**.
-3. In the **Path** field, enter the path to the file you want to ingest.
+3. Click the **Select files** button to select which file you want to ingest.
 4. Select which text type to extract from the file.
 The component supports text, charts, and tables.
 5. Select whether to split the text into chunks.
 Modify the splitting parameters in the component's **Configuration** tab.
 7. Click **Run** to ingest the file.
 8. To confirm the component is ingesting the file, open the **Logs** pane to view the output of the flow.
-9. To store the processed data in a vector database, add an **AstraDB Vector** component to your flow, and connect the **NVIDIA Ingest** component to the **AstraDB Vector** component with a **Data** output.
+9. To store the processed data in a vector database, add an **AstraDB Vector** component to your flow, and connect the **NVIDIA Retriever Extraction** component to the **AstraDB Vector** component with a **Data** output.
 
-![NVIDIA Ingest component flow](nvidia-component-ingest-astra.png)
+![NVIDIA Retriever Extraction component flow](nvidia-component-ingest-astra.png)
 
 10. Run the flow.
 Inspect your Astra DB vector database to view the processed data.
 
-## NVIDIA Ingest component parameters {#parameters}
+## NVIDIA Retriever Extraction component parameters {#parameters}
 
-The **NVIDIA Ingest** component has the following parameters.
+The **NVIDIA Retriever Extraction** component has the following parameters.
 
 For more information, see the [NV-Ingest documentation](https://nvidia.github.io/nv-ingest/user-guide/).
 
@@ -71,9 +75,9 @@ For more information, see the [NV-Ingest documentation](https://nvidia.github.io
 | extract_text | Extract Text | Extract text from documents. Default: `True`. |
 | extract_charts | Extract Charts | Extract text from charts. Default: `False`. |
 | extract_tables | Extract Tables | Extract text from tables. Default: `True`. |
-| text_depth | Text Depth | The level at which text is extracted. Support for 'block', 'line', and 'span' varies by document type. Default: `document`. |
+| text_depth | Text Depth | The level at which text is extracted. Options: 'document', 'page', 'block', 'line', 'span'. Default: `document`. |
 | split_text | Split Text | Split text into smaller chunks. Default: `True`. |
-| split_by | Split By | How to split into chunks. 'size' splits by number of characters. Default: `word`. |
+| split_by | Split By | How to split into chunks. Options: 'page', 'sentence', 'word', 'size'. Default: `word`. |
 | split_length | Split Length | The size of each chunk based on the 'split_by' method. Default: `200`. |
 | split_overlap | Split Overlap | The number of segments to overlap from the previous chunk. Default: `20`. |
 | max_character_length | Max Character Length | The maximum number of characters in each chunk. Default: `1000`. |
@@ -81,7 +85,7 @@ For more information, see the [NV-Ingest documentation](https://nvidia.github.io
 
 ### Outputs
 
-The **NVIDIA Ingest** component outputs a list of [Data](/concepts-objects#data-object) objects where each object contains:
+The **NVIDIA Retriever Extraction** component outputs a list of [Data](/concepts-objects#data-object) objects where each object contains:
 - `text`: The extracted content.
   - For text documents: The extracted text content.
   - For tables and charts: The extracted table/chart content.

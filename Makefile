@@ -33,20 +33,11 @@ all: help
 # See https://code.visualstudio.com/remote/advancedcontainers/improve-performance
 CLEAR_DIRS = $(foreach dir,$1,$(shell mkdir -p $(dir) && find $(dir) -mindepth 1 -delete))
 
-# increment the patch version of the current package
-patch: ## bump the version in langflow and langflow-base
-	@echo 'Patching the version'
-	@poetry version patch
-	@echo 'Patching the version in langflow-base'
-	@cd src/backend/base && poetry version patch
-	@make lock
-
 # check for required tools
 check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
 	@echo "$(GREEN)All required tools are installed.$(NC)"
-
 
 help: ## show this help message
 	@echo '----'
@@ -65,7 +56,7 @@ reinstall_backend: ## forces reinstall all dependencies (no caching)
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@uv sync --frozen $(EXTRA_ARGS)
+	@uv sync --frozen --extra "postgresql" $(EXTRA_ARGS)
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
@@ -114,7 +105,7 @@ clean_npm_cache:
 clean_all: clean_python_cache clean_npm_cache # clean all caches and temporary directories
 	@echo "$(GREEN)All caches and temporary directories cleaned.$(NC)"
 
-setup_uv: ## install poetry using pipx
+setup_uv: ## install uv using pipx
 	pipx install uv
 
 add:
@@ -190,12 +181,10 @@ tests: ## run unit, integration, coverage tests
 ######################
 
 codespell: ## run codespell to check spelling
-	@poetry install --with spelling
-	poetry run codespell --toml pyproject.toml
+	@uvx codespell --toml pyproject.toml
 
 fix_codespell: ## run codespell to fix spelling errors
-	@poetry install --with spelling
-	poetry run codespell --toml pyproject.toml --write
+	@uvx codespell --toml pyproject.toml --write
 
 format_backend: ## backend code formatters
 	@uv run ruff check . --fix
@@ -420,19 +409,6 @@ endif
 
 publish_testpypi: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
-
-ifdef base
-	#TODO: replace with uvx twine upload dist/*
-	poetry config repositories.test-pypi https://test.pypi.org/legacy/
-	make publish_base_testpypi
-endif
-
-ifdef main
-	#TODO: replace with uvx twine upload dist/*
-	poetry config repositories.test-pypi https://test.pypi.org/legacy/
-	make publish_langflow_testpypi
-endif
-
 
 # example make alembic-revision message="Add user table"
 alembic-revision: ## generate a new migration

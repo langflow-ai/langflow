@@ -1,3 +1,4 @@
+import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ReactFlowJsonObject } from "@xyflow/react";
 import { ReactElement, ReactNode } from "react";
 import { InputOutput } from "../../constants/enums";
@@ -67,6 +68,7 @@ export type DropDownComponent = {
   children?: ReactNode;
   name: string;
   dialogInputs?: any;
+  toggle?: boolean;
 };
 export type ParameterComponentType = {
   selected?: boolean;
@@ -106,6 +108,10 @@ export type NodeOutputFieldComponentType = {
   lastOutput?: boolean;
   colorName?: string[];
   isToolMode?: boolean;
+  showHiddenOutputs?: boolean;
+  hidden?: boolean;
+  outputs?: any;
+  handleSelectOutput?: (output: any) => void;
 };
 
 export type NodeInputFieldComponentType = {
@@ -141,6 +147,9 @@ export type outputComponentType = {
   name: string;
   proxy?: OutputFieldProxyType;
   isToolMode?: boolean;
+  outputs?: any;
+  handleSelectOutput?: (output: any) => void;
+  outputName?: string;
 };
 
 export type DisclosureComponentType = {
@@ -149,9 +158,9 @@ export type DisclosureComponentType = {
   isChild?: boolean;
   button: {
     title: string;
-    Icon: React.ElementType;
+    icon: string;
     buttons?: {
-      Icon: ReactElement;
+      icon: string;
       title: string;
       onClick: (event?: React.MouseEvent) => void;
     }[];
@@ -299,6 +308,8 @@ export type InputProps = {
   description: string | null;
   endpointName?: string | null;
   maxLength?: number;
+  descriptionMaxLength?: number;
+  minLength?: number;
   setName?: (name: string) => void;
   setDescription?: (description: string) => void;
   setEndpointName?: (endpointName: string) => void;
@@ -579,6 +590,8 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
+  isUserEdited: boolean;
+  hasBreakingChange: boolean;
   updateNode: () => void;
   closeToolbar?: () => void;
   setOpenShowMoreOptions?: (open: boolean) => void;
@@ -674,6 +687,32 @@ export type textModalPropsType = {
   onCloseModal?: () => void;
 };
 
+export interface ToolsModalProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  description: string;
+  rows: {
+    name: string;
+    tags: string[];
+    description: string;
+    status: boolean;
+  }[];
+  handleOnNewValue: handleOnNewValueType;
+  title: string;
+  icon: string;
+}
+export type queryModalPropsType = {
+  setValue: (value: string) => void;
+  value: string;
+  title: string;
+  description: string;
+  placeholder?: string;
+  disabled?: boolean;
+  children?: ReactNode;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
+};
+
 export type newFlowModalPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -704,7 +743,6 @@ export type buttonBoxPropsType = {
 export type FlowSettingsPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
-  details?: boolean;
   flowData?: FlowType;
 };
 

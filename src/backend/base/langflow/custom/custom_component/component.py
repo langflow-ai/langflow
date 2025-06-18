@@ -18,7 +18,6 @@ from pydantic import BaseModel, ValidationError
 from langflow.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
     TOOL_OUTPUT_NAME,
-    TOOL_TABLE_SCHEMA,
     TOOLS_METADATA_INFO,
     TOOLS_METADATA_INPUT_NAME,
 )
@@ -33,7 +32,6 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
-from langflow.schema.table import FieldParserType, TableOptions
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -96,6 +94,7 @@ class PlaceholderGraph(NamedTuple):
 class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
+    selected_output: str | None = None
     code_class_base_inheritance: ClassVar[str] = "Component"
 
     def __init__(self, **kwargs) -> None:
@@ -160,7 +159,23 @@ class Component(CustomComponent):
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
-        self._set_output_required_inputs()
+
+    def get_incoming_edge_by_target_param(self, target_param: str) -> str | None:
+        """Get the source vertex ID for an incoming edge that targets a specific parameter.
+
+        This method delegates to the underlying vertex to find an incoming edge that connects
+        to the specified target parameter.
+
+        Args:
+            target_param (str): The name of the target parameter to find an incoming edge for
+
+        Returns:
+            str | None: The ID of the source vertex if an incoming edge is found, None otherwise
+        """
+        if self._vertex is None:
+            msg = "Vertex not found. Please build the graph first."
+            raise ValueError(msg)
+        return self._vertex.get_incoming_edge_by_target_param(target_param)
 
     @property
     def enabled_tools(self) -> list[str] | None:
@@ -452,7 +467,10 @@ class Component(CustomComponent):
             if input_.name is None:
                 msg = self.build_component_error_message("Input name cannot be None")
                 raise ValueError(msg)
-            self._inputs[input_.name] = deepcopy(input_)
+            try:
+                self._inputs[input_.name] = deepcopy(input_)
+            except TypeError:
+                self._inputs[input_.name] = input_
 
     def validate(self, params: dict) -> None:
         """Validates the component parameters.
@@ -521,7 +539,6 @@ class Component(CustomComponent):
             raise ValueError(msg)
         return_types = self._get_method_return_type(output.method)
         output.add_types(return_types)
-        output.set_selected()
 
     def _set_output_required_inputs(self) -> None:
         for output in self.outputs:
@@ -720,6 +737,7 @@ class Component(CustomComponent):
 
     def __getattr__(self, name: str) -> Any:
         if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
+            # It is a dict of attributes that are not inputs or outputs all the raw data it should have the loop input.
             return self.__dict__["_attributes"][name]
         if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
             return self.__dict__["_inputs"][name].value
@@ -769,7 +787,10 @@ class Component(CustomComponent):
 
     def _validate_outputs(self) -> None:
         # Raise Error if some rule isn't met
-        pass
+        if self.selected_output is not None and self.selected_output not in self._outputs_map:
+            output_names = ", ".join(list(self._outputs_map.keys()))
+            msg = f"selected_output '{self.selected_output}' is not valid. Must be one of: {output_names}"
+            raise ValueError(msg)
 
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
@@ -832,13 +853,18 @@ class Component(CustomComponent):
                 continue
             return_types = self._get_method_return_type(output.method)
             output.add_types(return_types)
-            output.set_selected()
 
         frontend_node.validate_component()
         frontend_node.set_base_classes_from_outputs()
+
+        # Get the node dictionary and add selected_output if specified
+        node_dict = frontend_node.to_dict(keep_name=False)
+        if self.selected_output is not None:
+            node_dict["selected_output"] = self.selected_output
+
         return {
             "data": {
-                "node": frontend_node.to_dict(keep_name=False),
+                "node": node_dict,
                 "type": self.name or self.__class__.__name__,
                 "id": self._id,
             },
@@ -964,14 +990,53 @@ class Component(CustomComponent):
             self._append_tool_to_outputs_map()
 
     def _should_process_output(self, output):
+        """Determines whether a given output should be processed based on vertex edge configuration.
+
+        Returns True if the component has no vertex or outgoing edges, or if the output's name is among
+        the vertex's source edge names.
+        """
         if not self._vertex or not self._vertex.outgoing_edges:
             return True
         return output.name in self._vertex.edges_source_names
 
     def _get_outputs_to_process(self):
-        return (output for output in self._outputs_map.values() if self._should_process_output(output))
+        """Returns a list of outputs to process, ordered according to self.outputs.
+
+        Outputs are included only if they should be processed, as determined by _should_process_output.
+        First processes outputs in the order defined by self.outputs, then processes any remaining outputs
+        from _outputs_map that weren't in self.outputs.
+
+        Returns:
+            list: Outputs to be processed in the defined order.
+
+        Raises:
+            ValueError: If an output name in self.outputs is not present in _outputs_map.
+        """
+        result = []
+        processed_names = set()
+
+        # First process outputs in the order defined by self.outputs
+        for output in self.outputs:
+            output_obj = self._outputs_map.get(output.name, deepcopy(output))
+            if self._should_process_output(output_obj):
+                result.append(output_obj)
+                processed_names.add(output_obj.name)
+
+        # Then process any remaining outputs from _outputs_map
+        for name, output_obj in self._outputs_map.items():
+            if name not in processed_names and self._should_process_output(output_obj):
+                result.append(output_obj)
+
+        return result
 
     async def _get_output_result(self, output):
+        """Computes and returns the result for a given output, applying caching and output options.
+
+        If the output is cached and a value is already defined, returns the cached value. Otherwise,
+        invokes the associated output method asynchronously, applies output options, updates the cache,
+        and returns the result. Raises a ValueError if the output method is not defined, or a TypeError
+        if the method invocation fails.
+        """
         if output.cache and output.value != UNDEFINED:
             return output.value
 
@@ -998,7 +1063,29 @@ class Component(CustomComponent):
 
         return result
 
+    async def resolve_output(self, output_name: str) -> Any:
+        """Resolves and returns the value for a specified output by name.
+
+        If output caching is enabled and a value is already available, returns the cached value;
+        otherwise, computes and returns the output result. Raises a KeyError if the output name
+        does not exist.
+        """
+        output = self._outputs_map.get(output_name)
+        if output is None:
+            msg = (
+                f"Sorry, an output named '{output_name}' could not be found. "
+                "Please ensure that the output is correctly configured and try again."
+            )
+            raise KeyError(msg)
+        if output.cache and output.value != UNDEFINED:
+            return output.value
+        return await self._get_output_result(output)
+
     def _build_artifact(self, result):
+        """Builds an artifact dictionary containing a string representation, raw data, and type for a result.
+
+        The artifact includes a human-readable representation, the processed raw result, and its determined type.
+        """
         custom_repr = self.custom_repr()
         if custom_repr is None and isinstance(result, dict | Data | str):
             custom_repr = result
@@ -1124,7 +1211,11 @@ class Component(CustomComponent):
         return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
 
     def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
-        return old_tags != new_tags
+        # First check length - if different lengths, they can't be equal
+        if len(old_tags) != len(new_tags):
+            return True
+        # Use set comparison for O(n) average case complexity, earlier the old_tags.sort() != new_tags.sort() was used
+        return set(old_tags) != set(new_tags)
 
     def _filter_tools_by_status(self, tools: list[Tool], metadata: pd.DataFrame | None) -> list[Tool]:
         """Filter tools based on their status in metadata.
@@ -1137,7 +1228,7 @@ class Component(CustomComponent):
             list[Tool]: Filtered list of tools.
         """
         # Convert metadata to a list of dicts if it's a DataFrame
-        metadata_dict = None
+        metadata_dict = None  # Initialize as None to avoid lint issues with empty dict
         if isinstance(metadata, pd.DataFrame):
             metadata_dict = metadata.to_dict(orient="records")
 
@@ -1160,19 +1251,26 @@ class Component(CustomComponent):
         tool_status = {item["name"]: item.get("status", True) for item in metadata_dict}
         return [tool for tool in tools if tool_status.get(tool.name, True)]
 
+    def _build_tool_data(self, tool: Tool) -> dict:
+        if tool.metadata is None:
+            tool.metadata = {}
+        return {
+            "name": tool.name,
+            "description": tool.description,
+            "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
+            "status": True,  # Initialize all tools with status True
+            "display_name": tool.metadata.get("display_name", tool.name),
+            "display_description": tool.metadata.get("display_description", tool.description),
+            "readonly": tool.metadata.get("readonly", False),
+            "args": tool.args,
+            # "args_schema": tool.args_schema,
+        }
+
     async def _build_tools_metadata_input(self):
         tools = await self._get_tools()
         # Always use the latest tool data
-        tool_data = [
-            {
-                "name": tool.name,
-                "description": tool.description,
-                "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
-                "status": True,  # Initialize all tools with status True
-            }
-            for tool in tools
-        ]
-
+        tool_data = [self._build_tool_data(tool) for tool in tools]
+        # print(tool_data)
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             old_tags = self._extract_tools_tags(self.tools_metadata)
             new_tags = self._extract_tools_tags(tool_data)
@@ -1198,35 +1296,16 @@ class Component(CustomComponent):
             self.tools_metadata = tool_data
 
         try:
-            from langflow.io import TableInput
+            from langflow.io import ToolsInput
         except ImportError as e:
-            msg = "Failed to import TableInput from langflow.io"
+            msg = "Failed to import ToolsInput from langflow.io"
             raise ImportError(msg) from e
 
-        return TableInput(
+        return ToolsInput(
             name=TOOLS_METADATA_INPUT_NAME,
-            display_name="Edit tools",
-            real_time_refresh=True,
-            table_schema=TOOL_TABLE_SCHEMA,
+            display_name="Actions",
+            info=TOOLS_METADATA_INFO,
             value=tool_data,
-            table_icon="Hammer",
-            trigger_icon="Hammer",
-            trigger_text="",
-            table_options=TableOptions(
-                block_add=True,
-                block_delete=True,
-                block_edit=True,  # Allow editing for status toggle
-                block_sort=True,
-                block_filter=True,
-                block_hide=True,
-                block_select=True,
-                hide_options=True,
-                field_parsers={
-                    "name": [FieldParserType.SNAKE_CASE, FieldParserType.NO_BLANK],
-                    "commands": FieldParserType.COMMANDS,
-                },
-                description=TOOLS_METADATA_INFO,
-            ),
         )
 
     def get_project_name(self):
@@ -1320,7 +1399,7 @@ class Component(CustomComponent):
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
-            data_dict = message.data.copy() if hasattr(message, "data") else message.model_dump()
+            data_dict = message.model_dump()["data"] if hasattr(message, "data") else message.model_dump()
             if id_ and not data_dict.get("id"):
                 data_dict["id"] = id_
             category = category or data_dict.get("category", None)
@@ -1330,7 +1409,14 @@ class Component(CustomComponent):
                     case "error":
                         self._event_manager.on_error(data=data_dict)
                     case "remove_message":
-                        self._event_manager.on_remove_message(data={"id": data_dict["id"]})
+                        # Check if id exists in data_dict before accessing it
+                        if "id" in data_dict:
+                            self._event_manager.on_remove_message(data={"id": data_dict["id"]})
+                        else:
+                            # If no id, try to get it from the message object or id_ parameter
+                            message_id = getattr(message, "id", None) or id_
+                            if message_id:
+                                self._event_manager.on_remove_message(data={"id": message_id})
                     case _:
                         self._event_manager.on_message(data=data_dict)
 

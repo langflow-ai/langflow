@@ -15,20 +15,15 @@ Get to know Langflow by building an OpenAI-powered chatbot application. After yo
 	- An Astra DB application token scoped to read and write to the database
 	- A collection created in [Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection) or a new collection created in the **Astra DB** component
 
-## Open Langflow and start a new project
-
-1. From the Langflow dashboard, click **New Flow**, and then select **Blank Flow**. A blank workspace opens where you can build your flow.
+## Build the basic prompting flow
 
 :::tip
-If you want a pre-built flow, click **New Flow**, and then select **Basic Prompting**.
+If you prefer a pre-built flow, click **New Flow**, and then select **Basic Prompting**.
+
 Continue to [Run the basic prompting flow](#run-basic-prompting-flow).
 :::
 
-2. Select **Basic Prompting**.
-
-3. The **Basic Prompting** flow is created.
-
-## Build the basic prompting flow
+1. From the Langflow dashboard, click **New Flow**, and then select **Blank Flow**. A blank workspace opens where you can build your flow.
 
 The Basic Prompting flow will look like this when it's completed:
 
@@ -36,13 +31,13 @@ The Basic Prompting flow will look like this when it's completed:
 
 To build the **Basic Prompting** flow, follow these steps:
 
-1. Click **Inputs**, select the **Chat Input** component, and then drag it to the canvas.
+2. In the components sidebar, click **Inputs**, select the **Chat Input** component, and then drag it to the canvas.
 The [Chat Input](/components-io#chat-input) component accepts user input to the chat.
-2. Click **Prompt**, select the **Prompt** component, and then drag it to the canvas.
+3. In the components sidebar, click **Prompt**, select the **Prompt** component, and then drag it to the canvas.
 The [Prompt](/components-prompts) component combines the user input with a user-defined prompt.
-3. Click **Outputs**, select the **Chat Output** component, and then drag it to the canvas.
+4. In the components sidebar, click **Outputs**, select the **Chat Output** component, and then drag it to the canvas.
 The [Chat Output](/components-io#chat-output) component prints the flow's output to the chat.
-4. Click **Models**, select the **OpenAI** component, and then drag it to the canvas.
+5. In the components sidebar, click **Models**, select the **OpenAI** component, and then drag it to the canvas.
 The [OpenAI](components-models#openai) model component sends the user input and prompt to the OpenAI API and receives a response.
 
 You should now have a flow that looks like this:
@@ -55,9 +50,9 @@ Each component accepts inputs on its left side, and sends outputs on its right s
 Hover over the connection ports to see the data types that the component accepts.
 For more on component inputs and outputs, see [Components overview](/concepts-components).
 
-5. To connect the **Chat Input** component to the OpenAI model component, click and drag a line from the blue **Message** port to the OpenAI model component's **Input** port.
-6. To connect the **Prompt** component to the OpenAI model component, click and drag a line from the blue **Prompt Message** port to the OpenAI model component's **System Message** port.
-7. To connect the **OpenAI** model component to the **Chat Output**, click and drag a line from the blue **Text** port to the **Chat Output** component's **Text** port.
+6. To connect the **Chat Input** component to the OpenAI model component, click and drag a line from the blue **Message** port to the OpenAI model component's **Input** port.
+7. To connect the **Prompt** component to the OpenAI model component, click and drag a line from the blue **Prompt Message** port to the OpenAI model component's **System Message** port.
+8. To connect the **OpenAI** model component to the **Chat Output**, click and drag a line from the blue **Text** port to the **Chat Output** component's **Text** port.
 
 Your finished basic prompting flow should look like this:
 
@@ -127,11 +122,23 @@ The [Split Text](/components-processing#split-text) component splits the loaded 
 The [Parser](/components-processing#parser) component converts the data from the **Astra DB** component into plain text.
 6. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
 The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) component generates embeddings for the user's input, which are compared to the vector data in the database.
-7. Connect the new components into the existing flow, so your flow looks like this:
+7. Modify the **Prompt** component to contain variables for both `{user_question}` and `{context}`.
+The `{context}` variable gives the bot additional context for answering `{user_question}` beyond what the LLM was trained on.
+
+```text
+Given the context
+{context}
+Answer the question
+{user_question}
+```
+
+Adding variables like `{context}` creates new input handles in the component.
+
+8. Connect the new components into the existing flow, so your flow looks like this:
 
 ![Add document ingestion to the basic prompting flow](/img/quickstart-add-document-ingestion.png)
 
-8. Configure the **Astra DB** component.
+9. Configure the **Astra DB** component.
 	1. In the **Astra DB Application Token** field, add your **Astra DB** application token.
 	The component connects to your database and populates the menus with existing databases and collections.
 	2. Select your **Database**.
@@ -142,7 +149,7 @@ The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) componen
 	If you select a collection embedded with NVIDIA through Astra's vectorize service, the **Embedding Model** port is removed, because you have already generated embeddings for this collection with the NVIDIA `NV-Embed-QA` model. The component fetches the data from the collection, and uses the same embeddings for queries.
 	:::
 
-9. If you don't have a collection, create a new one within the component.
+10. If you don't have a collection, create a new one within the component.
 	1. Select **New collection**.
 	2. Complete the **Name**, **Embedding generation method**, **Embedding model**, and **Dimensions** fields, and then click **Create**.
 
@@ -159,21 +166,11 @@ If you used Langflow's **Global Variables** feature, the RAG application flow co
 
 ### Run the chatbot with retrieved context
 
-1. Modify the **Prompt** component to contain variables for both `{user_question}` and `{context}`.
-The `{context}` variable gives the bot additional context for answering `{user_question}` beyond what the LLM was trained on.
-
-```text
-Given the context
-{context}
-Answer the question
-{user_question}
-```
-
-2. In the **File** component, upload a text file from your local machine with data you want to ingest into the **Astra DB** component database.
+1. In the **File** component, upload a text file from your local machine with data you want to ingest into the **Astra DB** component database.
 This example uploads an up-to-date CSV about Oscar winners.
-3. Click **Playground** to start a chat session.
-4. Ask the bot: `Who won the Oscar in 2024 for best movie?`
-5. The bot's response should be similar to this:
+2. Click **Playground** to start a chat session.
+3. Ask the bot: `Who won the Oscar in 2024 for best movie?`
+4. The bot's response should be similar to this:
 
 ```text
 The Oscar for Best Picture in 2024 was awarded to "Oppenheimer,"

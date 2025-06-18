@@ -7,9 +7,9 @@ from zipfile import ZipFile, is_zipfile
 
 import pandas as pd
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
@@ -174,9 +174,8 @@ class BaseFileComponent(Component, ABC):
     ]
 
     _base_outputs = [
-        Output(display_name="Data", name="data", method="load_files"),
-        Output(display_name="DataFrame", name="dataframe", method="load_dataframe"),
-        Output(display_name="Message", name="message", method="load_message"),
+        Output(display_name="Loaded Files", name="dataframe", method="load_files"),
+        Output(display_name="Raw Content", name="message", method="load_files_message"),
     ]
 
     @abstractmethod
@@ -227,7 +226,7 @@ class BaseFileComponent(Component, ABC):
                     else:
                         file.path.unlink()
 
-    def load_files(self) -> list[Data]:
+    def load_files_core(self) -> list[Data]:
         """Load files and return as Data objects.
 
         Returns:
@@ -238,13 +237,33 @@ class BaseFileComponent(Component, ABC):
             return [Data()]
         return data_list
 
-    def load_dataframe(self) -> DataFrame:
+    def load_files_message(self) -> Message:
+        """Load files and return as Message.
+
+        Returns:
+            Message: Message containing all file data
+        """
+        data_list = self.load_files_core()
+        if not data_list:
+            return Message()  # No data -> empty message
+
+        sep: str = getattr(self, "separator", "\n\n") or "\n\n"
+
+        parts: list[str] = []
+        for d in data_list:
+            # Prefer explicit text if available, fall back to full dict, lastly str()
+            text = (getattr(d, "get_text", lambda: None)() or d.data.get("text")) if isinstance(d.data, dict) else None
+            parts.append(text if text is not None else str(d))
+
+        return Message(text=sep.join(parts))
+
+    def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.
 
         Returns:
             DataFrame: DataFrame containing all file data
         """
-        data_list = self.load_files()
+        data_list = self.load_files_core()
         if not data_list:
             return DataFrame()
 
@@ -264,8 +283,8 @@ class BaseFileComponent(Component, ABC):
             else:
                 # Handle non-CSV files as before
                 row = dict(data.data) if data.data else {}
-                if data.text:
-                    row["text"] = data.text
+                if "text" in data.data:
+                    row["text"] = data.data["text"]
                 if file_path:
                     row["file_path"] = file_path
                 non_csv_rows.append(row)
@@ -273,33 +292,6 @@ class BaseFileComponent(Component, ABC):
         # Combine CSV and non-CSV data
         all_rows = csv_data + non_csv_rows
         return DataFrame(all_rows)
-
-    def load_message(self) -> Message:
-        """Load files and return as Message with concatenated content.
-
-        Returns:
-            Message: Message containing concatenated file content
-        """
-        data_list = self.load_files()
-        if not data_list:
-            return Message(text="")
-
-        # Concatenate all text content
-        text_content = []
-        for data in data_list:
-            content = data.text if data.text else ""
-            text_content.append(content)
-
-        # Join with separator
-        final_text = self.separator.join(text_content)
-
-        # Create message with all metadata
-        all_data = {}
-        for data in data_list:
-            if data.data:
-                all_data.update(data.data)
-
-        return Message(text=final_text, data=all_data)
 
     @property
     def valid_extensions(self) -> list[str]:

@@ -40,8 +40,7 @@ from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
-from langflow.services.database.models.flow import Flow
-from langflow.services.database.models.flow.model import FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
@@ -267,7 +266,7 @@ async def run_flow_generator(
         await event_manager.queue.put((None, None, time.time))
 
 
-@router.post("/run/{flow_id_or_name}", response_model_exclude_none=True)  # noqa: RUF100, FAST003
+@router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
@@ -508,7 +507,7 @@ async def experimental_run_flow(
 
     ### Example usage:
     ```json
-    POST /run/{flow_id}
+    POST /run/flow_id
     x-api-key: YOUR_API_KEY
     Payload:
     {
@@ -545,7 +544,7 @@ async def experimental_run_flow(
         try:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            stmt = select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
+            stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)
             flow = (await session.exec(stmt)).first()
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')

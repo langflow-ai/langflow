@@ -1,9 +1,10 @@
+import json
 from typing import Any
 
 from composio import Action
 
 from langflow.base.composio.composio_base import ComposioBaseComponent
-from langflow.inputs import (
+from langflow.inputs.inputs import (
     BoolInput,
     FileInput,
     IntInput,
@@ -16,9 +17,8 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
     """Gmail API component for interacting with Gmail services."""
 
     display_name: str = "Gmail"
-    description: str = "Gmail API"
     name = "GmailAPI"
-    icon = "Gmail"
+    icon = "Google"
     documentation: str = "https://docs.composio.dev"
     app_name = "gmail"
 
@@ -26,92 +26,95 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
     _actions_data: dict = {
         "GMAIL_SEND_EMAIL": {
             "display_name": "Send Email",
-            "action_fields": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+            "action_fields": [
+                "recipient_email",
+                "subject",
+                "body",
+                "cc",
+                "bcc",
+                "is_html",
+                "gmail_user_id",
+                "attachment",
+            ],
         },
         "GMAIL_FETCH_EMAILS": {
             "display_name": "Fetch Emails",
-            "action_fields": ["max_results", "query"],
+            "action_fields": [
+                "gmail_user_id",
+                "max_results",
+                "query",
+                "page_token",
+                "label_ids",
+                "include_spam_trash",
+            ],
             "get_result_field": True,
             "result_field": "messages",
         },
         "GMAIL_GET_PROFILE": {
             "display_name": "Get User Profile",
-            "action_fields": [],
+            "action_fields": ["gmail_user_id"],
         },
         "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID": {
             "display_name": "Get Email By ID",
-            "action_fields": ["message_id"],
+            "action_fields": ["message_id", "gmail_user_id", "format"],
             "get_result_field": False,
         },
         "GMAIL_CREATE_EMAIL_DRAFT": {
             "display_name": "Create Draft Email",
-            "action_fields": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+            "action_fields": [
+                "recipient_email",
+                "subject",
+                "body",
+                "cc",
+                "bcc",
+                "is_html",
+                "attachment",
+                "gmail_user_id",
+            ],
         },
         "GMAIL_FETCH_MESSAGE_BY_THREAD_ID": {
             "display_name": "Get Message By Thread ID",
-            "action_fields": ["thread_id"],
+            "action_fields": ["thread_id", "page_token", "gmail_user_id"],
             "get_result_field": False,
         },
         "GMAIL_LIST_THREADS": {
             "display_name": "List Email Threads",
-            "action_fields": ["max_results", "query"],
+            "action_fields": ["max_results", "query", "gmail_user_id", "page_token"],
+            "get_result_field": True,
+            "result_field": "threads",
         },
         "GMAIL_REPLY_TO_THREAD": {
             "display_name": "Reply To Thread",
-            "action_fields": ["thread_id", "message_body", "recipient_email"],
+            "action_fields": ["thread_id", "message_body", "recipient_email", "gmail_user_id", "cc", "bcc", "is_html"],
         },
         "GMAIL_LIST_LABELS": {
             "display_name": "List Email Labels",
-            "action_fields": [],
+            "action_fields": ["gmail_user_id"],
+            "get_result_field": True,
+            "result_field": "labels",
         },
         "GMAIL_CREATE_LABEL": {
             "display_name": "Create Email Label",
-            "action_fields": ["label_name"],
+            "action_fields": ["label_name", "label_list_visibility", "message_list_visibility", "gmail_user_id"],
         },
         "GMAIL_GET_PEOPLE": {
             "display_name": "Get Contacts",
-            "action_fields": [],
+            "action_fields": ["resource_name", "person_fields"],
+            "get_result_field": True,
+            "result_field": "people_data",
         },
         "GMAIL_REMOVE_LABEL": {
             "display_name": "Delete Email Label",
-            "action_fields": ["label_id"],
+            "action_fields": ["label_id", "gmail_user_id"],
             "get_result_field": False,
+        },
+        "GMAIL_GET_ATTACHMENT": {
+            "display_name": "Get Attachment",
+            "action_fields": ["message_id", "attachment_id", "file_name", "gmail_user_id"],
         },
     }
     _all_fields = {field for action_data in _actions_data.values() for field in action_data["action_fields"]}
     _bool_variables = {"is_html", "include_spam_trash"}
-
-    # Cache for action fields mapping
-    _action_fields_cache: dict[str, set[str]] = {}
-    _readonly_actions = frozenset(
-        [
-            "GMAIL_FETCH_EMAILS",
-            "GMAIL_GET_PROFILE",
-            "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID",
-            "GMAIL_FETCH_MESSAGE_BY_THREAD_ID",
-            "GMAIL_LIST_THREADS",
-            "GMAIL_LIST_LABELS",
-            "GMAIL_GET_PEOPLE",
-        ]
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._all_fields = {
-            field for action_data in self._actions_data.values() for field in action_data["action_fields"]
-        }
-
-        self._bool_variables = {"is_html", "include_spam_trash"}
-        self._default_tools = {
-            self.sanitize_action_name("GMAIL_SEND_EMAIL").replace(" ", "-"),
-            self.sanitize_action_name("GMAIL_FETCH_EMAILS").replace(" ", "-"),
-        }
-        # Build the action maps right away
-        self._display_to_key_map = {data["display_name"]: key for key, data in self._actions_data.items()}
-        self._key_to_display_map = {key: data["display_name"] for key, data in self._actions_data.items()}
-        self._sanitized_names = {
-            action: self._name_sanitizer.sub("-", self.sanitize_action_name(action)) for action in self._actions_data
-        }
 
     # Combine base inputs with Gmail-specific inputs
     inputs = [
@@ -164,6 +167,13 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
             advanced=True,
         ),
         # Email retrieval and management fields
+        MessageTextInput(
+            name="gmail_user_id",
+            display_name="User ID",
+            info="The user's email address or 'me' for the authenticated user",
+            show=False,
+            advanced=True,
+        ),
         IntInput(
             name="max_results",
             display_name="Max Results",
@@ -350,23 +360,36 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
 
                     params[field] = value
 
+            if params.get("gmail_user_id"):
+                params["user_id"] = params.pop("gmail_user_id")
+
             result = toolset.execute_action(
                 action=enum_name,
                 params=params,
-            ).get("data", [])
-            if (
-                len(result) != 1
-                and not self._actions_data.get(action_key, {}).get("result_field")
-                and self._actions_data.get(action_key, {}).get("get_result_field")
-            ):
-                msg = f"Expected a dict with a single key, got {len(result)} keys: {result.keys()}"
+            )
+            if not result.get("successful"):
+                message_str = result.get("data", {}).get("message", "{}")
+                try:
+                    error_data = json.loads(message_str).get("error", {})
+                except json.JSONDecodeError:
+                    error_data = {"error": "Failed to get exact error details"}
+                return {
+                    "code": error_data.get("code"),
+                    "message": error_data.get("message"),
+                    "errors": error_data.get("errors", []),
+                    "status": error_data.get("status"),
+                }
+
+            result_data = result.get("data", {})
+            actions_data = self._actions_data.get(action_key, {})
+            # If 'get_result_field' is True and 'result_field' is specified, extract the data
+            # using 'result_field'. Otherwise, fall back to the entire 'data' field in the response.
+            if actions_data.get("get_result_field") and actions_data.get("result_field"):
+                result_data = result_data.get(actions_data.get("result_field"), result.get("data", []))
+            if len(result_data) != 1 and not actions_data.get("result_field") and actions_data.get("get_result_field"):
+                msg = f"Expected a dict with a single key, got {len(result_data)} keys: {result_data.keys()}"
                 raise ValueError(msg)
-            if result:
-                get_result_field = self._actions_data.get(action_key, {}).get("get_result_field", True)
-                if get_result_field:
-                    key = self._actions_data.get(action_key, {}).get("result_field", next(iter(result)))
-                    return result.get(key)
-                return result
+            return result_data  # noqa: TRY300
         except Exception as e:
             logger.error(f"Error executing action: {e}")
             display_name = self.action[0]["name"] if isinstance(self.action, list) and self.action else str(self.action)
@@ -375,3 +398,9 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         return super().update_build_config(build_config, field_value, field_name)
+
+    def set_default_tools(self):
+        self._default_tools = {
+            "GMAIL_SEND_EMAIL",
+            "GMAIL_FETCH_EMAILS",
+        }

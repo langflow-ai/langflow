@@ -1,10 +1,13 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
+import { InputProps } from "@/components/core/parameterRenderComponent/types";
 import { Button } from "@/components/ui/button";
+import { DialogFooter, DialogHeader } from "@/components/ui/dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
+import { Input } from "@/components/ui/input";
 import { cn, testIdCase } from "@/utils/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import ListItem from "./ListItem";
 
 // Update interface with better types
 interface ListSelectionComponentProps {
@@ -16,109 +19,10 @@ interface ListSelectionComponentProps {
   searchCategories?: string[];
   onSelection?: (action: any) => void;
   limit?: number;
+  headerSearchPlaceholder?: string;
+  addButtonText?: string;
+  onAddButtonClick?: () => void;
 }
-
-const ListItem = ({
-  item,
-  isSelected,
-  onClick,
-  className,
-  onMouseEnter,
-  onMouseLeave,
-  isFocused,
-  isKeyboardNavActive,
-  dataTestId,
-}: {
-  item: any;
-  isSelected: boolean;
-  onClick: () => void;
-  className?: string;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-  isFocused: boolean;
-  isKeyboardNavActive: boolean;
-  dataTestId: string;
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const itemRef = useRef<HTMLButtonElement>(null);
-
-  // Clear hover state when keyboard navigation is active
-  useEffect(() => {
-    if (isKeyboardNavActive) {
-      setIsHovered(false);
-    }
-  }, [isKeyboardNavActive]);
-
-  // Scroll into view when focused by keyboard
-  useEffect(() => {
-    if (isFocused && itemRef.current) {
-      itemRef.current.scrollIntoView({ block: "nearest" });
-    }
-  }, [isFocused]);
-
-  return (
-    <Button
-      ref={itemRef}
-      key={item.id}
-      data-testid={dataTestId}
-      unstyled
-      size="sm"
-      className={cn(
-        "group w-full rounded-md py-3 pl-3 pr-3",
-        !isKeyboardNavActive && "hover:bg-muted", // Only apply hover styles when not in keyboard nav
-        isFocused && "bg-muted",
-        className,
-      )}
-      onClick={onClick}
-      onMouseEnter={() => {
-        if (!isKeyboardNavActive) {
-          setIsHovered(true);
-          onMouseEnter();
-        }
-      }}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        onMouseLeave();
-      }}
-      // Disable pointer events during keyboard navigation
-      style={{ pointerEvents: isKeyboardNavActive ? "none" : "auto" }}
-    >
-      <div className="flex w-full items-center gap-2">
-        {item.icon && (
-          <ForwardedIconComponent name={item.icon} className="h-5 w-5" />
-        )}
-        <div className="truncate text-sm">{item.name}</div>
-        {"metaData" in item && item.metaData && (
-          <div className="text-gray-500">{item.metaData}</div>
-        )}
-        {isHovered || isFocused ? (
-          <div className="ml-auto flex items-center justify-start rounded-md">
-            <div className="flex items-center pr-1.5 text-sm text-muted-foreground">
-              Select
-            </div>
-            <div className="flex items-center justify-center rounded-md bg-border p-1">
-              <ForwardedIconComponent
-                name="corner-down-left"
-                className="h-3 w-3 text-muted-foreground"
-              />
-            </div>
-          </div>
-        ) : (
-          // Always show the check icon when selected, regardless of hover/focus state
-          isSelected && (
-            <ForwardedIconComponent
-              name="check"
-              className={cn(
-                "ml-auto flex h-4 w-4",
-                item.link === "validated" && "text-green-500",
-              )}
-            />
-          )
-        )}
-      </div>
-    </Button>
-  );
-};
 
 const ListSelectionComponent = ({
   open,
@@ -129,7 +33,12 @@ const ListSelectionComponent = ({
   selectedList = [],
   options,
   limit = 1,
-}: ListSelectionComponentProps) => {
+  headerSearchPlaceholder = "Search...",
+  addButtonText,
+  onAddButtonClick,
+  ...baseInputProps
+}: InputProps<any, ListSelectionComponentProps>) => {
+  const { nodeClass } = baseInputProps;
   const [search, setSearch] = useState("");
   const [hoveredItem, setHoveredItem] = useState<any | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
@@ -263,28 +172,47 @@ const ListSelectionComponent = ({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent
-        className="flex max-h-[65vh] min-h-[15vh] flex-col rounded-xl"
+        className="flex max-h-[65vh] min-h-[15vh] flex-col overflow-hidden rounded-xl p-0"
         onKeyDown={handleKeyDown}
       >
-        <div className="flex items-center justify-between">
-          <SearchBarComponent
-            searchCategories={searchCategories}
-            search={search}
-            setSearch={setSearch}
-          />
-          <Button
-            unstyled
-            size="icon"
-            className="ml-auto h-[38px]"
-            onClick={onClose}
-          >
-            <ForwardedIconComponent name="x" />
-          </Button>
-        </div>
+        <DialogHeader className="flex w-full justify-between border-b p-2">
+          {nodeClass ? (
+            <div className="flex items-center gap-2 p-1">
+              <ForwardedIconComponent
+                name={nodeClass?.icon || "unknown"}
+                className="h-[18px] w-[18px] text-muted-foreground"
+              />
+              <div className="text-[13px] font-semibold">
+                {nodeClass?.display_name}
+              </div>
+            </div>
+          ) : (
+            <div className="relative text-[13px] font-normal">
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="border-none focus:ring-0"
+                placeholder={headerSearchPlaceholder}
+                data-testid="search_bar_input"
+              />
+            </div>
+          )}
+        </DialogHeader>
+        {(filteredList?.length > 20 || search) &&
+          !headerSearchPlaceholder &&
+          !nodeClass && (
+            <div className="flex w-full items-center justify-between px-3">
+              <SearchBarComponent
+                searchCategories={searchCategories}
+                search={search}
+                setSearch={setSearch}
+              />
+            </div>
+          )}
 
         <div
           ref={listContainerRef}
-          className="flex flex-col gap-1 overflow-y-auto"
+          className="flex w-full flex-col gap-1 overflow-y-auto px-3 pb-3"
         >
           {filteredList.length > 0 ? (
             filteredList.map((item, index) => (
@@ -320,6 +248,16 @@ const ListSelectionComponent = ({
             </div>
           )}
         </div>
+        <DialogFooter>
+          <Button
+            className="flex w-full items-center gap-2 border-t px-4 py-3 !text-mmd hover:bg-muted"
+            unstyled
+            onClick={onAddButtonClick}
+          >
+            <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+            {addButtonText}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

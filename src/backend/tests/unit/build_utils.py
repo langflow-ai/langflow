@@ -1,8 +1,10 @@
+import asyncio
 import json
 from typing import Any
 from uuid import UUID
 
 from httpx import AsyncClient, codes
+from loguru import logger
 
 
 async def create_flow(client: AsyncClient, flow_data: str, headers: dict[str, str]) -> UUID:
@@ -25,51 +27,109 @@ async def build_flow(
 
 async def get_build_events(client: AsyncClient, job_id: str, headers: dict[str, str]):
     """Get events for a build job."""
-    return await client.get(f"api/v1/build/{job_id}/events", headers=headers)
+    # Add Accept header for NDJSON format
+    headers_with_accept = {**headers, "Accept": "application/x-ndjson"}
+    return await client.get(f"api/v1/build/{job_id}/events", headers=headers_with_accept)
 
 
-async def consume_and_assert_stream(response, job_id):
-    """Consume the event stream and assert the expected event structure."""
+async def consume_and_assert_stream(response, job_id, timeout=30.0):
+    """Consume the event stream and assert the expected event structure.
+
+    Args:
+        response: The response object with an aiter_lines method
+        job_id: The job ID to verify in events
+        timeout: Maximum time in seconds to wait for events (default: 10s)
+    """
     count = 0
     lines = []
-    async for line in response.aiter_lines():
-        # Skip empty lines (ndjson uses double newlines)
-        if not line:
-            continue
+    first_event_seen = False
+    end_event_seen = False
 
-        lines.append(line)
-        parsed = json.loads(line)
-        if "job_id" in parsed:
-            assert parsed["job_id"] == job_id
-            continue
+    # Set a timeout for the entire consumption process
+    try:
+        # In Python 3.10, asyncio.timeout() is not available, so we use wait_for instead
+        async def process_events():
+            nonlocal count, lines, first_event_seen, end_event_seen
+            async for line in response.aiter_lines():
+                # Skip empty lines (ndjson uses double newlines)
+                if not line:
+                    continue
 
-        if count == 0:
-            # First event should be vertices_sorted
-            assert parsed["event"] == "vertices_sorted", (
-                "Invalid first event. Expected 'vertices_sorted'. Full event stream:\n" + "\n".join(lines)
-            )
-            ids = parsed["data"]["ids"]
-            ids.sort()
-            assert ids == ["ChatInput-CIGht"], "Invalid ids in first event. Full event stream:\n" + "\n".join(lines)
+                lines.append(line)
+                try:
+                    parsed = json.loads(line)
+                except json.JSONDecodeError:
+                    logger.debug(f"ERROR: Failed to parse JSON: {line}")
+                    raise
 
-            to_run = parsed["data"]["to_run"]
-            to_run.sort()
-            assert to_run == ["ChatInput-CIGht", "ChatOutput-QA7ej", "Memory-amN4Z", "Prompt-iWbCC"], (
-                "Invalid to_run list in first event. Full event stream:\n" + "\n".join(lines)
-            )
-        elif count > 0 and count < 5:
-            # Next events should be end_vertex events
-            assert parsed["event"] == "end_vertex", (
-                f"Invalid event at position {count}. Expected 'end_vertex'. Full event stream:\n" + "\n".join(lines)
-            )
-            assert parsed["data"]["build_data"] is not None, (
-                f"Missing build_data at position {count}. Full event stream:\n" + "\n".join(lines)
-            )
-        elif count == 5:
-            # Final event should be end
-            assert parsed["event"] == "end", "Invalid final event. Expected 'end'. Full event stream:\n" + "\n".join(
-                lines
-            )
-        else:
-            raise ValueError(f"Unexpected event at position {count}. Full event stream:\n" + "\n".join(lines))
-        count += 1
+                if "job_id" in parsed:
+                    assert parsed["job_id"] == job_id
+                    continue
+
+                # First event should be vertices_sorted
+                if not first_event_seen:
+                    assert parsed["event"] == "vertices_sorted", (
+                        "Invalid first event. Expected 'vertices_sorted'. Full event stream:\n" + "\n".join(lines)
+                    )
+                    ids = parsed["data"]["ids"]
+
+                    assert ids == ["ChatInput-vsgM1"], "Invalid ids in first event. Full event stream:\n" + "\n".join(
+                        lines
+                    )
+
+                    to_run = parsed["data"]["to_run"]
+                    expected_to_run = [
+                        "ChatInput-vsgM1",
+                        "Prompt-VSSGR",
+                        "TypeConverterComponent-koSIz",
+                        "Memory-8X8Cq",
+                        "ChatOutput-NAw0P",
+                    ]
+                    assert set(to_run) == set(expected_to_run), (
+                        "Invalid to_run list in the first event. Full event stream:\n" + "\n".join(lines)
+                    )
+                    first_event_seen = True
+                # Last event should be end
+                elif parsed["event"] == "end":
+                    end_event_seen = True
+                # Middle events should be end_vertex
+                elif parsed["event"] == "end_vertex":
+                    assert parsed["data"]["build_data"] is not None, (
+                        f"Missing build_data at position {count}. Full event stream:\n" + "\n".join(lines)
+                    )
+                # Other event types (like token or add_message) are allowed and ignored
+                else:
+                    # Allow other event types to pass through without failing
+                    pass
+
+                count += 1
+
+                # Debug output for verbose mode to track progress
+                if count % 10 == 0:
+                    logger.debug(f"Processed {count} events so far")
+
+        await asyncio.wait_for(process_events(), timeout=timeout)
+    except asyncio.TimeoutError as e:
+        # If we timed out, logger.debug what we have so far and fail the test
+        events_summary = "\n".join(
+            f"{i}: {line[:80]}..." if len(line) > 80 else f"{i}: {line}" for i, line in enumerate(lines)
+        )
+        logger.debug(
+            f"ERROR: Test timed out after {timeout}s. Processed {count} events.\nEvents received:\n{events_summary}"
+        )
+        if first_event_seen and not end_event_seen:
+            msg = f"Test timed out after {timeout}s waiting for 'end' event"
+            raise TimeoutError(msg) from e
+        if not first_event_seen:
+            msg = f"Test timed out after {timeout}s waiting for 'vertices_sorted' event"
+            raise TimeoutError(msg) from e
+        msg = f"Test timed out after {timeout}s"
+        raise TimeoutError(msg) from e
+
+    # Verify we saw both the first and end events
+    assert first_event_seen, "Missing vertices_sorted event. Full event stream:\n" + "\n".join(lines)
+    assert end_event_seen, "Missing end event. Full event stream:\n" + "\n".join(lines)
+
+    # logger.debug summary of events processed
+    logger.debug(f"Successfully processed {count} events for job {job_id}")
+    return count

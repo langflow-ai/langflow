@@ -140,7 +140,7 @@ For more information, see [Session ID](/session-id).
 
 ```bash
 curl --request POST \
-  --url 'http://127.0.0.1:7860/api/v1/run/e4167236-938f-4aca-845b-21de3f399858?stream=false' \
+  --url 'http://localhost:7860/api/v1/run/e4167236-938f-4aca-845b-21de3f399858?stream=false' \
   --header 'Content-Type: application/json' \
   --data '{
     "input_value": "Tell me about Charizard please",
@@ -152,6 +152,8 @@ curl --request POST \
 
 If the flow streams the result back to you, your flow is being served, and can be consumed from a front-end application by submitting POST requests to this endpoint.
 
+To trigger your application from an external event, see [Webhook](/webhook).
+
 :::note
 The test application returns a large amount of text, so the example command used `?stream=true`. If you prefer, set `?stream=false` to use batching. For more information, see the [API examples](/api-reference-api-examples#run-flow).
 :::
@@ -160,4 +162,4 @@ The test application returns a large amount of text, so the example command used
 
 For instructions on building and pushing your image to Docker Hub, see [Docker](/deployment-docker).
 
-To deploy your application to Kubernetes, see [Kubernetes](/deployment-kubernetes).
+To deploy your application to Kubernetes, see [Deploy the Langflow production environment to Kubernetes](/deployment-kubernetes-prod).

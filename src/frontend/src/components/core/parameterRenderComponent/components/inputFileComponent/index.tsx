@@ -27,7 +27,7 @@ export default function InputFileComponent({
   disabled,
   fileTypes,
   isList,
-  tempFile = false,
+  tempFile = true,
   editNode = false,
   id,
 }: InputProps<string, FileComponentType>): JSX.Element {
@@ -202,7 +202,7 @@ export default function InputFileComponent({
           {ENABLE_FILE_MANAGEMENT && !tempFile ? (
             files && (
               <div className="relative flex w-full flex-col gap-2">
-                <div className="flex flex-col">
+                <div className="nopan nowheel flex max-h-44 flex-col overflow-y-auto">
                   <FilesRendererComponent
                     files={files.filter((file) =>
                       selectedFiles.includes(file.path),

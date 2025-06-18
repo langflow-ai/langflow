@@ -131,7 +131,7 @@ export default function SessionSelector({
         else toggleVisibility();
       }}
       className={cn(
-        "file-component-accordion-div group cursor-pointer rounded-md text-left text-[13px] hover:bg-secondary-hover",
+        "file-component-accordion-div group cursor-pointer rounded-md text-left text-mmd hover:bg-secondary-hover",
         isVisible ? "bg-secondary-hover font-semibold" : "font-normal",
       )}
     >
@@ -164,15 +164,24 @@ export default function SessionSelector({
             </div>
           ) : (
             <ShadTooltip styleClasses="z-50" content={session}>
-              <div
-                className={cn(
-                  "w-full whitespace-nowrap group-hover:truncate-secondary-hover",
-                  isVisible
-                    ? "truncate-secondary-hover"
-                    : "truncate-muted dark:truncate-canvas",
-                )}
-              >
-                {session === currentFlowId ? "Default Session" : session}
+              <div className="relative w-full overflow-hidden">
+                <span className="w-full truncate">
+                  {session === currentFlowId ? "Default Session" : session}
+                </span>
+                <div
+                  className={cn(
+                    "pointer-events-none absolute left-0 right-0 top-0 h-full whitespace-nowrap",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-full w-full group-hover:truncate-secondary-hover",
+                      isVisible
+                        ? "truncate-secondary-hover"
+                        : "truncate-muted dark:truncate-canvas",
+                    )}
+                  ></div>
+                </div>
               </div>
             </ShadTooltip>
           )}
