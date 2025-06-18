@@ -278,7 +278,8 @@ class ResultDataResponse(BaseModel):
         """Serializes the results value with custom handling for special types and applies truncation limits.
 
         Returns:
-            The serialized representation of the input value, truncated according to configured maximum text length and item count.
+            The serialized representation of the input value, truncated according to configured
+            maximum text length and item count.
         """
         return serialize(v, max_length=get_max_text_length(), max_items=get_max_items_length())
 
@@ -287,7 +288,8 @@ class ResultDataResponse(BaseModel):
         """Serialize the entire model into a dictionary with truncation applied to large fields.
 
         Returns:
-            dict: A dictionary representation of the model with serialized and truncated results, outputs, logs, message, and artifacts.
+            dict: A dictionary representation of the model with serialized and truncated
+            results, outputs, logs, message, and artifacts.
         """
         return {
             "results": self.serialize_results(self.results),
