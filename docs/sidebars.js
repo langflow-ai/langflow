@@ -71,6 +71,7 @@ module.exports = {
       label: "Agents",
       items: [
         "Agents/agents",
+        "Agents/agents-tools",
       ],
     },
     {

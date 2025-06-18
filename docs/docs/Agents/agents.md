@@ -1,5 +1,5 @@
 ---
-title: Langflow Agents
+title: Use Langflow Agents
 slug: /agents
 ---
 
@@ -11,19 +11,43 @@ Langflow's [Agent component](/components-agents#agent-component) simplifies agen
 
 The Agent component provides everything you need to create an agent, including multiple LLMs, custom instructions, and tool configuration.
 
+## Agent settings
 
-## Prerequisites
+You can configure the Agent component to use your preferred provider and model, custom instructions, and tools.
 
-- [An OpenAI API key](https://platform.openai.com/)
+### Agent models and providers
 
-## Create a flow with the Agent component
+Use the *Model Provider* and *Model Name* settings to select the LLM that you want the Agent to use.
 
-Create a problem-solving agent in Langflow, starting with the **Agent** component and working outward.
+You must provide an authentication key for the selected provider, such as an OpenAI API key for OpenAI models.
+
+### Agent instructions and input
+
+In the *Agent Instructions* field, you can provide custom instructions that you want the Agent to use for every conversation.
+
+These instructions are applied in addition to the *Input*, which is provided at runtime.
+
+### Agent tools
+
+Agents are most useful when they have the appropriate tools available to complete requests.
+
+An Agent component can use any Langflow component as a tool, as long as you attach it to the Agent component.
+
+When you attach a component as a tool, you must configure the component as a tool by enabling *Tool Mode*.
+
+For more information, see [Configure tools for agents](/)
+
+## Use the Agent component in a flow
+
+:::tip
+For a pre-built demonstration, open the **Simple Agent** starter flow and follow along.
+:::
+
+Create an agent in Langflow, starting with the **Agent** component and working outward.
 
 1. Click **New Flow**, and then click **Blank Flow**.
 2. Click and drag an **Agent** component to your workspace.
-The default settings are acceptable for now. This guide assumes you're using **OpenAI** for the LLM, but other model providers are available.
-3. Add your **OpenAI API Key** to the **Agent** component.
+3. Use the default model or select another provider and model. If you want to use the default model, you need an OpenAI API key to run the flow.
 4. Add **Chat input** and **Chat output** components to your flow, and connect them to the tool calling agent.
 
 ![Chat with agent component](/img/agent-example-add-chat.png)
@@ -58,174 +82,6 @@ The Playground displays the agent's tool calls, what input was provided, and the
 You've successfully constructed a flow with the Langflow Agent.
 Connect more tools to solve more specialized problems.
 
-### Edit a tool component's actions
+## See also
 
-To edit a tool's actions, in the tool component, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to modify its `name`, `description`, or `enabled` metadata.
-These fields help connected agents understand how to use the action, without having to modify the agent's prompt instructions.
-
-For example, the [URL](/components-data#url) component has two actions available when **Tool Mode** is enabled.
-
-| Tool Name | Description | Enabled |
-|-----------|-------------|---------|
-| `fetch_content` | Fetch content from web pages recursively | true |
-| `fetch_content_as_message` | Fetch web content formatted as messages | true |
-
-With these descriptions, a connected agent has a clear idea of each tool's capabilities based on the `name` and `description` metadata. The `enabled` boolean controls the tool's availability to the agent. If you think an agent is using a tool incorrectly, edit a tool's `description` metadata to help the agent better understand the tool.
-
-Tool names and descriptions can be edited, but the default tool identifiers cannot be changed. If you want to change the tool identifier, create a custom component.
-
-## Use an agent as a tool
-
-The agent component itself also supports **Tool Mode** for creating multi-agent flows.
-
-Add an agent to your flow that uses a different OpenAI model for a larger context window.
-
-1. Click and drag an **Agent** component to your workspace.
-2. Add your **Open AI API Key** to the **Agent** component.
-3. In the **Model Name** field, select `gpt-4.1`.
-4. Click **Tool Mode** to use this new agent as a tool.
-5. Connect the new agent's **Toolset** port to the previously created agent's **Tools** port.
-6. Connect the **Web Search**, **URL**, and **Calculator** to the new agent.
-The new agent will use `gpt-4.1` for the larger tasks of scraping and searching information that require large context windows.
-The previously created agent will now use this agent as a tool, with its unique LLM and toolset.
-
-![Agent as a tool](/img/agent-example-agent-as-tool.png)
-
-7. The new agent's actions can be edited to help the agent understand how to use it.
-Click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to modify its `name`, `description`, or `enabled` metadata.
-For example, the default tool name is `Agent`. Edit the name to `Agent-gpt-41`, and edit the description to `Use the gpt-4.1 model for complex problem solving`. The connected agent will understand that this is the `gpt-4.1` agent, and will use it for tasks requiring a larger context window.
-
-## Add custom components as tools {#components-as-tools}
-
-An agent can use custom components as tools.
-
-1. To add a custom component to the agent flow, click **New Custom Component**.
-
-2. Add custom Python code to the custom component.
-For example, to create a text analyzer component, paste the below code into the custom component's **Code** pane.
-
-<details open>
-<summary>Python</summary>
-
-```python
-from langflow.custom import Component
-from langflow.io import MessageTextInput, Output
-from langflow.schema import Data
-import re
-
-class TextAnalyzerComponent(Component):
-    display_name = "Text Analyzer"
-    description = "Analyzes and transforms input text."
-    documentation: str = "http://docs.langflow.org/components/custom"
-    icon = "chart-bar"
-    name = "TextAnalyzerComponent"
-
-    inputs = [
-        MessageTextInput(
-            name="input_text",
-            display_name="Input Text",
-            info="Enter text to analyze",
-            value="Hello, World!",
-            tool_mode=True,
-        ),
-    ]
-
-    outputs = [
-        Output(display_name="Analysis Result", name="output", method="analyze_text"),
-    ]
-
-    def analyze_text(self) -> Data:
-        text = self.input_text
-
-        # Perform text analysis
-        word_count = len(text.split())
-        char_count = len(text)
-        sentence_count = len(re.findall(r'\w+[.!?]', text))
-
-        # Transform text
-        reversed_text = text[::-1]
-        uppercase_text = text.upper()
-
-        analysis_result = {
-            "original_text": text,
-            "word_count": word_count,
-            "character_count": char_count,
-            "sentence_count": sentence_count,
-            "reversed_text": reversed_text,
-            "uppercase_text": uppercase_text
-        }
-
-        data = Data(value=analysis_result)
-        self.status = data
-        return data
-```
-</details>
-
-3. To use the custom component as a tool, click **Tool Mode**.
-4. Connect the custom component's tool output to the agent's tools input.
-5. Open the Playground and instruct the agent, `Use the text analyzer on this text: "Agents really are thinking machines!"`
-
-<details open>
-<summary>Response</summary>
-```
-AI
-gpt-4o
-Finished
-0.6s
-Here is the analysis of the text "Agents really are thinking machines!":
-Original Text: Agents really are thinking machines!
-Word Count: 5
-Character Count: 36
-Sentence Count: 1
-Reversed Text: !senihcam gnikniht era yllaer stnegA
-Uppercase Text: AGENTS REALLY ARE THINKING MACHINES!
-```
-</details>
-
-The agent correctly calls the `analyze_text` action and returns the result to the Playground.
-
-## Make any component a tool
-
-If the component you want to use as a tool doesn't have a **Tool Mode** button, add `tool_mode=True` to one of the component's inputs, and connect the new **Toolset** output to the agent's **Tools** input.
-
-Langflow supports **Tool Mode** for the following data types:
-
-* `DataInput`
-* `DataFrameInput`
-* `PromptInput`
-* `MessageTextInput`
-* `MultilineInput`
-* `DropdownInput`
-
-For example, the [components as tools](#components-as-tools) example above adds `tool_mode=True` to the `MessageTextInput` input so the custom component can be used as a tool.
-
-```python
-inputs = [
-    MessageTextInput(
-        name="input_text",
-        display_name="Input Text",
-        info="Enter text to analyze",
-        value="Hello, World!",
-        tool_mode=True,
-    ),
-]
-```
-
-## Use the Run Flow component as a tool
-
-An agent can use flows that are saved in your workspace as tools with the [Run flow](/components-logic#run-flow) component.
-
-1. To add a **Run flow** component, click and drag a **Run flow** component to your workspace.
-2. Select the flow you want the agent to use as a tool.
-3. Enable **Tool Mode** in the component.
-The **Run flow** component displays your flow as an available action.
-4. Connect the **Run flow** component's tool output to the agent's tools input.
-5. Ask the agent, `What tools are you using to answer my questions?`
-Your flow should be visible in the response as a tool.
-6. Ask the agent to specifically use the connected tool to answer your question.
-The connected flow returns an answer based on your question.
-For example, a Basic Prompting flow connected as a tool returns a different result depending upon its LLM and prompt instructions.
-
-![Run Flow as tool connected to agnet](/img/agent-example-run-flow-as-tool.png)
-
-
+* [Configure tools for agents](/agents-tools)
