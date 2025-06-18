@@ -1,22 +1,26 @@
 import json
 import os
 from collections.abc import Callable
+from io import StringIO
 from pathlib import Path
 from typing import Any
 from uuid import UUID
 
 from aiofile import async_open
+from dotenv import dotenv_values
 from loguru import logger
 from sqlalchemy import text
 
 from langflow.api.utils import cascade_delete_flow
 from langflow.graph import Graph
-from langflow.load import aload_flow_from_json
-from langflow.processing.process import run_graph
+from langflow.load.utils import replace_tweaks_with_env
+from langflow.logging.logger import configure
+from langflow.processing.process import process_tweaks, run_graph
 from langflow.services.cache.service import AsyncBaseCacheService
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import initialize_database
 from langflow.services.deps import get_cache_service, session_scope
+from langflow.utils.util import update_settings
 
 
 class LangflowRunnerExperimental:
@@ -36,7 +40,27 @@ class LangflowRunnerExperimental:
 
     """
 
-    should_initialize_db: bool = True
+    def __init__(
+        self,
+        *,
+        should_initialize_db: bool = True,
+        log_level: str | None = None,
+        log_file: str | None = None,
+        disable_logs: bool = False,
+        async_log_file: bool = True,
+    ):
+        """Initializes the LangflowRunnerExperimental instance with optional database and logging configuration.
+
+        Args:
+            should_initialize_db: If True, initializes the database if it does not exist.
+            log_level: Logging level to use (e.g., "INFO", "DEBUG").
+            log_file: Path to the log file for output, if specified.
+            disable_logs: If True, disables all logging output.
+            async_log_file: If True, enables asynchronous logging to file.
+        """
+        self.should_initialize_db = should_initialize_db
+        log_file_path = Path(log_file) if log_file else None
+        configure(log_level=log_level, log_file=log_file_path, disable=disable_logs, async_file=async_log_file)
 
     async def run(
         self,
@@ -46,14 +70,44 @@ class LangflowRunnerExperimental:
         *,
         input_type: str = "chat",
         output_type: str = "chat",
+        cache: str | None = None,
+        env_file: str | None = None,
+        tweaks: dict | None = None,
         stream: bool = False,
     ):
+        """Executes a flow asynchronously for a given session, supporting environment variable injection, tweaks, caching, and streaming output.
+
+        Initializes the database if needed, loads and modifies the flow schema, applies tweaks and environment variables, manages flow state in the cache and database, creates and runs the flow graph, and returns the execution result. Cleans up flow state after execution. Supports streaming output if requested.
+
+        Args:
+            session_id: Unique identifier for the session and flow execution.
+            flow: The flow definition as a file path, string, or dictionary.
+            input_value: The input to provide to the flow.
+            input_type: The type of input, e.g., "chat".
+            output_type: The type of output, e.g., "chat".
+            cache: Optional cache identifier to use for this run.
+            env_file: Optional path to a dotenv file for environment variable injection.
+            tweaks: Optional dictionary of tweaks to apply to the flow, with support for environment variable substitution.
+            stream: If True, enables streaming output.
+
+        Returns:
+            The result of the flow execution, or a streaming response if streaming is enabled.
+        """
         logger.info(f"Start Handling {session_id=}")
         await self.init_db_if_needed()
+        # Update settings with cache and components path
+        await update_settings(cache=cache)
         flow_dict = await self.get_flow_dict(flow)
         self.set_flow_id(session_id, flow_dict)
+        if env_file and tweaks is not None:
+            async with async_open(Path(env_file), encoding="utf-8") as f:
+                content = await f.read()
+                env_vars = dotenv_values(stream=StringIO(content))
+            tweaks = replace_tweaks_with_env(tweaks=tweaks, env_vars=env_vars)
         # we must modify the flow schema to set the session_id and for load_from_db=True we load the value from env vars
         self.modification(flow_dict, lambda obj, parent, key: self.modify_flow_schema(session_id, obj, parent, key))
+        if tweaks is not None:
+            flow_dict = process_tweaks(flow_dict, tweaks)
         await self.clear_flow_state(session_id, flow_dict)
         await self.add_flow_to_db(session_id, flow_dict)
         graph = await self.create_graph_from_flow(session_id, flow_dict)
@@ -91,9 +145,16 @@ class LangflowRunnerExperimental:
 
     @staticmethod
     async def create_graph_from_flow(session_id: str, flow_dict: dict):
-        graph = await aload_flow_from_json(flow=flow_dict, disable_logs=False)
-        graph.flow_id = flow_dict["id"]
-        graph.flow_name = flow_dict.get("name")
+        """Creates and initializes a Graph instance from a flow dictionary for a given session.
+
+        Args:
+            session_id: The unique identifier for the session.
+            flow_dict: The dictionary representing the flow configuration.
+
+        Returns:
+            An initialized Graph object ready for execution.
+        """
+        graph = Graph.from_payload(flow_dict, flow_id=flow_dict["id"], flow_name=flow_dict.get("name"))
         graph.session_id = session_id
         graph.set_run_id(session_id)
         await graph.initialize_run()
