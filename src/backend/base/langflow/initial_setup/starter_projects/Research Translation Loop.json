@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-WgsKR{œdataTypeœ:œChatInputœ,œidœ:œChatInput-WgsKRœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-zCOeL{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-zCOeLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-WgsKR",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-WgsKRœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-WgsKRœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ArXivComponent-zCOeL",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-zCOeLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-zCOeLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ArXivComponent-zCOeL{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-zCOeLœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-XRofp{œfieldNameœ:œdataœ,œidœ:œLoopComponent-XRofpœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ArXivComponent-zCOeL",
-        "sourceHandle": "{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-zCOeLœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-zCOeLœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "LoopComponent-XRofp",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-XRofpœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-XRofpœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -82,9 +82,9 @@
         "id": "reactflow__edge-LoopComponent-XRofp{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XRofpœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-Eutpd{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-Eutpdœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-XRofp",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XRofpœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-XRofpœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParserComponent-Eutpd",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-Eutpdœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-Eutpdœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-LoopComponent-XRofp{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XRofpœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-TypeConverterComponent-SXc9Q{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-SXc9Qœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-XRofp",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XRofpœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-XRofpœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "TypeConverterComponent-SXc9Q",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-SXc9Qœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-SXc9Qœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -142,9 +142,9 @@
         "id": "reactflow__edge-TypeConverterComponent-SXc9Q{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-SXc9Qœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JmCNb{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JmCNbœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TypeConverterComponent-SXc9Q",
-        "sourceHandle": "{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-SXc9Qœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-SXc9Qœ, œnameœ: œmessage_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-JmCNb",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JmCNbœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JmCNbœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -170,9 +170,9 @@
         "id": "reactflow__edge-ParserComponent-Eutpd{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-Eutpdœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-a6z66{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-a6z66œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-Eutpd",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-Eutpdœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-Eutpdœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-a6z66",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-a6z66œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-a6z66œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -200,9 +200,9 @@
         "id": "xy-edge__LanguageModelComponent-a6z66{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-a6z66œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-TypeConverterComponent-lLLqS{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-lLLqSœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-a6z66",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-a6z66œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-a6z66œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "TypeConverterComponent-lLLqS",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-lLLqSœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-lLLqSœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -212,9 +212,7 @@
             "dataType": "TypeConverterComponent",
             "id": "TypeConverterComponent-lLLqS",
             "name": "data_output",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "dataType": "LoopComponent",
@@ -228,9 +226,9 @@
         "id": "xy-edge__TypeConverterComponent-lLLqS{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-lLLqSœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}-LoopComponent-XRofp{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XRofpœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
         "selected": false,
         "source": "TypeConverterComponent-lLLqS",
-        "sourceHandle": "{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-lLLqSœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-lLLqSœ, œnameœ: œdata_outputœ, œoutput_typesœ: []}",
         "target": "LoopComponent-XRofp",
-        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XRofpœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}"
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-XRofpœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
       }
     ],
     "nodes": [
@@ -1518,8 +1516,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1534,8 +1530,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1795,17 +1789,14 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Data Output",
+                "display_name": "Message Output",
                 "group_outputs": false,
-                "hidden": null,
-                "method": "convert_to_data",
-                "name": "data_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Data",
+                "method": "convert_to_message",
+                "name": "message_output",
+                "selected": "Message",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Message"
                 ],
                 "value": "__UNDEFINED__"
               }

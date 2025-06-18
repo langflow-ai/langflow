@@ -25,9 +25,9 @@
         "id": "reactflow__edge-TextInput-NWSqL{œdataTypeœ:œTextInputœ,œidœ:œTextInput-NWSqLœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-aR6j4{œfieldNameœ:œCONTENT_GUIDELINESœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-NWSqL",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-NWSqLœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-NWSqLœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-aR6j4",
-        "targetHandle": "{œfieldNameœ:œCONTENT_GUIDELINESœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCONTENT_GUIDELINESœ, œidœ: œPrompt-aR6j4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-TextInput-fJIkh{œdataTypeœ:œTextInputœ,œidœ:œTextInput-fJIkhœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-aR6j4{œfieldNameœ:œOUTPUT_FORMATœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-fJIkh",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-fJIkhœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-fJIkhœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-aR6j4",
-        "targetHandle": "{œfieldNameœ:œOUTPUT_FORMATœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œOUTPUT_FORMATœ, œidœ: œPrompt-aR6j4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-TextInput-l0OiF{œdataTypeœ:œTextInputœ,œidœ:œTextInput-l0OiFœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-aR6j4{œfieldNameœ:œOUTPUT_LANGUAGEœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-l0OiF",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-l0OiFœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-l0OiFœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-aR6j4",
-        "targetHandle": "{œfieldNameœ:œOUTPUT_LANGUAGEœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œOUTPUT_LANGUAGEœ, œidœ: œPrompt-aR6j4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "reactflow__edge-TextInput-S8V0r{œdataTypeœ:œTextInputœ,œidœ:œTextInput-S8V0rœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-aR6j4{œfieldNameœ:œPROFILE_DETAILSœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-S8V0r",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-S8V0rœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-S8V0rœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-aR6j4",
-        "targetHandle": "{œfieldNameœ:œPROFILE_DETAILSœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œPROFILE_DETAILSœ, œidœ: œPrompt-aR6j4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -137,9 +137,9 @@
         "id": "reactflow__edge-TextInput-tGHaw{œdataTypeœ:œTextInputœ,œidœ:œTextInput-tGHawœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-aR6j4{œfieldNameœ:œPROFILE_TYPEœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-tGHaw",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-tGHawœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-tGHawœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-aR6j4",
-        "targetHandle": "{œfieldNameœ:œPROFILE_TYPEœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œPROFILE_TYPEœ, œidœ: œPrompt-aR6j4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -165,9 +165,9 @@
         "id": "reactflow__edge-TextInput-LlbHe{œdataTypeœ:œTextInputœ,œidœ:œTextInput-LlbHeœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-aR6j4{œfieldNameœ:œTONE_AND_STYLEœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-LlbHe",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-LlbHeœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-LlbHeœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-aR6j4",
-        "targetHandle": "{œfieldNameœ:œTONE_AND_STYLEœ,œidœ:œPrompt-aR6j4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œTONE_AND_STYLEœ, œidœ: œPrompt-aR6j4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -193,9 +193,9 @@
         "id": "reactflow__edge-Prompt-aR6j4{œdataTypeœ:œPromptœ,œidœ:œPrompt-aR6j4œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-w1FLB{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-w1FLBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-aR6j4",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-aR6j4œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-aR6j4œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-w1FLB",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-w1FLBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-w1FLBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -221,9 +221,9 @@
         "id": "reactflow__edge-ChatInput-mWVSr{œdataTypeœ:œChatInputœ,œidœ:œChatInput-mWVSrœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-w1FLB{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-w1FLBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-mWVSr",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-mWVSrœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-mWVSrœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-w1FLB",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-w1FLBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-w1FLBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -251,9 +251,9 @@
         "id": "reactflow__edge-LanguageModelComponent-w1FLB{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-w1FLBœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Tl4Or{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Tl4Orœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-w1FLB",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-w1FLBœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-w1FLBœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-Tl4Or",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Tl4Orœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Tl4Orœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1871,8 +1871,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1887,8 +1885,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
