@@ -125,6 +125,7 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
+    "onnxruntime>=1.22.0",
 ]
 
 [dependency-groups]

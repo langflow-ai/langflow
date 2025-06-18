@@ -125,8 +125,8 @@ dev = [
     "devtools>=0.12.2",
     "pytest-flakefinder>=1.1.0",
     "types-markdown>=3.7.0.20240822",
-    "codeflash>=0.8.4"
-
+    "codeflash>=0.8.4",
+    "onnxruntime>=1.22.0",
 ]
 
 
