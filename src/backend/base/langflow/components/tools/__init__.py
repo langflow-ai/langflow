@@ -13,6 +13,7 @@ from .serp_api import SerpAPIComponent
 from .wikidata_api import WikidataAPIComponent
 from .wikipedia_api import WikipediaAPIComponent
 from .yahoo_finance import YfinanceToolComponent
+from .currency_convertor import CurrencyConverterComponent
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", LangChainDeprecationWarning)
@@ -34,4 +35,5 @@ __all__ = [
     "WikidataAPIComponent",
     "WikipediaAPIComponent",
     "YfinanceToolComponent",
+    "CurrencyConverterComponent",
 ]
