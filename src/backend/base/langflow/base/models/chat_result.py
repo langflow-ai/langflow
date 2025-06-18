@@ -27,6 +27,8 @@ def build_messages_and_runnable(
                         system_message_added = True
                     runnable = prompt | runnable
                 else:
+                    if hasattr(input_value, "images") and input_value.images and hasattr(original_runnable, "bind"):
+                        runnable = original_runnable.bind(images=input_value.images)
                     messages.append(input_value.to_lc_message())
         else:
             messages.append(HumanMessage(content=input_value))
