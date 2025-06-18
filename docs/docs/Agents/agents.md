@@ -5,13 +5,12 @@ slug: /agents
 
 import Icon from "@site/src/components/icon";
 
-**Agents** use LLMs as a brain to autonomously analyze problems and select tools to solve them.
+Agents use LLMs as a brain to autonomously analyze problems and select tools to solve them.
 
-To simplify the development of agents, Langflow created an [Agent](/components-agents#agent-component) component that simplifies configuration and lets developers focus on solving problems.
+Langflow's [Agent component](/components-agents#agent-component) simplifies agent configuration so you can focus on application development.
 
-The Agent component provides everything needed to create an agent, including multiple LLM models, a built-in instructions field, and tool connection and management.
+The Agent component provides everything you need to create an agent, including multiple LLMs, custom instructions, and tool configuration.
 
-Learn how to build a flow starting with the **Agent** component, and see how it can help you solve problems.
 
 ## Prerequisites
 
