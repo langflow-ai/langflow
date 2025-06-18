@@ -1,3 +1,52 @@
+"""FastAPI endpoints for Langflow graph building and execution.
+
+This module provides REST API endpoints for building and executing Langflow graphs,
+with support for streaming results and background task processing.
+
+Main Endpoints:
+    POST /build/{flow_id}/vertices: Build graph and return execution order (deprecated)
+    POST /build/{flow_id}/flow: Build and execute flow with streaming support
+    GET /build/{job_id}/events: SSE endpoint for streaming build events
+    POST /build/{job_id}/cancel: Cancel running flow execution
+    POST /build/{flow_id}/vertices/{vertex_id}: Build specific vertex (deprecated)
+
+Flow Execution:
+    The /build/{flow_id}/flow endpoint handles the main execution workflow:
+    1. Builds graph from flow_id (database) or FlowDataRequest (inline data)
+    2. Validates graph structure and component dependencies
+    3. Executes graph with optional streaming via start_flow_build()
+    4. Returns streaming response with build events and results
+
+Streaming Support:
+    - SSE (Server-Sent Events) for real-time build progress
+    - Background task coordination via LimitVertexBuildBackgroundTasks
+    - Event delivery types: SSE, WebSocket (future), None (blocking)
+    - Automatic cleanup of completed jobs
+
+Request/Response Models:
+    - FlowDataRequest: Complete flow definition with nodes and edges
+    - ChatInputRequest: Input data for flow execution
+    - VerticesOrderResponse: Graph topology and execution order
+    - FlowStatusResponse: Current execution status and results
+
+Caching:
+    Uses ChatService for graph caching to avoid rebuilding identical flows:
+    - Graphs cached by flow_id after successful build
+    - Cache invalidation on flow modifications
+    - Performance optimization for repeated executions
+
+Error Handling:
+    - Comprehensive exception handling with user-friendly messages
+    - Telemetry logging for success/failure metrics via PlaygroundPayload/ComponentPayload
+    - Graceful degradation for malformed requests
+    - HTTP status codes: 404 (flow not found), 500 (execution errors), 400 (invalid requests)
+
+Authentication:
+    - CurrentActiveUser dependency for protected endpoints
+    - Public flow support via /build_public_tmp with client_id cookies
+    - Deterministic flow IDs for public flow tracking
+"""
+
 from __future__ import annotations
 
 import asyncio

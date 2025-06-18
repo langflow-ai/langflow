@@ -1,3 +1,48 @@
+"""Azure OpenAI embeddings component for Langflow.
+
+This module provides the AzureOpenAIEmbeddingsComponent which integrates Azure's
+OpenAI embedding models into Langflow workflows. Azure OpenAI provides the same
+models as OpenAI but through Microsoft's Azure infrastructure with additional
+enterprise features.
+
+Key Features:
+    - Enterprise-grade Azure OpenAI service integration
+    - Support for all OpenAI embedding models via Azure endpoints
+    - Configurable API versions for compatibility and feature access
+    - Azure-specific authentication and endpoint configuration
+    - Dimension control for supported embedding models
+
+Supported Models (via Azure):
+    - text-embedding-3-small: 1536 dimensions, improved performance
+    - text-embedding-3-large: 3072 dimensions, highest quality
+    - text-embedding-ada-002: 1536 dimensions, legacy model
+    - text-embedding-ada-001: 1024 dimensions, deprecated
+
+Azure Configuration:
+    - azure_endpoint: Full Azure OpenAI resource URL
+    - azure_deployment: Deployment name configured in Azure
+    - api_version: Azure API version (supports multiple versions)
+    - api_key: Azure OpenAI API key for authentication
+    - dimensions: Optional embedding dimension override
+
+API Versions Supported:
+    - 2022-12-01: Initial GA version
+    - 2023-03-15-preview: Preview with enhanced features
+    - 2023-05-15: Stable release with improvements
+    - 2023-06-01-preview: Preview with additional capabilities
+    - 2023-07-01-preview: Latest preview features
+    - 2023-08-01-preview: Most recent preview version
+
+Enterprise Benefits:
+    - Private network connectivity via Azure VNet
+    - Compliance with enterprise security requirements
+    - SLA guarantees and Azure support integration
+    - Regional data residency options
+
+The component wraps langchain_openai.AzureOpenAIEmbeddings and provides
+Langflow-specific configuration and error handling.
+"""
+
 from langchain_openai import AzureOpenAIEmbeddings
 
 from langflow.base.models.model import LCModelComponent

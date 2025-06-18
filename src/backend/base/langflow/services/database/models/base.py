@@ -1,3 +1,13 @@
+"""Base utilities for database model serialization.
+
+This module provides JSON serialization utilities optimized for database models
+in Langflow. It uses the orjson library for high-performance JSON encoding
+with configurable formatting options.
+
+The orjson_dumps function provides a consistent interface for serializing
+database model data with proper formatting and encoding.
+"""
+
 import orjson
 
 

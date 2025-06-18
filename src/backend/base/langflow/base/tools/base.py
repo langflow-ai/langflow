@@ -1,3 +1,12 @@
+"""Base utilities for tool components in Langflow.
+
+This module provides utility functions for working with Tool objects in Langflow,
+including functions for building status representations and handling tool metadata.
+
+These utilities are used throughout the Langflow tool ecosystem to provide
+consistent representations and debugging information for tool components.
+"""
+
 from langflow.field_typing import Tool
 
 

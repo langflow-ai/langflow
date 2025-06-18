@@ -1,3 +1,18 @@
+"""Main API router configuration for Langflow.
+
+This module configures the FastAPI router hierarchy for Langflow's REST API,
+organizing endpoints into versioned API groups (v1, v2) and functional modules.
+
+The router handles:
+- API versioning and route organization
+- Import and registration of endpoint modules
+- Prefix configuration for API namespacing
+- Integration of specialized routers (voice, files, auth, etc.)
+
+This provides the central routing configuration that FastAPI uses to
+dispatch incoming HTTP requests to the appropriate handler functions.
+"""
+
 # Router for base api
 from fastapi import APIRouter
 

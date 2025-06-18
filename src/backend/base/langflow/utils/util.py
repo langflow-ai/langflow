@@ -1,3 +1,17 @@
+"""Core utility functions for Langflow.
+
+This module provides essential utility functions used throughout the Langflow application,
+including:
+- Template building and formatting for dynamic component generation
+- Type processing and validation utilities
+- Settings management and configuration helpers
+- Field processing and frontend integration utilities
+- String manipulation and formatting functions
+
+These utilities support the core functionality of Langflow's component system,
+template generation, and dynamic type handling.
+"""
+
 import difflib
 import importlib
 import inspect

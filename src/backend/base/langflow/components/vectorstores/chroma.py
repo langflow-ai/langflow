@@ -1,3 +1,40 @@
+"""ChromaDB vector store component for Langflow.
+
+This module provides the ChromaVectorStoreComponent which integrates ChromaDB
+vector database for storing and searching embeddings in Langflow workflows.
+
+ChromaDB Features:
+    - Local SQLite-based vector storage (default)
+    - Optional remote server connection via HTTP
+    - Persistent storage with configurable paths
+    - Collection-based organization
+    - Metadata filtering and search
+    - Similarity and MMR (Maximum Marginal Relevance) search
+
+Component Operations:
+    - Store documents with embeddings in ChromaDB collections
+    - Similarity search with configurable result count
+    - MMR search for diverse result selection
+    - Document deduplication based on content and metadata
+    - Collection browsing and data export
+
+Configuration Options:
+    - collection_name: ChromaDB collection identifier
+    - persist_directory: Local storage path for database files
+    - chroma_server_host/port: Remote ChromaDB server settings
+    - chroma_server_headers: Authentication headers for remote access
+    - allow_duplicates: Control document deduplication behavior
+    - search_type: "Similarity" or "MMR" search algorithms
+
+Search Parameters:
+    - number_of_results: Maximum results to return from search
+    - limit: Deduplication comparison limit for performance
+    - Embedding input: Required embedding model for vector operations
+
+The component uses langchain_chroma.Chroma as the underlying implementation
+and provides Langflow-specific caching and data handling.
+"""
+
 from copy import deepcopy
 from typing import TYPE_CHECKING
 

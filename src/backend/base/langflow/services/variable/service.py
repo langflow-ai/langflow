@@ -1,3 +1,20 @@
+"""Variable management service for Langflow.
+
+This module provides the DatabaseVariableService that handles global and user-specific
+variables and credentials within the Langflow application, including:
+- Global and user-scoped variable management
+- Secure credential storage and encryption
+- Environment variable integration
+- Variable type management (generic, credential)
+- Database persistence for variables
+- Variable validation and access control
+- Integration with authentication services
+- Support for encrypted credential storage
+
+The VariableService enables secure and organized management of configuration
+values, API keys, and other sensitive data across Langflow workflows.
+"""
+
 from __future__ import annotations
 
 import os
