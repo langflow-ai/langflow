@@ -46,6 +46,8 @@ test(
 
     const firstOutputText = await page.getByPlaceholder("Empty").textContent();
 
+    expect(firstOutputText).toBe("hello world");
+
     await page.getByText("Close").last().click();
 
     await page.getByTestId("textarea_str_input_value").fill("goodbye world");
@@ -63,7 +65,9 @@ test(
     });
 
     await page.getByTestId("icon-FreezeAll").click();
-    // await expect(page.getByTestId("frozen-icon")).toBeVisible();
+    // Wait 3 seconds just to be sure the freeze is applied
+    await page.waitForTimeout(3000);
+    await expect(page.getByTestId("frozen-icon")).toBeVisible();
     await page.keyboard.press("Escape");
 
     await page.getByTestId("div-generic-node").getByRole("button").click();
