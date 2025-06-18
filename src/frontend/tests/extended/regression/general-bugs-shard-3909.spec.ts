@@ -44,7 +44,7 @@ test(
     await expect(page.getByTestId("button_run_chat output")).toBeVisible({
       timeout: 30000,
     });
-    await expect(page.getByTestId("button_run_openai")).toBeVisible({
+    await expect(page.getByTestId("button_run_language model")).toBeVisible({
       timeout: 30000,
     });
     await expect(page.getByTestId("button_run_prompt")).toBeVisible({
