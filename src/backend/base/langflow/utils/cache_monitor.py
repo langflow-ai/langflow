@@ -9,6 +9,7 @@ import gc
 import logging
 import threading
 import time
+from collections import deque
 from contextlib import contextmanager
 from dataclasses import dataclass
 
@@ -28,6 +29,9 @@ MEDIUM_MEMORY_THRESHOLD_MB = 500
 LOW_MEMORY_THRESHOLD_MB = 200
 HIGH_CREATION_TIME_THRESHOLD_MS = 100
 MIN_REQUESTS_FOR_ANALYSIS = 100
+
+# Maximum number of creation times to keep for average calculation
+MAX_CREATION_TIMES = 1000
 
 # TTL-related constants
 SHORT_TTL_THRESHOLD_SECONDS = 1800  # 30 minutes
@@ -69,7 +73,7 @@ class ClassConstructorCacheMonitor:
 
     def __init__(self) -> None:
         self.metrics = CacheMetrics()
-        self.creation_times: list[float] = []
+        self.creation_times: deque[float] = deque(maxlen=MAX_CREATION_TIMES)
         self.start_time = time.time()
         self._lock = threading.Lock()
 
