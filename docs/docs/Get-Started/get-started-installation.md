@@ -22,11 +22,10 @@ Langflow can be installed in multiple ways:
   <TabItem value="macOS" label="macOS">
 
   1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
-  2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
-  3. Open the **Finder**, and then navigate to **Downloads**.
-  4. Double-click the downloaded `.dmg` file.
-  5. To install Langflow Desktop, drag and drop the application icon to the **Applications** folder.
-  6. When the installation completes, open the Langflow application.
+  2. Click *Download Langflow*, enter your **Name**, **Email address**, and **Company**, and then click **Download**.
+  3. Mount and install the Langflow application.
+  6. Open the Langflow application.
+Initial startup can take a few minutes while Langflow Desktop checks your local environment and Langflow Desktop configuration, including [uv] and your preferred Langflow version.
 
   </TabItem>
   <TabItem value="Windows" label="Windows">
@@ -44,14 +43,14 @@ Langflow can be installed in multiple ways:
 
 The application checks [uv](https://docs.astral.sh/uv/concepts/tools/), your local environment, and the Langflow version, and then starts.
 
-### Manage your Langflow version in Langflow Desktop
+### Manage your version of Langflow Desktop
 
 When a new version of Langflow is available, Langflow Desktop displays an upgrade message.
 
-To manage your Langflow version in Langflow Desktop, follow these steps:
+To manage your version of Langflow Desktop, follow these steps:
 
-1. To access Langflow Desktop's **Version Management** pane, click your **Profile Image**, and then select **Version Management**.
-Langflow Desktop's current version is displayed, with other version options listed after it.
+1. In Langflow Desktop, click your profile image, and then select **Version Management**.
+The *Version Management* pane lists your active Langflow version first, followed by other available versions.
 The **latest** version is always highlighted.
 2. To change your Langflow version, select another version.
 A confirmation pane containing the selected version's changelog appears.
