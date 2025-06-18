@@ -75,11 +75,11 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
 ## Install and run Langflow OSS
 
-Before you install and run Langflow OSS, be sure you have the following items.
+To install and run Langflow OSS, you need the following:
 
 - [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- A dual-core CPU and at least 2 GB of RAM. More intensive use requires a multi-core CPU and at least 4 GB of RAM.
+- At minimum, a dual-core CPU and 2 GB RAM, but a multi-core CPU and at least 4 GB RAM are recommended
 - A virtual environment created with [uv](https://docs.astral.sh/uv/pip/environments)
 
 <details>
