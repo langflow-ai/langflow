@@ -70,8 +70,12 @@ test(
     await page.keyboard.press("Escape");
 
     await page.getByTestId("div-generic-node").getByRole("button").click();
-
-    await page.waitForTimeout(2000);
+    await page.waitForSelector(
+      '[data-testid="output-inspection-output text-textinput"]',
+      {
+        timeout: 2000,
+      },
+    );
 
     await page.getByTestId("output-inspection-output text-textinput").click();
 
