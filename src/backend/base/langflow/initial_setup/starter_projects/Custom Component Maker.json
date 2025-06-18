@@ -26,9 +26,9 @@
         "id": "reactflow__edge-ChatInput-NQjCD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NQjCDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-HezGA{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-HezGAœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-NQjCD",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NQjCDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-NQjCDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-HezGA",
-        "targetHandle": "{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-HezGAœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-HezGAœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-Memory-6oQG6{œdataTypeœ:œMemoryœ,œidœ:œMemory-6oQG6œ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-HezGA{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-HezGAœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Memory-6oQG6",
-        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-6oQG6œ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-6oQG6œ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-HezGA",
-        "targetHandle": "{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-HezGAœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-HezGAœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-URL-z6hKc{œdataTypeœ:œURLœ,œidœ:œURL-z6hKcœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-HezGA{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-HezGAœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-z6hKc",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-z6hKcœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-z6hKcœ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-HezGA",
-        "targetHandle": "{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-HezGAœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-HezGAœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-URL-iOGeB{œdataTypeœ:œURLœ,œidœ:œURL-iOGeBœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-HezGA{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-HezGAœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-iOGeB",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-iOGeBœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-iOGeBœ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-HezGA",
-        "targetHandle": "{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-HezGAœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-HezGAœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -142,9 +142,9 @@
         "id": "reactflow__edge-URL-iU5zn{œdataTypeœ:œURLœ,œidœ:œURL-iU5znœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-HezGA{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-HezGAœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-iU5zn",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-iU5znœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-iU5znœ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-HezGA",
-        "targetHandle": "{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-HezGAœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-HezGAœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -170,9 +170,9 @@
         "id": "reactflow__edge-Prompt-HezGA{œdataTypeœ:œPromptœ,œidœ:œPrompt-HezGAœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-3kLxv{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-3kLxvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-HezGA",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-HezGAœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-HezGAœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-3kLxv",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-3kLxvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-3kLxvœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -200,9 +200,9 @@
         "id": "reactflow__edge-LanguageModelComponent-3kLxv{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-3kLxvœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-IfM1m{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-IfM1mœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-3kLxv",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-3kLxvœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-3kLxvœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-IfM1m",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-IfM1mœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-IfM1mœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
