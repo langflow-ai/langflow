@@ -115,9 +115,8 @@ def _vertex_to_primitive_dict(target: Vertex) -> dict:
 async def log_transaction(
     flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
 ) -> None:
-    """
-    Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
-    
+    """Asynchronously logs a transaction record for a vertex in a flow if transaction storage is enabled.
+
     Serializes the source vertex's primitive parameters and result, handling pandas DataFrames as needed, and records transaction details including inputs, outputs, status, error, and flow ID in the database. If the flow ID is not provided, attempts to retrieve it from the source vertex's graph. Logs warnings and errors on serialization or database failures.
     """
     try:
@@ -171,9 +170,8 @@ async def log_vertex_build(
     data: ResultDataResponse | dict,
     artifacts: dict | None = None,
 ) -> None:
-    """
-    Asynchronously logs a vertex build record to the database if vertex build storage is enabled.
-    
+    """Asynchronously logs a vertex build record to the database if vertex build storage is enabled.
+
     Serializes the provided data and artifacts with configurable length and item limits before storing. Converts parameters to string if present. Handles exceptions by logging errors.
     """
     try:

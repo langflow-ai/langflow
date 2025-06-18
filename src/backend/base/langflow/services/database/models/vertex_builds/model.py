@@ -39,9 +39,8 @@ class VertexBuildBase(SQLModel):
 
     @field_serializer("data")
     def serialize_data(self, data) -> dict:
-        """
-        Serializes the `data` field with enforced limits on text length and item count.
-        
+        """Serializes the `data` field with enforced limits on text length and item count.
+
         Returns:
             dict: The serialized representation of the data field.
         """
@@ -49,9 +48,8 @@ class VertexBuildBase(SQLModel):
 
     @field_serializer("artifacts")
     def serialize_artifacts(self, data) -> dict:
-        """
-        Serializes the artifacts field, applying limits on text length and item count.
-        
+        """Serializes the artifacts field, applying limits on text length and item count.
+
         Returns:
             dict: The serialized artifacts dictionary with enforced size constraints.
         """
@@ -59,9 +57,8 @@ class VertexBuildBase(SQLModel):
 
     @field_serializer("params")
     def serialize_params(self, data) -> str:
-        """
-        Serialize the `params` field to a string with enforced limits on text length and item count.
-        
+        """Serialize the `params` field to a string with enforced limits on text length and item count.
+
         Returns:
             str: The serialized representation of the `params` data.
         """

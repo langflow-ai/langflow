@@ -32,12 +32,11 @@ class TransactionBase(SQLModel):
 
     @field_serializer("inputs")
     def serialize_inputs(self, data) -> dict:
-        """
-        Serialize the transaction's input data with enforced limits on text length and item count.
-        
+        """Serialize the transaction's input data with enforced limits on text length and item count.
+
         Parameters:
             data (dict): The input data to be serialized.
-        
+
         Returns:
             dict: The serialized input data with applied constraints.
         """
@@ -45,12 +44,11 @@ class TransactionBase(SQLModel):
 
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
-        """
-        Serialize the outputs dictionary with enforced limits on text length and item count.
-        
+        """Serialize the outputs dictionary with enforced limits on text length and item count.
+
         Parameters:
             data (dict): The outputs data to serialize.
-        
+
         Returns:
             dict: The serialized outputs dictionary with applied constraints.
         """
