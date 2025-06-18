@@ -1,8 +1,9 @@
-import requests
 from datetime import datetime
 
+import requests
+
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, StrInput,SecretStrInput,MessageTextInput
+from langflow.inputs import DropdownInput, MessageTextInput, SecretStrInput, StrInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
@@ -47,14 +48,12 @@ class CurrencyConverterComponent(Component):
             info="Comma-separated ISO codes (e.g., EUR,GBP,JPY).",
             value="EUR",
         ),
-        
-         MessageTextInput(
+        MessageTextInput(
             name="amount",
             display_name="Amount",
             info="The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
             tool_mode=True,
         ),
-        
         StrInput(
             name="date",
             display_name="Historical Date",
@@ -74,7 +73,9 @@ class CurrencyConverterComponent(Component):
 
     def fetch_content_text(self) -> Message:
         data = self.fetch_content()
-        lines = [f"{self.amount} {self.base_currency} → {item.data['converted']} {item.data['currency']}" for item in data]
+        lines = [
+            f"{self.amount} {self.base_currency} → {item.data['converted']} {item.data['currency']}" for item in data
+        ]
         lines.append(f"Timestamp: {data[0].data['timestamp']}")
         return Message(text="\n".join(lines))
 
@@ -99,12 +100,12 @@ class CurrencyConverterComponent(Component):
 
         timestamp = datetime.utcfromtimestamp(payload.get("timestamp")).isoformat() + "Z"
         quotes = payload.get("quotes", {})
-        
+
         try:
             amount_val = float(self.amount)
         except (TypeError, ValueError):
             raise Exception("❌ ‘amount’ must be a number (e.g. 12 or 12.34).")
-       # amount_val = float(self.amount)
+        # amount_val = float(self.amount)
 
         result = []
         for pair, rate in quotes.items():
