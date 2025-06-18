@@ -35,7 +35,6 @@ class SaveToFileComponent(Component):
             dynamic=True,
             input_types=["Data", "DataFrame", "Message"],
             required=True,
-            real_time_refresh=True,
         ),
         StrInput(
             name="file_name",
@@ -54,26 +53,6 @@ class SaveToFileComponent(Component):
     ]
 
     outputs = [Output(display_name="File Path", name="result", method="save_to_file")]
-
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:  # noqa: ARG002
-        """Update the build configuration based on the field value."""
-        # Get the input type from the provided input
-        try:
-            input_type = self._get_input_type()
-        except ValueError as _:
-            return build_config  # If input type cannot be determined, return unchanged config
-
-        # Set the file format choices based on the input type
-        if input_type in {"DataFrame", "Data"}:
-            build_config["file_format"]["options"] = self.DATA_FORMAT_CHOICES
-        elif input_type == "Message":
-            build_config["file_format"]["options"] = self.MESSAGE_FORMAT_CHOICES
-        else:
-            build_config["file_format"]["options"] = list(
-                dict.fromkeys(self.DATA_FORMAT_CHOICES + self.MESSAGE_FORMAT_CHOICES)
-            )
-
-        return build_config
 
     async def save_to_file(self) -> Message:
         """Save the input to a file and upload it, returning a confirmation message."""
