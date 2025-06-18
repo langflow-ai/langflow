@@ -44,7 +44,7 @@ class StructuredOutputComponent(Component):
                 "You are an AI that extracts one structured JSON object from unstructured text. "
                 "Use a predefined schema with expected types (str, int, float, bool, dict). "
                 "If multiple structures exist, extract only the first most complete one. "
-                "Fill missing or ambiguous values with defaults: null for missing values, "
+                "Fill missing or ambiguous values with defaults: null for missing values. "
                 "Ignore duplicates and partial repeats. "
                 "Always return one valid JSON, never throw errors or return multiple objects."
                 "Output: A single well-formed JSON object, and nothing else."
