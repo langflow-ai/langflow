@@ -53,10 +53,16 @@ def get_cache_stats() -> dict[str, int]:
         Dictionary with cache size and configuration info
     Thread-safe operation using native cache implementation.
     """
+    # Cache attribute lookups to local variables for minor performance gain
+    cache = _CLASS_CONSTRUCTOR_CACHE
+    max_size = _CACHE_MAX_SIZE
+    ttl_seconds = _CACHE_TTL_SECONDS
+    cache_size = len(cache)
+
     return {
-        "cache_size": len(_CLASS_CONSTRUCTOR_CACHE),
-        "max_size": _CACHE_MAX_SIZE,
-        "ttl_seconds": _CACHE_TTL_SECONDS,
+        "cache_size": cache_size,
+        "max_size": max_size,
+        "ttl_seconds": ttl_seconds,
     }
 
 
