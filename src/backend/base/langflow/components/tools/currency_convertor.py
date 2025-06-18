@@ -1,9 +1,8 @@
-from datetime import datetime
-
+from datetime import datetime, timezone
 import requests
 
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, MessageTextInput, SecretStrInput, StrInput
+from langflow.inputs import DropdownInput, StrInput, MessageTextInput, SecretStrInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
@@ -51,14 +50,14 @@ class CurrencyConverterComponent(Component):
         MessageTextInput(
             name="amount",
             display_name="Amount",
-            info="The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
+            info="Amount in base currency to convert (float).",
             tool_mode=True,
         ),
         StrInput(
             name="date",
             display_name="Historical Date",
-            info="Date for historical rates (YYYY-MM-DD). Required if mode is 'historical'.",
-            value=datetime.now().strftime("%Y-%m-%d"),
+            info="Date for historical rates (YYYY‑MM‑DD). Required if mode is 'historical'.",
+            value=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         ),
     ]
 
@@ -74,7 +73,8 @@ class CurrencyConverterComponent(Component):
     def fetch_content_text(self) -> Message:
         data = self.fetch_content()
         lines = [
-            f"{self.amount} {self.base_currency} → {item.data['converted']} {item.data['currency']}" for item in data
+            f"{self.amount} {self.base_currency} → {item.data['converted']} {item.data['currency']}"
+            for item in data
         ]
         lines.append(f"Timestamp: {data[0].data['timestamp']}")
         return Message(text="\n".join(lines))
@@ -97,17 +97,18 @@ class CurrencyConverterComponent(Component):
         payload = resp.json()
         if not payload.get("success", False):
             error_message = payload.get("error")
-            raise ValueError(f"API error: {error_message}")
+            raise ValueError(error_message)  # gracefully handled by Langflow
 
-        timestamp = datetime.fromtimestamp(payload.get("timestamp")).isoformat() + "Z"
+        timestamp = datetime.fromtimestamp(payload.get("timestamp"), timezone.utc).isoformat() + "Z"
         quotes = payload.get("quotes", {})
 
         try:
             amount_val = float(self.amount)
-        except (TypeError, ValueError):
-            raise ValueError("❌ ‘amount’ must be a number (e.g., 12 or 12.34).")
+        except (TypeError, ValueError) as err:
+            error_message = '❌ \'amount\' must be a number (e.g., 12 or 12.34).'
+            raise ValueError(error_message) from None
 
-        result = []
+        result: list[Data] = []
         for pair, rate in quotes.items():
             target_currency = pair.replace(self.base_currency, "")
             converted = rate * amount_val
