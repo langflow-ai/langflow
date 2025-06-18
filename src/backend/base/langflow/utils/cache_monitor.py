@@ -7,6 +7,7 @@ and overall performance of the class constructor caching system.
 import asyncio
 import gc
 import logging
+import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -70,18 +71,21 @@ class ClassConstructorCacheMonitor:
         self.metrics = CacheMetrics()
         self.creation_times: list[float] = []
         self.start_time = time.time()
+        self._lock = threading.Lock()
 
     def record_cache_hit(self):
         """Record a cache hit."""
-        self.metrics.cache_hits += 1
-        self._update_hit_rate()
+        with self._lock:
+            self.metrics.cache_hits += 1
+            self._update_hit_rate()
 
     def record_cache_miss(self, creation_time_ms: float):
         """Record a cache miss and creation time."""
-        self.metrics.cache_misses += 1
-        self.creation_times.append(creation_time_ms)
-        self._update_hit_rate()
-        self._update_avg_creation_time()
+        with self._lock:
+            self.metrics.cache_misses += 1
+            self.creation_times.append(creation_time_ms)
+            self._update_hit_rate()
+            self._update_avg_creation_time()
 
     def _update_hit_rate(self):
         """Update the cache hit rate."""
@@ -192,9 +196,10 @@ Memory Impact: {memory_impact}
 
     def reset_metrics(self):
         """Reset all metrics."""
-        self.metrics = CacheMetrics()
-        self.creation_times.clear()
-        self.start_time = time.time()
+        with self._lock:
+            self.metrics = CacheMetrics()
+            self.creation_times.clear()
+            self.start_time = time.time()
 
 
 # Global monitor instance
