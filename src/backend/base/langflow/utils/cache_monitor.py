@@ -60,14 +60,29 @@ class CacheMetrics:
 
     def to_dict(self) -> dict:
         """Convert metrics to dictionary for logging/serialization."""
+        ch = self.cache_hits
+        cm = self.cache_misses
+        cs = self.cache_size
+        mcs = self.max_cache_size
+        mum = self.memory_usage_mb
+        cta = self.creation_time_avg_ms
+        hr = self.hit_rate
+
+        # Use fast integer math for rounding (equivalent to round(x, 2) for positive numbers)
+        def round2(x):
+            return int(x * 100 + 0.5) / 100
+
+        def round4(x):
+            return int(x * 10000 + 0.5) / 10000
+
         return {
-            "cache_hits": self.cache_hits,
-            "cache_misses": self.cache_misses,
-            "cache_size": self.cache_size,
-            "max_cache_size": self.max_cache_size,
-            "memory_usage_mb": round(self.memory_usage_mb, 2),
-            "creation_time_avg_ms": round(self.creation_time_avg_ms, 2),
-            "hit_rate": round(self.hit_rate, 4),
+            "cache_hits": ch,
+            "cache_misses": cm,
+            "cache_size": cs,
+            "max_cache_size": mcs,
+            "memory_usage_mb": round2(mum),
+            "creation_time_avg_ms": round2(cta),
+            "hit_rate": round4(hr),
         }
 
 
