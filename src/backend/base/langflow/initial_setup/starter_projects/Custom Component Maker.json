@@ -65,15 +65,24 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
+<<<<<<< HEAD
             "id": "URL-1VsdY",
             "name": "raw_results",
+=======
+            "id": "URL-kLxHN",
+            "name": "text",
+>>>>>>> origin/fix-vector-search-template
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
             "fieldName": "EXAMPLE_COMPONENTS",
+<<<<<<< HEAD
             "id": "Prompt-IRJjn",
+=======
+            "id": "Prompt-o6YLl",
+>>>>>>> origin/fix-vector-search-template
             "inputTypes": [
               "Message",
               "Text"
@@ -81,12 +90,21 @@
             "type": "str"
           }
         },
+<<<<<<< HEAD
         "id": "reactflow__edge-URL-1VsdY{œdataTypeœ:œURLœ,œidœ:œURL-1VsdYœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-IRJjn{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-IRJjnœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-1VsdY",
         "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-1VsdYœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
         "target": "Prompt-IRJjn",
         "targetHandle": "{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-IRJjnœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+=======
+        "id": "reactflow__edge-URL-kLxHN{œdataTypeœ:œURLœ,œidœ:œURL-kLxHNœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-o6YLl{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-o6YLlœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "URL-kLxHN",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-kLxHNœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-o6YLl",
+        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-o6YLlœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+>>>>>>> origin/fix-vector-search-template
       },
       {
         "animated": false,
@@ -94,15 +112,19 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
+<<<<<<< HEAD
             "id": "URL-OSOEr",
             "name": "raw_results",
+=======
+            "id": "URL-JhHJV",
+            "name": "text",
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "CUSTOM_COMPONENT_CODE",
-            "id": "Prompt-IRJjn",
+            "fieldName": "BASE_COMPONENT_CODE",
+            "id": "Prompt-o6YLl",
             "inputTypes": [
               "Message",
               "Text"
@@ -110,6 +132,41 @@
             "type": "str"
           }
         },
+        "id": "reactflow__edge-URL-JhHJV{œdataTypeœ:œURLœ,œidœ:œURL-JhHJVœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-o6YLl{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-o6YLlœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "URL-JhHJV",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-JhHJVœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-o6YLl",
+        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-o6YLlœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-Duno8",
+            "name": "text",
+>>>>>>> origin/fix-vector-search-template
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "CUSTOM_COMPONENT_CODE",
+<<<<<<< HEAD
+            "id": "Prompt-IRJjn",
+=======
+            "id": "Prompt-o6YLl",
+>>>>>>> origin/fix-vector-search-template
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+<<<<<<< HEAD
         "id": "reactflow__edge-URL-OSOEr{œdataTypeœ:œURLœ,œidœ:œURL-OSOErœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-IRJjn{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-IRJjnœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-OSOEr",
@@ -145,6 +202,14 @@
         "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-M0TwNœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
         "target": "Prompt-IRJjn",
         "targetHandle": "{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-IRJjnœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+=======
+        "id": "reactflow__edge-URL-Duno8{œdataTypeœ:œURLœ,œidœ:œURL-Duno8œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-o6YLl{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-o6YLlœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "URL-Duno8",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-Duno8œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-o6YLl",
+        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-o6YLlœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+>>>>>>> origin/fix-vector-search-template
       },
       {
         "animated": false,
@@ -152,7 +217,11 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
+<<<<<<< HEAD
             "id": "Prompt-IRJjn",
+=======
+            "id": "Prompt-o6YLl",
+>>>>>>> origin/fix-vector-search-template
             "name": "prompt",
             "output_types": [
               "Message"
@@ -160,27 +229,45 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
+<<<<<<< HEAD
             "id": "LanguageModelComponent-NiQMw",
+=======
+            "id": "AnthropicModel-lHsal",
+>>>>>>> origin/fix-vector-search-template
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
+<<<<<<< HEAD
         "id": "reactflow__edge-Prompt-IRJjn{œdataTypeœ:œPromptœ,œidœ:œPrompt-IRJjnœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-NiQMw{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-NiQMwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-IRJjn",
         "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-IRJjnœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
         "target": "LanguageModelComponent-NiQMw",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-NiQMwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+=======
+        "id": "reactflow__edge-Prompt-o6YLl{œdataTypeœ:œPromptœ,œidœ:œPrompt-o6YLlœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-lHsal{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-lHsalœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-o6YLl",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-o6YLlœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AnthropicModel-lHsal",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-lHsalœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+>>>>>>> origin/fix-vector-search-template
       },
       {
         "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
+<<<<<<< HEAD
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-NiQMw",
+=======
+            "dataType": "AnthropicModel",
+            "id": "AnthropicModel-lHsal",
+>>>>>>> origin/fix-vector-search-template
             "name": "text_output",
             "output_types": [
               "Message"
@@ -188,7 +275,11 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
+<<<<<<< HEAD
             "id": "ChatOutput-1fK18",
+=======
+            "id": "ChatOutput-6uv9V",
+>>>>>>> origin/fix-vector-search-template
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -197,12 +288,78 @@
             "type": "other"
           }
         },
+<<<<<<< HEAD
         "id": "reactflow__edge-LanguageModelComponent-NiQMw{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-NiQMwœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-1fK18{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-1fK18œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-NiQMw",
         "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-NiQMwœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
         "target": "ChatOutput-1fK18",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-1fK18œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+=======
+        "id": "reactflow__edge-AnthropicModel-lHsal{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-lHsalœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-6uv9V{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-6uv9Vœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "AnthropicModel-lHsal",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-lHsalœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-6uv9V",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-6uv9Vœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-anwBz",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "USER_INPUT",
+            "id": "Prompt-o6YLl",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-anwBz{œdataTypeœ:œChatInputœ,œidœ:œChatInput-anwBzœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-o6YLl{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-o6YLlœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-anwBz",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-anwBzœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-o6YLl",
+        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-o6YLlœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "Memory",
+            "id": "Memory-manW4",
+            "name": "messages_text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "CHAT_HISTORY",
+            "id": "Prompt-o6YLl",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__Memory-manW4{œdataTypeœ:œMemoryœ,œidœ:œMemory-manW4œ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-o6YLl{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-o6YLlœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Memory-manW4",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-manW4œ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-o6YLl",
+        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-o6YLlœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+>>>>>>> origin/fix-vector-search-template
       }
     ],
     "nodes": [
@@ -210,7 +367,11 @@
         "data": {
           "description": "Retrieves stored chat messages from Langflow tables or an external memory.",
           "display_name": "Chat Memory",
+<<<<<<< HEAD
           "id": "Memory-irtYt",
+=======
+          "id": "Memory-manW4",
+>>>>>>> origin/fix-vector-search-template
           "node": {
             "base_classes": [
               "Data",
@@ -506,12 +667,21 @@
             },
             "tool_mode": false
           },
+<<<<<<< HEAD
           "selected_output": "messages_text",
           "type": "Memory"
         },
         "dragging": false,
         "height": 262,
         "id": "Memory-irtYt",
+=======
+          "type": "Memory",
+          "selected_output": "message"
+        },
+        "dragging": false,
+        "height": 262,
+        "id": "Memory-manW4",
+>>>>>>> origin/fix-vector-search-template
         "measured": {
           "height": 262,
           "width": 320
@@ -532,7 +702,11 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
+<<<<<<< HEAD
           "id": "Prompt-IRJjn",
+=======
+          "id": "Prompt-o6YLl",
+>>>>>>> origin/fix-vector-search-template
           "node": {
             "base_classes": [
               "Message"
@@ -761,7 +935,11 @@
         },
         "dragging": false,
         "height": 685,
+<<<<<<< HEAD
         "id": "Prompt-IRJjn",
+=======
+        "id": "Prompt-o6YLl",
+>>>>>>> origin/fix-vector-search-template
         "measured": {
           "height": 685,
           "width": 320
@@ -780,7 +958,11 @@
       },
       {
         "data": {
+<<<<<<< HEAD
           "id": "note-25UHX",
+=======
+          "id": "note-s0CB8",
+>>>>>>> origin/fix-vector-search-template
           "node": {
             "description": "# Fetch Components code \n\nUsing the URL component we are extracting from Github, the code from a few classes to provide as example to the LLM. \n\nThis ensures we are always up to date with recent information from the codebase.",
             "display_name": "",
@@ -791,7 +973,11 @@
         },
         "dragging": false,
         "height": 324,
+<<<<<<< HEAD
         "id": "note-25UHX",
+=======
+        "id": "note-s0CB8",
+>>>>>>> origin/fix-vector-search-template
         "measured": {
           "height": 324,
           "width": 325
@@ -810,7 +996,11 @@
       },
       {
         "data": {
+<<<<<<< HEAD
           "id": "note-KZeah",
+=======
+          "id": "note-oQxzH",
+>>>>>>> origin/fix-vector-search-template
           "node": {
             "description": "# 🛠️ Custom Component Generator 🚀\n\nHi! I'm here to help you create custom components for Langflow. Think of me as your technical partner who can help turn your ideas into working components! \n\n## 🎯 How to Work With Me\n\n### 1. 💭 Tell Me What You Want to Build\nSimply describe what you want your component to do in plain English. For example:\n- \"I need a component that sends Slack messages\"\n- \"I want to create a tool that can process CSV files\"\n- \"I need something that can translate text\"\n\n### 2. 📚 Share Any Relevant Information\nIf you're working with a specific:\n- 🔑 API or service (just share the documentation link or main endpoints)\n- 📄 File format\n- 🔄 Data structure\n- 🔧 Existing component you want to modify\n\n### 3. 🎨 Let Me Help Design It\nI'll help by:\n- 📊 Breaking down complex requirements into manageable pieces\n- 💡 Suggesting the best way to structure inputs and outputs\n- ⚙️ Creating the component code\n- 📝 Explaining how to use it\n\n### 4. 🔄 Iterative Refinement\nWe can then:\n- ✅ Test and refine the component\n- ⭐ Add features\n- 🔧 Modify behavior\n- 🛡️ Improve error handling\n- 📖 Add documentation\n\n## 🚀 What I Can Help With\n\nI can help create components that:\n- 📊 Process different file types (CSV, JSON, Excel, etc.)\n- 🔌 Integrate with external APIs\n- 🔄 Transform data\n- 🔀 Route messages\n- 🌐 Handle web requests\n- 🎯 Parse structured data\n- ✨ And much more!\n\n## 💡 Tips for Best Results\n\n1. **Be Specific** 🎯: The more details you provide about what you want to accomplish, the better I can help.\n\n2. **Share Examples** 📋: If you have example data or specific use cases, share them.\n\n3. **Ask Questions** ❓: Don't hesitate to ask for clarification or modifications.\n\nJust start by telling me what kind of component you'd like to create, and I'll guide you through the process! \n\nReady to build something awesome? 🚀 Let's get started!",
             "display_name": "",
@@ -821,7 +1011,11 @@
         },
         "dragging": false,
         "height": 573,
+<<<<<<< HEAD
         "id": "note-KZeah",
+=======
+        "id": "note-oQxzH",
+>>>>>>> origin/fix-vector-search-template
         "measured": {
           "height": 573,
           "width": 620
@@ -845,7 +1039,11 @@
       },
       {
         "data": {
+<<<<<<< HEAD
           "id": "URL-M0TwN",
+=======
+          "id": "URL-JhHJV",
+>>>>>>> origin/fix-vector-search-template
           "node": {
             "base_classes": [
               "Data",
@@ -875,7 +1073,36 @@
                 "display_name": "Result",
                 "group_outputs": false,
                 "method": "fetch_content",
+<<<<<<< HEAD
                 "name": "page_results",
+=======
+                "name": "data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Text",
+                "method": "fetch_content_text",
+                "name": "text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "method": "as_dataframe",
+                "name": "dataframe",
+>>>>>>> origin/fix-vector-search-template
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
@@ -1182,7 +1409,11 @@
         },
         "dragging": false,
         "height": 365,
+<<<<<<< HEAD
         "id": "URL-M0TwN",
+=======
+        "id": "URL-JhHJV",
+>>>>>>> origin/fix-vector-search-template
         "measured": {
           "height": 365,
           "width": 320
@@ -1195,13 +1426,17 @@
           "x": 1436.3617127766433,
           "y": 264.218898085405
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
+<<<<<<< HEAD
           "id": "URL-1VsdY",
+=======
+          "id": "URL-kLxHN",
+>>>>>>> origin/fix-vector-search-template
           "node": {
             "base_classes": [
               "Data",
@@ -1231,7 +1466,36 @@
                 "display_name": "Result",
                 "group_outputs": false,
                 "method": "fetch_content",
+<<<<<<< HEAD
                 "name": "page_results",
+=======
+                "name": "data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Text",
+                "method": "fetch_content_text",
+                "name": "text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "method": "as_dataframe",
+                "name": "dataframe",
+>>>>>>> origin/fix-vector-search-template
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
@@ -1544,7 +1808,11 @@
         },
         "dragging": false,
         "height": 661,
+<<<<<<< HEAD
         "id": "URL-1VsdY",
+=======
+        "id": "URL-kLxHN",
+>>>>>>> origin/fix-vector-search-template
         "measured": {
           "height": 661,
           "width": 320
@@ -1563,7 +1831,11 @@
       },
       {
         "data": {
+<<<<<<< HEAD
           "id": "URL-OSOEr",
+=======
+          "id": "URL-Duno8",
+>>>>>>> origin/fix-vector-search-template
           "node": {
             "base_classes": [
               "Data",
@@ -1593,7 +1865,36 @@
                 "display_name": "Result",
                 "group_outputs": false,
                 "method": "fetch_content",
+<<<<<<< HEAD
                 "name": "page_results",
+=======
+                "name": "data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Text",
+                "method": "fetch_content_text",
+                "name": "text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "method": "as_dataframe",
+                "name": "dataframe",
+>>>>>>> origin/fix-vector-search-template
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
@@ -1900,7 +2201,11 @@
         },
         "dragging": false,
         "height": 365,
+<<<<<<< HEAD
         "id": "URL-OSOEr",
+=======
+        "id": "URL-Duno8",
+>>>>>>> origin/fix-vector-search-template
         "measured": {
           "height": 365,
           "width": 320
@@ -1919,7 +2224,349 @@
       },
       {
         "data": {
+<<<<<<< HEAD
           "id": "ChatInput-qna2M",
+=======
+          "id": "AnthropicModel-lHsal",
+          "node": {
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "beta": false,
+            "category": "models",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generate text using Anthropic Chat&Completion LLMs with prefill support.",
+            "display_name": "Anthropic",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "system_message",
+              "stream",
+              "max_tokens",
+              "model_name",
+              "api_key",
+              "temperature",
+              "base_url",
+              "tool_model_enabled",
+              "prefill"
+            ],
+            "frozen": false,
+            "icon": "Anthropic",
+            "key": "AnthropicModel",
+            "legacy": false,
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Model Response",
+                "group_outputs": false,
+                "method": "text_response",
+                "name": "text_output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Language Model",
+                "group_outputs": false,
+                "method": "build_model",
+                "name": "model_output",
+                "selected": "LanguageModel",
+                "tool_mode": true,
+                "types": [
+                  "LanguageModel"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.0005851173668140926,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "Anthropic API Key",
+                "dynamic": false,
+                "info": "Your Anthropic API key.",
+                "input_types": [],
+                "load_from_db": false,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "base_url": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Anthropic API URL",
+                "dynamic": false,
+                "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "base_url",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "https://api.anthropic.com"
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from typing import Any, cast\n\nimport requests\nfrom loguru import logger\nfrom pydantic import ValidationError\n\nfrom langflow.base.models.anthropic_constants import (\n    ANTHROPIC_MODELS,\n    DEFAULT_ANTHROPIC_API_URL,\n    TOOL_CALLING_SUPPORTED_ANTHROPIC_MODELS,\n    TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS,\n)\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass AnthropicModelComponent(LCModelComponent):\n    display_name = \"Anthropic\"\n    description = \"Generate text using Anthropic Chat&Completion LLMs with prefill support.\"\n    icon = \"Anthropic\"\n    name = \"AnthropicModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            value=4096,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=ANTHROPIC_MODELS,\n            refresh_button=True,\n            value=ANTHROPIC_MODELS[0],\n            combobox=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Anthropic API Key\",\n            info=\"Your Anthropic API key.\",\n            value=None,\n            required=True,\n            real_time_refresh=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Run inference with this temperature. Must by in the closed interval [0.0, 1.0].\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"base_url\",\n            display_name=\"Anthropic API URL\",\n            info=\"Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.\",\n            value=DEFAULT_ANTHROPIC_API_URL,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tool_model_enabled\",\n            display_name=\"Enable Tool Models\",\n            info=(\n                \"Select if you want to use models that can work with tools. If yes, only those models will be shown.\"\n            ),\n            advanced=False,\n            value=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"prefill\", display_name=\"Prefill\", info=\"Prefill text to guide the model's response.\", advanced=True\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        try:\n            from langchain_anthropic.chat_models import ChatAnthropic\n        except ImportError as e:\n            msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n            raise ImportError(msg) from e\n        try:\n            max_tokens_value = getattr(self, \"max_tokens\", \"\")\n            max_tokens_value = 4096 if max_tokens_value == \"\" else int(max_tokens_value)\n            output = ChatAnthropic(\n                model=self.model_name,\n                anthropic_api_key=self.api_key,\n                max_tokens=max_tokens_value,\n                temperature=self.temperature,\n                anthropic_api_url=self.base_url or DEFAULT_ANTHROPIC_API_URL,\n                streaming=self.stream,\n            )\n        except ValidationError:\n            raise\n        except Exception as e:\n            msg = \"Could not connect to Anthropic API.\"\n            raise ValueError(msg) from e\n\n        return output\n\n    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:\n        try:\n            import anthropic\n\n            client = anthropic.Anthropic(api_key=self.api_key)\n            models = client.models.list(limit=20).data\n            model_ids = ANTHROPIC_MODELS + [model.id for model in models]\n        except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n            logger.exception(f\"Error getting model names: {e}\")\n            model_ids = ANTHROPIC_MODELS\n\n        if tool_model_enabled:\n            try:\n                from langchain_anthropic.chat_models import ChatAnthropic\n            except ImportError as e:\n                msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n                raise ImportError(msg) from e\n\n            # Create a new list instead of modifying while iterating\n            filtered_models = []\n            for model in model_ids:\n                if model in TOOL_CALLING_SUPPORTED_ANTHROPIC_MODELS:\n                    filtered_models.append(model)\n                    continue\n\n                model_with_tool = ChatAnthropic(\n                    model=model,  # Use the current model being checked\n                    anthropic_api_key=self.api_key,\n                    anthropic_api_url=cast(str, self.base_url) or DEFAULT_ANTHROPIC_API_URL,\n                )\n\n                if (\n                    not self.supports_tool_calling(model_with_tool)\n                    or model in TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS\n                ):\n                    continue\n\n                filtered_models.append(model)\n\n            return filtered_models\n\n        return model_ids\n\n    def _get_exception_message(self, exception: Exception) -> str | None:\n        \"\"\"Get a message from an Anthropic exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from anthropic import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(exception, BadRequestError):\n            message = exception.body.get(\"error\", {}).get(\"message\")\n            if message:\n                return message\n        return None\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):\n        if \"base_url\" in build_config and build_config[\"base_url\"][\"value\"] is None:\n            build_config[\"base_url\"][\"value\"] = DEFAULT_ANTHROPIC_API_URL\n            self.base_url = DEFAULT_ANTHROPIC_API_URL\n        if field_name in {\"base_url\", \"model_name\", \"tool_model_enabled\", \"api_key\"} and field_value:\n            try:\n                if len(self.api_key) == 0:\n                    ids = ANTHROPIC_MODELS\n                else:\n                    try:\n                        ids = self.get_models(tool_model_enabled=self.tool_model_enabled)\n                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n                        logger.exception(f\"Error getting model names: {e}\")\n                        ids = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"options\"] = ids\n                build_config[\"model_name\"][\"value\"] = ids[0]\n                build_config[\"model_name\"][\"combobox\"] = True\n            except Exception as e:\n                msg = f\"Error getting model names: {e}\"\n                raise ValueError(msg) from e\n        return build_config\n"
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "max_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Tokens",
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_tokens",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 4096
+              },
+              "model_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": true,
+                "dialog_inputs": {},
+                "display_name": "Model Name",
+                "dynamic": false,
+                "info": "",
+                "name": "model_name",
+                "options": [
+                  "claude-opus-4-20250514",
+                  "claude-sonnet-4-20250514",
+                  "claude-3-7-sonnet-latest",
+                  "claude-3-5-sonnet-latest",
+                  "claude-3-5-haiku-latest",
+                  "claude-3-opus-latest",
+                  "claude-3-sonnet-20240229"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "refresh_button": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "claude-opus-4-20250514"
+              },
+              "prefill": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Prefill",
+                "dynamic": false,
+                "info": "Prefill text to guide the model's response.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "prefill",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "stream": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Stream",
+                "dynamic": false,
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "stream",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "system_message": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "System Message",
+                "dynamic": false,
+                "info": "System message to pass to the model.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "system_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "langflow"
+              },
+              "temperature": {
+                "_input_type": "SliderInput",
+                "advanced": true,
+                "display_name": "Temperature",
+                "dynamic": false,
+                "info": "Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
+                "name": "temperature",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 1,
+                  "min": 0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "title_case": false,
+                "tool_mode": false,
+                "type": "slider",
+                "value": 0.1
+              },
+              "tool_model_enabled": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Enable Tool Models",
+                "dynamic": false,
+                "info": "Select if you want to use models that can work with tools. If yes, only those models will be shown.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "tool_model_enabled",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "selected_output": "text_output",
+          "showNode": true,
+          "type": "AnthropicModel"
+        },
+        "dragging": false,
+        "id": "AnthropicModel-lHsal",
+        "measured": {
+          "height": 507,
+          "width": 320
+        },
+        "position": {
+          "x": 2585.5577736139826,
+          "y": 454.98013556663204
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ChatInput-anwBz",
+>>>>>>> origin/fix-vector-search-template
           "node": {
             "base_classes": [
               "Message"
@@ -2218,7 +2865,11 @@
           "type": "ChatInput"
         },
         "dragging": false,
+<<<<<<< HEAD
         "id": "ChatInput-qna2M",
+=======
+        "id": "ChatInput-anwBz",
+>>>>>>> origin/fix-vector-search-template
         "measured": {
           "height": 48,
           "width": 192
@@ -2232,7 +2883,11 @@
       },
       {
         "data": {
+<<<<<<< HEAD
           "id": "ChatOutput-1fK18",
+=======
+          "id": "ChatOutput-6uv9V",
+>>>>>>> origin/fix-vector-search-template
           "node": {
             "base_classes": [
               "Message"
@@ -2528,7 +3183,11 @@
           "type": "ChatOutput"
         },
         "dragging": false,
+<<<<<<< HEAD
         "id": "ChatOutput-1fK18",
+=======
+        "id": "ChatOutput-6uv9V",
+>>>>>>> origin/fix-vector-search-template
         "measured": {
           "height": 166,
           "width": 320
@@ -2539,6 +3198,7 @@
         },
         "selected": false,
         "type": "genericNode"
+<<<<<<< HEAD
       },
       {
         "data": {
@@ -2840,11 +3500,23 @@
       "x": -952.392071992314,
       "y": -1.0081001632995594,
       "zoom": 0.6478224390292205
+=======
+      }
+    ],
+    "viewport": {
+      "x": -665.0972697399408,
+      "y": -127.2121357339559,
+      "zoom": 0.5786709092693727
+>>>>>>> origin/fix-vector-search-template
     }
   },
   "description": "Generates well-structured code for custom components following Langflow's specifications.",
   "endpoint_name": null,
+<<<<<<< HEAD
   "id": "c7c0bfba-d440-45ca-9983-3b46e776a71c",
+=======
+  "id": "dabce029-ba7b-4ca0-ab3c-2b413c72e1a1",
+>>>>>>> origin/fix-vector-search-template
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Custom Component Generator",

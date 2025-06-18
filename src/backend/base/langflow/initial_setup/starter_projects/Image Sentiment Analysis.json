@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-sIcOW",
+            "id": "parser-yDX3w",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-1VmAz",
+            "id": "ChatOutput-NRotL",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-sIcOW{œdataTypeœ:œparserœ,œidœ:œparser-sIcOWœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-1VmAz{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-1VmAzœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-yDX3w{œdataTypeœ:œparserœ,œidœ:œparser-yDX3wœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-NRotL{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NRotLœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-sIcOW",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-sIcOWœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-1VmAz",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-1VmAzœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-yDX3w",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-yDX3wœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-NRotL",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-NRotLœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -37,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-J6Rvk",
+            "id": "StructuredOutput-RP4NK",
             "name": "structured_output",
             "output_types": [
               "Data"
@@ -45,7 +45,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-sIcOW",
+            "id": "parser-yDX3w",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -53,40 +53,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-StructuredOutput-J6Rvk{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-J6Rvkœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-sIcOW{œfieldNameœ:œinput_dataœ,œidœ:œparser-sIcOWœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-RP4NK{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-RP4NKœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-yDX3w{œfieldNameœ:œinput_dataœ,œidœ:œparser-yDX3wœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-J6Rvk",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-J6Rvkœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "parser-sIcOW",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-sIcOWœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-x2hKm",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "StructuredOutput-J6Rvk",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-LanguageModelComponent-x2hKm{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-x2hKmœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-J6Rvk{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-J6Rvkœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "LanguageModelComponent-x2hKm",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-x2hKmœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-J6Rvk",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-J6Rvkœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-RP4NK",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-RP4NKœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
+        "target": "parser-yDX3w",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-yDX3wœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -94,7 +66,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-AGdss",
+            "id": "Prompt-jecME",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -102,19 +74,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "LanguageModelComponent-tAUaX",
+            "id": "LanguageModelComponent-7rDOj",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-AGdss{œdataTypeœ:œPromptœ,œidœ:œPrompt-AGdssœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-tAUaX{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-tAUaXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-jecME{œdataTypeœ:œPromptœ,œidœ:œPrompt-jecMEœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-7rDOj{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-7rDOjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-AGdss",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-AGdssœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-tAUaX",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-tAUaXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-jecME",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-jecMEœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-7rDOj",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-7rDOjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -122,7 +94,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-osYcH",
+            "id": "ChatInput-jlv8B",
             "name": "message",
             "output_types": [
               "Message"
@@ -130,19 +102,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-tAUaX",
+            "id": "LanguageModelComponent-7rDOj",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-osYcH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-osYcHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-tAUaX{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-tAUaXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-jlv8B{œdataTypeœ:œChatInputœ,œidœ:œChatInput-jlv8Bœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-7rDOj{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-7rDOjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-osYcH",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-osYcHœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-tAUaX",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-tAUaXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-jlv8B",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-jlv8Bœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-7rDOj",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-7rDOjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -150,7 +122,35 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-tAUaX",
+            "id": "LanguageModelComponent-uLusw",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "StructuredOutput-RP4NK",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__LanguageModelComponent-uLusw{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-uLuswœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-RP4NK{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-RP4NKœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LanguageModelComponent-uLusw",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-uLuswœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "StructuredOutput-RP4NK",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-RP4NKœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LanguageModelComponent",
+            "id": "LanguageModelComponent-7rDOj",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -158,19 +158,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-J6Rvk",
+            "id": "StructuredOutput-RP4NK",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-tAUaX{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-tAUaXœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-J6Rvk{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-J6Rvkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__LanguageModelComponent-7rDOj{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-7rDOjœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-RP4NK{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-RP4NKœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-tAUaX",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-tAUaXœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-J6Rvk",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-J6Rvkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "LanguageModelComponent-7rDOj",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-7rDOjœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "StructuredOutput-RP4NK",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-RP4NKœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -178,7 +178,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-osYcH",
+          "id": "ChatInput-jlv8B",
           "node": {
             "base_classes": [
               "Message"
@@ -462,7 +462,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-osYcH",
+        "id": "ChatInput-jlv8B",
         "measured": {
           "height": 234,
           "width": 320
@@ -483,7 +483,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-1VmAz",
+          "id": "ChatOutput-NRotL",
           "node": {
             "base_classes": [
               "Message"
@@ -766,7 +766,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-1VmAz",
+        "id": "ChatOutput-NRotL",
         "measured": {
           "height": 234,
           "width": 320
@@ -779,15 +779,15 @@
           "x": 2742.72534045604,
           "y": 681.9098282545469
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "note-uscMT",
+          "id": "note-coYVl",
           "node": {
-            "description": "# Image Sentiment Analysis\nWelcome to the Image Sentiment Classifier - an AI tool for quick image sentiment analysis!\n\n## Instructions\n\n1. **Prepare Your Image**\n   - Image should be clear and visible\n\n2. **Upload Options**\n   - Open the Playground\n   - Click file attachment icon\n   - Or drag and drop into playground\n\n3. **Wait for Analysis**\n   - System will process the image\n   - Uses zero-shot learning\n   - Classification happens automatically\n\n4. **Review Results**\n   - Get classification: Positive/Negative/Neutral\n   - Review confidence level\n   - Check reasoning if provided\n\n5. **Expected Classifications**\n   - Positive: Happy scenes, smiles, celebrations\n   - Negative: Sad scenes, problems, conflicts\n   - Neutral: Objects, landscapes, neutral scenes\n\nRemember: The clearer the image, the more accurate the classification! 📸✨",
+            "description": "# Image Sentiment Analysis\nClassify images uploaded to the Playground by sentiment.\n\n## Prerequisites\n\n* [OpenAI API Key](https://platform.openai.com/)\n\n## Quickstart\n\n1. In the **Language Model** component, add your OpenAI API key.\n\n2. Open the **Playground**, and then submit an image to the chat. \n\nThe LLM analyzes the image. The sentiment is output into a structured table according to the **Structured Output** component's Output Schema, and then parsed into a message for the Playground to display.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -795,15 +795,15 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 583,
-        "id": "note-uscMT",
+        "height": 818,
+        "id": "note-coYVl",
         "measured": {
-          "height": 583,
-          "width": 325
+          "height": 818,
+          "width": 392
         },
         "position": {
-          "x": 791.7294511578832,
-          "y": 340.1333942936967
+          "x": 636.4409835338676,
+          "y": 119.16831706772064
         },
         "positionAbsolute": {
           "x": 791.7294511578832,
@@ -816,13 +816,13 @@
           "width": 324
         },
         "type": "noteNode",
-        "width": 324
+        "width": 391
       },
       {
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-AGdss",
+          "id": "Prompt-jecME",
           "node": {
             "base_classes": [
               "Message"
@@ -929,7 +929,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-AGdss",
+        "id": "Prompt-jecME",
         "measured": {
           "height": 260,
           "width": 320
@@ -948,7 +948,7 @@
       },
       {
         "data": {
-          "id": "StructuredOutput-J6Rvk",
+          "id": "StructuredOutput-RP4NK",
           "node": {
             "base_classes": [
               "Data"
@@ -1207,21 +1207,21 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-J6Rvk",
+        "id": "StructuredOutput-RP4NK",
         "measured": {
-          "height": 349,
+          "height": 348,
           "width": 320
         },
         "position": {
-          "x": 2029.014435320394,
-          "y": 390.91002340476973
+          "x": 2021.6355491355362,
+          "y": 373.20069656111025
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "parser-sIcOW",
+          "id": "parser-yDX3w",
           "node": {
             "base_classes": [
               "Message"
@@ -1350,7 +1350,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "Sentiment: {sentiment}   Description: {description} "
+                "value": "Sentiment: {sentiment}, Description: {description}"
               },
               "sep": {
                 "_input_type": "MessageTextInput",
@@ -1382,9 +1382,9 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-sIcOW",
+        "id": "parser-yDX3w",
         "measured": {
-          "height": 361,
+          "height": 360,
           "width": 320
         },
         "position": {
@@ -1396,7 +1396,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-x2hKm",
+          "id": "LanguageModelComponent-7rDOj",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1482,7 +1482,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1503,7 +1503,7 @@
                 "value": "from typing import Any\n\nfrom langchain_anthropic import ChatAnthropic\nfrom langchain_google_genai import ChatGoogleGenerativeAI\nfrom langchain_openai import ChatOpenAI\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider. \"\n    icon = \"brain-circuit\"\n    category = \"models\"\n    priority = 0  # Set priority to 0 to make it appear first\n\n    inputs = [\n        DropdownInput(\n            name=\"provider\",\n            display_name=\"Model Provider\",\n            options=[\"OpenAI\", \"Anthropic\", \"Google\"],\n            value=\"OpenAI\",\n            info=\"Select the model provider\",\n            real_time_refresh=True,\n            options_metadata=[{\"icon\": \"OpenAI\"}, {\"icon\": \"Anthropic\"}, {\"icon\": \"Google\"}],\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n            info=\"Select the model to use\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        provider = self.provider\n        model_name = self.model_name\n        temperature = self.temperature\n        stream = self.stream\n\n        if provider == \"OpenAI\":\n            if not self.api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n            return ChatOpenAI(\n                model_name=model_name,\n                temperature=temperature,\n                streaming=stream,\n                openai_api_key=self.api_key,\n            )\n        if provider == \"Anthropic\":\n            if not self.api_key:\n                msg = \"Anthropic API key is required when using Anthropic provider\"\n                raise ValueError(msg)\n            return ChatAnthropic(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                anthropic_api_key=self.api_key,\n            )\n        if provider == \"Google\":\n            if not self.api_key:\n                msg = \"Google API key is required when using Google provider\"\n                raise ValueError(msg)\n            return ChatGoogleGenerativeAI(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                google_api_key=self.api_key,\n            )\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        if field_name == \"provider\":\n            if field_value == \"OpenAI\":\n                build_config[\"model_name\"][\"options\"] = OPENAI_MODEL_NAMES\n                build_config[\"model_name\"][\"value\"] = OPENAI_MODEL_NAMES[0]\n                build_config[\"api_key\"][\"display_name\"] = \"OpenAI API Key\"\n            elif field_value == \"Anthropic\":\n                build_config[\"model_name\"][\"options\"] = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"value\"] = ANTHROPIC_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Anthropic API Key\"\n            elif field_value == \"Google\":\n                build_config[\"model_name\"][\"options\"] = GOOGLE_GENERATIVE_AI_MODELS\n                build_config[\"model_name\"][\"value\"] = GOOGLE_GENERATIVE_AI_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Google API Key\"\n        return build_config\n"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "MessageTextInput",
                 "advanced": false,
                 "display_name": "Input",
                 "dynamic": false,
@@ -1612,9 +1612,8 @@
                 "value": false
               },
               "system_message": {
-                "_input_type": "MultilineInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
-                "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
@@ -1624,7 +1623,6 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
-                "multiline": true,
                 "name": "system_message",
                 "placeholder": "",
                 "required": false,
@@ -1667,25 +1665,26 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-x2hKm",
+        "id": "LanguageModelComponent-7rDOj",
         "measured": {
-          "height": 451,
+          "height": 450,
           "width": 320
         },
         "position": {
-          "x": 1639.476019848849,
-          "y": -40.182392195326116
+          "x": 1645.4600361504665,
+          "y": 292.02587622395924
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "LanguageModelComponent-tAUaX",
+          "id": "LanguageModelComponent-uLusw",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1771,7 +1770,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1792,7 +1791,7 @@
                 "value": "from typing import Any\n\nfrom langchain_anthropic import ChatAnthropic\nfrom langchain_google_genai import ChatGoogleGenerativeAI\nfrom langchain_openai import ChatOpenAI\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider. \"\n    icon = \"brain-circuit\"\n    category = \"models\"\n    priority = 0  # Set priority to 0 to make it appear first\n\n    inputs = [\n        DropdownInput(\n            name=\"provider\",\n            display_name=\"Model Provider\",\n            options=[\"OpenAI\", \"Anthropic\", \"Google\"],\n            value=\"OpenAI\",\n            info=\"Select the model provider\",\n            real_time_refresh=True,\n            options_metadata=[{\"icon\": \"OpenAI\"}, {\"icon\": \"Anthropic\"}, {\"icon\": \"Google\"}],\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n            info=\"Select the model to use\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        provider = self.provider\n        model_name = self.model_name\n        temperature = self.temperature\n        stream = self.stream\n\n        if provider == \"OpenAI\":\n            if not self.api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n            return ChatOpenAI(\n                model_name=model_name,\n                temperature=temperature,\n                streaming=stream,\n                openai_api_key=self.api_key,\n            )\n        if provider == \"Anthropic\":\n            if not self.api_key:\n                msg = \"Anthropic API key is required when using Anthropic provider\"\n                raise ValueError(msg)\n            return ChatAnthropic(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                anthropic_api_key=self.api_key,\n            )\n        if provider == \"Google\":\n            if not self.api_key:\n                msg = \"Google API key is required when using Google provider\"\n                raise ValueError(msg)\n            return ChatGoogleGenerativeAI(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                google_api_key=self.api_key,\n            )\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        if field_name == \"provider\":\n            if field_value == \"OpenAI\":\n                build_config[\"model_name\"][\"options\"] = OPENAI_MODEL_NAMES\n                build_config[\"model_name\"][\"value\"] = OPENAI_MODEL_NAMES[0]\n                build_config[\"api_key\"][\"display_name\"] = \"OpenAI API Key\"\n            elif field_value == \"Anthropic\":\n                build_config[\"model_name\"][\"options\"] = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"value\"] = ANTHROPIC_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Anthropic API Key\"\n            elif field_value == \"Google\":\n                build_config[\"model_name\"][\"options\"] = GOOGLE_GENERATIVE_AI_MODELS\n                build_config[\"model_name\"][\"value\"] = GOOGLE_GENERATIVE_AI_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Google API Key\"\n        return build_config\n"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "MessageTextInput",
                 "advanced": false,
                 "display_name": "Input",
                 "dynamic": false,
@@ -1901,9 +1900,8 @@
                 "value": false
               },
               "system_message": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "copy_field": false,
+                "_input_type": "MessageTextInput",
+                "advanced": true,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
@@ -1913,7 +1911,6 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
-                "multiline": true,
                 "name": "system_message",
                 "placeholder": "",
                 "required": false,
@@ -1956,32 +1953,33 @@
             },
             "tool_mode": false
           },
+          "selected_output": "model_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-tAUaX",
+        "id": "LanguageModelComponent-uLusw",
         "measured": {
-          "height": 534,
+          "height": 450,
           "width": 320
         },
         "position": {
-          "x": 1659.6268676037548,
-          "y": 577.7964730516118
+          "x": 1632.2008343481689,
+          "y": -201.15856374270624
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -394.48978663654907,
-      "y": 83.15122658160072,
-      "zoom": 0.5803621249210289
+      "x": -825.4737373520102,
+      "y": 78.60126043812443,
+      "zoom": 0.6840296327858956
     }
   },
   "description": "Analyzes images and categorizes them as positive, negative, or neutral using zero-shot learning.",
   "endpoint_name": null,
-  "id": "1a6e7961-5c68-450d-a5b3-db6d0bd90bfe",
+  "id": "7fe77771-b3e9-400e-8796-3071ce446014",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Image Sentiment Analysis",
