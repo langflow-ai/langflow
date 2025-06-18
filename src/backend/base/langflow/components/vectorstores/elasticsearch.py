@@ -104,7 +104,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             display_name="Verify SSL Certificates",
             value=True,
             advanced=True,
-            info="Whether to verify SSL certificates when connecting to Elasticsearch."
+            info="Whether to verify SSL certificates when connecting to Elasticsearch.",
         ),
     ]
 
