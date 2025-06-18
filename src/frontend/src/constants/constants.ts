@@ -37,7 +37,13 @@ export const INVALID_CHARACTERS = [
  * It matches the variables in the text that are between {{}} or {}.
  */
 
-export const regexHighlight = /\{\{(.*?)\}\}|\{([^{}]+)\}/g;
+/**
+ *  p1 – fenced code block ```...```
+ *  p2 – opening brace run (one or more)
+ *  p3 – variable name  (no braces)
+ *  p4 – closing brace run (one or more)
+ */
+export const regexHighlight = /(```[\s\S]*?```)|(\{+)([^{}]+)(\}+)/g;
 export const specialCharsRegex = /[!@#$%^&*()\-_=+[\]{}|;:'",.<>/?\\`´]/;
 
 export const programmingLanguages: languageMap = {
@@ -553,6 +559,8 @@ export const USER_PROJECTS_HEADER = "My Collection";
 
 export const DEFAULT_FOLDER = "Starter Project";
 export const DEFAULT_FOLDER_DEPRECATED = "My Projects";
+
+export const MAX_MCP_SERVER_NAME_LENGTH = 30;
 
 /**
  * Header text for admin page
