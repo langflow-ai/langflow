@@ -6,10 +6,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.io import DictInput, DropdownInput, FloatInput, IntInput, SliderInput, StrInput, SecretStrInput
-
-# TODO: langchain_community.llms.huggingface_endpoint is depreciated.
-#  Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
+from langflow.io import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
 
 # Constants
 DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
@@ -142,7 +139,8 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         # The HuggingFaceEndpoint library will construct the full URL internally.
         if self.model_id == "custom":
             if not self.custom_model:
-                raise ValueError("Custom model ID is required when 'custom' is selected")
+                msg = "Custom model ID is required when 'custom' is selected"
+                raise ValueError(msg)
             return self.custom_model
         return self.model_id
 
@@ -161,7 +159,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         except (KeyError, AttributeError) as e:
             self.log(f"Error updating build config: {e!s}")
         return build_config
-    
+
     def _get_model_param(self):
         """Restituisce il parametro corretto da passare a HuggingFaceEndpoint: model, endpoint_url o repo_id."""
         # Se endpoint_url è custom (non contiene 'huggingface'), usalo come endpoint_url
@@ -170,7 +168,8 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         # Se model_id è custom, usa custom_model come repo_id
         if self.model_id == "custom":
             if not self.custom_model:
-                raise ValueError("Custom model ID is required when 'custom' is selected")
+                msg = "Custom model ID is required when 'custom' is selected"
+                raise ValueError(msg)
             return {"repo_id": self.custom_model}
         # Altrimenti usa model_id come repo_id
         return {"repo_id": self.model_id}
