@@ -26,6 +26,8 @@ Langflow can be installed in multiple ways:
   3. Mount and install the Langflow application.
   4. When the installation completes, open the Langflow application.
 
+  After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
+
   </TabItem>
   <TabItem value="Windows" label="Windows">
     :::important
@@ -39,6 +41,8 @@ Langflow can be installed in multiple ways:
   5. To install Langflow Desktop, follow the instructions to install the executable file.
   6. When the installation completes, open the Langflow application.
 
+  After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
+
   </TabItem>
 
 </Tabs>
@@ -49,13 +53,13 @@ When a new version of Langflow is available, Langflow Desktop displays an upgrad
 
 To manage your version of Langflow Desktop, follow these steps:
 
-1. In Langflow Desktop, click your profile image, and then select **Version Management**.
-The *Version Management* pane lists your active Langflow version first, followed by other available versions.
-The **latest** version is always highlighted.
-2. To change your Langflow version, select another version.
-A confirmation pane containing the selected version's changelog appears.
-3. To change to the selected version, click **Confirm**.
-The application restarts with the new version installed.
+  1. In Langflow Desktop, click your profile image, and then select **Version Management**.
+  The *Version Management* pane lists your active Langflow version first, followed by other available versions.
+  The **latest** version is always highlighted.
+  2. To change your Langflow version, select another version.
+  A confirmation pane containing the selected version's changelog appears.
+  3. To change to the selected version, click **Confirm**.
+  The application restarts with the new version installed.
 
 ## Install and run Langflow with Docker {#install-and-run-langflow-docker}
 
@@ -145,7 +149,12 @@ After confirming that Langflow is running, create your first flow with the [Quic
 
 ### Manage Langflow OSS versions
 
-To upgrade Langflow to the latest version, use the following command:
+To manage your Langflow version, use the following commands.
+
+<details closed>
+<summary>Install dependency groups</summary>
+
+To upgrade Langflow to the latest version:
 
 ```bash
 uv pip install langflow -U
@@ -162,6 +171,9 @@ To reinstall Langflow and all of its dependencies, add the `--force-reinstall` f
 ```bash
 uv pip install langflow --force-reinstall
 ```
+
+</details>
+
 
 ### Manage Langflow OSS dependencies
 
