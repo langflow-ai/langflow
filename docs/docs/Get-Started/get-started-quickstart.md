@@ -12,13 +12,12 @@ Get started with Langflow by loading a flow, running it, and then serving your f
 ## Prerequisites
 
 - [A running Langflow instance](/get-started-installation)
-- [An OpenAI API key](https://platform.openai.com/)
+- [An OpenAI API key](https://platform.openai.com/api-keys)
 
-## Run the agent template flow
+## Run the Simple Agent template flow
 
-Load the **Simple Agent** template flow, add your OpenAI API key to the agent, and run the flow.
 
-1. To open the **Simple Agent** template flow, click **New Flow**, and then select **Simple Agent**.
+1. In Langflow, click **New Flow**, and then select the **Simple Agent** template.
 
 ![Simple agent starter flow](/img/starter-flow-simple-agent.png)
 
@@ -28,15 +27,22 @@ As you ask the agent questions, it calls the connected [Calculator](/components-
 
 3. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 
-4. Ask the agent a simple math question, such as `I want to add 4 and 4.`
-The Playground displays the agent's reasoning process as it correctly selects the Calculator component's `evaluate_expression` action.
+4. To test the Calculator tool, ask the agent a simple math question, such as `I want to add 4 and 4.`
+To help you test and evaluate your flows, the Playground shows the agent's reasoning process as it analyzes the prompt, selects a tool, and then uses the tool to generate a response.
+In this case, a math question causes the agent to select the Calculator tool and use an action like `evaluate_expression`.
 
 ![Playground with Agent calculator tool](/img/quickstart-simple-agent-playground.png)
 
-5. Ask the agent about current events.
-For this request, the agent selects the URL component's `fetch_content` action, and returns a summary of current headlines.
+5. To test the URL tool, ask the agent about current events.
+For this request, the agent selects the URL tool's `fetch_content` action, and then returns a summary of current news headlines.
 
-You have successfully run your first flow.
+6. When you are done testing the flow, click <X ICON> **Close**.
+
+Now that you've run your first flow, try these next steps:
+
+- Edit your **Simple Agent** flow by attaching different tools or adding more components to the flow.
+- Build your own flows from scratch or by modifying other template flows.
+- Integrate flows into your applications, as explained in [Run your flows from external applications](#run-your-flows-from-external-applications)
 
 Optionally, stop here if you just want to create more flows within Langflow.
 
