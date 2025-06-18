@@ -3,20 +3,14 @@ from datetime import datetime
 import requests
 
 from langflow.custom import Component
-<<<<<<< Updated upstream
-from langflow.inputs import DropdownInput, MessageTextInput, SecretStrInput, StrInput
-=======
-from langflow.inputs import DropdownInput, StrInput, IntInput,SecretStrInput,MessageTextInput
->>>>>>> Stashed changes
+from langflow.inputs import DropdownInput, StrInput, IntInput, SecretStrInput, MessageTextInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
 
-
 class CurrencyMode:
     LIVE = "live"
     HISTORICAL = "historical"
-
 
 class CurrencyConverterComponent(Component):
     display_name = "Currency Converter"
@@ -62,8 +56,7 @@ class CurrencyConverterComponent(Component):
             name="date",
             display_name="Historical Date",
             info="Date for historical rates (YYYY-MM-DD). Required if mode is 'historical'.",
-            value=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
-            
+            value=datetime.now().strftime("%Y-%m-%d"),
         ),
     ]
 
@@ -97,27 +90,20 @@ class CurrencyConverterComponent(Component):
             url = "http://api.exchangerate.host/historical"
             params["date"] = self.date
 
-        
         resp = requests.get(url, params=params, timeout=10)
         resp.raise_for_status()
         payload = resp.json()
         if not payload.get("success", False):
-
             error_message = payload.get("error")
-            raise ValueError(f"API error: {error_message}") from None
+            raise ValueError(f"API error: {error_message}")
 
-        timestamp = datetime.fromtimestamp(payload.get("timestamp"), tz=datetime.timezone.utc).isoformat() + "Z"
+        timestamp = datetime.fromtimestamp(payload.get("timestamp")).isoformat() + "Z"
         quotes = payload.get("quotes", {})
 
         try:
             amount_val = float(self.amount)
         except (TypeError, ValueError):
-            raise Exception("❌ ‘amount’ must be a number (e.g. 12 or 12.34).")
-<<<<<<< Updated upstream
-        # amount_val = float(self.amount)
-=======
-       
->>>>>>> Stashed changes
+            raise ValueError("❌ ‘amount’ must be a number (e.g., 12 or 12.34).")
 
         result = []
         for pair, rate in quotes.items():
