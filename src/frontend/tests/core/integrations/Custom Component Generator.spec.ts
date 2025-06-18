@@ -12,8 +12,8 @@ withEventDeliveryModes(
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
-      !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test",
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
     );
 
     if (!process.env.CI) {
@@ -46,7 +46,7 @@ withEventDeliveryModes(
         .getByTestId("anchor-popover-anchor-input-api_key")
         .locator("input")
         .last()
-        .fill(process.env.ANTHROPIC_API_KEY ?? "");
+        .fill(process.env.OPENAI_API_KEY ?? "");
     } catch (e) {
       console.log("There's API already added");
     }
