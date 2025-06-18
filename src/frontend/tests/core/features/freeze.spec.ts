@@ -88,11 +88,15 @@ test(
 
         // Log progress every 10 seconds for debugging
         if (attempts % 10 === 0) {
-          console.log(`Waiting for frozen icon... Attempt ${attempts}/${maxAttempts}`);
+          console.log(
+            `Waiting for frozen icon... Attempt ${attempts}/${maxAttempts}`,
+          );
         }
-
       } catch (error) {
-        console.log(`Error checking frozen icon on attempt ${attempts}:`, error);
+        console.log(
+          `Error checking frozen icon on attempt ${attempts}:`,
+          error,
+        );
         await page.waitForTimeout(1000);
         attempts++;
       }
