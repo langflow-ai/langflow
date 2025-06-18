@@ -3,7 +3,11 @@ from datetime import datetime
 import requests
 
 from langflow.custom import Component
+<<<<<<< Updated upstream
 from langflow.inputs import DropdownInput, MessageTextInput, SecretStrInput, StrInput
+=======
+from langflow.inputs import DropdownInput, StrInput, IntInput,SecretStrInput,MessageTextInput
+>>>>>>> Stashed changes
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
@@ -33,7 +37,7 @@ class CurrencyConverterComponent(Component):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Your https://exchangerate.host/ access key.",
+            info="Your https://exchangerate.host access key.",
             value="",
         ),
         StrInput(
@@ -58,7 +62,8 @@ class CurrencyConverterComponent(Component):
             name="date",
             display_name="Historical Date",
             info="Date for historical rates (YYYY-MM-DD). Required if mode is 'historical'.",
-            value=datetime.utcnow().strftime("%Y-%m-%d"),
+            value=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
+            
         ),
     ]
 
@@ -92,20 +97,27 @@ class CurrencyConverterComponent(Component):
             url = "http://api.exchangerate.host/historical"
             params["date"] = self.date
 
-        resp = requests.get(url, params=params)
+        
+        resp = requests.get(url, params=params, timeout=10)
         resp.raise_for_status()
         payload = resp.json()
         if not payload.get("success", False):
-            raise Exception(f"API error: {payload.get('error')}")
 
-        timestamp = datetime.utcfromtimestamp(payload.get("timestamp")).isoformat() + "Z"
+            error_message = payload.get("error")
+            raise ValueError(f"API error: {error_message}") from None
+
+        timestamp = datetime.fromtimestamp(payload.get("timestamp"), tz=datetime.timezone.utc).isoformat() + "Z"
         quotes = payload.get("quotes", {})
 
         try:
             amount_val = float(self.amount)
         except (TypeError, ValueError):
             raise Exception("❌ ‘amount’ must be a number (e.g. 12 or 12.34).")
+<<<<<<< Updated upstream
         # amount_val = float(self.amount)
+=======
+       
+>>>>>>> Stashed changes
 
         result = []
         for pair, rate in quotes.items():
