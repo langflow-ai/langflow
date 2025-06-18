@@ -69,7 +69,7 @@ Running applications in [Docker](https://docs.docker.com/) containers ensures co
     docker run -p 7860:7860 langflowai/langflow:latest
     ```
 
-2. To start using Langflow, visit `http://localhost:7860/`.
+3. To access Langflow, navigate to `http://localhost:7860/`.
 
 For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
