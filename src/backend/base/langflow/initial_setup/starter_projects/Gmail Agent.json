@@ -870,7 +870,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1185,9 +1184,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [
-                  "input_value"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

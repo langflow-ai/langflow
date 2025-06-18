@@ -299,7 +299,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -535,8 +534,8 @@
               }
             }
           },
-          "type": "ChatInput",
-          "selected_output": "message"
+          "selected_output": "message",
+          "type": "ChatInput"
         },
         "dragging": false,
         "height": 234,
@@ -588,7 +587,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -642,8 +640,8 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "selected_output": "text",
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
@@ -705,9 +703,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [
-                  "input_value"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1002,7 +997,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1056,8 +1050,8 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "selected_output": "text",
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
@@ -1109,7 +1103,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1163,8 +1156,8 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "selected_output": "text",
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
@@ -1216,7 +1209,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1270,8 +1262,8 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "selected_output": "text",
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
@@ -1323,7 +1315,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1377,8 +1368,8 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "selected_output": "text",
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
@@ -1430,7 +1421,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1484,8 +1474,8 @@
               }
             }
           },
-          "type": "TextInput",
-          "selected_output": "text"
+          "selected_output": "text",
+          "type": "TextInput"
         },
         "dragging": false,
         "height": 234,
@@ -1585,7 +1575,6 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1796,8 +1785,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt",
-          "selected_output": "prompt"
+          "selected_output": "prompt",
+          "type": "Prompt"
         },
         "dragging": false,
         "height": 779,
@@ -2191,9 +2180,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
-          "type": "OpenAIModel",
-          "selected_output": "text_output"
+          "type": "OpenAIModel"
         },
         "dragging": false,
         "id": "OpenAIModel-p0R9m",

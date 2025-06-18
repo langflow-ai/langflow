@@ -329,7 +329,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -625,7 +624,6 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -797,7 +795,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -910,7 +907,6 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1068,9 +1064,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [
-                  "input_value"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1391,7 +1384,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2065,7 +2057,6 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

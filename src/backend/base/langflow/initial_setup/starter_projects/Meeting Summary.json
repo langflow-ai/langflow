@@ -351,10 +351,6 @@
                 "group_outputs": false,
                 "method": "poll_transcription_job",
                 "name": "transcription_result",
-                "required_inputs": [
-                  "api_key",
-                  "transcript_id"
-                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1061,7 +1057,6 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1214,9 +1209,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [
-                  "input_value"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1519,9 +1511,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [
-                  "input_value"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2213,9 +2202,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [
-                  "input_value"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2520,7 +2506,6 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2689,25 +2674,10 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Data",
-                "method": "retrieve_messages",
-                "name": "messages",
-                "required_inputs": [],
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
                 "display_name": "Message",
                 "group_outputs": false,
                 "method": "retrieve_messages_as_text",
                 "name": "messages_text",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2722,7 +2692,6 @@
                 "group_outputs": false,
                 "method": "retrieve_messages_dataframe",
                 "name": "dataframe",
-                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -3035,7 +3004,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3451,10 +3419,6 @@
                 "group_outputs": false,
                 "method": "create_transcription_job",
                 "name": "transcript_id",
-                "required_inputs": [
-                  "api_key",
-                  "audio_file"
-                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [

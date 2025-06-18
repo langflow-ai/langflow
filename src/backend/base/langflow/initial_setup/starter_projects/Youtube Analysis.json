@@ -349,10 +349,6 @@
                 "group_outputs": false,
                 "method": "run_batch",
                 "name": "batch_results",
-                "required_inputs": [
-                  "df",
-                  "model"
-                ],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -568,10 +564,6 @@
                 "group_outputs": false,
                 "method": "get_video_comments",
                 "name": "comments",
-                "required_inputs": [
-                  "api_key",
-                  "video_url"
-                ],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -1910,7 +1902,6 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2087,9 +2078,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [
-                  "input_value"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2683,7 +2671,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3083,10 +3070,6 @@
                 "group_outputs": true,
                 "method": "true_response",
                 "name": "true_result",
-                "required_inputs": [
-                  "input_text",
-                  "match_text"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3101,10 +3084,6 @@
                 "group_outputs": true,
                 "method": "false_response",
                 "name": "false_result",
-                "required_inputs": [
-                  "input_text",
-                  "match_text"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

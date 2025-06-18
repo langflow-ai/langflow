@@ -27,7 +27,7 @@
         "source": "TextInput-5rO9p",
         "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-5rO9pœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-Te07A",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œAnthropicModel-Te07Aœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œAnthropicModel-tZx4nœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,7 +55,7 @@
         "source": "AnthropicModel-baay5",
         "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-baay5œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-GJfDv",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-GJfDvœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-tWLRaœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -83,7 +83,7 @@
         "source": "ParserComponent-FPw08",
         "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-FPw08œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-GJfDv",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-GJfDvœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-tWLRaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -112,7 +112,7 @@
         "source": "File-nhzgk",
         "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-nhzgkœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-FPw08",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-FPw08œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-wrPyPœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -120,7 +120,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AnthropicModel",
-            "id": "AnthropicModel-Te07A",
+            "id": "AnthropicModel-baay5",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -128,7 +128,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-iLekZ",
+            "id": "ChatOutput-XN5RE",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -139,10 +139,10 @@
         },
         "id": "reactflow__edge-AnthropicModel-Te07A{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-Te07Aœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XN5RE{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XN5REœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "AnthropicModel-tZx4n",
-        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-tZx4nœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-iLekZ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-iLekZœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "AnthropicModel-baay5",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-baay5œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-XN5RE",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XN5REœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -150,15 +150,13 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-tWLRa",
+            "id": "StructuredOutput-GJfDv",
             "name": "structured_output_dataframe",
-            "output_types": [
-              "DataFrame"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-ifKFs",
+            "id": "parser-8Jyry",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -168,10 +166,10 @@
         },
         "id": "xy-edge__StructuredOutput-tWLRa{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-tWLRaœ,œnameœ:œstructured_output_dataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-ifKFs{œfieldNameœ:œinput_dataœ,œidœ:œparser-ifKFsœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-tWLRa",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-tWLRaœ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "parser-ifKFs",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-ifKFsœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-GJfDv",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-GJfDvœ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: []}",
+        "target": "parser-8Jyry",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-8Jyryœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -199,7 +197,7 @@
         "source": "parser-8Jyry",
         "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-8Jyryœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-Te07A",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-Te07Aœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-tZx4nœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -265,7 +263,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -405,9 +402,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -747,9 +741,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1066,9 +1057,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [
-                  "input_value"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1521,35 +1509,10 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "required_inputs": [
-                  "input_value",
-                  "llm",
-                  "output_schema",
-                  "system_prompt"
-                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
                   "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "DataFrame",
-                "method": "as_dataframe",
-                "name": "structured_output_dataframe",
-                "required_inputs": [
-                  "input_value",
-                  "llm",
-                  "output_schema",
-                  "system_prompt"
-                ],
-                "selected": "DataFrame",
-                "tool_mode": true,
-                "types": [
-                  "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1885,20 +1848,6 @@
                 "display_name": "Loaded Files",
                 "group_outputs": false,
                 "method": "load_files",
-                "name": "data",
-                "required_inputs": [],
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "DataFrame",
-                "method": "load_dataframe",
                 "name": "dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
@@ -2193,10 +2142,6 @@
                 "group_outputs": false,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "required_inputs": [
-                  "input_data",
-                  "pattern"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

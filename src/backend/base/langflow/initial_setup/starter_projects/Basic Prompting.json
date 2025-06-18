@@ -127,7 +127,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -383,8 +382,8 @@
               }
             }
           },
-          "type": "ChatInput",
-          "selected_output": "message"
+          "selected_output": "message",
+          "type": "ChatInput"
         },
         "dragging": false,
         "height": 234,
@@ -440,7 +439,6 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -515,8 +513,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt",
-          "selected_output": "prompt"
+          "selected_output": "prompt",
+          "type": "Prompt"
         },
         "dragging": false,
         "height": 260,
@@ -649,9 +647,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [
-                  "input_value"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

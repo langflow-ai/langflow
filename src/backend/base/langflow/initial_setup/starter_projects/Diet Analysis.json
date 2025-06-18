@@ -129,7 +129,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -384,9 +383,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message",
           "showNode": false,
-          "type": "ChatInput",
-          "selected_output": "message"
+          "type": "ChatInput"
         },
         "dragging": false,
         "id": "ChatInput-Enwwh",
@@ -442,7 +441,6 @@
                 "group_outputs": false,
                 "method": "build_prompt",
                 "name": "prompt",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -516,9 +514,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "prompt",
           "showNode": true,
-          "type": "Prompt",
-          "selected_output": "prompt"
+          "type": "Prompt"
         },
         "dragging": false,
         "id": "Prompt-YubZ1",
@@ -892,9 +890,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
-          "type": "NovitaModel",
-          "selected_output": "text_output"
+          "type": "NovitaModel"
         },
         "dragging": false,
         "id": "NovitaModel-20MWu",
@@ -949,9 +947,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [
-                  "input_value"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

@@ -236,7 +236,6 @@
                 "group_outputs": false,
                 "method": "search_papers_dataframe",
                 "name": "dataframe",
-                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -336,9 +335,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "dataframe",
           "showNode": true,
-          "type": "ArXivComponent",
-          "selected_output": "dataframe"
+          "type": "ArXivComponent"
         },
         "dragging": false,
         "id": "ArXivComponent-ylKFb",
@@ -675,9 +674,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
-          "type": "AnthropicModel",
-          "selected_output": "text_output"
+          "type": "AnthropicModel"
         },
         "dragging": false,
         "id": "AnthropicModel-G2MkR",
@@ -726,7 +725,6 @@
                 "group_outputs": false,
                 "method": "convert_message_to_data",
                 "name": "data",
-                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -783,9 +781,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "data",
           "showNode": true,
-          "type": "MessagetoData",
-          "selected_output": "data"
+          "type": "MessagetoData"
         },
         "dragging": false,
         "id": "MessagetoData-jYebP",
@@ -840,9 +838,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [
-                  "input_value"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1153,7 +1148,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1407,9 +1401,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message",
           "showNode": true,
-          "type": "ChatInput",
-          "selected_output": "message"
+          "type": "ChatInput"
         },
         "dragging": false,
         "id": "ChatInput-5o3G0",
@@ -1517,10 +1511,6 @@
                 "group_outputs": false,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "required_inputs": [
-                  "input_data",
-                  "pattern"
-                ],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1644,9 +1634,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "parsed_text",
           "showNode": true,
-          "type": "ParserComponent",
-          "selected_output": "parsed_text"
+          "type": "ParserComponent"
         },
         "dragging": false,
         "id": "ParserComponent-ZhlLQ",
@@ -1696,7 +1686,6 @@
                 "group_outputs": true,
                 "method": "item_output",
                 "name": "item",
-                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -1711,7 +1700,6 @@
                 "group_outputs": true,
                 "method": "done_output",
                 "name": "done",
-                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -1765,9 +1753,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "done",
           "showNode": true,
-          "type": "LoopComponent",
-          "selected_output": "done"
+          "type": "LoopComponent"
         },
         "dragging": false,
         "id": "LoopComponent-9BK8B",
