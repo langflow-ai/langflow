@@ -69,9 +69,9 @@ Running applications in [Docker](https://docs.docker.com/) containers ensures co
 1. Install and start [Docker](https://docs.docker.com/).
 2. Pull the latest [Langflow Docker image](https://hub.docker.com/r/langflowai/langflow) and start it:
 
-    ```bash
-    docker run -p 7860:7860 langflowai/langflow:latest
-    ```
+  ```bash
+  docker run -p 7860:7860 langflowai/langflow:latest
+  ```
 
 3. To access Langflow, navigate to `http://localhost:7860/`.
 
@@ -133,15 +133,14 @@ To delete the virtual environment, type `Remove-Item VENV_NAME`.
 </details>
 
 2. To install Langflow, run the following command.
-    ```bash
-    uv pip install langflow
-    ```
+  ```bash
+  uv pip install langflow
+  ```
 
 3. After installation, start Langflow:
-
-    ```bash
-    uv run langflow run
-    ```
+  ```bash
+  uv run langflow run
+  ```
 
 4. To confirm that a local Langflow instance is running, navigate to the default Langflow URL`http://127.0.0.1:7860`.
 
