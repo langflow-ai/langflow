@@ -4,8 +4,7 @@ from uuid import UUID, uuid4
 from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, SQLModel
 
-from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
-from langflow.serialization.serialization import serialize
+from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 
 
 class TransactionBase(SQLModel):
@@ -33,11 +32,11 @@ class TransactionBase(SQLModel):
 
     @field_serializer("inputs")
     def serialize_inputs(self, data) -> dict:
-        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
-        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]

@@ -18,8 +18,7 @@ from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
 from langflow.serialization import constants as serialization_constants
-from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
-from langflow.serialization.serialization import serialize
+from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
@@ -277,17 +276,17 @@ class ResultDataResponse(BaseModel):
     @classmethod
     def serialize_results(cls, v):
         """Serialize results with custom handling for special types and truncation."""
-        return serialize(v, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+        return serialize(v, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @model_serializer(mode="plain")
     def serialize_model(self) -> dict:
         """Custom serializer for the entire model."""
         return {
             "results": self.serialize_results(self.results),
-            "outputs": serialize(self.outputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "logs": serialize(self.logs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "message": serialize(self.message, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "artifacts": serialize(self.artifacts, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            "outputs": serialize(self.outputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "logs": serialize(self.logs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "message": serialize(self.message, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "artifacts": serialize(self.artifacts, max_length=get_max_text_length(), max_items=get_max_items_length()),
             "timedelta": self.timedelta,
             "duration": self.duration,
             "used_frozen_result": self.used_frozen_result,
@@ -309,7 +308,7 @@ class VertexBuildResponse(BaseModel):
 
     @field_serializer("data")
     def serialize_data(self, data: ResultDataResponse) -> dict:
-        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
 class VerticesBuiltResponse(BaseModel):

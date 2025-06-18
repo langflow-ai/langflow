@@ -5,8 +5,7 @@ from pydantic import BaseModel, field_serializer, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, SQLModel
 
-from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
-from langflow.serialization.serialization import serialize
+from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 
 
 class VertexBuildBase(SQLModel):
@@ -40,15 +39,15 @@ class VertexBuildBase(SQLModel):
 
     @field_serializer("data")
     def serialize_data(self, data) -> dict:
-        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("artifacts")
     def serialize_artifacts(self, data) -> dict:
-        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("params")
     def serialize_params(self, data) -> str:
-        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
 class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore[call-arg]
