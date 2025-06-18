@@ -6,13 +6,13 @@ slug: /get-started-installation
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Langflow can be installed in multiple ways.
+Langflow can be installed in multiple ways:
 
-* **Recommended option**: Download and install the [standalone desktop application](#install-and-run-langflow-desktop) for the easiest setup experience.
+* **Langflow Desktop (Recommended)**: Download and install the [standalone desktop application](#install-and-run-langflow-desktop) for the easiest setup experience.
 
 * **Docker**: Pull and run the [Docker image](#install-and-run-langflow-docker) to start a Langflow container.
 
-* **For developers**: Install the [Langflow OSS Python package](#install-and-run-langflow-oss).
+* **Python package**: Install the [Langflow OSS Python package](#install-and-run-langflow-oss).
 
 ## Install and run Langflow Desktop
 

@@ -17,10 +17,10 @@
 
 ## ✨ Highlight features
 
-1. **Visual Builder** to get started quickly and iterate.
-1. **Access to Code** so developers can tweak any component using Python.
-1. **Playground** to immediately test and iterate on their flows with step-by-step control.
-1. **Multi-agent** orchestration and conversation management and retrieval.
+- **Visual builder interface** to quickly get started and iterate .
+- **Source code access** lets you customize any component using Python.
+- **Interactive playground** to immediately test and refine your flows with step-by-step control.
+- **Multi-agent orchestration** with conversation management and retrieval.
 1. **Deploy as an API** or export as JSON for Python apps.
 1. **Observability** with LangSmith, LangFuse and other integrations.
 1. **Enterprise-ready** security and scalability.
@@ -43,6 +43,7 @@ uv run langflow run
 
 3. Go to the default Langflow URL at `http://127.0.0.1:7860`.
 
+For more information about installing Langflow, including Docker and Desktop options, see [Install Langflow](https://docs.langflow.org/get-started-installation).
 ## 📦 Deployment
 
 ### Self-managed
