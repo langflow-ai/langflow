@@ -45,7 +45,6 @@ class StructuredOutputComponent(Component):
                 "Use a predefined schema with expected types (str, int, float, bool, dict). "
                 "If multiple structures exist, extract only the first most complete one. "
                 "Fill missing or ambiguous values with defaults: null for missing values, "
-                "0 for numeric fields, and 'N/A' for strings. "
                 "Ignore duplicates and partial repeats. "
                 "Always return one valid JSON, never throw errors or return multiple objects."
                 "Output: A single well-formed JSON object, and nothing else."
