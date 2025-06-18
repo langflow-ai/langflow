@@ -3,14 +3,16 @@ from datetime import datetime
 import requests
 
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, StrInput, IntInput, SecretStrInput, MessageTextInput
+from langflow.inputs import DropdownInput, MessageTextInput, SecretStrInput, StrInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
 
+
 class CurrencyMode:
     LIVE = "live"
     HISTORICAL = "historical"
+
 
 class CurrencyConverterComponent(Component):
     display_name = "Currency Converter"
