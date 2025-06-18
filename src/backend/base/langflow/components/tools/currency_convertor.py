@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
+
 import requests
 
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, StrInput, MessageTextInput, SecretStrInput
+from langflow.inputs import DropdownInput, MessageTextInput, SecretStrInput, StrInput
 from langflow.io import Output
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
@@ -73,8 +74,7 @@ class CurrencyConverterComponent(Component):
     def fetch_content_text(self) -> Message:
         data = self.fetch_content()
         lines = [
-            f"{self.amount} {self.base_currency} → {item.data['converted']} {item.data['currency']}"
-            for item in data
+            f"{self.amount} {self.base_currency} → {item.data['converted']} {item.data['currency']}" for item in data
         ]
         lines.append(f"Timestamp: {data[0].data['timestamp']}")
         return Message(text="\n".join(lines))
@@ -104,8 +104,8 @@ class CurrencyConverterComponent(Component):
 
         try:
             amount_val = float(self.amount)
-        except (TypeError, ValueError) as err:
-            error_message = '❌ \'amount\' must be a number (e.g., 12 or 12.34).'
+        except (TypeError, ValueError):
+            error_message = "❌ 'amount' must be a number (e.g., 12 or 12.34)."
             raise ValueError(error_message) from None
 
         result: list[Data] = []
