@@ -161,6 +161,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             current_time = asyncio.get_event_loop().time()
             logger.debug("Creating/updating starter projects")
             import tempfile
+
             from filelock import FileLock
 
             lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
