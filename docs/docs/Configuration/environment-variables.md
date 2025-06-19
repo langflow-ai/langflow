@@ -75,6 +75,8 @@ If it detects a supported environment variable, then it automatically adopts the
     LANGFLOW_HOST=localhost
     LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
     LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000
+    LANGFLOW_MAX_ITEMS_LENGTH=100
+    LANGFLOW_MAX_TEXT_LENGTH=1000
     LANGFLOW_LOG_LEVEL=error
     LANGFLOW_OPEN_BROWSER=false
     LANGFLOW_PORT=7860
@@ -202,6 +204,8 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_LOG_FILE"/><span class="env-prefix">LANGFLOW_</span>LOG_FILE | String | Not set | Path to the log file. If this option is not set, logs are written to stdout. |
 | <Link id="LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE"/><span class="env-prefix">LANGFLOW_</span>LOG_RETRIEVER_BUFFER_SIZE | Integer | `10000` | Set the buffer size for log retrieval. Only used if `LANGFLOW_ENABLE_LOG_RETRIEVAL` is enabled. |
 | <Link id="LANGFLOW_MAX_FILE_SIZE_UPLOAD"/><span class="env-prefix">LANGFLOW_</span>MAX_FILE_SIZE_UPLOAD | Integer | `100` | Set the maximum file size for the upload in megabytes.<br/>See [`--max-file-size-upload` option](./configuration-cli.md#run-max-file-size-upload). |
+| <Link id="LANGFLOW_MAX_ITEMS_LENGTH"/><span class="env-prefix">LANGFLOW_</span>MAX_ITEMS_LENGTH | Integer | `100` | Maximum number of items to store and display in the UI. Lists longer than this will be truncated when displayed in the UI. Does not affect data passed between components nor outputs. |
+| <Link id="LANGFLOW_MAX_TEXT_LENGTH"/><span class="env-prefix">LANGFLOW_</span>MAX_TEXT_LENGTH | Integer | `1000` | Maximum number of characters to store and display in the UI. Responses longer than this will be truncated when displayed in the UI. Does not truncate responses between components nor outputs. |
 | <Link id="LANGFLOW_MCP_SERVER_ENABLED"/><span class="env-prefix">LANGFLOW_</span>MCP_SERVER_ENABLED | Boolean | `true` | If this option is set to False, Langflow does not enable the MCP server. |
 | <Link id="LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS"/><span class="env-prefix">LANGFLOW_</span>MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS | Boolean | `false` | If this option is set to True, Langflow sends progress notifications in the MCP server. |
 | <Link id="LANGFLOW_NEW_USER_IS_ACTIVE"/><span class="env-prefix">LANGFLOW_</span>NEW_USER_IS_ACTIVE | Boolean | `false` | When enabled, new users are automatically activated and can log in without requiring explicit activation by the superuser. |
@@ -260,6 +264,8 @@ LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5
 LANGFLOW_HOST=localhost
 LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
 LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000
+LANGFLOW_MAX_ITEMS_LENGTH=100
+LANGFLOW_MAX_TEXT_LENGTH=1000
 LANGFLOW_LOG_LEVEL=error
 LANGFLOW_OPEN_BROWSER=false
 LANGFLOW_PORT=7860
@@ -299,6 +305,8 @@ Environment="LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5"
 Environment="LANGFLOW_HOST=localhost"
 Environment="LANGFLOW_LANGCHAIN_CACHE=InMemoryCache"
 Environment="LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000"
+Environment="LANGFLOW_MAX_ITEMS_LENGTH=100"
+Environment="LANGFLOW_MAX_TEXT_LENGTH=1000"
 Environment="LANGFLOW_LOG_ENV=container_json"
 Environment="LANGFLOW_LOG_FILE=logs/langflow.log"
 Environment="LANGFLOW_LOG_LEVEL=error"
@@ -345,6 +353,8 @@ Create or edit the `.vscode/tasks.json` file in your project root:
             "LANGFLOW_HOST": "localhost",
             "LANGFLOW_LANGCHAIN_CACHE": "InMemoryCache",
             "LANGFLOW_MAX_FILE_SIZE_UPLOAD": "10000",
+            "LANGFLOW_MAX_ITEMS_LENGTH": "100",
+            "LANGFLOW_MAX_TEXT_LENGTH": "1000",
             "LANGFLOW_LOG_ENV": "container_csv",
             "LANGFLOW_LOG_FILE": "langflow.log",
             "LANGFLOW_LOG_LEVEL": "error",
