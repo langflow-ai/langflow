@@ -161,7 +161,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             current_time = asyncio.get_event_loop().time()
             logger.debug("Creating/updating starter projects")
             import tempfile
-
             from filelock import FileLock
 
             lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
@@ -175,7 +174,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             except TimeoutError:
                 # Another process has the lock
                 logger.debug("Another worker is creating starter projects, skipping")
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 logger.warning(
                     f"Failed to acquire lock for starter projects: {e}. Starter projects may not be created or updated."
                 )

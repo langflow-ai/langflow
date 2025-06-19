@@ -126,6 +126,7 @@ dependencies = [
     "twelvelabs>=0.4.7",
     "filelock>=3.18.0",
     "docling>=2.36.1",
+    "filelock>=3.18.0"
 ]
 
 [dependency-groups]
