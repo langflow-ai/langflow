@@ -20,9 +20,14 @@ Get started with Langflow by loading a flow, running it, and then serving your f
 
 ![Simple agent starter flow](/img/quickstart-simple-agent-flow.png)
 
-This flow connects [Chat I/O](/components-io) components with an [Agent](/components-agents) component.
-As you ask the agent questions, it calls the connected [Calculator](/components-helpers#calculator) and [URL](/components-data#url) tools for answers, depending on the question.
-2. In the agent component, in the **OpenAI API Key** field, add your OpenAI API key.
+The Simple Agent flow consists of an [Agent component](/components-agents) connected to [Chat I/O components](/components-io), a [Calculator component](/components-helpers#calculator), and a [URL component](/components-data#url). When you run this flow, you submit a query to the agent through the Chat Input component, the agent uses the Calculator and URL tools to generate a response, and then returns the response through the Chat Output component.
+
+Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/mcp-server). The agent decides which tools to call based on the context of a given query.
+
+2. In the **Agent** component's settings, in the **OpenAI API Key** field, enter your OpenAI API key.
+This guide uses an OpenAI model for demonstration purposes. If you want to use a different provider, change the **Model Provider** field, and then provide credentials for your selected provider.
+
+    Optionally, you can click <Icon name="Globe" aria-hidden="true"/> **Globe** to store the key in a Langflow [global variable](/configuration-global-variables).
 
 3. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 
@@ -30,7 +35,7 @@ As you ask the agent questions, it calls the connected [Calculator](/components-
 To help you test and evaluate your flows, the Playground shows the agent's reasoning process as it analyzes the prompt, selects a tool, and then uses the tool to generate a response.
 In this case, a math question causes the agent to select the Calculator tool and use an action like `evaluate_expression`.
 
-![Playground with Agent calculator tool](/img/quickstart-simple-agent-playground.png)
+![Playground with Agent tool](/img/quickstart-simple-agent-playground.png)
 
 5. To test the URL tool, ask the agent about current events.
 For this request, the agent selects the URL tool's `fetch_content` action, and then returns a summary of current news headlines.
@@ -41,7 +46,7 @@ Now that you've run your first flow, try these next steps:
 
 - Edit your **Simple Agent** flow by attaching different tools or adding more components to the flow.
 - Build your own flows from scratch or by modifying other template flows.
-- Integrate flows into your applications, as explained in [Run your flows from external applications](#run-your-flows-from-external-applications)
+- Integrate flows into your applications, as explained in [Run your flows from external applications](#run-your-flows-from-external-applications).
 
 Optionally, stop here if you just want to create more flows within Langflow.
 
