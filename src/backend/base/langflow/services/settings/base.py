@@ -20,6 +20,7 @@ from pydantic_settings import (
 )
 from typing_extensions import override
 
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from langflow.utils.util_strings import is_valid_database_url
 
@@ -189,7 +190,7 @@ class Settings(BaseSettings):
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
     # Config
-    host: str = "127.0.0.1"
+    host: str = "localhost"
     """The host on which Langflow will run."""
     port: int = 7860
     """The port on which Langflow will run."""
@@ -229,6 +230,12 @@ class Settings(BaseSettings):
     """Path to the SSL certificate file on the local system."""
     ssl_key_file: str | None = None
     """Path to the SSL key file on the local system."""
+    max_text_length: int = MAX_TEXT_LENGTH
+    """Maximum number of characters to store and display in the UI. Responses longer than this
+    will be truncated when displayed in the UI. Does not truncate responses between components nor outputs."""
+    max_items_length: int = MAX_ITEMS_LENGTH
+    """Maximum number of items to store and display in the UI. Lists longer than this
+    will be truncated when displayed in the UI. Does not affect data passed between components nor outputs."""
 
     # MCP Server
     mcp_server_enabled: bool = True
