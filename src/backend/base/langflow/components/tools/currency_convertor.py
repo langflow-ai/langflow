@@ -57,8 +57,7 @@ class CurrencyConverterComponent(Component):
         StrInput(
             name="date",
             display_name="Historical Date",
-            info="Date for historical rates (YYYY‑MM‑DD). Required if mode is 'historical'.",
-            value=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            info="Date for historical rates (YYYY-MM-DD). Required if mode is 'historical'.",            value=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         ),
     ]
 
