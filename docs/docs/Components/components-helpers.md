@@ -190,7 +190,7 @@ For more information on configuring memory in Langflow, see [Memory](/memory).
 
 This component transforms LLM responses into structured data formats.
 
-In this example from the **Financial Support Parser** template, the **Structured Output** component transforms unstructured financial reports into structured data.
+In this example from the **Financial Report Parser** template, the **Structured Output** component transforms unstructured financial reports into structured data.
 
 ![Structured output example](/img/component-structured-output.png)
 
@@ -204,7 +204,7 @@ The `Output Schema` parameter defines the structure and data types for the model
 * **Type**: The data type of the output field. The available types are `str`, `int`, `float`, `bool`, `list`, or `dict`. The default is `text`.
 * **Multiple**: This feature is deprecated. Currently, it is set to `True` by default if you expect multiple values for a single field. For example, a `list` of `features` is set to `True` to contain multiple values, such as `["waterproof", "durable", "lightweight"]`. Default: `True`.
 
-The **Parse DataFrame** component parses the structured output into a template for orderly presentation in chat output. The template receives the values from the `output_schema` table with curly braces.
+The **Parser** component parses the structured output into a template for orderly presentation in chat output. The template receives the values from the `output_schema` table with curly braces.
 
 For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}` presents the extracted values in the **Playground** as `EBITDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion`.
 
