@@ -10,14 +10,13 @@ Use the `/build` endpoint to build vertices and flows, and execute those flows w
 
 The `/build` endpoint offers additional configuration for running flows.
 
-For a simpler execution of your flows, use the [`/run` endpoint](/api-flows#run-flow) instead.
-
-## Build flow
-
 :::important
-This endpoint is meant to be used by the frontend and is not optimized for external use.
-To run your flow, use the [`/run` endpoint](/api-flows#run-flow) instead.
+This `/build` endpoints are meant to be used by the frontend, and they aren't optimized for external use.
+
+To run a flow, use the [`/run` endpoint](/api-flows-run#run-flow).
 :::
+
+## Build flow and stream events
 
 This endpoint builds and executes a flow, returning a job ID that can be used to stream execution events.
 
@@ -86,9 +85,8 @@ curl -X GET \
   -H "accept: application/json"
 ```
 
-## Build endpoint headers and parameters
+## Build headers
 
-**Headers**
 | Header | Info | Example |
 |--------|------|---------|
 | Content-Type | Required. Specifies the JSON format. | "application/json" |
@@ -97,7 +95,8 @@ curl -X GET \
 
 The `/build/{flow_id}/flow` endpoint accepts the following parameters in its request body:
 
-**Parameters**
+## Build parameters
+
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | inputs | object | Optional. Input values for flow components. |
@@ -107,7 +106,7 @@ The `/build/{flow_id}/flow` endpoint accepts the following parameters in its req
 | start_component_id | string | Optional. ID of the component where the execution should start. |
 | log_builds | boolean | Optional. Control build logging. Default: `true`. |
 
-## Configure the build endpoint
+### Set start and stop points
 
 The `/build` endpoint accepts optional values for `start_component_id` and `stop_component_id` to control where the flow run starts and stops.
 Setting `stop_component_id` for a component triggers the same behavior as clicking the **Play** button on that component, where all dependent components leading up to that component are also run.
@@ -121,6 +120,8 @@ curl -X POST \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{"stop_component_id": "OpenAIModel-Uksag"}'
 ```
+
+### Override flow parameters
 
 The `/build` endpoint also accepts inputs for `data` directly, instead of using the values stored in the Langflow database.
 This is useful for running flows without having to pass custom values through the UI.

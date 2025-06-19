@@ -412,10 +412,7 @@ curl -X DELETE \
 
 ## Get messages
 
-Retrieve messages with optional filters.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
+Retrieve a list of all messages:
 
 ```bash
 curl -X GET \
@@ -423,18 +420,9 @@ curl -X GET \
   -H "accept: application/json"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+To filter messages, use the `flow_id`, `session_id`, `sender`, and `sender_name` query parameters.
 
-```text
-A list of all messages.
-```
-
- </TabItem>
-</Tabs>
-
-You can filter messages by `flow_id`, `session_id`, `sender`, and `sender_name`.
-Results can be ordered with the `order_by` query string.
+To sort the results, use the `order_by` query parameter.
 
 This example retrieves messages sent by `Machine` and `AI` in a given chat session (`session_id`) and orders the messages by timestamp.
 

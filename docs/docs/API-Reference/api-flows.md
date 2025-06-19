@@ -1,5 +1,5 @@
 ---
-title: Flows endpoints
+title: Flow management endpoints
 slug: /api-flows
 ---
 
@@ -7,6 +7,10 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 Use the `/flows` endpoint to create, read, update, and delete flows.
+
+## Run flows
+
+See [Flow trigger endpoints](/api-flows-run).
 
 ## Create flow
 
@@ -63,55 +67,79 @@ curl -X POST \
    </TabItem>
 </Tabs>
 
-## Read flows
+## Create flows
 
-Retrieve a list of flows with pagination support.
-
-<Tabs>
-   <TabItem value="curl" label="curl" default>
-
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=false&components_only=false&get_all=true&header_flows=false&page=1&size=50" \
-  -H "accept: application/json"
-```
-
-   </TabItem>
-
-<TabItem value="result" label="Result">
-
-```text
-A JSON object containing a list of flows.
-```
-
-   </TabItem>
-</Tabs>
-
-To retrieve only the flows from a specific project, pass `project_id` in the query string.
+Create multiple new flows.
 
 <Tabs>
-   <TabItem value="curl" label="curl" default>
+  <TabItem value="curl" label="curl" default>
 
 ```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&project_id=$PROJECT_ID&header_flows=false&page=1&size=1" \
-  -H "accept: application/json"
+curl -X POST \
+  "$LANGFLOW_URL/api/v1/flows/batch/" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "flows": [
+    {
+      "name": "string",
+      "description": "string",
+      "icon": "string",
+      "icon_bg_color": "string",
+      "gradient": "string",
+      "data": {},
+      "is_component": false,
+      "updated_at": "2024-12-30T18:36:02.737Z",
+      "webhook": false,
+      "endpoint_name": "string",
+      "tags": [
+        "string"
+      ],
+      "locked": false,
+      "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    },
+    {
+      "name": "string",
+      "description": "string",
+      "icon": "string",
+      "icon_bg_color": "string",
+      "gradient": "string",
+      "data": {},
+      "is_component": false,
+      "updated_at": "2024-12-30T18:36:02.737Z",
+      "webhook": false,
+      "endpoint_name": "string",
+      "tags": [
+        "string"
+      ],
+      "locked": false,
+      "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    }
+  ]
+}'
 ```
 
-   </TabItem>
+  </TabItem>
+  <TabItem value="result" label="Result">
 
-<TabItem value="result" label="Result">
-
-```text
-A JSON object containing a list of flows.
+```json
+[
+  {
+    // FlowRead objects
+  }
+]
 ```
 
-   </TabItem>
+  </TabItem>
 </Tabs>
 
 ## Read flow
 
-Read a specific flow by its ID.
+Retrieve a specific flow by its ID.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -143,6 +171,36 @@ curl -X GET \
 
   </TabItem>
 </Tabs>
+
+## Read flows
+
+Returns a JSON object containing a list of flows.
+
+Retrieve all flows with pagination:
+
+```bash
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=false&components_only=false&get_all=true&header_flows=false&page=1&size=50" \
+  -H "accept: application/json"
+```
+
+To retrieve flows from a specific project, use the `project_id` query parameter:
+
+```bash
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&project_id=$PROJECT_ID&header_flows=false&page=1&size=1" \
+  -H "accept: application/json"
+```
+
+## Read sample flows
+
+Retrieve a list of sample flows.
+
+```bash
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/flows/basic_examples/" \
+  -H "accept: application/json"
+```
 
 ## Update flow
 
@@ -222,131 +280,11 @@ curl -X DELETE \
    </TabItem>
 </Tabs>
 
-## Create flows
+## Export flows
 
-Create multiple new flows.
+Export specified flows to a ZIP file.
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```bash
-curl -X POST \
-  "$LANGFLOW_URL/api/v1/flows/batch/" \
-  -H "accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "flows": [
-    {
-      "name": "string",
-      "description": "string",
-      "icon": "string",
-      "icon_bg_color": "string",
-      "gradient": "string",
-      "data": {},
-      "is_component": false,
-      "updated_at": "2024-12-30T18:36:02.737Z",
-      "webhook": false,
-      "endpoint_name": "string",
-      "tags": [
-        "string"
-      ],
-      "locked": false,
-      "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-    },
-    {
-      "name": "string",
-      "description": "string",
-      "icon": "string",
-      "icon_bg_color": "string",
-      "gradient": "string",
-      "data": {},
-      "is_component": false,
-      "updated_at": "2024-12-30T18:36:02.737Z",
-      "webhook": false,
-      "endpoint_name": "string",
-      "tags": [
-        "string"
-      ],
-      "locked": false,
-      "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-    }
-  ]
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```json
-[
-  {
-    // FlowRead objects
-  }
-]
-```
-
-  </TabItem>
-</Tabs>
-
-## Upload flows
-
-Upload flows from a file.
-
-This example uploads a local file named `agent-with-astra-db-tool.json`.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```bash
-curl -X POST \
-  "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$PROJECT_ID" \
-  -H "accept: application/json" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@agent-with-astra-db-tool.json;type=application/json"
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```json
-[
-  {
-    "name": "agent-with-astra-db-tool",
-    "description": "",
-    "icon": null,
-    "icon_bg_color": null,
-    "gradient": null,
-    "data": {}
-  ...
-  }
-]
-```
-
-  </TabItem>
-</Tabs>
-
-To specify a target project for the flow, include the query parameter `project_id`.
-The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](#read-projects) endpoint for a list of available projects.
-To specify a target project for the flow, include the query parameter `project_id`.
-The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](#read-projects) endpoint for a list of available projects.
-
-```bash
-curl -X POST \
-  "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$PROJECT_ID" \
-  -H "accept: application/json" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@agent-with-astra-db-tool.json;type=application/json"
-```
-
-## Download all flows
-
-Download all flows as a ZIP file.
-
-This endpoint downloads a ZIP file containing flows for all `flow-id` values listed in the command's body.
+This endpoint downloads a ZIP file containing [Langflow JSON files](/concepts-flows#langflow-json-file-contents) for each flow ID listed in the request body.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -375,24 +313,41 @@ curl -X POST \
   </TabItem>
 </Tabs>
 
-## Read basic examples
+## Import flows
 
-Retrieve a list of basic example flows.
+Import flows by uploading a [Langflow-compatible JSON file](/concepts-flows#langflow-json-file-contents).
+
+To specify a target project for the flow, include the query parameter `project_id`.
+The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](/api-projects#read-projects) endpoint for a list of available projects.
+
+This example uploads a local file named `agent-with-astra-db-tool.json` to a project specified by a `PROJECT_ID` variable.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/flows/basic_examples/" \
-  -H "accept: application/json"
+curl -X POST \
+  "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$PROJECT_ID" \
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@agent-with-astra-db-tool.json;type=application/json"
 ```
 
   </TabItem>
   <TabItem value="result" label="Result">
 
-```text
-A list of example flows.
+```json
+[
+  {
+    "name": "agent-with-astra-db-tool",
+    "description": "",
+    "icon": null,
+    "icon_bg_color": null,
+    "gradient": null,
+    "data": {}
+  ...
+  }
+]
 ```
 
   </TabItem>

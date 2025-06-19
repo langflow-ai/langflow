@@ -81,6 +81,7 @@ The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<
 }
 ```
 
+<!-- TODO: What link goes here? -->
 2. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
    Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
    To find your Chat input component's ID, use the [](#)
@@ -184,7 +185,7 @@ curl -X DELETE \
 
 In `v2`, files are organized by `user_id` and tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
 The `v2` endpoints require authentication by an API key or JWT.
-To create a Langflow API key and export it as an environment variable, see [Export values](#export-values).
+To create a Langflow API key and export it as an environment variable, see [Get started with the Langflow API](/api-reference-api-examples).
 
 ### Upload file (v2)
 
@@ -268,7 +269,7 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API
 
 2. To use this file in your flow, add a [File](/components-data#file) component to load a file into the flow.
 3. To load the file into your flow, send it to the **File** component.
-To retrieve the **File** component's full name with the UUID attached, call the [Read flow](#read-flow) endpoint, and then include your **File** component and the file path as a tweak with the `/v1/run` POST request.
+To retrieve the **File** component's full name with the UUID attached, call the [Read flow](/api-flows#read-flow) endpoint, and then include your **File** component and the file path as a tweak with the `/v1/run` POST request.
 In this example, the file uploaded to `/v2/files` is included with the `/v1/run` POST request.
 
 ```text
@@ -435,3 +436,7 @@ curl -X DELETE \
 
   </TabItem>
 </Tabs>
+
+## Create upload file (Deprecated)
+
+This endpoint is deprecated. Use the `/files` endpoints instead.

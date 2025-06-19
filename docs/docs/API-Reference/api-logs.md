@@ -8,23 +8,25 @@ import TabItem from '@theme/TabItem';
 
 Retrieve logs for your Langflow flow.
 
-This endpoint requires log retrieval to be enabled in your Langflow application.
+## Enable log retrieval
 
-To enable log retrieval, include these values in your `.env` file:
+The `/logs` endpoint requires log retrieval to be enabled in your Langflow instance.
 
-```text
-LANGFLOW_ENABLE_LOG_RETRIEVAL=true
-LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000
-LANGFLOW_LOG_LEVEL=DEBUG
-```
+1. To enable log retrieval, include these values in your `.env` file:
 
-For log retrieval to function, `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` needs to be greater than 0. The default value is `10000`.
+    ```text
+    LANGFLOW_ENABLE_LOG_RETRIEVAL=true
+    LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000
+    LANGFLOW_LOG_LEVEL=DEBUG
+    ```
 
-Start Langflow with this `.env`:
+    Log retrieval requires that `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` is greater than 0. The default value is `10000`.
 
-```text
-uv run langflow run --env-file .env
-```
+2. Start Langflow with the updated `.env`:
+
+   ```text
+   uv run langflow run --env-file .env
+   ```
 
 ## Stream logs
 
@@ -67,14 +69,14 @@ keepalive
 
 ## Retrieve logs with optional parameters
 
-Retrieve logs with optional query parameters.
+Retrieve logs with optional query parameters:
 
 - `lines_before`: The number of logs before the timestamp or the last log.
 - `lines_after`: The number of logs after the timestamp.
 - `timestamp`: The timestamp to start getting logs from.
 
 The default values for all three parameters is `0`.
-With these values, the endpoint returns the last 10 lines of logs.
+With default values, the endpoint returns the last 10 lines of logs.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>

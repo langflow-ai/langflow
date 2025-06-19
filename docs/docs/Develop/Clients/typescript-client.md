@@ -134,7 +134,7 @@ const session_id = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
 ```
 3. Instead of calling `run` on the Flow object, call `stream` with the same arguments.
 The response is a [ReadableStream](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) of objects.
-For more information on streaming Langflow responses, see the [/run endpoint](https://docs.langflow.org/api-flows#run-flow).
+For more information on streaming Langflow responses, see the [/run endpoint](/api-flows-run#run-flow).
 ```tsx
 const response = await client.flow(flowId).stream(input);
 

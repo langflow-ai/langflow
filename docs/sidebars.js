@@ -207,17 +207,17 @@ module.exports = {
         {
           type: "doc",
           id: "API-Reference/api-reference-api-examples",
-          label: "API examples",
+          label: "Get started with the Langflow API",
         },
         {
           type: "doc",
-          id: "API-Reference/api-base",
-          label: "Base endpoints",
+          id: "API-Reference/api-flows-run",
+          label: "Flow trigger endpoints",
         },
         {
           type: "doc",
-          id: "API-Reference/api-build",
-          label: "Build endpoints",
+          id: "API-Reference/api-flows",
+          label: "Flow management endpoints",
         },
         {
           type: "doc",
@@ -226,8 +226,8 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "API-Reference/api-flows",
-          label: "Flows endpoints",
+          id: "API-Reference/api-projects",
+          label: "Projects endpoints",
         },
         {
           type: "doc",
@@ -241,8 +241,8 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "API-Reference/api-projects",
-          label: "Projects endpoints",
+          id: "API-Reference/api-build",
+          label: "Build endpoints",
         },
         {
           type: "doc",
@@ -251,7 +251,7 @@ module.exports = {
         },
         {
           type: "link",
-          label: "API documentation",
+          label: "Langflow API specification",
           href: "/api",
         },
       ],

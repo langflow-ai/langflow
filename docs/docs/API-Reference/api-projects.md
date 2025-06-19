@@ -74,7 +74,7 @@ curl -X POST \
   </TabItem>
 </Tabs>
 
-To add flows and components at project creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](#get-all-components) and [/api/v1/flows/read](#read-flows) endpoints and add them to the request body.
+To add flows and components at project creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](/api-reference-api-examples#get-all-components) and [/api/v1/flows/read](/api-flows#read-flows) endpoints and add them to the request body.
 
 Adding a flow to a project moves the flow from its previous location. The flow is not copied.
 
@@ -193,14 +193,11 @@ curl -X DELETE \
   </TabItem>
 </Tabs>
 
-## Download project
+## Export a project
 
 Download all flows from a project as a zip file.
 
 The `--output` flag is optional.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
 
 ```bash
 curl -X GET \
@@ -209,22 +206,9 @@ curl -X GET \
   --output langflow-project.zip
 ```
 
-  </TabItem>
-    <TabItem value="result" label="Result">
+## Import a project
 
-```text
-The project contents.
-```
-
-  </TabItem>
-</Tabs>
-
-## Upload project
-
-Upload a project to Langflow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
+Import a project and its flows by uploading a Langflow project zip file:
 
 ```bash
 curl -X POST \
@@ -233,14 +217,3 @@ curl -X POST \
   -H "Content-Type: multipart/form-data" \
   -F "file=@20241230_135006_langflow_flows.zip;type=application/zip"
 ```
-
-  </TabItem>
-
-  <TabItem value="result" label="Result">
-
-```text
-The project contents are uploaded to Langflow.
-```
-
-  </TabItem>
-</Tabs>
