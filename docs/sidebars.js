@@ -205,14 +205,54 @@ module.exports = {
       label: "API reference",
       items: [
         {
-          type: "link",
-          label: "API documentation",
-          href: "/api",
-        },
-        {
           type: "doc",
           id: "API-Reference/api-reference-api-examples",
           label: "API examples",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-base",
+          label: "Base endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-build",
+          label: "Build endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-files",
+          label: "Files endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-flows",
+          label: "Flows endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-logs",
+          label: "Logs endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-monitor",
+          label: "Monitor endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-projects",
+          label: "Projects endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-users",
+          label: "Users endpoints",
+        },
+        {
+          type: "link",
+          label: "API documentation",
+          href: "/api",
         },
       ],
     },

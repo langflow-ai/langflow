@@ -11,6 +11,8 @@ This page provides examples and practices for managing Langflow using the Langfl
 The Langflow API's OpenAPI spec can be viewed and tested at your Langflow deployment's `docs` endpoint.
 For example, `http://localhost:7860/docs`.
 
+<!-- Add base endpoints to their appropriate pages and replace w links -->
+
 ## Export values
 
 You might find it helpful to set the following environment variables in your terminal.
@@ -409,13 +411,13 @@ Use the `/build` endpoint to build vertices and flows, and execute those flows w
 
 The `/build` endpoint offers additional configuration for running flows.
 
-For a simpler execution of your flows, use the [`/run` endpoint](/api-reference-api-examples#run-flow) instead.
+For a simpler execution of your flows, use the [`/run` endpoint](/api-flows#run-flow) instead.
 
 ### Build flow
 
 :::important
 This endpoint is meant to be used by the frontend and is not optimized for external use.
-To run your flow, use the [`/run` endpoint](/api-reference-api-examples#run-flow) instead.
+To run your flow, use the [`/run` endpoint](/api-flows#run-flow) instead.
 :::
 
 This endpoint builds and executes a flow, returning a job ID that can be used to stream execution events.
