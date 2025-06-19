@@ -54,9 +54,9 @@ jobs:
       - name: Check PyPI package update
         id: check-pypi
         run: |
-          # Get today's date in ISO format for comparison
-          TODAY=$(date -u +"%Y-%m-%d")
-          echo "Today's date: $TODAY"
+          # Get current time in UTC for comparison
+          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
+          echo "Current time (UTC): $CURRENT_TIME"
 
           # Query PyPI API for the langflow package
           HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" https://pypi.org/pypi/langflow-nightly/json)
@@ -87,7 +87,7 @@ jobs:
           fi
 
           # Extract the release date of the latest version
-          RELEASE_DATE=$(jq -r --arg ver "$LATEST_VERSION" '.releases[$ver][0].upload_time_iso_8601 // empty' response.json | cut -d'T' -f1)
+          RELEASE_DATE=$(jq -r --arg ver "$LATEST_VERSION" '.releases[$ver][0].upload_time_iso_8601 // empty' response.json)
 
           if [ -z "$RELEASE_DATE" ]; then
             echo "Could not extract release date"
@@ -98,12 +98,21 @@ jobs:
           echo "Latest version: $LATEST_VERSION"
           echo "Release date: $RELEASE_DATE"
 
-          # Check if the release date is today
-          if [[ "$RELEASE_DATE" == "$TODAY" ]]; then
-            echo "Package was updated today"
+          # Convert dates to timestamps for comparison (24-hour window)
+          CURRENT_TIMESTAMP=$(date -u -d "$CURRENT_TIME" +%s)
+          RELEASE_TIMESTAMP=$(date -u -d "$RELEASE_DATE" +%s)
+          HOURS_DIFF=$(( (CURRENT_TIMESTAMP - RELEASE_TIMESTAMP) / 3600 ))
+
+          echo "Current timestamp: $CURRENT_TIMESTAMP"
+          echo "Release timestamp: $RELEASE_TIMESTAMP"
+          echo "Hours difference: $HOURS_DIFF"
+
+          # Check if the release is within the last 24 hours
+          if [ "$HOURS_DIFF" -le 24 ] && [ "$HOURS_DIFF" -ge 0 ]; then
+            echo "Package was updated within the last 24 hours"
             echo "success=true" >> $GITHUB_OUTPUT
           else
-            echo "Package was not updated today"
+            echo "Package was not updated within the last 24 hours"
             echo "success=false" >> $GITHUB_OUTPUT
           fi
 
