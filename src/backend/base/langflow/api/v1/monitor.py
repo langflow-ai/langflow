@@ -91,7 +91,7 @@ async def get_messages(
 @router.delete("/messages", status_code=204, dependencies=[Depends(get_current_active_user)])
 async def delete_messages(message_ids: list[UUID], session: DbSession) -> None:
     try:
-        await session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # x`zxtype: ignore[attr-defined]
+        await session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]
         await session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
