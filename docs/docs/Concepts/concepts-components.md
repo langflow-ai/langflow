@@ -5,42 +5,49 @@ slug: /concepts-components
 
 import Icon from "@site/src/components/icon";
 
+# Langflow components overview
+
 A component is a single building block within a flow with inputs, outputs, functions, and parameters that define its functionality. A single component is like a class within a larger application.
+
+To add a component to a flow, drag it from the **Component** menu to the **Workspace**.
+
+Learn more about components and how they work on this page.
 
 ## Component menu
 
-To add a component to a flow, drag it from the **Components** menu to the **Workspace**.
+All components have a **Component menu** that contains meta settings for the component.
 
-Each component is unique, but all have a menu bar at the top that looks something like the following:
+To access this menu for a specific component, select a component in a flow.
+The menu appears above the selected component.
 
-![Agent component](/img/agent-component.png)
+<img src="/img/openai-model-component.png" alt="OpenAI component with the component menu visible" style={{display: 'block', margin: 'auto', width: 300}} />
 
-Use the component controls to do the following:
+You can use the controls in the **Component menu** to manage and configure the component on a high level, including the following actions:
 
-- **Code** — Modify the component's Python code and save your changes.
-- **Controls** — Adjust all component parameters.
-- **Tool Mode** — Enable this option to connect the component to an Agent.
+- **Code**: Modify the component settings by directly editing the component's Python code.
+- **Controls**: Adjust all component parameters, including optional settings that are hidden by default.
+- **Tool Mode**: Enable tool mode when combining a component with an agent component.
+- **Freeze**: After a component runs, lock its previous output state to prevent it from re-running.
 
-To view additional options for a component, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**.
+Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
-To view a component's output and logs, click <Icon name="TextSearch" aria-hidden="true" />  **Inspect Output**.
+## Component logs
 
-To run a single component, click <Icon name="Play" aria-label="Play button" /> **Run component**.
+To view a component's output and logs, click the <Icon name="TextSearch" aria-label="Inspect icon" /> icon.
 
-A **Last Run** value indicates that the component ran successfully.
+## Run one component
 
-Running a single component with the **Run component** button is different from running the entire flow. In a single component run, the `build_vertex` function is called, which builds and runs only the single component with direct inputs provided through the UI (the `inputs_dict` parameter). The  `VertexBuildResult` data is passed to the `build_and_run` method, which calls the component's `build` method and runs it. Unlike running the full flow, running a single component does not automatically execute its upstream dependencies.
+To run a single component, click <Icon name="Play" aria-label="Play button" /> **Play**.
+
+Running a single component with the **Play** button is different from running the entire flow. In a single component run, the `build_vertex` function is called, which builds and runs only the single component with direct inputs provided through the UI (the `inputs_dict` parameter). The `VertexBuildResult` data is passed to the `build_and_run` method, which calls the component's `build` method and runs it. Unlike running the full flow, running a single component does not automatically execute its upstream dependencies.
+
+A <Icon name="Check" aria-label="Checkmark" /> **Checkmark** indicates that the component ran successfully.
 
 ## Component ports
 
-Handles (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }}/>) on the side of a component indicate the types of inputs and outputs that can be connected at that port. Hover over a handle to see connection details.
+Handles (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" />) on the side of a component indicate the types of inputs and outputs that can be connected at that port. Hover over a handle to see connection details.
 
-![Prompt component with multiple inputs](/img/prompt-component.png)
-
-Some components have ports that are dynamically added or removed.
-For example, the **Prompt** component accepts inputs within curly braces, and new ports are opened when a value within curly braces is detected in the **Template** field.
-
-![Prompt component with multiple inputs](/img/prompt-component-with-multiple-inputs.png)
+<img src="/img/prompt-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
 
 ### Component port data type colors
 
@@ -48,15 +55,15 @@ The following table lists the handle colors and their corresponding data types:
 
 | Data type | Handle color | Handle |
 |-----------|--------------|----------|
-| Data | Red | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#dc2626', fill: '#dc2626' }} /> |
-| DataFrame | Pink | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#ec4899', fill:'#ec4899' }} /> |
-| Embeddings | Emerald | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#10b981', fill: '#10b981' }} /> |
-| LanguageModel | Fuchsia | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#c026d3', fill: '#c026d3' }} /> |
-| Memory | Orange | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#f97316', fill: '#f97316' }} /> |
-| Message | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }} /> |
-| Text | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }} /> |
-| Tool | Cyan | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#06b6d4', fill: '#06b6d4' }} /> |
-| unknown | Gray | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#9CA3AF', fill: '#9CA3AF' }} /> |
+| Data | Red | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#dc2626' }} /> |
+| DataFrame | Pink | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#ec4899' }} /> |
+| Embeddings | Emerald | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#10b981' }} /> |
+| LanguageModel | Fuchsia | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#c026d3' }} /> |
+| Memory | Orange | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#f97316' }} /> |
+| Message | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5' }} /> |
+| Text | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5' }} /> |
+| Tool | Cyan | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#06b6d4' }} /> |
+| unknown | Gray | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#9CA3AF' }} /> |
 
 ## Component code
 
@@ -242,7 +249,7 @@ Components are listed in the sidebar by component type.
 **Legacy** components are available for use but are no longer supported. By default, legacy components are hidden in the sidebar.
 
 The sidebar includes a component **Search** bar with options for showing or hiding **Beta** and **Legacy** components.
-To change the sidebar's behavior, click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component Settings**, and then show or hide **Legacy** or **Beta** components.
+To change the sidebar's behavior, click the <Icon name="SlidersHorizontal" aria-hidden="true" />, and then show or hide **Legacy** or **Beta** components.
 
 
 

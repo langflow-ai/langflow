@@ -7,24 +7,6 @@ import Icon from "@site/src/components/icon";
 
 # Tool components in Langflow
 
-The **Tools** category in Langflow is removed as of Langflow 1.5.
-
-All components in the **Tools** category are now **Legacy**, except the following:
-
-* The [MCP Connection](/components-data#mcp-connection) component is available in **Data components**.
-* The [calculator](/components-helpers#calculator)  component is available in **Helpers**.
-* The [Astra DB JSON](/components-tools#astra-db-tool) and [Astra DB CQL](#astra-db-cql-tool) tools are available in the **DataStax** bundle.
-* The Python REPL tool is available in **Processing** and re-named the [Python Interpreter](/components-processing#python-interpreter) component.
-
-The remaining tools are **Legacy**.
-Legacy components are available for use but are no longer supported.
-
-To replace legacy search components like Bing Search and Google, use the [Web search component](/components-data#web-search) component.
-
-To replace legacy news aggregation components, use the [News search](/components-data#news-search) component.
-
-## Use a tool in a flow
-
 Tools are typically connected to agent components at the **Tools** port. Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
 
 Tools in agentic functions are, essentially, functions that the agent can call to perform tasks or access external resources.
@@ -32,6 +14,10 @@ A function is wrapped as a `Tool` object, with a common interface the agent unde
 Agents become aware of tools through tool registration, where the agent is provided a list of available tools, typically at agent initialization. The `Tool` object's description tells the agent what the tool can do.
 
 The agent then uses a connected LLM to reason through the problem to decide which tool is best for the job.
+
+## Use a tool in a flow
+
+Tools are typically connected to agent components at the **Tools** port.
 
 The [simple agent starter project](/starter-projects-simple-agent) uses URL and Calculator tools connected to an [agent component](/components-agents#agent-component) to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use.
 
@@ -42,10 +28,6 @@ If the component you want to connect to an agent doesn't have a **Tool mode** op
 For an example, see [Make any component a tool](/agents-tool-calling-agent-component#make-any-component-a-tool).
 
 ## arXiv
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
 
 This component searches and retrieves papers from [arXiv.org](https://arXiv.org).
 
@@ -180,10 +162,6 @@ The `Astra DB CQL Tool` allows agents to query data from CQL tables in Astra DB.
 
 ## Bing Search API
 
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
 This component allows you to call the Bing Search API.
 
 <details>
@@ -208,10 +186,6 @@ This component allows you to call the Bing Search API.
 </details>
 
 ## Combinatorial Reasoner
-
-:::important
-This component is available in the **Components** menu under **Bundles**.
-:::
 
 This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. For more information, see [Icosa computing](https://www.icosacomputing.com/).
 
@@ -239,10 +213,6 @@ This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to
 
 ## DuckDuckGo search
 
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
 This component performs web searches using the [DuckDuckGo](https://www.duckduckgo.com) search engine with result-limiting capabilities.
 
 <details>
@@ -267,10 +237,6 @@ This component performs web searches using the [DuckDuckGo](https://www.duckduck
 
 ## Exa Search
 
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
 This component provides an [Exa Search](https://exa.ai/) toolkit for search and content retrieval.
 
 <details>
@@ -294,10 +260,6 @@ This component provides an [Exa Search](https://exa.ai/) toolkit for search and 
 </details>
 
 ## Glean Search API
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
 
 This component allows you to call the Glean Search API.
 
@@ -325,10 +287,6 @@ This component allows you to call the Glean Search API.
 
 ## Google Serper API
 
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
 This component allows you to call the Serper.dev Google Search API.
 
 <details>
@@ -351,12 +309,16 @@ This component allows you to call the Serper.dev Google Search API.
 
 </details>
 
+## MCP connection
+
+The **MCP connection** component exposes Model Context Protocol (MCP) servers, including your other flows, as tools for Langflow agents. For information about this component, see [Use Langflow as an MCP client](/mcp-client).
+
+### MCP Tools (deprecated)
+
+The **MCP Tools (stdio)** and **MCP Tools (SSE)** components are deprecated as of Langflow version 1.3.
+They are replaced by the [MCP connection component](/mcp-client).
 
 ## Wikidata
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
 
 This component performs a search using the Wikidata API.
 
@@ -384,9 +346,6 @@ Legacy components are available for use but are no longer supported.
 
 ### Calculator Tool
 
-:::important
-This component is now available in [Helper components](/components-helpers#calculator).
-:::
 This component allows you to evaluate basic arithmetic expressions. It supports addition, subtraction, multiplication, division, and exponentiation.
 
 <details>
@@ -407,10 +366,6 @@ This component allows you to evaluate basic arithmetic expressions. It supports 
 </details>
 
 ### Google Search API
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
 
 This component allows you to call the Google Search API.
 
@@ -436,10 +391,6 @@ This component allows you to call the Google Search API.
 </details>
 
 ### Python Code Structured Tool
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
 
 This component creates a structured tool from Python code using a dataclass.
 
@@ -469,10 +420,6 @@ The component dynamically updates its configuration based on the provided Python
 
 ### Python REPL Tool
 
-:::important
-The Python REPL tool is available in **Processing** and re-named the [Python Interpreter](/components-processing#python-interpreter)
-:::
-
 This component creates a Python REPL (Read-Eval-Print Loop) tool for executing Python code.
 
 <details>
@@ -496,10 +443,6 @@ This component creates a Python REPL (Read-Eval-Print Loop) tool for executing P
 
 ### Retriever Tool
 
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
 This component creates a tool for interacting with a retriever in LangChain.
 
 <details>
@@ -522,10 +465,6 @@ This component creates a tool for interacting with a retriever in LangChain.
 </details>
 
 ### Search API
-
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
 
 This component calls the `searchapi.io` API. It can be used to search the web for information.
 
@@ -554,10 +493,6 @@ For more information, see the [SearchAPI documentation](https://www.searchapi.io
 
 ### SearXNG Search Tool
 
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
 This component creates a tool for searching using SearXNG, a metasearch engine.
 
 <details>
@@ -582,10 +517,6 @@ This component creates a tool for searching using SearXNG, a metasearch engine.
 
 ### Wikipedia API
 
-:::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
-:::
-
 This component creates a tool for searching and retrieving information from Wikipedia.
 
 <details>
@@ -609,21 +540,3 @@ This component creates a tool for searching and retrieving information from Wiki
 | tool | Tool | A Wikipedia search tool for use in LangChain. |
 
 </details>
-
-## Deprecated components
-
-Deprecated components have been replaced by newer alternatives and should not be used in new projects.
-
-### MCP Tools (stdio)
-:::important
-This component is deprecated as of Langflow version 1.3.
-Instead, use the [MCP connection component](/components-data#mcp-connection)
-:::
-
-
-### MCP Tools (SSE)
-:::important
-This component is deprecated as of Langflow version 1.3.
-Instead, use the [MCP connection component](/components-data#mcp-connection)
-:::
-
