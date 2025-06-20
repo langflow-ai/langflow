@@ -3,8 +3,8 @@ name: Nightly Build
 on:
   workflow_dispatch:
   schedule:
-    # Run job at 6:30 UTC, 10.30pm PST, or 11.30pm PDT
-    - cron: "30 6 * * *"
+    # Run job at 00:00 UTC (4:00 PM PST / 5:00 PM PDT)
+    - cron: "0 0 * * *"
 
 env:
   POETRY_VERSION: "1.8.3"
