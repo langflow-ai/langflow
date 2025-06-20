@@ -186,7 +186,16 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
     await page.getByText("Untitled document").first().click();
 
+    await page.waitForTimeout(1000);
+
+    await page.waitForSelector('[data-testid="save-mcp-server-button"]', {
+      timeout: 10000,
+    });
+
     await page.getByTestId("save-mcp-server-button").click({ timeout: 10000 });
+
+    await page.waitForTimeout(1000);
+
     await expect(page.getByTestId("save-mcp-server-button")).toBeHidden({
       timeout: 10000,
     });
