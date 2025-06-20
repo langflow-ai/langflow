@@ -4,6 +4,7 @@ from loguru import logger
 QUERY_DOCS_URL = "https://docs.agentql.com/agentql-query"
 QUERY_DATA_API_DOCS_URL = "https://docs.agentql.com/rest-api/api-reference#query-data"
 QUERY_DOCUMENT_API_DOCS_URL = "https://docs.agentql.com/rest-api/api-reference#query-document"
+
 MISSING_REQUIRED_INPUTS_MESSAGE = "Either Query or Prompt must be provided."
 TOO_MANY_INPUTS_MESSAGE = "Both Query and Prompt can't be provided at the same time."
 INVALID_API_KEY_MESSAGE = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."

@@ -74,19 +74,21 @@ class AgentQLQueryDocument(BaseFileComponent):
     outputs = [*BaseFileComponent._base_outputs]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
+        if not self.prompt and not self.query:
+            self.status = MISSING_REQUIRED_INPUTS_MESSAGE
+            raise ValueError(self.status)
+        if self.prompt and self.query:
+            self.status = TOO_MANY_INPUTS_MESSAGE
+            raise ValueError(self.status)
+        if len(file_list) > 1:
+            self.status = "Only one file is supported for AgentQL Query Document."
+            raise ValueError(self.status)
+
         endpoint = "https://api.agentql.com/v1/query-document"
         headers = {
             "X-API-Key": self.api_key,
             "X-TF-Request-Origin": "langflow",
         }
-
-        if len(file_list) > 1:
-            self.status = "Only one file is supported for AgentQL Query Document."
-            raise ValueError(self.status)
-
-        logger.info(f"Processing file: {file_list[0].path}")
-
-        file = file_list[0]
 
         form_data = {
             "query": self.query,
@@ -96,14 +98,10 @@ class AgentQLQueryDocument(BaseFileComponent):
             },
         }
 
-        if not self.prompt and not self.query:
-            self.status = MISSING_REQUIRED_INPUTS_MESSAGE
-            raise ValueError(self.status)
-        if self.prompt and self.query:
-            self.status = TOO_MANY_INPUTS_MESSAGE
-            raise ValueError(self.status)
-
+        file = file_list[0]
         path = file.path
+        logger.info(f"Processing file: {file.path}")
+
         with path.open("rb") as f:
             files = {"file": (path.name, f)}
             form_body = {"body": json.dumps(form_data)}
