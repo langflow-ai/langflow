@@ -5,8 +5,6 @@ const SvgAWS = (props) => (
     xmlns="http://www.w3.org/2000/svg"
     xmlSpace="preserve"
     id="Layer_1"
-    x={0}
-    y={0}
     style={{
       enableBackground: "new 0 0 304 182",
     }}

@@ -2,8 +2,6 @@ const SvgMistralIcon = (props) => (
   <svg
     viewBox="0 0 129 91"
     version="1.1"
-    width="32px"
-    height="32px"
     style={{
       fillRule: "evenodd",
       clipRule: "evenodd",

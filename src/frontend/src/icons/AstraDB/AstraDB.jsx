@@ -2,12 +2,12 @@ import { stringToBool } from "@/utils/utils";
 
 const AstraSVG = (props) => (
   <svg
-    {...props}
     width="167"
     height="68"
     viewBox="0 0 167 68"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
+    {...props}
   >
     <path
       d="M60.2338 0.25H0.000244141V67.75H60.2338L75.365 56.0752V11.9248L60.2338 0.25ZM11.6732 11.9248H63.692V56.0874H11.6732V11.9248Z"

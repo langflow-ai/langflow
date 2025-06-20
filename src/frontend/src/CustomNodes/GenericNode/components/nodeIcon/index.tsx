@@ -39,9 +39,17 @@ export function NodeIcon({
     return (
       <div className="flex h-4 w-4 items-center justify-center">
         {isLucideIcon ? (
-          <IconComponent strokeWidth={ICON_STROKE_WIDTH} name={iconName} />
+          <IconComponent
+            strokeWidth={ICON_STROKE_WIDTH}
+            name={iconName}
+            className="h-4 w-4"
+          />
         ) : (
-          <IconComponent name={iconName} iconColor={iconColor} />
+          <IconComponent
+            name={iconName}
+            iconColor={iconColor}
+            className="h-4 w-4"
+          />
         )}
       </div>
     );

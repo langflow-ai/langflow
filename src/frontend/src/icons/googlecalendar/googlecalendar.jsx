@@ -1,10 +1,5 @@
 const Icon = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 48 48"
-    width="23px"
-    height="23px"
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" {...props}>
     <rect width="22" height="22" x="13" y="13" fill="#fff" />
     <polygon
       fill="#1e88e5"

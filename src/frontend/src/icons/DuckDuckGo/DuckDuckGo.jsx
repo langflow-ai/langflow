@@ -3,8 +3,6 @@ const SvgDuckDuckGo = ({ ...props }) => (
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 122.88 122.88"
     {...props}
-    height="1rem"
-    width="1rem"
   >
     <defs>
       <style>{".b{fill:#fff}"}</style>

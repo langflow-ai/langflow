@@ -1,8 +1,6 @@
 export default function SvgStreamlit(props) {
   return (
     <svg
-      width="301"
-      height="165"
       viewBox="0 0 301 165"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

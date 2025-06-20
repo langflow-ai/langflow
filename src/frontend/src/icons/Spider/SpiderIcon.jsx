@@ -1,7 +1,5 @@
 const SvgSpiderIcon = (props) => (
   <svg
-    height="30"
-    width="30"
     viewBox="0 0 36 34"
     xmlns="http://www.w3.org/2000/svg"
     className="fill-accent-foreground transition-all group-hover:scale-110"
