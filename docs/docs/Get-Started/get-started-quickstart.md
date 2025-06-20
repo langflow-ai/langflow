@@ -55,11 +55,20 @@ If you want to learn how Langflow integrates into external applications, read on
 ## Run your flows from external applications
 
 Langflow is an IDE, but it's also a runtime you can call through an API with Python, JavaScript, or curl.
-If your server is running, you can POST a request to the `/run` endpoint to run the flow and get the result.
+
+When you start Langflow locally, you can send requests to the local Langflow server.
+For production applications, you need to deploy a stable Langflow instance to handle API calls.
+For more information, see [Langflow deployment overview](/deployment-overview).
+
+For example, you can use `POST /run` to run a flow and get the result.
 
 The **API access** pane includes code snippets to get you started sending requests to the server.
 
 1. To open the **API access pane**, in the **Playground**, click **Share**, and then click **API access**.
+The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data.
+The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow.
+Replace these values if you're using the code for a different server or flow.
+The default Langflow server address is `http://localhost:7860`
 
 <Tabs groupId="Language">
   <TabItem value="Python" label="Python" default>
@@ -67,7 +76,7 @@ The **API access** pane includes code snippets to get you started sending reques
 ```python
 import requests
 
-url = "http://127.0.0.1:7860/api/v1/run/29deb764-af3f-4d7d-94a0-47491ed241d6"  # The complete API endpoint URL for this flow
+url = "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID"  # The complete API endpoint URL for this flow
 
 # Request payload configuration
 payload = {
@@ -114,7 +123,7 @@ const options = {
     body: JSON.stringify(payload)
 };
 
-fetch('http://localhost:7860/api/v1/run/29deb764-af3f-4d7d-94a0-47491ed241d6', options)
+fetch('http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID', options)
     .then(response => response.json())
     .then(response => console.log(response))
     .catch(err => console.error(err));
@@ -126,7 +135,7 @@ fetch('http://localhost:7860/api/v1/run/29deb764-af3f-4d7d-94a0-47491ed241d6', o
 
 ```text
 curl --request POST \
-     --url 'http://localhost:7860/api/v1/run/29deb764-af3f-4d7d-94a0-47491ed241d6?stream=false' \
+     --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false' \
      --header 'Content-Type: application/json' \
      --data '{
 		           "output_type": "chat",
@@ -141,20 +150,7 @@ curl --request POST \
 
 </Tabs>
 
-The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data.
-
-The payload schema is defined in [schemas.py](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/schemas.py#L354). and accepts the following parameters.
-
-```json
-payload = {
-    "input_value": "your question here",  # Required: The text you want to send
-    "input_type": "chat",                 # Optional: Default is "chat"
-    "output_type": "chat",                # Optional: Default is "chat"
-    "output_component": "",               # Optional: Specify output component if needed
-    "tweaks": None,                      # Optional: Custom adjustments
-    "session_id": None                   # Optional: For conversation context
-}
-```
+The payload schema is defined in [schemas.py](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/schemas.py#L354).
 
 2. Copy the snippet to your terminal, and send the request.
 
@@ -342,7 +338,7 @@ The following example builds on the API pane's example code to create a question
 import requests
 import json
 
-url = "http://localhost:7860/api/v1/run/29deb764-af3f-4d7d-94a0-47491ed241d6"
+url = "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID"
 
 def ask_agent(question):
     payload = {
@@ -407,7 +403,7 @@ const rl = readline.createInterface({
     output: process.stdout
 });
 
-const url = 'http://localhost:7860/api/v1/run/29deb764-af3f-4d7d-94a0-47491ed241d6';
+const url = 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID';
 
 // Store the previous answer
 let previousAnswer = null;
@@ -430,7 +426,7 @@ async function askAgent(question) {
     try {
         const response = await fetch(url, options);
         const data = await response.json();
-        
+
         // Extract the message from the nested response
         const message = data.outputs[0].outputs[0].outputs.message.message;
         return message;
@@ -470,7 +466,7 @@ async function startChat() {
     askQuestion();
 }
 
-startChat(); 
+startChat();
 ```
 
   </TabItem>
@@ -479,7 +475,7 @@ startChat();
 ## Apply temporary overrides to a flow run
 
 To change a flow's values at runtime, Langflow offers **Temporary Overrides**, also called **Tweaks**.
-Tweaks are added to the API request to the `/run` endpoint, and temporarily change component parameters within your flow.
+Tweaks are added to the API request, and temporarily change component parameters within your flow.
 They don't modify the underlying flow configuration or persist between runs.
 
 The easiest way to modify your request with tweaks to the `/run` endpoint is in the **API access** pane, in the **Input schema** pane.
