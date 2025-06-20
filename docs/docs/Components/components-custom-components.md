@@ -41,6 +41,10 @@ class MyCsvReader(Component):
 * **name**: A unique internal identifier.
 * **documentation**: An optional link to external docs.
 
+:::tip Icon usage
+Langflow uses [Lucide Icons](https://lucide.dev/icons) for component visualization. To assign an icon to your component, set the icon attribute to the name of a Lucide icon (e.g., "sparkles", "file-text", "table"). Just provide the icon name as a string and Langflow will render it automatically.
+:::
+
 ### Structure of a custom component
 
 A **Langflow custom component** goes beyond a simple class with inputs and outputs. It includes an internal structure with optional lifecycle steps, output generation, front-end interaction, and logic organization.
