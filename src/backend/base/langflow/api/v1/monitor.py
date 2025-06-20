@@ -47,7 +47,7 @@ async def get_message_sessions(
     try:
         stmt = select(MessageTable.session_id).distinct()
         stmt = stmt.where(MessageTable.session_id.isnot(None))
-        
+
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
             
@@ -72,6 +72,7 @@ async def get_messages(
             stmt = stmt.where(MessageTable.flow_id == flow_id)
         if session_id:
             from urllib.parse import unquote
+
             decoded_session_id = unquote(session_id)
             stmt = stmt.where(MessageTable.session_id == decoded_session_id)
         if sender:
