@@ -16,11 +16,11 @@ export const useGetMCPServers: useQueryFunctionType<
 > = (options) => {
   const { query, queryClient } = UseRequestProcessor();
 
-  // First fetch: actionCount=false (fast)
+  // First fetch: action_count=false (fast)
   const responseFn = async () => {
     try {
       const { data } = await api.get<getMCPServersResponse>(
-        `${getURL("MCP_SERVERS", undefined, true)}?actionCount=false`,
+        `${getURL("MCP_SERVERS", undefined, true)}?action_count=false`,
       );
       // Merge with cached data to preserve non-null mode/toolsCount
       const cachedData = queryClient.getQueryData(["useGetMCPServers"]) as
@@ -42,11 +42,11 @@ export const useGetMCPServers: useQueryFunctionType<
     }
   };
 
-  // Second fetch: actionCount=true (slow, updates mode/toolsCount)
+  // Second fetch: action_count=true (slow, updates mode/toolsCount)
   const fetchWithCounts = async () => {
     try {
       const { data } = await api.get<getMCPServersResponse>(
-        `${getURL("MCP_SERVERS", undefined, true)}?actionCount=true`,
+        `${getURL("MCP_SERVERS", undefined, true)}?action_count=true`,
       );
       return data;
     } catch (error) {

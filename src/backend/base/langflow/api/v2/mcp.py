@@ -101,14 +101,14 @@ async def get_servers(
     session: DbSession,
     storage_service=Depends(get_storage_service),
     settings_service=Depends(get_settings_service),
-    actionCount: bool = False,
+    action_count: bool | None = None,
 ):
     """Get the list of available servers."""
     import asyncio
 
     server_list = await get_server_list(current_user, session, storage_service, settings_service)
 
-    if not actionCount:
+    if not action_count:
         # Return only the server names, with mode and toolsCount as None
         return [{"name": server_name, "mode": None, "toolsCount": None} for server_name in server_list["mcpServers"]]
 
