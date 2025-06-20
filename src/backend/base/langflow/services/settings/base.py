@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     Defaults to platform-specific config directory:
     - macOS: ~/Library/Application Support/langflow/
     - Linux: ~/.config/langflow/
-    - Windows: %APPDATA%\langflow\
+    - Windows: %APPDATA%\\langflow\
 
     This location is designed for persistent data and is typically included in system backups.
     For production use, consider setting LANGFLOW_CONFIG_DIR to a custom location."""
