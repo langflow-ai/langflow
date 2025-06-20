@@ -11,23 +11,17 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Starter projects",
+      label: "Templates",
       items: [
-        'Starter-Projects/starter-projects-basic-prompting',
-        'Starter-Projects/starter-projects-vector-store-rag',
-        'Starter-Projects/starter-projects-simple-agent',
-      ],
-    },
-    {
-      type: "category",
-      label: "Sample flows",
-      items: [
-        'Sample-Flows/blog-writer',
-        'Sample-Flows/document-qa',
-        'Sample-Flows/memory-chatbot',
-        'Sample-Flows/financial-report-parser',
-        'Sample-Flows/sequential-agent',
-        'Sample-Flows/travel-planning-agent',
+        'Templates/basic-prompting',
+        'Templates/simple-agent',
+        'Templates/vector-store-rag',
+        'Templates/blog-writer',
+        'Templates/document-qa',
+        'Templates/memory-chatbot',
+        'Templates/financial-report-parser',
+        'Templates/sequential-agent',
+        'Templates/travel-planning-agent',
       ],
     },
     {
