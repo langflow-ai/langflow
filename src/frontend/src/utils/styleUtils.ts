@@ -5,6 +5,7 @@ import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
+import { RedditIcon } from "../icons/reddit";
 
 const iconCache = new Map<string, any>();
 
@@ -237,6 +238,7 @@ export const SIDEBAR_BUNDLES = [
   },
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
+  { display_name: "Reddit", name: "reddit", icon: "Reddit" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   { display_name: "Outlook", name: "outlook", icon: "Outlook" },
@@ -343,6 +345,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatOutput: "MessagesSquare",
   //Integration Icons
   Outlook: "Outlook",
+  Reddit: "Reddit",
   AIML: "AI/ML",
   AgentQL: "AgentQL",
   LanguageModels: "BrainCircuit",
