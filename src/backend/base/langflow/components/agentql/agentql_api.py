@@ -1,9 +1,9 @@
 import httpx
 
 from langflow.components.agentql.utils import (
-    QUERY_DOCS_URL,
-    QUERY_DATA_API_DOCS_URL,
     MISSING_REQUIRED_INPUTS_MESSAGE,
+    QUERY_DATA_API_DOCS_URL,
+    QUERY_DOCS_URL,
     TOO_MANY_INPUTS_MESSAGE,
     handle_agentql_error,
 )

@@ -5,10 +5,10 @@ from loguru import logger
 
 from langflow.base.data import BaseFileComponent
 from langflow.components.agentql.utils import (
-    QUERY_DOCUMENT_API_DOCS_URL,
-    QUERY_DOCS_URL,
-    TOO_MANY_INPUTS_MESSAGE,
     MISSING_REQUIRED_INPUTS_MESSAGE,
+    QUERY_DOCS_URL,
+    QUERY_DOCUMENT_API_DOCS_URL,
+    TOO_MANY_INPUTS_MESSAGE,
     handle_agentql_error,
 )
 from langflow.io import (
