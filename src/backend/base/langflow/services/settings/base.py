@@ -70,17 +70,16 @@ class Settings(BaseSettings):
     """The configuration directory where Langflow stores persistent data including:
     - Secret keys for API key encryption
     - User uploaded files (PDFs, images, documents)
-    - Profile pictures
     - Application logs
     - Database (if save_db_in_config_dir=True)
 
-    Defaults to platform-specific cache directory:
-    - macOS: ~/Library/Caches/langflow/
-    - Linux: ~/.cache/langflow/
-    - Windows: %LOCALAPPDATA%\langflow\Cache\
+    Defaults to platform-specific config directory:
+    - macOS: ~/Library/Application Support/langflow/
+    - Linux: ~/.config/langflow/
+    - Windows: %APPDATA%\langflow\
 
-    Note: Using cache directory can lead to data loss when cache is cleared.
-    Consider setting LANGFLOW_CONFIG_DIR to a persistent location for production use."""
+    This location is designed for persistent data and is typically included in system backups.
+    For production use, consider setting LANGFLOW_CONFIG_DIR to a custom location."""
     save_db_in_config_dir: bool = False
     """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory
     (i.e. in the package directory)."""
