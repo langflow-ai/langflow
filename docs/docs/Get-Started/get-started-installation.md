@@ -22,7 +22,7 @@ Langflow can be installed in multiple ways:
   <TabItem value="macOS" label="macOS">
 
   1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
-  2. Click *Download Langflow*, enter your **Name**, **Email address**, and **Company**, and then click **Download**.
+  2. Click **Download Langflow**, enter your contact information, and then click **Download**.
   3. Mount and install the Langflow application.
   4. When the installation completes, open the Langflow application.
 
@@ -35,10 +35,9 @@ Langflow can be installed in multiple ways:
     :::
 
   1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
-  2. Enter your **Name**, **Email address**, and **Company**, and then click **Download**.
+  2. Click **Download Langflow**, enter your contact information, and then click **Download**.
   3. Open the **File Explorer**, and then navigate to **Downloads**.
-  4. Double-click the downloaded `.msi` file.
-  5. To install Langflow Desktop, follow the instructions to install the executable file.
+  4. Double-click the downloaded `.msi` file, and then use the install wizard to install Langflow Desktop.
   6. When the installation completes, open the Langflow application.
 
   After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
@@ -54,12 +53,12 @@ When a new version of Langflow is available, Langflow Desktop displays an upgrad
 To manage your version of Langflow Desktop, follow these steps:
 
   1. In Langflow Desktop, click your profile image, and then select **Version Management**.
-  The *Version Management* pane lists your active Langflow version first, followed by other available versions.
+  The **Version Management** pane lists your active Langflow version first, followed by other available versions.
   The **latest** version is always highlighted.
   2. To change your Langflow version, select another version.
   A confirmation pane containing the selected version's changelog appears.
-  3. To change to the selected version, click **Confirm**.
-  The application restarts with the new version installed.
+  3. To apply the change, click **Confirm**.
+  Langflow desktop restarts to install and activate the new version.
 
 ## Install and run Langflow with Docker {#install-and-run-langflow-docker}
 
@@ -77,7 +76,7 @@ Running applications in [Docker](https://docs.docker.com/) containers ensures co
 
 For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
-## Install and run Langflow OSS
+## Install and run the Langflow OSS Python package
 
 To install and run Langflow OSS, you need the following:
 
@@ -142,7 +141,8 @@ To delete the virtual environment, type `Remove-Item VENV_NAME`.
   uv run langflow run
   ```
 
-4. To confirm that a local Langflow instance is running, navigate to the default Langflow URL`http://127.0.0.1:7860`.
+4. To confirm that a local Langflow instance is running, navigate to the default Langflow URL `http://127.0.0.1:7860`.
+It can take a few minutes for Langflow to start.
 
 After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
 
@@ -151,7 +151,7 @@ After confirming that Langflow is running, create your first flow with the [Quic
 To manage your Langflow version, use the following commands.
 
 <details closed>
-<summary>Install dependency groups</summary>
+<summary>Manage Langflow OSS versions</summary>
 
 To upgrade Langflow to the latest version:
 
