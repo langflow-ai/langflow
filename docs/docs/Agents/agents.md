@@ -61,14 +61,14 @@ To unlock the power of the Agent component, connect some tools.
 
 5. Add the **News Search**, **URL**, and **Calculator** components to your flow.
 6. Enable **Tool Mode** in the **News Search**, **URL**, and **Calculator** components.
-To enable **Tool Mode** in a component, in the component's configuration tab, click **Tool Mode**.
+In the [component menu](/concepts-components#component-menu), enable **Tool mode** so you can use the component with an agent.
 
     **Tool Mode** makes a component into a tool by modifying the component's inputs to accept requests from the Agent component to use a tool's available actions. A component in tool mode has a **Toolset** port that you must connect to an Agent component's **Tools** port if you want to allow the agent to use the tool's actions.
 7. Connect the **Toolset** port on the three tool components to the **Tools** port on the Agent component.
 
 ![Chat with agent component](/img/agent-example-add-tools.png)
 
-8. Open the **Playground**. Ask the agent, `What tools are you using to answer my questions?`
+8. Open the <Icon name="Play" aria-hidden="true" /> **Playground**. Ask the agent, `What tools are you using to answer my questions?`
 The agent should respond with a list of the connected tools.
 
 ```text

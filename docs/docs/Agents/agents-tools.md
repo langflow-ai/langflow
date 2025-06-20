@@ -29,12 +29,12 @@ The agent component itself also supports **Tool Mode** for creating multi-agent 
 
 Add an agent to your flow that uses a different OpenAI model for a larger context window.
 
-1. Click and drag an **Agent** component to your workspace.
-2. Add your **Open AI API Key** to the **Agent** component.
-3. In the **Model Name** field, select `gpt-4.1`.
-4. Click **Tool Mode** to use this new agent as a tool.
-5. Connect the new agent's **Toolset** port to the previously created agent's **Tools** port.
-6. Connect the **Web Search**, **URL**, and **Calculator** to the new agent.
+1. Create the [Simple agent starter flow](/starter-projects-simple-agent).
+2. Add a second agent component to the flow.
+3. Add your **Open AI API Key** to the **Agent** component.
+4. In the **Model Name** field, select `gpt-4.1`.
+5. Click **Tool Mode** to use this new agent as a tool.
+6. Connect the new agent's **Toolset** port to the previously created agent's **Tools** port.
 The new agent will use `gpt-4.1` for the larger tasks of scraping and searching information that require large context windows.
 The previously created agent will now use this agent as a tool, with its unique LLM and toolset.
 
@@ -112,7 +112,7 @@ class TextAnalyzerComponent(Component):
 
 3. To use the custom component as a tool, click **Tool Mode**.
 4. Connect the custom component's tool output to the agent's tools input.
-5. Open the Playground and instruct the agent, `Use the text analyzer on this text: "Agents really are thinking machines!"`
+5. Open the <Icon name="Play" aria-hidden="true" /> **Playground** and instruct the agent, `Use the text analyzer on this text: "Agents really are thinking machines!"`
 
 <details open>
 <summary>Response</summary>
