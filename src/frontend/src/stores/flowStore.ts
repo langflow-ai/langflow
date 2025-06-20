@@ -1061,6 +1061,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
     set({ dismissedNodes: newDismissedNodes });
   },
+  setNewChatOnPlayground: (newChat: boolean) => {
+    set({ newChatOnPlayground: newChat });
+  },
+  newChatOnPlayground: false,
 }));
 
 export default useFlowStore;
