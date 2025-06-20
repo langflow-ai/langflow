@@ -38,7 +38,7 @@ The [Prompt](/components-prompts) component combines the user input with a user-
 4. In the components sidebar, click **Outputs**, select the **Chat Output** component, and then drag it to the canvas.
 The [Chat Output](/components-io#chat-output) component prints the flow's output to the chat.
 5. In the components sidebar, click **Models**, select the **OpenAI** component, and then drag it to the canvas.
-The [OpenAI](components-models#openai) model component sends the user input and prompt to the OpenAI API and receives a response.
+The [Language model](/components-models) model component sends the user input and prompt to the OpenAI API and receives a response.
 
 You should now have a flow that looks like this:
 
@@ -56,7 +56,7 @@ For more on component inputs and outputs, see [Components overview](/concepts-co
 
 Your finished basic prompting flow should look like this:
 
-![](/img/starter-flow-basic-prompting.png)
+![Connected starter flow](/img/starter-flow-basic-prompting.png)
 
 ### Run the Basic Prompting flow {#run-basic-prompting-flow}
 
@@ -121,7 +121,7 @@ The [Split Text](/components-processing#split-text) component splits the loaded 
 5. Click **Processing**, select the **Parser** component, and then drag it to the canvas.
 The [Parser](/components-processing#parser) component converts the data from the **Astra DB** component into plain text.
 6. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
-The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) component generates embeddings for the user's input, which are compared to the vector data in the database.
+The [Embeddings model](/components-embedding-models) component generates embeddings for the user's input, which are compared to the vector data in the database.
 7. Modify the **Prompt** component to contain variables for both `{user_question}` and `{context}`.
 The `{context}` variable gives the bot additional context for answering `{user_question}` beyond what the LLM was trained on.
 
