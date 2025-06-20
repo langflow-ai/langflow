@@ -28,7 +28,8 @@ You can use the controls in the **Component menu** to manage and configure the c
 - **Controls**: Adjust all component parameters, including optional settings that are hidden by default.
 - **Tool Mode**: Enable tool mode when combining a component with an agent component.
 - **Freeze**: After a component runs, lock its previous output state to prevent it from re-running.
-- <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All**: See additional options for a component.
+
+Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
 ## Component logs
 
