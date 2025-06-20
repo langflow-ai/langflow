@@ -5,7 +5,7 @@ slug: /components-processing
 
 import Icon from "@site/src/components/icon";
 
-Processing components process and transform data within a flow, like converting `Data` to text with a [Parser](#parser) component, filtering data with natural language with the [Smart filter](#smart-filter), or saving data to your local machine with [Save File](#save-file).
+Processing components process and transform data within a flow, like converting `Data` to text with a [Parser](#parser) component, filtering data with natural language with the [Smart function](#smart-function), or saving data to your local machine with [Save File](#save-file).
 
 ## Batch Run
 
@@ -165,7 +165,7 @@ This example fetches JSON data from an API. The **Smart Filter** component extra
 For this example, the desired data is nested within the `result` field.
 2. Connect a **Smart Filter** to the API request component, and a **Language model** to the **Smart Filter**. This example connects a **Groq** model component.
 3. In the **Groq** model component, add your **Groq** API key.
-4. To filter the data, in the **Smart filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
+4. To filter the data, in the **Smart function** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
 For this example, enter:
 ```
 I want to explode the result column out into a Data object
@@ -488,7 +488,7 @@ For `Message` inputs, the component can create:
 
 </details>
 
-## Smart filter
+## Smart function
 
 :::tip
 Prior to Langflow 1.5, the **Smart Filter** component was named the **Lambda Filter** component.
@@ -502,7 +502,7 @@ This example retrieves JSON data from the `https://jsonplaceholder.typicode.com/
 The **Instructions** field in the **Smart Filter** component specifies the task `extract emails`.
 The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
 
-![Smart filter](/img/component-lambda-filter.png)
+![Smart function](/img/component-lambda-filter.png)
 
 <details>
 <summary>Parameters</summary>

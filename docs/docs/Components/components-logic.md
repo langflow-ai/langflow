@@ -120,26 +120,6 @@ All options respect the `case_sensitive` setting except **regex**.
 - **ends with**: Checks if input_text ends with match_text.
 - **regex**: Performs regular expression matching. It is always case sensitive and ignores the case_sensitive setting.
 
-## Listen
-
-This component listens for a notification and retrieves its associated state.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type   | Description                                    |
-|------|--------|------------------------------------------------|
-| name | String | The name of the notification to listen for. |
-
-**Outputs**
-
-| Name   | Type | Description                                |
-|--------|------|--------------------------------------------|
-| output | Data | The state associated with the notification. |
-
-</details>
 
 ## Loop
 
@@ -180,29 +160,6 @@ Follow along with this step-by-step video guide for creating this flow and addin
 |------|---------|-------------------------------------------------------|
 | item | Data    | The current item being processed from the data list. |
 | done | Data    | The aggregated results after all items are processed. |
-
-</details>
-
-## Notify
-
-This component generates a notification for the Listen component to use.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name   | Type    | Description                                                       |
-|--------|---------|-------------------------------------------------------------------|
-| name   | String  | The name of the notification. |
-| data   | Data    | The data to store in the notification. |
-| append | Boolean | When set to true, the record is added to the existing notification. |
-
-**Outputs**
-
-| Name   | Type | Description                             |
-|--------|------|-----------------------------------------|
-| output | Data | The data stored in the notification. |
 
 </details>
 
@@ -293,11 +250,59 @@ The following actions occur when processing a list of Data objects:
 - Objects not meeting the condition go to false_output
 - If all objects go to one output, the other output is empty
 
-### Pass
+### Listen
 
 :::important
 This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
+
+This component listens for a notification and retrieves its associated state.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type   | Description                                    |
+|------|--------|------------------------------------------------|
+| name | String | The name of the notification to listen for. |
+
+**Outputs**
+
+| Name   | Type | Description                                |
+|--------|------|--------------------------------------------|
+| output | Data | The state associated with the notification. |
+
+</details>
+
+### Notify
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
+This component generates a notification for the Listen component to use.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name   | Type    | Description                                                       |
+|--------|---------|-------------------------------------------------------------------|
+| name   | String  | The name of the notification. |
+| data   | Data    | The data to store in the notification. |
+| append | Boolean | When set to true, the record is added to the existing notification. |
+
+**Outputs**
+
+| Name   | Type | Description                             |
+|--------|------|-----------------------------------------|
+| output | Data | The data stored in the notification. |
+
+</details>
+
+### Pass
 
 This component forwards the input message, unchanged.
 
