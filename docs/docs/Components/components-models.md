@@ -272,7 +272,9 @@ For more information, see the [Groq documentation](https://groq.com/).
 
 This component sends requests to the Hugging Face API to generate text using the model specified in the **Model ID** field.
 
-The Hugging Face API is a hosted inference API for models hosted on Hugging Face, and requires a [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) to authenticate.
+You can use this component in two main ways:
+- **Public Hugging Face models:** Specify a model ID from the Hugging Face Hub and provide your Hugging Face API token for authentication. This allows you to access any hosted model available on Hugging Face.
+- **Custom or local inference endpoints:** Instead of using a model from the Hub, you can provide a custom endpoint URL (for example, for a self-hosted or private inference server). In this case, you do **not** need to provide a Hugging Face API token unless your custom server specifically requires authentication. This makes it easy to connect to both public and private models using the same component, with the component automatically handling the correct configuration according to the [langchain-huggingface](https://github.com/langchain-ai/langchain-huggingface) library logic.
 
 In this example based on the [Basic prompting flow](/basic-prompting), the **Hugging Face API** model component replaces the **Open AI** model. By selecting different hosted models, you can see how different models return different results.
 
@@ -296,11 +298,15 @@ For more information, see the [Hugging Face documentation](https://huggingface.c
 | Name | Type | Description |
 |------|------|-------------|
 | model_id | String | The model ID from Hugging Face Hub. For example, "gpt2", "facebook/bart-large". |
+| endpoint_url | String | The inference endpoint URL. Use the default for Hugging Face Hub, or set a custom/local URL. |
 | huggingfacehub_api_token | SecretString | Your Hugging Face API token for authentication. |
 | temperature | Float | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
 | max_new_tokens | Integer | Maximum number of tokens to generate. Default: 512. |
 | top_p | Float | Nucleus sampling parameter. Range: [0.0, 1.0]. Default: 0.95. |
 | top_k | Integer | Top-k sampling parameter. Default: 50. |
+| typical_p | Float | Typical decoding mass. Default: 0.95. |
+| repetition_penalty | Float | Penalty for repeated tokens. Default: 1.0 (no penalty). |
+| task | String | The task to call the model with (e.g., `text-generation`, `summarization`). |
 | model_kwargs | Dictionary | Additional keyword arguments to pass to the model. |
 
 **Outputs**

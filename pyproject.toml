@@ -47,6 +47,7 @@ dependencies = [
     "qianfan==0.3.5",
     "pgvector==0.3.6",
     "langchain==0.3.21",
+    "langchain-huggingface==0.3.0",
     "elasticsearch==8.16.0",
     "pytube==15.0.0",
     "dspy-ai==2.5.41",
