@@ -25,7 +25,7 @@ For example:
 * [Build document analysis systems](/document-qa)
 * [Generate compelling content](/blog-writer)
 * [Orchestrate multi-agent applications](/simple-agent)
-* [Create agents with Langflow](/agents-overview)
+* [Create agents with Langflow](/agents)
 * [Use Langflow as an MCP server](/mcp-server)
 * [Use Langflow as an MCP client](/mcp-client)
 

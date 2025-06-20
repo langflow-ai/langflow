@@ -15,7 +15,7 @@ For information about using Langflow as an MCP server, see [Use Langflow as an M
 
 ## Use the MCP connection component
 
-The **MCP connection** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for [Langflow agents](/agents-overview).
+The **MCP connection** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for [Langflow agents](/agents).
 
 This component has two modes, depending on the type of server you want to access:
 
