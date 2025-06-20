@@ -161,6 +161,7 @@ export default function McpComponent({
               size="iconMd"
               className="px-2.5"
               onClick={handleSaveButtonClick}
+              data-testid="save-mcp-server-button"
             >
               <ForwardedIconComponent
                 name="Save"
