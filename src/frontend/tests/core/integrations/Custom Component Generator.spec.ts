@@ -3,8 +3,6 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
@@ -46,7 +44,7 @@ withEventDeliveryModes(
         .getByTestId("anchor-popover-anchor-input-api_key")
         .locator("input")
         .last()
-        .fill(process.env.OPENAI_API_KEY ?? "");
+        .fill(process.env.ANTHROPIC_API_KEY ?? "");
     } catch (e) {
       console.log("There's API already added");
     }
