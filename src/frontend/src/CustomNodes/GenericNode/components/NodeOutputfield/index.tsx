@@ -357,7 +357,7 @@ function NodeOutputField({
         </div>
 
         {data.node?.frozen && (
-          <div className="pr-1">
+          <div className="pr-1" data-testid="frozen-icon">
             <SnowflakeIcon />
           </div>
         )}
