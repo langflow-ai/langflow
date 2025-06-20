@@ -104,8 +104,7 @@
             "fieldName": "input_value",
             "id": "AnthropicModel-lHsal",
             "inputTypes": [
-              "Message",
-              "Text"
+              "Message"
             ],
             "type": "str"
           }
@@ -133,6 +132,8 @@
             "fieldName": "input_value",
             "id": "ChatOutput-6uv9V",
             "inputTypes": [
+              "Data",
+              "DataFrame",
               "Message"
             ],
             "type": "str"
@@ -143,7 +144,7 @@
         "source": "AnthropicModel-lHsal",
         "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-lHsalœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-6uv9V",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-6uv9Vœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-6uv9Vœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -504,8 +505,8 @@
             },
             "tool_mode": false
           },
-          "type": "Memory",
-          "selected_output": "message"
+          "selected_output": "message",
+          "type": "Memory"
         },
         "dragging": false,
         "height": 262,
@@ -2001,7 +2002,7 @@
             "category": "inputs",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Get chat inputs from the Playground.",
+            "description": "Generate text using Anthropic Chat&Completion LLMs with prefill support.",
             "display_name": "Chat Input",
             "documentation": "",
             "edited": false,
@@ -2017,25 +2018,46 @@
               "text_color"
             ],
             "frozen": false,
-            "icon": "MessagesSquare",
+            "icon": "Anthropic",
             "key": "ChatInput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Chat Message",
+                "display_name": "Model Response",
                 "group_outputs": false,
-                "method": "message_response",
-                "name": "message",
+                "method": "text_response",
+                "name": "text_output",
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Language Model",
+                "group_outputs": false,
+                "method": "build_model",
+                "name": "model_output",
+                "selected": "LanguageModel",
+                "tool_mode": true,
+                "types": [
+                  "LanguageModel"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -2044,43 +2066,38 @@
             "score": 0.0020353564437605998,
             "template": {
               "_type": "Component",
-              "background_color": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Background Color",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "Anthropic API Key",
                 "dynamic": false,
-                "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "background_color",
+                "info": "Your Anthropic API key.",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "api_key",
+                "password": true,
                 "placeholder": "",
-                "required": false,
+                "real_time_refresh": true,
+                "required": true,
                 "show": true,
                 "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
+                "type": "str"
               },
-              "chat_icon": {
+              "base_url": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
-                "display_name": "Icon",
+                "display_name": "Anthropic API URL",
                 "dynamic": false,
-                "info": "The icon of the message.",
+                "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
                 "input_types": [
                   "Message"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
-                "name": "chat_icon",
+                "name": "base_url",
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
@@ -2088,7 +2105,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "https://api.anthropic.com"
               },
               "code": {
                 "advanced": true,
@@ -2106,59 +2123,18 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
-              },
-              "files": {
-                "_input_type": "FileInput",
-                "advanced": true,
-                "display_name": "Files",
-                "dynamic": false,
-                "fileTypes": [
-                  "txt",
-                  "md",
-                  "mdx",
-                  "csv",
-                  "json",
-                  "yaml",
-                  "yml",
-                  "xml",
-                  "html",
-                  "htm",
-                  "pdf",
-                  "docx",
-                  "py",
-                  "sh",
-                  "sql",
-                  "js",
-                  "ts",
-                  "tsx",
-                  "jpg",
-                  "jpeg",
-                  "png",
-                  "bmp",
-                  "image"
-                ],
-                "file_path": "",
-                "info": "Files to be sent with the message.",
-                "list": true,
-                "list_add_label": "Add More",
-                "name": "files",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "file",
-                "value": ""
+                "value": "from typing import Any, cast\n\nimport requests\nfrom loguru import logger\nfrom pydantic import ValidationError\n\nfrom langflow.base.models.anthropic_constants import (\n    ANTHROPIC_MODELS,\n    DEFAULT_ANTHROPIC_API_URL,\n    TOOL_CALLING_SUPPORTED_ANTHROPIC_MODELS,\n    TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS,\n)\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass AnthropicModelComponent(LCModelComponent):\n    display_name = \"Anthropic\"\n    description = \"Generate text using Anthropic Chat&Completion LLMs with prefill support.\"\n    icon = \"Anthropic\"\n    name = \"AnthropicModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            value=4096,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=ANTHROPIC_MODELS,\n            refresh_button=True,\n            value=ANTHROPIC_MODELS[0],\n            combobox=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Anthropic API Key\",\n            info=\"Your Anthropic API key.\",\n            value=None,\n            required=True,\n            real_time_refresh=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Run inference with this temperature. Must by in the closed interval [0.0, 1.0].\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"base_url\",\n            display_name=\"Anthropic API URL\",\n            info=\"Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.\",\n            value=DEFAULT_ANTHROPIC_API_URL,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"tool_model_enabled\",\n            display_name=\"Enable Tool Models\",\n            info=(\n                \"Select if you want to use models that can work with tools. If yes, only those models will be shown.\"\n            ),\n            advanced=False,\n            value=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"prefill\", display_name=\"Prefill\", info=\"Prefill text to guide the model's response.\", advanced=True\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        try:\n            from langchain_anthropic.chat_models import ChatAnthropic\n        except ImportError as e:\n            msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n            raise ImportError(msg) from e\n        try:\n            max_tokens_value = getattr(self, \"max_tokens\", \"\")\n            max_tokens_value = 4096 if max_tokens_value == \"\" else int(max_tokens_value)\n            output = ChatAnthropic(\n                model=self.model_name,\n                anthropic_api_key=self.api_key,\n                max_tokens=max_tokens_value,\n                temperature=self.temperature,\n                anthropic_api_url=self.base_url or DEFAULT_ANTHROPIC_API_URL,\n                streaming=self.stream,\n            )\n        except ValidationError:\n            raise\n        except Exception as e:\n            msg = \"Could not connect to Anthropic API.\"\n            raise ValueError(msg) from e\n\n        return output\n\n    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:\n        try:\n            import anthropic\n\n            client = anthropic.Anthropic(api_key=self.api_key)\n            models = client.models.list(limit=20).data\n            model_ids = ANTHROPIC_MODELS + [model.id for model in models]\n        except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n            logger.exception(f\"Error getting model names: {e}\")\n            model_ids = ANTHROPIC_MODELS\n\n        if tool_model_enabled:\n            try:\n                from langchain_anthropic.chat_models import ChatAnthropic\n            except ImportError as e:\n                msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n                raise ImportError(msg) from e\n\n            # Create a new list instead of modifying while iterating\n            filtered_models = []\n            for model in model_ids:\n                if model in TOOL_CALLING_SUPPORTED_ANTHROPIC_MODELS:\n                    filtered_models.append(model)\n                    continue\n\n                model_with_tool = ChatAnthropic(\n                    model=model,  # Use the current model being checked\n                    anthropic_api_key=self.api_key,\n                    anthropic_api_url=cast(str, self.base_url) or DEFAULT_ANTHROPIC_API_URL,\n                )\n\n                if (\n                    not self.supports_tool_calling(model_with_tool)\n                    or model in TOOL_CALLING_UNSUPPORTED_ANTHROPIC_MODELS\n                ):\n                    continue\n\n                filtered_models.append(model)\n\n            return filtered_models\n\n        return model_ids\n\n    def _get_exception_message(self, exception: Exception) -> str | None:\n        \"\"\"Get a message from an Anthropic exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from anthropic import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(exception, BadRequestError):\n            message = exception.body.get(\"error\", {}).get(\"message\")\n            if message:\n                return message\n        return None\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):\n        if \"base_url\" in build_config and build_config[\"base_url\"][\"value\"] is None:\n            build_config[\"base_url\"][\"value\"] = DEFAULT_ANTHROPIC_API_URL\n            self.base_url = DEFAULT_ANTHROPIC_API_URL\n        if field_name in {\"base_url\", \"model_name\", \"tool_model_enabled\", \"api_key\"} and field_value:\n            try:\n                if len(self.api_key) == 0:\n                    ids = ANTHROPIC_MODELS\n                else:\n                    try:\n                        ids = self.get_models(tool_model_enabled=self.tool_model_enabled)\n                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n                        logger.exception(f\"Error getting model names: {e}\")\n                        ids = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"options\"] = ids\n                build_config[\"model_name\"][\"value\"] = ids[0]\n                build_config[\"model_name\"][\"combobox\"] = True\n            except Exception as e:\n                msg = f\"Error getting model names: {e}\"\n                raise ValueError(msg) from e\n        return build_config\n"
               },
               "input_value": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
                 "copy_field": false,
-                "display_name": "Input Text",
+                "display_name": "Input",
                 "dynamic": false,
-                "info": "Message to be passed as input.",
-                "input_types": [],
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2174,42 +2150,67 @@
                 "type": "str",
                 "value": ""
               },
-              "sender": {
-                "_input_type": "DropdownInput",
+              "max_tokens": {
+                "_input_type": "IntInput",
                 "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender Type",
+                "display_name": "Max Tokens",
                 "dynamic": false,
-                "info": "Type of sender.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
-                "options_metadata": [],
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_tokens",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "type": "str",
-                "value": "User"
+                "type": "int",
+                "value": 4096
               },
-              "sender_name": {
+              "model_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": true,
+                "dialog_inputs": {},
+                "display_name": "Model Name",
+                "dynamic": false,
+                "info": "",
+                "name": "model_name",
+                "options": [
+                  "claude-opus-4-20250514",
+                  "claude-sonnet-4-20250514",
+                  "claude-3-7-sonnet-latest",
+                  "claude-3-5-sonnet-latest",
+                  "claude-3-5-haiku-latest",
+                  "claude-3-opus-latest",
+                  "claude-3-sonnet-20240229"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "refresh_button": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "claude-opus-4-20250514"
+              },
+              "prefill": {
                 "_input_type": "MessageTextInput",
                 "advanced": true,
-                "display_name": "Sender Name",
+                "display_name": "Prefill",
                 "dynamic": false,
-                "info": "Name of the sender.",
+                "info": "Prefill text to guide the model's response.",
                 "input_types": [
                   "Message"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
-                "name": "sender_name",
+                "name": "prefill",
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -2218,21 +2219,17 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "User"
+                "value": ""
               },
-              "session_id": {
-                "_input_type": "MessageTextInput",
+              "stream": {
+                "_input_type": "BoolInput",
                 "advanced": true,
-                "display_name": "Session ID",
+                "display_name": "Stream",
                 "dynamic": false,
-                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "info": "Stream the response from the model. Streaming works only in Chat.",
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "session_id",
+                "name": "stream",
                 "placeholder": "",
                 "required": false,
                 "show": true,
