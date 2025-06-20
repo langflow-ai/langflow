@@ -9,10 +9,11 @@ export type MCPSettingsType = {
 };
 
 export type MCPServerInfoType = {
-  id: string;
+  id?: string;
   name: string;
-  description: string;
-  toolsCount: number;
+  description?: string;
+  mode: string | null;
+  toolsCount: number | null;
 };
 
 export type MCPServerType = {
