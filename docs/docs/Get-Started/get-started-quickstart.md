@@ -20,7 +20,7 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
 ![Simple agent starter flow](/img/quickstart-simple-agent-flow.png)
 
-The Simple Agent flow consists of an [Agent component](/components-agents) connected to [Chat I/O components](/components-io), a [Calculator component](/components-helpers#calculator), and a [URL component](/components-data#url). When you run this flow, you submit a query to the agent through the Chat Input component, the agent uses the Calculator and URL tools to generate a response, and then returns the response through the Chat Output component.
+The Simple Agent flow consists of an [Agent component](/components-agents) connected to [Chat I/O components](/components-io), a [Calculator component](/components-data#calculator), and a [URL component](/components-data#url). When you run this flow, you submit a query to the agent through the Chat Input component, the agent uses the Calculator and URL tools to generate a response, and then returns the response through the Chat Output component.
 
 Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/mcp-server). The agent decides which tools to call based on the context of a given query.
 
@@ -65,6 +65,7 @@ For example, you can use `POST /run` to run a flow and get the result.
 Langflow provides code snippets to help you get started with the Langflow API.
 
 1. To open the **API access pane**, in the **Playground**, click **Share**, and then click **API access**.
+
 The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data.
 The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow.
 Replace these values if you're using the code for a different server or flow.
@@ -152,6 +153,10 @@ curl --request POST \
 
 2. Copy the snippet, paste it in a script file, and then run the script to send the request.
 If you are using the curl snippet, you can run the command directly in your terminal.
+
+
+If the request is successful, the response includes many details about the flow run, including the session ID, inputs, outputs, components, durations, and more.
+The following is an example of a response from running the **Simple Agent** template flow:
 
 <details closed>
 <summary>Response</summary>
@@ -323,13 +328,15 @@ If you are using the curl snippet, you can run the command directly in your term
 
 </details>
 
-This response confirms the call succeeded, but let's do something more with the returned answer from the agent.
+In a production application, you probably want to select parts of this response to return to the user, store in logs, and so on. The next steps demonstrate how you can extract data from a Langflow API response to use in your application.
+
+### Extract data from the response
 
 The following example builds on the API pane's example code to create a question-and-answer chat in your terminal that stores the Agent's previous answer.
 
-3.  Incorporate your **Simple Agent** flow's `/run` snippet into the following script.
+1.  Incorporate your **Simple Agent** flow's `/run` snippet into the following script.
 This script runs a question-and-answer chat in your terminal and stores the Agent's previous answer so you can compare them.
-4. To view the Agent's previous answer, type `compare`. To close the terminal chat, type `exit`.
+
 
 <Tabs groupId="Languages">
   <TabItem value="Python" label="Python" default>
@@ -367,9 +374,10 @@ def extract_message(data):
     except (KeyError, IndexError):
         return None
 
-# Store the previous answer
+# Store the previous answer from ask_agent response
 previous_answer = None
 
+# the terminal chat
 while True:
     # Get user input
     print("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?')")
@@ -405,9 +413,10 @@ const rl = readline.createInterface({
 
 const url = 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID';
 
-// Store the previous answer
+// Store the previous answer from askAgent response
 let previousAnswer = null;
 
+// the agent flow, with question as input_value
 async function askAgent(question) {
     const payload = {
         "output_type": "chat",
@@ -435,6 +444,7 @@ async function askAgent(question) {
     }
 }
 
+// the terminal chat
 async function startChat() {
     console.log("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?'");
     console.log("Type 'quit' to exit or 'compare' to see the previous answer");
@@ -472,22 +482,24 @@ startChat();
   </TabItem>
 </Tabs>
 
+2. To view the Agent's previous answer, type `compare`. To close the terminal chat, type `exit`.
+
 ### Use tweaks to apply temporary overrides to a flow run
 
-You can use tweaks to temporarily modify flow parameters at runtime.
-This makes your flows more versatile and reduces toil when running the same flow for different use cases.
+You can include tweaks with your requests to temporarily modify flow parameters.
 Tweaks are added to the API request, and temporarily change component parameters within your flow.
-Tweaks override the flow's component settings for a single run only.
+Tweaks override the flow's components settings for a single run only.
 They don't modify the underlying flow configuration or persist between runs.
 
 Tweaks are added to the `/run` endpoint's `payload`.
-To assist with formatting, you can define tweaks in Langflow before copying the code snippet.
+To assist with formatting, you can define tweaks in Langflow's **Input Schema** pane before copying the code snippet.
 
-1. In the **Input schema** pane, select the parameter you want to modify in your next request.
+1. To open the **Input Schema** pane, from the **API access** pane, click **Input Schema**.
+2. In the **Input schema** pane, select the parameter you want to modify in your next request.
 Enabling parameters in the **Input schema** pane does not **allow** modifications to the listed parameters. It only adds them to the example code.
-2. For example, to change the LLM provider from OpenAI to Groq, and include your Groq API key with the request, select the values **Model Providers**, **Model**, and **Groq API Key**.
-The parameters are added to the sample code in the API pane's request.
-Inspect your request's payload with the added tweaks.
+3. For example, to change the LLM provider from OpenAI to Groq, and include your Groq API key with the request, select the values **Model Providers**, **Model**, and **Groq API Key**.
+Langflow updates the `tweaks` object in the code snippets based on your input parameters, and includes default values to guide you.
+Use the updated code snippets in your script to run your flow with your overrides.
 
 ```json
 payload = {
@@ -504,11 +516,7 @@ payload = {
 }
 ```
 
-3. Copy the code snippet from the **API access** pane into your terminal.
-Replace `GROQ_API_KEY` with your Groq API key, and run your application.
-You have run your flow without modifying the components themselves, by only passing tweaks with the request.
+## Next steps
 
-
-
-
-
+* [Model Context Protocol (MCP) servers](/mcp-server)
+* [Langflow deployment overview](/deployment-overview)
