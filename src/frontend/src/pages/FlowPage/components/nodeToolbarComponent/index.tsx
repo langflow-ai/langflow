@@ -307,6 +307,7 @@ const NodeToolbarComponent = memo(
             saveComponent();
             break;
           case "freezeAll":
+            takeSnapshot();
             FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
             break;
           case "code":
