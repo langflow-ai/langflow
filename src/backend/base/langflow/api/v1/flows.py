@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import io
 import json
 import re
@@ -8,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
+import httpx
 import orjson
 from aiofile import async_open
 from anyio import Path
@@ -19,7 +21,14 @@ from fastapi_pagination.ext.sqlmodel import apaginate
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    cascade_delete_flow,
+    remove_api_keys,
+    update_flow_from_github,
+    validate_is_component,
+)
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -57,6 +66,47 @@ async def _save_flow_to_fs(flow: Flow) -> None:
                 await f.write(flow.model_dump_json())
             except OSError:
                 logger.exception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
+
+
+async def _save_flow_to_github(flow: Flow):
+    if flow.git_repo:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            params = {"ref": flow.git_branch} if flow.git_branch else None
+            headers = {
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+                "Authorization": f"Bearer {flow.github_api_token}",
+            }
+            data = {
+                "message": f"Update flow {flow.name}",
+                "content": base64.b64encode(
+                    flow.model_dump_json(
+                        exclude={
+                            "github_api_token",
+                        }
+                    ).encode(encoding="utf-8")
+                ).decode(encoding="utf-8"),
+            }
+            if flow.github_sha:
+                data["sha"] = flow.github_sha
+            if flow.git_branch:
+                data["branch"] = flow.git_branch
+            response = await client.put(
+                f"https://api.github.com/repos/{flow.git_repo}/contents/{flow.git_file_path}",
+                params=params,
+                headers=headers,
+                json=data,
+            )
+            if response.status_code == httpx.codes.CONFLICT:
+                raise HTTPException(status_code=response.status_code, detail="File on GitHub has a different SHA")
+            try:
+                response.raise_for_status()
+            except httpx.HTTPError:
+                logger.exception(f"Failed to save flow {flow.name} on GitHub repo {flow.git_repo}")
+            else:
+                return response.json()["content"]["sha"]
+    else:
+        return flow.github_sha
 
 
 async def _new_flow(
@@ -151,6 +201,7 @@ async def create_flow(
 ):
     try:
         db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
+        db_flow.github_sha = await _save_flow_to_github(db_flow)
         await session.commit()
         await session.refresh(db_flow)
 
@@ -237,6 +288,10 @@ async def read_flows(
         if components_only:
             stmt = stmt.where(Flow.is_component == True)  # noqa: E712
 
+        git_flows = (await session.exec(stmt.where(col(Flow.git_file_path).is_not(None)))).all()
+        for git_flow in git_flows:
+            await update_flow_from_github(session, git_flow)
+
         if get_all:
             flows = (await session.exec(stmt)).all()
             flows = validate_is_component(flows)
@@ -281,7 +336,9 @@ async def _read_flow(
         stmt = stmt.where(
             (Flow.user_id == user_id) | (Flow.user_id == None)  # noqa: E711
         )
-    return (await session.exec(stmt)).first()
+    flow = (await session.exec(stmt)).first()
+    await update_flow_from_github(session, flow)
+    return flow
 
 
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
@@ -355,6 +412,8 @@ async def update_flow(
             default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
             if default_folder:
                 db_flow.folder_id = default_folder.id
+
+        db_flow.github_sha = await _save_flow_to_github(db_flow)
 
         session.add(db_flow)
         await session.commit()
@@ -442,6 +501,7 @@ async def upload_file(
             flow.folder_id = folder_id
         response = await _new_flow(session=session, flow=flow, user_id=current_user.id)
         response_list.append(response)
+        response.github_sha = await _save_flow_to_github(response)
 
     try:
         await session.commit()

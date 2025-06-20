@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import base64
 import uuid
 from ast import literal_eval
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
 
+import httpx
 from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
 from loguru import logger
+from orjson import orjson
 from sqlalchemy import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -378,3 +381,33 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
         raise HTTPException(status_code=403, detail=msg)
 
     return user, new_flow_id
+
+
+async def update_flow_from_github(session: AsyncSession, flow: Flow) -> None:
+    if flow.git_repo and flow.github_api_token:
+        try:
+            async with httpx.AsyncClient(follow_redirects=True) as client:
+                params = {"ref": flow.git_branch} if flow.git_branch else None
+                headers = {
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                    "Authorization": f"Bearer {flow.github_api_token}",
+                }
+                response = await client.get(
+                    f"https://api.github.com/repos/{flow.git_repo}/contents/{flow.git_file_path}",
+                    params=params,
+                    headers=headers,
+                )
+                response.raise_for_status()
+                data = response.json()
+            if data["sha"] != flow.github_sha:
+                update_data = orjson.loads(base64.b64decode(data["content"]))
+                for field_name in ("name", "description", "data", "locked", "sha"):
+                    if new_value := update_data.get(field_name):
+                        setattr(flow, field_name, new_value)
+                if folder_id := update_data.get("folder_id"):
+                    flow.folder_id = uuid.UUID(folder_id)
+                await session.commit()
+                await session.refresh(flow)
+        except Exception:  # noqa: BLE001
+            logger.exception(f"Couldn't update flow {flow.id} in database from github repo {flow.git_repo}")
