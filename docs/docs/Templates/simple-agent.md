@@ -1,6 +1,6 @@
 ---
 title: Simple agent
-slug: /starter-projects-simple-agent
+slug: /simple-agent
 ---
 
 Build a **Simple Agent** flow for an agentic application using the [Agent](/agents) component.
