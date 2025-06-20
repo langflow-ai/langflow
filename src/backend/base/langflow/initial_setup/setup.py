@@ -29,6 +29,7 @@ from langflow.base.constants import (
     FIELD_FORMAT_ATTRIBUTES,
     NODE_FORMAT_ATTRIBUTES,
     ORJSON_OPTIONS,
+    SKIPPED_COMPONENTS,
     SKIPPED_FIELD_ATTRIBUTES,
 )
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
@@ -64,8 +65,15 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
+            # skip components that are having dynamic values that need to be persisted for templates
 
-            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") == "Agent"
+            if node_data.get("key") in SKIPPED_COMPONENTS:
+                continue
+
+            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") in {
+                "Agent",
+                "LanguageModelComponent",
+            }
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
                 # Set selected output as the previous selected output
