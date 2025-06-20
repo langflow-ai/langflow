@@ -39,9 +39,8 @@ async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSes
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-
-@router.get("/sessions")
-async def get_sessions(
+@router.get("/messages/sessions", dependencies=[Depends(get_current_active_user)])
+async def get_message_sessions(
     session: DbSession,
     flow_id: Annotated[UUID | None, Query()] = None,
 ) -> list[str]:
@@ -52,8 +51,8 @@ async def get_sessions(
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
             
-        sessions = await session.exec(stmt)
-        return list(sessions)
+        session_ids = await session.exec(stmt)
+        return list(session_ids)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -91,7 +90,7 @@ async def get_messages(
 @router.delete("/messages", status_code=204, dependencies=[Depends(get_current_active_user)])
 async def delete_messages(message_ids: list[UUID], session: DbSession) -> None:
     try:
-        await session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]
+        await session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # x`zxtype: ignore[attr-defined]
         await session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

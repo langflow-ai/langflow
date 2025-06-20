@@ -7,7 +7,6 @@ export const URLs = {
   FILE_MANAGEMENT: `files`,
   VERSION: `version`,
   MESSAGES: `monitor/messages`,
-  SESSIONS: `monitor/sessions`,
   BUILDS: `monitor/builds`,
   STORE: `store`,
   USERS: "users",

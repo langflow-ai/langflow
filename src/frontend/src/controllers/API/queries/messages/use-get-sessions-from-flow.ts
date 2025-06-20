@@ -27,7 +27,7 @@ export const useGetSessionsFromFlowQuery: useQueryFunctionType<
     }
 
     if (!isPlaygroundPage) {
-      return await api.get<string[]>(`${getURL("SESSIONS")}`, config);
+      return await api.get<string[]>(`${getURL("MESSAGES")}/sessions`, config);
     } else {
       // For playground mode, get sessions from sessionStorage
       const data = JSON.parse(window.sessionStorage.getItem(id ?? "") || "[]");

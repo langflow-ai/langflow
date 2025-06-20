@@ -4,6 +4,7 @@ import {
   useDeleteMessages,
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
+import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
@@ -83,13 +84,13 @@ export default function IOModal({
     : realFlowId;
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const { mutate: deleteSessionFunction } = useDeleteMessages();
+  const { mutate: deleteMessagesFunction } = useDeleteMessages();
+  const { mutate: deleteSessionFunction } = useDeleteSession();
+
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
     currentFlowId,
   );
   const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
-
-  console.log(visibleSession);
 
   const {
     data: sessionsFromDb,
@@ -121,30 +122,45 @@ export default function IOModal({
   }, [open]);
 
   function handleDeleteSession(session_id: string) {
+    // Update UI optimistically
+    if (visibleSession === session_id) {
+      const remainingSessions = sessions.filter((s) => s !== session_id);
+      if (remainingSessions.length > 0) {
+        setvisibleSession(remainingSessions[0]);
+      } else {
+        setvisibleSession(currentFlowId);
+      }
+    }
+
+    // Delete the session (which will delete all associated messages on the backend)
     deleteSessionFunction(
-      {
-        ids: messages
-          .filter((msg) => msg.session_id === session_id)
-          .map((msg) => msg.id),
-      },
+      { sessionId: session_id },
       {
         onSuccess: () => {
+          // Remove the session from local state
+          deleteSession(session_id);
+
+          // Remove all messages for this session from local state
+          const messageIdsToRemove = messages
+            .filter((msg) => msg.session_id === session_id)
+            .map((msg) => msg.id);
+
+          if (messageIdsToRemove.length > 0) {
+            removeMessages(messageIdsToRemove);
+          }
+
           setSuccessData({
             title: "Session deleted successfully.",
           });
-          deleteSession(session_id);
-          if (visibleSession === session_id) {
-            const remainingSessions = sessions.filter((s) => s !== session_id);
-            if (remainingSessions.length > 0) {
-              setvisibleSession(remainingSessions[0]);
-            } else {
-              setvisibleSession(currentFlowId);
-            }
-          }
         },
         onError: () => {
+          // Revert optimistic UI update on error
+          if (visibleSession !== session_id) {
+            setvisibleSession(session_id);
+          }
+
           setErrorData({
-            title: "Error deleting Session.",
+            title: "Error deleting session.",
           });
         },
       },
@@ -168,6 +184,7 @@ export default function IOModal({
   >(startView());
 
   const messages = useMessagesStore((state) => state.messages);
+  const removeMessages = useMessagesStore((state) => state.removeMessages);
   const [sessions, setSessions] = useState<string[]>([]);
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
   const setCurrentSessionId = useUtilityStore(
