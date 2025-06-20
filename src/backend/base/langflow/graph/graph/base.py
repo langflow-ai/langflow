@@ -22,7 +22,6 @@ from langflow.graph.edge.base import CycleEdge, Edge
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
-from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.state_model import create_state_model_from_graph
 from langflow.graph.graph.utils import (
     find_all_cycle_edges,
@@ -52,7 +51,6 @@ if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.schema import ResultData
-    from langflow.schema.data import Data
     from langflow.services.chat.schema import GetCache, SetCache
     from langflow.services.tracing.service import TracingService
 
@@ -113,7 +111,6 @@ class Graph:
         self.edges: list[CycleEdge] = []
         self.vertices: list[Vertex] = []
         self.run_manager = RunnableVerticesManager()
-        self.state_manager = GraphStateManager()
         self._vertices: list[NodeData] = []
         self._edges: list[EdgeData] = []
 
@@ -494,34 +491,6 @@ class Graph:
         self.build_graph_maps(self.edges)
         self.define_vertices_lists()
 
-    def get_state(self, name: str) -> Data | None:
-        """Returns the state of the graph with the given name.
-
-        Args:
-            name (str): The name of the state.
-
-        Returns:
-            Optional[Data]: The state record, or None if the state does not exist.
-        """
-        return self.state_manager.get_state(name, run_id=self._run_id)
-
-    def update_state(self, name: str, record: str | Data, caller: str | None = None) -> None:
-        """Updates the state of the graph with the given name.
-
-        Args:
-            name (str): The name of the state.
-            record (Union[str, Data]): The new state record.
-            caller (Optional[str], optional): The ID of the vertex that is updating the state. Defaults to None.
-        """
-        if caller:
-            # If there is a caller which is a vertex_id, I want to activate
-            # all StateVertex in self.vertices that are not the caller
-            # essentially notifying all the other vertices that the state has changed
-            # This also has to activate their successors
-            self.activate_state_vertices(name, caller)
-
-        self.state_manager.update_state(name, record, run_id=self._run_id)
-
     def activate_state_vertices(self, name: str, caller: str) -> None:
         """Activates the state vertices in the graph with the given name and caller.
 
@@ -574,19 +543,6 @@ class Graph:
     def reset_activated_vertices(self) -> None:
         """Resets the activated vertices in the graph."""
         self.activated_vertices = []
-
-    def append_state(self, name: str, record: str | Data, caller: str | None = None) -> None:
-        """Appends the state of the graph with the given name.
-
-        Args:
-            name (str): The name of the state.
-            record (Union[str, Data]): The state record to append.
-            caller (Optional[str], optional): The ID of the vertex that is updating the state. Defaults to None.
-        """
-        if caller:
-            self.activate_state_vertices(name, caller)
-
-        self.state_manager.append_state(name, record, run_id=self._run_id)
 
     def validate_stream(self) -> None:
         """Validates the stream configuration of the graph.
@@ -1056,7 +1012,6 @@ class Graph:
             state["run_manager"] = RunnableVerticesManager.from_dict(run_manager)
         self.__dict__.update(state)
         self.vertex_map = {vertex.id: vertex for vertex in self.vertices}
-        self.state_manager = GraphStateManager()
         self.tracing_service = get_tracing_service()
         self.set_run_id(self._run_id)
 

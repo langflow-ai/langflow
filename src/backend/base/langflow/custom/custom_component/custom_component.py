@@ -116,16 +116,6 @@ class CustomComponent(BaseComponent):
             return f"{self.display_name} ({self._id})"
         return f"{self.display_name}"
 
-    def update_state(self, name: str, value: Any) -> None:
-        if not self._vertex:
-            msg = "Vertex is not set"
-            raise ValueError(msg)
-        try:
-            self._vertex.graph.update_state(name=name, record=value, caller=self._vertex.id)
-        except Exception as e:
-            msg = f"Error updating state: {e}"
-            raise ValueError(msg) from e
-
     def stop(self, output_name: str | None = None) -> None:
         if not output_name and self._vertex and len(self._vertex.outputs) == 1:
             output_name = self._vertex.outputs[0]["name"]
@@ -154,26 +144,6 @@ class CustomComponent(BaseComponent):
             self.graph.mark_branch(vertex_id=self._vertex.id, output_name=output_name, state="ACTIVE")
         except Exception as e:
             msg = f"Error starting {self.display_name}: {e}"
-            raise ValueError(msg) from e
-
-    def append_state(self, name: str, value: Any) -> None:
-        if not self._vertex:
-            msg = "Vertex is not set"
-            raise ValueError(msg)
-        try:
-            self._vertex.graph.append_state(name=name, record=value, caller=self._vertex.id)
-        except Exception as e:
-            msg = f"Error appending state: {e}"
-            raise ValueError(msg) from e
-
-    def get_state(self, name: str):
-        if not self._vertex:
-            msg = "Vertex is not set"
-            raise ValueError(msg)
-        try:
-            return self._vertex.graph.get_state(name=name)
-        except Exception as e:
-            msg = f"Error getting state: {e}"
             raise ValueError(msg) from e
 
     @staticmethod
