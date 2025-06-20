@@ -1719,7 +1719,7 @@
                 "group_outputs": false,
                 "method": "save_to_file",
                 "name": "result",
-                "selected": "Text",
+                "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"

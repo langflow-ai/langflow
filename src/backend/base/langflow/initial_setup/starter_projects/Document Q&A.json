@@ -412,8 +412,8 @@
               }
             }
           },
-          "type": "ChatInput",
-          "selected_output": "message"
+          "selected_output": "message",
+          "type": "ChatInput"
         },
         "dragging": false,
         "height": 234,
@@ -1030,8 +1030,8 @@
             },
             "tool_mode": false
           },
-          "type": "File",
-          "selected_output": "dataframe"
+          "selected_output": "dataframe",
+          "type": "File"
         },
         "dragging": false,
         "height": 232,
@@ -1188,8 +1188,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt",
-          "selected_output": "prompt"
+          "selected_output": "prompt",
+          "type": "Prompt"
         },
         "dragging": false,
         "height": 347,
@@ -1583,9 +1583,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
-          "type": "OpenAIModel",
-          "selected_output": "text_output"
+          "type": "OpenAIModel"
         },
         "dragging": false,
         "id": "OpenAIModel-Xctjl",
@@ -1758,9 +1758,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "parsed_text",
           "showNode": true,
-          "type": "parser",
-          "selected_output": "parsed_text"
+          "type": "parser"
         },
         "dragging": false,
         "id": "parser-mO32W",

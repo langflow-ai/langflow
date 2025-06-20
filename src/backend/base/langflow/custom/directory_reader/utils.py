@@ -162,8 +162,7 @@ def determine_component_name(component):
 def build_menu_items(menu_item):
     """Build menu items for a given menu."""
     menu_items = {}
-    logger.debug(f"Building menu items for {menu_item['name']}")
-    logger.debug(f"Loading {len(menu_item['components'])} components")
+    logger.debug(f"Building {len(menu_item['components'])} {menu_item['name']} components")
     for component_name, component_template, component in menu_item["components"]:
         try:
             menu_items[component_name] = component_template

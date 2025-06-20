@@ -335,9 +335,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "dataframe",
           "showNode": true,
-          "type": "ArXivComponent",
-          "selected_output": "dataframe"
+          "type": "ArXivComponent"
         },
         "dragging": false,
         "id": "ArXivComponent-ylKFb",
@@ -674,9 +674,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
-          "type": "AnthropicModel",
-          "selected_output": "text_output"
+          "type": "AnthropicModel"
         },
         "dragging": false,
         "id": "AnthropicModel-G2MkR",
@@ -781,9 +781,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "data",
           "showNode": true,
-          "type": "MessagetoData",
-          "selected_output": "data"
+          "type": "MessagetoData"
         },
         "dragging": false,
         "id": "MessagetoData-jYebP",
@@ -1401,9 +1401,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message",
           "showNode": true,
-          "type": "ChatInput",
-          "selected_output": "message"
+          "type": "ChatInput"
         },
         "dragging": false,
         "id": "ChatInput-5o3G0",
@@ -1634,9 +1634,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "parsed_text",
           "showNode": true,
-          "type": "ParserComponent",
-          "selected_output": "parsed_text"
+          "type": "ParserComponent"
         },
         "dragging": false,
         "id": "ParserComponent-ZhlLQ",
@@ -1753,9 +1753,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "done",
           "showNode": true,
-          "type": "LoopComponent",
-          "selected_output": "done"
+          "type": "LoopComponent"
         },
         "dragging": false,
         "id": "LoopComponent-9BK8B",
