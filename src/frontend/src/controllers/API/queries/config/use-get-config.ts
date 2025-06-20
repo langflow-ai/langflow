@@ -44,6 +44,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     (state) => state.setWebhookPollingInterval,
   );
   const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
+
   const { query } = UseRequestProcessor();
 
   const getConfigFn = async () => {
