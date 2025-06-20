@@ -3843,6 +3843,20 @@ wheels = [
 ]
 
 [[package]]
+name = "jigsawstack"
+version = "0.2.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6f/94/106d6f12599f481ca90abe8b96f9629da7e800247d675595b7403d193e4d/jigsawstack-0.2.6.tar.gz", hash = "sha256:69518908f223197b40c7d76cb651c0f740cfb7a20972b618d52e0171b19d2df6", size = 24939, upload-time = "2025-06-04T21:22:19.459Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/e8/4133a2cedd18ae7045c5daf57b99b2f2d86ef65308ec24adff8db52cd313/jigsawstack-0.2.6-py3-none-any.whl", hash = "sha256:44475cb81f14c1c2824ae5b34e226ed5a1d4a34b73e49ca90baa324132e23051", size = 30919, upload-time = "2025-06-04T21:22:17.879Z" },
+]
+
+[[package]]
 name = "jinja2"
 version = "3.1.6"
 source = { registry = "https://pypi.org/simple" }
@@ -4791,6 +4805,7 @@ dev = [
     { name = "httpx" },
     { name = "hypothesis" },
     { name = "ipykernel" },
+    { name = "jigsawstack" },
     { name = "locust" },
     { name = "mypy" },
     { name = "packaging" },
@@ -4963,6 +4978,7 @@ dev = [
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "hypothesis", specifier = ">=6.123.17" },
     { name = "ipykernel", specifier = ">=6.29.0" },
+    { name = "jigsawstack", specifier = ">=0.2.6" },
     { name = "locust", specifier = ">=2.32.9" },
     { name = "mypy", specifier = ">=1.11.0" },
     { name = "packaging", specifier = ">=24.1,<25.0" },
