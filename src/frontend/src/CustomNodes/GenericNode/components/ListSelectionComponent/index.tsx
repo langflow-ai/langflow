@@ -212,7 +212,7 @@ const ListSelectionComponent = ({
 
         <div
           ref={listContainerRef}
-          className="flex w-full flex-col gap-1 overflow-y-auto px-3 pb-3"
+          className="flex w-full flex-col gap-1 overflow-y-auto px-3"
         >
           {filteredList.length > 0 ? (
             filteredList.map((item, index) => (
@@ -249,14 +249,16 @@ const ListSelectionComponent = ({
           )}
         </div>
         <DialogFooter>
-          <Button
-            className="flex w-full items-center gap-2 border-t px-4 py-3 !text-mmd hover:bg-muted"
-            unstyled
-            onClick={onAddButtonClick}
-          >
-            <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-            {addButtonText}
-          </Button>
+          {onAddButtonClick && (
+            <Button
+              className="flex w-full items-center gap-2 border-t px-4 py-3 !text-mmd hover:bg-muted"
+              unstyled
+              onClick={onAddButtonClick}
+            >
+              <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+              {addButtonText}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
