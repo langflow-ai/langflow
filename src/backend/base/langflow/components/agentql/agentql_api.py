@@ -1,6 +1,12 @@
 import httpx
-from loguru import logger
 
+from langflow.components.agentql.utils import (
+    MISSING_REQUIRED_INPUTS_MESSAGE,
+    QUERY_DATA_API_DOCS_URL,
+    QUERY_DOCS_URL,
+    TOO_MANY_INPUTS_MESSAGE,
+    handle_agentql_error,
+)
 from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import (
@@ -18,7 +24,7 @@ from langflow.schema.data import Data
 class AgentQL(Component):
     display_name = "Extract Web Data"
     description = "Extracts structured data from a web page using an AgentQL query or a Natural Language description."
-    documentation: str = "https://docs.agentql.com/rest-api/api-reference"
+    documentation: str = QUERY_DATA_API_DOCS_URL
     icon = "AgentQL"
     name = "AgentQL"
 
@@ -41,7 +47,7 @@ class AgentQL(Component):
             name="query",
             display_name="AgentQL Query",
             required=False,
-            info="The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
+            info=f"The AgentQL query to execute. Learn more at {QUERY_DOCS_URL} or use a prompt.",
             tool_mode=True,
         ),
         MultilineInput(
@@ -125,33 +131,21 @@ class AgentQL(Component):
         }
 
         if not self.prompt and not self.query:
-            self.status = "Either Query or Prompt must be provided."
+            self.status = MISSING_REQUIRED_INPUTS_MESSAGE
             raise ValueError(self.status)
         if self.prompt and self.query:
-            self.status = "Both Query and Prompt can't be provided at the same time."
+            self.status = TOO_MANY_INPUTS_MESSAGE
             raise ValueError(self.status)
 
         try:
             response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
             response.raise_for_status()
 
-            json = response.json()
-            data = Data(result=json["data"], metadata=json["metadata"])
+            response_json = response.json()
+            data = Data(result=response_json["data"], metadata=response_json["metadata"])
 
         except httpx.HTTPStatusError as e:
-            response = e.response
-            if response.status_code == httpx.codes.UNAUTHORIZED:
-                self.status = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
-            else:
-                try:
-                    error_json = response.json()
-                    logger.error(
-                        f"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}"
-                    )
-                    msg = error_json["error_info"] if "error_info" in error_json else error_json["detail"]
-                except (ValueError, TypeError):
-                    msg = f"HTTP {e}."
-                self.status = msg
+            self.status = handle_agentql_error(e)
             raise ValueError(self.status) from e
 
         else:
