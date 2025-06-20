@@ -25,6 +25,7 @@ _INVALID_CHARACTERS = {
 }
 
 _INVALID_NAMES = {
+    "code",
     "input_variables",
     "output_parser",
     "partial_variables",
