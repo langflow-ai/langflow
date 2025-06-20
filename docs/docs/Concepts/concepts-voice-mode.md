@@ -19,7 +19,7 @@ Your flow must have a [Chat input](/components-io#chat-input) component to inter
 
 Chat with an agent in the **Playground**, and get more recent results by asking the agent to use tools.
 
-1. Create a [Simple agent starter project](/starter-projects-simple-agent).
+1. Create a [Simple agent starter project](/simple-agent).
 2. Add your **OpenAI API key** credentials to the **Agent** component.
 3. To start a chat session, click **Playground**.
 4. To enable voice mode, click the <Icon name="Mic" aria-label="Microphone"/> icon.
