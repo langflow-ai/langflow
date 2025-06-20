@@ -39,6 +39,7 @@ from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NA
 from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
+from langflow.services.settings.utils import read_version_from_file, write_version_to_file
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from langflow.utils.util import escape_json_dump
 
@@ -1039,3 +1040,52 @@ async def sync_flows_from_fs():
         except Exception:  # noqa: BLE001
             logger.exception("Error while syncing flows from database")
         await asyncio.sleep(fs_flows_polling_interval)
+
+
+async def get_initialized_version() -> str:
+    """Get the initialized version of Langflow.
+
+    Returns:
+        str: The initialized version of Langflow.
+    """
+    settings_service = get_settings_service()
+    path = Path(settings_service.settings.config_dir).joinpath("initialized_version")
+    return read_version_from_file(path)
+
+
+async def set_initialized_version(cur_version: str | None = None) -> None:
+    """Set the initialized version of Langflow.
+
+    Args:
+        cur_version (str): The current version of Langflow.
+    """
+    if not cur_version:
+        return
+    settings_service = get_settings_service()
+    path = Path(settings_service.settings.config_dir).joinpath("initialized_version")
+    write_version_to_file(path, cur_version)
+
+
+async def check_if_initialized(cur_version: str) -> bool:
+    """Check if Langflow is initialized.
+
+    Returns:
+        bool: True if Langflow is initialized, False otherwise.
+    """
+    initialized_version = await get_initialized_version()
+    return initialized_version == cur_version
+
+
+async def check_need_initialize(cur_version: str) -> bool:
+    """Check if Langflow needs to be initialized.
+
+    Returns:
+        bool: True if Langflow needs to be initialized, False otherwise.
+    """
+    settings_service = get_settings_service()
+    # Always initialize if init_once_per_version is disabled
+    if settings_service.settings.init_once_per_version:
+        # Only initialize if the current version hasn't been initialized yet
+        return not await check_if_initialized(cur_version)
+    # Otherwise, always initialize
+    return True
