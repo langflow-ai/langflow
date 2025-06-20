@@ -150,9 +150,8 @@ curl --request POST \
 
 </Tabs>
 
-The payload schema is defined in [schemas.py](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/schemas.py#L354).
-
-2. Copy the snippet to your terminal, and send the request.
+2. Copy the snippet, paste it in a script file, and then run the script to send the request.
+If you are using the curl snippet, you can run the command directly in your terminal.
 
 <details closed>
 <summary>Response</summary>
