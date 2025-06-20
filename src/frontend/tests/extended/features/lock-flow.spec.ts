@@ -90,8 +90,65 @@ test(
     await page.keyboard.press("Delete");
     numberOfEdges = await page.locator(".react-flow__edge-path").count();
     expect(numberOfEdges).toBe(0);
+
+    await tryConnectNodes(page);
+
+    await page.getByTestId("handle-prompt-shownode-prompt-right").click();
+    await page
+      .getByTestId("handle-languagemodelcomponent-shownode-system message-left")
+      .click();
+
+    await page
+      .getByTestId("handle-chatinput-shownode-chat message-right")
+      .click();
+    await page
+      .getByTestId("handle-languagemodelcomponent-shownode-input-left")
+      .click();
+
+    await page
+      .getByTestId(
+        "handle-languagemodelcomponent-shownode-model response-right",
+      )
+      .click();
+    await page.getByTestId("handle-chatoutput-shownode-inputs-left").click();
+    numberOfEdges = await page.locator(".react-flow__edge-path").count();
+
+    expect(numberOfEdges).toBe(3);
   },
 );
+
+async function tryConnectNodes(page: Page) {
+  await page.getByTestId("lock_unlock").click();
+
+  const numberOfTries = 5;
+  let numberOfEdges = await page.locator(".react-flow__edge-path").count();
+
+  for (let i = 0; i < numberOfTries; i++) {
+    try {
+      await page.getByTestId("handle-prompt-shownode-prompt-right").click({
+        timeout: 500,
+      });
+    } catch (e) {
+      numberOfEdges = await page.locator(".react-flow__edge-path").count();
+      expect(numberOfEdges).toBe(0);
+    }
+
+    try {
+      await page
+        .getByTestId(
+          "handle-languagemodelcomponent-shownode-system message-left",
+        )
+        .click({
+          timeout: 500,
+        });
+    } catch (e) {
+      numberOfEdges = await page.locator(".react-flow__edge-path").count();
+      expect(numberOfEdges).toBe(0);
+    }
+  }
+
+  await page.getByTestId("lock_unlock").click();
+}
 
 async function tryDeleteEdge(page: Page) {
   await page.getByTestId("lock_unlock").click();
