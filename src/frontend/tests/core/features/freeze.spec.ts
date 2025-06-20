@@ -102,6 +102,7 @@ test(
       }
     }
 
+    await page.waitForTimeout(1000);
     // Final assertion
     await expect(page.getByTestId("frozen-icon")).toBeVisible();
     await page.keyboard.press("Escape");
