@@ -229,6 +229,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Linear", name: "linear", icon: "Linear" },
   { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   {
     display_name: "Language Models",
@@ -316,6 +317,7 @@ export const categoryIcons: Record<string, string> = {
 
 export const nodeIconToDisplayIconMap: Record<string, string> = {
   //Category Icons
+  Linear: "Linear",
   input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
