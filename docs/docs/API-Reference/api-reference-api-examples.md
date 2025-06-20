@@ -13,19 +13,25 @@ You can view and test the Langflow API's OpenAPI specification at your Langflow 
 :::
 
 <!-- TODO: Add basic information: How to get an API key, flow IDs, component IDs, base url etc. -->
-<!-- Forming requests: Authentication, Base urls, parameters -->
-<!-- Rewrite "export values" section and update incoming links. -->
 <!-- Bring aPI key and auth stuff from those topics in the Config section.-->
 <!-- List all deprecated endpoints somewhere?-->
 
-## Parameters
+## Form requests
+<!-- Forming requests: Authentication, Base urls, parameters -->
+Langflow API requests ...
+
+### Base URL
+
+### Authentication
+
+### Parameters
 
 Langflow endpoints use URL path parameters, query parameters, and request body parameters.
 
 The specific parameters and where you can declare them vary by endpoint and operation.
 
-## Export values
-
+## Set environment variables
+<!-- Rewrite "export values" section and update incoming links. -->
 You might find it helpful to set the following environment variables in your terminal.
 
 The examples in this guide use environment variables for these values.
@@ -99,9 +105,9 @@ Export the generated API key as an environment variable.
 export LANGFLOW_API_KEY="sk-..."
 ```
 
-## Configuration and metadata endpoints
+## Send requests
 
-Use these endpoints to get Langflow configuration information.
+Try sending some minimal requests to get Langflow configuration information.
 
 ### Get version
 
