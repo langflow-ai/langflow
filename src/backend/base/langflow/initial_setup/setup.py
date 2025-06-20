@@ -2,7 +2,6 @@ import asyncio
 import copy
 import io
 import json
-import os
 import re
 import shutil
 import zipfile
@@ -26,7 +25,13 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
+from langflow.base.constants import (
+    FIELD_FORMAT_ATTRIBUTES,
+    NODE_FORMAT_ATTRIBUTES,
+    ORJSON_OPTIONS,
+    SKIPPED_COMPONENTS,
+    SKIPPED_FIELD_ATTRIBUTES,
+)
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -60,11 +65,27 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
+            # skip components that are having dynamic values that need to be persisted for templates
 
-            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") == "Agent"
+            if node_data.get("key") in SKIPPED_COMPONENTS:
+                continue
+
+            is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") in {
+                "Agent",
+                "LanguageModelComponent",
+            }
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
+                # Set selected output as the previous selected output
+                for output in latest_node["outputs"]:
+                    node_data_output = next(
+                        (output_ for output_ in node_data["outputs"] if output_["name"] == output["name"]),
+                        None,
+                    )
+                    if node_data_output:
+                        output["selected"] = node_data_output.get("selected")
                 node_data["outputs"] = latest_node["outputs"]
+
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
                 if node_type != "Prompt":
@@ -121,7 +142,16 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                         continue
                     # The idea here is to update some attributes of the field
                     to_check_attributes = FIELD_FORMAT_ATTRIBUTES
+                    # Skip specific field attributes that should respect the starter project template values.
+                    # Currently we skip 'advanced' so that a field marked as advanced in the component code
+                    # will NOT overwrite the value specified in the starter project template. This preserves
+                    # the intended UX configuration of the starter projects.
+                    # SKIPPED_FIELD_ATTRIBUTES = {"advanced"}
+                    # Iterate through the attributes we want to potentially update
                     for attr in to_check_attributes:
+                        # Respect the template value by not updating if the attribute is in the skipped set
+                        if attr in SKIPPED_FIELD_ATTRIBUTES:
+                            continue
                         if (
                             attr in field_dict
                             and attr in node_data["template"].get(field_name)
@@ -486,6 +516,7 @@ def log_node_changes(node_changes_log) -> None:
 async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, dict]]:
     starter_projects = []
     folder = anyio.Path(__file__).parent / "starter_projects"
+    logger.debug("Loading starter projects")
     async for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
@@ -494,7 +525,6 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
             try:
                 project = orjson.loads(content)
                 starter_projects.append((file, project))
-                logger.debug(f"Loaded starter project {file}")
                 break  # Break if load is successful
             except orjson.JSONDecodeError as e:
                 attempt += 1
@@ -502,6 +532,7 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
                     msg = f"Error loading starter project {file}: {e}"
                     raise ValueError(msg) from e
                 await asyncio.sleep(delay)  # Wait before retrying
+    logger.debug(f"Loaded {len(starter_projects)} starter projects")
     return starter_projects
 
 
@@ -559,8 +590,6 @@ async def copy_profile_pictures() -> None:
             if str(rel_path) not in target_files:
                 dst_file = target / rel_path
                 tasks.append(copy_file(src_file, dst_file, rel_path))
-            else:
-                logger.debug(f"Skipped existing file: '{rel_path}'")
 
         if tasks:
             await asyncio.gather(*tasks)
@@ -639,7 +668,6 @@ def create_new_project(
     project_icon_bg_color,
     new_folder_id,
 ) -> None:
-    logger.debug(f"Creating starter project {project_name}")
     new_project = FlowCreate(
         name=project_name,
         description=project_description,
@@ -661,7 +689,7 @@ async def get_all_flows_similar_to_project(session: AsyncSession, folder_id: UUI
     return list((await session.exec(stmt)).first().flows)
 
 
-async def delete_start_projects(session, folder_id) -> None:
+async def delete_starter_projects(session, folder_id) -> None:
     flows = await get_all_flows_similar_to_project(session, folder_id)
     for flow in flows:
         await session.delete(flow)
@@ -674,7 +702,7 @@ async def folder_exists(session, folder_name):
     return folder is not None
 
 
-async def create_starter_folder(session):
+async def get_or_create_starter_folder(session):
     if not await folder_exists(session, STARTER_FOLDER_NAME):
         new_folder = FolderCreate(name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION)
         db_folder = Folder.model_validate(new_folder, from_attributes=True)
@@ -870,58 +898,107 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name):
     return None
 
 
-async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: bool = True) -> None:
+async def create_or_update_starter_projects(all_types_dict: dict) -> None:
     """Create or update starter projects.
 
     Args:
         all_types_dict (dict): Dictionary containing all component types and their templates
-        do_create (bool, optional): Whether to create new projects. Defaults to True.
     """
+    if not get_settings_service().settings.create_starter_projects:
+        # no-op for environments that don't want to create starter projects.
+        # note that this doesn't check if the starter projects are already loaded in the db;
+        # this is intended to be used to skip all startup project logic.
+        return
+
     async with session_scope() as session:
-        new_folder = await create_starter_folder(session)
+        new_folder = await get_or_create_starter_folder(session)
         starter_projects = await load_starter_projects()
-        await delete_start_projects(session, new_folder.id)
-        await copy_profile_pictures()
-        for project_path, project in starter_projects:
-            (
-                project_name,
-                project_description,
-                project_is_component,
-                updated_at_datetime,
-                project_data,
-                project_icon,
-                project_icon_bg_color,
-                project_gradient,
-                project_tags,
-            ) = get_project_data(project)
-            do_update_starter_projects = os.environ.get("LANGFLOW_UPDATE_STARTER_PROJECTS", "true").lower() == "true"
-            if do_update_starter_projects:
+
+        if get_settings_service().settings.update_starter_projects:
+            logger.debug("Updating starter projects")
+            # 1. Delete all existing starter projects
+            successfully_updated_projects = 0
+            await delete_starter_projects(session, new_folder.id)
+            await copy_profile_pictures()
+
+            # 2. Update all starter projects with the latest component versions (this modifies the actual file data)
+            for project_path, project in starter_projects:
+                (
+                    project_name,
+                    project_description,
+                    project_is_component,
+                    updated_at_datetime,
+                    project_data,
+                    project_icon,
+                    project_icon_bg_color,
+                    project_gradient,
+                    project_tags,
+                ) = get_project_data(project)
                 updated_project_data = update_projects_components_with_latest_component_versions(
                     project_data.copy(), all_types_dict
                 )
                 updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
                 if updated_project_data != project_data:
                     project_data = updated_project_data
-                    # We also need to update the project data in the file
                     await update_project_file(project_path, project, updated_project_data)
-            if do_create and project_name and project_data:
-                existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
-                for existing_project in existing_flows:
-                    await session.delete(existing_project)
 
-                create_new_project(
-                    session=session,
-                    project_name=project_name,
-                    project_description=project_description,
-                    project_is_component=project_is_component,
-                    updated_at_datetime=updated_at_datetime,
-                    project_data=project_data,
-                    project_icon=project_icon,
-                    project_icon_bg_color=project_icon_bg_color,
-                    project_gradient=project_gradient,
-                    project_tags=project_tags,
-                    new_folder_id=new_folder.id,
-                )
+                try:
+                    # Create the updated starter project
+                    create_new_project(
+                        session=session,
+                        project_name=project_name,
+                        project_description=project_description,
+                        project_is_component=project_is_component,
+                        updated_at_datetime=updated_at_datetime,
+                        project_data=project_data,
+                        project_icon=project_icon,
+                        project_icon_bg_color=project_icon_bg_color,
+                        project_gradient=project_gradient,
+                        project_tags=project_tags,
+                        new_folder_id=new_folder.id,
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.exception(f"Error while creating starter project {project_name}")
+
+                successfully_updated_projects += 1
+            logger.debug(f"Successfully updated {successfully_updated_projects} starter projects")
+        else:
+            # Even if we're not updating starter projects, we still need to create any that don't exist
+            logger.debug("Creating new starter projects")
+            successfully_created_projects = 0
+            existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
+            existing_flow_names = [existing_flow.name for existing_flow in existing_flows]
+            for _, project in starter_projects:
+                (
+                    project_name,
+                    project_description,
+                    project_is_component,
+                    updated_at_datetime,
+                    project_data,
+                    project_icon,
+                    project_icon_bg_color,
+                    project_gradient,
+                    project_tags,
+                ) = get_project_data(project)
+                if project_name not in existing_flow_names:
+                    try:
+                        create_new_project(
+                            session=session,
+                            project_name=project_name,
+                            project_description=project_description,
+                            project_is_component=project_is_component,
+                            updated_at_datetime=updated_at_datetime,
+                            project_data=project_data,
+                            project_icon=project_icon,
+                            project_icon_bg_color=project_icon_bg_color,
+                            project_gradient=project_gradient,
+                            project_tags=project_tags,
+                            new_folder_id=new_folder.id,
+                        )
+                    except Exception:  # noqa: BLE001
+                        logger.exception(f"Error while creating starter project {project_name}")
+                    successfully_created_projects += 1
+                logger.debug(f"Successfully created {successfully_created_projects} starter projects")
 
 
 async def initialize_super_user_if_needed() -> None:

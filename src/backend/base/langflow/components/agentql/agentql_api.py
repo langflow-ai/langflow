@@ -7,7 +7,7 @@ from langflow.components.agentql.utils import (
     TOO_MANY_INPUTS_MESSAGE,
     handle_agentql_error,
 )
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import (
     BoolInput,
@@ -18,7 +18,7 @@ from langflow.io import (
     Output,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class AgentQL(Component):

@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Literal
 import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
-from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema, create_input_schema_from_dict
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.serialization.serialization import serialize
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from langflow.schema.content_block import ContentBlock
     from langflow.schema.dotdict import dotdict
 
-
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
 
 
@@ -38,9 +37,8 @@ def _get_input_type(input_: InputTypes):
     return input_.field_type
 
 
-def build_description(component: Component, output: Output) -> str:
-    name = component.name or component.__class__.__name__
-    return f"{name}. {output.method} - {component.description}"
+def build_description(component: Component) -> str:
+    return f"{component.description}"
 
 
 async def send_message_noop(
@@ -108,9 +106,8 @@ def _build_output_function(component: Component, output_method: Callable, event_
             return result.get_text()
         if isinstance(result, Data):
             return result.data
-        if isinstance(result, BaseModel):
-            return result.model_dump()
-        return result
+        # removing the model_dump() call here because it is not serializable
+        return serialize(result)
 
     return _patch_send_message_decorator(component, output_function)
 
@@ -132,9 +129,8 @@ def _build_output_async_function(
             return result.get_text()
         if isinstance(result, Data):
             return result.data
-        if isinstance(result, BaseModel):
-            return result.model_dump()
-        return result
+        # removing the model_dump() call here because it is not serializable
+        return serialize(result)
 
     return _patch_send_message_decorator(component, output_function)
 
@@ -234,7 +230,7 @@ class ComponentToolkit:
                 tools.append(
                     StructuredTool(
                         name=formatted_name,
-                        description=build_description(self.component, output),
+                        description=build_description(self.component),
                         coroutine=_build_output_async_function(self.component, output_method, event_manager),
                         args_schema=args_schema,
                         handle_tool_error=True,
@@ -242,7 +238,7 @@ class ComponentToolkit:
                         tags=[formatted_name],
                         metadata={
                             "display_name": formatted_name,
-                            "display_description": build_description(self.component, output),
+                            "display_description": build_description(self.component),
                         },
                     )
                 )
@@ -250,7 +246,7 @@ class ComponentToolkit:
                 tools.append(
                     StructuredTool(
                         name=formatted_name,
-                        description=build_description(self.component, output),
+                        description=build_description(self.component),
                         func=_build_output_function(self.component, output_method, event_manager),
                         args_schema=args_schema,
                         handle_tool_error=True,
@@ -258,7 +254,7 @@ class ComponentToolkit:
                         tags=[formatted_name],
                         metadata={
                             "display_name": formatted_name,
-                            "display_description": build_description(self.component, output),
+                            "display_description": build_description(self.component),
                         },
                     )
                 )
