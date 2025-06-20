@@ -29,7 +29,7 @@ class StructuredOutputComponent(Component):
             input_types=["LanguageModel"],
             required=True,
         ),
-        MessageTextInput(
+        MultilineInput(
             name="input_value",
             display_name="Input Message",
             info="The input message to the language model.",
