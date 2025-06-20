@@ -11,23 +11,17 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Starter projects",
+      label: "Templates",
       items: [
-        'Starter-Projects/starter-projects-basic-prompting',
-        'Starter-Projects/starter-projects-vector-store-rag',
-        'Starter-Projects/starter-projects-simple-agent',
-      ],
-    },
-    {
-      type: "category",
-      label: "Sample flows",
-      items: [
-        'Sample-Flows/blog-writer',
-        'Sample-Flows/document-qa',
-        'Sample-Flows/memory-chatbot',
-        'Sample-Flows/financial-report-parser',
-        'Sample-Flows/sequential-agent',
-        'Sample-Flows/travel-planning-agent',
+        'Templates/basic-prompting',
+        'Templates/simple-agent',
+        'Templates/blog-writer',
+        'Templates/document-qa',
+        'Templates/memory-chatbot',
+        'Templates/vector-store-rag',
+        'Templates/financial-report-parser',
+        'Templates/sequential-agent',
+        'Templates/travel-planning-agent',
       ],
     },
     {
@@ -41,7 +35,6 @@ module.exports = {
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
         "Concepts/embedded-chat-widget",
-        "Concepts/mcp-server",
         "Concepts/concepts-file-management",
         "Concepts/concepts-voice-mode",
       ],
@@ -72,6 +65,14 @@ module.exports = {
       items: [
         "Agents/agents-overview",
         "Agents/agent-tool-calling-agent-component",
+      ],
+    },
+    {
+      type: "category",
+      label: "Model Context Protocol (MCP)",
+      items: [
+        "Concepts/mcp-server",
+        "Components/mcp-client",
       ],
     },
     {
