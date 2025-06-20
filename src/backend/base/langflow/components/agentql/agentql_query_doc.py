@@ -5,8 +5,8 @@ from loguru import logger
 
 from langflow.base.data import BaseFileComponent
 from langflow.components.agentql.utils import (
-    AGENTQL_QUERY_DOCUMENT_DOCUMENTATION,
-    AGENTQL_QUERY_DOCUMENTATION,
+    QUERY_DOCUMENT_API_DOCS_URL,
+    QUERY_DOCS_URL,
     DOUBLE_INPUT_MESSAGE,
     NO_INPUT_MESSAGE,
     handle_agentql_error,
@@ -23,7 +23,7 @@ from langflow.schema import Data
 class AgentQLQueryDocument(BaseFileComponent):
     display_name = "Extract Document Data"
     description = "Extracts structured data from a document using an AgentQL query or a Natural Language description."
-    documentation: str = AGENTQL_QUERY_DOCUMENT_DOCUMENTATION
+    documentation: str = QUERY_DOCUMENT_API_DOCS_URL
     icon = "AgentQL"
     name = "AgentQL Query Document"
 
@@ -44,7 +44,7 @@ class AgentQLQueryDocument(BaseFileComponent):
             name="query",
             display_name="AgentQL Query",
             required=False,
-            info=f"The AgentQL query to execute. Learn more at {AGENTQL_QUERY_DOCUMENTATION} or use a prompt.",
+            info=f"The AgentQL query to execute. Learn more at {QUERY_DOCS_URL} or use a prompt.",
             tool_mode=True,
         ),
         MultilineInput(

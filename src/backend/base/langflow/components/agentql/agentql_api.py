@@ -1,8 +1,8 @@
 import httpx
 
 from langflow.components.agentql.utils import (
-    AGENTQL_QUERY_DOCUMENTATION,
-    AGENTQL_REST_API_DOCUMENTATION,
+    QUERY_DOCS_URL,
+    QUERY_DATA_API_DOCS_URL,
     NO_INPUT_MESSAGE,
     DOUBLE_INPUT_MESSAGE,
     handle_agentql_error,
@@ -24,9 +24,9 @@ from langflow.schema import Data
 class AgentQL(Component):
     display_name = "Extract Web Data"
     description = "Extracts structured data from a web page using an AgentQL query or a Natural Language description."
-    documentation: str = AGENTQL_REST_API_DOCUMENTATION
+    documentation: str = QUERY_DATA_API_DOCS_URL
     icon = "AgentQL"
-    name = "AgentQL Query Web"
+    name = "AgentQL"
 
     inputs = [
         SecretStrInput(
@@ -47,7 +47,7 @@ class AgentQL(Component):
             name="query",
             display_name="AgentQL Query",
             required=False,
-            info=f"The AgentQL query to execute. Learn more at {AGENTQL_QUERY_DOCUMENTATION} or use a prompt.",
+            info=f"The AgentQL query to execute. Learn more at {QUERY_DOCS_URL} or use a prompt.",
             tool_mode=True,
         ),
         MultilineInput(
