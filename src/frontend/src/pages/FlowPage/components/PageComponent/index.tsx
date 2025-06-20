@@ -34,6 +34,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
   INVALID_SELECTION_ERROR_ALERT,
@@ -123,6 +124,10 @@ export default function Page({
   const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
   const edgeUpdateSuccessful = useRef(true);
+
+  const isLocked = useFlowStore(
+    useShallow((state) => state.currentFlow?.locked),
+  );
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
@@ -521,6 +526,11 @@ export default function Page({
   );
 
   const handleEdgeClick = (event, edge) => {
+    if (isLocked) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     const color =
       nodeColorsName[edge?.data?.sourceHandle?.output_types[0]] || "cyan";
 
@@ -584,13 +594,13 @@ export default function Page({
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            onConnect={onConnectMod}
+            onConnect={isLocked ? undefined : onConnectMod}
             disableKeyboardA11y={true}
             onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
-            onReconnect={onEdgeUpdate}
-            onReconnectStart={onEdgeUpdateStart}
-            onReconnectEnd={onEdgeUpdateEnd}
+            onReconnect={isLocked ? undefined : onEdgeUpdate}
+            onReconnectStart={isLocked ? undefined : onEdgeUpdateStart}
+            onReconnectEnd={isLocked ? undefined : onEdgeUpdateEnd}
             onNodeDragStart={onNodeDragStart}
             onSelectionDragStart={onSelectionDragStart}
             elevateEdgesOnSelect={true}
