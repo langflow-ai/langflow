@@ -47,7 +47,7 @@ async def get_message_sessions(
 ) -> list[str]:
     try:
         stmt = select(MessageTable.session_id).distinct()
-        stmt = stmt.where(MessageTable.session_id.isnot(None))
+        stmt = stmt.where(col(MessageTable.session_id).isnot(None))
 
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
