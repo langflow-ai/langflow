@@ -275,7 +275,7 @@ This component listens for a notification and retrieves its associated state.
 
 </details>
 
-###Notify
+### Notify
 
 :::important
 This component is in **Legacy**, which means it is available for use but no longer in active development.
