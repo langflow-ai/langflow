@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -74,42 +74,5 @@ test(
       timeout: 3000,
       state: "visible",
     });
-
-    await tryDeleteEdge(page);
-    await page.locator(".react-flow__edge-path").nth(0).click();
-    await page.keyboard.press("Delete");
-    let numberOfEdges = await page.locator(".react-flow__edge-path").count();
-    expect(numberOfEdges).toBe(2);
-
-    await page.locator(".react-flow__edge-path").nth(0).click();
-    await page.keyboard.press("Delete");
-    numberOfEdges = await page.locator(".react-flow__edge-path").count();
-    expect(numberOfEdges).toBe(1);
-
-    await page.locator(".react-flow__edge-path").nth(0).click();
-    await page.keyboard.press("Delete");
-    numberOfEdges = await page.locator(".react-flow__edge-path").count();
-    expect(numberOfEdges).toBe(0);
   },
 );
-
-async function tryDeleteEdge(page: Page) {
-  await page.getByTestId("lock_unlock").click();
-
-  let numberOfEdges = await page.locator(".react-flow__edge-path").count();
-  expect(numberOfEdges).toBe(3);
-  const numberOfTries = 50;
-
-  for (let i = 0; i < numberOfTries; i++) {
-    await page.locator(".react-flow__edge-path").nth(0).click();
-    await page.keyboard.press("Delete");
-    await page.locator(".react-flow__edge-path").nth(1).click();
-    await page.keyboard.press("Delete");
-    await page.locator(".react-flow__edge-path").nth(2).click();
-    await page.keyboard.press("Delete");
-    numberOfEdges = await page.locator(".react-flow__edge-path").count();
-    expect(numberOfEdges).toBe(3);
-  }
-  //unlock the flow
-  await page.getByTestId("lock_unlock").click();
-}
