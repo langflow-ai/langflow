@@ -5,21 +5,21 @@ slug: /agents-tools
 
 import Icon from "@site/src/components/icon";
 
-Configure toolss connected to agents to extend their capabilities.
+Configure tools connected to agents to extend their capabilities.
 
 ## Edit a tool component's actions
 
 To edit a tool's actions, in the tool component, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to modify its `name`, `description`, or `enabled` metadata.
 These fields help connected agents understand how to use the action, without having to modify the agent's prompt instructions.
 
-For example, the [URL](/components-data#url) component has two actions available when **Tool Mode** is enabled.
+For example, the [URL](/components-data#url) component has two actions available when **Tool Mode** is enabled:
 
 | Tool Name | Description | Enabled |
 |-----------|-------------|---------|
 | `fetch_content` | Fetch content from web pages recursively | true |
 | `fetch_content_as_message` | Fetch web content formatted as messages | true |
 
-With these descriptions, a connected agent has a clear idea of each tool's capabilities based on the `name` and `description` metadata. The `enabled` boolean controls the tool's availability to the agent. If you think an agent is using a tool incorrectly, edit a tool's `description` metadata to help the agent better understand the tool.
+A Langflow Agent has a clear idea of each tool's capabilities based on the `name` and `description` metadata. The `enabled` boolean controls the tool's availability to the agent. If you think an agent is using a tool incorrectly, edit a tool's `description` metadata to help the agent better understand the tool.
 
 Tool names and descriptions can be edited, but the default tool identifiers cannot be changed. If you want to change the tool identifier, create a custom component.
 
@@ -160,7 +160,7 @@ inputs = [
 ]
 ```
 
-## Use the Run Flow component as a tool
+## Use flows as tools
 
 An agent can use flows that are saved in your workspace as tools with the [Run flow](/components-logic#run-flow) component.
 
