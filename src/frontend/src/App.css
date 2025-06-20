@@ -19,7 +19,6 @@ body {
 }
 
 .react-flow__node {
-  width: fit-content !important;
   height: auto;
   border-radius: auto;
   min-width: inherit;

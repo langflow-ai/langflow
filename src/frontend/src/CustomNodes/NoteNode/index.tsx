@@ -1,5 +1,7 @@
 import {
   COLOR_OPTIONS,
+  NOTE_NODE_MAX_HEIGHT,
+  NOTE_NODE_MAX_WIDTH,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
@@ -111,6 +113,8 @@ function NoteNode({
       <NodeResizer
         minWidth={Math.max(DEFAULT_WIDTH, NOTE_NODE_MIN_WIDTH)}
         minHeight={Math.max(DEFAULT_HEIGHT, NOTE_NODE_MIN_HEIGHT)}
+        maxWidth={NOTE_NODE_MAX_WIDTH}
+        maxHeight={NOTE_NODE_MAX_HEIGHT}
         onResize={(_, params) => {
           const { width, height } = params;
           debouncedResize(width, height);
@@ -136,7 +140,7 @@ function NoteNode({
         ref={nodeDiv}
         className={cn(
           "relative flex h-full w-full flex-col gap-3 rounded-xl p-3",
-          "transition-all duration-200 ease-in-out",
+          "duration-200 ease-in-out",
           !isResizing && "transition-transform",
           COLOR_OPTIONS[bgColor] !== null &&
             `border ${!selected && "-z-50 shadow-sm"}`,
@@ -145,13 +149,13 @@ function NoteNode({
         {MemoNoteToolbarComponent}
         <div
           style={{
-            width: size.width,
+            width: "100%",
             height: "100%",
             display: "flex",
             overflow: "hidden",
           }}
           className={cn(
-            "flex-1 transition-all duration-200 ease-in-out",
+            "flex-1 duration-200 ease-in-out",
             !isResizing && "transition-[width,height]",
           )}
         >
@@ -166,6 +170,7 @@ function NoteNode({
               COLOR_OPTIONS[bgColor] === null
                 ? "dark:prose-invert"
                 : "dark:!text-background",
+              "min-w-full",
             )}
             style={{ backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000" }}
             charLimit={CHAR_LIMIT}
