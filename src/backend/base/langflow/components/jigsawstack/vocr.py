@@ -1,18 +1,17 @@
-from typing import Any
 
 from langflow.custom.custom_component.component import Component
-from langflow.io import Output, SecretStrInput, PromptInput, StrInput, IntInput
+from langflow.io import IntInput, Output, SecretStrInput, StrInput
 from langflow.schema.data import Data
-from langflow.schema.message import Message
 
 
 class JigsawStackVOCRComponent(Component):
     display_name = "VOCR"
-    description = "Extract data from any document type in a consistent structure with fine-tuned vLLMs for the highest accuracy"
+    description = "Extract data from any document type in a consistent structure with fine-tuned \
+        vLLMs for the highest accuracy"
     documentation = "https://jigsawstack.com/docs/api-reference/ai/vocr"
     icon = "JigsawStack"
     name = "JigsawStackVOCR"
-    
+
     inputs = [
         SecretStrInput(
             name="api_key",
@@ -60,15 +59,19 @@ class JigsawStackVOCRComponent(Component):
 
     def vocr(self) -> Data:
         try:
-            from jigsawstack import JigsawStack
+            from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:
+            jigsawstack_import_error = (
+                "JigsawStack package not found. Please install it using: "
+                "pip install jigsawstack>=0.2.6"
+            )
             raise ImportError(
-                "JigsawStack package not found"
+                jigsawstack_import_error
             ) from e
 
         try:
             client = JigsawStack(api_key=self.api_key)
-            
+
             #build request object
             params = {}
             if self.prompt:
@@ -77,31 +80,32 @@ class JigsawStackVOCRComponent(Component):
                 elif isinstance(self.prompt, str):
                     params["prompt"] = [self.prompt]
                 else:
-                    raise ValueError("Prompt must be a list of strings")
+                    invalid_prompt_error = "Prompt must be a list of strings or a single string"
+                    raise ValueError(invalid_prompt_error)
             if self.url:
                 params["url"] = self.url
             if self.file_store_key:
                 params["file_store_key"] = self.file_store_key
 
             if self.page_range_start and self.page_range_end:
-                
+
                 params["page_range"] = [self.page_range_start, self.page_range_end]
-            
+
             # Call web scraping
             response = client.vision.vocr(params)
-            
+
             if not response.get("success", False):
-                raise ValueError("JigsawStack API returned unsuccessful response")
-            
+                failed_response_error = "JigsawStack API returned unsuccessful response"
+                raise ValueError(failed_response_error)
+
             return Data(data=response)
-            
-        except Exception as e:
+
+        except JigsawStackError as e:
             error_data = {
                 "error": str(e),
                 "success": False
             }
-            self.status = f"Error: {str(e)}"
+            self.status = f"Error: {e!s}"
             return Data(data=error_data)
 
 
-   

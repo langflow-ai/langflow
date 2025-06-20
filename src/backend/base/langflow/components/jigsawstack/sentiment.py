@@ -1,4 +1,3 @@
-from typing import Any
 
 from langflow.custom.custom_component.component import Component
 from langflow.io import MessageTextInput, Output, SecretStrInput
@@ -8,11 +7,11 @@ from langflow.schema.message import Message
 
 class JigsawStackSentimentComponent(Component):
     display_name = "Sentiment Analysis"
-    description = "Analyze sentiment and emotion in text using JigsawStack AI"
-    documentation = "https://docs.jigsawstack.com/api-reference/ai/sentiment"
+    description = "Analyze sentiment of text using JigsawStack AI"
+    documentation = "https://jigsawstack.com/docs/api-reference/ai/sentiment"
     icon = "JigsawStack"
     name = "JigsawStackSentiment"
-    
+
     inputs = [
         SecretStrInput(
             name="api_key",
@@ -23,99 +22,97 @@ class JigsawStackSentimentComponent(Component):
         MessageTextInput(
             name="text",
             display_name="Text",
-            info="The text to analyze for sentiment and emotion",
+            info="Text to analyze for sentiment",
             required=True,
             tool_mode=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Sentiment Result", name="sentiment_result", method="analyze_sentiment"),
-        Output(display_name="Formatted Text", name="formatted_text", method="get_formatted_text"),
+        Output(display_name="Sentiment Data", name="sentiment_data", method="analyze_sentiment"),
+        Output(display_name="Sentiment Text", name="sentiment_text", method="get_sentiment_text"),
     ]
 
     def analyze_sentiment(self) -> Data:
         try:
-            from jigsawstack import JigsawStack
+            from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:
-            raise ImportError(
-                "JigsawStack package not found. Please install it with: pip install jigsawstack"
-            ) from e
+            jigsawstack_import_error = (
+                "JigsawStack package not found. Please install it using: "
+                "pip install jigsawstack>=0.2.6"
+            )
+            raise ImportError(jigsawstack_import_error) from e
 
         try:
-            # Initialize JigsawStack client
             client = JigsawStack(api_key=self.api_key)
-            
-            # Call sentiment analysis
             response = client.sentiment({"text": self.text})
-            
+
+            api_error_msg = "JigsawStack API returned unsuccessful response"
             if not response.get("success", False):
-                raise ValueError("JigsawStack API returned unsuccessful response")
-            
+                raise ValueError(api_error_msg)
+
             sentiment_data = response.get("sentiment", {})
-            
-            # Create comprehensive data object
+
             result_data = {
-                "overall_sentiment": sentiment_data.get("sentiment", ""),
-                "overall_emotion": sentiment_data.get("emotion", ""),
-                "overall_score": sentiment_data.get("score", 0.0),
-                "sentences": sentiment_data.get("sentences", []),
                 "text_analyzed": self.text,
-                "success": True
+                "sentiment": sentiment_data.get("sentiment", "Unknown"),
+                "emotion": sentiment_data.get("emotion", "Unknown"),
+                "score": sentiment_data.get("score", 0.0),
+                "sentences": response.get("sentences", []),
+                "success": True,
             }
-            
-            self.status = f"Sentiment: {sentiment_data.get('sentiment', 'Unknown')} | Emotion: {sentiment_data.get('emotion', 'Unknown')} | Score: {sentiment_data.get('score', 0.0):.3f}"
-            
+
+            self.status = (
+                f"Sentiment: {sentiment_data.get('sentiment', 'Unknown')} | "
+                f"Emotion: {sentiment_data.get('emotion', 'Unknown')} | "
+                f"Score: {sentiment_data.get('score', 0.0):.3f}"
+            )
+
             return Data(data=result_data)
-            
-        except Exception as e:
-            error_data = {
-                "error": str(e),
-                "text_analyzed": self.text,
-                "success": False
-            }
-            self.status = f"Error: {str(e)}"
+
+        except ValueError:
+            raise
+        except JigsawStackError as e:
+            error_data = {"error": str(e), "text_analyzed": self.text, "success": False}
+            self.status = f"Error: {e!s}"
             return Data(data=error_data)
 
-    def get_formatted_text(self) -> Message:
+    def get_sentiment_text(self) -> Message:
         try:
-            from jigsawstack import JigsawStack
-        except ImportError as e:
-            return Message(text=f"Error: JigsawStack package not found. Please install it with: pip install jigsawstack")
+            from jigsawstack import JigsawStack, JigsawStackError
+        except ImportError:
+            return Message(
+                text="Error: JigsawStack package not found. Please install it with: pip install jigsawstack"
+            )
 
         try:
-            # Initialize JigsawStack client
             client = JigsawStack(api_key=self.api_key)
-            
-            # Call sentiment analysis
             response = client.sentiment({"text": self.text})
-            
-            if not response.get("success", False):
-                return Message(text="Error: JigsawStack API returned unsuccessful response")
-            
+
             sentiment_data = response.get("sentiment", {})
-            
-            # Create formatted text output
-            formatted_output = f"""📊 **Sentiment Analysis Results**
+            sentences = response.get("sentences", [])
 
-**Overall Analysis:**
-• Sentiment: {sentiment_data.get('sentiment', 'Unknown')}
-• Emotion: {sentiment_data.get('emotion', 'Unknown')}
-• Confidence Score: {sentiment_data.get('score', 0.0):.3f}
+            # Format the output
+            formatted_output = f"""Sentiment Analysis Results:
 
-**Original Text:**
-"{self.text}"
+Text: {self.text}
 
-**Sentence-by-Sentence Breakdown:**"""
+Overall Sentiment: {sentiment_data.get("sentiment", "Unknown")}
+Emotion: {sentiment_data.get("emotion", "Unknown")}
+Score: {sentiment_data.get("score", 0.0):.3f}
 
-            sentences = sentiment_data.get("sentences", [])
+Sentence-by-sentence Analysis:
+"""
+
             for i, sentence in enumerate(sentences, 1):
-                formatted_output += f"""
-
-{i}. "{sentence.get('text', '')}"
-   → Sentiment: {sentence.get('sentiment', 'Unknown')} | Emotion: {sentence.get('emotion', 'Unknown')} | Score: {sentence.get('score', 0.0):.3f}"""
+                formatted_output += (
+                    f"{i}. {sentence.get('text', '')}\n"
+                    f"   Sentiment: {sentence.get('sentiment', 'Unknown')} | "
+                    f"Emotion: {sentence.get('emotion', 'Unknown')} | "
+                    f"Score: {sentence.get('score', 0.0):.3f}\n"
+                )
 
             return Message(text=formatted_output)
-            
-        except Exception as e:
-            return Message(text=f"Error analyzing sentiment: {str(e)}")
+
+        except JigsawStackError as e:
+            return Message(text=f"Error analyzing sentiment: {e!s}")

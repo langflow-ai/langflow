@@ -1,15 +1,15 @@
 from langflow.custom.custom_component.component import Component
-from langflow.io import Output, SecretStrInput, StrInput, IntInput
+from langflow.io import Output, SecretStrInput, StrInput
 from langflow.schema.data import Data
 
 
 class JigsawStackNSFWComponent(Component):
-    display_name = "NSFW"
-    description = "Quickly detect nudity, violence, hentai, porn and more NSFW content in images."
-    documentation = "https://jigsawstack.com/docs/api-reference/validate/nsfw"
+    display_name = "NSFW Detection"
+    description = "Detect if image/video contains NSFW content"
+    documentation = "https://jigsawstack.com/docs/api-reference/ai/nsfw"
     icon = "JigsawStack"
     name = "JigsawStackNSFW"
-    
+
     inputs = [
         SecretStrInput(
             name="api_key",
@@ -20,46 +20,42 @@ class JigsawStackNSFWComponent(Component):
         StrInput(
             name="url",
             display_name="URL",
-            info="The image URL to validate.",
+            info="URL of the image or video to analyze",
             required=True,
-        )
+        ),
     ]
 
     outputs = [
-        Output(display_name="NSFW Results", name="nsfw_results", method="nsfw"),
+        Output(display_name="NSFW Analysis", name="nsfw_result", method="detect_nsfw"),
     ]
 
-    def nsfw(self) -> Data:
+    def detect_nsfw(self) -> Data:
         try:
-            from jigsawstack import JigsawStack
+            from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:
-            raise ImportError(
-                "JigsawStack package not found"
-            ) from e
+            jigsawstack_import_error = (
+                "JigsawStack package not found. Please install it using: "
+                "pip install jigsawstack>=0.2.6"
+            )
+            raise ImportError(jigsawstack_import_error) from e
 
         try:
             client = JigsawStack(api_key=self.api_key)
-            
-            #build request object
-            params = {}
-            if self.url:
-                params["url"] = self.url
-        
-            # Call web scraping
+
+            # Build request parameters
+            params = {"url": self.url}
+
             response = client.validate.nsfw(params)
-            
+
+            api_error_msg = "JigsawStack API returned unsuccessful response"
             if not response.get("success", False):
-                raise ValueError("JigsawStack API returned unsuccessful response")
-            
+                raise ValueError(api_error_msg)
+
             return Data(data=response)
-            
-        except Exception as e:
-            error_data = {
-                "error": str(e),
-                "success": False
-            }
-            self.status = f"Error: {str(e)}"
+
+        except ValueError:
+            raise
+        except JigsawStackError as e:
+            error_data = {"error": str(e), "success": False}
+            self.status = f"Error: {e!s}"
             return Data(data=error_data)
-
-
-   

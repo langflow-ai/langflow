@@ -4,6 +4,7 @@ const JigsawStackIcon = (props) => (
     role="img"
     width="278"
     height="278"
+    viewBox="0 0 278 278"
     fill="none"
     {...props}
   >

@@ -1,7 +1,5 @@
-from typing import Any
-
 from langflow.custom.custom_component.component import Component
-from langflow.io import MessageTextInput, Output, SecretStrInput, BoolInput, DropdownInput, QueryInput, DataInput
+from langflow.io import BoolInput, DropdownInput, Output, QueryInput, SecretStrInput
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 
@@ -12,7 +10,7 @@ class JigsawStackAIWebSearchComponent(Component):
     documentation = "https://jigsawstack.com/docs/api-reference/web/ai-search"
     icon = "JigsawStack"
     name = "JigsawStackAISearch"
-    
+
     inputs = [
         SecretStrInput(
             name="api_key",
@@ -40,7 +38,7 @@ class JigsawStackAIWebSearchComponent(Component):
             info="Enable safe search to filter out adult content",
             required=False,
             options=["moderate", "strict", "off"],
-            value="off"
+            value="off",
         ),
         BoolInput(
             name="spell_check",
@@ -48,7 +46,7 @@ class JigsawStackAIWebSearchComponent(Component):
             info="Spell check the search query",
             required=False,
             value=True,
-        )
+        ),
     ]
 
     outputs = [
@@ -58,16 +56,18 @@ class JigsawStackAIWebSearchComponent(Component):
 
     def search(self) -> Data:
         try:
-            from jigsawstack import JigsawStack
+            from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:
-            raise ImportError(
-                "JigsawStack package not found"
-            ) from e
+            jigsawstack_import_error = (
+                "JigsawStack package not found. "
+                "Please install it using: pip install jigsawstack>=0.2.6"
+            )
+            raise ImportError(jigsawstack_import_error) from e
 
         try:
             client = JigsawStack(api_key=self.api_key)
-            
-            #build request object
+
+            # build request object
             search_params = {}
             if self.query:
                 search_params["query"] = self.query
@@ -77,13 +77,14 @@ class JigsawStackAIWebSearchComponent(Component):
                 search_params["safe_search"] = self.safe_search
             if self.spell_check is not None:
                 search_params["spell_check"] = self.spell_check
-            
+
             # Call web scraping
             response = client.web.search(search_params)
-            
+
+            api_error_msg = "JigsawStack API returned unsuccessful response"
             if not response.get("success", False):
-                raise ValueError("JigsawStack API returned unsuccessful response")
-            
+                raise ValueError(api_error_msg)
+
             # Create comprehensive data object
             result_data = {
                 "query": self.query,
@@ -91,31 +92,28 @@ class JigsawStackAIWebSearchComponent(Component):
                 "spell_fixed": response.get("spell_fixed", False),
                 "is_safe": response.get("is_safe", True),
                 "results": response.get("results", []),
-                "success": True
+                "success": True,
             }
-            
+
             self.status = f"Search complete for: {response.get('query', '')}"
-            
+
             return Data(data=result_data)
-            
-        except Exception as e:
-            error_data = {
-                "error": str(e),
-                "success": False
-            }
-            self.status = f"Error: {str(e)}"
+
+        except JigsawStackError as e:
+            error_data = {"error": str(e), "success": False}
+            self.status = f"Error: {e!s}"
             return Data(data=error_data)
 
     def get_content_text(self) -> Message:
         try:
-            from jigsawstack import JigsawStack
-        except ImportError as e:
-            return Message(text=f"Error: JigsawStack package not found.")
+            from jigsawstack import JigsawStack, JigsawStackError
+        except ImportError:
+            return Message(text="Error: JigsawStack package not found.")
 
         try:
             # Initialize JigsawStack client
             client = JigsawStack(api_key=self.api_key)
-            
+
             search_params = {}
             if self.query:
                 search_params["query"] = self.query
@@ -125,16 +123,17 @@ class JigsawStackAIWebSearchComponent(Component):
                 search_params["safe_search"] = self.safe_search
             if self.spell_check is not None:
                 search_params["spell_check"] = self.spell_check
-            
+
             # Call web scraping
             response = client.web.search(search_params)
-            
+
+            request_failed_msg = "Request Failed"
             if not response.get("success", False):
-                raise ValueError("JigsawStack API returned unsuccessful response")
-            
+                raise JigsawStackError(request_failed_msg)
+
             # Return the content as text
             content = response.get("ai_overview", "")
             return Message(text=content)
-            
-        except Exception as e:
-            return Message(text=f"Error while using AI Search: {str(e)}")
+
+        except JigsawStackError as e:
+            return Message(text=f"Error while using AI Search: {e!s}")
