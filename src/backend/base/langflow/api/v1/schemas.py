@@ -326,7 +326,8 @@ class VertexBuildResponse(BaseModel):
         Returns:
             dict: The serialized representation of the data with truncation applied.
         """
-        return serialize(data, max_length=get_max_text_length())
+        # return serialize(data, max_length=get_max_text_length())  TODO: Safe?
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
 class VerticesBuiltResponse(BaseModel):
