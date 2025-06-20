@@ -29,7 +29,7 @@ The agent component itself also supports **Tool Mode** for creating multi-agent 
 
 Add an agent to your flow that uses a different OpenAI model for a larger context window.
 
-1. Create the [Simple agent starter flow](/starter-projects-simple-agent).
+1. Create the [Simple agent starter flow](/simple-agent).
 2. Add a second agent component to the flow.
 3. Add your **Open AI API Key** to the **Agent** component.
 4. In the **Model Name** field, select `gpt-4.1`.
