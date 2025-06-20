@@ -67,12 +67,23 @@ class MyCustomSource(EnvSettingsSource):
 class Settings(BaseSettings):
     # Define the default LANGFLOW_DIR
     config_dir: str | None = None
-    # Define if langflow db should be saved in config dir or
-    # in the langflow directory
+    """The configuration directory where Langflow stores persistent data including:
+    - Secret keys for API key encryption
+    - User uploaded files (PDFs, images, documents)
+    - Profile pictures
+    - Application logs
+    - Database (if save_db_in_config_dir=True)
+
+    Defaults to platform-specific cache directory:
+    - macOS: ~/Library/Caches/langflow/
+    - Linux: ~/.cache/langflow/
+    - Windows: %LOCALAPPDATA%\langflow\Cache\
+
+    Note: Using cache directory can lead to data loss when cache is cleared.
+    Consider setting LANGFLOW_CONFIG_DIR to a persistent location for production use."""
     save_db_in_config_dir: bool = False
     """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory
     (i.e. in the package directory)."""
-
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
@@ -327,16 +338,16 @@ class Settings(BaseSettings):
     @classmethod
     def set_langflow_dir(cls, value):
         if not value:
-            from platformdirs import user_cache_dir
+            from platformdirs import user_config_dir
 
             # Define the app name and author
             app_name = "langflow"
             app_author = "langflow"
 
-            # Get the cache directory for the application
-            cache_dir = user_cache_dir(app_name, app_author)
+            # Get the config directory for the application
+            cache_dir = user_config_dir(app_name, app_author)
 
-            # Create a .langflow directory inside the cache directory
+            # Create a .langflow directory inside the config directory
             value = Path(cache_dir)
             value.mkdir(parents=True, exist_ok=True)
 
