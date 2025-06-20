@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
-from uuid import UUID
 from urllib.parse import quote
+from uuid import UUID
 
 import pytest
 from httpx import AsyncClient
@@ -151,25 +151,23 @@ async def test_get_messages_with_url_encoded_datetime_session_id(
 ):
     """Test that URL-encoded datetime session IDs are properly decoded and matched."""
     created_messages, datetime_session_id = messages_with_datetime_session_id
-    
+
     # URL encode the datetime session ID (spaces become %20, colons become %3A)
     encoded_session_id = quote(datetime_session_id)
-    
+
     # Test with URL-encoded session ID
     response = await client.get(
-        "api/v1/monitor/messages", 
-        params={"session_id": encoded_session_id}, 
-        headers=logged_in_headers
+        "api/v1/monitor/messages", params={"session_id": encoded_session_id}, headers=logged_in_headers
     )
-    
+
     assert response.status_code == 200, response.text
     messages = response.json()
     assert len(messages) == 2
-    
+
     # Verify all messages have the correct (decoded) session ID
     for message in messages:
         assert message["session_id"] == datetime_session_id
-    
+
     # Verify message content
     assert messages[0]["text"] == "Datetime message 1"
     assert messages[1]["text"] == "Datetime message 2"
@@ -181,51 +179,42 @@ async def test_get_messages_with_non_encoded_datetime_session_id(
 ):
     """Test that non-URL-encoded datetime session IDs also work correctly."""
     created_messages, datetime_session_id = messages_with_datetime_session_id
-    
+
     # Test with non-encoded session ID (should still work due to unquote being safe for non-encoded strings)
     response = await client.get(
-        "api/v1/monitor/messages", 
-        params={"session_id": datetime_session_id}, 
-        headers=logged_in_headers
+        "api/v1/monitor/messages", params={"session_id": datetime_session_id}, headers=logged_in_headers
     )
-    
+
     assert response.status_code == 200, response.text
     messages = response.json()
     assert len(messages) == 2
-    
+
     # Verify all messages have the correct session ID
     for message in messages:
         assert message["session_id"] == datetime_session_id
 
 
 @pytest.mark.api_key_required
-async def test_get_messages_with_various_encoded_characters(
-    client: AsyncClient, logged_in_headers
-):
+async def test_get_messages_with_various_encoded_characters(client: AsyncClient, logged_in_headers):
     """Test various URL-encoded characters in session IDs."""
     # Create a session ID with various special characters
     special_session_id = "test+session:2024@domain.com"
-    
+
     async with session_scope() as session:
         message = MessageCreate(
-            text="Special chars message", 
-            sender="User", 
-            sender_name="User", 
-            session_id=special_session_id
+            text="Special chars message", sender="User", sender_name="User", session_id=special_session_id
         )
         messagetable = MessageTable.model_validate(message, from_attributes=True)
         await aadd_messagetables([messagetable], session)
-    
+
     # URL encode the session ID
     encoded_session_id = quote(special_session_id)
-    
+
     # Test with URL-encoded session ID
     response = await client.get(
-        "api/v1/monitor/messages", 
-        params={"session_id": encoded_session_id}, 
-        headers=logged_in_headers
+        "api/v1/monitor/messages", params={"session_id": encoded_session_id}, headers=logged_in_headers
     )
-    
+
     assert response.status_code == 200, response.text
     messages = response.json()
     assert len(messages) == 1
@@ -234,19 +223,15 @@ async def test_get_messages_with_various_encoded_characters(
 
 
 @pytest.mark.api_key_required
-async def test_get_messages_empty_result_with_encoded_nonexistent_session(
-    client: AsyncClient, logged_in_headers
-):
+async def test_get_messages_empty_result_with_encoded_nonexistent_session(client: AsyncClient, logged_in_headers):
     """Test that URL-encoded non-existent session IDs return empty results."""
     nonexistent_session_id = "2024-12-31 23:59:59 UTC"
     encoded_session_id = quote(nonexistent_session_id)
-    
+
     response = await client.get(
-        "api/v1/monitor/messages", 
-        params={"session_id": encoded_session_id}, 
-        headers=logged_in_headers
+        "api/v1/monitor/messages", params={"session_id": encoded_session_id}, headers=logged_in_headers
     )
-    
+
     assert response.status_code == 200, response.text
     messages = response.json()
     assert len(messages) == 0
