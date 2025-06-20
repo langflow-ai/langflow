@@ -1,3 +1,17 @@
+"""Base model components for Langflow.
+
+This module provides the foundation for language model components in Langflow,
+including:
+- Base classes for LangChain model integration
+- Message handling and processing utilities
+- Stream processing and output formatting
+- Model configuration and parameter management
+
+The LCModelComponent class serves as the base for all language model components,
+providing consistent interfaces for chat models, LLMs, and other language models
+within the Langflow ecosystem.
+"""
+
 import importlib
 import json
 import warnings

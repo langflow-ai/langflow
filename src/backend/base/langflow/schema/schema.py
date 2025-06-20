@@ -1,3 +1,36 @@
+"""Core schema definitions for Langflow data types and execution results.
+
+This module defines the fundamental data structures used throughout Langflow
+for representing execution results, component outputs, and data flow.
+
+Key Schema Types:
+    - OutputValue: Union type for all possible component output values
+    - LogType: Enumeration of supported logging/output types
+    - InputType/OutputType: Type literals for component I/O classification
+    - StreamURL: Schema for streaming output locations
+
+Data Types Supported:
+    - Message: Chat/conversational data with sender information
+    - Data: Structured data with metadata and content
+    - DataFrame: Tabular data representation
+    - Native Python types: str, int, float, bool, dict, list
+
+The schema definitions ensure type safety and consistent data representation
+across the Langflow execution engine and API layer.
+
+Constants:
+    INPUT_FIELD_NAME = "input_value"  # Standard field name for component inputs
+
+Example Usage:
+    ```python
+    from langflow.schema.schema import OutputValue, LogType
+
+    # Component output can be any of these types
+    result: OutputValue = Message(text="Hello")
+    log_entry = build_output_logs(result, LogType.MESSAGE)
+    ```
+"""
+
 from collections.abc import Generator
 from enum import Enum
 from typing import Literal

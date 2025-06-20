@@ -1,3 +1,48 @@
+"""Cache management service for chat data with thread-safe operations.
+
+This module implements the ChatService which provides a caching layer
+specifically for chat-related data with support for both sync and async
+cache backends.
+
+The service acts as a wrapper around cache services with additional
+thread safety and handles both async and sync cache implementations:
+
+Cache Operations:
+    - set_cache(): Store chat data with automatic locking
+    - get_cache(): Retrieve cached chat data
+    - clear_cache(): Remove specific cache entries
+    - clear_all_cache(): Clear all cached data
+
+Thread Safety:
+    - async_cache_locks: defaultdict of asyncio.Lock per cache key
+    - _sync_cache_locks: defaultdict of threading.RLock per cache key
+    - Automatic lock selection based on cache service type
+
+Data Format:
+    Cached data is stored as:
+    ```python
+    {
+        "result": data,      # The actual cached data
+        "type": type(data)   # Type information for deserialization
+    }
+    ```
+
+Cache Service Integration:
+    Supports both cache service types:
+    - AsyncBaseCacheService: Native async operations
+    - CacheService: Sync operations wrapped with asyncio.to_thread()
+
+Example Usage:
+    ```python
+    chat_service = ChatService()
+    await chat_service.set_cache("session_123", {"messages": [...]})
+    data = await chat_service.get_cache("session_123")
+    ```
+
+The service automatically handles cache service detection and provides
+consistent async interface regardless of underlying cache implementation.
+"""
+
 import asyncio
 from collections import defaultdict
 from threading import RLock

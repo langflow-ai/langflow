@@ -1,3 +1,69 @@
+"""High-level graph execution functions with input processing and streaming.
+
+This module provides wrapper functions around the Graph.arun() method to
+handle input validation, session management, and result formatting for
+Langflow graph execution.
+
+Key Functions:
+    - run_graph_internal(): Core execution with multiple inputs support
+    - run_graph(): Single input execution wrapper
+    - parse_inputs(): Extracts and validates component inputs
+    - validate_and_repair_json(): JSON validation and repair utility
+
+Input Processing:
+    InputValueRequest objects are processed to extract:
+    - input_value: Raw input data (text, JSON, etc.)
+    - components: List of component IDs to target
+    - type: Input type classification
+    - session: Session ID for state management
+
+Execution Flow:
+    ```python
+    # Single input execution
+    outputs, session_id = await run_graph(
+        graph=graph,
+        input_value="Hello world",
+        input_type="chat",
+        session_id="session_123"
+    )
+
+    # Multiple inputs execution
+    outputs, session_id = await run_graph_internal(
+        graph=graph,
+        flow_id="flow_uuid",
+        inputs=[InputValueRequest(input_value="test", components=["comp1"])],
+        stream=True,
+        event_manager=event_manager
+    )
+    ```
+
+Result Format:
+    Returns tuple of (RunOutputs, session_id) where RunOutputs contains:
+    - Component execution results
+    - Error information if execution failed
+    - Streaming data if stream=True
+
+Session Management:
+    - Uses provided session_id or falls back to flow_id for state tracking
+    - Maintains session state across multiple executions
+    - Enables conversation continuity for chat-based flows
+    - Memory persistence through database storage
+
+Error Handling:
+    - JSON validation and repair via validate_and_repair_json()
+    - ComponentBuildError handling with detailed error messages
+    - Graceful failure with partial results when possible
+    - Exception wrapping for better error context
+
+Streaming Support:
+    - Real-time result delivery via AsyncIterator
+    - Event-driven updates through EventManager
+    - Background task processing for non-blocking execution
+
+The module handles fallback to environment variables when components
+reference undefined variables, based on settings configuration.
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast

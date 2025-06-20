@@ -1,3 +1,57 @@
+r"""HuggingFace Inference API embeddings component for Langflow.
+
+This module provides the HuggingFaceInferenceAPIEmbeddingsComponent which integrates
+HuggingFace's Text Embeddings Inference (TEI) into Langflow workflows. Supports both
+hosted Inference API and local/custom TEI deployments.
+
+Deployment Options:
+    - HuggingFace Hosted API: api-inference.huggingface.co (requires API key)
+    - Local TEI Server: Self-hosted inference server (no API key needed)
+    - Custom Endpoints: Private TEI deployments with custom URLs
+    - Docker Deployments: Containerized TEI instances
+
+Popular Models:
+    - BAAI/bge-large-en-v1.5: High-quality English embeddings (default)
+    - sentence-transformers/all-MiniLM-L6-v2: Lightweight multilingual
+    - intfloat/e5-large-v2: Strong performance across tasks
+    - BAAI/bge-small-en-v1.5: Faster, smaller model for English
+    - sentence-transformers/all-mpnet-base-v2: Balanced performance
+
+Key Features:
+    - Automatic local vs. hosted endpoint detection
+    - Health check validation for custom endpoints
+    - Retry mechanism with exponential backoff
+    - Support for any HuggingFace embedding model
+    - Flexible authentication (API key for hosted, none for local)
+
+Configuration:
+    - api_key: Required for hosted API, optional for local deployments
+    - inference_endpoint: URL for TEI server or hosted API
+    - model_name: HuggingFace model identifier
+
+Local Deployment Example:
+    ```bash
+    # Start TEI server locally
+    docker run -p 8080:80 ghcr.io/huggingface/text-embeddings-inference:latest \\
+        --model-id BAAI/bge-large-en-v1.5
+
+    # Configure component
+    inference_endpoint: http://localhost:8080
+    model_name: BAAI/bge-large-en-v1.5
+    api_key: (leave empty for local)
+    ```
+
+Hosted API Example:
+    ```
+    inference_endpoint: https://api-inference.huggingface.co/models/
+    model_name: BAAI/bge-large-en-v1.5
+    api_key: hf_your_api_key_here
+    ```
+
+The component includes automatic endpoint validation, health checking,
+and graceful handling of both local and hosted deployments.
+"""
+
 from urllib.parse import urlparse
 
 import requests

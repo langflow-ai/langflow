@@ -1,3 +1,21 @@
+"""Telemetry and analytics service for Langflow.
+
+This module provides the TelemetryService that handles usage analytics
+and telemetry data collection for Langflow, including:
+- Usage metrics collection and reporting
+- Performance monitoring and analytics
+- Error tracking and diagnostics
+- Feature usage statistics
+- OpenTelemetry integration for distributed tracing
+- Privacy-respecting telemetry with opt-out support
+- System information and version tracking
+- Component usage analytics
+
+The TelemetryService helps improve Langflow by collecting anonymous
+usage data while respecting user privacy preferences and providing
+insights for product development.
+"""
+
 from __future__ import annotations
 
 import asyncio

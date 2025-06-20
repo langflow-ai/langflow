@@ -1,3 +1,47 @@
+"""Cohere embeddings component for Langflow.
+
+This module provides the CohereEmbeddingsComponent which integrates Cohere's
+embedding models into Langflow workflows. Cohere offers multilingual embeddings
+optimized for various text analysis tasks.
+
+Supported Models:
+    - embed-english-v2.0: Latest English-only model with improved performance
+    - embed-multilingual-v2.0: Multilingual model supporting 100+ languages
+    - embed-english-light-v2.0: Lightweight English model for faster inference
+    - embed-multilingual-light-v2.0: Lightweight multilingual model
+
+Key Features:
+    - Multilingual support with high-quality embeddings
+    - Dynamic model fetching from Cohere API
+    - Configurable truncation strategies
+    - Retry mechanisms for reliability
+    - Custom user-agent and timeout settings
+
+Configuration Options:
+    - api_key: Required Cohere API key with real-time refresh
+    - model_name: Dropdown with available models (refreshable)
+    - truncate: Text truncation strategy ("NONE", "START", "END")
+    - max_retries: Number of retry attempts for failed requests
+    - user_agent: Custom user agent string for API calls
+    - request_timeout: Timeout for API requests in seconds
+
+Multilingual Capabilities:
+    The multilingual models support:
+    - 100+ languages with high-quality embeddings
+    - Cross-lingual semantic similarity
+    - Code-switching and mixed-language text
+    - Consistent embedding space across languages
+
+Performance Characteristics:
+    - Standard models: Higher accuracy, larger size
+    - Light models: 50% smaller, faster inference
+    - Optimized for semantic search and clustering
+    - Efficient batch processing support
+
+The component uses langchain_cohere.CohereEmbeddings and provides dynamic
+model discovery with real-time API integration.
+"""
+
 from typing import Any
 
 import cohere

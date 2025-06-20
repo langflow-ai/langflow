@@ -1,3 +1,53 @@
+"""Directed acyclic graph (DAG) execution engine for Langflow workflows.
+
+This module implements the Graph class which represents a computational graph
+of connected components (vertices) and manages their execution order and data flow.
+
+The Graph class provides:
+    - Topological sorting of vertices for execution order
+    - Cycle detection and validation (CycleEdge support for deliberate cycles)
+    - Asynchronous execution with streaming results
+    - State management through GraphStateManager and RunnableVerticesManager
+    - Transaction logging and error handling
+
+Graph Construction:
+    The graph is built from flow data containing vertex definitions and edges:
+
+    >>> from langflow.graph.graph.base import Graph
+    >>> graph = Graph(flow_id="uuid", user_id="user123")
+    >>> await graph.build(flow_data, components_path="./components")
+
+Execution Flow:
+    1. build() - Constructs vertices and edges from flow data
+    2. validate() - Checks for cycles and validates structure
+    3. prepare() - Sorts vertices topologically and initializes state
+    4. run() - Executes vertices in dependency order with streaming
+
+State Management:
+    - GraphStateManager: Handles graph-level state persistence
+    - RunnableVerticesManager: Tracks vertex execution status and dependencies
+    - Vertex states: ACTIVE, INACTIVE, SUCCESS, ERROR
+    - Context management: Shared state and variable passing between components
+    - Memory integration: Automatic message storage and retrieval for chat flows
+
+Performance Features:
+    - Lazy vertex instantiation: Components created only when needed
+    - Parallel execution: Independent vertices run concurrently
+    - Streaming support: Real-time result delivery via AsyncIterator
+    - Caching: Vertex results cached to avoid recomputation
+
+Key Attributes:
+    vertices (dict[str, Vertex]): Component instances indexed by ID
+    edges (list[Edge]): Connections between vertices
+    _sorted_vertices_layers (list[list[str]]): Topologically sorted execution layers
+    _start_time (datetime): Graph execution start timestamp
+    inactivated_vertices (set): Vertices marked as inactive
+    vertices_to_run (set[str]): Vertices queued for execution
+
+The Graph handles both simple linear flows and complex branching workflows
+with parallel execution where dependencies allow.
+"""
+
 from __future__ import annotations
 
 import asyncio

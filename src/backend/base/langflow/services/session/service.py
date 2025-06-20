@@ -1,3 +1,20 @@
+"""Session management service for Langflow.
+
+This module provides the SessionService that handles session lifecycle
+and state management for user interactions with Langflow, including:
+- Session creation, persistence, and cleanup
+- Session data caching and retrieval
+- Session ID generation and validation
+- Flow state management across sessions
+- Integration with cache services for session storage
+- Session expiration and cleanup mechanisms
+- Cross-session data sharing and isolation
+
+The SessionService ensures consistent user experience by maintaining
+session state and providing efficient access to session data across
+multiple requests and interactions.
+"""
+
 import asyncio
 from typing import TYPE_CHECKING
 

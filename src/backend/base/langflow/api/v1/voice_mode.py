@@ -1,3 +1,41 @@
+"""WebSocket endpoints for real-time voice interaction with Langflow flows.
+
+This module implements two main WebSocket endpoints that enable voice-based
+interaction with Langflow workflows through OpenAI's Realtime API:
+
+Endpoints:
+    - `/voice/ws/flow_as_tool/{flow_id}[/{session_id}]`: Registers a Langflow
+      flow as a tool for OpenAI's Realtime API, enabling voice-triggered flow execution
+    - `/voice/ws/flow_tts/{flow_id}[/{session_id}]`: Direct text-to-speech endpoint
+      for voice output from flow results
+
+Key Components:
+    - VoiceConfig: Configuration for voice settings including ElevenLabs integration
+    - TTSConfig: Text-to-speech configuration with OpenAI and ElevenLabs support
+    - SendQueues: Async message queue manager for bidirectional WebSocket communication
+    - Voice Activity Detection (VAD) using webrtcvad for barge-in functionality
+
+Audio Processing:
+    - PCM16 audio format at 24kHz (resampled to 16kHz for VAD)
+    - Base64 encoding for WebSocket transmission
+    - Real-time audio streaming with configurable silence detection
+
+Example Usage:
+    Connect to voice endpoint with WebSocket client:
+    ```javascript
+    const ws = new WebSocket('ws://localhost:7860/api/v1/voice/ws/flow_as_tool/flow-uuid');
+    ws.send(JSON.stringify({
+        type: "input_audio_buffer.append",
+        audio: base64AudioData
+    }));
+    ```
+
+Dependencies:
+    - OpenAI API key (from environment or user variables)
+    - Optional: ElevenLabs API key for enhanced TTS
+    - webrtcvad package for voice activity detection
+"""
+
 import asyncio
 import base64
 import json

@@ -1,3 +1,44 @@
+r"""Python REPL tool component for code execution in Langflow (deprecated).
+
+This module provides the PythonREPLToolComponent which enables Python code
+execution within Langflow workflows using LangChain's experimental Python REPL.
+
+DEPRECATED: This component is deprecated in favor of the newer Python Code
+Structured Tool component which provides better security and functionality.
+
+Functionality:
+    - Execute arbitrary Python code in a sandboxed REPL environment
+    - Access to standard Python libraries and common data science packages
+    - Integration with LangChain agents as a tool
+    - Return both stdout output and execution results
+
+Security Considerations:
+    - EXPERIMENTAL: Uses langchain_experimental.utilities.PythonREPL
+    - Code execution runs in the same process as Langflow
+    - No sandboxing or security restrictions applied
+    - Should only be used in trusted environments
+
+Tool Configuration:
+    - name: Tool identifier for agent usage (default: "python_repl")
+    - description: Tool description for agent context
+    - code: Python code string to execute
+
+Example Usage:
+    ```python
+    # Configure tool inputs
+    name = "python_calculator"
+    description = "Execute Python code for calculations"
+    code = "result = 2 + 3\nprint(f'Answer: {result}')"
+
+    # Returns both output and any printed results
+    ```
+
+The component wraps langchain_experimental.utilities.PythonREPL and provides
+Langflow-specific input handling and error management.
+
+Migration: Use PythonCodeStructuredTool for new implementations.
+"""
+
 import importlib
 
 from langchain.tools import StructuredTool

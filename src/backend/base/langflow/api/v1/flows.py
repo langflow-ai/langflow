@@ -1,3 +1,19 @@
+"""Flow management API endpoints for Langflow.
+
+This module provides comprehensive CRUD operations and management functionality for Langflow flows,
+including:
+- Flow creation, reading, updating, and deletion (CRUD)
+- Flow import/export capabilities with JSON and ZIP formats
+- Flow sharing and access control management
+- Flow validation and component verification
+- Pagination and filtering for flow listings
+- Flow endpoint management for API access
+- Integration with folder organization and user permissions
+
+The endpoints handle the core workflow management lifecycle, enabling users to
+build, deploy, and manage their AI workflows through a RESTful interface.
+"""
+
 from __future__ import annotations
 
 import io

@@ -1,3 +1,40 @@
+"""OpenRouter language model component for accessing multiple LLM providers.
+
+This module provides the OpenRouterComponent which integrates with OpenRouter's
+unified API to access multiple language model providers through a single interface.
+OpenRouter acts as a proxy/gateway to models from OpenAI, Anthropic, Google, Meta, and others.
+
+Supported Providers via OpenRouter:
+    - OpenAI: GPT-4, GPT-3.5, GPT-4 Turbo variants
+    - Anthropic: Claude 3 Opus, Sonnet, Haiku models
+    - Google: PaLM, Gemini Pro models
+    - Meta: Llama 2, Code Llama variants
+    - Mistral: Mistral 7B, Mixtral models
+    - Many others updated dynamically via API
+
+Key Features:
+    - Dynamic model fetching from OpenRouter API
+    - Real-time model list refresh with availability status
+    - Cost tracking per model (input/output token pricing)
+    - Context window information for each model
+    - Provider-specific model capabilities and limitations
+
+Configuration:
+    - api_key: OpenRouter API key for authentication
+    - model_name: Model identifier (e.g., "openai/gpt-4", "anthropic/claude-3-opus")
+    - max_tokens: Maximum response length
+    - temperature: Randomness control (0.0-2.0)
+    - Advanced parameters: top_p, frequency_penalty, presence_penalty
+
+Dynamic Model Discovery:
+    The component automatically fetches available models from OpenRouter's
+    /models endpoint, providing real-time model availability and pricing.
+    Models are categorized by provider and include context limits.
+
+Uses langchain_openai.ChatOpenAI as the underlying implementation with
+OpenRouter-specific base URL and authentication handling.
+"""
+
 from collections import defaultdict
 from typing import Any
 

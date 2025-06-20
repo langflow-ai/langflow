@@ -1,3 +1,19 @@
+"""Storage service for file and data management in Langflow.
+
+This module provides the StorageService abstract base class that defines
+the interface for file storage and data persistence operations, including:
+- File upload, download, and management
+- Data persistence and retrieval
+- Storage backend abstraction (local, cloud, etc.)
+- File path management and organization
+- Integration with session and settings services
+- Storage quota and access control
+- Async file operations for performance
+
+The StorageService enables flexible storage backends while providing
+a consistent interface for file operations across the Langflow application.
+"""
+
 from __future__ import annotations
 
 from abc import abstractmethod

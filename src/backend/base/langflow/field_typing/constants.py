@@ -1,3 +1,30 @@
+"""Type aliases and constants for Langflow component field typing system.
+
+This module defines TypeAlias mappings between LangChain types and Langflow's
+internal type system, enabling type-safe component connections and validation.
+
+The type aliases provide a mapping layer between:
+- LangChain's core types (BaseLLM, Embeddings, etc.)
+- Langflow's component field types for the visual editor
+- Type validation in the graph execution engine
+
+LangChain Type Mappings:
+    - LanguageModel: BaseLLM, BaseLanguageModel, BaseChatModel
+    - Embeddings: Embeddings (vector generation)
+    - Memory: BaseMemory, BaseChatMemory, BaseChatMessageHistory
+    - DocumentLoader: BaseLoader (data ingestion)
+    - OutputParser: BaseOutputParser, BaseLLMOutputParser
+    - AgentExecutor: LangChain agent execution framework
+
+Component Field Types:
+    - Input/Output type validation for visual connections
+    - Runtime type checking during graph execution
+    - Frontend type information for component compatibility
+
+The typing system ensures that only compatible components can be connected
+in the visual flow editor and provides runtime validation during execution.
+"""
+
 from collections.abc import Callable
 from typing import Text, TypeAlias, TypeVar
 
