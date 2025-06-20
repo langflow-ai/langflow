@@ -64,6 +64,8 @@ test(
       timeout: 1000,
     });
 
+    await page.waitForTimeout(5000);
+
     await page.getByTestId("icon-FreezeAll").click();
     await page.waitForSelector('[data-testid="frozen-icon"]', {
       timeout: 20000,
@@ -73,7 +75,7 @@ test(
 
     await page.getByTestId("div-generic-node").getByRole("button").click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(5000);
 
     await page.getByTestId("output-inspection-output text-textinput").click();
 
