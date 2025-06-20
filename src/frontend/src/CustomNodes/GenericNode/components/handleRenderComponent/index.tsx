@@ -3,7 +3,6 @@ import useFlowStore from "@/stores/flowStore";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { Connection, Handle, Position } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
   isValidConnection,
@@ -179,10 +178,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
-
-  const isLocked = useFlowStore(
-    useShallow((state) => state.currentFlow?.locked),
-  );
 
   const {
     setHandleDragging,
@@ -389,10 +384,16 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     [],
   );
 
+  // Memoize the validation function
+  const validateConnection = useCallback(
+    (connection: any) => isValidConnection(connection),
+    [],
+  );
+
   return (
     <div>
       <ShadTooltip
-        open={openTooltip && !isLocked}
+        open={openTooltip}
         setOpen={setOpenTooltip}
         styleClasses={cn("tooltip-fixed-width custom-scroll nowheel bottom-2")}
         delayDuration={1000}
@@ -413,16 +414,13 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           position={left ? Position.Left : Position.Right}
           id={myId}
           isValidConnection={(connection) =>
-            isLocked ? false : isValidConnection(connection as Connection)
+            isValidConnection(connection as Connection)
           }
           className={cn(
             `group/handle z-50 transition-all`,
             !showNode && "no-show",
           )}
-          style={{
-            ...BASE_HANDLE_STYLES,
-            pointerEvents: isLocked ? "none" : "auto",
-          }}
+          style={BASE_HANDLE_STYLES}
           onClick={handleClick}
           onMouseUp={handleMouseUp}
           onContextMenu={handleContextMenu}
