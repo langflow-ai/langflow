@@ -1,6 +1,7 @@
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
+import useAlertStore from "@/stores/alertStore";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ListSelectionComponent from "../../../../../CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "../../../../../utils/utils";
@@ -17,6 +18,7 @@ export default function McpComponent({
 }: InputProps<string, any>): JSX.Element {
   const { data: mcpServers } = useGetMCPServers();
   const { mutate: addMcpServer } = useAddMCPServer();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const options = useMemo(
     () =>
       mcpServers?.map((server) => ({
@@ -93,6 +95,12 @@ export default function McpComponent({
         onSuccess: () => {
           handleSuccess(name);
         },
+        onError: (error) => {
+          setErrorData({
+            title: "Error adding MCP server",
+            list: [error.message],
+          });
+        },
       },
     );
   };
@@ -117,7 +125,7 @@ export default function McpComponent({
 
   return (
     <div className="flex w-full flex-col gap-2">
-      {options == null || options.length > 0 ? (
+      {options == null || options.length > 0 || showSaveButton ? (
         <div className="flex w-full gap-2">
           <Button
             variant={!showSaveButton ? "primary" : "secondary"}
