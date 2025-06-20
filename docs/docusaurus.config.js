@@ -200,9 +200,10 @@ const config = {
             from: ["/starter-projects-document-qa", "/tutorials-document-qa"],
           },
           {
-            to: "/starter-projects-simple-agent",
+            to: "/simple-agent",
             from: [
               "/math-agent",
+              "/starter-projects-simple-agent",
               "/starter-projects-math-agent",
               "/tutorials-math-agent",
             ],
@@ -267,6 +268,14 @@ const config = {
             from: [
               "/deployment-kubernetes",
             ],
+          },
+          {
+            to: "/basic-prompting",
+            from: "/starter-projects-basic-prompting",
+          },
+          {
+            to: "/vector-store-rag",
+            from: "/starter-projects-vector-store-rag",
           },
           // add more redirects like this
           // {

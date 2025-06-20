@@ -17,7 +17,7 @@ The agent then uses a connected LLM to reason through the problem to decide whic
 
 ## Use an agent in a flow
 
-The [simple agent starter project](/starter-projects-simple-agent) uses an [agent component](#agent-component) connected to URL and Calculator tools to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use. Tools are connected to agent components at the **Tools** port.
+The [simple agent starter project](/simple-agent) uses an [agent component](#agent-component) connected to URL and Calculator tools to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use. Tools are connected to agent components at the **Tools** port.
 
 ![Simple agent starter flow](/img/starter-flow-simple-agent.png)
 

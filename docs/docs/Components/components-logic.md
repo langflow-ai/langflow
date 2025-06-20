@@ -237,7 +237,7 @@ The Run Flow component can also be used as a tool when connected to an [Agent](/
 When you select a flow, the component fetches the flow's graph structure and uses it to generate the inputs and outputs for the Run Flow component.
 
 To use the Run Flow component as a tool, do the following:
-1. Add the **Run Flow** component to the [Simple Agent](/starter-projects-simple-agent) flow.
+1. Add the **Run Flow** component to the [Simple Agent](/simple-agent) flow.
 2. In the **Flow Name** menu, select the sub-flow you want to run.
 The appearance of the **Run Flow** component changes to reflect the inputs and outputs of the selected flow.
 3. On the **Run Flow** component, enable **Tool Mode**.

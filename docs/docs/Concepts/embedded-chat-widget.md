@@ -16,7 +16,7 @@ For a sandbox example, see the [Langflow embedded chat CodeSandbox](https://code
 The following example includes the minimum required inputs, called [props](https://react.dev/learn/passing-props-to-a-component) in React, for using the chat widget in your HTML code, which are `host_url` and `flow_id`.
 The `host_url` value must be `HTTPS`, and may not include a `/` after the URL.
 The `flow_id` value is found in your Langflow URL.
-For a Langflow server running the [Basic prompting flow](/starter-projects-basic-prompting) at `https://c822-73-64-93-151.ngrok-free.app/flow/dcbed533-859f-4b99-b1f5-16fce884f28f`, your chat widget code is similar to the following:
+For a Langflow server running the [Basic prompting flow](/basic-prompting) at `https://c822-73-64-93-151.ngrok-free.app/flow/dcbed533-859f-4b99-b1f5-16fce884f28f`, your chat widget code is similar to the following:
 ```html
 <html>
   <head>

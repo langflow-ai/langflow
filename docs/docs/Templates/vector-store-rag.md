@@ -1,6 +1,6 @@
 ---
 title: Vector store RAG
-slug: /starter-projects-vector-store-rag
+slug: /vector-store-rag
 ---
 
 import Icon from "@site/src/components/icon";

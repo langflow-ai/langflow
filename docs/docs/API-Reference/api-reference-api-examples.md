@@ -116,7 +116,7 @@ A dictionary of all Langflow components.
 Execute a specified flow by ID or name.
 The flow is executed as a batch, but LLM responses can be streamed.
 
-This example runs a [Basic Prompting](/starter-projects-basic-prompting) flow with a given `flow_id` and passes a JSON object as the input value.
+This example runs a [Basic Prompting](/basic-prompting) flow with a given `flow_id` and passes a JSON object as the input value.
 
 The parameters are passed in the request body. In this example, the values are the default values.
 
