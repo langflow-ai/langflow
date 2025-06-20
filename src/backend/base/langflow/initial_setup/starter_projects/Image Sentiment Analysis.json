@@ -69,14 +69,14 @@
             "id": "LanguageModelComponent-2h2qm",
             "name": "model_output",
             "output_types": [
-              "Message"
+              "LanguageModel"
             ]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "StructuredOutput-eoFyT",
             "inputTypes": [
-              "Message"
+              "LanguageModel"
             ],
             "type": "str"
           }
@@ -86,7 +86,7 @@
         "source": "LanguageModelComponent-2h2qm",
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-2h2qmœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-eoFyT",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-eoFyTœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-eoFyTœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -125,14 +125,14 @@
             "id": "ChatInput-CbbPG",
             "name": "message",
             "output_types": [
-              "LanguageModel"
+              "Message"
             ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-YHUqJ",
             "inputTypes": [
-              "LanguageModel"
+              "Message"
             ],
             "type": "other"
           }
@@ -142,7 +142,7 @@
         "source": "ChatInput-CbbPG",
         "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-CbbPGœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-YHUqJ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-YHUqJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-YHUqJœ, œinputTypesœ: [œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
