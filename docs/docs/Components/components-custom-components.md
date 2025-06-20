@@ -42,7 +42,7 @@ class MyCsvReader(Component):
 * **documentation**: An optional link to external docs.
 
 :::tip Icon usage
-Langflow uses [Lucide Icons](https://lucide.dev/icons) for component visualization. To assign an icon to your component, set the icon attribute to the name of a Lucide icon (e.g., "sparkles", "file-text", "table"). Just provide the icon name as a string and Langflow will render it automatically.
+Langflow uses [Lucide](https://lucide.dev/icons) for icons. To assign an icon to your component, set the icon attribute to the name of a Lucide icon as a string, such as `icon = "file-text"`. Langflow renders icons from the Lucide library automatically.
 :::
 
 ### Structure of a custom component
