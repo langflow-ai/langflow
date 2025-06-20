@@ -60,44 +60,14 @@ test(
 
     await page.getByTestId("freeze-all-button-modal").click();
 
-    // Use polling approach to wait for frozen icon with better error handling
-    let frozenIconVisible = false;
-    let attempts = 0;
-    const maxAttempts = 40; // 40 seconds total
+    await page.waitForSelector('[data-testid="icon-FreezeAll"]', {
+      timeout: 1000,
+    });
 
-    while (!frozenIconVisible && attempts < maxAttempts) {
-      try {
-        // Check if frozen icon is visible
-        const frozenIcon = page.getByTestId("frozen-icon");
-        const isVisible = await frozenIcon.isVisible().catch(() => false);
-
-        if (isVisible) {
-          frozenIconVisible = true;
-          break;
-        }
-
-        // Wait before next attempt
-        await page.waitForTimeout(1000);
-        attempts++;
-
-        // Log progress every 10 seconds for debugging
-        if (attempts % 10 === 0) {
-          console.log(
-            `Waiting for frozen icon... Attempt ${attempts}/${maxAttempts}`,
-          );
-        }
-      } catch (error) {
-        console.log(
-          `Error checking frozen icon on attempt ${attempts}:`,
-          error,
-        );
-        await page.waitForTimeout(1000);
-        attempts++;
-      }
-    }
-
-    await page.waitForTimeout(1000);
-    // Final assertion
+    await page.getByTestId("icon-FreezeAll").click();
+    await page.waitForSelector('[data-testid="frozen-icon"]', {
+      timeout: 20000,
+    });
     await expect(page.getByTestId("frozen-icon")).toBeVisible();
     await page.keyboard.press("Escape");
 
