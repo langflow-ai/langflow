@@ -12,6 +12,7 @@ export const useStartRecording = async (
   workletCode: string,
   processorRef: MutableRefObject<AudioWorkletNode | null>,
   setStatus: (status: string) => void,
+  isLLMRespondingRef?: MutableRefObject<boolean>,
 ) => {
   try {
     const selectedMicrophone = localStorage.getItem("lf_selected_microphone");
@@ -44,7 +45,6 @@ export const useStartRecording = async (
       try {
         await audioContextRef.current.audioWorklet.addModule(workletUrl);
       } catch (err) {
-        // Check if the error is because the processor is already registered
         if (
           err instanceof DOMException &&
           err.message.includes("already been loaded")
@@ -65,7 +65,10 @@ export const useStartRecording = async (
 
       processorRef.current.port.onmessage = (event) => {
         if (event.data.type === "input" && event.data.audio && wsRef.current) {
-          // Only send audio if it's not detected as silence
+          if (isLLMRespondingRef?.current) {
+            return;
+          }
+
           const base64Audio = btoa(
             String.fromCharCode.apply(
               null,
