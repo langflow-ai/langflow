@@ -114,7 +114,7 @@ async def get_servers(
 
     # Check all of the tool counts for each server concurrently
     async def check_server(server_name: str) -> dict:
-        server_info = {"name": server_name, "mode": None, "toolsCount": None}
+        server_info: dict[str, str | int | None] = {"name": server_name, "mode": None, "toolsCount": None}
         try:
             mode, tool_list, _ = await update_tools(
                 server_name=server_name,
