@@ -155,7 +155,7 @@ export default function NodeDescription({
             maxLength={charLimit}
             className={cn(
               "nowheel w-full text-xs focus:border-primary focus:ring-0",
-              stickyNote ? "p-0" : "px-2 py-0.5",
+              stickyNote ? "p-0 pt-0.5 !text-mmd" : "px-2 py-0.5",
               inputClassName,
             )}
             autoFocus
