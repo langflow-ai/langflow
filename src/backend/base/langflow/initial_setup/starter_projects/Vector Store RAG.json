@@ -553,6 +553,7 @@
               }
             }
           },
+          "selected_output": "message",
           "type": "ChatInput"
         },
         "dragging": false,
@@ -734,6 +735,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "prompt",
           "type": "Prompt"
         },
         "dragging": false,
@@ -939,6 +941,7 @@
               }
             }
           },
+          "selected_output": "chunks",
           "type": "SplitText"
         },
         "dragging": false,
@@ -1389,9 +1392,6 @@
                 "group_outputs": false,
                 "method": "build_embeddings",
                 "name": "embeddings",
-                "required_inputs": [
-                  "openai_api_key"
-                ],
                 "selected": "Embeddings",
                 "tool_mode": true,
                 "types": [
@@ -1815,6 +1815,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "embeddings",
           "type": "OpenAIEmbeddings"
         },
         "dragging": false,
@@ -1924,9 +1925,6 @@
                 "group_outputs": false,
                 "method": "build_embeddings",
                 "name": "embeddings",
-                "required_inputs": [
-                  "openai_api_key"
-                ],
                 "selected": "Embeddings",
                 "tool_mode": true,
                 "types": [
@@ -2350,6 +2348,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "embeddings",
           "type": "OpenAIEmbeddings"
         },
         "dragging": false,
@@ -2405,11 +2404,24 @@
                 "group_outputs": false,
                 "method": "load_files",
                 "name": "dataframe",
-                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Raw Content",
+                "group_outputs": false,
+                "method": "load_files_message",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -2616,6 +2628,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "dataframe",
           "type": "File"
         },
         "dragging": false,
@@ -2784,7 +2797,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2799,9 +2811,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -3110,6 +3119,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
           "type": "OpenAIModel"
         },
@@ -3285,6 +3295,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "parsed_text",
           "showNode": true,
           "type": "parser"
         },
@@ -3355,11 +3366,6 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "required_inputs": [
-                  "collection_name",
-                  "database_name",
-                  "token"
-                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -3374,7 +3380,6 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -3399,6 +3404,7 @@
               }
             ],
             "pinned": false,
+            "selected_output": "dataframe",
             "template": {
               "_type": "Component",
               "advanced_search_filter": {
@@ -4061,6 +4067,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "dataframe",
           "showNode": true,
           "type": "AstraDB"
         },
@@ -4131,11 +4138,6 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "required_inputs": [
-                  "collection_name",
-                  "database_name",
-                  "token"
-                ],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -4150,7 +4152,6 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [

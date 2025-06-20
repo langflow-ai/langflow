@@ -39,6 +39,7 @@ on:
         required: true
         type: string
       pre_release:
+        description: "Whether this is a pre-release."
         required: false
         type: boolean
         default: false
@@ -49,7 +50,7 @@ on:
 
 
 env:
-  POETRY_VERSION: "1.8.2"
+  PYTHON_VERSION: "3.13"
   TEST_TAG: "langflowai/langflow:test"
 
 jobs:
@@ -191,7 +192,12 @@ jobs:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
           persist-credentials: true
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
       - name: Install the project
         run: |
           if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
@@ -337,9 +343,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
 
       - name: Restart HuggingFace Spaces Build
         run: |

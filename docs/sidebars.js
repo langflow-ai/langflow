@@ -41,7 +41,6 @@ module.exports = {
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
         "Concepts/embedded-chat-widget",
-        "Concepts/mcp-server",
         "Concepts/concepts-file-management",
         "Concepts/concepts-voice-mode",
       ],
@@ -72,6 +71,14 @@ module.exports = {
       items: [
         "Agents/agents-overview",
         "Agents/agent-tool-calling-agent-component",
+      ],
+    },
+    {
+      type: "category",
+      label: "Model Context Protocol (MCP)",
+      items: [
+        "Concepts/mcp-server",
+        "Components/mcp-client",
       ],
     },
     {

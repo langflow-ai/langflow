@@ -48,9 +48,12 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
       - name: Install the project
         run: uv sync
       - name: Run unit tests
@@ -59,8 +62,7 @@ jobs:
           timeout_minutes: 12
           max_attempts: 2
           command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5"
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
@@ -72,15 +74,17 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
       - name: Install the project
         run: uv sync
       - name: Run integration tests
         run: make integration_tests_no_api_keys
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
@@ -93,9 +97,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
 
       - name: Check Version
         id: check-version
@@ -131,10 +138,10 @@ jobs:
         if: steps.check-version.outputs.skipped == 'false'
         run: |
           source new-venv/bin/activate
-          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          timeout 120 bash -c 'until curl -f http://localhost:7860/api/v1/auto_login; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
           sleep 20 # give the server some time to terminate
@@ -145,5 +152,4 @@ jobs:
           else
             echo "Server terminated successfully"
           fi
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+

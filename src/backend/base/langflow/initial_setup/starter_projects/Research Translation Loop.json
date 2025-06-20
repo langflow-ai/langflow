@@ -336,7 +336,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ArXivComponent"
+          "type": "ArXivComponent",
+          "selected_output": "dataframe"
         },
         "dragging": false,
         "id": "ArXivComponent-ylKFb",
@@ -402,7 +403,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -417,9 +417,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -678,7 +675,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "AnthropicModel"
+          "type": "AnthropicModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "AnthropicModel-G2MkR",
@@ -784,7 +782,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "MessagetoData"
+          "type": "MessagetoData",
+          "selected_output": "data"
         },
         "dragging": false,
         "id": "MessagetoData-jYebP",
@@ -1403,7 +1402,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "id": "ChatInput-5o3G0",
@@ -1635,7 +1635,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "ParserComponent"
+          "type": "ParserComponent",
+          "selected_output": "parsed_text"
         },
         "dragging": false,
         "id": "ParserComponent-ZhlLQ",
@@ -1753,7 +1754,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "LoopComponent"
+          "type": "LoopComponent",
+          "selected_output": "done"
         },
         "dragging": false,
         "id": "LoopComponent-9BK8B",
