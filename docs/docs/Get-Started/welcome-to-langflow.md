@@ -1,6 +1,7 @@
 ---
 title: Welcome to Langflow
 slug: /
+hide_table_of_contents: true
 ---
 
 Langflow is a new, visual framework for building multi-agent and RAG applications. It is open-source, Python-powered, fully customizable, and LLM and vector store agnostic.
