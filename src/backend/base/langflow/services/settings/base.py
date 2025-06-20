@@ -256,6 +256,14 @@ class Settings(BaseSettings):
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
 
+    # Starter Projects
+    create_starter_projects: bool = True
+    """If set to True, Langflow will create starter projects. If False, skips all starter project setup.
+    Note that this doesn't check if the starter projects are already loaded in the db;
+    this is intended to be used to skip all startup project logic."""
+    update_starter_projects: bool = True
+    """If set to True, Langflow will update starter projects."""
+
     @field_validator("event_delivery", mode="before")
     @classmethod
     def set_event_delivery(cls, value, info):
