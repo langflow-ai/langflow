@@ -3,8 +3,8 @@ import httpx
 from langflow.components.agentql.utils import (
     QUERY_DOCS_URL,
     QUERY_DATA_API_DOCS_URL,
-    NO_INPUT_MESSAGE,
-    DOUBLE_INPUT_MESSAGE,
+    MISSING_REQUIRED_INPUTS_MESSAGE,
+    TOO_MANY_INPUTS_MESSAGE,
     handle_agentql_error,
 )
 from langflow.custom import Component
@@ -131,10 +131,10 @@ class AgentQL(Component):
         }
 
         if not self.prompt and not self.query:
-            self.status = NO_INPUT_MESSAGE
+            self.status = MISSING_REQUIRED_INPUTS_MESSAGE
             raise ValueError(self.status)
         if self.prompt and self.query:
-            self.status = DOUBLE_INPUT_MESSAGE
+            self.status = TOO_MANY_INPUTS_MESSAGE
             raise ValueError(self.status)
 
         try:

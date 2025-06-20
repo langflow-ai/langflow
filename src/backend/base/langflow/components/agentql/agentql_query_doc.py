@@ -7,8 +7,8 @@ from langflow.base.data import BaseFileComponent
 from langflow.components.agentql.utils import (
     QUERY_DOCUMENT_API_DOCS_URL,
     QUERY_DOCS_URL,
-    DOUBLE_INPUT_MESSAGE,
-    NO_INPUT_MESSAGE,
+    TOO_MANY_INPUTS_MESSAGE,
+    MISSING_REQUIRED_INPUTS_MESSAGE,
     handle_agentql_error,
 )
 from langflow.io import (
@@ -97,10 +97,10 @@ class AgentQLQueryDocument(BaseFileComponent):
         }
 
         if not self.prompt and not self.query:
-            self.status = NO_INPUT_MESSAGE
+            self.status = MISSING_REQUIRED_INPUTS_MESSAGE
             raise ValueError(self.status)
         if self.prompt and self.query:
-            self.status = DOUBLE_INPUT_MESSAGE
+            self.status = TOO_MANY_INPUTS_MESSAGE
             raise ValueError(self.status)
 
         path = file.path
