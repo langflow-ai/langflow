@@ -15,25 +15,33 @@ Learn more about components and how they work on this page.
 
 ## Component menu
 
-Each component is unique, but all have a menu bar at the top that looks something like the following:
+All components have a **Component menu** that contains meta settings for the component.
 
-<img src="/img/openai-model-component.png" alt="Open AI component" style={{display: 'block', margin: 'auto', width: 300}} />
+To access this menu for a specific component, select a component in a flow.
+The menu appears above the selected component.
 
-Use the component controls to do the following:
+<img src="/img/openai-model-component.png" alt="OpenAI component with the component menu visible" style={{display: 'block', margin: 'auto', width: 300}} />
 
-- **Code** — Modify the component's Python code and save your changes.
-- **Controls** — Adjust all component parameters.
-- **Freeze** — After a component runs, lock its previous output state to prevent it from re-running.
+You can use the controls in the **Component menu** to manage and configure the component on a high level, including the following actions:
+
+- **Code**: Modify the component settings by directly editing the component's Python code.
+- **Controls**: Adjust all component parameters, including optional settings that are hidden by default.
+- **Tool Mode**: Enable tool mode when combining a component with an agent component.
+- **Freeze**: After a component runs, lock its previous output state to prevent it from re-running.
 
 Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
+## Component logs
+
 To view a component's output and logs, click the <Icon name="TextSearch" aria-label="Inspect icon" /> icon.
+
+## Run one component
 
 To run a single component, click <Icon name="Play" aria-label="Play button" /> **Play**.
 
-A <Icon name="Check" aria-label="Checkmark" />**Checkmark** indicates that the component ran successfully.
+Running a single component with the **Play** button is different from running the entire flow. In a single component run, the `build_vertex` function is called, which builds and runs only the single component with direct inputs provided through the UI (the `inputs_dict` parameter). The `VertexBuildResult` data is passed to the `build_and_run` method, which calls the component's `build` method and runs it. Unlike running the full flow, running a single component does not automatically execute its upstream dependencies.
 
-Running a single component with the **Play** button is different from running the entire flow. In a single component run, the `build_vertex` function is called, which builds and runs only the single component with direct inputs provided through the UI (the `inputs_dict` parameter). The  `VertexBuildResult` data is passed to the `build_and_run` method, which calls the component's `build` method and runs it. Unlike running the full flow, running a single component does not automatically execute its upstream dependencies.
+A <Icon name="Check" aria-label="Checkmark" /> **Checkmark** indicates that the component ran successfully.
 
 ## Component ports
 

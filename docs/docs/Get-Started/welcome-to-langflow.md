@@ -17,12 +17,16 @@ Langflow is an intuitive visual flow builder. This drag-and-drop interface allow
 
 ## Use cases
 
-Langflow can be used for a wide range of AI applications, including:
+Langflow can be used for a wide range of AI applications.
+For example:
 
 * [Craft intelligent chatbots](/memory-chatbot)
 * [Build document analysis systems](/document-qa)
 * [Generate compelling content](/blog-writer)
 * [Orchestrate multi-agent applications](/starter-projects-simple-agent)
+* [Create agents with Langflow](/agents-overview)
+* [Use Langflow as an MCP server](/mcp-server)
+* [Use Langflow as an MCP client](/mcp-client)
 
 ## Community and support
 
@@ -30,10 +34,9 @@ Join Langflow's vibrant community of developers and AI enthusiasts. See the foll
 
 * [Contribute to Langflow](contributing-how-to-contribute)
 * [Langflow Discord Server](https://discord.gg/EqksyE2EX9)
-* [@langflow_ai](https://twitter.com/langflow_ai) 
+* [@langflow_ai](https://twitter.com/langflow_ai)
 
 ## Get started with Langflow
 
 - [Install Langflow](/get-started-installation)
 - [Quickstart](/get-started-quickstart)
-
