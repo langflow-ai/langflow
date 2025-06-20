@@ -20,7 +20,7 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
 ![Simple agent starter flow](/img/quickstart-simple-agent-flow.png)
 
-The Simple Agent flow consists of an [Agent component](/components-agents) connected to [Chat I/O components](/components-io), a [Calculator component](/components-data#calculator), and a [URL component](/components-data#url). When you run this flow, you submit a query to the agent through the Chat Input component, the agent uses the Calculator and URL tools to generate a response, and then returns the response through the Chat Output component.
+The Simple Agent flow consists of an [Agent component](/components-agents) connected to [Chat I/O components](/components-io), a [Calculator component](/components-tools#calculator-tool), and a [URL component](/components-data#url). When you run this flow, you submit a query to the agent through the Chat Input component, the agent uses the Calculator and URL tools to generate a response, and then returns the response through the Chat Output component.
 
 Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/mcp-server). The agent decides which tools to call based on the context of a given query.
 

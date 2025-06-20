@@ -13,7 +13,7 @@ Prompts are a combination of natural language and variables created with curly b
 
 ## Use a prompt component in a flow
 
-An example of modifying a prompt can be found in [Vector RAG starter flow](/starter-projects-vector-store-rag), where a basic chatbot flow is extended to include a full vector RAG pipeline.
+An example of modifying a prompt can be found in [Vector RAG starter flow](/vector-store-rag), where a basic chatbot flow is extended to include a full vector RAG pipeline.
 
 ![Vector RAG connected to a chatbot](/img/starter-flow-vector-rag.png)
 
