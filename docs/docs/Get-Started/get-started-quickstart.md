@@ -154,7 +154,6 @@ Langflow provides code snippets to help you get started with the Langflow API.
 2. Copy the snippet, paste it in a script file, and then run the script to send the request.
 If you are using the curl snippet, you can run the command directly in your terminal.
 
-
 If the request is successful, the response includes many details about the flow run, including the session ID, inputs, outputs, components, durations, and more.
 The following is an example of a response from running the **Simple Agent** template flow:
 
@@ -334,7 +333,7 @@ In a production application, you probably want to select parts of this response 
 
 The following example builds on the API pane's example code to create a question-and-answer chat in your terminal that stores the Agent's previous answer.
 
-1.  Incorporate your **Simple Agent** flow's `/run` snippet into the following script.
+1. Incorporate your **Simple Agent** flow's `/run` snippet into the following script.
 This script runs a question-and-answer chat in your terminal and stores the Agent's previous answer so you can compare them.
 
 
