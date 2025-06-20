@@ -1254,7 +1254,7 @@ wheels = [
 
 [[package]]
 name = "codeflash"
-version = "0.14.3"
+version = "0.14.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1283,7 +1283,7 @@ dependencies = [
     { name = "unidiff" },
     { name = "unittest-xml-reporting" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8b/d2/70707acebf6238cd4fe006924a7ee4328070f44080ccef0b42ad2bdf768b/codeflash-0.14.3.tar.gz", hash = "sha256:d4afdc81f5db81480f020c9ebfdacfeaaa84ccaa07536d1aa75f36b15a7cf1fd", size = 170585, upload-time = "2025-06-15T19:25:13.767Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/3e/b62bd959c4dfc759a226f41d00ab442caa21f5f0f40bf8bcb902c17ffa6a/codeflash-0.14.4.tar.gz", hash = "sha256:389d34ac96da35246a1743295339b043aa2fa70be61d4f02621b17c305ce5061", size = 172136, upload-time = "2025-06-19T01:01:19.386Z" }
 
 [[package]]
 name = "cohere"
@@ -4631,6 +4631,7 @@ dependencies = [
     { name = "fake-useragent" },
     { name = "fastavro", version = "1.9.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
     { name = "fastavro", version = "1.11.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "filelock" },
     { name = "gassist", marker = "sys_platform == 'win32'" },
     { name = "gitpython" },
     { name = "google-api-python-client" },
@@ -4821,6 +4822,7 @@ requires-dist = [
     { name = "fake-useragent", specifier = "==1.5.1" },
     { name = "fastavro", marker = "python_full_version < '3.13'", specifier = "==1.9.7" },
     { name = "fastavro", marker = "python_full_version >= '3.13'", specifier = ">=1.9.8" },
+    { name = "filelock", specifier = ">=3.18.0" },
     { name = "gassist", marker = "sys_platform == 'win32'", specifier = ">=0.0.1" },
     { name = "gitpython", specifier = "==3.1.43" },
     { name = "google-api-python-client", specifier = "==2.154.0" },
@@ -5550,7 +5552,7 @@ wheels = [
 
 [[package]]
 name = "locust-cloud"
-version = "1.23.1"
+version = "1.23.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "configargparse" },
@@ -5560,9 +5562,9 @@ dependencies = [
     { name = "python-socketio", extra = ["client"] },
     { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bd/7c/d9cbbd051490aeedfbd6ddda8ad48f77dd848ee490f6ebd166d20db5911e/locust_cloud-1.23.1.tar.gz", hash = "sha256:a09161752b8c9a9205e97cef5223ee3ad967bc2d91c52d61952aaa3da6802a55", size = 450937, upload-time = "2025-06-05T06:07:53.773Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a0/ce/60fa27ebf214c3ddf159634006a607ef73a44e3657a32ca2630738e7c2ba/locust_cloud-1.23.2.tar.gz", hash = "sha256:614051174a96672fdba3a77ba2c4bcb537fe28ad32bf4bfdb715429aabe395be", size = 451096, upload-time = "2025-06-18T10:26:45.166Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/01/5af43edee540e38ba0ee0a2e3beb72c50073e0f646bb543a8b34650315e3/locust_cloud-1.23.1-py3-none-any.whl", hash = "sha256:11677895c6ed6d0beef1b425a6f04f10ea2cfcaeaefbf00a97fb3c9134296e54", size = 408323, upload-time = "2025-06-05T06:07:51.947Z" },
+    { url = "https://files.pythonhosted.org/packages/37/ff/9328101b6936f8f394464c371a9ac2c98294c5f5aa29292e83ca6f3a9709/locust_cloud-1.23.2-py3-none-any.whl", hash = "sha256:553979d165c1415685bde13460969cad188ee0438b4747393a5e11f566e10733", size = 408452, upload-time = "2025-06-18T10:26:43.73Z" },
 ]
 
 [[package]]
