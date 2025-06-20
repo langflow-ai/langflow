@@ -9,7 +9,6 @@ class JigsawStackTextTranslateComponent(Component):
     documentation = "https://jigsawstack.com/docs/api-reference/ai/translate"
     icon = "JigsawStack"
     name = "JigsawStackTextTranslate"
-
     inputs = [
         SecretStrInput(
             name="api_key",

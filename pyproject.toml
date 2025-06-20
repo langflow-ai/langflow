@@ -177,6 +177,7 @@ dev = [
     "jigsawstack>=0.2.6",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.12",
+    "jigsawstack>=0.2.7"
 ]
 
 [tool.uv.sources]

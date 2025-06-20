@@ -10,7 +10,6 @@ class JigsawStackAIWebSearchComponent(Component):
     documentation = "https://jigsawstack.com/docs/api-reference/web/ai-search"
     icon = "JigsawStack"
     name = "JigsawStackAISearch"
-
     inputs = [
         SecretStrInput(
             name="api_key",
@@ -112,7 +111,6 @@ class JigsawStackAIWebSearchComponent(Component):
         try:
             # Initialize JigsawStack client
             client = JigsawStack(api_key=self.api_key)
-
             search_params = {}
             if self.query:
                 search_params["query"] = self.query
