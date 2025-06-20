@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Get started with Langflow by loading a flow, running it, and then serving your flow at the `/run` API endpoint.
+Get started with Langflow by loading a template flow, running it, and then serving it at the `/run` API endpoint.
 
 ## Prerequisites
 
@@ -54,7 +54,7 @@ If you want to learn how Langflow integrates into external applications, read on
 
 ## Run your flows from external applications
 
-Langflow is an IDE, but it's also a runtime you can call through an API with Python, JavaScript, or curl.
+Langflow is an IDE, but it's also a runtime you can call through an API with Python, JavaScript, or HTTP.
 
 When you start Langflow locally, you can send requests to the local Langflow server.
 For production applications, you need to deploy a stable Langflow instance to handle API calls.
@@ -62,7 +62,7 @@ For more information, see [Langflow deployment overview](/deployment-overview).
 
 For example, you can use `POST /run` to run a flow and get the result.
 
-The **API access** pane includes code snippets to get you started sending requests to the server.
+Langflow provides code snippets to help you get started with the Langflow API.
 
 1. To open the **API access pane**, in the **Playground**, click **Share**, and then click **API access**.
 The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data.
@@ -328,7 +328,8 @@ This response confirms the call succeeded, but let's do something more with the 
 
 The following example builds on the API pane's example code to create a question-and-answer chat in your terminal that stores the Agent's previous answer.
 
-3. Copy the code into your terminal, and run it.
+3.  Incorporate your **Simple Agent** flow's `/run` snippet into the following script.
+This script runs a question-and-answer chat in your terminal and stores the Agent's previous answer so you can compare them.
 4. To view the Agent's previous answer, type `compare`. To close the terminal chat, type `exit`.
 
 <Tabs groupId="Languages">
@@ -472,13 +473,16 @@ startChat();
   </TabItem>
 </Tabs>
 
-## Apply temporary overrides to a flow run
+### Use tweaks to apply temporary overrides to a flow run
 
-To change a flow's values at runtime, Langflow offers **Temporary Overrides**, also called **Tweaks**.
+You can use tweaks to temporarily modify flow parameters at runtime.
+This makes your flows more versatile and reduces toil when running the same flow for different use cases.
 Tweaks are added to the API request, and temporarily change component parameters within your flow.
+Tweaks override the flow's component settings for a single run only.
 They don't modify the underlying flow configuration or persist between runs.
 
-The easiest way to modify your request with tweaks to the `/run` endpoint is in the **API access** pane, in the **Input schema** pane.
+Tweaks are added to the `/run` endpoint's `payload`.
+To assist with formatting, you can define tweaks in Langflow before copying the code snippet.
 
 1. In the **Input schema** pane, select the parameter you want to modify in your next request.
 Enabling parameters in the **Input schema** pane does not **allow** modifications to the listed parameters. It only adds them to the example code.
