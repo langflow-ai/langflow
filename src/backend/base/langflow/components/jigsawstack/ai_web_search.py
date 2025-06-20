@@ -59,8 +59,7 @@ class JigsawStackAIWebSearchComponent(Component):
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:
             jigsawstack_import_error = (
-                "JigsawStack package not found. "
-                "Please install it using: pip install jigsawstack>=0.2.6"
+                "JigsawStack package not found. Please install it using: pip install jigsawstack>=0.2.6"
             )
             raise ImportError(jigsawstack_import_error) from e
 

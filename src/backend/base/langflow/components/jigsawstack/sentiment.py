@@ -1,4 +1,3 @@
-
 from langflow.custom.custom_component.component import Component
 from langflow.io import MessageTextInput, Output, SecretStrInput
 from langflow.schema.data import Data
@@ -38,8 +37,7 @@ class JigsawStackSentimentComponent(Component):
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:
             jigsawstack_import_error = (
-                "JigsawStack package not found. Please install it using: "
-                "pip install jigsawstack>=0.2.6"
+                "JigsawStack package not found. Please install it using: pip install jigsawstack>=0.2.6"
             )
             raise ImportError(jigsawstack_import_error) from e
 
@@ -81,9 +79,7 @@ class JigsawStackSentimentComponent(Component):
         try:
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError:
-            return Message(
-                text="Error: JigsawStack package not found. Please install it with: pip install jigsawstack"
-            )
+            return Message(text="Error: JigsawStack package not found. Please install it with: pip install jigsawstack")
 
         try:
             client = JigsawStack(api_key=self.api_key)

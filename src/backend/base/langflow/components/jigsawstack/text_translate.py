@@ -30,7 +30,7 @@ class JigsawStackTextTranslateComponent(Component):
             info="The text to translate. This can be a single string or a list of strings. \
                 If a list is provided, each string will be translated separately.",
             required=True,
-            is_list=True
+            is_list=True,
         ),
     ]
 
@@ -43,17 +43,14 @@ class JigsawStackTextTranslateComponent(Component):
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:
             jigsawstack_import_error = (
-                "JigsawStack package not found. Please install it using: "
-                "pip install jigsawstack>=0.2.6"
+                "JigsawStack package not found. Please install it using: pip install jigsawstack>=0.2.6"
             )
-            raise ImportError(
-                jigsawstack_import_error
-            ) from e
+            raise ImportError(jigsawstack_import_error) from e
 
         try:
             client = JigsawStack(api_key=self.api_key)
 
-            #build request object
+            # build request object
             params = {}
             if self.target_language:
                 params["target_language"] = self.target_language
@@ -74,11 +71,6 @@ class JigsawStackTextTranslateComponent(Component):
             return Data(data=response)
 
         except JigsawStackError as e:
-            error_data = {
-                "error": str(e),
-                "success": False
-            }
+            error_data = {"error": str(e), "success": False}
             self.status = f"Error: {e!s}"
             return Data(data=error_data)
-
-
