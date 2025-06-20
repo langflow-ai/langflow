@@ -7,7 +7,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
-Use the [MCP connection component](/components-tools#mcp-connection) to connect Langflow to a [Datastax Astra DB MCP server](https://github.com/datastax/astra-db-mcp).
+Use the [MCP connection component](/mcp-client) to connect Langflow to a [Datastax Astra DB MCP server](https://github.com/datastax/astra-db-mcp).
 
 1. Install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 
@@ -17,9 +17,9 @@ Use the [MCP connection component](/components-tools#mcp-connection) to connect 
 
 4. Get your database's **Astra DB API endpoint** and an **Astra DB application token** with the Database Administrator role. For more information, see [Generate an application token for a database](https://docs.datastax.com/en/astra-db-serverless/administration/manage-application-tokens.html#database-token).
 
-5. Create a [Simple agent starter project](/starter-projects-simple-agent).
+5. Create a [Simple agent starter project](/starter-projects-simple-agent) if you want to follow along with this guide. Otherwise, you can use an existing flow or create a new, blank flow.
 
-6. Remove the **URL** tool and replace it with an [MCP connection](/components-tools#mcp-connection) component.
+6. Remove the **URL** tool, and then replace it with an [MCP connection component](/mcp-client).
 The flow should look like this:
 
     ![MCP connection component connecting to Astra](/img/component-mcp-astra-db.png)
