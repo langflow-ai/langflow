@@ -120,7 +120,11 @@ export default function McpComponent({
   };
 
   const showSaveButton = useMemo(() => {
-    return !selectedOption?.name && Object.keys(config ?? {}).length > 0;
+    return (
+      !selectedOption?.name &&
+      Object.keys(config ?? {}).length > 0 &&
+      options !== null
+    );
   }, [selectedOption, config]);
 
   return (
