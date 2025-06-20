@@ -9,7 +9,7 @@ Agents use LLMs as a brain to autonomously analyze problems and select tools to 
 
 Langflow's [Agent component](/components-agents#agent-component) simplifies agent configuration so you can focus on application development.
 
-The Agent component provides everything you need to create an agent, including multiple LLMs, custom instructions, and tool configuration.
+The Agent component provides everything you need to create an agent, including multiple LLM providers and custom instructions.
 
 ## Agent settings
 
