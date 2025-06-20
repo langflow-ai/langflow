@@ -284,6 +284,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
   { display_name: "Search", name: "search", icon: "Search" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
+  { display_name: "JigsawStack", name: "jigsawstack", icon: "JigsawStack" },
 ];
 
 export const categoryIcons: Record<string, string> = {
