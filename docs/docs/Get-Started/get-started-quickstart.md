@@ -487,15 +487,15 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
 
 You can include tweaks with your requests to temporarily modify flow parameters.
 Tweaks are added to the API request, and temporarily change component parameters within your flow.
-Tweaks override the flow's components settings for a single run only.
+Tweaks override the flow's components' settings for a single run only.
 They don't modify the underlying flow configuration or persist between runs.
 
 Tweaks are added to the `/run` endpoint's `payload`.
 To assist with formatting, you can define tweaks in Langflow's **Input Schema** pane before copying the code snippet.
 
 1. To open the **Input Schema** pane, from the **API access** pane, click **Input Schema**.
-2. In the **Input schema** pane, select the parameter you want to modify in your next request.
-Enabling parameters in the **Input schema** pane does not **allow** modifications to the listed parameters. It only adds them to the example code.
+2. In the **Input Schema** pane, select the parameter you want to modify in your next request.
+Enabling parameters in the **Input Schema** pane does not **allow** modifications to the listed parameters. It only adds them to the example code.
 3. For example, to change the LLM provider from OpenAI to Groq, and include your Groq API key with the request, select the values **Model Providers**, **Model**, and **Groq API Key**.
 Langflow updates the `tweaks` object in the code snippets based on your input parameters, and includes default values to guide you.
 Use the updated code snippets in your script to run your flow with your overrides.
