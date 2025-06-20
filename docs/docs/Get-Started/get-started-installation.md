@@ -108,6 +108,7 @@ Your shell's prompt changes to display that you're currently working in a virtua
 (VENV_NAME) ➜  langflow git:(main) ✗
 ```
 3. To deactivate the virtual environment and return to your regular shell, type `deactivate`.
+   When activated, the virtual environment temporarily modifies your PATH variable to prioritize packages installed within the virtual environment, so always deactivate it when you're done to avoid conflicts with other projects.
 To delete the virtual environment, type `rm -rf VENV_NAME`.
   </TabItem>
   <TabItem value="Windows" label="Windows">
@@ -125,6 +126,7 @@ Your shell's prompt changes to display that you're currently working in a virtua
 (VENV_NAME) PS C:/users/username/langflow-dir>
 ```
 3. To deactivate the virtual environment and return to your regular shell, type `deactivate`.
+   When activated, the virtual environment temporarily modifies your PATH variable to prioritize packages installed within the virtual environment, so always deactivate it when you're done to avoid conflicts with other projects.
 To delete the virtual environment, type `Remove-Item VENV_NAME`.
   </TabItem>
   </Tabs>
