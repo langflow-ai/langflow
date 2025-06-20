@@ -39,6 +39,7 @@ async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSes
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
+
 @router.get("/messages/sessions", dependencies=[Depends(get_current_active_user)])
 async def get_message_sessions(
     session: DbSession,
@@ -50,7 +51,7 @@ async def get_message_sessions(
 
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
-            
+
         session_ids = await session.exec(stmt)
         return list(session_ids)
     except Exception as e:
