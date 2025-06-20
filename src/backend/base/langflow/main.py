@@ -173,7 +173,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             except TimeoutError:
                 # Another process has the lock
                 logger.debug("Another worker is creating starter projects, skipping")
-            except Exception as e: # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
                 logger.warning(
                     f"Failed to acquire lock for starter projects: {e}. Starter projects may not be created or updated."
                 )
