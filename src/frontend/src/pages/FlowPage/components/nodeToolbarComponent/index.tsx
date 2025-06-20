@@ -454,6 +454,7 @@ const NodeToolbarComponent = memo(
             <ToolbarButton
               icon="FreezeAll"
               label="Freeze"
+              dataTestId="freeze-all-button-modal"
               onClick={() => {
                 takeSnapshot();
                 FreezeAllVertices({
@@ -669,7 +670,10 @@ const NodeToolbarComponent = memo(
                   </SelectItem>
                 )}
                 {hasToolMode && (
-                  <SelectItem value="freezeAll">
+                  <SelectItem
+                    value="freezeAll"
+                    data-testid="freeze-all-button-modal"
+                  >
                     <ToolbarSelectItem
                       shortcut={
                         shortcuts.find((obj) =>

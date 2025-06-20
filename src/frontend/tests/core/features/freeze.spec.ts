@@ -54,17 +54,11 @@ test(
 
     await page.getByTestId("div-generic-node").click();
 
-    await page.waitForSelector('[data-testid="more-options-modal"]', {
+    await page.waitForSelector('[data-testid="freeze-all-button-modal"]', {
       timeout: 1000,
     });
 
-    await page.getByTestId("more-options-modal").click();
-
-    await page.waitForSelector('[data-testid="icon-FreezeAll"]', {
-      timeout: 1000,
-    });
-
-    await page.getByTestId("icon-FreezeAll").click();
+    await page.getByTestId("freeze-all-button-modal").click();
 
     // Use polling approach to wait for frozen icon with better error handling
     let frozenIconVisible = false;
