@@ -295,7 +295,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Contributing",
+      label: "Contribute",
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-how-to-contribute",
