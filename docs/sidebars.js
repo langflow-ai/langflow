@@ -322,6 +322,11 @@ module.exports = {
       items: [
         {
           type: "doc",
+          id: "Support/troubleshooting",
+          label: "Troubleshoot",
+        },
+        {
+          type: "doc",
           id: "Contributing/contributing-github-issues",
           label: "Get help and request enhancements",
         },
