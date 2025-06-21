@@ -15,7 +15,7 @@ To create, read, update, and delete flows, see [Flow management endpoints](/api-
 Execute a specified flow by ID or name.
 The flow is executed as a batch, but LLM responses can be streamed.
 
-This example runs a [Basic Prompting](/starter-projects-basic-prompting) flow with a given flow ID and passes a JSON object as the input value.
+This example runs a [Basic Prompting](/basic-prompting) flow with a given flow ID and passes a JSON object as the input value.
 Flow IDs can be found on the [Publish pane](/concepts-publish) or in a flow's URL.
 
 The parameters are passed in the request body. In this example, the values are the default values.
