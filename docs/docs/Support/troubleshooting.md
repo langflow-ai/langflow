@@ -14,7 +14,7 @@ If a component appears to be missing from the expected location on the component
 * Search for the component or check other component categories, including [Bundles](/components-bundle-components).
 * [Expose legacy components](/concepts-components#components-sidebar), which are hidden by default.
 * Check the [Changelog](https://github.com/langflow-ai/langflow/releases/latest) for component changes in recent releases.
-* Make sure the component isn't already present in your flow, if it is a single-use component.
+* Make sure the component isn't already present in your flow if it is a single-use component.
 
 If you still cannot locate the component, see [Langflow GitHub Issues and Discussions](/contributing-github-issues).
 
@@ -28,7 +28,7 @@ If you get an API key error when running a flow, try the following:
 
 * For all components that require credentials, make sure those components have a valid credential in the component's settings, such as the **API key** field.
 * If you store your credentials in [Langflow global variables](/configuration-global-variables), make sure you selected the correct global variable and that the variable contains a valid credential.
-* Make sure the provided credentials are active, have the required permissions, and, if applicable, have sufficient funds on the account to execute the required action. For example, model providers require credits to use their LLMs.
+* Make sure the provided credentials are active, have the required permissions, and, if applicable, have sufficient funds in the account to execute the required action. For example, model providers require credits to use their LLMs.
 
 ## Langflow installation issues
 
