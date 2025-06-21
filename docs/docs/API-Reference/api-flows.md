@@ -95,7 +95,6 @@ curl -X POST \
       "locked": false,
       "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
       "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     },
     {
       "name": "string",
@@ -113,7 +112,6 @@ curl -X POST \
       ],
       "locked": false,
       "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
       "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     }
   ]
@@ -204,7 +202,6 @@ curl -X PATCH \
   "description": "string",
   "data": {},
   "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "endpoint_name": "my_new_endpoint_name",
   "locked": true
 }'
@@ -229,7 +226,6 @@ curl -X PATCH \
   "locked": true,
   "id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
   "user_id": "f58396d4-a387-4bb8-b749-f40825c3d9f3",
-  "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
   "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 }
 ```

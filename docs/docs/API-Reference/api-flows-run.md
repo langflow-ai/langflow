@@ -183,9 +183,10 @@ curl -X POST \
 
 <details>
 <summary>Result</summary>
-```text
+```json
 {
-  {"message":"Task started in the background","status":"in progress"}
+  "message": "Task started in the background",
+  "status": "in progress"
 }
 ```
 </details>

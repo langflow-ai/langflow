@@ -68,7 +68,7 @@ For information on sending files to the Langflow API, see [Files endpoint](/api-
 
 ## Shareable playground
 
-The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/{$FLOW_ID` endpoint.
+The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/$FLOW_ID` endpoint.
 
 You can share this endpoint publicly using a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
 

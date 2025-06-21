@@ -236,7 +236,7 @@ curl -X PATCH \
 
 ```json
 {
-  "id": "07e5b864-e367-4f52-b647-a48035ae7e5e",
+  "id": "10c1c6a2-ab8a-4748-8700-0e4832fd5ce8",
   "username": "langflow",
   "profile_image": null,
   "store_api_key": null,

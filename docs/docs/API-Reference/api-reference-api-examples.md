@@ -152,6 +152,6 @@ curl -X GET \
 ## Next steps
 
 - Use the Langflow API to [run a flow](/api-flows-run).
-- Use the Langflow API to [upload files](/api-flows).
+- Use the Langflow API to [upload files](/api-files).
 - Use the Langflow API to [get flow logs](/api-logs).
 - Explore all endpoints in the [Langflow API specification](/api).

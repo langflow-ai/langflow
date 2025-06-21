@@ -74,7 +74,7 @@ curl -X POST \
   </TabItem>
 </Tabs>
 
-To add flows and components at project creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](/api-reference-api-examples#get-all-components) and [/api/v1/flows/read](/api-flows#read-flows) endpoints and add them to the request body.
+To add flows and components at project creation, retrieve the `components_list` and `flows_list` values from the [`/all`](/api-reference-api-examples#get-all-components) and [/flows/read](/api-flows#read-flows) endpoints and add them to the request body.
 
 Adding a flow to a project moves the flow from its previous location. The flow is not copied.
 

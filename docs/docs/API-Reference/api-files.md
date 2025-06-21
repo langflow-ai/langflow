@@ -6,25 +6,28 @@ slug: /api-files
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Use the `/files` endpoint to add or delete files between your local machine and Langflow.
+Use the `/files` endpoints to move files between your local machine and Langflow.
 
-There are `/v1` and `/v2` versions of the `/files` endpoints.
-The `v2/files` version offers several improvements over `/v1`:
+## Differences between `/v1/files` and `/v2/files`
 
-- In `v1`, files are organized by `flow_id`. In `v2`, files are organized by `user_id`.
-  This means files are accessed based on user ownership, and not tied to specific flows.
+There are two versions of the `/files` endpoints.
+
+`/v2/files` offers several improvements over `/v1/files`:
+
+- `/v2` files are organized by `user_id` instead of `flow_id`.
+  This means files are owned by users, and they aren't attached to specific flows.
   You can upload a file to Langflow one time, and use it with multiple flows.
-- In `v2`, files are tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
-- Responses from the `/v2` endpoint contain more descriptive metadata.
-- The `v2` endpoints require authentication by an API key or JWT.
-- The `/v2/files` endpoint does not support sending **image** files to flows through the API. To send **image** files to your flows through the API, follow the procedure in [Upload image files (v1)](#upload-image-files-v1).
+- `/v2` files are tracked in the Langflow database.
+- `/v2` supports bulk upload and delete.
+- `/v2` responses contain more descriptive metadata.
+- `/v2` endpoints have more strict security, requiring authentication by an API key or JWT.
+
+However, `/v2/files` doesn't support image files.
+To send image files to your flows through the API, use [Upload image files (v1)](#upload-image-files-v1).
 
 ## Files/V1 endpoints
 
-Use the `/files` endpoint to add or delete files between your local machine and Langflow.
-
-- In `v1`, files are organized by `flow_id`.
-- In `v2`, files are organized by `user_id` and tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
+Use the `/files` endpoints to move files between your local machine and Langflow.
 
 ### Upload file (v1)
 
@@ -84,7 +87,7 @@ The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<
 <!-- TODO: What link goes here? -->
 2. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
    Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
-   To find your Chat input component's ID, use the [](#)
+   Component `id` values can be found in [Langflow JSON files](/concepts-flows#langflow-json-file-contents).
 
 ```bash
 curl -X POST \
