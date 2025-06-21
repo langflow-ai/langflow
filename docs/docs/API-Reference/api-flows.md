@@ -14,7 +14,7 @@ See [Flow trigger endpoints](/api-flows-run).
 
 ## Create flow
 
-Create a new flow.
+Creates a new flow.
 
 <Tabs>
    <TabItem value="curl" label="curl" default>
@@ -69,10 +69,7 @@ curl -X POST \
 
 ## Create flows
 
-Create multiple new flows.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
+Creates multiple new flows, returning an array of flow objects.
 
 ```bash
 curl -X POST \
@@ -123,23 +120,9 @@ curl -X POST \
 }'
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```json
-[
-  {
-    // FlowRead objects
-  }
-]
-```
-
-  </TabItem>
-</Tabs>
-
 ## Read flow
 
-Retrieve a specific flow by its ID.
+Retrieves a specific flow by its ID.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -194,7 +177,7 @@ curl -X GET \
 
 ## Read sample flows
 
-Retrieve a list of sample flows.
+Retrieves a list of sample flows:
 
 ```bash
 curl -X GET \
@@ -204,7 +187,7 @@ curl -X GET \
 
 ## Update flow
 
-Update an existing flow by its ID.
+Updates an existing flow by its ID.
 
 This example changes the value for `endpoint_name` from a random UUID to `my_new_endpoint_name`.
 
@@ -256,7 +239,7 @@ curl -X PATCH \
 
 ## Delete flow
 
-Delete a specific flow by its ID.
+Deletes a specific flow by its ID.
 
 <Tabs>
     <TabItem value="curl" label="curl" default>
@@ -282,7 +265,7 @@ curl -X DELETE \
 
 ## Export flows
 
-Export specified flows to a ZIP file.
+Exports specified flows to a ZIP file.
 
 This endpoint downloads a ZIP file containing [Langflow JSON files](/concepts-flows#langflow-json-file-contents) for each flow ID listed in the request body.
 
@@ -315,7 +298,7 @@ curl -X POST \
 
 ## Import flows
 
-Import flows by uploading a [Langflow-compatible JSON file](/concepts-flows#langflow-json-file-contents).
+Imports flows by uploading a [Langflow-compatible JSON file](/concepts-flows#langflow-json-file-contents).
 
 To specify a target project for the flow, include the query parameter `project_id`.
 The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](/api-projects#read-projects) endpoint for a list of available projects.

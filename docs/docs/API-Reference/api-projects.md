@@ -12,7 +12,7 @@ Projects store your flows and components.
 
 ## Read projects
 
-Get a list of Langflow projects.
+Get a list of Langflow projects, including project IDs, names, and descriptions.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>

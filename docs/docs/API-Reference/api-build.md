@@ -20,7 +20,7 @@ To run a flow, use the [`/run` endpoint](/api-flows-run#run-flow).
 
 This endpoint builds and executes a flow, returning a job ID that can be used to stream execution events.
 
-1. Send a POST request to the `/build/{flow_id}/flow` endpoint.
+1. Send a POST request to the `/build/$FLOW_ID/flow` endpoint.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -49,7 +49,7 @@ curl -X POST \
   </TabItem>
 </Tabs>
 
-2. After receiving a job ID from the build endpoint, use the `/build/{job_id}/events` endpoint to stream the execution results:
+2. After receiving a job ID from the build endpoint, use the `/build/$JOB_ID/events` endpoint to stream the execution results:
 
 <Tabs>
    <TabItem value="curl" label="curl" default>
@@ -93,7 +93,7 @@ curl -X GET \
 | accept | Required. Specifies the response format. | "application/json" |
 | x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
 
-The `/build/{flow_id}/flow` endpoint accepts the following parameters in its request body:
+The `/build/$FLOW_ID/flow` endpoint accepts the following parameters in its request body:
 
 ## Build parameters
 
@@ -102,8 +102,8 @@ The `/build/{flow_id}/flow` endpoint accepts the following parameters in its req
 | inputs | object | Optional. Input values for flow components. |
 | data | object | Optional. Flow data to override stored configuration. |
 | files | array[string] | Optional. List of file paths to use. |
-| stop_component_id | string | Optional. ID of the component where the execution should stop. |
-| start_component_id | string | Optional. ID of the component where the execution should start. |
+| start_component_id | string | Optional. ID of the component where the execution should start. Component `id` values can be found in a [Langflow JSON files](/concepts-flows#langflow-json-file-contents) |
+| stop_component_id | string | Optional. ID of the component where the execution should stop. Component `id` values can be found in a [Langflow JSON files](/concepts-flows#langflow-json-file-contents).|
 | log_builds | boolean | Optional. Control build logging. Default: `true`. |
 
 ### Set start and stop points
@@ -160,3 +160,4 @@ curl -X POST \
 
 - [Get Vertex builds](/api-monitor#get-vertex-builds)
 - [Delete Vertex builds](/api-monitor#delete-vertex-builds)
+- [Session ID](/session-id)

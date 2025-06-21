@@ -15,7 +15,8 @@ To create, read, update, and delete flows, see [Flow management endpoints](/api-
 Execute a specified flow by ID or name.
 The flow is executed as a batch, but LLM responses can be streamed.
 
-This example runs a [Basic Prompting](/starter-projects-basic-prompting) flow with a given `flow_id` and passes a JSON object as the input value.
+This example runs a [Basic Prompting](/starter-projects-basic-prompting) flow with a given flow ID and passes a JSON object as the input value.
+Flow IDs can be found on the [Publish pane](/concepts-publish) or in a flow's URL.
 
 The parameters are passed in the request body. In this example, the values are the default values.
 
@@ -134,14 +135,14 @@ This result is abbreviated, but illustrates where the `end` event completes the 
 
 | Parameter | Type | Info |
 |-----------|------|------|
-| flow_id | UUID/string | Required. Part of URL: `/run/{flow_id}` |
-| stream | boolean | Optional. Query parameter: `/run/{flow_id}?stream=true` |
+| flow_id | UUID/string | Required. Part of URL: `/run/$FLOW_ID` |
+| stream | boolean | Optional. Query parameter: `/run/$FLOW_ID?stream=true` |
 | input_value | string | Optional. JSON body field. Main input text/prompt. Default: `null` |
 | input_type | string | Optional. JSON body field. Input type ("chat" or "text"). Default: `"chat"` |
 | output_type | string | Optional. JSON body field. Output type ("chat", "any", "debug"). Default: `"chat"` |
 | output_component | string | Optional. JSON body field. Target component for output. Default: `""` |
 | tweaks | object | Optional. JSON body field. Component adjustments. Default: `null` |
-| session_id | string | Optional. JSON body field. Conversation context ID. Default: `null` |
+| session_id | string | Optional. JSON body field. Conversation context ID. See [Session ID](/session-id). Default: `null` |
 
 ### Request example with all headers and parameters
 
@@ -167,14 +168,11 @@ curl -X POST \
 
 ## Webhook run flow
 
-The webhook endpoint triggers flow execution with an HTTP POST request.
+Use the `/webhook` endpoint to start a flow by sending an HTTP `POST` request.
 
-When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component, similar to the call in this example.
-
-To test the **Webhook** component in your flow, see the [Webhook component](/components-data#webhook).
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
+:::tip
+After you add a **Webhook** component to a flow, open the [**API access** pane](/concepts-publish), and then click the **Webhook cURL** tab to get an automatically generated `POST /webhook` request for your flow.
+:::
 
 ```bash
 curl -X POST \
@@ -183,17 +181,16 @@ curl -X POST \
   -d '{"data": "example-data"}'
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
-
+<details>
+<summary>Result</summary>
 ```text
 {
   {"message":"Task started in the background","status":"in progress"}
 }
 ```
+</details>
 
-  </TabItem>
-</Tabs>
+For more information, see [Webhook component](/components-data#webhook) and [Trigger flows with webhooks](/webhook).
 
 ## Deprecated flow trigger endpoints
 

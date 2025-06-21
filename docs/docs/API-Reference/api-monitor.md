@@ -671,3 +671,7 @@ curl -X GET \
 
   </TabItem>
 </Tabs>
+
+## See also
+
+- [Session ID](/session-id)

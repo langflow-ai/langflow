@@ -128,7 +128,7 @@ This example tweaks the Open-AI model component to enforce using the `gpt-4o-min
 ```tsx
 const tweaks = { model_name: "gpt-4o-mini" };
 ```
-2. Pass a session ID with the request to maintain the same conversation with the LLM from this application.
+2. Pass a [session ID](/session-id) with the request to maintain the same conversation with the LLM from this application.
 ```tsx
 const session_id = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
 ```

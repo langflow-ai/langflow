@@ -6,115 +6,95 @@ slug: /api-reference-api-examples
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-You can use the Langflow API to manage your Langflow deployment, build flows, and develop applications that use your flows.
+You can use the Langflow API for programmatic interaction with Langflow:
 
-:::tip
-You can view and test the Langflow API's OpenAPI specification at your Langflow deployment's `/docs` endpoint, such as `http://localhost:7860/docs`.
-:::
+* Create and edit flows, including file management for flows
+* Develop applications that use your flows
+* Develop custom components
+* Build Langflow as a dependency of a larger project
+* Contribute to the overall Langflow project
 
-<!-- TODO: Add basic information: How to get an API key, flow IDs, component IDs, base url etc. -->
-<!-- Bring aPI key and auth stuff from those topics in the Config section.-->
-<!-- List all deprecated endpoints somewhere?-->
+To view and test all available endpoints, you can access the Langflow API's OpenAPI specification at your Langflow deployment's `/docs` endpoint, such as `http://localhost:7860/docs`.
 
-## Form requests
-<!-- Forming requests: Authentication, Base urls, parameters -->
-Langflow API requests ...
+## Form Langflow API requests
+
+While individual parameters vary by endpoint, all Langflow API requests share some commonalities.
 
 ### Base URL
 
+Local deployments serve the Langflow API at `http://localhost:LANGFLOW_PORT/api`.
+The default port is 7868 or 7860:
+
+* Local Langflow Desktop: `http://localhost:7868/api`
+* Local Langflow OSS: `http://localhost:7860/api`
+* Local Langflow Docker image: `http://localhost:7860/api`
+
+Remotely hosted Langflow deployments are available at the domain set by the hosting service.
+For example:
+
+* `https://UUID.ngrok.app/api`
+* `http://IP_OR_DNS/api`
+* `http://IP_OR_DNS:LANGFLOW_PORT/api`
+
+:::tip
+The Langflow port number is set in the `LANGFLOW_PORT` [environment variable](/environment-variables).
+::::
+
 ### Authentication
 
-### Parameters
+Your [Langflow deployment's authentication settings](/configuration-authentication) determine whether Langflow API requests require explicit authentication with a Langflow API key.
 
-Langflow endpoints use URL path parameters, query parameters, and request body parameters.
+If explicit authentication is required, you must provide a valid Langflow API key in either an `x-api-key` header or query parameter.
+For more information, see [API keys](/configuration-api-keys).
 
-The specific parameters and where you can declare them vary by endpoint and operation.
+Because authentication isn't always required, Langflow API examples in the Langflow documentation often omit authentication.
+
+### Methods, paths, and parameters
+
+Langflow API requests use a variety of methods, paths, path parameters, query parameters, and body parameters.
+The specific requirements and options depend on the endpoint that you want to call.
+
+For example, to create a flow, you pass a JSON-formatted flow definition to `POST /v1/flows`.
+Then, to run your flow, you call `POST /v1/run/$FLOW_ID` with optional run parameters in the request body.
+
+### Versions
+
+The Langflow API serves `/v1` and `/v2` endpoints.
+
+Some endpoints exist only under `/v2`, and some endpoints have both `/v1` and `/v2` versions.
+
+If a request fails or has an unexpected result, make sure your endpoint path has the correct version.
 
 ## Set environment variables
-<!-- Rewrite "export values" section and update incoming links. -->
-You might find it helpful to set the following environment variables in your terminal.
 
-The examples in this guide use environment variables for these values.
+As a best practice with any API, store commonly used values in environment variables to facilitate reuse, simplify token rotation, and securely reference sensitive values.
+You can use any method you prefer to set environment variables, such as `export`, `.env`, `zshrc`, or `.curlrc`.
+Additionally, be sure to follow industry best practices when storing credentials and other sensitive values.
 
-- Export your Langflow URL in your terminal.
-  Langflow starts by default at `http://localhost:7860`.
+You might find it helpful to set environment variables for values like your Langflow server URL, Langflow API keys, flow IDs, and project IDs.
+For example:
 
 ```bash
 export LANGFLOW_URL="http://localhost:7860"
-```
-
-- Export the `flow-id` in your terminal.
-  The `flow-id` is found in the [Publish pane](/concepts-publish) or in the flow's URL.
-
-```text
 export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
+export PROJECT_ID="1415de42-8f01-4f36-bf34-539f23e47466"
+export API_KEY="sk-..."
 ```
 
-- Export the `project-id` in your terminal.
-To find your project ID, call the Langflow [/api/v1/projects/](/api-projects#read-projects) endpoint for a list of projects.
-<Tabs>
+:::tip
+- You can find flow IDs on the [Publish pane](/concepts-publish), in a flow's URL, and with [`GET /flows`](/api-flows#read-flows).
+- You can retrieve project IDs with `GET /projects`(/api-projects#read-projects).
+:::
 
-  <TabItem value="curl" label="curl" default>
+## Try some Langflow API requests
 
-```bash
-curl -X GET \
-  "$LANGFLOW_URL/api/v1/projects/" \
-  -H "accept: application/json"
-```
+Once you have your Langflow server URL, try calling these endpoints that return Langflow metadata.
 
-  </TabItem>
-  <TabItem value="result" label="Result">
-```json
-[
-  {
-    "name": "My Projects",
-    "description": "Manage your own projects. Download and upload projects.",
-    "id": "1415de42-8f01-4f36-bf34-539f23e47466",
-    "parent_id": null
-  }
-]
-```
-  </TabItem>
-</Tabs>
-
-- Export the `project-id` as an environment variable.
-```bash
-export project_ID="1415de42-8f01-4f36-bf34-539f23e47466"
-```
-
-- Export the Langflow API key as an environment variable.
-  To create a Langflow API key, run the following command in the Langflow CLI.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```text
-langflow api-key
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-```text
-API Key Created Successfully:
-sk-...
-```
-  </TabItem>
-</Tabs>
-Export the generated API key as an environment variable.
-```text
-export LANGFLOW_API_KEY="sk-..."
-```
-
-## Send requests
-
-Try sending some minimal requests to get Langflow configuration information.
+If authentication is required, include an `x-api-key` header or query parameter with a valid [Langflow API key](/configuration-api-keys), such as `-H 'x-api-key: $API_KEY'`.
 
 ### Get version
 
-Get the version of the Langflow API.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
+Returns the current Langflow API version:
 
 ```bash
 curl -X GET \
@@ -122,9 +102,8 @@ curl -X GET \
   -H "accept: application/json"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
-
+<details>
+<summary>Result</summary>
 ```text
 {
     "version": "1.1.1",
@@ -132,16 +111,11 @@ curl -X GET \
     "package": "Langflow"
 }
 ```
-
-  </TabItem>
-</Tabs>
+</details>
 
 ### Get configuration
 
-Retrieve the Langflow configuration information.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
+Returns configuration details for your Langflow deployment:
 
 ```bash
 curl -X GET \
@@ -149,9 +123,8 @@ curl -X GET \
   -H "accept: application/json"
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
-
+<details>
+<summary>Result</summary>
 ```json
 {
   "feature_flags": {
@@ -164,13 +137,11 @@ curl -X GET \
   "max_file_size_upload": 100
 }
 ```
-
-  </TabItem>
-</Tabs>
+</details>
 
 ### Get all components
 
-This operation returns a dictionary of all Langflow components.
+Returns a dictionary of all Langflow components:
 
 ```bash
 curl -X GET \
