@@ -128,13 +128,13 @@ This example tweaks the Open-AI model component to enforce using the `gpt-4o-min
 ```tsx
 const tweaks = { model_name: "gpt-4o-mini" };
 ```
-2. Pass a session ID with the request to maintain the same conversation with the LLM from this application.
+2. Pass a [session ID](/session-id) with the request to maintain the same conversation with the LLM from this application.
 ```tsx
 const session_id = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
 ```
 3. Instead of calling `run` on the Flow object, call `stream` with the same arguments.
 The response is a [ReadableStream](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) of objects.
-For more information on streaming Langflow responses, see [Run flow](https://docs.langflow.org/api-reference-api-examples#run-flow).
+For more information on streaming Langflow responses, see the [/run endpoint](/api-flows-run#run-flow).
 ```tsx
 const response = await client.flow(flowId).stream(input);
 
@@ -256,7 +256,7 @@ LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000
 LANGFLOW_LOG_LEVEL=DEBUG
 ```
 
-For more information, see [API examples](/api-reference-api-examples#logs).
+For more information, see [Logs endpoints](/api-logs).
 
 This complete example starts streaming logs in the background, and then runs a flow so you can see how a flow executes.
 Replace `baseUrl` and `flowId` with values from your deployment.

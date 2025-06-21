@@ -72,4 +72,7 @@ In the **Memory Chatbot** flow you created, the **Message history** component re
 2. Now, once you send a new message the **Playground**, you should have a new memory created in the **Message Logs** pane.
 3. Notice how your conversation is being stored in different memory sessions.
 
-Learn more about chat memories in the [Memory](/components-memories) section.
+## See also
+
+- [Memory components](/components-memories)
+- [Session ID](/session-id)

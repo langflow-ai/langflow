@@ -204,3 +204,7 @@ DataFrameInput(
     name="dataframe_input", display_name="DataFrame Input", info="Input for DataFrame objects.", tool_mode=True
 ),
 ```
+
+## See also
+
+- [Session ID](/session-id)
