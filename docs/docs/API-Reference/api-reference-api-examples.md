@@ -16,6 +16,12 @@ You can use the Langflow API for programmatic interaction with Langflow:
 
 To view and test all available endpoints, you can access the Langflow API's OpenAPI specification at your Langflow deployment's `/docs` endpoint, such as `http://localhost:7860/docs`.
 
+:::tip
+For an example of the Langflow API in a script, see the [Langflow quickstart](/get-started-quickstart).
+
+The quickstart demonstrates how to get automatically generated code snippets for your flows, use a script to run a flow, and extract data from the Langfow API response.
+:::
+
 ## Form Langflow API requests
 
 While individual parameters vary by endpoint, all Langflow API requests share some commonalities.
