@@ -5,8 +5,6 @@ slug: /troubleshoot
 
 This page provides troubleshooting advice for issues you might encounter when using Langflow or contributing to Langflow.
 
-<!-- Maybe FAQ, known issues separate? -->
-
 ## Missing components
 
 As Langflow development continues, components are often recategorized or deprecated for better alignment or to prepare for new components.
@@ -20,9 +18,21 @@ If a component appears to be missing from the expected location on the component
 
 If you still cannot locate the component, see [Langflow GitHub Issues and Discussions](/contributing-github-issues).
 
-## Troubleshoot Langflow installation and startup issues
+## No input in the Playground
 
-The following issues can occur when installing and running Langflow.
+If there is no text box for input in the Playground, make sure your flow has a [Input component](/components-io) that is connected to the **Input** port of another component.
+
+## Missing key, no key found, or invalid API key
+
+If you get an API key error when running a flow, try the following:
+
+* For all components that require credentials, make sure those components have a valid credential in the component's settings, such as the **API key** field.
+* If you store your credentials in [Langflow global variables](/configuration-global-variables), make sure you selected the correct global variable and that the variable contains a valid credential.
+* Make sure the provided credentials are active, have the required permissions, and, if applicable, have sufficient funds on the account to execute the required action. For example, model providers require credits to use their LLMs.
+
+## Langflow installation issues
+
+The following issues can occur when installing Langflow.
 
 ### C++ build tools required for Langflow Desktop on Windows
 
@@ -66,6 +76,10 @@ sudo apt-get install gcc
 
 If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in your virtual environment, and then retry the Langflow installation.
 
+## Langflow startup issues
+
+The following issues can occur when attempting to start Langflow.
+
 ### No `langflow.__main__` module
 
 When you try to run Langflow with the command `langflow run`, you encounter the following error:
@@ -98,9 +112,11 @@ There are two possible reasons for this error:
 
 * **Version conflict during installation**: Some version conflicts might have occurred during the installation process. To resolve this issue, reinstall Langflow and its dependencies by running `python -m pip install langflow --pre -U --force-reinstall`.
 
-## Troubleshoot Langflow upgrade issues
+## Langflow upgrade issues
 
 The following issues can occur when upgrading your Langflow version.
+
+For information about managing Langflow versions, see [Install Langflow](/get-started-installation).
 
 ### Something went wrong running migrations
 
@@ -123,12 +139,12 @@ The cache folder location depends on your OS:
 - **WSL2 on Windows**: `home/<username>/.cache/langflow/`
 - **macOS**: `/Users/<username>/Library/Caches/langflow/`
 
-## Troubleshoot MCP server flows
+## MCP server issues
 
 - [Use MCP Inspector to test and debug flows](/mcp-server#test-and-debug-flows)
 - [Troubleshooting MCP server](/mcp-server#troubleshooting-mcp-server)
 
-## Troubleshoot custom components and integrations
+## Custom components and integrations issues
 
 For troubleshooting advice for a third-party integration, see the information about that integration in the Langflow documentation and the provider's documentation.
 
