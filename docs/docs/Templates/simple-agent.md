@@ -1,9 +1,9 @@
 ---
 title: Simple agent
-slug: /starter-projects-simple-agent
+slug: /simple-agent
 ---
 
-Build a **Simple Agent** flow for an agentic application using the [Tool-calling agent](/agents-tool-calling-agent-component) component.
+Build a **Simple Agent** flow for an agentic application using the [Agent](/agents) component.
 
 An **agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
 
