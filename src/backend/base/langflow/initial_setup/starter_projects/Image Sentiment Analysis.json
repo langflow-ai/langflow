@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-sIcOW",
+            "id": "parser-o6H8E",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-1VmAz",
+            "id": "ChatOutput-WVlr5",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-sIcOW{œdataTypeœ:œparserœ,œidœ:œparser-sIcOWœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-1VmAz{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-1VmAzœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-o6H8E{œdataTypeœ:œparserœ,œidœ:œparser-o6H8Eœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-WVlr5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-WVlr5œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-sIcOW",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-sIcOWœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-1VmAz",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-1VmAzœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-o6H8E",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-o6H8Eœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-WVlr5",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-WVlr5œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -37,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-J6Rvk",
+            "id": "StructuredOutput-eoFyT",
             "name": "structured_output",
             "output_types": [
               "Data"
@@ -45,7 +45,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-sIcOW",
+            "id": "parser-o6H8E",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -53,12 +53,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-StructuredOutput-J6Rvk{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-J6Rvkœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-sIcOW{œfieldNameœ:œinput_dataœ,œidœ:œparser-sIcOWœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-eoFyT{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-eoFyTœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-o6H8E{œfieldNameœ:œinput_dataœ,œidœ:œparser-o6H8Eœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-J6Rvk",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-J6Rvkœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "parser-sIcOW",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-sIcOWœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-eoFyT",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-eoFyTœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
+        "target": "parser-o6H8E",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-o6H8Eœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -66,7 +66,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-x2hKm",
+            "id": "LanguageModelComponent-2h2qm",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -74,19 +74,19 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-J6Rvk",
+            "id": "StructuredOutput-eoFyT",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-x2hKm{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-x2hKmœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-J6Rvk{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-J6Rvkœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-2h2qm{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-2h2qmœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-eoFyT{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-eoFyTœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LanguageModelComponent-x2hKm",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-x2hKmœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-J6Rvk",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-J6Rvkœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-2h2qm",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-2h2qmœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "StructuredOutput-eoFyT",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-eoFyTœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -94,7 +94,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-AGdss",
+            "id": "Prompt-ElcZb",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -102,19 +102,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "LanguageModelComponent-tAUaX",
+            "id": "LanguageModelComponent-YHUqJ",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-AGdss{œdataTypeœ:œPromptœ,œidœ:œPrompt-AGdssœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-tAUaX{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-tAUaXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-ElcZb{œdataTypeœ:œPromptœ,œidœ:œPrompt-ElcZbœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-YHUqJ{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-YHUqJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-AGdss",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-AGdssœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-tAUaX",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-tAUaXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-ElcZb",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ElcZbœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-YHUqJ",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-YHUqJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -122,7 +122,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-osYcH",
+            "id": "ChatInput-CbbPG",
             "name": "message",
             "output_types": [
               "Message"
@@ -130,19 +130,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-tAUaX",
+            "id": "LanguageModelComponent-YHUqJ",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-osYcH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-osYcHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-tAUaX{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-tAUaXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-CbbPG{œdataTypeœ:œChatInputœ,œidœ:œChatInput-CbbPGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-YHUqJ{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-YHUqJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-osYcH",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-osYcHœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-tAUaX",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-tAUaXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-CbbPG",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-CbbPGœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-YHUqJ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-YHUqJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -150,7 +150,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-tAUaX",
+            "id": "LanguageModelComponent-YHUqJ",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -158,19 +158,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-J6Rvk",
+            "id": "StructuredOutput-eoFyT",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-tAUaX{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-tAUaXœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-J6Rvk{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-J6Rvkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-YHUqJ{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-YHUqJœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-eoFyT{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-eoFyTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-tAUaX",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-tAUaXœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-J6Rvk",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-J6Rvkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "LanguageModelComponent-YHUqJ",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-YHUqJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "StructuredOutput-eoFyT",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-eoFyTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -178,7 +178,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-osYcH",
+          "id": "ChatInput-CbbPG",
           "node": {
             "base_classes": [
               "Message"
@@ -462,7 +462,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-osYcH",
+        "id": "ChatInput-CbbPG",
         "measured": {
           "height": 234,
           "width": 320
@@ -483,7 +483,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-1VmAz",
+          "id": "ChatOutput-WVlr5",
           "node": {
             "base_classes": [
               "Message"
@@ -766,7 +766,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-1VmAz",
+        "id": "ChatOutput-WVlr5",
         "measured": {
           "height": 234,
           "width": 320
@@ -779,13 +779,13 @@
           "x": 2742.72534045604,
           "y": 681.9098282545469
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "note-uscMT",
+          "id": "note-k9mrI",
           "node": {
             "description": "# Image Sentiment Analysis\nWelcome to the Image Sentiment Classifier - an AI tool for quick image sentiment analysis!\n\n## Instructions\n\n1. **Prepare Your Image**\n   - Image should be clear and visible\n\n2. **Upload Options**\n   - Open the Playground\n   - Click file attachment icon\n   - Or drag and drop into playground\n\n3. **Wait for Analysis**\n   - System will process the image\n   - Uses zero-shot learning\n   - Classification happens automatically\n\n4. **Review Results**\n   - Get classification: Positive/Negative/Neutral\n   - Review confidence level\n   - Check reasoning if provided\n\n5. **Expected Classifications**\n   - Positive: Happy scenes, smiles, celebrations\n   - Negative: Sad scenes, problems, conflicts\n   - Neutral: Objects, landscapes, neutral scenes\n\nRemember: The clearer the image, the more accurate the classification! 📸✨",
             "display_name": "",
@@ -796,7 +796,7 @@
         },
         "dragging": false,
         "height": 583,
-        "id": "note-uscMT",
+        "id": "note-k9mrI",
         "measured": {
           "height": 583,
           "width": 325
@@ -822,7 +822,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-AGdss",
+          "id": "Prompt-ElcZb",
           "node": {
             "base_classes": [
               "Message"
@@ -929,7 +929,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-AGdss",
+        "id": "Prompt-ElcZb",
         "measured": {
           "height": 260,
           "width": 320
@@ -948,7 +948,7 @@
       },
       {
         "data": {
-          "id": "StructuredOutput-J6Rvk",
+          "id": "StructuredOutput-eoFyT",
           "node": {
             "base_classes": [
               "Data"
@@ -1207,7 +1207,7 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-J6Rvk",
+        "id": "StructuredOutput-eoFyT",
         "measured": {
           "height": 349,
           "width": 320
@@ -1221,7 +1221,7 @@
       },
       {
         "data": {
-          "id": "parser-sIcOW",
+          "id": "parser-o6H8E",
           "node": {
             "base_classes": [
               "Message"
@@ -1382,7 +1382,7 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-sIcOW",
+        "id": "parser-o6H8E",
         "measured": {
           "height": 361,
           "width": 320
@@ -1396,7 +1396,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-x2hKm",
+          "id": "LanguageModelComponent-2h2qm",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1473,7 +1473,7 @@
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1667,11 +1667,12 @@
             },
             "tool_mode": false
           },
+          "selected_output": "model_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-x2hKm",
+        "id": "LanguageModelComponent-2h2qm",
         "measured": {
           "height": 451,
           "width": 320
@@ -1685,7 +1686,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-tAUaX",
+          "id": "LanguageModelComponent-YHUqJ",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1762,7 +1763,7 @@
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1960,7 +1961,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-tAUaX",
+        "id": "LanguageModelComponent-YHUqJ",
         "measured": {
           "height": 534,
           "width": 320
@@ -1974,14 +1975,14 @@
       }
     ],
     "viewport": {
-      "x": -394.48978663654907,
-      "y": 83.15122658160072,
-      "zoom": 0.5803621249210289
+      "x": -779.9735306873563,
+      "y": 114.7787669766526,
+      "zoom": 0.6873063891390285
     }
   },
   "description": "Analyzes images and categorizes them as positive, negative, or neutral using zero-shot learning.",
   "endpoint_name": null,
-  "id": "1a6e7961-5c68-450d-a5b3-db6d0bd90bfe",
+  "id": "0cccdf9b-c4ae-4e14-8d19-1b1ac4dd1edf",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Image Sentiment Analysis",
