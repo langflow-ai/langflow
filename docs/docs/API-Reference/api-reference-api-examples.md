@@ -61,7 +61,7 @@ Then, to run your flow, you call `POST /v1/run/$FLOW_ID` with optional run param
 
 The Langflow API serves `/v1` and `/v2` endpoints.
 
-Some endpoints exist only under `/v2`, and some endpoints have both `/v1` and `/v2` versions.
+Some endpoints have only exist under a single version and some exist under both the `/v1` and `/v2` versions.
 
 If a request fails or has an unexpected result, make sure your endpoint path has the correct version.
 
