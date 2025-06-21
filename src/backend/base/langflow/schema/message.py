@@ -12,7 +12,8 @@ from uuid import UUID
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
+from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
+from langchain_core.prompts.prompt import PromptTemplate
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
