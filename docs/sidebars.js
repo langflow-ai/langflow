@@ -85,6 +85,7 @@ module.exports = {
         "Configuration/configuration-custom-database",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
+        "Contributing/contributing-telemetry",
       ],
     },
     {
@@ -302,7 +303,6 @@ module.exports = {
         "Contributing/contributing-component-tests",
         "Contributing/contributing-templates",
         "Contributing/contributing-bundles",
-        "Contributing/contributing-telemetry",
       ],
     },
     {
