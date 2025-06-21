@@ -302,8 +302,6 @@ module.exports = {
         "Contributing/contributing-component-tests",
         "Contributing/contributing-templates",
         "Contributing/contributing-bundles",
-        "Contributing/contributing-github-discussion-board",
-        "Contributing/contributing-github-issues",
         "Contributing/contributing-telemetry",
       ],
     },
@@ -322,6 +320,11 @@ module.exports = {
       type: "category",
       label: "Support",
       items: [
+        {
+          type: "doc",
+          id: "Contributing/contributing-github-issues",
+          label: "Get help and request enhancements",
+        },
         {
           type: "doc",
           id: "Support/luna-for-langflow",
