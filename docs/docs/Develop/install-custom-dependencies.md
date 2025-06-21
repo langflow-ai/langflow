@@ -3,9 +3,37 @@ title: Install custom dependencies
 slug: /install-custom-dependencies
 ---
 
-To install custom dependencies in your Langflow environment, add them with your package manager.
+Langflow provides optional dependency groups and support for custom dependencies to extend Langflow functionality.
 
-## Create a virtual environment for local testing
+## Install optional dependency groups
+
+Langflow OSS provides optional dependency groups that extend its functionality.
+
+These dependencies are listed in the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L191) file under `[project.optional-dependencies]`.
+
+Install dependency groups using pip's `[extras]` syntax. For example, to install Langflow with the `postgresql` dependency group, enter the following command:
+
+```bash
+uv pip install "langflow[postgresql]"
+```
+
+To install multiple extras, use commas to separate each dependency group:
+
+```bash
+uv pip install "langflow[deploy,local,postgresql]"
+```
+
+## Install custom dependencies
+
+To install your own custom dependencies in your Langflow environment, add them with your package manager.
+
+If you're working within a cloned Langflow repository, add dependencies with `uv add` because there is already a `pyproject.toml` file for uv to reference:
+
+```bash
+uv add langflow DEPENDENCY
+```
+
+### Use a virtual environment to test custom dependencies
 
 When testing locally, use a virtual environment to isolate your dependencies and prevent conflicts with other Python projects.
 
@@ -20,14 +48,17 @@ source YOUR_LANGFLOW_VENV/bin/activate
 uv pip install langflow matplotlib
 ```
 
-If you're working within a cloned Langflow repository, add dependencies with `uv add` because there is already a `pyproject.toml` file for uv to reference.
+If you're working within a cloned Langflow repository, add dependencies with `uv add` to reference the existing `pyproject.toml` file:
+
 ```bash
 uv add langflow matplotlib
 ```
 
 ## Add dependencies to the Langflow project
 
-When contributing to Langflow itself, add dependencies to the project's configuration. Langflow uses a workspace with two packages:
+When contributing to Langflow itself, add dependencies to the project's configuration.
+
+Langflow uses a workspace with two packages:
 
 * The `main` package (root level): For end-user features and main application code
 * The `base` package (in `src/backend/base`): For core functionality and shared code
