@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Literal
-from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import (
@@ -374,8 +373,7 @@ class InputValueRequest(BaseModel):
         extra="forbid",
     )
     chat_history: list[ChatMessageOpenAI] | None = Field(
-        default=None,
-        description="A list of OpenAI-style chat messages with 'role' and 'content'."
+        default=None, description="A list of OpenAI-style chat messages with 'role' and 'content'."
     )
 
 
@@ -386,9 +384,11 @@ class OpenAIModel(BaseModel):
     owned_by: str
     name: str
 
+
 class OpenAIList(BaseModel):
     object: Literal["list"] = Field("list")
     data: list[OpenAIModel]
+
 
 class OpenAIChatCompletionRequest(BaseModel):
     model: str
@@ -406,6 +406,7 @@ class ChatCompletionChoice(BaseModel):
     index: int
     message: ChatMessageOpenAI
     finish_reason: str | None = "stop"
+
 
 class ChatCompletionResponse(BaseModel):
     id: str
@@ -426,8 +427,7 @@ class SimplifiedAPIRequest(BaseModel):
     tweaks: Tweaks | None = Field(default=None, description="The tweaks")
     session_id: str | None = Field(default=None, description="The session id")
     chat_history: list[ChatMessageOpenAI] | None = Field(
-        default=None,
-        description="A list of OpenAI-style chat messages with 'role' and 'content'."
+        default=None, description="A list of OpenAI-style chat messages with 'role' and 'content'."
     )
 
 

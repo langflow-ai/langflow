@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+import uuid
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, Union
@@ -11,12 +12,12 @@ import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
+from fastapi_pagination import Params
 from loguru import logger
 from sqlmodel import select
-import json
-from fastapi_pagination import Page, Params
-from langflow.api.v1.flows import read_flows
+
 from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
+from langflow.api.v1.flows import read_flows
 from langflow.api.v1.schemas import (
     ChatCompletionChoice,
     ChatCompletionResponse,
@@ -401,8 +402,7 @@ async def get_models(
     current_user=Depends(get_current_active_user),
     folder_id: UUID | None = None,
 ):
-    """
-    Fetch all flow models and convert them into the OpenAI-compatible model list.
+    """Fetch all flow models and convert them into the OpenAI-compatible model list.
 
     This endpoint wraps around `read_flows()` with `get_all=True`, retrieves all flows
     accessible to the current user (optionally filtering components and example flows),
@@ -440,6 +440,7 @@ async def get_models(
             )
         )
     return OpenAIList(data=models)
+
 
 @router.post("/chat/completions", response_model=ChatCompletionResponse | None)
 async def openai_chat_completions(
@@ -504,7 +505,7 @@ async def openai_chat_completions(
                     full_text = payload["data"].get("text", "")
                     if full_text == input_request.input_value:
                         continue
-                    delta = full_text[len(prev_text):]
+                    delta = full_text[len(prev_text) :]
                     if delta:
                         chunk = {
                             "id": run_id,
