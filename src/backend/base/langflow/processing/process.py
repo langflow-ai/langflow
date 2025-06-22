@@ -44,7 +44,8 @@ async def run_graph_internal(
             logger.warning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
             input_value_request.input_value = ""
         components.append(input_value_request.components or [])
-        inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
+        inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value,
+                            'chat_history': input_value_request.chat_history})
         types.append(input_value_request.type)
 
     fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var

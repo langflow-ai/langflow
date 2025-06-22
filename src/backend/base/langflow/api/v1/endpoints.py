@@ -140,6 +140,7 @@ async def simple_run_flow(
                     components=[],
                     input_value=input_request.input_value,
                     type=input_request.input_type,
+                    chat_history=input_request.chat_history
                 )
             ]
         if input_request.output_component:
@@ -467,6 +468,7 @@ async def openai_chat_completions(
         output_type="chat",
         tweaks=request_data.tweaks,
         chat_history=request_data.messages,
+        session_id=str(uuid4())
     )
 
     stream = request_data.stream or False
