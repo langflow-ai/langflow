@@ -283,16 +283,15 @@ try:
 except ImportError:
     pass
 
-# Expose only active providers
-MODEL_PROVIDERS = [name for name, prov in MODEL_PROVIDERS_DICT.items() if prov.get("is_active", True)]
+# Expose only active providers ----------------------------------------------
+ACTIVE_MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {
+    name: prov for name, prov in MODEL_PROVIDERS_DICT.items() if prov.get("is_active", True)
+}
 
-ALL_PROVIDER_FIELDS: list[str] = [
-    field for prov in MODEL_PROVIDERS_DICT.values() if prov.get("is_active", True) for field in prov["fields"]
-]
+MODEL_PROVIDERS: list[str] = list(ACTIVE_MODEL_PROVIDERS_DICT.keys())
+
+ALL_PROVIDER_FIELDS: list[str] = [field for prov in ACTIVE_MODEL_PROVIDERS_DICT.values() for field in prov["fields"]]
 
 MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name"]
 
-
-MODELS_METADATA = {
-    key: {"icon": prov["icon"]} for key, prov in MODEL_PROVIDERS_DICT.items() if prov.get("is_active", True)
-}
+MODELS_METADATA = {name: {"icon": prov["icon"]} for name, prov in ACTIVE_MODEL_PROVIDERS_DICT.items()}
