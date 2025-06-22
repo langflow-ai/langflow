@@ -459,6 +459,7 @@ class Settings(BaseSettings):
             if lowered in {"true", "1", "yes"}:
                 return True
         return v
+
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
     async def update_from_yaml(self, file_path: str, *, dev: bool = False) -> None:
