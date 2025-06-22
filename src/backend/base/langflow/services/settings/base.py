@@ -435,7 +435,8 @@ class Settings(BaseSettings):
     @classmethod
     def _coerce_verify_ssl(cls, v):
         env_v = os.getenv("VERIFY_SSL")
-        if v is None and env_v is not None:
+        # Always prefer the explicit env-var when present
+        if env_v is not None:
             v = env_v
         if isinstance(v, str):
             if v.lower() in {"false", "0", "no"}:
@@ -443,7 +444,6 @@ class Settings(BaseSettings):
             if v.lower() in {"true", "1", "yes"}:
                 return True
         return v
-
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
     async def update_from_yaml(self, file_path: str, *, dev: bool = False) -> None:
