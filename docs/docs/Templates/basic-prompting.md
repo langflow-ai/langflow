@@ -1,6 +1,6 @@
 ---
 title: Basic prompting
-slug: /starter-projects-basic-prompting
+slug: /basic-prompting
 ---
 
 import Icon from "@site/src/components/icon";
