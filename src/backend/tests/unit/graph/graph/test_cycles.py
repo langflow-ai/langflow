@@ -5,7 +5,7 @@ from langflow.components.input_output import ChatInput, ChatOutput, TextOutputCo
 from langflow.components.input_output.text import TextInputComponent
 from langflow.components.languagemodels import OpenAIModelComponent
 from langflow.components.logic.conditional_router import ConditionalRouterComponent
-from langflow.components.prompts import PromptComponent
+from langflow.components.processing import PromptComponent
 from langflow.custom.custom_component.component import Component
 from langflow.graph.graph.base import Graph
 from langflow.graph.graph.utils import find_cycle_vertices
