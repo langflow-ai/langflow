@@ -1,5 +1,14 @@
 from langflow.custom.custom_component.component import Component
-from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
+from langflow.io import (
+    BoolInput,
+    DataFrameInput,
+    DropdownInput,
+    IntInput,
+    MessageTextInput,
+    Output,
+    StrInput,
+)
+from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
 
 
@@ -7,8 +16,8 @@ class DataFrameOperationsComponent(Component):
     display_name = "DataFrame Operations"
     description = "Perform various operations on a DataFrame."
     icon = "table"
+    name = "DataFrameOperations"
 
-    # Available operations
     OPERATION_CHOICES = [
         "Add Column",
         "Drop Column",
@@ -19,6 +28,7 @@ class DataFrameOperationsComponent(Component):
         "Select Columns",
         "Sort",
         "Tail",
+        "Drop Duplicates",
     ]
 
     inputs = [
@@ -111,7 +121,6 @@ class DataFrameOperationsComponent(Component):
     ]
 
     def update_build_config(self, build_config, field_value, field_name=None):
-        # Hide all dynamic fields by default
         dynamic_fields = [
             "column_name",
             "filter_value",
@@ -126,7 +135,6 @@ class DataFrameOperationsComponent(Component):
         for field in dynamic_fields:
             build_config[field]["show"] = False
 
-        # Show relevant fields based on the selected operation
         if field_name == "operation":
             if field_value == "Filter":
                 build_config["column_name"]["show"] = True
@@ -150,36 +158,39 @@ class DataFrameOperationsComponent(Component):
                 build_config["column_name"]["show"] = True
                 build_config["replace_value"]["show"] = True
                 build_config["replacement_value"]["show"] = True
+            elif field_value == "Drop Duplicates":
+                build_config["column_name"]["show"] = True
 
         return build_config
 
     def perform_operation(self) -> DataFrame:
-        dataframe_copy = self.df.copy()
-        operation = self.operation
+        df = self.df.copy()
+        op = self.operation
 
-        if operation == "Filter":
-            return self.filter_rows_by_value(dataframe_copy)
-        if operation == "Sort":
-            return self.sort_by_column(dataframe_copy)
-        if operation == "Drop Column":
-            return self.drop_column(dataframe_copy)
-        if operation == "Rename Column":
-            return self.rename_column(dataframe_copy)
-        if operation == "Add Column":
-            return self.add_column(dataframe_copy)
-        if operation == "Select Columns":
-            return self.select_columns(dataframe_copy)
-        if operation == "Head":
-            return self.head(dataframe_copy)
-        if operation == "Tail":
-            return self.tail(dataframe_copy)
-        if operation == "Replace Value":
-            return self.replace_values(dataframe_copy)
-        msg = f"Unsupported operation: {operation}"
-
+        if op == "Filter":
+            return self.filter_rows_by_value(df)
+        if op == "Sort":
+            return self.sort_by_column(df)
+        if op == "Drop Column":
+            return self.drop_column(df)
+        if op == "Rename Column":
+            return self.rename_column(df)
+        if op == "Add Column":
+            return self.add_column(df)
+        if op == "Select Columns":
+            return self.select_columns(df)
+        if op == "Head":
+            return self.head(df)
+        if op == "Tail":
+            return self.tail(df)
+        if op == "Replace Value":
+            return self.replace_values(df)
+        if op == "Drop Duplicates":
+            return self.drop_duplicates(df)
+        msg = f"Unsupported operation: {op}"
+        logger.error(msg)
         raise ValueError(msg)
 
-    # Existing methods
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
         return DataFrame(df[df[self.column_name] == self.filter_value])
 
@@ -200,7 +211,6 @@ class DataFrameOperationsComponent(Component):
         columns = [col.strip() for col in self.columns_to_select]
         return DataFrame(df[columns])
 
-    # New methods
     def head(self, df: DataFrame) -> DataFrame:
         return DataFrame(df.head(self.num_rows))
 
@@ -210,3 +220,6 @@ class DataFrameOperationsComponent(Component):
     def replace_values(self, df: DataFrame) -> DataFrame:
         df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
         return DataFrame(df)
+
+    def drop_duplicates(self, df: DataFrame) -> DataFrame:
+        return DataFrame(df.drop_duplicates(subset=self.column_name))
