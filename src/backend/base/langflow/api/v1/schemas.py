@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, List, Literal, Optional
 from uuid import UUID
 
 from pydantic import (
@@ -333,6 +333,11 @@ class VerticesBuiltResponse(BaseModel):
     vertices: list[VertexBuildResponse]
 
 
+class ChatMessageOpenAI(BaseModel):
+    role: Literal["system", "user", "assistant", "tool", "function", "developer"]
+    content: str
+
+
 class InputValueRequest(BaseModel):
     components: list[str] | None = []
     input_value: str | None = None
@@ -366,6 +371,36 @@ class InputValueRequest(BaseModel):
         },
         extra="forbid",
     )
+    chat_history: Optional[List[ChatMessageOpenAI]] = Field(
+        default=None,
+        description="A list of OpenAI-style chat messages with 'role' and 'content'."
+    )
+
+
+# OpenAI-compatible request format
+
+class OpenAIChatCompletionRequest(BaseModel):
+    model: str
+    messages: List[ChatMessageOpenAI]
+    stream: Optional[bool] = False
+    temperature: Optional[float] = None
+    top_p: Optional[float] = None
+    max_tokens: Optional[int] = None
+    stop: Optional[List[str]] = None
+    tweaks: Tweaks | None = Field(default=None, description="The tweaks")
+
+# OpenAI-compatible response format (simplified)
+class ChatCompletionChoice(BaseModel):
+    index: int
+    message: ChatMessageOpenAI
+    finish_reason: Optional[str] = "stop"
+
+class ChatCompletionResponse(BaseModel):
+    id: str
+    object: str = "chat.completion"
+    created: int
+    model: str
+    choices: List[ChatCompletionChoice]
 
 
 class SimplifiedAPIRequest(BaseModel):
@@ -378,6 +413,10 @@ class SimplifiedAPIRequest(BaseModel):
     )
     tweaks: Tweaks | None = Field(default=None, description="The tweaks")
     session_id: str | None = Field(default=None, description="The session id")
+    chat_history: Optional[List[ChatMessageOpenAI]] = Field(
+        default=None,
+        description="A list of OpenAI-style chat messages with 'role' and 'content'."
+    )
 
 
 # (alias) type ReactFlowJsonObject<NodeData = any, EdgeData = any> = {
