@@ -434,8 +434,10 @@ class Settings(BaseSettings):
     @field_validator("verify_ssl", mode="before")
     @classmethod
     def _coerce_verify_ssl(cls, v):
-        # Normalise common string representations so Pydantic can cast them
-        # correctly after this validator runs.
+        env_v = os.getenv("VERIFY_SSL")
+        # Always prefer the explicit env-var when present
+        if env_v is not None:
+            v = env_v
         if isinstance(v, str):
             lowered = v.lower()
             if lowered in {"false", "0", "no"}:
@@ -443,7 +445,6 @@ class Settings(BaseSettings):
             if lowered in {"true", "1", "yes"}:
                 return True
         return v
-
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
     async def update_from_yaml(self, file_path: str, *, dev: bool = False) -> None:
