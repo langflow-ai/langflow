@@ -6,16 +6,16 @@ from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, Union
 from uuid import UUID
-
+import uuid
 import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import select
 import json
-import time
-
+from fastapi_pagination import Page, Params
+from langflow.api.v1.flows import read_flows
 from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
 from langflow.api.v1.schemas import (
     ChatCompletionChoice,
@@ -26,6 +26,8 @@ from langflow.api.v1.schemas import (
     CustomComponentResponse,
     InputValueRequest,
     OpenAIChatCompletionRequest,
+    OpenAIList,
+    OpenAIModel,
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
@@ -393,7 +395,53 @@ async def simplified_run_flow(
     return result
 
 
-@router.post("/chat/completions", response_model=Union[ChatCompletionResponse, None])
+@router.get("/models", response_model=OpenAIList)
+async def get_models(
+    session: DbSession,
+    current_user=Depends(get_current_active_user),
+    folder_id: UUID | None = Query(None),
+):
+    """
+    Fetch all flow models and convert them into the OpenAI-compatible model list.
+
+    This endpoint wraps around `read_flows()` with `get_all=True`, retrieves all flows
+    accessible to the current user (optionally filtering components and example flows),
+    and transforms them into `OpenAIModel` objects.
+
+    Args:
+        session (DbSession): Active database session.
+        current_user (User): The current authenticated user.
+        folder_id (UUID, optional): Filter by a specific folder.
+
+    Returns:
+        OpenAIList: A list of OpenAIModel objects with basic flow metadata.
+    """
+    page_or_list = await read_flows(
+        session=session,
+        current_user=current_user,
+        remove_example_flows=True,
+        components_only=False,
+        get_all=False,
+        folder_id=folder_id,
+        params=Params(page=1, size=100),
+        header_flows=False,
+    )
+    flows = getattr(page_or_list, "items", page_or_list)
+
+    models = []
+    for flow in flows:
+        ts = int(flow.updated_at.timestamp()) if getattr(flow, "updated_at", None) else 0
+        models.append(
+            OpenAIModel(
+                id=str(flow.id),
+                created=ts,
+                owned_by=getattr(current_user, "organization", "organization-owner"),
+                name=str(flow.name),
+            )
+        )
+    return OpenAIList(data=models)
+
+@router.post("/chat/completions", response_model=ChatCompletionResponse | None)
 async def openai_chat_completions(
     *,
     background_tasks: BackgroundTasks,
@@ -439,20 +487,7 @@ async def openai_chat_completions(
             main_task.cancel()
 
         async def sse_generator():
-            run_id = str(UUID.uuid4())
-            created = int(time.time())
-
-            # 1) send initial assistant‐role chunk
-            init = {
-                "id": run_id,
-                "object": "chat.completion.chunk",
-                "created": created,
-                "model": request_data.model,
-                "choices": [
-                    {"delta": {"role": "assistant"}, "index": 0}
-                ]
-            }
-            yield f"data: {json.dumps(init)}\n\n"
+            run_id = str(uuid.uuid4())
             prev_text = ""
 
             # 2) stream content as add_message events arrive
@@ -463,6 +498,8 @@ async def openai_chat_completions(
 
                 if ev_type == "add_message":
                     full_text = payload["data"].get("text", "")
+                    if full_text == input_request.input_value:
+                        continue
                     delta = full_text[len(prev_text):]
                     if delta:
                         chunk = {
