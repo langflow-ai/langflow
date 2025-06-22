@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-import uuid
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated, Union
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
+
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
@@ -598,7 +598,7 @@ async def openai_chat_completions(
         last_output = result.outputs[-1]
         if hasattr(last_output, "data") and last_output.data:
             content = str(last_output.data)
-    
+
     reply_message = ChatMessageOpenAI(role="assistant", content=content)
 
     return ChatCompletionResponse(
