@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
@@ -13,8 +14,6 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import select
-import json
-import time
 
 from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
 from langflow.api.v1.schemas import (
@@ -413,7 +412,7 @@ async def openai_chat_completions(
         input_type="chat",
         output_type="chat",
         tweaks=request_data.tweaks,
-        chat_history=request_data.messages
+        chat_history=request_data.messages,
     )
 
     stream = request_data.stream or False
@@ -448,9 +447,7 @@ async def openai_chat_completions(
                 "object": "chat.completion.chunk",
                 "created": created,
                 "model": request_data.model,
-                "choices": [
-                    {"delta": {"role": "assistant"}, "index": 0}
-                ]
+                "choices": [{"delta": {"role": "assistant"}, "index": 0}],
             }
             yield f"data: {json.dumps(init)}\n\n"
             prev_text = ""
@@ -463,14 +460,14 @@ async def openai_chat_completions(
 
                 if ev_type == "add_message":
                     full_text = payload["data"].get("text", "")
-                    delta = full_text[len(prev_text):]
+                    delta = full_text[len(prev_text) :]
                     if delta:
                         chunk = {
                             "id": run_id,
                             "object": "chat.completion.chunk",
                             "created": int(time.time()),
                             "model": request_data.model,
-                            "choices": [{"delta": {"content": delta}, "index": 0}]
+                            "choices": [{"delta": {"content": delta}, "index": 0}],
                         }
                         yield f"data: {json.dumps(chunk)}\n\n"
                         prev_text = full_text
@@ -485,7 +482,7 @@ async def openai_chat_completions(
                         "object": "chat.completion.chunk",
                         "created": int(time.time()),
                         "model": request_data.model,
-                        "choices": [{"delta": {}, "index": 0, "finish_reason": "stop"}]
+                        "choices": [{"delta": {}, "index": 0, "finish_reason": "stop"}],
                     }
                     yield f"data: {json.dumps(fin)}\n\n"
                     yield "data: [DONE]\n\n"
@@ -556,7 +553,7 @@ async def openai_chat_completions(
         id=result.run_id if hasattr(result, "run_id") else "run_unknown",
         created=int(time.time()),
         model=request_data.model,
-        choices=[ChatCompletionChoice(index=0, message=reply_message)]
+        choices=[ChatCompletionChoice(index=0, message=reply_message)],
     )
 
 
