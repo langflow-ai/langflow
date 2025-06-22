@@ -11,7 +11,7 @@ class PromptComponent(Component):
     description: str = "Create a prompt template with dynamic variables."
     icon = "braces"
     trace_type = "prompt"
-    name = "Prompt"
+    name = "Prompt Template"
     priority = 0  # Set priority to 0 to make it appear first
 
     inputs = [
