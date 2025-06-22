@@ -6,10 +6,9 @@ import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, Union
-from uuid import UUID
-import uuid
+from uuid import UUID, uuid4
 import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from loguru import logger
@@ -400,7 +399,7 @@ async def simplified_run_flow(
 async def get_models(
     session: DbSession,
     current_user=Depends(get_current_active_user),
-    folder_id: UUID | None = Query(None),
+    folder_id: UUID | None = None,
 ):
     """
     Fetch all flow models and convert them into the OpenAI-compatible model list.
@@ -457,8 +456,12 @@ async def openai_chat_completions(
     telemetry_service = get_telemetry_service()
 
     # Convert OpenAI format
+    last_message_content = ""
+    if request_data.messages and isinstance(request_data.messages, list):
+        last_message_content = request_data.messages[-1].content
+
     input_request = SimplifiedAPIRequest(
-        input_value=request_data.messages[-1].content if request_data.messages else None,
+        input_value=last_message_content,
         input_type="chat",
         output_type="chat",
         tweaks=request_data.tweaks,
@@ -488,7 +491,7 @@ async def openai_chat_completions(
             main_task.cancel()
 
         async def sse_generator():
-            run_id = str(uuid.uuid4())
+            run_id = str(uuid4())
             prev_text = ""
 
             # 2) stream content as add_message events arrive
@@ -589,9 +592,16 @@ async def openai_chat_completions(
 
     # Return OpenAI-style response
     reply_message = ChatMessageOpenAI(role="assistant", content=result.output if hasattr(result, "output") else "Done.")
+    content = "Done."
+    if result.outputs and len(result.outputs) > 0:
+        last_output = result.outputs[-1]
+        if hasattr(last_output, "data") and last_output.data:
+            content = str(last_output.data)
+    
+    reply_message = ChatMessageOpenAI(role="assistant", content=content)
 
     return ChatCompletionResponse(
-        id=result.run_id if hasattr(result, "run_id") else "run_unknown",
+        id=str(uuid4()),
         created=int(time.time()),
         model=request_data.model,
         choices=[ChatCompletionChoice(index=0, message=reply_message)],
