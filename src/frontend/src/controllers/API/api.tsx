@@ -13,6 +13,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
 import { useLogout, useRefreshAccessToken } from "./queries/auth";
+import { useClerkAccessToken } from "./clerk-access-token";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -20,31 +21,25 @@ const api: AxiosInstance = axios.create({
 });
 
 const cookies = new Cookies();
+const CLERK_AUTH_ENABLED = import.meta.env.VITE_CLERK_AUTH_ENABLED === "true";
+
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const accessToken = useAuthStore((state) => state.accessToken);
-  const authenticationErrorCount = useAuthStore(
-    (state) => state.authenticationErrorCount,
-  );
-  const setAuthenticationErrorCount = useAuthStore(
-    (state) => state.setAuthenticationErrorCount,
-  );
-
+  const authenticationErrorCount = useAuthStore((state) => state.authenticationErrorCount);
+  const setAuthenticationErrorCount = useAuthStore((state) => state.setAuthenticationErrorCount);
   const { mutate: mutationLogout } = useLogout();
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
   const isLoginPage = location.pathname.includes("login");
   const customHeaders = useCustomApiHeaders();
-
-  const setHealthCheckTimeout = useUtilityStore(
-    (state) => state.setHealthCheckTimeout,
-  );
+  const getClerkAccessToken = useClerkAccessToken();
+  const setHealthCheckTimeout = useUtilityStore((state) => state.setHealthCheckTimeout);
 
   useEffect(() => {
     const unregister = fetchIntercept.register({
       request: function (url, config) {
         const accessToken = customGetAccessToken();
-
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
@@ -65,40 +60,29 @@ function ApiInterceptor() {
         return response;
       },
       async (error: AxiosError) => {
-        const isAuthenticationError =
-          error?.response?.status === 403 || error?.response?.status === 401;
-
+        const isAuthenticationError = [401, 403].includes(error?.response?.status || 0);
         const shouldRetryRefresh =
-          (isAuthenticationError && !IS_AUTO_LOGIN) ||
-          (isAuthenticationError && !autoLogin && autoLogin !== undefined);
+          (isAuthenticationError && !autoLogin) || (isAuthenticationError && autoLogin === undefined);
 
         if (shouldRetryRefresh) {
-          if (
-            error?.config?.url?.includes("github") ||
-            error?.config?.url?.includes("public")
-          ) {
+          if (error?.config?.url?.includes("github") || error?.config?.url?.includes("public")) {
             return Promise.reject(error);
           }
+
           const stillRefresh = checkErrorCount();
-          if (!stillRefresh) {
-            return Promise.reject(error);
-          }
+          if (!stillRefresh) return Promise.reject(error);
 
           await tryToRenewAccessToken(error);
 
           const accessToken = customGetAccessToken();
-
           if (!accessToken && error?.config?.url?.includes("login")) {
             return Promise.reject(error);
           }
         }
 
         await clearBuildVerticesState(error);
-
-        if (!isAuthenticationError) {
-          return Promise.reject(error);
-        }
-      },
+        if (!isAuthenticationError) return Promise.reject(error);
+      }
     );
 
     const isAuthorizedURL = (url) => {
@@ -108,26 +92,17 @@ function ApiInterceptor() {
         "https://api.github.com/repos/langflow-ai/langflow",
         "auto_login",
       ];
-
       const authorizedEndpoints = ["auto_login"];
 
       try {
         const parsedURL = new URL(url);
-        const isDomainAllowed = authorizedDomains.some(
-          (domain) => parsedURL.origin === new URL(domain).origin,
-        );
-        const isEndpointAllowed = authorizedEndpoints.some((endpoint) =>
-          parsedURL.pathname.includes(endpoint),
-        );
-
-        return isDomainAllowed || isEndpointAllowed;
-      } catch (e) {
-        // Invalid URL
+        return authorizedDomains.some((domain) => parsedURL.origin === new URL(domain).origin) ||
+          authorizedEndpoints.some((endpoint) => parsedURL.pathname.includes(endpoint));
+      } catch {
         return false;
       }
     };
 
-    // Check for external url which we don't want to add custom headers to
     const isExternalURL = (url: string): boolean => {
       const EXTERNAL_DOMAINS = [
         "https://raw.githubusercontent.com",
@@ -135,55 +110,50 @@ function ApiInterceptor() {
         "https://api.segment.io",
         "https://cdn.sprig.com",
       ];
-
       try {
         const parsedURL = new URL(url);
         return EXTERNAL_DOMAINS.some((domain) => parsedURL.origin === domain);
-      } catch (e) {
+      } catch {
         return false;
       }
     };
 
-    // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       async (config) => {
-        const controller = new AbortController();
-        try {
-          checkDuplicateRequestAndStoreRequest(config);
-        } catch (e) {
-          const error = e as Error;
-          controller.abort(error.message);
-          console.error(error.message);
+        let accessToken = customGetAccessToken();
+        if (CLERK_AUTH_ENABLED) {
+          accessToken = await getClerkAccessToken();
+          console.debug("[CLERK][API] Clerk token:", accessToken?.slice(0, 30));
+        } else {
+          console.debug("[CLERK][API] Legacy token:", accessToken);
         }
-
-        const accessToken = customGetAccessToken();
 
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
+        const controller = new AbortController();
+        try {
+          checkDuplicateRequestAndStoreRequest(config);
+        } catch (e) {
+          controller.abort((e as Error).message);
+          console.error(e);
+        }
+
         const currentOrigin = window.location.origin;
         const requestUrl = new URL(config?.url as string, currentOrigin);
-
-        const urlIsFromCurrentOrigin = requestUrl.origin === currentOrigin;
-        if (urlIsFromCurrentOrigin) {
+        if (requestUrl.origin === currentOrigin) {
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
         }
 
-        return {
-          ...config,
-          signal: controller.signal,
-        };
+        return { ...config, signal: controller.signal };
       },
-      (error) => {
-        return Promise.reject(error);
-      },
+      (error) => Promise.reject(error)
     );
 
     return () => {
-      // Clean up the interceptors when the component unmounts
       api.interceptors.response.eject(interceptor);
       api.interceptors.request.eject(requestInterceptor);
       unregister();
@@ -192,30 +162,28 @@ function ApiInterceptor() {
 
   function checkErrorCount() {
     if (isLoginPage) return;
-
     setAuthenticationErrorCount(authenticationErrorCount + 1);
-
     if (authenticationErrorCount > 3) {
       setAuthenticationErrorCount(0);
       mutationLogout();
       return false;
     }
-
     return true;
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
     if (isLoginPage) return;
+
     if (error.config?.headers) {
       for (const [key, value] of Object.entries(customHeaders)) {
         error.config.headers[key] = value;
       }
     }
+
     mutationRenewAccessToken(undefined, {
       onSuccess: async () => {
         setAuthenticationErrorCount(0);
         await remakeRequest(error);
-        setAuthenticationErrorCount(0);
       },
       onError: (error) => {
         console.error(error);
@@ -228,33 +196,27 @@ function ApiInterceptor() {
   async function clearBuildVerticesState(error) {
     if (error?.response?.status === 500) {
       const vertices = useFlowStore.getState().verticesBuild;
-      useFlowStore
-        .getState()
-        .updateBuildStatus(vertices?.verticesIds ?? [], BuildStatus.BUILT);
+      useFlowStore.getState().updateBuildStatus(vertices?.verticesIds ?? [], BuildStatus.BUILT);
       useFlowStore.getState().setIsBuilding(false);
     }
   }
 
   async function remakeRequest(error: AxiosError) {
     const originalRequest = error.config as AxiosRequestConfig;
-
     try {
-      const accessToken = customGetAccessToken();
-
-      if (!accessToken) {
-        throw new Error("Access token not found in cookies");
+      let accessToken = customGetAccessToken();
+      if (CLERK_AUTH_ENABLED) {
+        accessToken = await getClerkAccessToken();
       }
-
-      // Modify headers in originalRequest
+      if (!accessToken) throw new Error("Access token not found");
       originalRequest.headers = {
-        ...(originalRequest.headers as Record<string, string>), // Cast to suppress TypeScript error
+        ...(originalRequest.headers as Record<string, string>),
         Authorization: `Bearer ${accessToken}`,
       };
-
       const response = await axios.request(originalRequest);
-      return response.data; // Or handle the response as needed
+      return response.data;
     } catch (err) {
-      throw err; // Throw the error if request fails again
+      throw err;
     }
   }
 

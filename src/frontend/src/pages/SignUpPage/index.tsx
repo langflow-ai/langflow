@@ -19,11 +19,17 @@ import {
   inputHandlerEventType,
   signUpInputStateType,
 } from "../../types/components";
+import { CLERK_AUTH_ENABLED } from "@/controllers/API/helpers/constants";
+import { SignUp as ClerkSignup } from "@clerk/clerk-react";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
     useState<signUpInputStateType>(CONTROL_INPUT_STATE);
 
+  if(CLERK_AUTH_ENABLED){
+    return <ClerkSignup />
+  }
+  
   const [isDisabled, setDisableBtn] = useState<boolean>(true);
 
   const { password, cnfPassword, username } = inputState;

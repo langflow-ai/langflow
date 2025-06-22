@@ -121,12 +121,16 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isDarkMode = useTheme().dark;
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const projectId = folderId ?? myCollectionId ?? "";
+  const projectId = folderId ?? myCollectionId;
   const [isCopied, setIsCopied] = useState(false);
   const [apiKey, setApiKey] = useState<string>("");
   const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  if (!projectId) {
+    return null;
+  }
 
   const { data: flowsMCP } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });

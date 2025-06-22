@@ -1,3 +1,4 @@
+import React from "react";
 import ReactDOM from "react-dom/client";
 import reportWebVitals from "./reportWebVitals";
 
@@ -11,9 +12,21 @@ import "./style/applies.css";
 // @ts-ignore
 import App from "./customization/custom-App";
 
-const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement,
+import { ClerkProvider } from "@clerk/clerk-react";
+
+// Load Clerk publishable key from Vite env
+const clerkFrontendApi = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
+
+root.render(
+  <React.StrictMode>
+    <ClerkProvider publishableKey={clerkFrontendApi}
+      afterSignInUrl="/flows"
+      afterSignUpUrl="/flows">
+      <App />
+    </ClerkProvider>
+  </React.StrictMode>
 );
 
-root.render(<App />);
 reportWebVitals();

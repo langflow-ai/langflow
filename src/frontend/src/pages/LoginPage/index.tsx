@@ -11,6 +11,9 @@ import { CONTROL_LOGIN_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import { LoginType } from "../../types/api";
+import { CLERK_AUTH_ENABLED } from "@/controllers/API/helpers/constants";
+import { SignIn, SignedOut } from "@clerk/clerk-react";
+
 import {
   inputHandlerEventType,
   loginInputStateType,
@@ -19,7 +22,9 @@ import {
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
-
+  if (CLERK_AUTH_ENABLED) {
+    return (<SignedOut><SignIn afterSignInUrl="/flows" /></SignedOut>);
+  }
   const { password, username } = inputState;
   const { login } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);

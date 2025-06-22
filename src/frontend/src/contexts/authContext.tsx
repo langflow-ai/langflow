@@ -13,6 +13,9 @@ import { Cookies } from "react-cookie";
 import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
+import { CLERK_AUTH_ENABLED } from "@/controllers/API/helpers/constants";
+import {ClerkSessionSync} from "@/components/ClerkSessionSync";
+
 
 const initialValue: AuthContextType = {
   accessToken: null,
@@ -105,20 +108,23 @@ export function AuthProvider({ children }): React.ReactElement {
 
   return (
     // !! to convert string to boolean
-    <AuthContext.Provider
-      value={{
-        accessToken,
-        login,
-        setUserData,
-        userData,
-        authenticationErrorCount: 0,
-        setApiKey,
-        apiKey,
-        storeApiKey,
-        getUser,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <>
+      {CLERK_AUTH_ENABLED && <ClerkSessionSync />}
+      <AuthContext.Provider
+        value={{
+          accessToken,
+          login,
+          setUserData,
+          userData,
+          authenticationErrorCount: 0,
+          setApiKey,
+          apiKey,
+          storeApiKey,
+          getUser,
+        }}
+      >
+        {children}
+      </AuthContext.Provider>
+    </>
   );
 }

@@ -12,6 +12,16 @@ from langflow.services.settings.utils import read_secret_from_file, write_secret
 
 
 class AuthSettings(BaseSettings):
+
+    CLERK_AUTH_ENABLED: bool = Field(default=False)
+    AUTO_LOGIN: bool = Field(default=False)
+
+    # Clerk Secret Key (required to validate Clerk JWTs)
+    CLERK_SECRET_KEY: SecretStr = Field(
+        default=SecretStr(""),
+        description="Secret key for verifying Clerk JWTs.",
+    )
+
     # Login settings
     CONFIG_DIR: str
     SECRET_KEY: SecretStr = Field(
@@ -29,7 +39,6 @@ class AuthSettings(BaseSettings):
 
     # If AUTO_LOGIN = True
     # > The application does not request login and logs in automatically as a super user.
-    AUTO_LOGIN: bool = True
     NEW_USER_IS_ACTIVE: bool = False
     SUPERUSER: str = DEFAULT_SUPERUSER
     SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD

@@ -176,6 +176,7 @@ export type Users = {
   username: string;
   is_active: boolean;
   is_superuser: boolean;
+  email?: string;
   profile_image: string;
   create_at: Date;
   updated_at: Date;
@@ -344,4 +345,11 @@ export type TableOptionsTypeAPI = {
   >;
   field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
   description?: string;
+};
+
+
+export type MeResponse = {
+  id: string;
+  username: string;
+  is_superuser: boolean;
 };

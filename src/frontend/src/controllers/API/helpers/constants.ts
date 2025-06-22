@@ -1,5 +1,12 @@
-import { BASE_URL_API, BASE_URL_API_V2 } from "../../../constants/constants";
+// Environment config strictly for frontend
+export const CLERK_AUTH_ENABLED = import.meta.env.VITE_CLERK_AUTH_ENABLED === "true";
+export const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "";
 
+// API base URLs
+export const BASE_URL_API = "/api/v1/";
+export const BASE_URL_API_V2 = "/api/v2/";
+
+// All backend API endpoints
 export const URLs = {
   TRANSACTIONS: `monitor/transactions`,
   API_KEY: `api_key`,
@@ -17,7 +24,7 @@ export const URLs = {
   BUILD: `build`,
   CUSTOM_COMPONENT: `custom_component`,
   FLOWS: `flows`,
-  FOLDERS: `projects`,
+  FOLDERS: `projects`, // alias for backward compatibility
   PROJECTS: `projects`,
   VARIABLES: `variables`,
   VALIDATE: `validate`,
@@ -30,16 +37,22 @@ export const URLs = {
   MCP: `mcp/project`,
 } as const;
 
-// IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility
-
+// URL constructor
 export function getURL(
   key: keyof typeof URLs,
   params: any = {},
   v2: boolean = false,
-) {
+): string {
+  if (CLERK_AUTH_ENABLED && (key === "LOGIN" || key === "REFRESH")) {
+    throw new Error(`Legacy endpoint "${key}" is disabled under Clerk authentication`);
+  }
+
   let url = URLs[key];
-  Object.keys(params).forEach((key) => (url += `/${params[key]}`));
-  return `${v2 ? BASE_URL_API_V2 : BASE_URL_API}${url.toString()}`;
+  Object.keys(params).forEach((key) => {
+    url += `/${params[key]}`;
+  });
+
+  return `${v2 ? BASE_URL_API_V2 : BASE_URL_API}${url}`;
 }
 
 export type URLsType = typeof URLs;
