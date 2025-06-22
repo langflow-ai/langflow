@@ -1,8 +1,9 @@
 from langflow.custom.custom_component.component import Component
-from langflow.inputs.inputs import HandleInput
+from langflow.inputs.inputs import DataFrameInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.template.field.base import Output
+from loguru import logger
 
 
 class LoopComponent(Component):
@@ -13,12 +14,11 @@ class LoopComponent(Component):
     icon = "infinity"
 
     inputs = [
-        HandleInput(
-            name="data",
-            display_name="Inputs",
-            info="The initial list of Data objects or DataFrame to iterate over.",
-            input_types=["DataFrame"],
-        ),
+        DataFrameInput(
+            name="df_input",
+            display_name="DataFrame",
+            info="The input DataFrame to operate on.",
+        )
     ]
 
     outputs = [
@@ -30,9 +30,9 @@ class LoopComponent(Component):
         """Initialize the data list, context index, and aggregated list."""
         if self.ctx.get(f"{self._id}_initialized", False):
             return
-
+        logger.debug(f"Initializing data for LoopComponent {self._id}. Input data: {self.df_input}")
         # Ensure data is a list of Data objects
-        data_list = self._validate_data(self.data)
+        data_list = self._validate_data(self.df_input)
 
         # Store the initial data and context variables
         self.update_ctx(
@@ -43,16 +43,25 @@ class LoopComponent(Component):
                 f"{self._id}_initialized": True,
             }
         )
+        logger.debug(f"Data initialized. Context: {self.ctx.get(f'{self._id}_data')}")
 
     def _validate_data(self, data):
         """Validate and return a list of Data objects."""
+        logger.debug(f"Validating data: {data} (type: {type(data)})")
+        if not data or (isinstance(data, str) and not data.strip()):
+            logger.warning("Data input is empty or an empty string. Returning empty list.")
+            return []
         if isinstance(data, DataFrame):
+            logger.debug("Data is a DataFrame. Converting to data list.")
             return data.to_data_list()
         if isinstance(data, Data):
+            logger.debug("Data is a single Data object. Wrapping in a list.")
             return [data]
         if isinstance(data, list) and all(isinstance(item, Data) for item in data):
+            logger.debug("Data is a list of Data objects.")
             return data
-        msg = "The 'data' input must be a DataFrame, a list of Data objects, or a single Data object."
+        msg = f"The 'data' input must be a DataFrame, but received type {type(data)}."
+        logger.error(msg)
         raise TypeError(msg)
 
     def evaluate_stop_loop(self) -> bool:
@@ -112,8 +121,6 @@ class LoopComponent(Component):
 
     def aggregated_output(self) -> list[Data]:
         """Return the aggregated list once all items are processed."""
-        self.initialize_data()
-
         # Get data list and aggregated list
         data_list = self.ctx.get(f"{self._id}_data", [])
         aggregated = self.ctx.get(f"{self._id}_aggregated", [])
