@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import (
@@ -326,6 +327,7 @@ class VertexBuildResponse(BaseModel):
         Returns:
             dict: The serialized representation of the data with truncation applied.
         """
+        # return serialize(data, max_length=get_max_text_length())  TODO: Safe?
         return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
@@ -397,6 +399,7 @@ class OpenAIChatCompletionRequest(BaseModel):
     max_tokens: int | None = None
     stop: list[str] | None = None
     tweaks: Tweaks | None = Field(default=None, description="The tweaks")
+
 
 # OpenAI-compatible response format (simplified)
 class ChatCompletionChoice(BaseModel):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
@@ -461,7 +462,7 @@ async def openai_chat_completions(
         input_type="chat",
         output_type="chat",
         tweaks=request_data.tweaks,
-        chat_history=request_data.messages
+        chat_history=request_data.messages,
     )
 
     stream = request_data.stream or False
@@ -507,7 +508,7 @@ async def openai_chat_completions(
                             "object": "chat.completion.chunk",
                             "created": int(time.time()),
                             "model": request_data.model,
-                            "choices": [{"delta": {"content": delta}, "index": 0}]
+                            "choices": [{"delta": {"content": delta}, "index": 0}],
                         }
                         yield f"data: {json.dumps(chunk)}\n\n"
                         prev_text = full_text
@@ -522,7 +523,7 @@ async def openai_chat_completions(
                         "object": "chat.completion.chunk",
                         "created": int(time.time()),
                         "model": request_data.model,
-                        "choices": [{"delta": {}, "index": 0, "finish_reason": "stop"}]
+                        "choices": [{"delta": {}, "index": 0, "finish_reason": "stop"}],
                     }
                     yield f"data: {json.dumps(fin)}\n\n"
                     yield "data: [DONE]\n\n"
@@ -593,7 +594,7 @@ async def openai_chat_completions(
         id=result.run_id if hasattr(result, "run_id") else "run_unknown",
         created=int(time.time()),
         model=request_data.model,
-        choices=[ChatCompletionChoice(index=0, message=reply_message)]
+        choices=[ChatCompletionChoice(index=0, message=reply_message)],
     )
 
 
