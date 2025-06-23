@@ -37,7 +37,7 @@ This component evaluates and explains the trustworthiness of a prompt and respon
 
 | Name                    | Type       | Description                                                             |
 |-------------------------|------------|-------------------------------------------------------------------------|
-| score                   | number     | Displays the trust score between 0–1.                                                |
+| score                   | number     | Displays the trust score between `0–1`.                                                |
 | explanation             | Message    | Provides an explanation of the trust score.                                         |
 | response                | Message    | Returns the original response for easy chaining to the `CleanlabRemediator` component. |
 
@@ -85,7 +85,7 @@ Additionally, use the [CleanlabRemediator](#cleanlabremediator) component with t
 |-----------------------------|------------|-------------------------------------------------------------------------|
 | cleanlab_api_key           | Secret     | Your Cleanlab API key.                                                  |
 | cleanlab_evaluation_model  | Dropdown   | Thevaluation model used by Cleanlab, such as GPT-4, or Claude. This does not need to be the same model that generated the response. |
-| quality_preset             | Dropdown   | Tradeoff between evaluation speed and accuracy.                         |
+| quality_preset             | Dropdown   | The tradeoff between evaluation speed and accuracy.                         |
 | context                    | Message    | The retrieved context from your RAG system.                                 |
 | query                      | Message    | The original user query.                                                |
 | response                   | Message    | The model's response based on the context and query. |
