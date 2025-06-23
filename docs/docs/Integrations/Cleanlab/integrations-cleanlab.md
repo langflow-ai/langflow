@@ -30,24 +30,24 @@ This component evaluates and explains the trustworthiness of a prompt and respon
 |-------------------------|------------|-------------------------------------------------------------------------|
 | system_prompt           | Message    | (Optional) System message prepended to the prompt.                      |
 | prompt                  | Message    | The user-facing input to the LLM.                                       |
-| response                | Message    | OpenAI's, Claude, etc. model's response to evaluate.                    |
+| response                | Message    | The model's response to evaluate.                    |
 | cleanlab_api_key        | Secret     | Your Cleanlab API key.                                                  |
-| cleanlab_evaluation_model | Dropdown   | Evaluation model used by Cleanlab, such as GPT-4, or Claude. This does not need to be the same model that generated the response. |
+| cleanlab_evaluation_model | Dropdown   | Evaluation model used by Cleanlab, such as GPT-4 or Claude. This does not need to be the same model that generated the response. |
 | quality_preset          | Dropdown   | Tradeoff between evaluation speed and accuracy.                         |
 
 **Outputs**
 
 | Name                    | Type       | Description                                                             |
 |-------------------------|------------|-------------------------------------------------------------------------|
-| score                   | number     | Trust score between 0–1.                                                |
-| explanation             | Message    | Explanation of the trust score.                                         |
-| response                | Message    | Returns the original response for easy chaining to `CleanlabRemediator` component. |
+| score                   | number     | Shows the trust score between 0–1.                                                |
+| explanation             | Message    | Provides an explanation of the trust score.                                         |
+| response                | Message    | Returns the original response for easy chaining to the `CleanlabRemediator` component. |
 
 </details>
 
 ## CleanlabRemediator
 
-This component uses the trust score from the [CleanlabEvaluator](#cleanlabevaluator) component to determine whether to show, warn about, or replace an LLM response. This component has configurables for the score threshold, warning text, and fallback message which you can customize as needed.
+This component uses the trust score from the [CleanlabEvaluator](#cleanlabevaluator) component to determine whether to show, warn about, or replace an LLM response. This component has configurables for the score threshold, warning text, and fallback message that you can customize as needed.
 
 <details>
 <summary>Parameters</summary>
@@ -90,7 +90,7 @@ Additionally, use the [CleanlabRemediator](#cleanlabremediator) component with t
 | quality_preset             | Dropdown   | Tradeoff between evaluation speed and accuracy.                         |
 | context                    | Message    | Retrieved context from your RAG system.                                 |
 | query                      | Message    | The original user query.                                                |
-| response                   | Message    | OpenAI's, Claude, etc. model's response based on the context and query. |
+| response                   | Message    | The model's response based on the context and query. |
 | run_context_sufficiency    | bool       | Evaluate whether context supports answering the query.                  |
 | run_response_groundedness  | bool       | Evaluate whether the response is grounded in the context.               |
 | run_response_helpfulness   | bool       | Evaluate how helpful the response is.                                   |
