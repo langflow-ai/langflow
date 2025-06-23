@@ -280,13 +280,13 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Integrations/Composio/integrations-composio",
-          label: "Composio",
+          id: "Integrations/Cleanlab/integrations-cleanlab",
+          label: "Cleanlab",
         },
         {
           type: "doc",
-          id: "Integrations/Cleanlab/integrations-cleanlab",
-          label: "Cleanlab",
+          id: "Integrations/Composio/integrations-composio",
+          label: "Composio",
         },
         {
           type: 'category',
