@@ -1,15 +1,10 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import safe_convert
-from langflow.io import (
-    BoolInput,
-    HandleInput,
-    MessageTextInput,
-    MultilineInput,
-    Output,
-    TabInput,
-)
-from langflow.schema import Data, DataFrame
+from langflow.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+from langflow.template.field.base import Output
 
 
 class ParserComponent(Component):

@@ -9,7 +9,7 @@ from langflow.base.models.model_input_constants import (
     MODELS_METADATA,
 )
 from langflow.base.models.model_utils import get_model_name
-from langflow.components.helpers import CurrentDateComponent
+from langflow.components.helpers.current_date import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from langflow.custom.custom_component.component import _get_component_toolkit
@@ -87,16 +87,12 @@ class AgentComponent(ToolCallingAgentComponent):
                     msg = "CurrentDateComponent must be converted to a StructuredTool"
                     raise TypeError(msg)
                 self.tools.append(current_date_tool)
-
-            # Validate tools
-            if not self.tools:
-                msg = "Tools are required to run the agent. Please add at least one tool."
-                raise ValueError(msg)
+            # note the tools are not required to run the agent, hence the validation removed.
 
             # Set up and run agent
             self.set(
                 llm=llm_model,
-                tools=self.tools,
+                tools=self.tools or [],
                 chat_history=self.chat_history,
                 input_value=self.input_value,
                 system_prompt=self.system_prompt,
