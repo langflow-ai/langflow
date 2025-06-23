@@ -8,6 +8,8 @@ from typing import Any
 
 import click
 
+MIN_DURATION_THRESHOLD = 0.1  # Minimum duration to show in seconds (100ms)
+
 
 class ProgressIndicator:
     """A CLI progress indicator that shows user-friendly step-by-step progress.
@@ -15,7 +17,7 @@ class ProgressIndicator:
     Shows animated loading indicators (□ → ■) for each step of the initialization process.
     """
 
-    def __init__(self, verbose: bool = False):
+    def __init__(self, *, verbose: bool = False):
         self.verbose = verbose
         self.steps: list[dict[str, Any]] = []
         self.current_step = 0
@@ -91,7 +93,7 @@ class ProgressIndicator:
         self._animation_thread.daemon = True
         self._animation_thread.start()
 
-    def complete_step(self, step_index: int, success: bool = True) -> None:
+    def complete_step(self, step_index: int, *, success: bool = True) -> None:
         """Complete a step and stop its animation."""
         if step_index >= len(self.steps):
             return
@@ -120,7 +122,7 @@ class ProgressIndicator:
         duration = ""
         if step["start_time"] and step["end_time"]:
             elapsed = step["end_time"] - step["start_time"]
-            if self.verbose and elapsed > 0.1:  # Only show duration if verbose and > 100ms
+            if self.verbose and elapsed > MIN_DURATION_THRESHOLD:  # Only show duration if verbose and > 100ms
                 duration = click.style(f" ({elapsed:.2f}s)", fg="bright_black")
 
         line = f"{icon} {title}{duration}"
@@ -183,7 +185,7 @@ class ProgressIndicator:
         click.echo(farewell)
 
 
-def create_langflow_progress(verbose: bool = False) -> ProgressIndicator:
+def create_langflow_progress(*, verbose: bool = False) -> ProgressIndicator:
     """Create a progress indicator with predefined Langflow initialization steps."""
     progress = ProgressIndicator(verbose=verbose)
 
@@ -204,7 +206,7 @@ def create_langflow_progress(verbose: bool = False) -> ProgressIndicator:
     return progress
 
 
-def create_langflow_shutdown_progress(verbose: bool = False) -> ProgressIndicator:
+def create_langflow_shutdown_progress(*, verbose: bool = False) -> ProgressIndicator:
     """Create a progress indicator with predefined Langflow shutdown steps."""
     progress = ProgressIndicator(verbose=verbose)
 

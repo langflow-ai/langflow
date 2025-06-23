@@ -48,14 +48,14 @@ class ProcessManager:
         self.webapp_process = None
         self.shutdown_in_progress = False
 
-    def handle_sigterm(self, signum, frame):
+    def handle_sigterm(self):
         """Handle SIGTERM signal gracefully."""
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
         self.shutdown_in_progress = True
         self.shutdown()
 
-    def handle_sigint(self, signum, frame):
+    def handle_sigint(self):
         """Handle SIGINT signal gracefully."""
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore

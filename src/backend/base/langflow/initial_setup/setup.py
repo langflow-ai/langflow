@@ -1093,7 +1093,7 @@ async def sync_flows_from_fs():
                     logger.debug("Database connection lost, assuming shutdown")
                     break  # Exit gracefully, don't error
                 raise  # Re-raise if it's a real connection problem
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.exception("Error while syncing flows from database")
                 break
 
