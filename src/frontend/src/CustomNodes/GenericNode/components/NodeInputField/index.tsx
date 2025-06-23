@@ -6,6 +6,7 @@ import {
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
+import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
 import { useEffect, useMemo, useRef } from "react";
@@ -46,9 +47,7 @@ export default function NodeInputField({
 }: NodeInputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const autoLogin = useAuthStore((state) => state.autoLogin);
-  const isAutoLoginEnv = IS_AUTO_LOGIN;
-  const isAutoLogin = autoLogin ?? isAutoLoginEnv;
+  const isAutoLogin = useIsAutoLogin();
   const shouldDisplayApiKey = isAuthenticated && !isAutoLogin;
 
   const { currentFlowId, currentFlowName } = useFlowStore(
