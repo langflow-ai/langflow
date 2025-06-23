@@ -14,7 +14,7 @@ Your flow must have a [Chat input](/components-io#chat-input) component to inter
 ## Prerequisite
 
 - [An OpenAI API key](https://platform.openai.com/)
-- The Langflow audio dependency installed.
+- The Langflow `[audio]` dependency installed.
     To install the extra dependency:
     ```bash
     uv pip install "langflow[audio]"
