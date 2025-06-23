@@ -67,6 +67,6 @@ This approach is ideal for low latency applications, but it is less deterministi
 This approach is more deterministic but has higher latency.
 This is the mode used in the Langflow playground.
 
-Required Parameters:
+Path parameters:
 * `flow_id`: Required path parameter. The ID of the flow to be used as a tool.
 * `session_id`: Optional path parameter. A unique identifier for the conversation session. If not provided, one is automatically generated.
