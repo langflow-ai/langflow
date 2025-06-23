@@ -24,10 +24,7 @@ export function ChatScrollAnchor({
     if (canScroll) {
       if (!scrollRef.current) return;
 
-      if (
-        playgroundScrollBehaves === "instant" ||
-        trackVisibility.category === "error"
-      ) {
+      if (trackVisibility.category === "error") {
         scrollRef.current.scrollIntoView({
           behavior: playgroundScrollBehaves,
         });
@@ -37,14 +34,22 @@ export function ChatScrollAnchor({
             behavior: "smooth",
           });
         }, 400);
-        setPlaygroundScrollBehaves("smooth");
       } else {
         scrollRef.current.scrollIntoView({
           behavior: playgroundScrollBehaves,
         });
+        if (playgroundScrollBehaves === "smooth") {
+          setPlaygroundScrollBehaves("instant");
+          setTimeout(() => {
+            if (!scrollRef.current) return;
+            scrollRef.current.scrollIntoView({
+              behavior: "instant",
+            });
+          }, 200);
+        }
       }
     }
-  }, [canScroll, trackVisibility]);
+  }, [trackVisibility]);
 
   return <div ref={scrollRef} className="h-px w-full" />;
 }
