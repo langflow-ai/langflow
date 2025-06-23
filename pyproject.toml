@@ -173,6 +173,7 @@ dev = [
     'elevenlabs>=1.52.0; python_version != "3.12"',
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
+    "pyyaml>=6.0.2",
 ]
 
 [tool.uv.sources]
@@ -232,7 +233,7 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 timeout = 120
 timeout_method = "signal"
 minversion = "6.0"
-testpaths = ["tests", "integration"]
+testpaths = ["src/backend/tests"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
