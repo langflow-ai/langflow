@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.556d0cc8.css">
-<script src="/assets/js/runtime~main.0cf0a3c7.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.38c0a072.js" defer="defer"></script>
 <script src="/assets/js/main.32737126.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -74,7 +74,27 @@ The agent summarizes the recent news in speech and in the <strong>Playground</st
 <li>Voice mode does not use the instructions in the Agent component&#x27;s <strong>Agent Instructions</strong> field, because your spoken instructions override this value.</li>
 <li>Voice mode only maintains context within the conversation session you are currently in.
 If you exit a conversation and close the <strong>Playground</strong>, your conversational context is not available in the next chat session.</li>
-</ul></div></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/concepts-file-management"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Manage files</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/components-agents"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Agents</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisite" class="table-of-contents__link toc-highlight">Prerequisite</a></li><li><a href="#use-voice-mode-in-the-langflow-playground" class="table-of-contents__link toc-highlight">Use voice mode in the Langflow Playground</a></li></ul></div></div></div></div></main></div></div></div><footer class="footer"><div class="container container-fluid"><div class="row footer__links"><div class="col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+</ul>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="langflow-voice-mode-endpoints">Langflow voice mode endpoints<a href="#langflow-voice-mode-endpoints" class="hash-link" aria-label="Direct link to Langflow voice mode endpoints" title="Direct link to Langflow voice mode endpoints">​</a></h2>
+<p>Langflow exposes OpenAI Realtime API-compatible websocket endpoints for your flows. You can build voice applications against these endpoints the same way you would build against <a href="https://platform.openai.com/docs/guides/realtime#connect-with-websockets" target="_blank" rel="noopener noreferrer">OpenAI Realtime API websockets</a>.</p>
+<p>The WebSockets endpoints require an <a href="https://platform.openai.com/docs/overview" target="_blank" rel="noopener noreferrer">OpenAI API key</a> for authentication, and they support an optional <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer">ElevenLabs</a> integration.</p>
+<p>Langflow exposes two WebSockets endpoints:</p>
+<ul>
+<li>
+<p><code>/ws/flow_as_tool/{flow_id}</code> or <code>/ws/flow_as_tool/{flow_id}/{session_id}</code>: Establishes a connection to OpenAI Realtime voice, and then invokes flows as tools by the <a href="https://platform.openai.com/docs/guides/realtime-conversations#handling-audio-with-websockets" target="_blank" rel="noopener noreferrer">OpenAI Realtime model</a>.
+This approach is ideal for low latency applications, but it is less deterministic since the OpenAI voice-to-voice model determines when to call your flow.</p>
+</li>
+<li>
+<p><code>/ws/flow_tts/{flow_id}</code> or <code>/ws/flow_tts/{flow_id}/{session_id}</code>: Converts audio to text using <a href="https://platform.openai.com/docs/guides/realtime-transcription" target="_blank" rel="noopener noreferrer">OpenAI Realtime voice transcription</a>, and then each flow is invoked directly for each transcript.
+This approach is more deterministic but has higher latency.
+This is the mode used in the Langflow playground.</p>
+</li>
+</ul>
+<p>Path parameters:</p>
+<ul>
+<li><code>flow_id</code>: Required path parameter. The ID of the flow to be used as a tool.</li>
+<li><code>session_id</code>: Optional path parameter. A unique identifier for the conversation session. If not provided, one is automatically generated.</li>
+</ul></div></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/concepts-file-management"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Manage files</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/components-agents"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Agents</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisite" class="table-of-contents__link toc-highlight">Prerequisite</a></li><li><a href="#use-voice-mode-in-the-langflow-playground" class="table-of-contents__link toc-highlight">Use voice mode in the Langflow Playground</a></li><li><a href="#langflow-voice-mode-endpoints" class="table-of-contents__link toc-highlight">Langflow voice mode endpoints</a></li></ul></div></div></div></div></main></div></div></div><footer class="footer"><div class="container container-fluid"><div class="row footer__links"><div class="col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div><div class="footer__bottom text--center"><div class="margin-bottom--sm"><img src="/img/lf-docs-light.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--light_NVdE" width="160" height="40"><img src="/img/lf-docs-dark.svg" alt="Langflow" class="footer__logo themedComponent_mlkZ themedComponent--dark_xIcU" width="160" height="40"></div></div></div></footer><div style="position:fixed;right:20px;bottom:20px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>
