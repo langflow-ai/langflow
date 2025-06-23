@@ -283,7 +283,7 @@ Note: Check 'Advanced' for all options.
                 "content-type": "application/json",
                 "accept": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
-                "X-Client-Source": "langflow"
+                "X-Client-Source": "langflow",
             }
             payload = {
                 "query": query,

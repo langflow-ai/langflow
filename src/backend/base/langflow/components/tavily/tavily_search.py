@@ -128,7 +128,7 @@ class TavilySearchComponent(Component):
                 "content-type": "application/json",
                 "accept": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
-                "X-Client-Source": "langflow"
+                "X-Client-Source": "langflow",
             }
             payload = {
                 "query": self.query,

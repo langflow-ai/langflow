@@ -45,7 +45,10 @@ class TavilyExtractComponent(Component):
         DropdownInput(
             name="format",
             display_name="Format",
-            info="The format of the extracted web page content. markdown returns content in markdown format. text returns plain text and may increase latency.",
+            info=(
+                "The format of the extracted web page content. markdown returns content in markdown format. "
+                "text returns plain text and may increase latency."
+            ),
             options=["markdown", "text"],
             value="markdown",
             advanced=True,
@@ -74,7 +77,7 @@ class TavilyExtractComponent(Component):
                 "content-type": "application/json",
                 "accept": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
-                "X-Client-Source": "langflow"
+                "X-Client-Source": "langflow",
             }
             payload = {
                 "urls": urls,
@@ -92,7 +95,9 @@ class TavilyExtractComponent(Component):
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.HTTPStatusError as exc:
-            error_message = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
+            error_message = (
+                f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
+            )
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except (ValueError, KeyError, AttributeError, httpx.RequestError) as exc:
@@ -107,7 +112,11 @@ class TavilyExtractComponent(Component):
             for result in extract_results.get("results", []):
                 raw_content = result.get("raw_content", "")
                 images = result.get("images", [])
-                result_data = {"url": result.get("url"), "raw_content": raw_content, "images": images}
+                result_data = {
+                    "url": result.get("url"),
+                    "raw_content": raw_content,
+                    "images": images,
+                }
                 data_results.append(Data(text=raw_content, data=result_data))
 
             # Process failed extractions

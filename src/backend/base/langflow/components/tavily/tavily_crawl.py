@@ -3,7 +3,13 @@ import json
 from loguru import logger
 
 from langflow.custom.custom_component.component import Component
-from langflow.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.inputs.inputs import (
+    BoolInput,
+    DropdownInput,
+    IntInput,
+    MessageTextInput,
+    SecretStrInput,
+)
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.template.field.base import Output
@@ -11,7 +17,9 @@ from langflow.template.field.base import Output
 
 class TavilyCrawlComponent(Component):
     display_name = "Tavily Crawl API"
-    description = """**Tavily Crawl** intelligently crawl a website from a starting URL to discover and extract content across multiple pages."""
+    description = (
+        """**Tavily Crawl** intelligently crawl a website from a starting URL to discover and extract content across multiple pages."""
+    )
     icon = "TavilyIcon"
 
     inputs = [
@@ -57,31 +65,46 @@ class TavilyCrawlComponent(Component):
         MessageTextInput(
             name="categories",
             display_name="Categories",
-            info="Enter a JSON array of categories, e.g. [\"Careers\", \"Blog\", \"Documentation\"]. Available: Careers, Blog, Documentation, About, Pricing, Community, Developers, Contact, Media",
+            info=(
+                'Enter a JSON array of categories, e.g. ["Careers", "Blog", "Documentation"]. '
+                'Available: Careers, Blog, Documentation, About, Pricing, Community, Developers, Contact, Media'
+            ),
             advanced=True,
         ),
         MessageTextInput(
             name="select_paths",
             display_name="Select Paths",
-            info="Regex patterns to select only URLs with specific path patterns (e.g., /docs/.*, /api/v1.*). Enter as a JSON array: [\"/docs/.*\", \"/api/v1.*\"]",
+            info=(
+                'Regex patterns to select only URLs with specific path patterns '
+                '(e.g., /docs/.*, /api/v1.*). Enter as a JSON array: ["/docs/.*", "/api/v1.*"]'
+            ),
             advanced=True,
         ),
         MessageTextInput(
             name="select_domains",
             display_name="Select Domains",
-            info="Regex patterns to select crawling to specific domains or subdomains (e.g., ^private\\.example\\.com$). Enter as a JSON array: [\"^private\\.example\\.com$\"]",
+            info=(
+                'Regex patterns to select crawling to specific domains or subdomains '
+                '(e.g., ^private\\.example\\.com$). Enter as a JSON array: ["^private\\.example\\.com$"]'
+            ),
             advanced=True,
         ),
         MessageTextInput(
             name="exclude_paths",
             display_name="Exclude Paths",
-            info="Regex patterns to exclude URLs with specific path patterns (e.g., /private/.*, /admin/.*). Enter as a JSON array: [\"/private/.*\", \"/admin/.*\"]",
+            info=(
+                'Regex patterns to exclude URLs with specific path patterns '
+                '(e.g., /private/.*, /admin/.*). Enter as a JSON array: ["/private/.*", "/admin/.*"]'
+            ),
             advanced=True,
         ),
         MessageTextInput(
             name="exclude_domains",
             display_name="Exclude Domains",
-            info="Regex patterns to exclude specific domains or subdomains from crawling (e.g., ^private\\.example\\.com$). Enter as a JSON array: [\"^private\\.example\\.com$\"]",
+            info=(
+                'Regex patterns to exclude specific domains or subdomains from crawling '
+                '(e.g., ^private\\.example\\.com$). Enter as a JSON array: ["^private\\.example\\.com$"]'
+            ),
             advanced=True,
         ),
         BoolInput(
@@ -101,7 +124,10 @@ class TavilyCrawlComponent(Component):
         DropdownInput(
             name="extract_depth",
             display_name="Extract Depth",
-            info="Advanced extraction retrieves more data, including tables and embedded content, with higher success but may increase latency.",
+            info=(
+                "Advanced extraction retrieves more data, including tables and embedded content, "
+                "with higher success but may increase latency."
+            ),
             options=["basic", "advanced"],
             value="basic",
             advanced=True,
@@ -109,7 +135,10 @@ class TavilyCrawlComponent(Component):
         DropdownInput(
             name="format",
             display_name="Format",
-            info="The format of the extracted web page content. markdown returns content in markdown format. text returns plain text and may increase latency.",
+            info=(
+                "The format of the extracted web page content. markdown returns content in markdown format. "
+                "text returns plain text and may increase latency."
+            ),
             options=["markdown", "text"],
             value="markdown",
             advanced=True,
@@ -127,7 +156,7 @@ class TavilyCrawlComponent(Component):
                 "content-type": "application/json",
                 "accept": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
-                "X-Client-Source": "langflow"
+                "X-Client-Source": "langflow",
             }
 
             payload = {
@@ -141,11 +170,16 @@ class TavilyCrawlComponent(Component):
                 "format": self.format,
             }
 
-            # Add optional parameters if they exist
             if hasattr(self, "instructions") and self.instructions:
                 payload["instructions"] = self.instructions
 
-            for param in ["select_paths", "select_domains", "exclude_paths", "exclude_domains", "categories"]:
+            for param in [
+                "select_paths",
+                "select_domains",
+                "exclude_paths",
+                "exclude_domains",
+                "categories",
+            ]:
                 value = getattr(self, param, None)
                 if value:
                     try:
@@ -154,7 +188,7 @@ class TavilyCrawlComponent(Component):
                             payload[param] = value_list
                         else:
                             payload[param] = [value]
-                    except Exception:
+                    except (json.JSONDecodeError, TypeError):
                         payload[param] = [value]
 
             with httpx.Client(timeout=120.0) as client:
@@ -165,39 +199,39 @@ class TavilyCrawlComponent(Component):
 
             data_results = []
 
-            # Process results based on the expected format
             results = crawl_results.get("results", [])
             response_time = crawl_results.get("response_time")
-            
+
             for result in results:
                 url = result.get("url", "")
                 raw_content = result.get("raw_content", "")
-                
+
                 result_data = {
                     "url": url,
                     "raw_content": raw_content,
                 }
-                
-                # Use raw_content as the text for the Data object
-                data_results.append(Data(text=raw_content,data=result_data))
 
-            # Add response time information to the last data point if available
+                data_results.append(Data(data=result_data))
+
             if data_results and response_time is not None:
                 data_results[-1].data["response_time"] = response_time
-            
-            # If no results were found, return a message with the response time
+
             if not data_results:
                 message = "No results found in crawl response"
                 if response_time is not None:
                     message += f" (response time: {response_time}s)"
-                data_results.append(Data(text=message, data={"response_time": response_time}))
+                data_results.append(
+                    Data(text=message, data={"response_time": response_time})
+                )
 
         except httpx.TimeoutException:
             error_message = "Request timed out (120s). Please try again or adjust parameters."
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.HTTPStatusError as exc:
-            error_message = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
+            error_message = (
+                f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
+            )
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.RequestError as exc:
