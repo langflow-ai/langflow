@@ -56,18 +56,17 @@ If you exit a conversation and close the **Playground**, your conversational con
 
 Langflow exposes OpenAI Realtime API-compatible websocket endpoints for your flows. You can build voice applications against these endpoints the same way you would build against [OpenAI Realtime API websockets](https://platform.openai.com/docs/guides/realtime#connect-with-websockets).
 
-Both endpoints require an [OpenAI API key](https://platform.openai.com/docs/overview) for authentication, and support an optional [ElevenLabs](https://elevenlabs.io) integration.
+The WebSockets endpoints require an [OpenAI API key](https://platform.openai.com/docs/overview) for authentication, and they support an optional [ElevenLabs](https://elevenlabs.io) integration.
 
 Langflow exposes two WebSockets endpoints:
 
-* `/ws/flow_as_tool/{flow_id}` or `/ws/flow_as_tool/{flow_id}/{session_id}` - A connection is established to OpenAI Realtime voice, and flows are invoked as tools by the [OpenAI Realtime model](https://platform.openai.com/docs/guides/realtime-conversations#handling-audio-with-websockets).
-This approach is ideal for low latency applications, but is less deterministic since the OpenAI voice-to-voice model determines when to call your flow.
+* `/ws/flow_as_tool/{flow_id}` or `/ws/flow_as_tool/{flow_id}/{session_id}`: Establishes a connection to OpenAI Realtime voice, and then invokes flows as tools by the [OpenAI Realtime model](https://platform.openai.com/docs/guides/realtime-conversations#handling-audio-with-websockets).
+This approach is ideal for low latency applications, but it is less deterministic since the OpenAI voice-to-voice model determines when to call your flow.
 
-* `/ws/flow_tts/{flow_id}` or `/ws/flow_tts/{flow_id}/{session_id}` - Audio is converted to text by [OpenAI Realtime voice transcription](https://platform.openai.com/docs/guides/realtime-transcription).
-The flow is invoked directly for each transcript.
+* `/ws/flow_tts/{flow_id}` or `/ws/flow_tts/{flow_id}/{session_id}`: Converts audio to text using [OpenAI Realtime voice transcription](https://platform.openai.com/docs/guides/realtime-transcription), and then each flow is invoked directly for each transcript.
 This approach is more deterministic but has higher latency.
 This is the mode used in the Langflow playground.
 
 Required Parameters:
-- `flow_id` (path parameter): The ID of the flow to be used as a tool.
-- `session_id` (path parameter, optional): A unique identifier for the conversation session. If not provided, one is automatically generated.
+* `flow_id`: Required path parameter. The ID of the flow to be used as a tool.
+* `session_id`: Optional path parameter. A unique identifier for the conversation session. If not provided, one is automatically generated.
