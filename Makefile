@@ -39,7 +39,6 @@ check_tools:
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
 	@echo "$(GREEN)All required tools are installed.$(NC)"
 
-
 help: ## show this help message
 	@echo '----'
 	@grep -hE '^\S+:.*##' $(MAKEFILE_LIST) | \
@@ -76,12 +75,11 @@ build_frontend: ## build the frontend static files
 	@cp -r src/frontend/build/. src/backend/base/langflow/frontend
 	@echo '==== Frontend build complete ===='
 
-init: check_tools clean_python_cache clean_npm_cache ## initialize the project
+init: check_tools ## initialize the project
 	@make install_backend
 	@make install_frontend
-	@make build_frontend
+	@uvx pre-commit install
 	@echo "$(GREEN)All requirements are installed.$(NC)"
-	@uv run langflow run
 
 ######################
 # CLEAN PROJECT

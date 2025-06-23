@@ -11,7 +11,7 @@ from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import BoolInput
-from langflow.io import DropdownInput, MessageTextInput, SecretStrInput, SliderInput
+from langflow.io import DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
 
 
@@ -30,7 +30,7 @@ class LanguageModelComponent(LCModelComponent):
             value="OpenAI",
             info="Select the model provider",
             real_time_refresh=True,
-            options_metadata=[{"icon": "OpenAI"}, {"icon": "Anthropic"}, {"icon": "Google"}],
+            options_metadata=[{"icon": "OpenAI"}, {"icon": "Anthropic"}, {"icon": "GoogleGenerativeAI"}],
         ),
         DropdownInput(
             name="model_name",
@@ -47,12 +47,12 @@ class LanguageModelComponent(LCModelComponent):
             show=True,
             real_time_refresh=True,
         ),
-        MessageTextInput(
+        MessageInput(
             name="input_value",
             display_name="Input",
             info="The input text to send to the model",
         ),
-        MessageTextInput(
+        MultilineInput(
             name="system_message",
             display_name="System Message",
             info="A system message that helps set the behavior of the assistant",

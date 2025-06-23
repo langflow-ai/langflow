@@ -51,7 +51,7 @@
 }
 
 p {
-  text-align: justify;
+  text-align: start;
 }
 
 /* apply */
@@ -398,9 +398,17 @@ body {
 }
 
 .markdown details summary {
-  width: 100%;
-  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  list-style: none;
+  outline: none;
   cursor: pointer;
+}
+
+.markdown details summary:focus-visible {
+  outline: 2px solid var(--ifm-color-primary, #a855f7);
+  outline-offset: 2px;
 }
 
 .markdown details [class^="collapsibleContent"] {

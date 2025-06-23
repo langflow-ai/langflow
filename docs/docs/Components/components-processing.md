@@ -21,15 +21,15 @@ This component performs operations on [DataFrame](https://pandas.pydata.org/docs
 
 To use this component in a flow, connect a component that outputs [DataFrame](/concepts-objects#dataframe-object) to the **DataFrame Operations** component.
 
-This example fetches JSON data from an API. The **Lambda filter** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
+This example fetches JSON data from an API. The **Smart function** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
 
 ![Dataframe operations with flattened dataframe](/img/component-dataframe-operations.png)
 
 1. The **API Request** component retrieves data with only `source` and `result` fields.
 For this example, the desired data is nested within the `result` field.
-2. Connect a **Lambda Filter** to the API request component, and a **Language model** to the **Lambda Filter**. This example connects a **Groq** model component.
+2. Connect a **Smart function** to the API request component, and a **Language model** to the **Smart function**. This example connects a **Groq** model component.
 3. In the **Groq** model component, add your **Groq** API key.
-4. To filter the data, in the **Lambda filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
+4. To filter the data, in the **Smart function** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
 For this example, enter:
 ```
 I want to explode the result column out into a Data object
@@ -37,8 +37,8 @@ I want to explode the result column out into a Data object
 :::tip
 Avoid punctuation in the **Instructions** field, as it can cause errors.
 :::
-5. To run the flow, in the **Lambda Filter** component, click <Icon name="Play" aria-label="Play icon" />.
-6. To inspect the filtered data, in the **Lambda Filter** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+5. To run the flow, in the **Smart function** component, click <Icon name="Play" aria-label="Play icon" />.
+6. To inspect the filtered data, in the **Smart function** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
 The result is a structured DataFrame.
 ```text
 id | name             | company               | username        | email                              | address           | zip
@@ -112,7 +112,7 @@ All operations in the component require at least one [Data](/concepts-objects#da
 For example, send this request to the **Webhook** component.
 Replace `YOUR_FLOW_ID` with your flow ID.
 ```bash
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
   "id": 1,
@@ -205,7 +205,7 @@ This example connects a **Webhook** component to convert `text` and `data` into 
 Replace `YOUR_FLOW_ID` with your flow ID.
 This example uses the default Langflow server address.
 ```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
     "text": "Alex Cruz - Employee Profile",
@@ -227,7 +227,7 @@ The **Data to DataFrame** component converts the webhook request into a `DataFra
 
 5. Send another employee data object.
 ```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
     "text": "Kalani Smith - Employee Profile",
@@ -260,40 +260,6 @@ curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
 | Name | Display Name | Info |
 |------|--------------|------|
 | dataframe | DataFrame | A DataFrame built from each Data object's fields plus a text column. |
-
-</details>
-
-## Lambda filter
-
-This component uses an LLM to generate a Lambda function for filtering or transforming structured data.
-
-To use the **Lambda filter** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
-
-This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
-The **Instructions** field in the **Lambda filter** component specifies the task `extract emails`.
-The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
-
-![](/img/component-lambda-filter.png)
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The structured data to filter or transform using a Lambda function. |
-| llm | Language Model | The connection port for a [Model](/components-models) component. |
-| filter_instruction | Instructions | The natural language instructions for how to filter or transform the data using a Lambda function, such as `Filter the data to only include items where the 'status' is 'active'`. |
-| sample_size | Sample Size | For large datasets, the number of characters to sample from the dataset head and tail. |
-| max_size | Max Size | The number of characters for the data to be considered "large", which triggers sampling by the `sample_size` value. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| filtered_data | Filtered Data | The filtered or transformed [Data object](/concepts-objects#data-object). |
-| dataframe | DataFrame | The filtered data as a [DataFrame](/concepts-objects#dataframe-object). |
 
 </details>
 
@@ -446,7 +412,7 @@ For example, if the selected `file_format` is `csv`, and you enter `file_path` a
 Replace `YOUR_FLOW_ID` with your flow ID.
 This example uses the default Langflow server address.
 ```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
     "Name": ["Alex Cruz", "Kalani Smith", "Noam Johnson"],
@@ -502,6 +468,40 @@ For `Message` inputs, the component can create:
 | data | Data | A list of extracted matches as Data objects. |
 | text | Message | The extracted matches formatted as a Message object. |
 | confirmation | Confirmation | The confirmation message after saving the file. |
+
+</details>
+
+## Smart function
+
+This component uses an LLM to generate a Lambda function for filtering or transforming structured data.
+
+To use the **Smart function** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
+
+This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
+The **Instructions** field in the **Smart function** component specifies the task `extract emails`.
+The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
+
+![](/img/component-lambda-filter.png)
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The structured data to filter or transform using a Lambda function. |
+| llm | Language Model | The connection port for a [Model](/components-models) component. |
+| filter_instruction | Instructions | The natural language instructions for how to filter or transform the data using a Lambda function, such as `Filter the data to only include items where the 'status' is 'active'`. |
+| sample_size | Sample Size | For large datasets, the number of characters to sample from the dataset head and tail. |
+| max_size | Max Size | The number of characters for the data to be considered "large", which triggers sampling by the `sample_size` value. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| filtered_data | Filtered Data | The filtered or transformed [Data object](/concepts-objects#data-object). |
+| dataframe | DataFrame | The filtered data as a [DataFrame](/concepts-objects#dataframe-object). |
 
 </details>
 
