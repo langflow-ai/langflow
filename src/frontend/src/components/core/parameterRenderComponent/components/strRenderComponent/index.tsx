@@ -1,7 +1,8 @@
 import { InputProps, StrRenderComponentType } from "../../types";
 import CopyFieldAreaComponent from "../copyFieldAreaComponent";
 import DropdownComponent from "../dropdownComponent";
-import InputGlobalComponent from "../inputGlobalComponent";
+import NewInputGlobalComponent from "../inputGlobalComponent/newComponent";
+import InputGlobalComponent from "../inputGlobalComponent/oldComponent";
 import TextAreaComponent from "../textAreaComponent";
 import WebhookFieldComponent from "../webhookFieldComponent";
 
@@ -51,7 +52,17 @@ export function StrRenderComponent({
       );
     }
 
-    return (
+    return templateData.name === "api_key" ? (
+      <NewInputGlobalComponent
+        {...baseInputProps}
+        password={templateData.password}
+        load_from_db={templateData.load_from_db}
+        placeholder={placeholder}
+        display_name={display_name}
+        id={`input-${name}`}
+        isToolMode={isToolMode}
+      />
+    ) : (
       <InputGlobalComponent
         {...baseInputProps}
         password={templateData.password}

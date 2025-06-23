@@ -186,23 +186,31 @@ export default function InputComponent({
                 !disabled && "hover:text-foreground",
               )}
             >
-              <ForwardedIconComponent
-                name={
-                  getIconName(
-                    disabled!,
-                    selectedOption!,
-                    optionsIcon,
-                    nodeStyle!,
-                    isToolMode!,
-                  ) || "ChevronsUpDown"
-                }
-                className={cn(
-                  disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
-                  "icon-size",
-                )}
-                strokeWidth={ICON_STROKE_WIDTH}
-                aria-hidden="true"
-              />
+              {name === "api_key" ? (
+                <span className="text-input-foreground text-[12px] underline">
+                  {value === "" ? "Add" : "Save"} variable
+                </span>
+              ) : (
+                <ForwardedIconComponent
+                  name={
+                    getIconName(
+                      disabled!,
+                      selectedOption!,
+                      optionsIcon,
+                      nodeStyle!,
+                      isToolMode!,
+                    ) || "ChevronsUpDown"
+                  }
+                  className={cn(
+                    disabled
+                      ? "cursor-grab text-placeholder"
+                      : "cursor-pointer",
+                    "icon-size",
+                  )}
+                  strokeWidth={ICON_STROKE_WIDTH}
+                  aria-hidden="true"
+                />
+              )}
             </button>
           </span>
         )}
