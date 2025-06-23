@@ -25,9 +25,9 @@
         "id": "reactflow__edge-TextInput-UeV2Q{œdataTypeœ:œTextInputœ,œidœ:œTextInput-UeV2Qœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-lUhrE{œfieldNameœ:œCONTENT_GUIDELINESœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-UeV2Q",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-UeV2Qœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-UeV2Qœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-lUhrE",
-        "targetHandle": "{œfieldNameœ:œCONTENT_GUIDELINESœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCONTENT_GUIDELINESœ, œidœ: œPrompt-lUhrEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-TextInput-9Kc4y{œdataTypeœ:œTextInputœ,œidœ:œTextInput-9Kc4yœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-lUhrE{œfieldNameœ:œOUTPUT_FORMATœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-9Kc4y",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-9Kc4yœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-9Kc4yœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-lUhrE",
-        "targetHandle": "{œfieldNameœ:œOUTPUT_FORMATœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œOUTPUT_FORMATœ, œidœ: œPrompt-lUhrEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-TextInput-BQ6y1{œdataTypeœ:œTextInputœ,œidœ:œTextInput-BQ6y1œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-lUhrE{œfieldNameœ:œOUTPUT_LANGUAGEœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-BQ6y1",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-BQ6y1œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-BQ6y1œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-lUhrE",
-        "targetHandle": "{œfieldNameœ:œOUTPUT_LANGUAGEœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œOUTPUT_LANGUAGEœ, œidœ: œPrompt-lUhrEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "reactflow__edge-TextInput-OuRAG{œdataTypeœ:œTextInputœ,œidœ:œTextInput-OuRAGœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-lUhrE{œfieldNameœ:œPROFILE_DETAILSœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-OuRAG",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-OuRAGœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-OuRAGœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-lUhrE",
-        "targetHandle": "{œfieldNameœ:œPROFILE_DETAILSœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œPROFILE_DETAILSœ, œidœ: œPrompt-lUhrEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -137,9 +137,9 @@
         "id": "reactflow__edge-TextInput-ioYlB{œdataTypeœ:œTextInputœ,œidœ:œTextInput-ioYlBœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-lUhrE{œfieldNameœ:œPROFILE_TYPEœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-ioYlB",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-ioYlBœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-ioYlBœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-lUhrE",
-        "targetHandle": "{œfieldNameœ:œPROFILE_TYPEœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œPROFILE_TYPEœ, œidœ: œPrompt-lUhrEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -165,9 +165,9 @@
         "id": "reactflow__edge-TextInput-y44vH{œdataTypeœ:œTextInputœ,œidœ:œTextInput-y44vHœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-lUhrE{œfieldNameœ:œTONE_AND_STYLEœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-y44vH",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-y44vHœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-y44vHœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-lUhrE",
-        "targetHandle": "{œfieldNameœ:œTONE_AND_STYLEœ,œidœ:œPrompt-lUhrEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œTONE_AND_STYLEœ, œidœ: œPrompt-lUhrEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -193,9 +193,9 @@
         "id": "reactflow__edge-Prompt-lUhrE{œdataTypeœ:œPromptœ,œidœ:œPrompt-lUhrEœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-Mgppb{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-Mgppbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-lUhrE",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-lUhrEœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-lUhrEœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-Mgppb",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-Mgppbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-Mgppbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -223,9 +223,9 @@
         "id": "xy-edge__LanguageModelComponent-Mgppb{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Mgppbœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-1Z4rn{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-1Z4rnœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-Mgppb",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Mgppbœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-Mgppbœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-1Z4rn",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-1Z4rnœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-1Z4rnœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -248,9 +248,9 @@
         },
         "id": "xy-edge__ChatInput-hDFzw{œdataTypeœ:œChatInputœ,œidœ:œChatInput-hDFzwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-Mgppb{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-Mgppbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "ChatInput-hDFzw",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-hDFzwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-hDFzwœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-Mgppb",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-Mgppbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-Mgppbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -1236,8 +1236,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1252,8 +1250,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
