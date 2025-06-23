@@ -12,11 +12,11 @@ Langflow can be installed in multiple ways:
 
 * **Docker**: Pull and run the [Docker image](#install-and-run-langflow-docker) to start a Langflow container.
 
-* **Python package**: Install the [Langflow OSS Python package](#install-and-run-langflow-oss).
+* **Python package**: Install the [Langflow OSS Python package](#install-and-run-the-langflow-oss-python-package).
 
 ## Install and run Langflow Desktop
 
-**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [version management](#manage-your-langflow-version-in-langflow-desktop) feature for managing your Langflow version.
+**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [version management](#manage-your-version-of-langflow-desktop) feature for managing your Langflow version.
 
 <Tabs groupId="os">
   <TabItem value="macOS" label="macOS">
