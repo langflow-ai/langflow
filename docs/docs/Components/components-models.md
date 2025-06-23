@@ -30,7 +30,7 @@ Use a **Language Moodel** component in your flow anywhere you would use an LLM.
 
 Model components receive inputs and prompts for generating text, and the generated text is sent to an output component.
 
-This example has the OpenAI model in a chatbot flow. For more information, see the [Basic prompting flow](/starter-projects-basic-prompting).
+This example has the OpenAI model in a chatbot flow. For more information, see the [Basic prompting flow](/basic-prompting).
 
 1. Add the **Language Model** component to your flow.
 The default model is OpenAI's GPT-4.1 mini model. Based on [OpenAI's recommendations](https://platform.openai.com/docs/models/gpt-4.1-mini), this model is a good, balanced starter model.

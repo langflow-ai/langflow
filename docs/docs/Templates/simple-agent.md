@@ -1,6 +1,6 @@
 ---
 title: Simple agent
-slug: /starter-projects-simple-agent
+slug: /simple-agent
 ---
 
 import Icon from "@site/src/components/icon";

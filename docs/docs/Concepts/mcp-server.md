@@ -23,6 +23,11 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 ## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
 
+:::tip
+As of Langflow 1.5, you can install Langflow MCP servers with a single click, instead of manually editing the client's JSON configuration file.
+For more information, see [Auto-install Langflow MCP servers](#auto-install).
+:::
+
 Langflow runs a separate MCP server for every [project](/concepts-overview#projects).
 The MCP server for each project exposes that project's flows as tools.
 
@@ -349,6 +354,16 @@ To find your NPX path, run `which npx`.
 ```
   </TabItem>
 </Tabs>
+
+## Auto-install Langflow MCP servers {#auto-install}
+
+In the **MCP server** tab, an **Auto install** option is available for **Cursor** and **Claude**.
+
+To auto install your current Langflow project as an MCP server, click <Icon name="Plus" aria-hidden="True"/> **Add**.
+The installation adds the server's configuration file to the selected client's configuration file.
+
+Auto installation only works if your HTTP client and Langflow server are on the same local machine.
+You can still configure the client with the code in the **JSON** tab.
 
 ## See also
 

@@ -9,7 +9,7 @@ import Icon from "@site/src/components/icon";
 The **Chat memory** component is also known as the **Message history** component.
 :::
 
-This flow extends the [basic prompting flow](/starter-projects-basic-prompting) with a [Message history](/components-helpers#message-history) component that stores up to 100 previous chat messages and uses them to provide context for the current conversation.
+This flow extends the [basic prompting flow](/basic-prompting) with a [Message history](/components-helpers#message-history) component that stores up to 100 previous chat messages and uses them to provide context for the current conversation.
 
 ## Prerequisites
 

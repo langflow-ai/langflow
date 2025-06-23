@@ -13,7 +13,7 @@ For more information on bundled components, see the component provider's documen
 
 **Agents** use LLMs as a brain to analyze problems and select external tools.
 
-For more information, see [Agents](/agents-overview).
+For more information, see [Agents](/agents).
 
 ### CrewAI Agent
 
@@ -566,7 +566,7 @@ To run an embeddings inference locally, see the [HuggingFace documentation](http
 
 To connect the local Hugging Face model to the **Hugging Face embeddings inference** component and use it in a flow, follow these steps:
 
-1. Create a [Vector store RAG flow](/starter-projects-vector-store-rag).
+1. Create a [Vector store RAG flow](/vector-store-rag).
 There are two embeddings models in this flow that you can replace with **Hugging Face** embeddings inference components.
 2. Replace both **OpenAI** embeddings model components with **Hugging Face** model components.
 3. Connect both **Hugging Face** components to the **Embeddings** ports of the **Astra DB vector store** components.
@@ -1044,7 +1044,7 @@ For more information, see the [Google Generative AI documentation](https://cloud
 
 This component generates text using Groq's language models.
 
-1. To use this component in a flow, connect it as a **Model** in a flow like the [Basic prompting flow](/starter-projects-basic-prompting), or select it as the **Model Provider** if you're using an **Agent** component.
+1. To use this component in a flow, connect it as a **Model** in a flow like the [Basic prompting flow](/basic-prompting), or select it as the **Model Provider** if you're using an **Agent** component.
 
 ![Groq component in a basic prompting flow](/img/component-groq.png)
 
@@ -1091,9 +1091,9 @@ This component sends requests to the Hugging Face API to generate text using the
 
 The Hugging Face API is a hosted inference API for models hosted on Hugging Face, and requires a [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) to authenticate.
 
-In this example based on the [Basic prompting flow](/starter-projects-basic-prompting), the **Hugging Face API** model component replaces the **Open AI** model. By selecting different hosted models, you can see how different models return different results.
+In this example based on the [Basic prompting flow](/basic-prompting), the **Hugging Face API** model component replaces the **Open AI** model. By selecting different hosted models, you can see how different models return different results.
 
-1. Create a [Basic prompting flow](/starter-projects-basic-prompting).
+1. Create a [Basic prompting flow](/basic-prompting).
 
 2. Replace the **OpenAI** model component with a **Hugging Face API** model component.
 

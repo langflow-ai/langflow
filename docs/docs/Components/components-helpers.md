@@ -5,72 +5,24 @@ slug: /components-helpers
 
 import Icon from "@site/src/components/icon";
 
-# Helper components in Langflow
+## Calculator
 
-Helper components provide utility functions to help manage data, tasks, and other components in your flow.
+The Calculator component performs basic arithmetic operations on mathematical expressions. It supports addition, subtraction, multiplication, division, and exponentiation operations.
 
-## Use a helper component in a flow
-
-Chat memory in Langflow is stored either in local Langflow tables with `LCBufferMemory`, or connected to an external database.
-
-The **Store Message** helper component stores chat memories as [Data](/concepts-objects) objects, and the **Message History** helper component retrieves chat messages as data objects or strings.
-
-This example flow stores and retrieves chat history from an [AstraDBChatMemory](/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
-
-![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
-
-## Batch Run
-
-The **Batch Run** component runs a language model over **each row** of a [DataFrame](/concepts-objects#dataframe-object) text column and returns a new DataFrame with the original text and an LLM response.
-
-The response contains the following columns:
-
-* `text_input`: The original text from the input DataFrame.
-* `model_response`: The model's response for each input.
-* `batch_index`: The processing order, with a `0`-based index.
-* `metadata` (optional): Additional information about the processing.
-
-These columns, when connected to a **Parser** component, can be used as variables within curly braces.
-
-To use the Batch Run component with a **Parser** component, do the following:
-
-1. Connect a **Model** component to the **Batch Run** component's **Language model** port.
-2. Connect a component that outputs DataFrame, like **File** component, to the **Batch Run** component's **DataFrame** input.
-3. Connect the **Batch Run** component's **Batch Results** output to a **Parser** component's **DataFrame** input.
-The flow looks like this:
-
-![A batch run component connected to OpenAI and a Parser](/img/component-batch-run.png)
-
-4. In the **Column Name** field of the **Batch Run** component, enter a column name based on the data you're loading from the **File** loader. For example, to process a column of `name`, enter `name`.
-5. Optionally, in the **System Message** field of the **Batch Run** component, enter a **System Message** to instruct the connected LLM on how to process your file. For example, `Create a business card for each name.`
-6. In the **Template** field of the **Parser** component, enter a template for using the **Batch Run** component's new DataFrame columns.
-To use all three columns from the **Batch Run** component, include them like this:
-```text
-record_number: {batch_index}, name: {text_input}, summary: {model_response}
-```
-7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-label="Play icon" />.
-8. To view your created DataFrame, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
-9. Optionally, connect a **Chat Output** component, and open the **Playground** to see the output.
+For an example of using this component in a flow, see the [Python interpreter](/components-processing#python-interpreter) component.
 
 <details>
 <summary>Parameters</summary>
 
-**Inputs**
-
 | Name | Type | Description |
 |------|------|-------------|
-| model | HandleInput | Connect the 'Language Model' output from your LLM component here. Required. |
-| system_message | MultilineInput | A multi-line system instruction for all rows in the DataFrame. |
-| df | DataFrameInput | The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
-| column_name | MessageTextInput | The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
-| output_column_name | MessageTextInput | Name of the column where the model's response is stored. Default=`model_response`. |
-| enable_metadata | BoolInput | If True, add metadata to the output DataFrame. |
+| expression | String | The arithmetic expression to evaluate, such as `4*4*(33/22)+12-20'`. |
 
 **Outputs**
 
 | Name | Type | Description |
 |------|------|-------------|
-| batch_results | DataFrame | A DataFrame with all original columns plus the model's response column. |
+| result | Data | The calculation result as a Data object containing the evaluated expression. |
 
 </details>
 
@@ -95,38 +47,34 @@ The Current Date component returns the current date and time in a selected timez
 
 </details>
 
-## ID Generator
-
-This component generates a unique ID.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| unique_id | String | The generated unique ID. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| id | String | The generated unique ID. |
-
-</details>
-
 ## Message history
 
 :::info
-Prior to Langflow 1.1, this component was known as the Chat Memory component.
+Prior to Langflow 1.5, this component was two separate components called **Chat History** and **Message Store**.
 :::
 
-This component retrieves chat messages from Langflow tables or external memory.
+This component combines the **Chat History** and **Message Store** component into one component that can utilize Langflow's SQLite database, or connect to external memory, to store and retrieve chat messages.
 
-In this example, the **Message Store** component stores the complete chat history in a local Langflow table, which the **Message History** component retrieves as context for the LLM to answer each question.
+Chat memory components is distinct from vector store memory components, because they are built specifically for storing and retrieving chat messages from databases.
+
+Memory components provide access to their respective external databases **as memory**. This allows Large Language Models (LLMs) or [agents](/components-agents) to access external memory for persistence and context retention.
+
+In **Retrieve** mode, this component retrieves chat messages from Langflow tables or external memory.
+In **Store** mode, this component stores chat messages in Langflow tables or external memory.
+
+In this example, one **Message History** component stores the complete chat history in a local Langflow table, which the other **Message History** component retrieves as context for the LLM to answer each question.
 
 ![Message store and history components](/img/component-message-history-message-store.png)
+
+To configure Langflow to store and retrieve messages from an external database instead of local Langflow memory, follow these steps.
+
+1. Add two **Memory** components to your flow.
+This example uses **Astra DB Chat Memory**.
+2. To enable external memory ports, in both **Memory** components, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, and then enable **External Memory**.
+3. Connect the **Memory** ports to the **Message History** components.
+The flow looks like this:
+![Message store and history components with external memory](/img/component-message-history-external-memory.png)
+4. In the **Astra DB Chat Memory** components, add your **Astra DB Application Token**, **API Endpoint**, and **Collection Name**. These values are found in your Astra deployment. For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
 
 For more information on configuring memory in Langflow, see [Memory](/memory).
 
@@ -134,7 +82,6 @@ For more information on configuring memory in Langflow, see [Memory](/memory).
 <summary>Parameters</summary>
 
 **Inputs**
-
 | Name | Type | Description |
 |------|------|-------------|
 | memory | Memory | Retrieve messages from an external memory. If empty, the Langflow tables are used. |
@@ -146,87 +93,11 @@ For more information on configuring memory in Langflow, see [Memory](/memory).
 | template | String | The template to use for formatting the data. It can contain the keys `{text}`, `{sender}` or any other key in the message data. |
 
 **Outputs**
-
 | Name | Type | Description |
 |------|------|-------------|
 | messages | Data | The retrieved messages as Data objects. |
 | messages_text | Message | The retrieved messages formatted as text. |
 | dataframe | DataFrame | A DataFrame containing the message data. |
-
-</details>
-
-## Message store
-
-This component stores chat messages or text in Langflow tables or external memory.
-
-In this example, the **Message Store** component stores the complete chat history in a local Langflow table, which the **Message History** component retrieves as context for the LLM to answer each question.
-
-![Message store and history components](/img/component-message-history-message-store.png)
-
-For more information on configuring memory in Langflow, see [Memory](/memory).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| message | String | The chat message to be stored. (Required) |
-| memory | Memory | The external memory to store the message. If empty, the Langflow tables are used. |
-| sender | String | The sender of the message. Can be Machine or User. If empty, the current sender parameter is used. |
-| sender_name | String | The name of the sender. Can be AI or User. If empty, the current sender parameter is used. |
-| session_id | String | The session ID of the chat. If empty, the current session ID parameter is used. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| stored_messages | List[Data] | The list of stored messages after the current message has been added. |
-
-</details>
-
-## Structured output
-
-This component transforms LLM responses into structured data formats.
-
-In this example from the **Financial Report Parser** template, the **Structured Output** component transforms unstructured financial reports into structured data.
-
-![Structured output example](/img/component-structured-output.png)
-
-The connected LLM model is prompted by the **Structured Output** component's `Format Instructions` parameter to extract structured output from the unstructured text. `Format Instructions` is utilized as the system prompt for the **Structured Output** component.
-
-In the **Structured Output** component, click the **Open table** button to view the `Output Schema` table.
-The `Output Schema` parameter defines the structure and data types for the model's output using a table with the following fields:
-
-* **Name**: The name of the output field.
-* **Description**: The purpose of the output field.
-* **Type**: The data type of the output field. The available types are `str`, `int`, `float`, `bool`, `list`, or `dict`. The default is `text`.
-* **Multiple**: This feature is deprecated. Currently, it is set to `True` by default if you expect multiple values for a single field. For example, a `list` of `features` is set to `True` to contain multiple values, such as `["waterproof", "durable", "lightweight"]`. Default: `True`.
-
-The **Parser** component parses the structured output into a template for orderly presentation in chat output. The template receives the values from the `output_schema` table with curly braces.
-
-For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}` presents the extracted values in the **Playground** as `EBITDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion`.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use to generate the structured output. |
-| input_value | String | The input message to the language model. |
-| system_prompt | String | The instructions to the language model for formatting the output. |
-| schema_name | String | The name for the output data schema. |
-| output_schema | Table | The structure and data types for the model's output. |
-| multiple | Boolean | [Deprecated] Always set to `True`. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| structured_output | Data | The structured output is a Data object based on the defined schema. |
 
 </details>
 
@@ -253,6 +124,27 @@ This component dynamically creates a record with a specified number of fields.
 | Name | Type | Description |
 |------|------|-------------|
 | list | List | The dynamically created list with the specified number of fields. |
+
+</details>
+
+### ID Generator
+
+This component generates a unique ID.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| unique_id | String | The generated unique ID. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| id | String | The generated unique ID. |
 
 </details>
 

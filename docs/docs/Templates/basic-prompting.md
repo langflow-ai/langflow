@@ -5,7 +5,7 @@ slug: /basic-prompting
 
 import Icon from "@site/src/components/icon";
 
-Build a **Basic prompting** flow with [Language model](/agents-tool-calling-agent-component), [Prompt](/components-prompts), and [Chat I/O](/components-io) components.
+Build a **Basic prompting** flow with [Language model](/components-models), [Prompt](/components-prompts), and [Chat I/O](/components-io) components.
 
 Prompts serve as the inputs to a large language model (LLM), acting as the interface between human instructions and computational tasks.
 

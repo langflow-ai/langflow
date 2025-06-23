@@ -678,7 +678,7 @@ Keys are columns, and each dictionary (a collection of key-value pairs) in the l
 
 To use this component in a flow, do the following:
 
-1. Add the **Web search** component to the [Basic prompting](/starter-projects-basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
+1. Add the **Web search** component to the [Basic prompting](/basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
 2. Connect the **Web search** component's output to a component that accepts the DataFrame input.
 This example uses a **Prompt** component to give the chatbot context, so you must convert the **Web search** component's DataFrame output to a Message type.
 3. Connect a **Type Convert** component to convert the DataFrame to a Message.

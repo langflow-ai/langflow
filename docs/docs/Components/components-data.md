@@ -17,7 +17,7 @@ Components like [News search](#news-search), [RSS reader](#rss-reader), and [Web
 
 For example, to connect all three components to an Agent, do the following:
 
-1. Create the [Simple Agent starter flow](/starter-projects-simple-agent).
+1. Create the [Simple Agent starter flow](/simple-agent).
 2. In the **Agent** component, in the **OpenAI API Key** field, add your OpenAI API key.
 3. Add the **News search**, **RSS reader**, and **Web Search** components to your flow.
 4. In all three components, enable **Tool Mode**.
@@ -414,7 +414,7 @@ This component performs web searches using DuckDuckGo's HTML interface, and retu
 
 To use this component in a flow, do the following:
 
-1. Add the **Web search** component to the [Basic prompting](/starter-projects-basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
+1. Add the **Web search** component to the [Basic prompting](/basic-prompting) flow. In the **Search Query** field, enter a query, such as `environmental news`.
 2. Connect the **Web search** component's output to a component that accepts the DataFrame input.
 3. Connect a **Type Convert** component to convert the DataFrame to a Message.
 4. In the **Type Convert** component, in the **Output Type** field, select **Message**.
