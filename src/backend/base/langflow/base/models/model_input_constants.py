@@ -44,6 +44,8 @@ def process_inputs(component_data: Input):
         component_data.value = ""
         component_data.load_from_db = False
         component_data.real_time_refresh = True
+        if component_data.name == "api_key":
+            component_data.required = False
     elif component_data.name == "tool_model_enabled":
         component_data.advanced = True
         component_data.value = True
