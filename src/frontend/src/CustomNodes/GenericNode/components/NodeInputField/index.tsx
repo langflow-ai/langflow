@@ -16,6 +16,7 @@ import {
   DEFAULT_TOOLSET_PLACEHOLDER,
   FLEX_VIEW_TYPES,
   ICON_STROKE_WIDTH,
+  IS_AUTO_LOGIN,
   LANGFLOW_SUPPORTED_TYPES,
 } from "../../../../constants/constants";
 import useFlowStore from "../../../../stores/flowStore";
@@ -44,13 +45,19 @@ export default function NodeInputField({
   isToolMode = false,
 }: NodeInputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
-  const isAuth = useAuthStore((state) => state.isAuthenticated);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const autoLogin = useAuthStore((state) => state.autoLogin);
+  const isAutoLoginEnv = IS_AUTO_LOGIN;
+  const isAutoLogin = autoLogin ?? isAutoLoginEnv;
+  const shouldDisplayApiKey = isAuthenticated && !isAutoLogin;
+
   const { currentFlowId, currentFlowName } = useFlowStore(
     useShallow((state) => ({
       currentFlowId: state.currentFlow?.id,
       currentFlowName: state.currentFlow?.name,
     })),
   );
+
   const myData = useTypesStore((state) => state.data);
   const postTemplateValue = usePostTemplateValue({
     node: data.node!,
@@ -75,10 +82,10 @@ export default function NodeInputField({
       flowId: currentFlowId ?? "",
       nodeType: data?.type?.toLowerCase() ?? "",
       flowName: currentFlowName ?? "",
-      isAuth,
+      isAuth: shouldDisplayApiKey!,
       variableName: name,
     };
-  }, [data?.node?.id, isAuth, name]);
+  }, [data?.node?.id, shouldDisplayApiKey, name]);
 
   useFetchDataOnMount(
     data.node!,
