@@ -3,8 +3,6 @@ title: Integrate Cleanlab Evaluations with Langflow
 slug: /integrations-cleanlab
 ---
 
-import DownloadableJsonFile from '@theme/DownloadableJsonFile';
-
 Unlock trustworthy Agentic, RAG, and LLM pipelines with Cleanlab's evaluation and remediation suite.
 
 [Cleanlab](https://www.cleanlab.ai/) adds automation and trust to every data point going in and every prediction coming out of AI and RAG solutions.
@@ -28,7 +26,7 @@ This component evaluates and explains the trustworthiness of a prompt and respon
 
 | Name                    | Type       | Description                                                             |
 |-------------------------|------------|-------------------------------------------------------------------------|
-| system_prompt           | Message    | (Optional) System message prepended to the prompt.                      |
+| system_prompt           | Message    | The system message prepended to the prompt. Optional.                   |
 | prompt                  | Message    | The user-facing input to the LLM.                                       |
 | response                | Message    | The model's response to evaluate.                    |
 | cleanlab_api_key        | Secret     | Your Cleanlab API key.                                                  |
@@ -39,7 +37,7 @@ This component evaluates and explains the trustworthiness of a prompt and respon
 
 | Name                    | Type       | Description                                                             |
 |-------------------------|------------|-------------------------------------------------------------------------|
-| score                   | number     | Shows the trust score between 0–1.                                                |
+| score                   | number     | Displays the trust score between 0–1.                                                |
 | explanation             | Message    | Provides an explanation of the trust score.                                         |
 | response                | Message    | Returns the original response for easy chaining to the `CleanlabRemediator` component. |
 
@@ -57,18 +55,18 @@ This component uses the trust score from the [CleanlabEvaluator](#cleanlabevalua
 | Name                        | Type       | Description                                                             |
 |-----------------------------|------------|-------------------------------------------------------------------------|
 | response                    | Message    | The response to potentially remediate.                                  |
-| score                       | number     | Trust score from `CleanlabEvaluator`.                                   |
-| explanation                 | Message    | Explanation to append if warning is shown. Optional.                    |
-| threshold                   | float      | Minimum trust score to pass response unchanged.                         |
-| show_untrustworthy_response | bool       | Show original response with warning if untrustworthy.                   |
-| untrustworthy_warning_text  | Prompt     | Warning text for untrustworthy responses.                               |
-| fallback_text              | Prompt     | Fallback message if response is hidden.                                 |
+| score                       | number     | The trust score from `CleanlabEvaluator`.                                   |
+| explanation                 | Message    | The explanation to append if a warning is shown. Optional.                    |
+| threshold                   | float      | The minimum trust score to pass a response unchanged.                         |
+| show_untrustworthy_response | bool       | Whether to display or hide the original response with a warning if a response is deemed untrustworthy.                   |
+| untrustworthy_warning_text  | Prompt     | The warning text for untrustworthy responses.                               |
+| fallback_text              | Prompt     | The fallback message if the response is hidden.                                 |
 
 **Outputs**
 
 | Name                    | Type       | Description                                                             |
 |-------------------------|------------|-------------------------------------------------------------------------|
-| remediated_response     | Message    | Final message shown to user after remediation logic.                    |
+| remediated_response     | Message    | The final message shown to user after remediation logic.                    |
 
 </details>
 
@@ -86,9 +84,9 @@ Additionally, use the [CleanlabRemediator](#cleanlabremediator) component with t
 | Name                        | Type       | Description                                                             |
 |-----------------------------|------------|-------------------------------------------------------------------------|
 | cleanlab_api_key           | Secret     | Your Cleanlab API key.                                                  |
-| cleanlab_evaluation_model  | Dropdown   | Evaluation model used by Cleanlab, such as GPT-4, or Claude. This does not need to be the same model that generated the response. |
+| cleanlab_evaluation_model  | Dropdown   | Thevaluation model used by Cleanlab, such as GPT-4, or Claude. This does not need to be the same model that generated the response. |
 | quality_preset             | Dropdown   | Tradeoff between evaluation speed and accuracy.                         |
-| context                    | Message    | Retrieved context from your RAG system.                                 |
+| context                    | Message    | The retrieved context from your RAG system.                                 |
 | query                      | Message    | The original user query.                                                |
 | response                   | Message    | The model's response based on the context and query. |
 | run_context_sufficiency    | bool       | Evaluate whether context supports answering the query.                  |
@@ -100,10 +98,10 @@ Additionally, use the [CleanlabRemediator](#cleanlabremediator) component with t
 
 | Name                    | Type       | Description                                                             |
 |-------------------------|------------|-------------------------------------------------------------------------|
-| trust_score             | number     | Overall trust score.                                                    |
-| trust_explanation       | Message    | Explanation for trust score.                                            |
-| other_scores            | dict       | Dictionary of optional enabled RAG evaluation metrics.                  |
-| evaluation_summary      | Message    | Markdown summary of query, context, response, and evaluation results.   |
+| trust_score             | number     | The overall trust score.                                                    |
+| trust_explanation       | Message    | The explanation for the trust score.                                            |
+| other_scores            | dict       | A dictionary of optional enabled RAG evaluation metrics.                  |
+| evaluation_summary      | Message    | A Markdown summary of query, context, response, and evaluation results.   |
 
 </details>
 
@@ -114,11 +112,7 @@ The following example flows show how to use the **CleanlabEvaluator** and **Clea
 ### Evaluate and remediate responses from an LLM
 
 :::tip
-Optionally, 
-<DownloadableJsonFile
-  source="./eval_and_remediate_cleanlab.json"
-  title="Download"
-/>  the Evaluate and Remediate flow.
+Optionally, [Download](./eval_and_remediate_cleanlab.json) the Evaluate and Remediate flow and follow along.
 :::
 
 This flow evaluates and remediates the trustworthiness of a response from any LLM using the **CleanlabEvaluator** and **CleanlabRemediator** components.
