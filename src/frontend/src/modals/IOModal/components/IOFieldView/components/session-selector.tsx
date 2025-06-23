@@ -26,6 +26,7 @@ export default function SessionSelector({
   selectedView,
   setSelectedView,
   playgroundPage,
+  setActiveSession,
 }: {
   deleteSession: (session: string) => void;
   session: string;
@@ -36,6 +37,7 @@ export default function SessionSelector({
   selectedView?: { type: string; id: string };
   setSelectedView: (view: { type: string; id: string } | undefined) => void;
   playgroundPage: boolean;
+  setActiveSession: (session: string) => void;
 }) {
   const clientId = useUtilityStore((state) => state.clientId);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -46,6 +48,9 @@ export default function SessionSelector({
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();
   const inputRef = useRef<HTMLInputElement>(null);
+  const setNewChatOnPlayground = useFlowStore(
+    (state) => state.setNewChatOnPlayground,
+  );
 
   useEffect(() => {
     setEditedSession(session);
@@ -68,13 +73,13 @@ export default function SessionSelector({
         {
           onSuccess: () => {
             if (isVisible) {
-              updateVisibleSession(editedSession);
+              updateVisibleSession(editedSession.trim());
             }
             if (
               selectedView?.type === "Session" &&
               selectedView?.id === session
             ) {
-              setSelectedView({ type: "Session", id: editedSession });
+              setSelectedView({ type: "Session", id: editedSession.trim() });
             }
           },
         },

@@ -4,29 +4,30 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface DeleteMessagesParams {
-  ids: string[];
+interface DeleteSessionParams {
+  sessionId: string;
 }
 
-export const useDeleteMessages: useMutationFunctionType<
+export const useDeleteSession: useMutationFunctionType<
   undefined,
-  DeleteMessagesParams
+  DeleteSessionParams
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const deleteMessage = async ({ ids }: DeleteMessagesParams): Promise<any> => {
-    const response = await api.delete(`${getURL("MESSAGES")}`, {
-      data: ids,
-    });
-
+  const deleteSession = async ({
+    sessionId,
+  }: DeleteSessionParams): Promise<any> => {
+    const response = await api.delete(
+      `${getURL("MESSAGES")}/session/${sessionId}`,
+    );
     return response.data;
   };
 
   const mutation: UseMutationResult<
-    DeleteMessagesParams,
+    DeleteSessionParams,
     any,
-    DeleteMessagesParams
-  > = mutate(["useDeleteMessages"], deleteMessage, {
+    DeleteSessionParams
+  > = mutate(["useDeleteSession"], deleteSession, {
     ...options,
     onSettled: (data, error, variables, context) => {
       queryClient.invalidateQueries({
