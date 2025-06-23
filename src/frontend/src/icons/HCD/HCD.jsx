@@ -2,8 +2,6 @@ import { stringToBool } from "@/utils/utils";
 
 const HCDSVG = (props) => (
   <svg
-    width="96"
-    height="96"
     viewBox="12 33 72 29"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"

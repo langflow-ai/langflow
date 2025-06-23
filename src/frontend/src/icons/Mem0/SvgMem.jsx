@@ -3,8 +3,6 @@ import { stringToBool } from "@/utils/utils";
 export default function SvgMem0(props) {
   return (
     <svg
-      width="126pt"
-      height="127pt"
       viewBox="0 0 126 127"
       preserveAspectRatio="xMidYMid meet"
       xmlns="http://www.w3.org/2000/svg"

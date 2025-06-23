@@ -3,8 +3,6 @@ const SvgMaritalkIcon = (props) => (
     version="1.1"
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 118 118"
-    width="118"
-    height="118"
     {...props}
   >
     <path

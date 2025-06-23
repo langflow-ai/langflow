@@ -1,10 +1,9 @@
 const SvgSearchVectorIcon = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width="18"
-    height="18"
     viewBox="0 0 18 18"
     fill="none"
+    {...props}
   >
     <path d="M15.75 15.75L12.525 12.525L15.75 15.75Z" fill="currentColor" />
     <path

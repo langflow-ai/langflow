@@ -4,6 +4,7 @@ const SvgLMStudio = (props) => (
     width="1.5em"
     height="1.5em"
     viewBox="0 0 271.68 271.44"
+    {...props}
   >
     <path
       fill="#4b28be"
