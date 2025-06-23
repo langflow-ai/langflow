@@ -153,16 +153,16 @@
             "id": "LanguageModelComponent-7rDOj",
             "name": "text_output",
             "output_types": [
-              "Message"
+              "LanguageModel"
             ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "StructuredOutput-RP4NK",
             "inputTypes": [
-              "Message"
+              "LanguageModel"
             ],
-            "type": "str"
+            "type": "other"
           }
         },
         "id": "xy-edge__LanguageModelComponent-7rDOj{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-7rDOjœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-RP4NK{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-RP4NKœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
@@ -1473,7 +1473,7 @@
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1761,7 +1761,7 @@
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
