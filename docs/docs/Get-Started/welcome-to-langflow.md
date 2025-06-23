@@ -1,6 +1,7 @@
 ---
 title: Welcome to Langflow
 slug: /
+hide_table_of_contents: true
 ---
 
 Langflow is a new, visual framework for building multi-agent and RAG applications. It is open-source, Python-powered, fully customizable, and LLM and vector store agnostic.
@@ -23,8 +24,8 @@ For example:
 * [Craft intelligent chatbots](/memory-chatbot)
 * [Build document analysis systems](/document-qa)
 * [Generate compelling content](/blog-writer)
-* [Orchestrate multi-agent applications](/starter-projects-simple-agent)
-* [Create agents with Langflow](/agents-overview)
+* [Orchestrate multi-agent applications](/simple-agent)
+* [Create agents with Langflow](/agents)
 * [Use Langflow as an MCP server](/mcp-server)
 * [Use Langflow as an MCP client](/mcp-client)
 

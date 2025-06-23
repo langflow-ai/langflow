@@ -19,13 +19,13 @@ The agent then uses a connected LLM to reason through the problem to decide whic
 
 Tools are typically connected to agent components at the **Tools** port.
 
-The [simple agent starter project](/starter-projects-simple-agent) uses URL and Calculator tools connected to an [agent component](/components-agents#agent-component) to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use.
+The [simple agent starter project](/simple-agent) uses URL and Calculator tools connected to an [agent component](/components-agents#agent-component) to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use.
 
 ![Simple agent starter flow](/img/starter-flow-simple-agent.png)
 
 To make a component into a tool that an agent can use, enable **Tool mode** in the component. Enabling **Tool mode** modifies a component input to accept calls from an agent.
 If the component you want to connect to an agent doesn't have a **Tool mode** option, you can modify the component's inputs to become a tool.
-For an example, see [Make any component a tool](/agents-tool-calling-agent-component#make-any-component-a-tool).
+For an example, see [Make any component a tool](/agents-tools#make-any-component-a-tool).
 
 ## arXiv
 

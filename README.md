@@ -19,39 +19,37 @@
 
 ## ✨ Highlight features
 
-1. **Visual Builder** to get started quickly and iterate.
-1. **Access to Code** so developers can tweak any component using Python.
-1. **Playground** to immediately test and iterate on their flows with step-by-step control.
-1. **Multi-agent** orchestration and conversation management and retrieval.
-1. **Deploy as an API** or export as JSON for Python apps.
-1. **Observability** with LangSmith, LangFuse and other integrations.
-1. **Enterprise-ready** security and scalability.
+- **Visual builder interface** to quickly get started and iterate .
+- **Source code access** lets you customize any component using Python.
+- **Interactive playground** to immediately test and refine your flows with step-by-step control.
+- **Multi-agent orchestration** with conversation management and retrieval.
+- **Deploy as an API** or export as JSON for Python apps.
+- **Observability** with LangSmith, LangFuse and other integrations.
+- **Enterprise-ready** security and scalability.
 
 ## ⚡️ Quickstart
 
-Langflow works with Python 3.10 to 3.13.
+Langflow requires [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/) and [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-Install with uv **(recommended)** 
-
-```shell
-uv pip install langflow
-```
-
-Install with pip
+1. To install Langflow, run:
 
 ```shell
-pip install langflow
+uv pip install langflow -U 
 ```
+
+2. To run Langflow, run:
+
+```shell
+uv run langflow run
+```
+
+3. Go to the default Langflow URL at `http://127.0.0.1:7860`.
+
+For more information about installing Langflow, including Docker and Desktop options, see [Install Langflow](https://docs.langflow.org/get-started-installation).
 
 ## 📦 Deployment
 
-### Self-managed
-
-Langflow is completely open source and you can deploy it to all major deployment clouds. Follow this [guide](https://docs.langflow.org/deployment-docker) to learn how to use Docker to deploy Langflow.
-
-### Fully-managed by DataStax
-
-DataStax Langflow is a full-managed environment with zero setup. Developers can [sign up for a free account](https://astra.datastax.com/signup?type=langflow) to get started.
+Langflow is completely open source and you can deploy it to all major deployment clouds. To learn how to use Docker to deploy Langflow, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
 
 ## ⭐ Stay up-to-date
 
