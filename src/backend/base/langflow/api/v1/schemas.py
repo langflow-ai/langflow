@@ -409,12 +409,11 @@ class ConfigResponse(BaseModel):
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "ConfigResponse":
-        """
-        Create a ConfigResponse instance using values from a Settings object and global feature flags.
-        
+        """Create a ConfigResponse instance using values from a Settings object and global feature flags.
+
         Parameters:
             settings (Settings): The Settings object containing configuration values.
-        
+
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
         """

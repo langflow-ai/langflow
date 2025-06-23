@@ -675,11 +675,10 @@ async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
 ):
-    """
-    Update an existing custom component with new code and configuration.
-    
+    """Update an existing custom component with new code and configuration.
+
     Processes the provided code and template updates, applies parameter changes (including those loaded from the database), updates the component's build configuration, and validates outputs. Returns the updated component node as a JSON-serializable dictionary.
-    
+
     Raises:
         HTTPException: If an error occurs during component building or updating.
         SerializationError: If serialization of the updated component node fails.
@@ -737,12 +736,11 @@ async def custom_component_update(
 
 @router.get("/config")
 async def get_config() -> ConfigResponse:
-    """
-    Retrieve the current application configuration settings.
-    
+    """Retrieve the current application configuration settings.
+
     Returns:
         ConfigResponse: The configuration settings of the application.
-    
+
     Raises:
         HTTPException: If an error occurs while retrieving the configuration.
     """
