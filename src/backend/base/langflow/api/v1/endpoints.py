@@ -675,22 +675,14 @@ async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
 ):
-    """Update a custom component with the provided code request.
-
-    This endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method
-    on the latest version of the template.
-    This ensures that every time it runs, it has the latest version of the template.
-
-    Args:
-        code_request (CustomComponentRequest): The code request containing the updated code for the custom component.
-        user (User, optional): The user making the request. Defaults to the current active user.
-
-    Returns:
-        dict: The updated custom component node.
-
+    """
+    Update an existing custom component with new code and configuration.
+    
+    Processes the provided code and template updates, applies parameter changes (including those loaded from the database), updates the component's build configuration, and validates outputs. Returns the updated component node as a JSON-serializable dictionary.
+    
     Raises:
-        HTTPException: If there's an error building or updating the component
-        SerializationError: If there's an error serializing the component to JSON
+        HTTPException: If an error occurs during component building or updating.
+        SerializationError: If serialization of the updated component node fails.
     """
     try:
         component = Component(_code=code_request.code)
@@ -745,6 +737,15 @@ async def custom_component_update(
 
 @router.get("/config")
 async def get_config() -> ConfigResponse:
+    """
+    Retrieve the current application configuration settings.
+    
+    Returns:
+        ConfigResponse: The configuration settings of the application.
+    
+    Raises:
+        HTTPException: If an error occurs while retrieving the configuration.
+    """
     try:
         settings_service: SettingsService = get_settings_service()
         return ConfigResponse.from_settings(settings_service.settings)
