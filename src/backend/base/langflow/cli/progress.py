@@ -23,7 +23,7 @@ class ProgressIndicator:
         self.current_step = 0
         self.running = False
         self._stop_animation = False
-        self._animation_thread = None
+        self._animation_thread: threading.Thread | None = None
 
         # Use Windows-safe characters on Windows to prevent encoding issues
         if platform.system() == "Windows":

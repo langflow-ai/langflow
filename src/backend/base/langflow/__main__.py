@@ -48,14 +48,16 @@ class ProcessManager:
         self.webapp_process = None
         self.shutdown_in_progress = False
 
-    def handle_sigterm(self):
+    # params are required for signal handlers, even if they are not used
+    def handle_sigterm(self, signum: int, frame) -> None:  # noqa: ARG001
         """Handle SIGTERM signal gracefully."""
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
         self.shutdown_in_progress = True
         self.shutdown()
 
-    def handle_sigint(self):
+    # params are required for signal handlers, even if they are not used
+    def handle_sigint(self, signum: int, frame) -> None:  # noqa: ARG001
         """Handle SIGINT signal gracefully."""
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
@@ -236,7 +238,8 @@ def run(
     env_log_level = os.environ.get("LANGFLOW_LOG_LEVEL")
     if env_log_level is None:
         os.environ["LANGFLOW_LOG_LEVEL"] = log_level_str
-    os.environ["LANGFLOW_LOG_LEVEL"] = env_log_level.lower()
+    else:
+        os.environ["LANGFLOW_LOG_LEVEL"] = env_log_level.lower()
 
     configure(log_level=log_level, log_file=log_file)
 
