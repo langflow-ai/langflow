@@ -49,7 +49,7 @@ class ProcessManager:
         self.shutdown_in_progress = False
 
     # params are required for signal handlers, even if they are not used
-    def handle_sigterm(self, signum: int, frame) -> None:
+    def handle_sigterm(self, _signum: int, _frame) -> None:
         """Handle SIGTERM signal gracefully."""
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
@@ -57,7 +57,7 @@ class ProcessManager:
         self.shutdown()
 
     # params are required for signal handlers, even if they are not used
-    def handle_sigint(self, signum: int, frame) -> None:
+    def handle_sigint(self, _signum: int, _frame) -> None:
         """Handle SIGINT signal gracefully."""
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
