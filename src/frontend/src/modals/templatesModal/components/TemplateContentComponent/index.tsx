@@ -3,6 +3,7 @@ import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import Fuse from "fuse.js";
+import { SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ForwardedIconComponent } from "../../../../components/common/genericIconComponent";
@@ -83,11 +84,12 @@ export default function TemplateContentComponent({
         <Input
           type="search"
           placeholder="Search..."
+          icon={"SearchIcon"}
           data-testid="search-input-template"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           ref={searchInputRef}
-          className="w-3/4 rounded-lg bg-background pl-8 lg:w-2/3"
+          className="w-3/4 rounded-lg bg-background lg:w-2/3"
         />
       </div>
       <div
