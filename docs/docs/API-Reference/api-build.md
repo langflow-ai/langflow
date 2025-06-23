@@ -6,16 +6,17 @@ slug: /api-build
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Use the `/build` endpoints to build vertices and flows, and execute those flows with streaming event responses.
-
-The `/build` endpoints offers additional configuration for running flows, but they are for development against the Langflow codebase.
-
 :::important
-This `/build` endpoints are meant to be used by Langflow's frontend code.
-They aren't intended for running flows as apart of application development with Langflow.
+The `/build` endpoints are used by Langflow's frontend Workspace and Playground code.
+These endpoints are part of the internal Langflow codebase.
 
+Don't use these endpoints to run flows in applications that use your Langflow flows.
 To run flows in your apps, see [Flow trigger endpoints](/api-flows-run).
 :::
+
+The `/build` endpoints support Langflow's frontend code for building flows in the Langflow Workspace.
+You can use these endpoints to build vertices and flows, as well as execute flows with streaming event responses.
+You might need to use or understand these endpoints when contributing to the Langflow project's core codebase.
 
 ## Build flow and stream events
 
