@@ -44,13 +44,12 @@ from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
-    from langflow.services.event_manager import EventManager
+    from langflow.events.event_manager import EventManager
     from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
@@ -744,14 +743,11 @@ async def custom_component_update(
         raise SerializationError.from_exception(exc, data=component_node) from exc
 
 
-@router.get("/config", response_model=ConfigResponse)
-async def get_config():
+@router.get("/config")
+async def get_config() -> ConfigResponse:
     try:
         settings_service: SettingsService = get_settings_service()
+        return ConfigResponse.from_settings(settings_service.settings)
 
-        return {
-            "feature_flags": FEATURE_FLAGS,
-            **settings_service.settings.model_dump(),
-        }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

@@ -17,13 +17,13 @@ from langflow.graph.schema import RunOutputs
 from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
-from langflow.serialization import constants as serialization_constants
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.settings.feature_flags import FeatureFlags
+from langflow.services.settings.base import Settings
+from langflow.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
 from langflow.services.tracing.schema import Log
 
 
@@ -395,8 +395,8 @@ class FlowDataRequest(BaseModel):
 
 class ConfigResponse(BaseModel):
     feature_flags: FeatureFlags
-    serialization_max_items_length: int = serialization_constants.MAX_ITEMS_LENGTH
-    serialization_max_text_length: int = serialization_constants.MAX_TEXT_LENGTH
+    serialization_max_items_length: int
+    serialization_max_text_length: int
     frontend_timeout: int
     auto_saving: bool
     auto_saving_interval: int
@@ -406,6 +406,23 @@ class ConfigResponse(BaseModel):
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     event_delivery: Literal["polling", "streaming", "direct"]
+
+    @classmethod
+    def from_settings(cls, settings: Settings) -> "ConfigResponse":
+        return cls(
+            feature_flags=FEATURE_FLAGS,
+            serialization_max_items_length=settings.max_items_length,
+            serialization_max_text_length=settings.max_text_length,
+            frontend_timeout=settings.frontend_timeout,
+            auto_saving=settings.auto_saving,
+            auto_saving_interval=settings.auto_saving_interval,
+            health_check_max_retries=settings.health_check_max_retries,
+            max_file_size_upload=settings.max_file_size_upload,
+            webhook_polling_interval=settings.webhook_polling_interval,
+            public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
+            public_flow_expiration=settings.public_flow_expiration,
+            event_delivery=settings.event_delivery,
+        )
 
 
 class CancelFlowResponse(BaseModel):
