@@ -54,6 +54,7 @@ components:
   - "src/backend/base/langflow/custom/**"
   - "src/backend/base/langflow/components/**"
   - "src/backend/base/langflow/initial_setup/**"
+  - "src/backend/base/langflow/serialization/**"
 
 workspace:
   - "src/backend/base/langflow/inputs/**"
