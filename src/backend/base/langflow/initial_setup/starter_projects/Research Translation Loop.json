@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-7dhXG{œdataTypeœ:œChatInputœ,œidœ:œChatInput-7dhXGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-8YHhw{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-8YHhwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-7dhXG",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-7dhXGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-7dhXGœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ArXivComponent-8YHhw",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-8YHhwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-8YHhwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ArXivComponent-8YHhw{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-8YHhwœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-dkM1v{œfieldNameœ:œdataœ,œidœ:œLoopComponent-dkM1vœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ArXivComponent-8YHhw",
-        "sourceHandle": "{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-8YHhwœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-8YHhwœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "LoopComponent-dkM1v",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-dkM1vœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-dkM1vœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -82,9 +82,9 @@
         "id": "reactflow__edge-LoopComponent-dkM1v{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-dkM1vœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-uSCVe{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-uSCVeœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-dkM1v",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-dkM1vœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-dkM1vœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParserComponent-uSCVe",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-uSCVeœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-uSCVeœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-LoopComponent-dkM1v{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-dkM1vœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-TypeConverterComponent-0TFCA{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-0TFCAœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-dkM1v",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-dkM1vœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-dkM1vœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "TypeConverterComponent-0TFCA",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-0TFCAœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-0TFCAœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -142,9 +142,9 @@
         "id": "reactflow__edge-TypeConverterComponent-0TFCA{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-0TFCAœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-O3R2b{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-O3R2bœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TypeConverterComponent-0TFCA",
-        "sourceHandle": "{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-0TFCAœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-0TFCAœ, œnameœ: œmessage_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-O3R2b",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-O3R2bœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-O3R2bœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -170,9 +170,9 @@
         "id": "reactflow__edge-ParserComponent-uSCVe{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-uSCVeœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-huxaM{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-huxaMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-uSCVe",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-uSCVeœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-uSCVeœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-huxaM",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-huxaMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-huxaMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -198,9 +198,9 @@
         "id": "reactflow__edge-LanguageModelComponent-huxaM{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-huxaMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-uaDsB{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-uaDsBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-huxaM",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-huxaMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-huxaMœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "MessagetoData-uaDsB",
-        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-uaDsBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œMessagetoData-uaDsBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -226,9 +226,9 @@
         "id": "reactflow__edge-MessagetoData-uaDsB{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-uaDsBœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-dkM1v{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-dkM1vœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
         "selected": false,
         "source": "MessagetoData-uaDsB",
-        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-uaDsBœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-uaDsBœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "LoopComponent-dkM1v",
-        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-dkM1vœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}"
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-dkM1vœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
       }
     ],
     "nodes": [
@@ -1492,8 +1492,6 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1508,8 +1506,6 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
