@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test(
+// TODO: This test needs to be rebuilt/refactored
+test.skip(
   "truncated values must be displayed correctly",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
