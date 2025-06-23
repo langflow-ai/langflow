@@ -226,7 +226,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         localStorage.getItem(`dismiss_${flow?.id}`) ?? "[]",
       ) as string[],
     });
-    unselectAllNodesEdges(nodes, edges);
+    unselectAllNodesEdges(nodes, newEdges);
     if (flow?.id) {
       useTweaksStore.getState().initialSetup(nodes, flow?.id);
     }
