@@ -30,7 +30,7 @@ class LanguageModelComponent(LCModelComponent):
             value="OpenAI",
             info="Select the model provider",
             real_time_refresh=True,
-            options_metadata=[{"icon": "OpenAI"}, {"icon": "Anthropic"}, {"icon": "Google"}],
+            options_metadata=[{"icon": "OpenAI"}, {"icon": "Anthropic"}, {"icon": "GoogleGenerativeAI"}],
         ),
         DropdownInput(
             name="model_name",
