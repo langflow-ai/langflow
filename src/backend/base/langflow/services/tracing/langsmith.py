@@ -167,9 +167,8 @@ class LangSmithTracer(BaseTracer):
             child.add_metadata(self._convert_to_langchain_types({"logs": {log.get("name"): log for log in logs_dicts}}))
         child.add_metadata(self._convert_to_langchain_types({"outputs": raw_outputs}))
         child.end(outputs=processed_outputs, error=self._error_to_string(error))
-        self._children_traces[trace_id].__exit__()
+        self._children_traces[trace_id].__exit__(None, None, None)
         self._child_link[trace_id] = child.get_url()
-
     @staticmethod
     def _error_to_string(error: Exception | None):
         error_message = None
