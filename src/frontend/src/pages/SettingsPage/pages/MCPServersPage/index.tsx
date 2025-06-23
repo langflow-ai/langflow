@@ -102,8 +102,9 @@ export default function MCPServersPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{server.name}</span>
                     <span className="text-mmd text-muted-foreground">
-                      {server.toolsCount} action
-                      {server.toolsCount === 1 ? "" : "s"}
+                      {server.toolsCount === null
+                        ? "Loading..."
+                        : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`}
                     </span>
                   </div>
                   <DropdownMenu>
