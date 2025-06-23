@@ -1,5 +1,6 @@
-import httpx
 import json
+
+import httpx
 from loguru import logger
 
 from langflow.custom.custom_component.component import Component
@@ -18,7 +19,8 @@ from langflow.template.field.base import Output
 class TavilyCrawlComponent(Component):
     display_name = "Tavily Crawl API"
     description = (
-        """**Tavily Crawl** intelligently crawl a website from a starting URL to discover and extract content across multiple pages."""
+        """**Tavily Crawl** intelligently crawl a website from a starting URL to discover and extract content "
+        "across multiple pages."""
     )
     icon = "TavilyIcon"
 
