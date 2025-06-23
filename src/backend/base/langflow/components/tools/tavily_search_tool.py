@@ -282,9 +282,10 @@ Note: Check 'Advanced' for all options.
             headers = {
                 "content-type": "application/json",
                 "accept": "application/json",
+                "Authorization": f"Bearer {self.api_key}",
+                "X-Client-Source": "langflow"
             }
             payload = {
-                "api_key": self.api_key,
                 "query": query,
                 "search_depth": search_depth.value,
                 "topic": topic.value,

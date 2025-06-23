@@ -42,6 +42,14 @@ class TavilyExtractComponent(Component):
             value=False,
             advanced=True,
         ),
+        DropdownInput(
+            name="format",
+            display_name="Format",
+            info="The format of the extracted web page content. markdown returns content in markdown format. text returns plain text and may increase latency.",
+            options=["markdown", "text"],
+            value="markdown",
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -66,19 +74,21 @@ class TavilyExtractComponent(Component):
                 "content-type": "application/json",
                 "accept": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
+                "X-Client-Source": "langflow"
             }
             payload = {
                 "urls": urls,
                 "extract_depth": self.extract_depth,
                 "include_images": self.include_images,
+                "format": self.format,
             }
 
-            with httpx.Client(timeout=90.0) as client:
+            with httpx.Client(timeout=120.0) as client:
                 response = client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
 
         except httpx.TimeoutException as exc:
-            error_message = f"Request timed out (90s): {exc}"
+            error_message = f"Request timed out (120s): {exc}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.HTTPStatusError as exc:
