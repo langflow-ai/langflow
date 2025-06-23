@@ -191,13 +191,10 @@ def get_lifespan(*, fix_migration=False, version=None):
         finally:
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
-            import os
-
             from langflow.cli.progress import create_langflow_shutdown_progress
 
-            log_level = os.getenv("LANGFLOW_LOG_LEVEL", "INFO").upper()
-            verbose = log_level == "DEBUG"
-            shutdown_progress = create_langflow_shutdown_progress(verbose=verbose)
+            log_level = os.getenv("LANGFLOW_LOG_LEVEL", "info").lower()
+            shutdown_progress = create_langflow_shutdown_progress(verbose=log_level == "debug")
 
             try:
                 # Step 0: Stopping Server
@@ -214,7 +211,10 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):
-                    await teardown_services()
+                    try:
+                        await asyncio.wait_for(teardown_services(), timeout=10)
+                    except asyncio.TimeoutError:
+                        logger.warning("Teardown services timed out.")
 
                 # Step 3: Clearing Temporary Files
                 with shutdown_progress.step(3):
@@ -427,7 +427,7 @@ def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = Fals
 
         @app.get("/")
         async def redirect_to_flows():
-            return RedirectResponse(url="/flows")
+            return RedirectResponse(url="/all")
 
     if not backend_only and static_files_dir is not None:
         setup_static_files(app, static_files_dir)

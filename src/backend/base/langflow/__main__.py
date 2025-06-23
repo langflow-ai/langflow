@@ -305,8 +305,9 @@ def run(
         pass  # Components are loaded during app startup
 
     # Step 5: Adding Starter Projects (placeholder for starter projects)
-    with progress.step(5):
-        pass  # Starter projects are added during app startup
+    if get_settings_service().settings.create_starter_projects:
+        with progress.step(5):
+            pass  # Starter projects are added during app startup
 
     # Step 6: Launching Langflow
     if platform.system() == "Windows":
