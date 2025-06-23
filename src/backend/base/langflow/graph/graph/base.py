@@ -486,33 +486,6 @@ class Graph:
         self.build_graph_maps(self.edges)
         self.define_vertices_lists()
 
-    def get_state(self, name: str) -> Data | None:
-        """Retrieves the state record associated with the specified name for the current run.
-
-        Args:
-            name: The name of the state to retrieve.
-
-        Returns:
-            The state data if it exists, or None otherwise.
-        """
-        return self.state_manager.get_state(name, run_id=self._run_id)
-
-    def update_state(self, name: str, record: str | Data, caller: str | None = None) -> None:
-        """Updates the state associated with the given name and notifies relevant state vertices.
-
-        If a caller vertex is provided, activates all state vertices (excluding the caller) whose context key contains
-        the state name, as well as their successors and related predecessors. The state manager is then
-        updated with the new state record.
-        """
-        if caller:
-            # If there is a caller which is a vertex_id, I want to activate
-            # all StateVertex in self.vertices that are not the caller
-            # essentially notifying all the other vertices that the state has changed
-            # This also has to activate their successors
-            self.activate_state_vertices(name, caller)
-
-        self.state_manager.update_state(name, record, run_id=self._run_id)
-
     @property
     def is_state_vertices(self) -> list[str]:
         """Returns a cached list of vertex IDs for vertices marked as state vertices.
