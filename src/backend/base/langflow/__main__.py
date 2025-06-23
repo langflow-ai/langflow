@@ -229,13 +229,14 @@ def run(
     if env_file:
         load_dotenv(env_file, override=True)
 
-    log_level = log_level.lower() if log_level else "info"
+    # Set default log level if not provided
+    log_level_str = "info" if log_level is None else log_level.lower()
 
     # Must set as env var for child process to pick up
-    if os.environ.get("LANGFLOW_LOG_LEVEL") is None:
-        os.environ["LANGFLOW_LOG_LEVEL"] = log_level
-    else:
-        os.environ["LANGFLOW_LOG_LEVEL"] = os.environ.get("LANGFLOW_LOG_LEVEL").lower()
+    env_log_level = os.environ.get("LANGFLOW_LOG_LEVEL")
+    if env_log_level is None:
+        os.environ["LANGFLOW_LOG_LEVEL"] = log_level_str
+    os.environ["LANGFLOW_LOG_LEVEL"] = env_log_level.lower()
 
     configure(log_level=log_level, log_file=log_file)
 
