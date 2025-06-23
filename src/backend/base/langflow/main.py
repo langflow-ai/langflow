@@ -422,13 +422,6 @@ def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = Fals
         raise RuntimeError(msg)
     app = create_app()
 
-    # Add redirect from / to /flows before static files
-    if not backend_only:
-
-        @app.get("/")
-        async def redirect_to_flows():
-            return RedirectResponse(url="/all")
-
     if not backend_only and static_files_dir is not None:
         setup_static_files(app, static_files_dir)
     return app
