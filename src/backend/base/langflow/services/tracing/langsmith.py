@@ -192,9 +192,8 @@ class LangSmithTracer(BaseTracer):
         self._run_tree.end(outputs=serialize(outputs), error=self._error_to_string(error))
         self._run_tree.patch()
         self._run_link = self._run_tree.get_url()
-        if self._trace:
+        if getattr(self, "_trace", None):
             self._trace.__exit__()
-
     @property
     def run_link(self):
         if not self._ready or not self._run_tree:
