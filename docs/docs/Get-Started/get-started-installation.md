@@ -12,7 +12,7 @@ Langflow can be installed in multiple ways:
 
 * **Docker**: Pull and run the [Docker image](#install-and-run-langflow-docker) to start a Langflow container.
 
-* **Python package**: Install the [Langflow OSS Python package](#install-and-run-langflow-oss).
+* **Python package**: Install the [Langflow OSS Python package](#install-and-run-the-langflow-oss-python-package).
 
 ## Install and run Langflow Desktop
 
