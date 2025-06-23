@@ -5,6 +5,7 @@ slug: /api-reference-api-examples
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
 
 This page provides examples and practices for managing Langflow using the Langflow API.
 
@@ -509,7 +510,7 @@ The `/build/{flow_id}/flow` endpoint accepts the following parameters in its req
 ### Configure the build endpoint
 
 The `/build` endpoint accepts optional values for `start_component_id` and `stop_component_id` to control where the flow run starts and stops.
-Setting `stop_component_id` for a component triggers the same behavior as clicking the **Play** button on that component, where all dependent components leading up to that component are also run.
+Setting `stop_component_id` for a component triggers the same behavior as clicking <Icon name="Play" aria-hidden="True" /> **Run component** on that component, where all dependent components leading up to that component are also run.
 For example, to stop flow execution at the Open AI model component, run the following command:
 
 ```bash

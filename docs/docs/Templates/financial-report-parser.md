@@ -5,7 +5,7 @@ slug: /financial-report-parser
 
 import Icon from "@site/src/components/icon";
 
-Build a **Financial Report Parser** flow with the [Structured output](/components-helpers#structured-output) and [Parser](/components-processing#parser) components to parse LLM responses into a structured format.
+Build a **Financial Report Parser** flow with the [Structured output](/components-processing#structured-output) and [Parser](/components-processing#parser) components to parse LLM responses into a structured format.
 
 In this example, the **Chat Input** component is pre-loaded with a sample financial report to demonstrate extracting `Gross Profit`, `EBITDA`, and `Net Income`.
 
@@ -21,14 +21,20 @@ In this example, the **Chat Input** component is pre-loaded with a sample financ
 
 The **Financial Report Parser** flow is created.
 
-![](/img/starter-flow-financial-report-parser.png)
+![Financial report parser flow](/img/starter-flow-financial-report-parser.png)
 
-## Run the memory chatbot flow
+## Run the financial report parser flow
 
-1. Add your OpenAI API key to the OpenAI model.
-2. Click the **Playground** button, and then click **Send**.
+1. Add your **OpenAI API key** to the **Language model** model component.
+	Optionally, create a [global variable](/configuration-global-variables) for the **OpenAI API key**.
+
+	1. In the **OpenAI API Key** field, click <Icon name="Globe" aria-hidden="True" /> **Globe**, and then click **Add New Variable**.
+	2. In the **Variable Name** field, enter `openai_api_key`.
+	3. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+	4. Click **Save Variable**.
+2. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**, and then click **Send**.
 The **Chat Input** component is pre-loaded with a sample financial report for demonstration purposes.
-The chat returns a structured response:
+The **Playground** returns a structured response:
 
 ```text
 EBITDA: $900 million , Net Income: $500 million , GROSS_PROFIT: $1.2 billion
@@ -46,7 +52,7 @@ The **Structured Output** component uses the attached **OpenAI** model component
 | GROSS_PROFIT | description of field  | text | False    |
 ```
 
-4. To inspect the template that contains the extracted data, in the **Parser** component, click the <Icon name="Scan" aria-hidden="true"/> **Scan** icon in the **Template** field.
+4. To inspect the template that contains the extracted data, in the **Parser** component, click <Icon name="Scan" aria-hidden="true"/> **Scan** in the **Template** field.
 The **Parser** component converts the extracted data into formatted messages for chat consumption.
 Each variable receives its value from the structured outputs.
 ```text

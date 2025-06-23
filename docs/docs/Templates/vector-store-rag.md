@@ -36,24 +36,27 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-p
 
 The vector store RAG flow is built of two separate flows for ingestion and query.
 
-![](/img/starter-flow-vector-rag.png)
+![Vector RAG starter flow with Astra DB](/img/starter-flow-vector-rag.png)
 
 The **Load Data Flow** (bottom of the screen) creates a searchable index to be queried for contextual similarity.
 This flow populates the vector store with data from a local file.
-It ingests data from a local file, splits it into chunks, indexes it in Astra DB, and computes embeddings for the chunks using the OpenAI embeddings model.
+It ingests data from a local file, splits it into chunks, indexes it in Astra DB, and computes embeddings for the chunks using the **Embeddings model** component.
 
 The **Retriever Flow** (top of the screen) embeds the user's queries into vectors, which are compared to the vector store data from the **Load Data Flow** for contextual similarity.
 
 - **Chat Input** receives user input from the **Playground**.
-- **OpenAI Embeddings** converts the user query into vector form.
+- **Embeddings model** converts the user query into vector form.
 - **Astra DB** performs similarity search using the query vector.
 - **Parser** processes the retrieved chunks.
 - **Prompt** combines the user query with relevant context.
-- **OpenAI** generates the response using the prompt.
+- **Language model** generates the response using the prompt and the OpenAI LLM.
 - **Chat Output** returns the response to the **Playground**.
 
-1. Configure the **OpenAI** model component.
-	1. To create a global variable for the **OpenAI** component, in the **OpenAI API Key** field, click the <Icon name="Globe" aria-label="Globe" /> **Globe** button, and then click **Add New Variable**.
+1. Add your **OpenAI API key** to the **Language model** component.
+
+	Optionally, create a [global variable](/configuration-global-variables) for the **OpenAI API key**.
+
+	1. In the **OpenAI API Key** field, click <Icon name="Globe" aria-hidden="True" /> **Globe**, and then click **Add New Variable**.
 	2. In the **Variable Name** field, enter `openai_api_key`.
 	3. In the **Value** field, paste your OpenAI API Key (`sk-...`).
 	4. Click **Save Variable**.
@@ -85,6 +88,7 @@ If you used Langflow's **Global Variables** feature, the RAG application flow co
 
 ## Run the Vector Store RAG flow
 
-1. Click the **Playground** button. Here you can chat with the AI that uses context from the database you created.
-2. Type a message and press Enter. (Try something like "What topics do you know about?")
+1. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
+In the **Playground**, you can chat with the LLM that uses context from the database you created.
+2. Enter a message and press <kbd>Enter</kbd>. Try something like, "What topics do you know about?"
 3. The bot will respond with a summary of the data you've embedded.

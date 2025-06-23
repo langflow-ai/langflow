@@ -29,6 +29,7 @@ Flows are stored on local disk at the following default locations:
 
 - **Linux and WSL**: `home/<username>/.cache/langflow/`
 - **macOS**: `/Users/<username>/Library/Caches/langflow/`
+- **Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`
 
 The flow storage location can be customized with the [LANGFLOW_CONFIG_DIR](/environment-variables#LANGFLOW_CONFIG_DIR) environment variable.
 
@@ -36,7 +37,7 @@ The flow storage location can be customized with the [LANGFLOW_CONFIG_DIR](/envi
 
 If you're new to Langflow, it's OK to feel a bit lost at first. We’ll take you on a tour, so you can orient yourself and start creating applications quickly.
 
-Langflow has four distinct regions: the [workspace](#workspace) is the main area where you build your flows. The components sidebar is on the left, and lists the available [components](#components). The [playground](#playground) and [publish pane](#publish-pane) are available in the upper right corner.
+Langflow has four distinct regions: the [workspace](#workspace) is the main area where you build your flows. The components sidebar is on the left, and lists the available [components](#components). The [playground](#playground) and [Share menu](#share-menu) are available in the upper right corner.
 
 ## Workspace
 
@@ -45,8 +46,8 @@ The **workspace** is where you create AI applications by connecting and running 
 - Click and drag the workspace to move it left, right, up, and down.
 - Scroll up and down to zoom in and out of the workspace, or use the <Icon name="ZoomIn" aria-hidden="true"/> **Zoom In** and <Icon name="ZoomOut" aria-hidden="true"/> **Zoom Out** controls.
 - Click <Icon name="Maximize" aria-hidden="true"/> **Fit To Zoom** to center the workspace on the current flow.
-- Click <Icon name="LockOpen" aria-hidden="true"/> **Lock** to lock the workspace in place, preventing accidental movement.
 - Click <Icon name="StickyNote" aria-hidden="true"/> **Add Note** to add a note to your flow, similar to commenting in code.
+- Click <Icon name="LockOpen" aria-hidden="true"/> **Lock** to lock the workspace in place, preventing accidental movement.
 
 ![Empty langflow workspace](/img/workspace.png)
 
@@ -56,39 +57,50 @@ A **component** is a single building block within a flow and consists of inputs,
 
 To add a component to your flow, drag it from the sidebar onto the workspace.
 
-To connect components, drag a line from the output handle (⚪) of one component to the input handle of another.
+To connect components, drag a line from the output handle (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }}/>) of a component to the input handle of the same color (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }}/>) of another.
 
-For more information, see [Components overview](/concepts-components).
+For example, to connect **Chat Input**, **Language Model**, and **Chat Output** components, connect the blue **Message** handles to each other:
 
-<img src="/img/prompt-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
+![Chat input and output connected to Language model component](/img/connect-component.png)
+
+**Message** handles send text strings between components, so these components will send text to each other.
+Additional data types include **Data** (<Icon name="Circle" size="16" aria-label="A red circle on the side of a component" style={{ color: '#ef4444', fill: '#ef4444' }}/>) and **DataFrame** (<Icon name="Circle" size="16" aria-label="A red circle on the side of a component" style={{ color: '#d72670', fill: '#d72670' }}/>).
+
+For more information, see [Components](/concepts-components).
 
 ## Playground
 
-The **Playground** executes the current flow in the workspace.
+If a **Chat Input** component is in your current flow, the **Playground** enables you to run your flow, chat with your flow, view inputs and outputs, and modify your AI's memories to tune your responses in real time.
 
-Chat with your flow, view inputs and outputs, and modify your AI's memories to tune your responses in real time.
+For example, click <Icon name="Play" aria-hidden="true"/> **Playground** in a flow that includes **Chat Input**, **Language Model**, and **Chat Output** components to chat with the LLM.
 
-Either the **Chat Input** or **Chat Output** component can be opened in the **Playground** and tested in real time.
+![Playground window](/img/playground.png)
 
-For more information, see the [Playground](/concepts-playground).
+If you have an **Agent** in your flow, the **Playground** displays its tool calls and outputs, so you can monitor the agent's tool use and understand how it came to the answer it returns.
 
-![](/img/playground.png)
+![Playground window with agent response](/img/playground-with-agent.png)
 
-## Publish pane {#publish-pane}
+For more information, see [Playground](/concepts-playground).
 
-The **Publish** pane provides code templates to integrate your flows into external applications.
+## Share {#share-menu}
 
-For more information, see the [Publish pane](/concepts-publish).
+The **Share** menu provides options for integrating your flow into external applications.
 
-![](/img/api-pane.png)
+For more information, see the links below.
+
+* [API access](/concepts-publish#api-access) - Code snippets to run your flow with Python, JavaScript, or curl.
+* [Export](/concepts-flows#export-flow) - Export your flow to your local machine as a JSON file.
+* [MCP Server](/mcp-server) - Expose your flow as a tool for MCP-compatible clients.
+* [Embed into site](/embedded-chat-widget) - Embed your flow in HTML, React, or Angular applications.
+* [Shareable playground](/concepts-publish#shareable-playground) - Share your **Playground** interface with another user.
 
 ## View logs
 
 The **Logs** pane provides a detailed record of all component executions within a workspace.
 
-To access the **Logs** pane, click your **Flow Name**, and then select **Logs**.
+To access the **Logs** pane, click **Logs**.
 
-![](/img/logs.png)
+![Logs pane](/img/logs.png)
 
 Langflow stores logs at the location specified in the `LANGFLOW_CONFIG_DIR` environment variable.
 
@@ -125,19 +137,6 @@ Upload, store, and manage files in Langflow's **File management** system.
 
 For more on managing your files, see [Manage files](/concepts-file-management).
 
-## Options menu
-
-The dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow workspace:
-
-- <Icon name="Plus" aria-hidden="true"/> **New**: Create a new flow from scratch.
-- <Icon name="SquarePen" aria-hidden="true"/> **Edit Details**: Adjust settings specific to the current flow, such as its name, description, and endpoint name.
-- <Icon name="ScrollText" aria-hidden="true"/> **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
-- <Icon name="FileUp" aria-hidden="true"/> **Import**: Import a flow or component from a JSON file into the workspace.
-- <Icon name="FileDown" aria-hidden="true"/> **Export**: Export the current flow as a JSON file.
-- <Icon name="Undo" aria-hidden="true"/> **Undo**: Revert the last action taken in the project. Keyboard shortcut: <kbd>Control+Z</kbd> (or <kbd>Command+Z</kbd> on macOS).
-- <Icon name="Redo" aria-hidden="true"/> **Redo**: Reapply a previously undone action. Keyboard shortcut: <kbd>Control+Y</kbd> (or <kbd>Command+Y</kbd> on macOS).
-- <Icon name="RefreshCcw" aria-hidden="true"/> **Refresh All**: Refresh all components and delete cache.
-
 ## Settings
 
-Click <Icon name="Settings" aria-hidden="true"/> **Settings** to access **Global variables**, **Langflow API keys**, **Shortcuts**, and **Messages**.
+Click <Icon name="Settings" aria-hidden="true"/> **Settings** to access **Global variables**, **MCP Servers**, **Langflow API keys**, **Shortcuts**, and **Messages**.

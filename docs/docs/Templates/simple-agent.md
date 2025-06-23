@@ -1,14 +1,16 @@
 ---
 title: Simple agent
-slug: /simple-agent
+slug: /starter-projects-simple-agent
 ---
 
-Build a **Simple Agent** flow for an agentic application using the [Agent](/agents) component.
+import Icon from "@site/src/components/icon";
+
+Build a **Simple Agent** flow for an agentic application using the [Agent](/components-agents) component.
 
 An **agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
 
-In this flow, the **Tool-calling agent** reasons using an **Open AI** LLM.
-The agent selects the **Calculator** tool for simple math problems and the **URL** tool to search a URL for content.
+In this flow, the **Agent** reasons using a connected [Language model](/components-models) component.
+The agent selects the [Calculator](/components-helpers#calculator) tool for simple math problems, and the [URL](/components-data#url) tool to search a URL for content.
 
 ## Prerequisites
 
@@ -17,26 +19,26 @@ The agent selects the **Calculator** tool for simple math problems and the **URL
 
 ## Open Langflow and start a new flow
 
-Click **New Flow**, and then select the **Simple Agent** flow.
+1. From the Langflow dashboard, click **New Flow**.
 
-This opens a starter flow with the necessary components to run an agentic application using the Tool-calling agent.
+2. Select **Simple Agent**.
 
-## Simple Agent flow
+The **Simple Agent** flow is created.
 
 ![Simple agent starter flow](/img/starter-flow-simple-agent.png)
 
-The **Simple Agent** flow consists of these components:
+## Run the simple agent flow
 
-* The **Tool calling agent** component uses the connected LLM to reason through the user's input and select among the connected tools to complete its task.
-* The **URL** tool component searches a list of URLs for content.
-* The **Calculator** component performs basic arithmetic operations.
-* The **Chat Input** component accepts user input to the chat.
-* The **Chat Output** component prints the flow's output to the chat.
+1. Add your **OpenAI API key** to the **Agent** component.
 
-## Run the Simple Agent flow
+	Optionally, create a [global variable](/configuration-global-variables) for the **OpenAI API key**.
 
-1. Add your credentials to the **Agent** component.
-2. Click **Playground** to start a chat session.
+	1. In the **OpenAI API Key** field, click <Icon name="Globe" aria-hidden="True" /> **Globe**, and then click **Add New Variable**.
+	2. In the **Variable Name** field, enter `openai_api_key`.
+	3. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+	4. Click **Save Variable**.
+
+2. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 3. To confirm the tools are connected, ask the agent, `What tools are available to you?`
 The response is similar to the following:
 ```text

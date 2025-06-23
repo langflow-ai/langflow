@@ -9,7 +9,7 @@ import Icon from "@site/src/components/icon";
 The **Chat memory** component is also known as the **Message history** component.
 :::
 
-This flow extends the [basic prompting flow](/basic-prompting) with a **Message history** component that stores up to 100 previous chat messages and uses them to provide context for the current conversation.
+This flow extends the [basic prompting flow](/starter-projects-basic-prompting) with a [Message history](/components-helpers#message-history) component that stores up to 100 previous chat messages and uses them to provide context for the current conversation.
 
 ## Prerequisites
 
@@ -22,13 +22,13 @@ This flow extends the [basic prompting flow](/basic-prompting) with a **Message 
 2. Select **Memory Chatbot**.
 3. The **Memory Chatbot** flow is created.
 
-![](/img/starter-flow-memory-chatbot.png)
+![Memory chatbot flow](/img/starter-flow-memory-chatbot.png)
 
 This flow adds a **Message history** component to the Basic Prompting flow.
 This component retrieves previous messages and sends them to the **Prompt** component to fill a part of the **Template** with context.
 
 To examine the template, click the **Template** field in the **Prompt** component.
-The **Prompt** tells the **OpenAI model** component how to respond to input.
+The **Prompt** instructs the **Language model** component how to respond to input.
 
 ```text
 You are a helpful assistant that answers questions.
@@ -41,7 +41,7 @@ History:
 ```
 
 The `{memory}` code in the prompt creates a new input port in the component called **memory**.
-The **Message history** component is connected to this port to store chat messages from the **Playground**, and provide the **OpenAI** component with a memory of previous chat messages.
+The **Message history** component is connected to this port to store chat messages from the **Playground**, and provide the **Language model** component with a memory of previous chat messages.
 
 ## Run the memory chatbot flow
 
@@ -57,10 +57,10 @@ What is the second subject I asked you about?
 
 The chatbot remembers your name and previous questions.
 
-3. To view the **Message Logs** pane, click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" />, and then click **Message Logs**.
-The **Message Logs** pane displays all previous messages, with each conversation sorted by `session_id`.
+3. To view the **Message Logs** pane, in the **Playground** pane, click <Icon name="Ellipsis" aria-hidden="true"/> **Options**, and then click **Message logs**.
+The **Message Logs** pane displays all previous messages.
 
-![](/img/messages-logs.png)
+![Message logs pane](/img/messages-logs.png)
 
 ## Use Session ID with the memory chatbot flow
 
@@ -69,7 +69,7 @@ The **Message Logs** pane displays all previous messages, with each conversation
 In the **Memory Chatbot** flow you created, the **Message history** component references past interactions by **Session ID**. You can demonstrate this by modifying the **Session ID** value to switch between conversation histories.
 
 1. In the **Session ID** field of the **Message history** and **Chat Input** components, add a **Session ID** value like `MySessionID`.
-2. Now, once you send a new message the **Playground**, you should have a new memory created in the **Message Logs** pane.
-3. Notice how your conversation is being stored in different memory sessions.
+2. Now, once you send a new message the **Playground**, you should have a new session created in the **Message Logs** pane.
+3. Note how your conversation is being stored in different memory sessions.
 
-Learn more about chat memories in the [Memory](/components-memories) section.
+To learn more about memory in Langflow, see [Memory](/memory).

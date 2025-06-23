@@ -4,518 +4,188 @@ slug: /get-started-quickstart
 ---
 
 import Icon from "@site/src/components/icon";
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
 
-Get started with Langflow by loading a template flow, running it, and then serving it at the `/run` API endpoint.
+Get to know Langflow by building an OpenAI-powered chatbot application. After you've constructed a chatbot, add Retrieval Augmented Generation (RAG) to chat with your own data.
 
 ## Prerequisites
 
 - [A running Langflow instance](/get-started-installation)
-- [An OpenAI API key](https://platform.openai.com/api-keys)
+- [An OpenAI API key](https://platform.openai.com/)
+- [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
+	- An Astra DB application token scoped to read and write to the database
+	- A collection created in [Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection) or a new collection created in the **Astra DB** component
 
-## Run the Simple Agent template flow
+## Build the basic prompting flow
 
-1. In Langflow, click **New Flow**, and then select the **Simple Agent** template.
+:::tip
+If you prefer a pre-built flow, click **New Flow**, and then select **Basic Prompting**.
 
-![Simple agent starter flow](/img/quickstart-simple-agent-flow.png)
+Continue to [Run the basic prompting flow](#run-basic-prompting-flow).
+:::
 
-The Simple Agent flow consists of an [Agent component](/agents) connected to [Chat I/O components](/components-io), a [Calculator component](/components-tools#calculator-tool), and a [URL component](/components-data#url). When you run this flow, you submit a query to the agent through the Chat Input component, the agent uses the Calculator and URL tools to generate a response, and then returns the response through the Chat Output component.
+1. From the Langflow dashboard, click **New Flow**, and then select **Blank Flow**. A blank workspace opens where you can build your flow.
 
-Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/mcp-server). The agent decides which tools to call based on the context of a given query.
+The Basic Prompting flow will look like this when it's completed:
 
-2. In the **Agent** component's settings, in the **OpenAI API Key** field, enter your OpenAI API key.
-This guide uses an OpenAI model for demonstration purposes. If you want to use a different provider, change the **Model Provider** field, and then provide credentials for your selected provider.
+![Completed basic prompting flow](/img/starter-flow-basic-prompting.png)
 
-    Optionally, you can click <Icon name="Globe" aria-hidden="true"/> **Globe** to store the key in a Langflow [global variable](/configuration-global-variables).
+To build the **Basic Prompting** flow, follow these steps:
 
-3. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
+2. In the components sidebar, click **Inputs**, select the **Chat Input** component, and then drag it to the canvas.
+The [Chat Input](/components-io#chat-input) component accepts user input to the chat.
+3. In the components sidebar, click **Prompt**, select the **Prompt** component, and then drag it to the canvas.
+The [Prompt](/components-prompts) component combines the user input with a user-defined prompt.
+4. In the components sidebar, click **Outputs**, select the **Chat Output** component, and then drag it to the canvas.
+The [Chat Output](/components-io#chat-output) component prints the flow's output to the chat.
+5. In the components sidebar, click **Models**, select the **OpenAI** component, and then drag it to the canvas.
+The [Language model](/components-models) model component sends the user input and prompt to the OpenAI API and receives a response.
 
-4. To test the Calculator tool, ask the agent a simple math question, such as `I want to add 4 and 4.`
-To help you test and evaluate your flows, the Playground shows the agent's reasoning process as it analyzes the prompt, selects a tool, and then uses the tool to generate a response.
-In this case, a math question causes the agent to select the Calculator tool and use an action like `evaluate_expression`.
+You should now have a flow that looks like this:
 
-![Playground with Agent tool](/img/quickstart-simple-agent-playground.png)
+![Basic prompting flow with no connections](/img/quickstart-basic-prompt-no-connections.png)
 
-5. To test the URL tool, ask the agent about current events.
-For this request, the agent selects the URL tool's `fetch_content` action, and then returns a summary of current news headlines.
+With no connections between them, the components won't interact with each other.
+You want data to flow from **Chat Input** to **Chat Output** through the connections between the components.
+Each component accepts inputs on its left side, and sends outputs on its right side.
+Hover over the connection ports to see the data types that the component accepts.
+For more on component inputs and outputs, see [Components overview](/concepts-components).
 
-6. When you are done testing the flow, click <Icon name="X" aria-hidden="true"/>**Close**.
+6. To connect the **Chat Input** component to the OpenAI model component, click and drag a line from the blue **Message** port to the OpenAI model component's **Input** port.
+7. To connect the **Prompt** component to the OpenAI model component, click and drag a line from the blue **Prompt Message** port to the OpenAI model component's **System Message** port.
+8. To connect the **OpenAI** model component to the **Chat Output**, click and drag a line from the blue **Text** port to the **Chat Output** component's **Text** port.
 
-Now that you've run your first flow, try these next steps:
+Your finished basic prompting flow should look like this:
 
-- Edit your **Simple Agent** flow by attaching different tools or adding more components to the flow.
-- Build your own flows from scratch or by modifying other template flows.
-- Integrate flows into your applications, as explained in [Run your flows from external applications](#run-your-flows-from-external-applications).
+![Connected starter flow](/img/starter-flow-basic-prompting.png)
 
-Optionally, stop here if you just want to create more flows within Langflow.
+### Run the Basic Prompting flow {#run-basic-prompting-flow}
 
-If you want to learn how Langflow integrates into external applications, read on.
+Add your OpenAI API key to the OpenAI model component, and add a prompt to the Prompt component to instruct the model how to respond.
 
-## Run your flows from external applications
+1. Add your credentials to the OpenAI component. The fastest way to complete these fields is with Langflow’s [Global Variables](/configuration-global-variables).
 
-Langflow is an IDE, but it's also a runtime you can call through an API with Python, JavaScript, or HTTP.
+	1. In the OpenAI component’s OpenAI API Key field, click the <Icon name="Globe" aria-label="Globe" /> **Globe** button, and then click **Add New Variable**.
+	Alternatively, click your user icon in the top right corner, and then click **Settings**, **Global Variables**, and then **Add New**.
+	2. Name your variable. Paste your OpenAI API key (sk-…​) in the Value field.
+	3. In the **Apply To Fields** field, select the OpenAI API Key field to apply this variable to all OpenAI Embeddings components.
 
-When you start Langflow locally, you can send requests to the local Langflow server.
-For production applications, you need to deploy a stable Langflow instance to handle API calls.
-For more information, see [Langflow deployment overview](/deployment-overview).
+2. To add a prompt to the **Prompt** component, click the **Template** field, and then enter your prompt.
+The prompt guides the bot's responses to input.
+If you're unsure, use `Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.`
+3. Click **Playground** to start a chat session.
+4. Enter a query, and then make sure the bot responds according to the prompt you set in the **Prompt** component.
 
-For example, you can use `POST /run` to run a flow and get the result.
+You have successfully created a chatbot application using OpenAI in the Langflow Workspace.
 
-Langflow provides code snippets to help you get started with the Langflow API.
+## Add vector RAG to your application
 
-1. To open the **API access pane**, in the **Playground**, click **Share**, and then click **API access**.
+You created a chatbot application with Langflow, but let's try an experiment.
 
-    The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data.
-    The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow.
-    Replace these values if you're using the code for a different server or flow.
-    The default Langflow server address is `http://localhost:7860`
+1. Ask the bot: `Who won the Oscar in 2024 for best movie?`
+2. The bot's response is similar to this:
 
-    <Tabs groupId="Language">
-      <TabItem value="Python" label="Python" default>
-    
-    ```python
-    import requests
-    
-    url = "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID"  # The complete API endpoint URL for this flow
-    
-    # Request payload configuration
-    payload = {
-        "output_type": "chat",
-        "input_type": "chat",
-        "input_value": "hello world!"
-    }
-    
-    # Request headers
-    headers = {
-        "Content-Type": "application/json"
-    }
-    
-    try:
-        # Send API request
-        response = requests.request("POST", url, json=payload, headers=headers)
-        response.raise_for_status()  # Raise exception for bad status codes
-    
-        # Print response
-        print(response.text)
-    
-    except requests.exceptions.RequestException as e:
-        print(f"Error making API request: {e}")
-    except ValueError as e:
-        print(f"Error parsing response: {e}")
-    ```
-    
-      </TabItem>
-      <TabItem value="JavaScript" label="JavaScript">
-    
-    ```js
-    const payload = {
-        "output_type": "chat",
-        "input_type": "chat",
-        "input_value": "hello world!",
-        "session_id": "user_1"
-    };
-    
-    const options = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    };
-    
-    fetch('http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID', options)
-        .then(response => response.json())
-        .then(response => console.log(response))
-        .catch(err => console.error(err));
-    ```
-    
-      </TabItem>
-    
-      <TabItem value="curl" label="curl">
-    
-    ```text
-    curl --request POST \
-         --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false' \
-         --header 'Content-Type: application/json' \
-         --data '{
-    		           "output_type": "chat",
-    		           "input_type": "chat",
-    		           "input_value": "hello world!"
-    		         }'
-    
-    # A 200 response confirms the call succeeded.
-    ```
-    
-      </TabItem>
-    
-    </Tabs>
-
-2. Copy the snippet, paste it in a script file, and then run the script to send the request.
-If you are using the curl snippet, you can run the command directly in your terminal.
-
-If the request is successful, the response includes many details about the flow run, including the session ID, inputs, outputs, components, durations, and more.
-The following is an example of a response from running the **Simple Agent** template flow:
-
-<details closed>
-<summary>Response</summary>
-
-```json
-{
-  "session_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-  "outputs": [
-    {
-      "inputs": {
-        "input_value": "hello world!"
-      },
-      "outputs": [
-        {
-          "results": {
-            "message": {
-              "text_key": "text",
-              "data": {
-                "timestamp": "2025-06-16 19:58:23 UTC",
-                "sender": "Machine",
-                "sender_name": "AI",
-                "session_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-                "text": "Hello world! 🌍 How can I assist you today?",
-                "files": [],
-                "error": false,
-                "edit": false,
-                "properties": {
-                  "text_color": "",
-                  "background_color": "",
-                  "edited": false,
-                  "source": {
-                    "id": "Agent-ZOknz",
-                    "display_name": "Agent",
-                    "source": "gpt-4o-mini"
-                  },
-                  "icon": "bot",
-                  "allow_markdown": false,
-                  "positive_feedback": null,
-                  "state": "complete",
-                  "targets": []
-                },
-                "category": "message",
-                "content_blocks": [
-                  {
-                    "title": "Agent Steps",
-                    "contents": [
-                      {
-                        "type": "text",
-                        "duration": 2,
-                        "header": {
-                          "title": "Input",
-                          "icon": "MessageSquare"
-                        },
-                        "text": "**Input**: hello world!"
-                      },
-                      {
-                        "type": "text",
-                        "duration": 226,
-                        "header": {
-                          "title": "Output",
-                          "icon": "MessageSquare"
-                        },
-                        "text": "Hello world! 🌍 How can I assist you today?"
-                      }
-                    ],
-                    "allow_markdown": true,
-                    "media_url": null
-                  }
-                ],
-                "id": "f3d85d9a-261c-4325-b004-95a1bf5de7ca",
-                "flow_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-                "duration": null
-              },
-              "default_value": "",
-              "text": "Hello world! 🌍 How can I assist you today?",
-              "sender": "Machine",
-              "sender_name": "AI",
-              "files": [],
-              "session_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-              "timestamp": "2025-06-16T19:58:23+00:00",
-              "flow_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-              "error": false,
-              "edit": false,
-              "properties": {
-                "text_color": "",
-                "background_color": "",
-                "edited": false,
-                "source": {
-                  "id": "Agent-ZOknz",
-                  "display_name": "Agent",
-                  "source": "gpt-4o-mini"
-                },
-                "icon": "bot",
-                "allow_markdown": false,
-                "positive_feedback": null,
-                "state": "complete",
-                "targets": []
-              },
-              "category": "message",
-              "content_blocks": [
-                {
-                  "title": "Agent Steps",
-                  "contents": [
-                    {
-                      "type": "text",
-                      "duration": 2,
-                      "header": {
-                        "title": "Input",
-                        "icon": "MessageSquare"
-                      },
-                      "text": "**Input**: hello world!"
-                    },
-                    {
-                      "type": "text",
-                      "duration": 226,
-                      "header": {
-                        "title": "Output",
-                        "icon": "MessageSquare"
-                      },
-                      "text": "Hello world! 🌍 How can I assist you today?"
-                    }
-                  ],
-                  "allow_markdown": true,
-                  "media_url": null
-                }
-              ],
-              "duration": null
-            }
-          },
-          "artifacts": {
-            "message": "Hello world! 🌍 How can I assist you today?",
-            "sender": "Machine",
-            "sender_name": "AI",
-            "files": [],
-            "type": "object"
-          },
-          "outputs": {
-            "message": {
-              "message": "Hello world! 🌍 How can I assist you today?",
-              "type": "text"
-            }
-          },
-          "logs": {
-            "message": []
-          },
-          "messages": [
-            {
-              "message": "Hello world! 🌍 How can I assist you today?",
-              "sender": "Machine",
-              "sender_name": "AI",
-              "session_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-              "stream_url": null,
-              "component_id": "ChatOutput-aF5lw",
-              "files": [],
-              "type": "text"
-            }
-          ],
-          "timedelta": null,
-          "duration": null,
-          "component_display_name": "Chat Output",
-          "component_id": "ChatOutput-aF5lw",
-          "used_frozen_result": false
-        }
-      ]
-    }
-  ]
-}
+```text
+I'm sorry, but I don't have information on events or awards that occurred after
+October 2023, including the Oscars in 2024.
+You may want to check the latest news or the official Oscars website
+for the most current information.
 ```
 
-</details>
+Well, that's unfortunate, but you can load more up-to-date data with **Retrieval Augmented Generation**, or **RAG**.
 
-In a production application, you probably want to select parts of this response to return to the user, store in logs, and so on. The next steps demonstrate how you can extract data from a Langflow API response to use in your application.
+Vector RAG allows you to load your own data and chat with it, unlocking a wider range of possibilities for your chatbot application.
 
-### Extract data from the response
+## Add vector RAG with the Astra DB component
 
-The following example builds on the API pane's example code to create a question-and-answer chat in your terminal that stores the Agent's previous answer.
+Build on the basic prompting flow and add vector RAG to your chatbot application with the **Astra DB Vector Store** component.
 
-1. Incorporate your **Simple Agent** flow's `/run` snippet into the following script.
-This script runs a question-and-answer chat in your terminal and stores the Agent's previous answer so you can compare them.
+Add document ingestion to your basic prompting flow, with the **Astra DB** component as the vector store.
 
+:::tip
+If you don't want to create a blank flow, click **New Flow**, and then select **Vector RAG** for a pre-built flow.
+:::
 
-    <Tabs groupId="Languages">
-      <TabItem value="Python" label="Python" default>
-    
-    ```python
-    import requests
-    import json
-    
-    url = "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID"
-    
-    def ask_agent(question):
-        payload = {
-            "output_type": "chat",
-            "input_type": "chat",
-            "input_value": question,
-        }
-    
-        headers = {"Content-Type": "application/json"}
-    
-        try:
-            response = requests.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-    
-            # Get the response message
-            data = response.json()
-            message = data["outputs"][0]["outputs"][0]["outputs"]["message"]["message"]
-            return message
-    
-        except Exception as e:
-            return f"Error: {str(e)}"
-    
-    def extract_message(data):
-        try:
-            return data["outputs"][0]["outputs"][0]["outputs"]["message"]["message"]
-        except (KeyError, IndexError):
-            return None
-    
-    # Store the previous answer from ask_agent response
-    previous_answer = None
-    
-    # the terminal chat
-    while True:
-        # Get user input
-        print("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?')")
-        print("Type 'quit' to exit or 'compare' to see the previous answer")
-        user_question = input("Your question: ")
-        
-        if user_question.lower() == 'quit':
-            break
-        elif user_question.lower() == 'compare':
-            if previous_answer:
-                print(f"\nPrevious answer was: {previous_answer}")
-            else:
-                print("\nNo previous answer to compare with!")
-            continue
-        
-        # Get and display the answer
-        result = ask_agent(user_question)
-        print(f"\nAgent's answer: {result}")    
-        # Store the answer for comparison
-        previous_answer = result
-    ```
-    
-      </TabItem>
-      <TabItem value="JavaScript" label="JavaScript">
-    
-    ```js
-    const readline = require('readline');
-    
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-    
-    const url = 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID';
-    
-    // Store the previous answer from askAgent response
-    let previousAnswer = null;
-    
-    // the agent flow, with question as input_value
-    async function askAgent(question) {
-        const payload = {
-            "output_type": "chat",
-            "input_type": "chat",
-            "input_value": question
-        };
-    
-        const options = {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        };
-    
-        try {
-            const response = await fetch(url, options);
-            const data = await response.json();
-    
-            // Extract the message from the nested response
-            const message = data.outputs[0].outputs[0].outputs.message.message;
-            return message;
-        } catch (error) {
-            return `Error: ${error.message}`;
-        }
-    }
-    
-    // the terminal chat
-    async function startChat() {
-        console.log("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?'");
-        console.log("Type 'quit' to exit or 'compare' to see the previous answer");
-    
-        const askQuestion = () => {
-            rl.question('\nYour question: ', async (userQuestion) => {
-                if (userQuestion.toLowerCase() === 'quit') {
-                    rl.close();
-                    return;
-                }
-    
-                if (userQuestion.toLowerCase() === 'compare') {
-                    if (previousAnswer) {
-                        console.log(`\nPrevious answer was: ${previousAnswer}`);
-                    } else {
-                        console.log("\nNo previous answer to compare with!");
-                    }
-                    askQuestion();
-                    return;
-                }
-    
-                const result = await askAgent(userQuestion);
-                console.log(`\nAgent's answer: ${result}`);
-                previousAnswer = result;
-                askQuestion();
-            });
-        };
-    
-        askQuestion();
-    }
-    
-    startChat();
-    ```
-    
-      </TabItem>
-    </Tabs>
+Adding vector RAG to the basic prompting flow will look like this when completed:
 
-2. To view the Agent's previous answer, type `compare`. To close the terminal chat, type `exit`.
+![Add document ingestion to the basic prompting flow](/img/quickstart-add-document-ingestion.png)
 
-### Use tweaks to apply temporary overrides to a flow run
+To build the flow, follow these steps:
 
-You can include tweaks with your requests to temporarily modify flow parameters.
-Tweaks are added to the API request, and temporarily change component parameters within your flow.
-Tweaks override the flow's components' settings for a single run only.
-They don't modify the underlying flow configuration or persist between runs.
+1. Disconnect the **Chat Input** component from the **OpenAI** component by double-clicking on the connecting line.
+2. Click **Vector Stores**, select the **Astra DB** component, and then drag it to the canvas.
+The [Astra DB vector store](/components-vector-stores#astra-db-vector-store) component connects to your **Astra DB** database.
+3. Click **Data**, select the **File** component, and then drag it to the canvas.
+The [File](/components-data#file) component loads files from your local machine.
+4. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
+The [Split Text](/components-processing#split-text) component splits the loaded text into smaller chunks.
+5. Click **Processing**, select the **Parser** component, and then drag it to the canvas.
+The [Parser](/components-processing#parser) component converts the data from the **Astra DB** component into plain text.
+6. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
+The [Embeddings model](/components-embedding-models) component generates embeddings for the user's input, which are compared to the vector data in the database.
+7. Modify the **Prompt** component to contain variables for both `{user_question}` and `{context}`.
+The `{context}` variable gives the bot additional context for answering `{user_question}` beyond what the LLM was trained on.
 
-Tweaks are added to the `/run` endpoint's `payload`.
-To assist with formatting, you can define tweaks in Langflow's **Input Schema** pane before copying the code snippet.
-
-1. To open the **Input Schema** pane, from the **API access** pane, click **Input Schema**.
-2. In the **Input Schema** pane, select the parameter you want to modify in your next request.
-Enabling parameters in the **Input Schema** pane does not **allow** modifications to the listed parameters. It only adds them to the example code.
-3. For example, to change the LLM provider from OpenAI to Groq, and include your Groq API key with the request, select the values **Model Providers**, **Model**, and **Groq API Key**.
-Langflow updates the `tweaks` object in the code snippets based on your input parameters, and includes default values to guide you.
-Use the updated code snippets in your script to run your flow with your overrides.
-
-```json
-payload = {
-    "output_type": "chat",
-    "input_type": "chat",
-    "input_value": "hello world!",
-    "tweaks": {
-        "Agent-ZOknz": {
-            "agent_llm": "Groq",
-            "api_key": "GROQ_API_KEY",
-            "model_name": "llama-3.1-8b-instant"
-        }
-    }
-}
+```text
+Given the context
+{context}
+Answer the question
+{user_question}
 ```
+
+Adding variables like `{context}` creates new input handles in the component.
+
+8. Connect the new components into the existing flow, so your flow looks like this:
+
+![Add document ingestion to the basic prompting flow](/img/quickstart-add-document-ingestion.png)
+
+9. Configure the **Astra DB** component.
+	1. In the **Astra DB Application Token** field, add your **Astra DB** application token.
+	The component connects to your database and populates the menus with existing databases and collections.
+	2. Select your **Database**.
+	If you don't have a collection, select **New database**.
+	Complete the **Name**, **Cloud provider**, and **Region** fields, and then click **Create**. **Database creation takes a few minutes**.
+	3. Select your **Collection**. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data.
+	:::info
+	If you select a collection embedded with NVIDIA through Astra's vectorize service, the **Embedding Model** port is removed, because you have already generated embeddings for this collection with the NVIDIA `NV-Embed-QA` model. The component fetches the data from the collection, and uses the same embeddings for queries.
+	:::
+
+10. If you don't have a collection, create a new one within the component.
+	1. Select **New collection**.
+	2. Complete the **Name**, **Embedding generation method**, **Embedding model**, and **Dimensions** fields, and then click **Create**.
+
+		Your choice for the **Embedding generation method** and **Embedding model** depends on whether you want to use embeddings generated by a provider through Astra's vectorize service, or generated by a component in Langflow.
+
+		* To use embeddings generated by a provider through Astra's vectorize service, select the model from the **Embedding generation method** dropdown menu, and then select the model from the **Embedding model** dropdown menu.
+		* To use embeddings generated by a component in Langflow, select **Bring your own** for both the **Embedding generation method** and **Embedding model** fields. In this starter project, the option for the embeddings method and model is the **OpenAI Embeddings** component connected to the **Astra DB** component.
+		* The **Dimensions** value must match the dimensions of your collection. This field is **not required** if you use embeddings generated through Astra's vectorize service. You can find this value in the **Collection** in your [Astra DB deployment](https://astra.datastax.com).
+
+		For more information, see the [DataStax Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
+
+
+If you used Langflow's **Global Variables** feature, the RAG application flow components are already configured with the necessary credentials.
+
+### Run the chatbot with retrieved context
+
+1. In the **File** component, upload a text file from your local machine with data you want to ingest into the **Astra DB** component database.
+This example uploads an up-to-date CSV about Oscar winners.
+2. Click **Playground** to start a chat session.
+3. Ask the bot: `Who won the Oscar in 2024 for best movie?`
+4. The bot's response should be similar to this:
+
+```text
+The Oscar for Best Picture in 2024 was awarded to "Oppenheimer,"
+produced by Emma Thomas, Charles Roven, and Christopher Nolan.
+```
+
+Adding an **Astra DB** vector store brought your chatbot all the way into 2024.
+You have successfully added RAG to your chatbot application using the **Astra DB** component.
 
 ## Next steps
 
-* [Model Context Protocol (MCP) servers](/mcp-server)
-* [Langflow deployment overview](/deployment-overview)
+This example used movie data, but the RAG pattern can be used with any data you want to load and chat with.
+
+Make the **Astra DB** database the brain that [Agents](/agents-overview) use to make decisions.
+
+Publish this flow as an [API](/concepts-publish) and call it from your external applications.
+
+For more on the **Astra DB** component, see [Astra DB vector store](/components-vector-stores#astra-db-vector-store).
