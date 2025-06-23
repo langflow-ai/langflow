@@ -110,7 +110,8 @@ async def ws_api_key_security(
                         code=status.WS_1008_POLICY_VIOLATION,
                         reason=AUTO_LOGIN_ERROR,
                     )
-            result = await check_key(db, api_key)
+            else:
+                result = await check_key(db, api_key)
 
         # normal path: must provide an API key
         else:
