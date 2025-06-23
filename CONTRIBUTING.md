@@ -40,10 +40,35 @@ make init
 
 This command sets up the development environment by:
 - Checking for uv and npm.
-- Cleaning Python and npm caches.
 - Installing backend and frontend dependencies.
-- Building the frontend static files.
-- Starting the application with default settings.
+- Installing pre-commit hooks.
+
+### Development workflow
+
+There are two different workflows depending on whether you're a developer or just running Langflow from source.
+
+Developers typically run the backend and frontend separately for development:
+
+```bash
+# Run backend in development mode (includes hot reload)
+make backend
+
+# In another terminal, run frontend in development mode (includes hot reload)
+make frontend
+```
+
+The `make backend` and `make frontend` commands automatically install dependencies, so you don't need to run install commands separately.
+
+If you're not developing, but want to run Langflow from source, run:
+
+```bash
+make run_cli
+```
+
+This command:
+- Installs frontend and backend dependencies
+- Builds the frontend static files
+- Starts the application with default settings
 
 After running `make init` once to set up your environment, you can use `make run_cli` for subsequent runs. The `make run_cli` command allows you to configure the application such as logging level, host, port, and environment variables.
 
@@ -62,9 +87,8 @@ The `make run_cli` command accepts the following parameters:
 | `port` | `7860` | The port number to run the server on. |
 | `env` | `.env` | Path to the environment file containing configuration variables. |
 | `open_browser` | `true` | Whether to automatically open the browser when starting. Set to `false` to disable. |
-| `path` | `src/backend/base/langflow/frontend` | Path to the frontend directory containing build files. |
 
-4. (Optional) Install pre-commit hooks to help keep your changes clean and well-formatted:
+4. (Optional) Install pre-commit hooks to help keep your changes clean and well-formatted. `make init` runs this automatically.
 
 ```bash
 uv sync
