@@ -172,11 +172,6 @@ const ListComponent = ({
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
-            <div className="overflow-hidden text-mmd text-muted-foreground">
-              <span className="block max-w-[110ch] truncate">
-                {flowData.description}
-              </span>
-            </div>
           </div>
         </div>
 

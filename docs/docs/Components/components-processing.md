@@ -21,15 +21,15 @@ This component performs operations on [DataFrame](https://pandas.pydata.org/docs
 
 To use this component in a flow, connect a component that outputs [DataFrame](/concepts-objects#dataframe-object) to the **DataFrame Operations** component.
 
-This example fetches JSON data from an API. The **Lambda filter** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
+This example fetches JSON data from an API. The **Smart function** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
 
 ![Dataframe operations with flattened dataframe](/img/component-dataframe-operations.png)
 
 1. The **API Request** component retrieves data with only `source` and `result` fields.
 For this example, the desired data is nested within the `result` field.
-2. Connect a **Lambda Filter** to the API request component, and a **Language model** to the **Lambda Filter**. This example connects a **Groq** model component.
+2. Connect a **Smart function** to the API request component, and a **Language model** to the **Smart function**. This example connects a **Groq** model component.
 3. In the **Groq** model component, add your **Groq** API key.
-4. To filter the data, in the **Lambda filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
+4. To filter the data, in the **Smart function** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
 For this example, enter:
 ```
 I want to explode the result column out into a Data object
@@ -37,8 +37,8 @@ I want to explode the result column out into a Data object
 :::tip
 Avoid punctuation in the **Instructions** field, as it can cause errors.
 :::
-5. To run the flow, in the **Lambda Filter** component, click <Icon name="Play" aria-label="Play icon" />.
-6. To inspect the filtered data, in the **Lambda Filter** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+5. To run the flow, in the **Smart function** component, click <Icon name="Play" aria-label="Play icon" />.
+6. To inspect the filtered data, in the **Smart function** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
 The result is a structured DataFrame.
 ```text
 id | name             | company               | username        | email                              | address           | zip
@@ -263,14 +263,14 @@ curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 
 </details>
 
-## Lambda filter
+## Smart function
 
 This component uses an LLM to generate a Lambda function for filtering or transforming structured data.
 
-To use the **Lambda filter** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
+To use the **Smart function** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
 
 This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
-The **Instructions** field in the **Lambda filter** component specifies the task `extract emails`.
+The **Instructions** field in the **Smart function** component specifies the task `extract emails`.
 The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
 
 ![](/img/component-lambda-filter.png)
