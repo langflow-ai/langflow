@@ -1,11 +1,12 @@
 ---
 title: Document QA
 slug: /document-qa
+description: Build a question-and-answer chatbot with document analysis capabilities using a document loaded from local memory.
 ---
 
 import Icon from "@site/src/components/icon";
 
-Build a question-and-answer chatbot with a document loaded from local memory.
+Build a question-and-answer chatbot with document analysis capabilities using a document loaded from local memory.
 
 ## Prerequisites
 
