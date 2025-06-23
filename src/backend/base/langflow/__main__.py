@@ -97,6 +97,7 @@ class ProcessManager:
         farewell = click.style(f"{self._farewell_emoji} See you next time!", fg="bright_blue", bold=True)
         click.echo(farewell)
 
+
 # Create a single instance of ProcessManager
 process_manager = ProcessManager()
 

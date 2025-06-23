@@ -178,6 +178,7 @@ class ProgressIndicator:
         click.echo()
         click.echo(click.style(f"Total shutdown time: {total_time:.2f}s", fg="bright_black"))
 
+
 def create_langflow_progress(*, verbose: bool = False) -> ProgressIndicator:
     """Create a progress indicator with predefined Langflow initialization steps."""
     progress = ProgressIndicator(verbose=verbose)
@@ -206,9 +207,13 @@ def create_langflow_shutdown_progress(*, verbose: bool = False, multiple_workers
     # Define the shutdown steps in reverse order of initialization
     if multiple_workers:
         import os
+
         steps = [
             (f"[Worker PID {os.getpid()}] Stopping Server", "Gracefully stopping the web server"),
-            (f"[Worker PID {os.getpid()}] Cancelling Background Tasks", "Stopping file synchronization and background jobs"),
+            (
+                f"[Worker PID {os.getpid()}] Cancelling Background Tasks",
+                "Stopping file synchronization and background jobs",
+            ),
             (f"[Worker PID {os.getpid()}] Cleaning Up Services", "Teardown database connections and services"),
             (f"[Worker PID {os.getpid()}] Clearing Temporary Files", "Removing temporary directories and cache"),
             (f"[Worker PID {os.getpid()}] Finalizing Shutdown", "Completing cleanup and logging"),

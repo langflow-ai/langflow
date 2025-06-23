@@ -191,12 +191,14 @@ def get_lifespan(*, fix_migration=False, version=None):
         finally:
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
-            from langflow.cli.progress import create_langflow_shutdown_progress
             from langflow.__main__ import get_number_of_workers
+            from langflow.cli.progress import create_langflow_shutdown_progress
 
             log_level = os.getenv("LANGFLOW_LOG_LEVEL", "info").lower()
             num_workers = get_number_of_workers(get_settings_service().settings.workers)
-            shutdown_progress = create_langflow_shutdown_progress(verbose=log_level == "debug", multiple_workers=num_workers > 1)
+            shutdown_progress = create_langflow_shutdown_progress(
+                verbose=log_level == "debug", multiple_workers=num_workers > 1
+            )
 
             try:
                 # Step 0: Stopping Server
