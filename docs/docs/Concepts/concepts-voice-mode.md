@@ -60,10 +60,10 @@ Both endpoints require an [OpenAI API key](https://platform.openai.com/docs/over
 
 Langflow exposes two WebSockets endpoints:
 
-* [/ws/flow_as_tool/](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/voice_mode.py#L688) - A connection is established to OpenAI Realtime voice, and flows are invoked as tools by the [OpenAI Realtime model](https://platform.openai.com/docs/guides/realtime-conversations#handling-audio-with-websockets).
+* `/ws/flow_as_tool/{flow_id}` or `/ws/flow_as_tool/{flow_id}/{session_id}` - A connection is established to OpenAI Realtime voice, and flows are invoked as tools by the [OpenAI Realtime model](https://platform.openai.com/docs/guides/realtime-conversations#handling-audio-with-websockets).
 This approach is ideal for low latency applications, but is less deterministic since the OpenAI voice-to-voice model determines when to call your flow.
 
-* [ws/flow_tts/](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/voice_mode.py#L1117) - Audio is converted to text by [OpenAI Realtime voice transcription](https://platform.openai.com/docs/guides/realtime-transcription).
+* `/ws/flow_tts/{flow_id}` or `/ws/flow_tts/{flow_id}/{session_id}` - Audio is converted to text by [OpenAI Realtime voice transcription](https://platform.openai.com/docs/guides/realtime-transcription).
 The flow is invoked directly for each transcript.
 This approach is more deterministic but has higher latency.
 This is the mode used in the Langflow playground.
