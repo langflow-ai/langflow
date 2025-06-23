@@ -136,7 +136,8 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         # Check if we need to verify SSL certificates
         if self.verify_certs is False:
             # Build client parameters for Elasticsearch constructor
-            client_params = {"verify_certs": False}
+            client_params: dict[str, Any] = {}
+            client_params["verify_certs"] = False
 
             if self.cloud_id:
                 client_params["cloud_id"] = self.cloud_id
