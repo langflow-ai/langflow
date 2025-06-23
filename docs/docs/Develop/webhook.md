@@ -30,8 +30,8 @@ To connect the **Webhook** to a **Parser** component to view and parse your data
     :::
 7. Send a POST request with any data to trigger your flow.
 This example uses `id`, `name`, and `email` strings.
-Replace **YOUR_FLOW_ID** with your flow ID.
-    ```text
+Replace **FLOW_ID** with your flow's ID, which can be found on the [Publish pane](/concepts-publish) or in the flow's URL.
+    ```bash
     curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
         -H 'Content-Type: application/json' \
         -d '{"id": "12345", "name": "alex", "email": "alex@email.com"}'
@@ -39,11 +39,14 @@ Replace **YOUR_FLOW_ID** with your flow ID.
 
     This response indicates Langflow received your request:
 
-    ```text
-    {"message":"Task started in the background","status":"in progress"}
+    ```json
+    {
+      "message": "Task started in the background",
+      "status": "in progress"
+    }
     ```
 
-8. To view the data received from your request, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+1. To view the data received from your request, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
 
 You should receive a string of parsed text, like `ID: 12345 - Name: alex - Email: alex@email.com`.
 
@@ -54,3 +57,7 @@ By passing the event trigger data payload directly into a flow, you can also par
 ## Trigger flows with Composio webhooks
 
 Now that you've triggered the webhook component manually, follow along with this step-by-step video guide for triggering flows with payloads from external applications: [How to Use Webhooks in Langflow](https://www.youtube.com/watch?v=IC1CAtzFRE0).
+
+## See also
+
+- [Flow trigger endpoints](/api-flows-run)

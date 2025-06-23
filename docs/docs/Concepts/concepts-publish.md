@@ -64,11 +64,11 @@ For example, changing the **Chat Input** component's `input_value` changes that 
 
 ### Send files to your flow with the API
 
-For information on sending files to the Langflow API, see [API examples](/api-reference-api-examples#upload-image-files-v1).
+For information on sending files to the Langflow API, see [Files endpoint](/api-files).
 
 ## Shareable playground
 
-The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/{flow-id}` endpoint.
+The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/$FLOW_ID` endpoint.
 
 You can share this endpoint publicly using a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
 
