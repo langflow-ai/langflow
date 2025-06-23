@@ -263,40 +263,6 @@ curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 
 </details>
 
-## Smart function
-
-This component uses an LLM to generate a Lambda function for filtering or transforming structured data.
-
-To use the **Smart function** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
-
-This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
-The **Instructions** field in the **Smart function** component specifies the task `extract emails`.
-The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
-
-![](/img/component-lambda-filter.png)
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The structured data to filter or transform using a Lambda function. |
-| llm | Language Model | The connection port for a [Model](/components-models) component. |
-| filter_instruction | Instructions | The natural language instructions for how to filter or transform the data using a Lambda function, such as `Filter the data to only include items where the 'status' is 'active'`. |
-| sample_size | Sample Size | For large datasets, the number of characters to sample from the dataset head and tail. |
-| max_size | Max Size | The number of characters for the data to be considered "large", which triggers sampling by the `sample_size` value. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| filtered_data | Filtered Data | The filtered or transformed [Data object](/concepts-objects#data-object). |
-| dataframe | DataFrame | The filtered data as a [DataFrame](/concepts-objects#dataframe-object). |
-
-</details>
-
 ## LLM router
 
 This component routes requests to the most appropriate LLM based on OpenRouter model specifications.
@@ -502,6 +468,40 @@ For `Message` inputs, the component can create:
 | data | Data | A list of extracted matches as Data objects. |
 | text | Message | The extracted matches formatted as a Message object. |
 | confirmation | Confirmation | The confirmation message after saving the file. |
+
+</details>
+
+## Smart function
+
+This component uses an LLM to generate a Lambda function for filtering or transforming structured data.
+
+To use the **Smart function** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
+
+This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
+The **Instructions** field in the **Smart function** component specifies the task `extract emails`.
+The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
+
+![](/img/component-lambda-filter.png)
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The structured data to filter or transform using a Lambda function. |
+| llm | Language Model | The connection port for a [Model](/components-models) component. |
+| filter_instruction | Instructions | The natural language instructions for how to filter or transform the data using a Lambda function, such as `Filter the data to only include items where the 'status' is 'active'`. |
+| sample_size | Sample Size | For large datasets, the number of characters to sample from the dataset head and tail. |
+| max_size | Max Size | The number of characters for the data to be considered "large", which triggers sampling by the `sample_size` value. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| filtered_data | Filtered Data | The filtered or transformed [Data object](/concepts-objects#data-object). |
+| dataframe | DataFrame | The filtered data as a [DataFrame](/concepts-objects#dataframe-object). |
 
 </details>
 

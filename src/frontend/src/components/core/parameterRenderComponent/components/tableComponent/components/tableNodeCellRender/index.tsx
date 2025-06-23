@@ -2,6 +2,8 @@ import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
 import { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
+import { IS_AUTO_LOGIN } from "@/constants/constants";
+import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { APIClassType } from "@/types/api";
@@ -17,7 +19,9 @@ export default function TableNodeCellRender({
   const node = useFlowStore((state) => state.getNode(nodeId));
   const parameter = node?.data?.node?.template?.[parameterId];
   const currentFlow = useFlowStore((state) => state.currentFlow);
-  const isAuth = useAuthStore((state) => state.isAuthenticated);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAutoLogin = useIsAutoLogin();
+  const shouldDisplayApiKey = isAuthenticated && !isAutoLogin;
 
   const disabled = isTargetHandleConnected(
     edges,
@@ -43,10 +47,10 @@ export default function TableNodeCellRender({
       flowId: currentFlow?.id ?? "",
       nodeType: node?.data?.type?.toLowerCase() ?? "",
       flowName: currentFlow?.name ?? "",
-      isAuth,
+      isAuth: shouldDisplayApiKey!,
       variableName: parameterId,
     };
-  }, [nodeId, isAuth, parameterId]);
+  }, [nodeId, shouldDisplayApiKey, parameterId]);
 
   return (
     parameter && (
