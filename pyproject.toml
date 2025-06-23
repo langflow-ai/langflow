@@ -31,7 +31,7 @@ dependencies = [
     "faiss-cpu==1.9.0.post1",
     "types-cachetools==5.5.0.20240820",
     "pymongo==4.10.1",
-    "supabase==2.6.0",
+    "supabase>=2.6.0",
     "certifi>=2023.11.17,<2025.0.0",
     "certifi==2024.8.30",
     'fastavro==1.9.7; python_version < "3.13"',
@@ -180,6 +180,13 @@ dev = [
 langflow-base = { workspace = true }
 langflow = { workspace = true }
 
+[tool.uv]
+override-dependencies = [
+    "httpx>=0.28.1",
+]
+
+
+
 [tool.uv.workspace]
 members = ["src/backend/base", "."]
 
@@ -211,8 +218,9 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    "nv-ingest-api==2025.4.22.dev20250422",
-    "nv-ingest-client==2025.4.22.dev20250422",
+    "nv-ingest-api==25.6.2",
+    "nv-ingest-client==25.6.2",
+    "supabase>=2.15.0",
 ]
 
 postgresql = [
