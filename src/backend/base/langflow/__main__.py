@@ -47,6 +47,10 @@ class ProcessManager:
     def __init__(self):
         self.webapp_process = None
         self.shutdown_in_progress = False
+        if platform.system() == "Windows":
+            self._farewell_emoji = ":)"  # ASCII smiley
+        else:
+            self._farewell_emoji = "👋"  # Unicode wave
 
     # params are required for signal handlers, even if they are not used
     def handle_sigterm(self, _signum: int, _frame) -> None:
@@ -78,8 +82,20 @@ class ProcessManager:
                 logger.warning("Process didn't terminate gracefully, killing it.")
                 self.webapp_process.kill()
                 self.webapp_process.join()
+            self.print_farewell_message()
+
         sys.exit(0)
 
+    def print_farewell_message(self) -> None:
+        """Print a nice farewell message after shutdown is complete."""
+        # Clear any progress indicator output that might be on the current line
+        sys.stdout.write("\r")  # Move cursor to beginning of line
+        sys.stdout.write(" " * 80)  # Clear the line with spaces
+        sys.stdout.write("\r")  # Move cursor back to beginning
+
+        click.echo()
+        farewell = click.style(f"{self._farewell_emoji} See you next time!", fg="bright_blue", bold=True)
+        click.echo(farewell)
 
 # Create a single instance of ProcessManager
 process_manager = ProcessManager()

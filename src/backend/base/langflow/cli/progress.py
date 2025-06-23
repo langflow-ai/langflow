@@ -178,13 +178,6 @@ class ProgressIndicator:
         click.echo()
         click.echo(click.style(f"Total shutdown time: {total_time:.2f}s", fg="bright_black"))
 
-    def print_farewell_message(self) -> None:
-        """Print a nice farewell message after shutdown is complete."""
-        click.echo()
-        farewell = click.style(f"{self._farewell_emoji} See you next time!", fg="bright_blue", bold=True)
-        click.echo(farewell)
-
-
 def create_langflow_progress(*, verbose: bool = False) -> ProgressIndicator:
     """Create a progress indicator with predefined Langflow initialization steps."""
     progress = ProgressIndicator(verbose=verbose)
@@ -206,18 +199,28 @@ def create_langflow_progress(*, verbose: bool = False) -> ProgressIndicator:
     return progress
 
 
-def create_langflow_shutdown_progress(*, verbose: bool = False) -> ProgressIndicator:
+def create_langflow_shutdown_progress(*, verbose: bool = False, multiple_workers: bool = False) -> ProgressIndicator:
     """Create a progress indicator with predefined Langflow shutdown steps."""
     progress = ProgressIndicator(verbose=verbose)
 
     # Define the shutdown steps in reverse order of initialization
-    steps = [
-        ("Stopping Server", "Gracefully stopping the web server"),
-        ("Cancelling Background Tasks", "Stopping file synchronization and background jobs"),
-        ("Cleaning Up Services", "Teardown database connections and services"),
-        ("Clearing Temporary Files", "Removing temporary directories and cache"),
-        ("Finalizing Shutdown", "Completing cleanup and logging"),
-    ]
+    if multiple_workers:
+        import os
+        steps = [
+            (f"[Worker PID {os.getpid()}] Stopping Server", "Gracefully stopping the web server"),
+            (f"[Worker PID {os.getpid()}] Cancelling Background Tasks", "Stopping file synchronization and background jobs"),
+            (f"[Worker PID {os.getpid()}] Cleaning Up Services", "Teardown database connections and services"),
+            (f"[Worker PID {os.getpid()}] Clearing Temporary Files", "Removing temporary directories and cache"),
+            (f"[Worker PID {os.getpid()}] Finalizing Shutdown", "Completing cleanup and logging"),
+        ]
+    else:
+        steps = [
+            ("Stopping Server", "Gracefully stopping the web server"),
+            ("Cancelling Background Tasks", "Stopping file synchronization and background jobs"),
+            ("Cleaning Up Services", "Teardown database connections and services"),
+            ("Clearing Temporary Files", "Removing temporary directories and cache"),
+            ("Finalizing Shutdown", "Completing cleanup and logging"),
+        ]
 
     for title, description in steps:
         progress.add_step(title, description)
