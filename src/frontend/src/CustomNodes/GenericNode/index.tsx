@@ -325,6 +325,13 @@ function GenericNode({
     [data.id, setNode, setEdges, updateNodeInternals],
   );
 
+  useEffect(() => {
+    if (data?.selected_output) return;
+    handleSelectOutput(
+      data.node?.outputs?.find((output) => output.selected) || null,
+    );
+  }, [data.node?.outputs, data?.selected_output]);
+
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =
     useState(false);
 
