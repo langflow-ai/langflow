@@ -66,12 +66,12 @@ class LangSmithTracer(BaseTracer):
 
     def get_run_type(self, run_type: str) -> str:
         from langsmith import client
+        from typing import get_args
 
-        # check if run_type is valid
-        # if not return chain
-        if run_type not in client.RUN_TYPE_T:
-            logger.warning(f"Run type {run_type} is not valid. Using default run type.")
-            return client.RUN_TYPE_T["chain"]
+        valid_run_types = set(get_args(client.RUN_TYPE_T))
+        if run_type not in valid_run_types:
+            logger.warning("Run type %s is not valid. Using default run type 'chain'.", run_type)
+            return "chain"
         return run_type
 
     def setup_langsmith(self) -> bool:
