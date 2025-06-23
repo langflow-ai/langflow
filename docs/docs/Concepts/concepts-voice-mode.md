@@ -14,7 +14,11 @@ Your flow must have a [Chat input](/components-io#chat-input) component to inter
 ## Prerequisite
 
 - [An OpenAI API key](https://platform.openai.com/)
-
+- The Langflow audio dependency installed.
+    To install the extra dependency:
+    ```bash
+    uv pip install "langflow[audio]"
+    ```
 ## Use voice mode in the Langflow Playground
 
 Chat with an agent in the **Playground**, and get more recent results by asking the agent to use tools.
