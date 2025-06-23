@@ -85,6 +85,7 @@ module.exports = {
         "Configuration/configuration-custom-database",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
+        "Contributing/contributing-telemetry",
       ],
     },
     {
@@ -239,13 +240,13 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Integrations/Composio/integrations-composio",
-          label: "Composio",
+          id: "Integrations/Cleanlab/integrations-cleanlab",
+          label: "Cleanlab",
         },
         {
           type: "doc",
-          id: "Integrations/Cleanlab/integrations-cleanlab",
-          label: "Cleanlab",
+          id: "Integrations/Composio/integrations-composio",
+          label: "Composio",
         },
         {
           type: 'category',
@@ -294,7 +295,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Contributing",
+      label: "Contribute",
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-how-to-contribute",
@@ -302,9 +303,6 @@ module.exports = {
         "Contributing/contributing-component-tests",
         "Contributing/contributing-templates",
         "Contributing/contributing-bundles",
-        "Contributing/contributing-github-discussion-board",
-        "Contributing/contributing-github-issues",
-        "Contributing/contributing-telemetry",
       ],
     },
     {
@@ -324,8 +322,18 @@ module.exports = {
       items: [
         {
           type: "doc",
+          id: "Support/troubleshooting",
+          label: "Troubleshoot",
+        },
+        {
+          type: "doc",
+          id: "Contributing/contributing-github-issues",
+          label: "Get help and request enhancements",
+        },
+        {
+          type: "doc",
           id: "Support/luna-for-langflow",
-          label: "Luna for Langflow",
+          label: "Enterprise support",
         },
       ],
     },
