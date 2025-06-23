@@ -1,3 +1,13 @@
+from docling.datamodel.base_models import ConversionStatus, InputFormat
+from docling.datamodel.pipeline_options import (
+    OcrOptions,
+    PdfPipelineOptions,
+    VlmPipelineOptions,
+)
+from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
+from docling.models.factories import get_ocr_factory
+from docling.pipeline.vlm_pipeline import VlmPipeline
+
 from langflow.base.data import BaseFileComponent
 from langflow.inputs import DropdownInput
 from langflow.schema import Data
@@ -70,16 +80,6 @@ class DoclingInlineComponent(BaseFileComponent):
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
-        from docling.datamodel.base_models import ConversionStatus, InputFormat
-        from docling.datamodel.pipeline_options import (
-            OcrOptions,
-            PdfPipelineOptions,
-            VlmPipelineOptions,
-        )
-        from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
-        from docling.models.factories import get_ocr_factory
-        from docling.pipeline.vlm_pipeline import VlmPipeline
-
         # Configure the standard PDF pipeline
         def _get_standard_opts() -> PdfPipelineOptions:
             pipeline_options = PdfPipelineOptions()

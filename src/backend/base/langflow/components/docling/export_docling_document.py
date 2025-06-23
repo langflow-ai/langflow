@@ -1,3 +1,6 @@
+from docling_core.types.doc import ImageRefMode
+
+from langflow.components.docling._utils import extract_docling_documents
 from langflow.custom import Component
 from langflow.io import DropdownInput, HandleInput, MessageTextInput, Output, StrInput
 from langflow.schema import Data, DataFrame
@@ -64,10 +67,6 @@ class ExportDoclingDocumentComponent(Component):
     ]
 
     def export_document(self) -> list[Data]:
-        from docling_core.types.doc import ImageRefMode
-
-        from langflow.components.docling._utils import extract_docling_documents
-
         documents = extract_docling_documents(self.data_inputs, self.doc_key)
 
         results: list[Data] = []
@@ -88,7 +87,6 @@ class ExportDoclingDocumentComponent(Component):
                 elif self.export_format == "DocTags":
                     content = doc.export_to_doctags()
 
-                # TODO: also add useful metadata
                 results.append(Data(text=content))
         except Exception as e:
             msg = f"Error splitting text: {e}"

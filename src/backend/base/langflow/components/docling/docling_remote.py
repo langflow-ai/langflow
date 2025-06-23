@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from docling_core.types.doc import DoclingDocument
 from pydantic import ValidationError
 
 from langflow.base.data import BaseFileComponent
@@ -102,8 +103,6 @@ class DoclingRemoteComponent(BaseFileComponent):
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
-        from docling_core.types.doc import DoclingDocument
-
         base_url = f"{self.api_url}/v1alpha"
 
         def _convert_document(client: httpx.Client, file_path: Path, options: dict[str, Any]) -> Data | None:

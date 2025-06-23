@@ -1,5 +1,13 @@
 import json
 
+import tiktoken
+from docling_core.transforms.chunker import BaseChunker, DocMeta
+from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
+from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
+from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
+from docling_core.transforms.chunker.tokenizer.openai import OpenAITokenizer
+
+from langflow.components.docling._utils import extract_docling_documents
 from langflow.custom import Component
 from langflow.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output, StrInput
 from langflow.schema import Data, DataFrame
@@ -111,15 +119,6 @@ class ChunkDoclingDocumentComponent(Component):
         return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
 
     def chunk_documents(self) -> DataFrame:
-        import tiktoken
-        from docling_core.transforms.chunker import BaseChunker, DocMeta
-        from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
-        from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
-        from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
-        from docling_core.transforms.chunker.tokenizer.openai import OpenAITokenizer
-
-        from langflow.components.docling._utils import extract_docling_documents
-
         documents = extract_docling_documents(self.data_inputs, self.doc_key)
 
         chunker: BaseChunker
