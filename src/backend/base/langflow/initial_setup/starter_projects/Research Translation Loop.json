@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-OF2vZ",
+            "id": "ChatInput-7dhXG",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "ArXivComponent-WxSYF",
+            "id": "ArXivComponent-8YHhw",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-OF2vZ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-OF2vZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-WxSYF{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-WxSYFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-7dhXG{œdataTypeœ:œChatInputœ,œidœ:œChatInput-7dhXGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-8YHhw{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-8YHhwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-OF2vZ",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-OF2vZœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ArXivComponent-WxSYF",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-WxSYFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-7dhXG",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-7dhXGœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ArXivComponent-8YHhw",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-8YHhwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ArXivComponent",
-            "id": "ArXivComponent-WxSYF",
+            "id": "ArXivComponent-8YHhw",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "LoopComponent-zuKTL",
+            "id": "LoopComponent-dkM1v",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ArXivComponent-WxSYF{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-WxSYFœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-zuKTL{œfieldNameœ:œdataœ,œidœ:œLoopComponent-zuKTLœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ArXivComponent-8YHhw{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-8YHhwœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-dkM1v{œfieldNameœ:œdataœ,œidœ:œLoopComponent-dkM1vœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ArXivComponent-WxSYF",
-        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-WxSYFœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "LoopComponent-zuKTL",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-zuKTLœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "ArXivComponent-8YHhw",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-8YHhwœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "LoopComponent-dkM1v",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-dkM1vœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-zuKTL",
+            "id": "LoopComponent-dkM1v",
             "name": "item",
             "output_types": [
               "Data"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-2OCL9",
+            "id": "ParserComponent-uSCVe",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -79,12 +79,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LoopComponent-zuKTL{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-zuKTLœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-2OCL9{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-2OCL9œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LoopComponent-dkM1v{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-dkM1vœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-uSCVe{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-uSCVeœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LoopComponent-zuKTL",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-zuKTLœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParserComponent-2OCL9",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-2OCL9œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "LoopComponent-dkM1v",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-dkM1vœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParserComponent-uSCVe",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-uSCVeœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -92,7 +92,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-zuKTL",
+            "id": "LoopComponent-dkM1v",
             "name": "done",
             "output_types": [
               "DataFrame"
@@ -100,7 +100,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "TypeConverterComponent-mWgMR",
+            "id": "TypeConverterComponent-0TFCA",
             "inputTypes": [
               "Message",
               "Data",
@@ -109,12 +109,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LoopComponent-zuKTL{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-zuKTLœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-TypeConverterComponent-mWgMR{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-mWgMRœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LoopComponent-dkM1v{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-dkM1vœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-TypeConverterComponent-0TFCA{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-0TFCAœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LoopComponent-zuKTL",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-zuKTLœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "TypeConverterComponent-mWgMR",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-mWgMRœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "LoopComponent-dkM1v",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-dkM1vœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "TypeConverterComponent-0TFCA",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-0TFCAœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -122,7 +122,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TypeConverterComponent",
-            "id": "TypeConverterComponent-mWgMR",
+            "id": "TypeConverterComponent-0TFCA",
             "name": "message_output",
             "output_types": [
               "Message"
@@ -130,7 +130,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-ylHrO",
+            "id": "ChatOutput-O3R2b",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -139,12 +139,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TypeConverterComponent-mWgMR{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-mWgMRœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ylHrO{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ylHrOœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TypeConverterComponent-0TFCA{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-0TFCAœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-O3R2b{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-O3R2bœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TypeConverterComponent-mWgMR",
-        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-mWgMRœ, œnameœ: œmessage_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-ylHrO",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-ylHrOœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "TypeConverterComponent-0TFCA",
+        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-0TFCAœ, œnameœ: œmessage_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-O3R2b",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-O3R2bœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -152,7 +152,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-2OCL9",
+            "id": "ParserComponent-uSCVe",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -160,19 +160,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-Te29P",
+            "id": "LanguageModelComponent-huxaM",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParserComponent-2OCL9{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-2OCL9œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-Te29P{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-Te29Pœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParserComponent-uSCVe{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-uSCVeœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-huxaM{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-huxaMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParserComponent-2OCL9",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-2OCL9œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-Te29P",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-Te29Pœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ParserComponent-uSCVe",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-uSCVeœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-huxaM",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-huxaMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -180,7 +180,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-Te29P",
+            "id": "LanguageModelComponent-huxaM",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -188,19 +188,19 @@
           },
           "targetHandle": {
             "fieldName": "message",
-            "id": "MessagetoData-IbO6b",
+            "id": "MessagetoData-uaDsB",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-Te29P{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Te29Pœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-IbO6b{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-IbO6bœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-huxaM{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-huxaMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-uaDsB{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-uaDsBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-Te29P",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-Te29Pœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "MessagetoData-IbO6b",
-        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œMessagetoData-IbO6bœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "LanguageModelComponent-huxaM",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-huxaMœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "MessagetoData-uaDsB",
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œMessagetoData-uaDsBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -208,7 +208,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "MessagetoData",
-            "id": "MessagetoData-IbO6b",
+            "id": "MessagetoData-uaDsB",
             "name": "data",
             "output_types": [
               "Data"
@@ -216,25 +216,25 @@
           },
           "targetHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-zuKTL",
+            "id": "LoopComponent-dkM1v",
             "name": "item",
             "output_types": [
               "Data"
             ]
           }
         },
-        "id": "reactflow__edge-MessagetoData-IbO6b{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-IbO6bœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-zuKTL{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-zuKTLœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "id": "reactflow__edge-MessagetoData-uaDsB{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-uaDsBœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-dkM1v{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-dkM1vœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
         "selected": false,
-        "source": "MessagetoData-IbO6b",
-        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-IbO6bœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "LoopComponent-zuKTL",
-        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-zuKTLœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
+        "source": "MessagetoData-uaDsB",
+        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-uaDsBœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "LoopComponent-dkM1v",
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-dkM1vœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ArXivComponent-WxSYF",
+          "id": "ArXivComponent-8YHhw",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -371,7 +371,7 @@
           "type": "ArXivComponent"
         },
         "dragging": false,
-        "id": "ArXivComponent-WxSYF",
+        "id": "ArXivComponent-8YHhw",
         "measured": {
           "height": 368,
           "width": 320
@@ -385,7 +385,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-ylHrO",
+          "id": "ChatOutput-O3R2b",
           "node": {
             "base_classes": [
               "Message"
@@ -680,7 +680,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-ylHrO",
+        "id": "ChatOutput-O3R2b",
         "measured": {
           "height": 48,
           "width": 192
@@ -694,7 +694,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-OF2vZ",
+          "id": "ChatInput-7dhXG",
           "node": {
             "base_classes": [
               "Message"
@@ -992,7 +992,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-OF2vZ",
+        "id": "ChatInput-7dhXG",
         "measured": {
           "height": 203,
           "width": 320
@@ -1006,36 +1006,7 @@
       },
       {
         "data": {
-          "id": "note-uG7pK",
-          "node": {
-            "description": "### 💡 Add your Anthropic API key here 👇",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-uG7pK",
-        "measured": {
-          "height": 324,
-          "width": 359
-        },
-        "position": {
-          "x": 1479.4278434913201,
-          "y": -274.26903478612456
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 359
-      },
-      {
-        "data": {
-          "id": "note-F4Ff1",
+          "id": "note-A2mJA",
           "node": {
             "description": "# **Langflow Loop Component Template - ArXiv search result Translator** \nThis template translates research paper summaries on ArXiv into Portuguese and summarizes them. \n Using **Langflow’s looping mechanism**, the template iterates through multiple research papers, translates them with the **OpenAI** model component, and outputs an aggregated version of all translated papers.  \n\n## Quickstart \n 1. Add your OpenAI API key to the **Language Model** component. \n2. In the **Playground**, enter a query related to a research topic (for example, “Quantum Computing Advancements”).  \n\n  The flow fetches a list of research papers from ArXiv matching the query. Each paper in the retrieved list is processed one-by-one using the Langflow **Loop component**. \n\n  The abstract of each paper is translated into Portuguese by the **OpenAI** model component. \n\n Once all papers are translated, the system aggregates them into a **single structured output**.",
             "display_name": "",
@@ -1046,7 +1017,7 @@
         },
         "dragging": false,
         "height": 647,
-        "id": "note-F4Ff1",
+        "id": "note-A2mJA",
         "measured": {
           "height": 647,
           "width": 576
@@ -1062,7 +1033,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-2OCL9",
+          "id": "ParserComponent-uSCVe",
           "node": {
             "base_classes": [
               "Message"
@@ -1221,7 +1192,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-2OCL9",
+        "id": "ParserComponent-uSCVe",
         "measured": {
           "height": 328,
           "width": 320
@@ -1235,7 +1206,7 @@
       },
       {
         "data": {
-          "id": "LoopComponent-zuKTL",
+          "id": "LoopComponent-dkM1v",
           "node": {
             "base_classes": [
               "Data",
@@ -1336,7 +1307,7 @@
           "type": "LoopComponent"
         },
         "dragging": false,
-        "id": "LoopComponent-zuKTL",
+        "id": "LoopComponent-dkM1v",
         "measured": {
           "height": 241,
           "width": 320
@@ -1350,7 +1321,7 @@
       },
       {
         "data": {
-          "id": "TypeConverterComponent-mWgMR",
+          "id": "TypeConverterComponent-0TFCA",
           "node": {
             "base_classes": [
               "Message"
@@ -1464,7 +1435,7 @@
           "type": "TypeConverterComponent"
         },
         "dragging": false,
-        "id": "TypeConverterComponent-mWgMR",
+        "id": "TypeConverterComponent-0TFCA",
         "measured": {
           "height": 262,
           "width": 320
@@ -1478,7 +1449,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-Te29P",
+          "id": "LanguageModelComponent-huxaM",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1654,10 +1625,10 @@
                 ],
                 "options_metadata": [
                   {
-                    "icon": "Anthropic"
+                    "icon": "OpenAI"
                   },
                   {
-                    "icon": "OpenAI"
+                    "icon": "Anthropic"
                   },
                   {
                     "icon": "Google"
@@ -1752,7 +1723,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-Te29P",
+        "id": "LanguageModelComponent-huxaM",
         "measured": {
           "height": 532,
           "width": 320
@@ -1766,7 +1737,7 @@
       },
       {
         "data": {
-          "id": "MessagetoData-IbO6b",
+          "id": "MessagetoData-uaDsB",
           "node": {
             "base_classes": [
               "Data"
@@ -1857,7 +1828,7 @@
           "type": "MessagetoData"
         },
         "dragging": false,
-        "id": "MessagetoData-IbO6b",
+        "id": "MessagetoData-uaDsB",
         "measured": {
           "height": 203,
           "width": 320
@@ -1871,14 +1842,14 @@
       }
     ],
     "viewport": {
-      "x": 718.2366665584553,
-      "y": 264.2875075099402,
+      "x": 269.23666655845534,
+      "y": 307.2875075099402,
       "zoom": 0.46271902027504264
     }
   },
   "description": "This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",
   "endpoint_name": null,
-  "id": "00674d9d-d897-4c75-aedd-dcca1c8e8d9d",
+  "id": "07f1c000-7ebe-4655-8421-06e012fb6da6",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Research Translation Loop",
