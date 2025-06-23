@@ -399,7 +399,7 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 | Name | Type | Description |
 |------|------|-------------|
 | collection_name | String | The name of the Chroma collection. Default: "langflow". |
-| persist_directory | String | Custom base directory to save the vector store. Collections are stored under `$DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, it will use your system's cache folder. |
+| persist_directory | String | Custom base directory to save the vector store. Collections are stored under `$DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, it uses your system's cache folder. |
 | existing_collections | String | Select a previously created collection to search through its stored data. |
 | embedding | Embeddings | The embedding function to use for the vector store. |
 | allow_duplicates | Boolean | If false, will not add documents that are already in the Vector Store. |

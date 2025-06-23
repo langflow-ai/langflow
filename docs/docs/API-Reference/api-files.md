@@ -12,7 +12,7 @@ Use the `/files` endpoints to move files between your local machine and Langflow
 
 There are two versions of the `/files` endpoints.
 
-`/v2/files` offers several improvements over `/v1/files`:
+`/v2/files` offers the following improvements over `/v1/files`:
 
 - `/v2` files are organized by `user_id` instead of `flow_id`.
   This means files are owned by users, and they aren't attached to specific flows.
@@ -186,7 +186,8 @@ curl -X DELETE \
 
 ## Files/V2 endpoints
 
-In `v2`, files are organized by `user_id` and tracked in the Langflow database, and can be added or deleted in bulk, instead of one by one.
+Use the `/files` endpoints to move files between your local machine and Langflow.
+
 The `v2` endpoints require authentication by an API key or JWT.
 To create a Langflow API key and export it as an environment variable, see [Get started with the Langflow API](/api-reference-api-examples).
 

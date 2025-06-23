@@ -30,7 +30,7 @@ The `/logs` endpoint requires log retrieval to be enabled in your Langflow insta
 
 ## Stream logs
 
-Stream logs in real-time using Server-Sent Events (SSE).
+Stream logs in real-time using Server Sent Events (SSE).
 
 <Tabs>
   <TabItem value="curl" label="curl" default>

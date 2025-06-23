@@ -8,9 +8,7 @@ import TabItem from '@theme/TabItem';
 
 Use the `/flows` endpoint to create, read, update, and delete flows.
 
-## Run flows
-
-See [Flow trigger endpoints](/api-flows-run).
+If you want to use the Langflow API to run a flow, see [Flow trigger endpoints](/api-flows-run).
 
 ## Create flow
 

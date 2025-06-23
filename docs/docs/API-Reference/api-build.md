@@ -6,14 +6,15 @@ slug: /api-build
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Use the `/build` endpoint to build vertices and flows, and execute those flows with streaming event responses.
+Use the `/build` endpoints to build vertices and flows, and execute those flows with streaming event responses.
 
-The `/build` endpoint offers additional configuration for running flows.
+The `/build` endpoints offers additional configuration for running flows, but they are for development against the Langflow codebase.
 
 :::important
-This `/build` endpoints are meant to be used by the frontend, and they aren't optimized for external use.
+This `/build` endpoints are meant to be used by Langflow's frontend code.
+They aren't intended for running flows as apart of application development with Langflow.
 
-To run a flow, use the [`/run` endpoint](/api-flows-run#run-flow).
+To run flows in your apps, see [Flow trigger endpoints](/api-flows-run).
 :::
 
 ## Build flow and stream events
@@ -76,7 +77,7 @@ curl -X GET \
    </TabItem>
 </Tabs>
 
-The events endpoint accepts an optional `stream` query parameter which defaults to `true`.
+The `/build/$FLOW_ID/events` endpoint accepts an optional `stream` query parameter that defaults to `true`.
 To disable streaming and get all events at once, set `stream` to `false`.
 
 ```text

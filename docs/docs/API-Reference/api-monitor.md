@@ -633,7 +633,7 @@ HTTP/1.1 204 No Content
 
 ## Get transactions
 
-Retrieve all transactions (interactions between components) for a specific flow.
+Retrieve all transactions, which are interactions between components, for a specific flow.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>

@@ -6,13 +6,13 @@ slug: /api-reference-api-examples
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-You can use the Langflow API for programmatic interaction with Langflow:
+You can use the Langflow API for programmatic interactions with Langflow, such as the following:
 
-* Create and edit flows, including file management for flows
-* Develop applications that use your flows
-* Develop custom components
-* Build Langflow as a dependency of a larger project
-* Contribute to the overall Langflow project
+* Create and edit flows, including file management for flows.
+* Develop applications that use your flows.
+* Develop custom components.
+* Build Langflow as a dependency of a larger project.
+* Contribute to the overall Langflow project.
 
 To view and test all available endpoints, you can access the Langflow API's OpenAPI specification at your Langflow deployment's `/docs` endpoint, such as `http://localhost:7860/docs`.
 
@@ -67,7 +67,7 @@ Then, to run your flow, you call `POST /v1/run/$FLOW_ID` with optional run param
 
 The Langflow API serves `/v1` and `/v2` endpoints.
 
-Some endpoints have only exist under a single version and some exist under both the `/v1` and `/v2` versions.
+Some endpoints only exist under a single version and some exist under both the `/v1` and `/v2` versions.
 
 If a request fails or has an unexpected result, make sure your endpoint path has the correct version.
 
