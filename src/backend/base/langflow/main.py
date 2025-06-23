@@ -235,7 +235,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             except asyncio.CancelledError:
                 # Swallow this - it's normal during shutdown
                 logger.debug("Teardown cancelled during shutdown.")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.exception(f"Unhandled error during cleanup: {e}")
 
             try:
