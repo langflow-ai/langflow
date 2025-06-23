@@ -2,7 +2,7 @@ from langchain_community.vectorstores import Clickhouse, ClickhouseSettings
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.inputs import BoolInput, FloatInput
+from langflow.inputs.inputs import BoolInput, FloatInput
 from langflow.io import (
     DictInput,
     DropdownInput,
@@ -11,7 +11,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
@@ -70,7 +70,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
         except ImportError as e:
             msg = (
                 "Failed to import Clickhouse dependencies. "
-                "Install it using `pip install langflow[clickhouse-connect] --pre`"
+                "Install it using `uv pip install langflow[clickhouse-connect] --pre`"
             )
             raise ImportError(msg) from e
 

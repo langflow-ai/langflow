@@ -3,7 +3,7 @@ from typing import Any
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter, TextSplitter
 
 from langflow.base.textsplitters.model import LCTextSplitterComponent
-from langflow.inputs import DataInput, DropdownInput, IntInput
+from langflow.inputs.inputs import DataInput, DropdownInput, IntInput
 
 
 class LanguageRecursiveTextSplitterComponent(LCTextSplitterComponent):

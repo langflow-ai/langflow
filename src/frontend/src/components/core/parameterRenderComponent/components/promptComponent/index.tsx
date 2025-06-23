@@ -26,21 +26,33 @@ export default function PromptAreaComponent({
   readonly = false,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
   const coloredContent = (typeof value === "string" ? value : "")
+    // escape HTML first
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(regexHighlight, (match, p1, p2) => {
-      // Decide which group was matched. If p1 is not undefined, do nothing
-      // we don't want to change the text. If p2 is not undefined, then we
-      // have a variable, so we should highlight it.
-      // ! This will not work with multiline or indented json yet
-      if (p1 !== undefined) {
-        return match;
-      } else if (p2 !== undefined) {
-        return `<span class="chat-message-highlight">{${p2}}</span>`;
-      }
+    // highlight variables
+    .replace(regexHighlight, (match, codeFence, openRun, varName, closeRun) => {
+      // 1) Leave ```code``` blocks untouched
+      if (codeFence) return match;
 
-      return match;
+      // 2) Balanced & odd-length brace runs mean “real variable”
+      const lenOpen = openRun?.length ?? 0;
+      const lenClose = closeRun?.length ?? 0;
+      const isVariable = lenOpen === lenClose && lenOpen % 2 === 1;
+
+      if (!isVariable) return match; // even runs are just escapes
+
+      // 3) Number of literal braces outside the span
+      const outerCount = Math.floor(lenOpen / 2);
+      const outerLeft = "{".repeat(outerCount);
+      const outerRight = "}".repeat(outerCount);
+
+      return (
+        `${outerLeft}` +
+        `<span class="chat-message-highlight">{${varName}}</span>` +
+        `${outerRight}`
+      );
     })
+    // preserve new-lines
     .replace(/\n/g, "<br />");
 
   const renderPromptText = () => (

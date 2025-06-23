@@ -1,27 +1,29 @@
 import re
-import shutil
 from typing import Any
 
-from langchain_core.tools import StructuredTool
-
+from langflow.api.v2.mcp import get_server
 from langflow.base.mcp.util import (
     MCPSseClient,
     MCPStdioClient,
     create_input_schema_from_json_schema,
-    create_tool_coroutine,
-    create_tool_func,
+    update_tools,
 )
-from langflow.custom import Component
-from langflow.inputs import DropdownInput, TableInput
+from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs.inputs import InputTypes
-from langflow.io import MessageTextInput, MultilineInput, Output, TabInput
+from langflow.io import DropdownInput, McpInput, MessageTextInput, Output  # Import McpInput from langflow.io
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
-from langflow.schema import DataFrame
+from langflow.schema.dataframe import DataFrame
+from langflow.services.auth.utils import create_user_longterm_token
+from langflow.services.cache.utils import CacheMiss
+
+# Import get_server from the backend API
+from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.deps import get_session, get_settings_service, get_storage_service
 
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
-    """If any key looks nested (contains a dot or “[index]”), rebuild the.
+    """If any key looks nested (contains a dot or "[index]"), rebuild the.
 
     full nested structure; otherwise return flat as is.
     """
@@ -58,24 +60,19 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
     return nested
 
 
-class MCPToolsComponent(Component):
-    schema_inputs: list[InputTypes] = []
+class MCPToolsComponent(ComponentWithCache):
+    schema_inputs: list = []
     stdio_client: MCPStdioClient = MCPStdioClient()
     sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
-    tool_names: list[str] = []
-    _tool_cache: dict = {}  # Cache for tool objects
+    _tool_cache: dict = {}
     default_keys: list[str] = [
         "code",
         "_type",
-        "mode",
-        "command",
-        "env",
-        "sse_url",
-        "tool_placeholder",
         "tool_mode",
+        "tool_placeholder",
+        "mcp_server",
         "tool",
-        "headers_input",
     ]
 
     display_name = "MCP Connection"
@@ -84,63 +81,11 @@ class MCPToolsComponent(Component):
     name = "MCPTools"
 
     inputs = [
-        TabInput(
-            name="mode",
-            display_name="Mode",
-            options=["Stdio", "SSE"],
-            value="Stdio",
-            info="Select the connection mode",
+        McpInput(
+            name="mcp_server",
+            display_name="MCP Server",
+            info="Select the MCP Server that will be used by this component",
             real_time_refresh=True,
-        ),
-        MessageTextInput(
-            name="command",
-            display_name="MCP Command",
-            info="Command for MCP stdio connection",
-            value="uvx mcp-server-fetch",
-            show=True,
-            refresh_button=True,
-        ),
-        MessageTextInput(
-            name="env",
-            display_name="Env",
-            info="Env vars to include in mcp stdio connection (i.e. DEBUG=true)",
-            value="",
-            is_list=True,
-            show=True,
-            tool_mode=False,
-            advanced=True,
-        ),
-        MultilineInput(
-            name="sse_url",
-            display_name="MCP SSE URL",
-            info="URL for MCP SSE connection",
-            show=False,
-            refresh_button=True,
-            value="MCP_SSE",
-            real_time_refresh=True,
-        ),
-        TableInput(
-            name="headers_input",
-            display_name="Headers",
-            info="Headers to include in the tool",
-            show=False,
-            real_time_refresh=True,
-            table_schema=[
-                {
-                    "name": "key",
-                    "display_name": "Header",
-                    "type": "str",
-                    "description": "Header name",
-                },
-                {
-                    "name": "value",
-                    "display_name": "Value",
-                    "type": "str",
-                    "description": "Header value",
-                },
-            ],
-            value=[],
-            advanced=True,
         ),
         DropdownInput(
             name="tool",
@@ -148,7 +93,7 @@ class MCPToolsComponent(Component):
             options=[],
             value="",
             info="Select the tool to execute",
-            show=True,
+            show=False,
             required=True,
             real_time_refresh=True,
         ),
@@ -166,67 +111,14 @@ class MCPToolsComponent(Component):
         Output(display_name="Response", name="response", method="build_output"),
     ]
 
-    async def _validate_connection_params(self, mode: str, command: str | None = None, url: str | None = None) -> None:
-        """Validate connection parameters based on mode."""
-        if mode not in ["Stdio", "SSE"]:
-            msg = f"Invalid mode: {mode}. Must be either 'Stdio' or 'SSE'"
-            raise ValueError(msg)
-
-        if mode == "Stdio" and not command:
-            msg = "Command is required for Stdio mode"
-            raise ValueError(msg)
-        if mode == "Stdio" and command:
-            self._validate_node_installation(command)
-        if mode == "SSE" and not url:
-            msg = "URL is required for SSE mode"
-            raise ValueError(msg)
-
-    def _validate_node_installation(self, command: str) -> str:
-        """Validate the npx command."""
-        if "npx" in command and not shutil.which("node"):
-            msg = "Node.js is not installed. Please install Node.js to use npx commands."
-            raise ValueError(msg)
-        return command
-
-    def _process_headers(self, headers: Any) -> dict:
-        """Process the headers input into a valid dictionary.
-
-        Args:
-            headers: The headers to process, can be dict, str, or list
-        Returns:
-            Processed dictionary
-        """
-        if headers is None:
-            return {}
-        if isinstance(headers, dict):
-            return headers
-        if isinstance(headers, list):
-            processed_headers = {}
-            try:
-                for item in headers:
-                    if not self._is_valid_key_value_item(item):
-                        continue
-                    key = item["key"]
-                    value = item["value"]
-                    processed_headers[key] = value
-            except (KeyError, TypeError, ValueError) as e:
-                self.log(f"Failed to process headers list: {e}")
-                return {}  # Return empty dictionary instead of None
-            return processed_headers
-        return {}
-
-    def _is_valid_key_value_item(self, item: Any) -> bool:
-        """Check if an item is a valid key-value dictionary."""
-        return isinstance(item, dict) and "key" in item and "value" in item
-
     async def _validate_schema_inputs(self, tool_obj) -> list[InputTypes]:
         """Validate and process schema inputs for a tool."""
         try:
-            if not tool_obj or not hasattr(tool_obj, "inputSchema"):
+            if not tool_obj or not hasattr(tool_obj, "args_schema"):
                 msg = "Invalid tool object or missing input schema"
                 raise ValueError(msg)
 
-            flat_schema = flatten_schema(tool_obj.inputSchema)
+            flat_schema = flatten_schema(tool_obj.args_schema.schema())
             input_schema = create_input_schema_from_json_schema(flat_schema)
             if not input_schema:
                 msg = f"Empty input schema for tool '{tool_obj.name}'"
@@ -245,68 +137,153 @@ class MCPToolsComponent(Component):
         else:
             return schema_inputs
 
+    async def update_tool_list(self, mcp_server_value=None):
+        # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
+        mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
+        server_name = None
+        server_config_from_value = None
+        if isinstance(mcp_server, dict):
+            server_name = mcp_server.get("name")
+            server_config_from_value = mcp_server.get("config")
+        else:
+            server_name = mcp_server
+        if not server_name:
+            self.tools = []
+            return [], {"name": server_name, "config": server_config_from_value}
+
+        # Use shared cache if available
+        cached = self._shared_component_cache.get(server_name)
+        if not isinstance(cached, CacheMiss):
+            self.tools = cached["tools"]
+            self.tool_names = cached["tool_names"]
+            self._tool_cache = cached["tool_cache"]
+            server_config_from_value = cached["config"]
+            return self.tools, {"name": server_name, "config": server_config_from_value}
+
+        try:
+            async for db in get_session():
+                user_id, _ = await create_user_longterm_token(db)
+                current_user = await get_user_by_id(db, user_id)
+
+                # Try to get server config from DB/API
+                server_config = await get_server(
+                    server_name,
+                    current_user,
+                    db,
+                    storage_service=get_storage_service(),
+                    settings_service=get_settings_service(),
+                )
+
+                # If get_server returns empty but we have a config, use it
+                if not server_config and server_config_from_value:
+                    server_config = server_config_from_value
+
+                if not server_config:
+                    self.tools = []
+                    return [], {"name": server_name, "config": server_config}
+
+                _, tool_list, tool_cache = await update_tools(
+                    server_name=server_name,
+                    server_config=server_config,
+                    mcp_stdio_client=self.stdio_client,
+                    mcp_sse_client=self.sse_client,
+                )
+
+                self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
+                self._tool_cache = tool_cache
+                self.tools = tool_list
+                # Cache the result using shared cache
+                self._shared_component_cache.set(
+                    server_name,
+                    {
+                        "tools": tool_list,
+                        "tool_names": self.tool_names,
+                        "tool_cache": tool_cache,
+                        "config": server_config,
+                    },
+                )
+                return tool_list, {"name": server_name, "config": server_config}
+        except Exception as e:
+            msg = f"Error updating tool list: {e!s}"
+            logger.exception(msg)
+            raise ValueError(msg) from e
+
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
         try:
-            if field_name == "mode":
-                self.remove_non_default_keys(build_config)
-                build_config["tool"]["options"] = []
-                if field_value == "Stdio":
-                    build_config["command"]["show"] = True
-                    build_config["env"]["show"] = True
-                    build_config["headers_input"]["show"] = False
-                    build_config["sse_url"]["show"] = False
-                elif field_value == "SSE":
-                    build_config["command"]["show"] = False
-                    build_config["env"]["show"] = False
-                    build_config["sse_url"]["show"] = True
-                    build_config["sse_url"]["value"] = "MCP_SSE"
-                    build_config["headers_input"]["show"] = True
-                    return build_config
-            if field_name in ("command", "sse_url", "mode"):
+            if field_name == "tool":
                 try:
-                    await self.update_tools(
-                        mode=build_config["mode"]["value"],
-                        command=build_config["command"]["value"],
-                        url=build_config["sse_url"]["value"],
-                        env=build_config["env"]["value"],
-                        headers=build_config["headers_input"]["value"],
-                    )
-                    if "tool" in build_config:
-                        build_config["tool"]["options"] = self.tool_names
+                    if len(self.tools) == 0:
+                        try:
+                            self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
+                        except ValueError:
+                            build_config["tool"]["options"] = []
+                            build_config["tool"]["value"] = ""
+                            build_config["tool"]["placeholder"] = "Error on MCP Server"
+                            return build_config
+                        build_config["tool"]["placeholder"] = ""
+                    if field_value == "":
+                        return build_config
+                    tool_obj = None
+                    for tool in self.tools:
+                        if tool.name == self.tool:
+                            tool_obj = tool
+                            break
+                    if tool_obj is None:
+                        msg = f"Tool {self.tool} not found in available tools: {self.tools}"
+                        logger.warning(msg)
+                        return build_config
+                    await self._update_tool_config(build_config, field_value)
                 except Exception as e:
                     build_config["tool"]["options"] = []
                     msg = f"Failed to update tools: {e!s}"
                     raise ValueError(msg) from e
                 else:
                     return build_config
-            elif field_name == "tool":
-                if len(self.tools) == 0:
-                    await self.update_tools(
-                        mode=build_config["mode"]["value"],
-                        command=build_config["command"]["value"],
-                        url=build_config["sse_url"]["value"],
-                        env=build_config["env"]["value"],
-                        headers=build_config["headers_input"]["value"],
-                    )
-                if self.tool is None:
+            elif field_name == "mcp_server":
+                try:
+                    # field_value is now a dict {name, config}
+                    mcp_server_value = field_value
+                    self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list(mcp_server_value)
+                except ValueError:
+                    if not build_config["tools_metadata"]["show"]:
+                        build_config["tool"]["show"] = True
+                        build_config["tool"]["options"] = []
+                        build_config["tool"]["value"] = ""
+                        build_config["tool"]["placeholder"] = "Error on MCP Server"
+                    else:
+                        build_config["tool"]["show"] = False
+                    self.remove_non_default_keys(build_config)
                     return build_config
-                tool_obj = None
-                for tool in self.tools:
-                    if tool.name == self.tool:
-                        tool_obj = tool
-                        break
-                if tool_obj is None:
-                    msg = f"Tool {self.tool} not found in available tools: {self.tools}"
-                    logger.warning(msg)
-                    return build_config
-                self.remove_non_default_keys(build_config)
-                await self._update_tool_config(build_config, field_value)
+                build_config["tool"]["placeholder"] = ""
+                if "tool" in build_config and len(self.tools) > 0 and not build_config["tools_metadata"]["show"]:
+                    build_config["tool"]["show"] = True
+                    build_config["tool"]["options"] = [tool.name for tool in self.tools]
+                    await self._update_tool_config(build_config, build_config["tool"]["value"])
+                elif "tool" in build_config and len(self.tools) == 0:
+                    self.remove_non_default_keys(build_config)
+                    build_config["tool"]["show"] = False
+                    build_config["tool"]["options"] = []
+                    build_config["tool"]["value"] = ""
             elif field_name == "tool_mode":
+                try:
+                    self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
+                except ValueError:
+                    if not build_config["tools_metadata"]["show"]:
+                        build_config["tool"]["show"] = True
+                        build_config["tool"]["options"] = []
+                        build_config["tool"]["value"] = ""
+                        build_config["tool"]["placeholder"] = "Error on MCP Server"
+                    else:
+                        build_config["tool"]["show"] = False
+                build_config["tool"]["placeholder"] = ""
                 build_config["tool"]["show"] = not field_value
                 for key, value in list(build_config.items()):
                     if key not in self.default_keys and isinstance(value, dict) and "show" in value:
                         build_config[key]["show"] = not field_value
+                if not field_value:
+                    build_config["tool"]["options"] = [tool.name for tool in self.tools]
+                    await self._update_tool_config(build_config, build_config["tool"]["value"])
 
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
@@ -322,7 +299,7 @@ class MCPToolsComponent(Component):
             if not tool or not hasattr(tool, "name"):
                 continue
             try:
-                flat_schema = flatten_schema(tool.inputSchema)
+                flat_schema = flatten_schema(tool.args_schema.schema())
                 input_schema = create_input_schema_from_json_schema(flat_schema)
                 langflow_inputs = schema_to_langflow_inputs(input_schema)
                 inputs[tool.name] = langflow_inputs
@@ -353,13 +330,7 @@ class MCPToolsComponent(Component):
     async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
         """Update tool configuration with proper error handling."""
         if not self.tools:
-            await self.update_tools(
-                mode=build_config["mode"]["value"],
-                command=build_config["command"]["value"],
-                url=build_config["sse_url"]["value"],
-                env=build_config["env"]["value"],
-                headers=build_config["headers_input"]["value"],
-            )
+            self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
 
         if not tool_name:
             return
@@ -367,10 +338,18 @@ class MCPToolsComponent(Component):
         tool_obj = next((tool for tool in self.tools if tool.name == tool_name), None)
         if not tool_obj:
             msg = f"Tool {tool_name} not found in available tools: {self.tools}"
+            self.remove_non_default_keys(build_config)
+            build_config["tool"]["value"] = ""
             logger.warning(msg)
             return
 
         try:
+            # Store current values before removing inputs
+            current_values = {}
+            for key, value in build_config.items():
+                if key not in self.default_keys and isinstance(value, dict) and "value" in value:
+                    current_values[key] = value["value"]
+
             # Get all tool inputs and remove old ones
             input_schema_for_all_tools = self.get_inputs_for_all_tools(self.tools)
             self.remove_input_schema_from_build_config(build_config, tool_name, input_schema_for_all_tools)
@@ -394,7 +373,13 @@ class MCPToolsComponent(Component):
                     input_dict = schema_input.to_dict()
                     input_dict.setdefault("value", None)
                     input_dict.setdefault("required", True)
+
                     build_config[name] = input_dict
+
+                    # Preserve existing value if the parameter name exists in current_values
+                    if name in current_values:
+                        build_config[name]["value"] = current_values[name]
+
                 except (AttributeError, KeyError, TypeError) as e:
                     msg = f"Error processing schema input {schema_input}: {e!s}"
                     logger.exception(msg)
@@ -412,7 +397,7 @@ class MCPToolsComponent(Component):
     async def build_output(self) -> DataFrame:
         """Build output with improved error handling and validation."""
         try:
-            await self.update_tools()
+            self.tools, _ = await self.update_tool_list()
             if self.tool != "":
                 exec_tool = self._tool_cache[self.tool]
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
@@ -437,114 +422,7 @@ class MCPToolsComponent(Component):
             logger.exception(msg)
             raise ValueError(msg) from e
 
-    async def update_tools(
-        self,
-        mode: str | None = None,
-        command: str | None = None,
-        url: str | None = None,
-        env: list[str] | None = None,
-        headers: dict[str, str] | None = None,
-    ) -> list[StructuredTool]:
-        """Connect to the MCP server and update available tools with improved error handling."""
-        try:
-            if mode is None:
-                mode = self.mode
-            if command is None:
-                command = self.command
-            if env is None:
-                env = self.env
-            if url is None:
-                url = self.sse_url
-            if headers is None:
-                headers = self.headers_input
-            headers = self._process_headers(headers)
-            await self._validate_connection_params(mode, command, url)
-
-            if mode == "Stdio":
-                if not self.stdio_client.session:
-                    try:
-                        self.tools = await self.stdio_client.connect_to_server(command, env)
-                    except ValueError as e:
-                        msg = f"Error connecting to MCP server: {e}"
-                        logger.exception(msg)
-                        raise ValueError(msg) from e
-            elif mode == "SSE" and not self.sse_client.session:
-                try:
-                    self.tools = await self.sse_client.connect_to_server(url, headers)
-                except ValueError as e:
-                    # URL validation error
-                    logger.error(f"SSE URL validation error: {e}")
-                    msg = f"Invalid SSE URL configuration: {e}. Please check your Langflow deployment URL and port."
-                    raise ValueError(msg) from e
-                except ConnectionError as e:
-                    # Connection failed after retries
-                    logger.error(f"SSE connection error: {e}")
-                    msg = (
-                        f"Could not connect to Langflow SSE endpoint: {e}. "
-                        "Please verify:\n"
-                        "1. Langflow server is running\n"
-                        "2. The SSE URL matches your Langflow deployment port\n"
-                        "3. There are no network issues preventing the connection"
-                    )
-                    raise ValueError(msg) from e
-                except Exception as e:
-                    logger.error(f"Unexpected SSE error: {e}")
-                    msg = f"Unexpected error connecting to SSE endpoint: {e}"
-                    raise ValueError(msg) from e
-
-            if not self.tools:
-                logger.warning("No tools returned from server")
-                return []
-
-            tool_list = []
-            for tool in self.tools:
-                if not tool or not hasattr(tool, "name"):
-                    logger.warning("Invalid tool object detected, skipping")
-                    continue
-
-                try:
-                    args_schema = create_input_schema_from_json_schema(tool.inputSchema)
-                    if not args_schema:
-                        logger.warning(f"Empty schema for tool '{tool.name}', skipping")
-                        continue
-
-                    client = self.stdio_client if self.mode == "Stdio" else self.sse_client
-                    if not client or not client.session:
-                        msg = f"Invalid client session for tool '{tool.name}'"
-                        raise ValueError(msg)
-
-                    tool_obj = StructuredTool(
-                        name=tool.name,
-                        description=tool.description or "",
-                        args_schema=args_schema,
-                        func=create_tool_func(tool.name, args_schema, client.session),
-                        coroutine=create_tool_coroutine(tool.name, args_schema, client.session),
-                        tags=[tool.name],
-                        metadata={},
-                    )
-                    tool_list.append(tool_obj)
-                    self._tool_cache[tool.name] = tool_obj
-                except (AttributeError, ValueError, TypeError, KeyError) as e:
-                    msg = f"Error creating tool {getattr(tool, 'name', 'unknown')}: {e}"
-                    logger.exception(msg)
-                    continue
-
-            self.tool_names = [tool.name for tool in self.tools if hasattr(tool, "name")]
-
-        except ValueError as e:
-            # Re-raise validation errors with clear messages
-            raise ValueError(str(e)) from e
-        except Exception as e:
-            logger.exception("Error updating tools")
-            msg = f"Failed to update tools: {e!s}"
-            raise ValueError(msg) from e
-        else:
-            return tool_list
-
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
-        # if not self.tools:
-        if self.mode == "SSE" and self.sse_url is None:
-            msg = "SSE URL is not set"
-            raise ValueError(msg)
-        return await self.update_tools()
+        mcp_server = getattr(self, "mcp_server", None)
+        return await self.update_tool_list(mcp_server)
