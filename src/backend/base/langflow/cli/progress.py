@@ -1,10 +1,10 @@
+import platform
 import sys
 import threading
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
-import platform
 
 import click
 
@@ -22,7 +22,7 @@ class ProgressIndicator:
         self.running = False
         self._stop_animation = False
         self._animation_thread = None
-        
+
         # Use Windows-safe characters on Windows to prevent encoding issues
         if platform.system() == "Windows":
             self._animation_chars = ["-", "\\", "|", "/"]  # ASCII spinner
@@ -34,7 +34,7 @@ class ProgressIndicator:
             self._success_icon = "✓"  # Unicode checkmark
             self._failure_icon = "✗"  # Unicode cross
             self._farewell_emoji = "👋"  # Unicode wave
-            
+
         self._animation_index = 0
 
     def add_step(self, title: str, description: str = "") -> None:

@@ -315,7 +315,7 @@ def run(
 
             # Print summary and banner before starting the server, since uvicorn is a blocking call.
             # We _may_ be able to subprocess, but with window's spawn behavior, we'd have to move all
-            # non-picklable code to the subprocess. 
+            # non-picklable code to the subprocess.
             progress.print_summary()
             print_banner(host, port, protocol)
 
@@ -543,9 +543,10 @@ def print_banner(host: str, port: int, protocol: str) -> None:
     )
 
     title = f"[bold]Welcome to {styled_package_name}[/bold]\n"
-    
+
     # Use Windows-safe characters to prevent encoding issues
     import platform
+
     if platform.system() == "Windows":
         github_icon = "*"
         discord_icon = "#"
@@ -556,7 +557,7 @@ def print_banner(host: str, port: int, protocol: str) -> None:
         discord_icon = ":speech_balloon:"
         arrow = "→"
         status_icon = "🟢"
-    
+
     info_text = (
         f"{github_icon} GitHub: Star for updates {arrow} https://github.com/langflow-ai/langflow\n"
         f"{discord_icon} Discord: Join for support {arrow} https://discord.com/invite/EqksyE2EX9"
