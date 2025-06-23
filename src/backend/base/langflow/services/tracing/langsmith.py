@@ -65,8 +65,9 @@ class LangSmithTracer(BaseTracer):
         return self._ready
 
     def get_run_type(self, run_type: str) -> str:
-        from langsmith import client
         from typing import get_args
+
+        from langsmith import client
 
         valid_run_types = set(get_args(client.RUN_TYPE_T))
         if run_type not in valid_run_types:
@@ -169,6 +170,7 @@ class LangSmithTracer(BaseTracer):
         child.end(outputs=processed_outputs, error=self._error_to_string(error))
         self._children_traces[trace_id].__exit__(None, None, None)
         self._child_link[trace_id] = child.get_url()
+
     @staticmethod
     def _error_to_string(error: Exception | None):
         error_message = None
@@ -194,6 +196,7 @@ class LangSmithTracer(BaseTracer):
         self._run_link = self._run_tree.get_url()
         if getattr(self, "_trace", None):
             self._trace.__exit__()
+
     @property
     def run_link(self):
         if not self._ready or not self._run_tree:
