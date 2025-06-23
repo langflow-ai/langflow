@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SambaNovaModel",
-            "id": "SambaNovaModel-NEyqD",
+            "id": "SambaNovaModel-8WRTL",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-XjOH3",
+            "id": "ChatOutput-Cvbe8",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-SambaNovaModel-NEyqD{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-NEyqDœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XjOH3{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XjOH3œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SambaNovaModel-8WRTL{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-8WRTLœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Cvbe8{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Cvbe8œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "SambaNovaModel-NEyqD",
-        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-NEyqDœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-XjOH3",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XjOH3œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "SambaNovaModel-8WRTL",
+        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-8WRTLœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-Cvbe8",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Cvbe8œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -37,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-X83ni",
+            "id": "ChatInput-qozug",
             "name": "message",
             "output_types": [
               "Message"
@@ -45,19 +45,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-cGZsD",
+            "id": "Agent-J7aBZ",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-X83ni{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-cGZsD{œfieldNameœ:œinput_valueœ,œidœ:œAgent-cGZsDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-qozug{œdataTypeœ:œChatInputœ,œidœ:œChatInput-qozugœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-J7aBZ{œfieldNameœ:œinput_valueœ,œidœ:œAgent-J7aBZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-X83ni",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-X83niœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-cGZsD",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-cGZsDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-qozug",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-qozugœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-J7aBZ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-J7aBZœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-7Y3yy",
+            "id": "TavilySearchComponent-5hDm1",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -73,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-cGZsD",
+            "id": "Agent-J7aBZ",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-7Y3yy{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-7Y3yyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-cGZsD{œfieldNameœ:œtoolsœ,œidœ:œAgent-cGZsDœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-5hDm1{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-5hDm1œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-J7aBZ{œfieldNameœ:œtoolsœ,œidœ:œAgent-J7aBZœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-7Y3yy",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-7Y3yyœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-cGZsD",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-cGZsDœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-5hDm1",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-5hDm1œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-J7aBZ",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-J7aBZœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-N9CXl",
+            "id": "URL-mbCdn",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -101,19 +101,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-wqbpC",
+            "id": "Agent-oCAnt",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-N9CXl{œdataTypeœ:œURLœ,œidœ:œURL-N9CXlœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-wqbpC{œfieldNameœ:œtoolsœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URL-mbCdn{œdataTypeœ:œURLœ,œidœ:œURL-mbCdnœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oCAnt{œfieldNameœ:œtoolsœ,œidœ:œAgent-oCAntœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URL-N9CXl",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-N9CXlœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-wqbpC",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-wqbpCœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "URL-mbCdn",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-mbCdnœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-oCAnt",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oCAntœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -121,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-X83ni",
+            "id": "ChatInput-qozug",
             "name": "message",
             "output_types": [
               "Message"
@@ -129,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-wqbpC",
+            "id": "Agent-oCAnt",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-X83ni{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-wqbpC{œfieldNameœ:œinput_valueœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-qozug{œdataTypeœ:œChatInputœ,œidœ:œChatInput-qozugœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-oCAnt{œfieldNameœ:œinput_valueœ,œidœ:œAgent-oCAntœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-X83ni",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-X83niœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-wqbpC",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-wqbpCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-qozug",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-qozugœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-oCAnt",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-oCAntœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -149,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-wqbpC",
+            "id": "Agent-oCAnt",
             "name": "response",
             "output_types": [
               "Message"
@@ -157,19 +157,19 @@
           },
           "targetHandle": {
             "fieldName": "first_text",
-            "id": "Prompt-er8QV",
+            "id": "Prompt-GCeTu",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-wqbpC{œdataTypeœ:œAgentœ,œidœ:œAgent-wqbpCœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-er8QV{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-er8QVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-oCAnt{œdataTypeœ:œAgentœ,œidœ:œAgent-oCAntœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-GCeTu{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-GCeTuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-wqbpC",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-wqbpCœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-er8QV",
-        "targetHandle": "{œfieldNameœ: œfirst_textœ, œidœ: œPrompt-er8QVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-oCAnt",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-oCAntœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-GCeTu",
+        "targetHandle": "{œfieldNameœ: œfirst_textœ, œidœ: œPrompt-GCeTuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -177,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-cGZsD",
+            "id": "Agent-J7aBZ",
             "name": "response",
             "output_types": [
               "Message"
@@ -185,19 +185,19 @@
           },
           "targetHandle": {
             "fieldName": "second_text",
-            "id": "Prompt-er8QV",
+            "id": "Prompt-GCeTu",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-cGZsD{œdataTypeœ:œAgentœ,œidœ:œAgent-cGZsDœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-er8QV{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-er8QVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-J7aBZ{œdataTypeœ:œAgentœ,œidœ:œAgent-J7aBZœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-GCeTu{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-GCeTuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-cGZsD",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-cGZsDœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-er8QV",
-        "targetHandle": "{œfieldNameœ: œsecond_textœ, œidœ: œPrompt-er8QVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-J7aBZ",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-J7aBZœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-GCeTu",
+        "targetHandle": "{œfieldNameœ: œsecond_textœ, œidœ: œPrompt-GCeTuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -205,7 +205,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-er8QV",
+            "id": "Prompt-GCeTu",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -213,19 +213,19 @@
           },
           "targetHandle": {
             "fieldName": "second_text",
-            "id": "Prompt-AdpTy",
+            "id": "Prompt-BghS1",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-er8QV{œdataTypeœ:œPromptœ,œidœ:œPrompt-er8QVœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Prompt-AdpTy{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-AdpTyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-GCeTu{œdataTypeœ:œPromptœ,œidœ:œPrompt-GCeTuœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Prompt-BghS1{œfieldNameœ:œsecond_textœ,œidœ:œPrompt-BghS1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-er8QV",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-er8QVœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AdpTy",
-        "targetHandle": "{œfieldNameœ: œsecond_textœ, œidœ: œPrompt-AdpTyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-GCeTu",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-GCeTuœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-BghS1",
+        "targetHandle": "{œfieldNameœ: œsecond_textœ, œidœ: œPrompt-BghS1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -233,7 +233,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-X83ni",
+            "id": "ChatInput-qozug",
             "name": "message",
             "output_types": [
               "Message"
@@ -241,19 +241,19 @@
           },
           "targetHandle": {
             "fieldName": "first_text",
-            "id": "Prompt-AdpTy",
+            "id": "Prompt-BghS1",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-X83ni{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X83niœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-AdpTy{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-AdpTyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-qozug{œdataTypeœ:œChatInputœ,œidœ:œChatInput-qozugœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-BghS1{œfieldNameœ:œfirst_textœ,œidœ:œPrompt-BghS1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-X83ni",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-X83niœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AdpTy",
-        "targetHandle": "{œfieldNameœ: œfirst_textœ, œidœ: œPrompt-AdpTyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-qozug",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-qozugœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-BghS1",
+        "targetHandle": "{œfieldNameœ: œfirst_textœ, œidœ: œPrompt-BghS1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -261,7 +261,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-AdpTy",
+            "id": "Prompt-BghS1",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -269,26 +269,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "SambaNovaModel-NEyqD",
+            "id": "SambaNovaModel-8WRTL",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-AdpTy{œdataTypeœ:œPromptœ,œidœ:œPrompt-AdpTyœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-NEyqD{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-NEyqDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-BghS1{œdataTypeœ:œPromptœ,œidœ:œPrompt-BghS1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-8WRTL{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-8WRTLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-AdpTy",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-AdpTyœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SambaNovaModel-NEyqD",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-NEyqDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-BghS1",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-BghS1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SambaNovaModel-8WRTL",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-8WRTLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-KpeWR",
+            "id": "YfinanceComponent-XI4d2",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -296,25 +297,25 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-wqbpC",
+            "id": "Agent-oCAnt",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__YfinanceComponent-KpeWR{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-KpeWRœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-wqbpC{œfieldNameœ:œtoolsœ,œidœ:œAgent-wqbpCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YfinanceComponent-XI4d2{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-XI4d2œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oCAnt{œfieldNameœ:œtoolsœ,œidœ:œAgent-oCAntœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YfinanceComponent-KpeWR",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-KpeWRœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-wqbpC",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-wqbpCœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YfinanceComponent-XI4d2",
+        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-XI4d2œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-oCAnt",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oCAntœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-X83ni",
+          "id": "ChatInput-qozug",
           "node": {
             "base_classes": [
               "Message"
@@ -340,7 +341,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -611,9 +612,9 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-X83ni",
+        "id": "ChatInput-qozug",
         "measured": {
-          "height": 66,
+          "height": 48,
           "width": 192
         },
         "position": {
@@ -625,7 +626,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-7Y3yy",
+          "id": "TavilySearchComponent-5hDm1",
           "node": {
             "base_classes": [
               "Data",
@@ -651,7 +652,7 @@
             "frozen": false,
             "icon": "TavilyIcon",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -660,9 +661,11 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
+                "group_outputs": false,
                 "hidden": false,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -682,7 +685,7 @@
                 "dynamic": false,
                 "info": "Your Tavily API Key.",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -690,7 +693,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "TAVILY_API_KEY"
               },
               "chunks_per_source": {
                 "_input_type": "IntInput",
@@ -935,11 +938,11 @@
                 "type": "str"
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -947,102 +950,28 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": true,
-                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
-                      "disable_edit": false,
-                      "display_name": "Enable",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "status",
-                      "sortable": true,
-                      "type": "boolean"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "name": "TavilySearchComponent-fetch_content",
+                    "args": {
+                      "query": {
+                        "default": "",
+                        "description": "The search query you want to execute with Tavily.",
+                        "title": "Query",
+                        "type": "string"
+                      }
+                    },
+                    "description": "**Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+                    "display_description": "**Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+                    "display_name": "fetch_content_dataframe",
+                    "name": "fetch_content_dataframe",
+                    "readonly": false,
                     "status": true,
                     "tags": [
-                      "TavilySearchComponent-fetch_content"
-                    ]
-                  },
-                  {
-                    "description": "fetch_content_text(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "name": "TavilySearchComponent-fetch_content_text",
-                    "status": true,
-                    "tags": [
-                      "TavilySearchComponent-fetch_content_text"
+                      "fetch_content_dataframe"
                     ]
                   }
                 ]
@@ -1078,9 +1007,9 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-7Y3yy",
+        "id": "TavilySearchComponent-5hDm1",
         "measured": {
-          "height": 354,
+          "height": 316,
           "width": 320
         },
         "position": {
@@ -1094,7 +1023,7 @@
         "data": {
           "description": "Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
           "display_name": "Yahoo Finance",
-          "id": "YfinanceComponent-KpeWR",
+          "id": "YfinanceComponent-XI4d2",
           "node": {
             "base_classes": [
               "Data",
@@ -1116,6 +1045,7 @@
             "frozen": false,
             "icon": "trending-up",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1124,6 +1054,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
+                "group_outputs": false,
                 "hidden": false,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
@@ -1273,49 +1204,14 @@
                         "type": "string"
                       }
                     },
-                    "description": "YfinanceComponent. fetch_content() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "display_description": "YfinanceComponent. fetch_content() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "display_name": "fetch_content",
-                    "name": "fetch_content",
+                    "description": "Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_description": "Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "display_name": "fetch_content_dataframe",
+                    "name": "fetch_content_dataframe",
+                    "readonly": false,
                     "status": true,
                     "tags": [
-                      "fetch_content"
-                    ]
-                  },
-                  {
-                    "args": {
-                      "symbol": {
-                        "default": "",
-                        "description": "The stock symbol to retrieve data for (e.g., AAPL, GOOG).",
-                        "title": "Symbol",
-                        "type": "string"
-                      }
-                    },
-                    "description": "YfinanceComponent. fetch_content_text() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "display_description": "YfinanceComponent. fetch_content_text() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "display_name": "fetch_content_text",
-                    "name": "fetch_content_text",
-                    "status": true,
-                    "tags": [
-                      "fetch_content_text"
-                    ]
-                  },
-                  {
-                    "args": {
-                      "symbol": {
-                        "default": "",
-                        "description": "The stock symbol to retrieve data for (e.g., AAPL, GOOG).",
-                        "title": "Symbol",
-                        "type": "string"
-                      }
-                    },
-                    "description": "YfinanceComponent. as_dataframe() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "display_description": "YfinanceComponent. as_dataframe() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
-                    "display_name": "as_dataframe",
-                    "name": "as_dataframe",
-                    "status": true,
-                    "tags": [
-                      "as_dataframe"
+                      "fetch_content_dataframe"
                     ]
                   }
                 ]
@@ -1328,9 +1224,9 @@
           "type": "YfinanceComponent"
         },
         "dragging": false,
-        "id": "YfinanceComponent-KpeWR",
+        "id": "YfinanceComponent-XI4d2",
         "measured": {
-          "height": 461,
+          "height": 398,
           "width": 320
         },
         "position": {
@@ -1342,7 +1238,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-XjOH3",
+          "id": "ChatOutput-Cvbe8",
           "node": {
             "base_classes": [
               "Message"
@@ -1368,7 +1264,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -1638,9 +1534,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-XjOH3",
+        "id": "ChatOutput-Cvbe8",
         "measured": {
-          "height": 66,
+          "height": 48,
           "width": 192
         },
         "position": {
@@ -1652,7 +1548,7 @@
       },
       {
         "data": {
-          "id": "URL-N9CXl",
+          "id": "URL-mbCdn",
           "node": {
             "base_classes": [
               "Data",
@@ -1675,7 +1571,7 @@
             "frozen": false,
             "icon": "layout-template",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1684,6 +1580,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
+                "group_outputs": false,
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
@@ -1886,9 +1783,9 @@
                 "name": "max_depth",
                 "placeholder": "",
                 "range_spec": {
-                  "max": 5.0,
-                  "min": 1.0,
-                  "step": 1.0,
+                  "max": 5,
+                  "min": 1,
+                  "step": 1,
                   "step_type": "float"
                 },
                 "required": false,
@@ -1959,7 +1856,7 @@
                     "args": {
                       "urls": {
                         "default": "",
-                        "description": "",
+                        "description": "Enter one or more URLs to crawl recursively, by clicking the '+' button.",
                         "items": {
                           "type": "string"
                         },
@@ -1967,10 +1864,11 @@
                         "type": "array"
                       }
                     },
-                    "description": "URL. fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "display_description": "URL. fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "description": "Fetch content from one or more web pages, following links recursively.",
+                    "display_description": "Fetch content from one or more web pages, following links recursively.",
                     "display_name": "fetch_content",
                     "name": "fetch_content",
+                    "readonly": false,
                     "status": true,
                     "tags": [
                       "fetch_content"
@@ -1980,7 +1878,7 @@
                     "args": {
                       "urls": {
                         "default": "",
-                        "description": "",
+                        "description": "Enter one or more URLs to crawl recursively, by clicking the '+' button.",
                         "items": {
                           "type": "string"
                         },
@@ -1988,34 +1886,14 @@
                         "type": "array"
                       }
                     },
-                    "description": "URL. fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "display_description": "URL. fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "display_name": "fetch_content_text",
-                    "name": "fetch_content_text",
+                    "description": "Fetch content from one or more web pages, following links recursively.",
+                    "display_description": "Fetch content from one or more web pages, following links recursively.",
+                    "display_name": "as_message",
+                    "name": "as_message",
+                    "readonly": false,
                     "status": true,
                     "tags": [
-                      "fetch_content_text"
-                    ]
-                  },
-                  {
-                    "args": {
-                      "urls": {
-                        "default": "",
-                        "description": "",
-                        "items": {
-                          "type": "string"
-                        },
-                        "title": "Urls",
-                        "type": "array"
-                      }
-                    },
-                    "description": "URL. as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "display_description": "URL. as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "display_name": "as_dataframe",
-                    "name": "as_dataframe",
-                    "status": true,
-                    "tags": [
-                      "as_dataframe"
+                      "as_message"
                     ]
                   }
                 ]
@@ -2067,9 +1945,9 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-N9CXl",
+        "id": "URL-mbCdn",
         "measured": {
-          "height": 523,
+          "height": 290,
           "width": 320
         },
         "position": {
@@ -2081,7 +1959,7 @@
       },
       {
         "data": {
-          "id": "note-tZG9P",
+          "id": "note-yhn5a",
           "node": {
             "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent retrieves content and writes reports about financial queries.\n\n## Prerequisites\n\n* [Tavily AI Search key](https://docs.tavily.com/welcome)\n* [SambaNova API key](https://cloud.sambanova.ai/) \n\n## Quickstart\n\n1. In both **Agent** components and **SambaNova** component, add your SambaNova API key. \nIn the **Model Provider** field, select **Sambanova**, and select a model.\n3. In the **Tavily Search** component, add your **Tavily API key**.\n4. Click the **Playground** and ask `Why did Nvidia stock drop in January?`",
             "display_name": "",
@@ -2094,10 +1972,10 @@
         },
         "dragging": false,
         "height": 630,
-        "id": "note-tZG9P",
+        "id": "note-yhn5a",
         "measured": {
           "height": 630,
-          "width": 479
+          "width": 478
         },
         "position": {
           "x": -1119.9423274254439,
@@ -2110,7 +1988,7 @@
       },
       {
         "data": {
-          "id": "SambaNovaModel-NEyqD",
+          "id": "SambaNovaModel-8WRTL",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2137,7 +2015,7 @@
             "frozen": false,
             "icon": "SambaNova",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {
               "keywords": [
                 "model",
@@ -2417,9 +2295,9 @@
           "type": "SambaNovaModel"
         },
         "dragging": false,
-        "id": "SambaNovaModel-NEyqD",
+        "id": "SambaNovaModel-8WRTL",
         "measured": {
-          "height": 525,
+          "height": 450,
           "width": 320
         },
         "position": {
@@ -2431,7 +2309,7 @@
       },
       {
         "data": {
-          "id": "Agent-cGZsD",
+          "id": "Agent-J7aBZ",
           "node": {
             "base_classes": [
               "Message"
@@ -2476,7 +2354,7 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -2485,8 +2363,11 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
+                "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2614,6 +2495,7 @@
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
@@ -2803,6 +2685,7 @@
                 "display_name": "Mode",
                 "dynamic": false,
                 "info": "Operation mode: Store messages or Retrieve messages.",
+                "input_types": [],
                 "name": "mode",
                 "options": [
                   "Retrieve",
@@ -3009,6 +2892,7 @@
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Filter by sender type.",
+                "input_types": [],
                 "name": "sender_type",
                 "options": [
                   "Machine",
@@ -3193,21 +3077,21 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-cGZsD",
+        "id": "Agent-J7aBZ",
         "measured": {
-          "height": 624,
+          "height": 593,
           "width": 320
         },
         "position": {
           "x": -114.7705455447527,
           "y": 395.9726937371793
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-wqbpC",
+          "id": "Agent-oCAnt",
           "node": {
             "base_classes": [
               "Message"
@@ -3252,7 +3136,7 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -3261,8 +3145,11 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
+                "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3390,6 +3277,7 @@
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
@@ -3579,6 +3467,7 @@
                 "display_name": "Mode",
                 "dynamic": false,
                 "info": "Operation mode: Store messages or Retrieve messages.",
+                "input_types": [],
                 "name": "mode",
                 "options": [
                   "Retrieve",
@@ -3785,6 +3674,7 @@
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Filter by sender type.",
+                "input_types": [],
                 "name": "sender_type",
                 "options": [
                   "Machine",
@@ -3969,9 +3859,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-wqbpC",
+        "id": "Agent-oCAnt",
         "measured": {
-          "height": 624,
+          "height": 593,
           "width": 320
         },
         "position": {
@@ -3983,7 +3873,7 @@
       },
       {
         "data": {
-          "id": "Prompt-er8QV",
+          "id": "Prompt-GCeTu",
           "node": {
             "base_classes": [
               "Message"
@@ -4012,6 +3902,7 @@
             "is_input": null,
             "is_output": null,
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "name": "",
@@ -4147,9 +4038,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-er8QV",
+        "id": "Prompt-GCeTu",
         "measured": {
-          "height": 433,
+          "height": 386,
           "width": 320
         },
         "position": {
@@ -4161,7 +4052,7 @@
       },
       {
         "data": {
-          "id": "Prompt-AdpTy",
+          "id": "Prompt-BghS1",
           "node": {
             "base_classes": [
               "Message"
@@ -4190,6 +4081,7 @@
             "is_input": null,
             "is_output": null,
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "name": "",
@@ -4325,9 +4217,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-AdpTy",
+        "id": "Prompt-BghS1",
         "measured": {
-          "height": 433,
+          "height": 386,
           "width": 320
         },
         "position": {
@@ -4339,15 +4231,16 @@
       }
     ],
     "viewport": {
-      "x": 402.8529727761044,
-      "y": 359.62391032755147,
-      "zoom": 0.5103514759965421
+      "x": 443.41452386254014,
+      "y": 287.7203359909025,
+      "zoom": 0.3828602258274036
     }
   },
   "description": "Financial assistant chatbot that uses specialized agents to research for financial information",
   "endpoint_name": null,
+  "id": "45fad7d2-2a24-4049-ad1b-6d800f5cc4c6",
   "is_component": false,
-  "last_tested_version": "1.3.4",
+  "last_tested_version": "1.4.3",
   "name": "Financial Agent",
   "tags": [
     "assistants",
