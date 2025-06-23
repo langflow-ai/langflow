@@ -34,7 +34,7 @@ Langflow requires [Python 3.10 to 3.13](https://www.python.org/downloads/release
 1. To install Langflow, run:
 
 ```shell
-uv pip install langflow
+uv pip install langflow -U 
 ```
 
 2. To run Langflow, run:
