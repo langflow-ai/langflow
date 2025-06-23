@@ -1101,7 +1101,7 @@
               },
               "system_message": {
                 "_input_type": "MessageTextInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
