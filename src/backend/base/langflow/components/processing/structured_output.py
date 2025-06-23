@@ -29,7 +29,7 @@ class StructuredOutputComponent(Component):
             input_types=["LanguageModel"],
             required=True,
         ),
-        MessageTextInput(
+        MultilineInput(
             name="input_value",
             display_name="Input Message",
             info="The input message to the language model.",
@@ -41,14 +41,13 @@ class StructuredOutputComponent(Component):
             display_name="Format Instructions",
             info="The instructions to the language model for formatting the output.",
             value=(
-                "You are an AI system designed to extract structured information from unstructured text."
-                "Given the input_text, return a JSON object with predefined keys based on the expected structure."
-                "Extract values accurately and format them according to the specified type "
-                "(e.g., string, integer, float, date)."
-                "If a value is missing or cannot be determined, return a default "
-                "(e.g., null, 0, or 'N/A')."
-                "If multiple instances of the expected structure exist within the input_text, "
-                "stream each as a separate JSON object."
+                "You are an AI that extracts one structured JSON object from unstructured text. "
+                "Use a predefined schema with expected types (str, int, float, bool, dict). "
+                "If multiple structures exist, extract only the first most complete one. "
+                "Fill missing or ambiguous values with defaults: null for missing values. "
+                "Ignore duplicates and partial repeats. "
+                "Always return one valid JSON, never throw errors or return multiple objects."
+                "Output: A single well-formed JSON object, and nothing else."
             ),
             required=True,
             advanced=True,
