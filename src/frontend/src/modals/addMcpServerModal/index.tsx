@@ -12,6 +12,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs-button";
 import { Textarea } from "@/components/ui/textarea";
+import { MAX_MCP_SERVER_NAME_LENGTH } from "@/constants/constants";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-server";
 import { CustomLink } from "@/customization/components/custom-link";
@@ -134,7 +135,7 @@ export default function AddMcpServerModal({
         "snake_case",
         "no_blank",
         "lowercase",
-      ]).slice(0, 20);
+      ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
       try {
         await modifyMCPServer({
           name,
@@ -168,7 +169,7 @@ export default function AddMcpServerModal({
         "snake_case",
         "no_blank",
         "lowercase",
-      ]).slice(0, 20);
+      ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
       try {
         await modifyMCPServer({
           name,
@@ -202,7 +203,7 @@ export default function AddMcpServerModal({
           "snake_case",
           "no_blank",
           "lowercase",
-        ]).slice(0, 20),
+        ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH),
       }));
     } catch (e: any) {
       setError(e.message || "Invalid input");

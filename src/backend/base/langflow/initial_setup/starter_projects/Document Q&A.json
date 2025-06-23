@@ -412,7 +412,8 @@
               }
             }
           },
-          "type": "ChatInput"
+          "type": "ChatInput",
+          "selected_output": "message"
         },
         "dragging": false,
         "height": 234,
@@ -812,6 +813,20 @@
                   "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Raw Content",
+                "group_outputs": false,
+                "method": "load_files_message",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -1015,7 +1030,8 @@
             },
             "tool_mode": false
           },
-          "type": "File"
+          "type": "File",
+          "selected_output": "dataframe"
         },
         "dragging": false,
         "height": 232,
@@ -1172,7 +1188,8 @@
             },
             "tool_mode": false
           },
-          "type": "Prompt"
+          "type": "Prompt",
+          "selected_output": "prompt"
         },
         "dragging": false,
         "height": 347,
@@ -1567,7 +1584,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "OpenAIModel"
+          "type": "OpenAIModel",
+          "selected_output": "text_output"
         },
         "dragging": false,
         "id": "OpenAIModel-Xctjl",
@@ -1741,7 +1759,8 @@
             "tool_mode": false
           },
           "showNode": true,
-          "type": "parser"
+          "type": "parser",
+          "selected_output": "parsed_text"
         },
         "dragging": false,
         "id": "parser-mO32W",

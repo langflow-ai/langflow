@@ -94,6 +94,7 @@ class PlaceholderGraph(NamedTuple):
 class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
+    selected_output: str | None = None
     code_class_base_inheritance: ClassVar[str] = "Component"
 
     def __init__(self, **kwargs) -> None:
@@ -802,7 +803,10 @@ class Component(CustomComponent):
 
     def _validate_outputs(self) -> None:
         # Raise Error if some rule isn't met
-        pass
+        if self.selected_output is not None and self.selected_output not in self._outputs_map:
+            output_names = ", ".join(list(self._outputs_map.keys()))
+            msg = f"selected_output '{self.selected_output}' is not valid. Must be one of: {output_names}"
+            raise ValueError(msg)
 
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
@@ -868,9 +872,15 @@ class Component(CustomComponent):
 
         frontend_node.validate_component()
         frontend_node.set_base_classes_from_outputs()
+
+        # Get the node dictionary and add selected_output if specified
+        node_dict = frontend_node.to_dict(keep_name=False)
+        if self.selected_output is not None:
+            node_dict["selected_output"] = self.selected_output
+
         return {
             "data": {
-                "node": frontend_node.to_dict(keep_name=False),
+                "node": node_dict,
                 "type": self.name or self.__class__.__name__,
                 "id": self._id,
             },
@@ -1418,7 +1428,14 @@ class Component(CustomComponent):
                     case "error":
                         self._event_manager.on_error(data=data_dict)
                     case "remove_message":
-                        self._event_manager.on_remove_message(data={"id": data_dict["id"]})
+                        # Check if id exists in data_dict before accessing it
+                        if "id" in data_dict:
+                            self._event_manager.on_remove_message(data={"id": data_dict["id"]})
+                        else:
+                            # If no id, try to get it from the message object or id_ parameter
+                            message_id = getattr(message, "id", None) or id_
+                            if message_id:
+                                self._event_manager.on_remove_message(data={"id": message_id})
                     case _:
                         self._event_manager.on_message(data=data_dict)
 
