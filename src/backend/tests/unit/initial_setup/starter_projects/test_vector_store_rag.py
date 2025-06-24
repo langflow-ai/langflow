@@ -6,7 +6,7 @@ import pytest
 from langflow.components.data import FileComponent
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
 from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.components.languagemodels import OpenAIModelComponent
+from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 from langflow.components.processing import ParseDataComponent, PromptComponent
 from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
@@ -148,9 +148,9 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     # Verify each expected node exists with correct type
     for node_id, expected_type in expected_nodes.items():
         assert node_id in node_map, f"Missing node {node_id}"
-        assert node_map[node_id]["type"] == expected_type, (
-            f"Node {node_id} has incorrect type. Expected {expected_type}, got {node_map[node_id]['type']}"
-        )
+        assert (
+            node_map[node_id]["type"] == expected_type
+        ), f"Node {node_id} has incorrect type. Expected {expected_type}, got {node_map[node_id]['type']}"
 
     # Verify all nodes in graph are expected
     unexpected_nodes = set(node_map.keys()) - set(expected_nodes.keys())
@@ -230,9 +230,9 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
         f"Vertices mismatch: {len(ingestion_graph_copy.vertices)} "
         f"!= {len(ingestion_graph.vertices)} + {len(rag_graph.vertices)}"
     )
-    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(rag_graph.edges), (
-        f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
-    )
+    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(
+        rag_graph.edges
+    ), f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
 
     combined_graph_dump = ingestion_graph_copy.dump(
         name="Combined Graph", description="Graph for data ingestion and RAG", endpoint_name="combined"
