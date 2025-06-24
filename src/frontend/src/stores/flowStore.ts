@@ -39,6 +39,7 @@ import {
   checkChatInput,
   cleanEdges,
   detectBrokenEdgesEdges,
+  getConnectedSubgraph,
   getHandleId,
   getNodeId,
   scapeJSONParse,
@@ -46,6 +47,7 @@ import {
   unselectAllNodesEdges,
   updateGroupRecursion,
   validateEdge,
+  validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
@@ -661,12 +663,39 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     const edges = get().edges;
     let errors: string[] = [];
-    for (const edge of edges) {
-      const errorsEdge = validateEdge(edge, get().nodes, edges);
+
+    // Only validate upstream nodes/edges if startNodeId is provided
+    let nodesToValidate = get().nodes;
+    let edgesToValidate = edges;
+    if (startNodeId) {
+      const downstream = getConnectedSubgraph(
+        startNodeId,
+        get().nodes,
+        edges,
+        "downstream",
+      );
+      nodesToValidate = downstream.nodes;
+      edgesToValidate = downstream.edges;
+    } else if (stopNodeId) {
+      const upstream = getConnectedSubgraph(
+        stopNodeId,
+        get().nodes,
+        edges,
+        "upstream",
+      );
+      nodesToValidate = upstream.nodes;
+      edgesToValidate = upstream.edges;
+    }
+
+    for (const edge of edgesToValidate) {
+      const errorsEdge = validateEdge(edge, nodesToValidate, edgesToValidate);
       if (errorsEdge.length > 0) {
         errors.push(errorsEdge.join("\n"));
       }
     }
+    const errorsObjs = validateNodes(nodesToValidate, edgesToValidate);
+
+    errors = errors.concat(errorsObjs.map((obj) => obj.errors).flat());
     if (errors.length > 0) {
       setErrorData({
         title: MISSED_ERROR_ALERT,
