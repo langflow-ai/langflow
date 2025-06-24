@@ -5,34 +5,42 @@ slug: /release notes
 
 This page summarizes significant changes and updates to Langflow.
 
+For the complete changelog, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
+
 ## 1.5
 
-### New Language Model and Embedding Model components
+The following updates are included in this version:
 
-We moved **Model** and **Embedding Model** components to **Bundles** in the Langflow sidebar. The **Language Model** and **Embedding Model** components are satisfactory for most use cases, and the single-provider components are still available for your flows.
-For more information, see the [Language model](/components-models) and [Embedding model](/components-embedding-models) components.
+### New features and enhancements
 
-### MCP one-click installation
+- New Language Model and Embedding Model components
 
-In the **MCP server** page, click **Auto install** to install your Langflow MCP server to Claude or Cursor clients with just one click.
-For more information, see [MCP server](/mcp-server).
+    We moved **Model** and **Embedding Model** components to **Bundles** in the Langflow sidebar. The **Language Model** and **Embedding Model** components are satisfactory for most use cases, and the single-provider components are still available for your flows.
+    For more information, see the [Language model](/components-models) and [Embedding model](/components-embedding-models) components.
 
-### Input schema replaces temporary overrides
+- MCP one-click installation
 
-Instead of managing the tweaks values in the **API access** pane, the **Input schema** pane adds the default values to the code snippets for this flow. This provides a template for sending the request in your language of choice, with a default value for you to modify to suit your application's needs.
+    In the **MCP server** page, click **Auto install** to install your Langflow MCP server to Claude or Cursor clients with just one click.
+    For more information, see [MCP server](/mcp-server).
 
-### Tools category is now legacy
+- Input schema replaces temporary overrides
 
-All components in the **Tools** category are now **Legacy** or have moved.
+    Instead of managing the tweaks values in the **API access** pane, the **Input schema** pane adds the default values to the code snippets for this flow. This provides a template for sending the request in your language of choice, with a default value for you to modify to suit your application's needs.
 
-The [MCP Connection](/components-data#mcp-connection) component is available in **Data components**.
+- Tools category is now legacy
 
-Many of the components performed the same functions, like web search and API requests, so we combined this functionality into single components:
+    All components in the **Tools** category are now **Legacy** or have moved.
 
-* To replace legacy search components like Bing Search and Google, use the [Web search](/components-data#web-search) component.
-* To replace legacy news aggregation components, use the [News search](/components-data#news-search) component.
+    The [MCP Connection](/mcp-client) component is available in **Data components**.
 
-For more information, see [Tools](/components-tools).
+    Many of the components performed the same functions, like web search and API requests, so we combined this functionality into single components:
+
+    * To replace legacy search components like Bing Search and Google, use the [Web search](/components-data#web-search) component.
+    * To replace legacy news aggregation components, use the [News search](/components-data#news-search) component.
+
+### New integrations and bundles
+
+- [Cleanlab integration](/integrations-cleanlab)
 
 ## 1.4.2
 
