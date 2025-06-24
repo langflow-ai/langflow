@@ -36,7 +36,8 @@ from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
-console = Console()
+# Initialize console with Windows-safe settings
+console = Console(legacy_windows=True, emoji=False) if platform.system() == "Windows" else Console()
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -47,6 +48,10 @@ class ProcessManager:
     def __init__(self):
         self.webapp_process = None
         self.shutdown_in_progress = False
+        if platform.system() == "Windows":
+            self._farewell_emoji = ":)"  # ASCII smiley
+        else:
+            self._farewell_emoji = "👋"  # Unicode wave
 
     # params are required for signal handlers, even if they are not used
     def handle_sigterm(self, _signum: int, _frame) -> None:
@@ -78,7 +83,20 @@ class ProcessManager:
                 logger.warning("Process didn't terminate gracefully, killing it.")
                 self.webapp_process.kill()
                 self.webapp_process.join()
+            self.print_farewell_message()
+
         sys.exit(0)
+
+    def print_farewell_message(self) -> None:
+        """Print a nice farewell message after shutdown is complete."""
+        # Clear any progress indicator output that might be on the current line
+        sys.stdout.write("\r")  # Move cursor to beginning of line
+        sys.stdout.write(" " * 80)  # Clear the line with spaces
+        sys.stdout.write("\r")  # Move cursor back to beginning
+
+        click.echo()
+        farewell = click.style(f"{self._farewell_emoji} See you next time!", fg="bright_blue", bold=True)
+        click.echo(farewell)
 
 
 # Create a single instance of ProcessManager
@@ -583,7 +601,26 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 
     message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
 
-    console.print(Panel.fit(message, border_style="#7528FC", padding=(1, 2)))
+    # Handle Unicode encoding errors on Windows
+    try:
+        console.print(Panel.fit(message, border_style="#7528FC", padding=(1, 2)))
+    except UnicodeEncodeError:
+        # Fallback to a simpler banner without emojis for Windows systems with encoding issues
+        fallback_message = (
+            f"Welcome to {package_name}\n\n"
+            "* GitHub: https://github.com/langflow-ai/langflow\n"
+            "# Discord: https://discord.com/invite/EqksyE2EX9\n\n"
+            f"{telemetry_text}\n\n"
+            f"[OK] Open Langflow -> {protocol}://{access_host}:{port}"
+        )
+        try:
+            console.print(Panel.fit(fallback_message, border_style="#7528FC", padding=(1, 2)))
+        except UnicodeEncodeError:
+            # Last resort: use logger instead of print
+            logger.info(f"Welcome to {package_name}")
+            logger.info("GitHub: https://github.com/langflow-ai/langflow")
+            logger.info("Discord: https://discord.com/invite/EqksyE2EX9")
+            logger.info(f"Open Langflow: {protocol}://{access_host}:{port}")
 
 
 @app.command()
@@ -776,8 +813,19 @@ def api_key_banner(unmasked_api_key) -> None:
         border_style="blue",
         expand=False,
     )
-    console = Console()
-    console.print(panel)
+    # Use Windows-safe console initialization
+    banner_console = Console(legacy_windows=True, emoji=False) if platform.system() == "Windows" else Console()
+
+    try:
+        banner_console.print(panel)
+    except UnicodeEncodeError:
+        # Fallback for Windows encoding issues
+        logger.info("API Key Created Successfully:")
+        logger.info(unmasked_api_key.api_key)
+        logger.info("This is the only time the API key will be displayed.")
+        logger.info("Make sure to store it in a secure location.")
+        ctrl_cmd = "Ctrl" if not is_mac else "Cmd"
+        logger.info(f"The API key has been copied to your clipboard. {ctrl_cmd} + V to paste it.")
 
 
 def main() -> None:
