@@ -63,7 +63,7 @@ For example, to connect **Chat Input**, **Language Model**, and **Chat Output** 
 
 ![Chat input and output connected to Language model component](/img/connect-component.png)
 
-**Message** handles send text strings between components, so these components will send text to each other.
+**Message** handles send text strings between components, so these components send text to each other.
 Additional data types include **Data** (<Icon name="Circle" size="16" aria-label="A red circle on the side of a component" style={{ color: '#ef4444', fill: '#ef4444' }}/>) and **DataFrame** (<Icon name="Circle" size="16" aria-label="A red circle on the side of a component" style={{ color: '#d72670', fill: '#d72670' }}/>).
 
 For more information, see [Components](/concepts-components).

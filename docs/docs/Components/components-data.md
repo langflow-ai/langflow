@@ -22,13 +22,13 @@ For example, to connect all three components to an Agent, do the following:
 3. Add the **News search**, **RSS reader**, and **Web Search** components to your flow.
 4. In all three components, enable **Tool Mode**.
 5. Connect the three components to the **Agent** component's **Tools** port.
-The flow looks like this:
+The flow looks like the following:
 
 ![Data components connected to agent](/img/connect-data-components-to-agent.png)
 
-6. Open the **Playground** and ask `Use the websearch component to get me an RSS feed of the latest news.`
+6. Open the **Playground** and enter `Use the websearch component to get me an RSS feed of the latest news.`
 The Agent uses the `perform_search` tool to return a list of RSS feeds.
-7. Ask for an RSS feed that interests you.
+7. Enter the name of an RSS feed that interests you.
 The Agent uses the `read_rss` tool to fetch and summarize the latest RSS feed.
 
 Data components bring in data from many sources to Langflow, output as DataFrames or as tools for Agents to use.
@@ -220,11 +220,11 @@ For information on the parameters, see the MCP server's documentation.
 5. In the **MCP connection** component, enable **Tool mode**.
 Connect the **MCP connection** component's **Toolset** port to an **Agent** component's **Tools** port.
 
-    The flow looks similar to this:
+    The flow looks similar to the following:
     ![MCP connection component](/img/component-mcp-stdio.png)
 
-6. Open the **Playground**.
-Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
+6. Open the **Playground**, and then ask the agent to summarize recent tech news. 
+The agent calls the MCP server function `fetch` and returns the summary.
 This confirms the MCP server is connected, and its tools are being used in Langflow.
 
 For more information, see [MCP server](/mcp-server).
@@ -246,7 +246,7 @@ The default value is `http://localhost:7860/api/v1/mcp/sse`.
 4. Click the **Tools** field.
 All of your flows are listed as tools.
 5. Enable **Tool Mode**, and then connect the **MCP connection** component to an agent component's tool port.
-The flow looks like this:
+The flow looks like the following:
 ![MCP component with SSE mode enabled](/img/component-mcp-sse-mode.png)
 6. Open the **Playground** and chat with your tool.
 The agent chooses the correct tool based on your query.
@@ -363,10 +363,10 @@ Result:
 4. In the **SQL Database** component's **Database URL** field, add the connection string for `test.db`, such as `sqlite:///test.db`.
 
 With this connection established, the **SQL Query** field now accepts SQL queries.
-Instead of manually entering SQL queries, let's connect this database to an agent as a **Tool** to query it with natural language.
+Instead of manually entering SQL queries, connect this database to an agent as a **Tool** to query it with natural language.
 
 5. In the **SQL Database** component, enable **Tool Mode**, and then connect it to an **Agent** component.
-The flow looks like this:
+The flow looks like the following:
 
 ![SQL database connected to agent](/img/component-sql-database.png)
 
@@ -418,7 +418,7 @@ To use this component in a flow, do the following:
 2. Connect the **Web search** component's output to a component that accepts the DataFrame input.
 3. Connect a **Type Convert** component to convert the DataFrame to a Message.
 4. In the **Type Convert** component, in the **Output Type** field, select **Message**.
-Your flow looks like this:
+Your flow looks like the following:
 
 ![Type convert web search output to chat](/img/component-type-convert-and-web-search.png)
 

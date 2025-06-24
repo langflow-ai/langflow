@@ -58,8 +58,8 @@ The response content depends on your flow. Make sure the endpoint returns a succ
 ### Input schema
 
 The **Input schema** pane displays the available input parameters for your flow.
-Enable individual input parameters in the pane to add a parameters and its default value to the JSON payloads of the code snippets.
-Enabling parameters in the **Input schema** pane does now allow modifications to the listed parameters.
+Enable individual input parameters in the pane to add a parameter and its default value to the JSON payloads of the code snippets.
+Enabling parameters in the **Input schema** pane does not allow modifications to the listed parameters.
 Instead, copy the code snippet from the **API access** pane into the text editor of your choice, and modify
 
 The **Endpoint name** field changes the endpoint name for your flow from the default UUID to the name you specify here.
