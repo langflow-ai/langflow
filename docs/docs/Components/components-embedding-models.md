@@ -280,7 +280,7 @@ To run an embeddings inference locally, see the [HuggingFace documentation](http
 
 To connect the local Hugging Face model to the **Hugging Face embeddings inference** component and use it in a flow, follow these steps:
 
-1. Create a [Vector store RAG flow](/starter-projects-vector-store-rag).
+1. Create a [Vector store RAG flow](/vector-store-rag).
 There are two embeddings models in this flow that you can replace with **Hugging Face** embeddings inference components.
 2. Replace both **OpenAI** embeddings model components with **Hugging Face** model components.
 3. Connect both **Hugging Face** components to the **Embeddings** ports of the **Astra DB vector store** components.
