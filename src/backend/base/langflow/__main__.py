@@ -10,6 +10,7 @@ import warnings
 from contextlib import suppress
 from ipaddress import ip_address
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 import httpx
@@ -35,6 +36,10 @@ from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
+
+if TYPE_CHECKING:
+    from langflow.services.database.service import DatabaseService
+    from langflow.services.settings.service import SettingsService
 
 console = Console()
 
@@ -587,6 +592,159 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 
 
 @app.command()
+def migration(
+    *,
+    test: bool = typer.Option(False, help="Run migrations in test mode (non-destructive)."),  # noqa: FBT003
+    fix: bool = typer.Option(False, help="Fix migrations (destructive operation)."),  # noqa: FBT003
+    backup: bool = typer.Option(False, help="Backup the SQLite database before migration."),  # noqa: FBT003
+    upgrade: str = typer.Option(None, help="Upgrade the database to the specified revision (e.g., 'head')."),
+    downgrade: str = typer.Option(None, help="Downgrade the database to the specified revision."),
+    force: bool = typer.Option(False, help="Force the operation without confirmation prompts."),  # noqa: FBT003
+) -> None:
+    """Perform migration operations. Only one operation can be specified: test, fix, backup, upgrade, or downgrade.
+
+    If no operation is specified, test migration is assumed.
+
+    Args:
+        test: Run migrations in test mode (non-destructive)
+        fix: Fix migrations (destructive operation)
+        backup: Backup the SQLite database before migration
+        upgrade: Upgrade the database to the specified revision
+        downgrade: Downgrade the database to the specified revision
+        force: Force the operation without confirmation prompts
+    """
+    settings_service = get_settings_service()
+    db_service = get_db_service()
+
+    # Determine which operation was requested
+    operations = {"test": test, "fix": fix, "backup": backup, "upgrade": bool(upgrade), "downgrade": bool(downgrade)}
+
+    # Get list of requested operations
+    requested_ops = [op for op, value in operations.items() if value]
+
+    # Default to test mode if no operation specified
+    if not requested_ops:
+        operations["test"] = True
+        requested_ops = ["test"]
+
+    # Validate only one operation requested
+    if len(requested_ops) > 1:
+        typer.echo("Please specify exactly one migration operation: test, fix, backup, upgrade, or downgrade.")
+        raise typer.Exit(code=1)
+
+    operation = requested_ops[0]
+
+    # For destructive operations, backup first if using SQLite
+    if (
+        not force
+        and operation in ["fix", "upgrade", "downgrade"]
+        and settings_service.settings.database_url.startswith("sqlite")
+    ):
+        if not typer.confirm("Would you like to backup the database before proceeding?"):
+            if not typer.confirm("Are you sure you want to proceed without a backup?"):
+                raise typer.Abort(exit_code=0)
+        else:
+            _handle_backup(settings_service)
+    # Handle operations using match-case
+    match operation:
+        case "test":
+            typer.echo("Running test migration...")
+            asyncio.run(_migration(test=True, fix=False))
+            return
+
+        case "fix":
+            if not force and not typer.confirm(
+                "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
+            ):
+                raise typer.Abort(exit_code=0)
+            typer.echo("Applying migrations (fix mode)...")
+            asyncio.run(_migration(test=False, fix=True))
+            return
+
+        case "backup":
+            _handle_backup(settings_service)
+            return
+
+        case "upgrade" | "downgrade":
+            revision = upgrade if operation == "upgrade" else downgrade
+            _handle_db_version_change(operation=operation, revision=revision, db_service=db_service, force=force)
+            return
+
+
+def _handle_backup(settings_service: "SettingsService") -> None:
+    """Handle database backup operation.
+
+    This function creates a backup of the SQLite database files (both main and pre-release)
+    in the same directory as the script. Only works with SQLite databases.
+
+    Args:
+        settings_service: The settings service instance containing database configuration
+    """
+    if not settings_service.settings.database_url.startswith("sqlite"):
+        typer.echo(
+            "Automatic backup is only supported for SQLite databases. Please backup your PostgreSQL database manually."
+        )
+        return
+
+    import shutil
+    from pathlib import Path
+
+    cache_dir = Path(settings_service.settings.config_dir)
+    destination_folder = Path(__file__).parent
+
+    # Backup main database
+    db_path = cache_dir / "langflow.db"
+    if db_path.exists():
+        shutil.copy(db_path, destination_folder)
+        typer.echo(f"Database file '{db_path.name}' backed up to {destination_folder}")
+    else:
+        typer.echo("SQLite database not found in the config directory.")
+
+    # Backup pre-release database
+    pre_db_path = cache_dir / "langflow-pre.db"
+    if pre_db_path.exists():
+        shutil.copy(pre_db_path, destination_folder)
+        typer.echo(f"Pre-release database file '{pre_db_path.name}' backed up to {destination_folder}")
+    else:
+        typer.echo("Pre-release SQLite database not found in the config directory.")
+
+
+def _handle_db_version_change(operation: str, revision: str, db_service: "DatabaseService", *, force: bool) -> None:
+    """Handle database upgrade/downgrade operations.
+
+    This function handles the upgrade and downgrade operations for the database
+    using Alembic. It provides user confirmation and feedback during the process.
+
+    Args:
+        operation: The operation to perform ("upgrade" or "downgrade")
+        revision: The target revision for the operation
+        db_service: The database service instance
+        force: Whether to skip confirmation prompts
+    """
+    from alembic import command
+    from alembic.config import Config
+
+    operation_gerund = "upgrading" if operation == "upgrade" else "downgrading"
+
+    if not force and not typer.confirm(f"Are you sure you want to {operation} the database to revision '{revision}'?"):
+        raise typer.Abort()  # noqa: RSE102
+
+    typer.echo(f"{operation_gerund.capitalize()} database to revision '{revision}'...")
+
+    with db_service.alembic_log_path.open("w", encoding="utf-8") as buffer:
+        alembic_cfg = Config(stdout=buffer)
+        alembic_cfg.set_main_option("script_location", str(db_service.script_location))
+        alembic_cfg.set_main_option("sqlalchemy.url", db_service.database_url.replace("%", "%%"))
+
+        if operation == "upgrade":
+            command.upgrade(alembic_cfg, revision)
+        else:
+            command.downgrade(alembic_cfg, revision)
+
+    typer.echo(f"Database {operation} completed successfully.")
+
+
+@app.command()
 def superuser(
     username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
     password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),
@@ -663,27 +821,16 @@ def copy_db() -> None:
 async def _migration(*, test: bool, fix: bool) -> None:
     await initialize_services(fix_migration=fix)
     db_service = get_db_service()
-    if not test:
+    if test:
+        # In test mode, only run the test
+        results = await db_service.run_migrations_test()
+        display_results(results)
+    else:
+        # In non-test mode, run the actual migration
         await db_service.run_migrations()
-    results = await db_service.run_migrations_test()
-    display_results(results)
-
-
-@app.command()
-def migration(
-    test: bool = typer.Option(default=True, help="Run migrations in test mode."),  # noqa: FBT001
-    fix: bool = typer.Option(  # noqa: FBT001
-        default=False,
-        help="Fix migrations. This is a destructive operation, and should only be used if you know what you are doing.",
-    ),
-) -> None:
-    """Run or test migrations."""
-    if fix and not typer.confirm(
-        "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
-    ):
-        raise typer.Abort
-
-    asyncio.run(_migration(test=test, fix=fix))
+        # Then run test to verify the migration worked
+        results = await db_service.run_migrations_test()
+        display_results(results)
 
 
 @app.command()
