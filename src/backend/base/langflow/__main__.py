@@ -36,7 +36,12 @@ from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
-console = Console()
+# Initialize console with Windows-safe settings
+if platform.system() == "Windows":
+    # Use legacy Windows console mode and disable emoji processing to avoid Unicode issues
+    console = Console(legacy_windows=True, emoji=False)
+else:
+    console = Console()
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -600,7 +605,20 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 
     message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
 
-    console.print(Panel.fit(message, border_style="#7528FC", padding=(1, 2)))
+    # Handle Unicode encoding errors on Windows
+    try:
+        console.print(Panel.fit(message, border_style="#7528FC", padding=(1, 2)))
+    except UnicodeEncodeError:
+        # Fallback to a simpler banner without emojis for Windows systems with encoding issues
+        fallback_message = f"Welcome to {package_name}\n\n* GitHub: https://github.com/langflow-ai/langflow\n# Discord: https://discord.com/invite/EqksyE2EX9\n\n{telemetry_text}\n\n[OK] Open Langflow -> {protocol}://{access_host}:{port}"
+        try:
+            console.print(Panel.fit(fallback_message, border_style="#7528FC", padding=(1, 2)))
+        except UnicodeEncodeError:
+            # Last resort: print without Rich formatting
+            print(f"Welcome to {package_name}")
+            print(f"GitHub: https://github.com/langflow-ai/langflow")
+            print(f"Discord: https://discord.com/invite/EqksyE2EX9")
+            print(f"Open Langflow: {protocol}://{access_host}:{port}")
 
 
 @app.command()
@@ -793,8 +811,21 @@ def api_key_banner(unmasked_api_key) -> None:
         border_style="blue",
         expand=False,
     )
-    console = Console()
-    console.print(panel)
+    # Use Windows-safe console initialization
+    if platform.system() == "Windows":
+        banner_console = Console(legacy_windows=True, emoji=False)
+    else:
+        banner_console = Console()
+    
+    try:
+        banner_console.print(panel)
+    except UnicodeEncodeError:
+        # Fallback for Windows encoding issues
+        print("API Key Created Successfully:")
+        print(f"{unmasked_api_key.api_key}")
+        print("This is the only time the API key will be displayed.")
+        print("Make sure to store it in a secure location.")
+        print(f"The API key has been copied to your clipboard. {'Ctrl' if not is_mac else 'Cmd'} + V to paste it.")
 
 
 def main() -> None:
