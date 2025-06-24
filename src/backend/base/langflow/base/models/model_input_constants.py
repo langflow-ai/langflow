@@ -19,6 +19,7 @@ class ModelProvidersDict(TypedDict):
     prefix: str
     component_class: LCModelComponent
     icon: str
+    is_active: bool
 
 
 def get_filtered_inputs(component_class):
@@ -188,6 +189,7 @@ try:
         "prefix": "",
         "component_class": OpenAIModelComponent(),
         "icon": OpenAIModelComponent.icon,
+        "is_active": True,
     }
 except ImportError:
     pass
@@ -200,6 +202,7 @@ try:
         "prefix": "",
         "component_class": AzureChatOpenAIComponent(),
         "icon": AzureChatOpenAIComponent.icon,
+        "is_active": False,
     }
 except ImportError:
     pass
@@ -212,6 +215,7 @@ try:
         "prefix": "",
         "component_class": GroqModel(),
         "icon": GroqModel.icon,
+        "is_active": True,
     }
 except ImportError:
     pass
@@ -224,6 +228,7 @@ try:
         "prefix": "",
         "component_class": AnthropicModelComponent(),
         "icon": AnthropicModelComponent.icon,
+        "is_active": True,
     }
 except ImportError:
     pass
@@ -236,6 +241,7 @@ try:
         "prefix": "",
         "component_class": NVIDIAModelComponent(),
         "icon": NVIDIAModelComponent.icon,
+        "is_active": False,
     }
 except ImportError:
     pass
@@ -248,6 +254,7 @@ try:
         "prefix": "",
         "component_class": AmazonBedrockComponent(),
         "icon": AmazonBedrockComponent.icon,
+        "is_active": False,
     }
 except ImportError:
     pass
@@ -260,6 +267,7 @@ try:
         "prefix": "",
         "component_class": GoogleGenerativeAIComponent(),
         "icon": GoogleGenerativeAIComponent.icon,
+        "is_active": True,
     }
 except ImportError:
     pass
@@ -272,17 +280,20 @@ try:
         "prefix": "",
         "component_class": SambaNovaComponent(),
         "icon": SambaNovaComponent.icon,
+        "is_active": False,
     }
 except ImportError:
     pass
 
-MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
-ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
+# Expose only active providers ----------------------------------------------
+ACTIVE_MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {
+    name: prov for name, prov in MODEL_PROVIDERS_DICT.items() if prov.get("is_active", True)
+}
+
+MODEL_PROVIDERS: list[str] = list(ACTIVE_MODEL_PROVIDERS_DICT.keys())
+
+ALL_PROVIDER_FIELDS: list[str] = [field for prov in ACTIVE_MODEL_PROVIDERS_DICT.values() for field in prov["fields"]]
 
 MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name"]
 
-
-MODELS_METADATA = {
-    key: {"icon": MODEL_PROVIDERS_DICT[key]["icon"] if key in MODEL_PROVIDERS_DICT else None}
-    for key in MODEL_PROVIDERS_DICT
-}
+MODELS_METADATA = {name: {"icon": prov["icon"]} for name, prov in ACTIVE_MODEL_PROVIDERS_DICT.items()}
