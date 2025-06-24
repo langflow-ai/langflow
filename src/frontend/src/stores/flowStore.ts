@@ -658,7 +658,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     get().setIsBuilding(true);
     set({ flowBuildStatus: {} });
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
-    const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
 
     const edges = get().edges;
@@ -667,43 +666,24 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     for (const edge of edges) {
       const errorsEdge = validateEdge(edge, get().nodes, edges);
       if (errorsEdge.length > 0) {
-        error = true;
         errors.push(errorsEdge.join("\n"));
-        useAlertStore.getState().addNotificationToHistory({
-          title: MISSED_ERROR_ALERT,
-          type: "error",
-          list: errorsEdge,
-        });
       }
     }
-    if (error) {
+    const nodes = get().nodes;
+    const errorsObjs = validateNodes(nodes, edges);
+
+    errors = errors.concat(errorsObjs.map((obj) => obj.errors).flat());
+    if (errors.length > 0) {
+      error = true;
+      setErrorData({
+        title: MISSED_ERROR_ALERT,
+        list: errors,
+      });
       get().setIsBuilding(false);
-      get().setBuildInfo({ error: errors, success: false });
       throw new Error("Invalid components");
     }
 
-    function validateSubgraph(nodes: string[]) {
-      const errorsObjs = validateNodes(
-        get().nodes.filter((node) => nodes.includes(node.id)),
-        get().edges,
-      );
-
-      const errors = errorsObjs.map((obj) => obj.errors).flat();
-      if (errors.length > 0) {
-        get().setBuildInfo({ error: errors, success: false });
-        useAlertStore.getState().addNotificationToHistory({
-          title: MISSED_ERROR_ALERT,
-          type: "error",
-          list: errors,
-        });
-        get().setIsBuilding(false);
-        const ids = errorsObjs.map((obj) => obj.id).flat();
-
-        get().updateBuildStatus(ids, BuildStatus.ERROR);
-        throw new Error("Invalid components");
-      }
-      // get().updateEdgesRunningByNodes(nodes, true);
-    }
+    function validateSubgraph() {}
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
       status: BuildStatus,
