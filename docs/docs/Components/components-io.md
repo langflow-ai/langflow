@@ -34,7 +34,7 @@ It can optionally store the message in a chat history.
 |should_store_message|Store Messages|Store the message in the history.|
 |sender|Sender Type|The type of sender.|
 |sender_name|Sender Name|The name of the sender.|
-|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter is used.|
+|session_id|Session ID|The unique identifier for the chat session. If empty, the current session ID parameter is used.|
 |files|Files|The files to be sent with the message.|
 |background_color|Background Color|The background color of the icon.|
 |chat_icon|Icon|The icon of the message.|
@@ -111,7 +111,7 @@ The component accepts the following input types.
 |should_store_message|Store Messages|The flag to store the message in the history.|
 |sender|Sender Type|The type of sender.|
 |sender_name|Sender Name|The name of the sender.|
-|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter is used.|
+|session_id|Session ID|The unique identifier for the chat session. If empty, the current session ID parameter is used.|
 |data_template|Data Template|The template to convert Data to Text. If the option is left empty, it is dynamically set to the Data's text key.|
 |background_color|Background Color|The background color of the icon.|
 |chat_icon|Icon|The icon of the message.|
@@ -262,3 +262,7 @@ curl --request POST \
 
 To confirm your command is using the tweak, navigate to the **Logs** pane and view the request from the **Chat Input** component.
 The value for `should_store_message` is `false`.
+
+## See also
+
+- [Session ID](/session-id)
