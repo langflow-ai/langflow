@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-FCQmM",
+            "id": "ChatInput-xyuQP",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-AkxJs",
+            "id": "OpenAIModel-uwgKb",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-FCQmM{œdataTypeœ:œChatInputœ,œidœ:œChatInput-FCQmMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-AkxJs{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-AkxJsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-xyuQP{œdataTypeœ:œChatInputœ,œidœ:œChatInput-xyuQPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-uwgKb{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-uwgKbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-FCQmM",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-FCQmMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenAIModel-AkxJs",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-AkxJsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "source": "ChatInput-xyuQP",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-xyuQPœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-uwgKb",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-uwgKbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-ZC67m",
+            "id": "Prompt-2aw7O",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-AkxJs",
+            "id": "OpenAIModel-uwgKb",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-ZC67m{œdataTypeœ:œPromptœ,œidœ:œPrompt-ZC67mœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-AkxJs{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-AkxJsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-2aw7O{œdataTypeœ:œPromptœ,œidœ:œPrompt-2aw7Oœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-uwgKb{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-uwgKbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-ZC67m",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-ZC67mœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenAIModel-AkxJs",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-AkxJsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "source": "Prompt-2aw7O",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-2aw7Oœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-uwgKb",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-uwgKbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-AkxJs",
+            "id": "OpenAIModel-uwgKb",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-7dc41",
+            "id": "ChatOutput-cBToy",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -80,28 +80,28 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-AkxJs{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-AkxJsœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-7dc41{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-7dc41œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-uwgKb{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uwgKbœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-cBToy{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-cBToyœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-AkxJs",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-AkxJsœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-7dc41",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-7dc41œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "source": "OpenAIModel-uwgKb",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uwgKbœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-cBToy",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-cBToyœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "Memory",
-            "id": "Memory-FTgzq",
-            "name": "messages_text",
+            "dataType": "TypeConverterComponent",
+            "id": "TypeConverterComponent-6kqHz",
+            "name": "message_output",
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
             "fieldName": "memory",
-            "id": "Prompt-ZC67m",
+            "id": "Prompt-2aw7O",
             "inputTypes": [
               "Message",
               "Text"
@@ -109,18 +109,48 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__Memory-FTgzq{œdataTypeœ:œMemoryœ,œidœ:œMemory-FTgzqœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-ZC67m{œfieldNameœ:œmemoryœ,œidœ:œPrompt-ZC67mœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-TypeConverterComponent-6kqHz{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-6kqHzœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-2aw7O{œfieldNameœ:œmemoryœ,œidœ:œPrompt-2aw7Oœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Memory-FTgzq",
-        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-FTgzqœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-ZC67m",
-        "targetHandle": "{œfieldNameœ:œmemoryœ,œidœ:œPrompt-ZC67mœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "source": "TypeConverterComponent-6kqHz",
+        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-6kqHzœ, œnameœ: œmessage_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-2aw7O",
+        "targetHandle": "{œfieldNameœ: œmemoryœ, œidœ: œPrompt-2aw7Oœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Memory",
+            "id": "Memory-Esy2a",
+            "name": "dataframe",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "TypeConverterComponent-6kqHz",
+            "inputTypes": [
+              "Message",
+              "Data",
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-Memory-Esy2a{œdataTypeœ:œMemoryœ,œidœ:œMemory-Esy2aœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-TypeConverterComponent-6kqHz{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-6kqHzœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Memory-Esy2a",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-Esy2aœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "TypeConverterComponent-6kqHz",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-6kqHzœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-FCQmM",
+          "id": "ChatInput-xyuQP",
           "node": {
             "base_classes": [
               "Message"
@@ -405,7 +435,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-FCQmM",
+        "id": "ChatInput-xyuQP",
         "measured": {
           "height": 234,
           "width": 320
@@ -426,7 +456,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-7dc41",
+          "id": "ChatOutput-cBToy",
           "node": {
             "base_classes": [
               "Message"
@@ -709,7 +739,7 @@
         },
         "dragging": true,
         "height": 234,
-        "id": "ChatOutput-7dc41",
+        "id": "ChatOutput-cBToy",
         "measured": {
           "height": 234,
           "width": 320
@@ -728,7 +758,7 @@
       },
       {
         "data": {
-          "id": "note-cvkz9",
+          "id": "note-WfHA2",
           "node": {
             "description": "# Memory Chatbot\n\nA flexible chatbot implementation featuring advanced conversation memory capabilities. This serves as a foundational tool for building chat experiences with persistent context.\n\n## Core Components\n\n1. **Chat Input**\n   - Accepts user messages\n   - Configures conversation storage\n   - Tracks session identity\n\n2. **Chat Memory**\n   - Stores and retrieves up to 100 previous messages\n   - Maintains conversation context\n   - Tracks separate chat sessions\n   - Preserves sender information and message order\n\n3. **Prompt**\n   - Creates dynamic prompt templates\n   - Integrates memory into conversation flow\n\n4. **OpenAI**\n   - Processes user input with context\n   - Accesses conversation history\n   - Includes options for model configuration and API key setup\n\n5. **Chat Output**\n   - Displays formatted responses\n   - Maintains conversation flow\n   - Syncs with memory storage\n\n## Memory Features\n\n- Stores message history\n- Plans conversation trajectory\n- Differentiates between chat sessions\n- Preserves sender and message metadata\n\n## Quick Start\n\n1. **Initialize** with a clear session ID\n2. **Enter** message in Chat Input\n3. **AI Processes** with context from memory\n4. **Response** appears in Chat Output\n5. Context remains available for follow-ups\n\nThis robust system demonstrates thorough memory integration with minimal complexity. 🧠💬\n",
             "display_name": "",
@@ -739,7 +769,7 @@
         },
         "dragging": false,
         "height": 736,
-        "id": "note-cvkz9",
+        "id": "note-WfHA2",
         "measured": {
           "height": 736,
           "width": 324
@@ -763,7 +793,7 @@
       },
       {
         "data": {
-          "id": "note-1krat",
+          "id": "note-cHuhR",
           "node": {
             "description": "## Get Your OpenAI API Key\n\n**Steps**:\n\n1. **Visit** [OpenAI's API Key Page](https://platform.openai.com/api-keys).\n\n2. **Log In/Sign Up**:\n   - Log in or create a new OpenAI account.\n\n3. **Generate API Key**:\n   - Click \"Create New Secret Key\" to obtain your key.\n\n4. **Store Your Key Securely**:\n   - Note it down as it will only display once.\n\n5. **Enter API Key**:\n   - Input your key in the OpenAI API Key field within the component setup.\n\nKeep your key safe and manage it responsibly!",
             "display_name": "",
@@ -776,7 +806,7 @@
         },
         "dragging": false,
         "height": 325,
-        "id": "note-1krat",
+        "id": "note-cHuhR",
         "measured": {
           "height": 325,
           "width": 325
@@ -795,7 +825,7 @@
       },
       {
         "data": {
-          "id": "Prompt-ZC67m",
+          "id": "Prompt-2aw7O",
           "node": {
             "base_classes": [
               "Message"
@@ -933,7 +963,7 @@
         },
         "dragging": false,
         "height": 347,
-        "id": "Prompt-ZC67m",
+        "id": "Prompt-2aw7O",
         "measured": {
           "height": 347,
           "width": 320
@@ -952,7 +982,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-AkxJs",
+          "id": "OpenAIModel-uwgKb",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1329,7 +1359,7 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-AkxJs",
+        "id": "OpenAIModel-uwgKb",
         "measured": {
           "height": 539,
           "width": 320
@@ -1343,7 +1373,133 @@
       },
       {
         "data": {
-          "id": "Memory-FTgzq",
+          "id": "TypeConverterComponent-6kqHz",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Convert between different types (Message, Data, DataFrame)",
+            "display_name": "Type Convert",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "input_data",
+              "output_type"
+            ],
+            "frozen": false,
+            "icon": "repeat",
+            "legacy": false,
+            "lf_version": "1.4.3",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message Output",
+                "group_outputs": false,
+                "method": "convert_to_message",
+                "name": "message_output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from typing import Any\n\nfrom langflow.custom import Component\nfrom langflow.io import HandleInput, Output, TabInput\nfrom langflow.schema import Data, DataFrame, Message\n\n\ndef convert_to_message(v) -> Message:\n    \"\"\"Convert input to Message type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Message: Converted Message object\n    \"\"\"\n    return v if isinstance(v, Message) else v.to_message()\n\n\ndef convert_to_data(v: DataFrame | Data | Message | dict) -> Data:\n    \"\"\"Convert input to Data type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Data: Converted Data object\n    \"\"\"\n    if isinstance(v, dict):\n        return Data(v)\n    return v if isinstance(v, Data) else v.to_data()\n\n\ndef convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:\n    \"\"\"Convert input to DataFrame type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        DataFrame: Converted DataFrame object\n    \"\"\"\n    if isinstance(v, dict):\n        return DataFrame([v])\n    return v if isinstance(v, DataFrame) else v.to_dataframe()\n\n\nclass TypeConverterComponent(Component):\n    display_name = \"Type Convert\"\n    description = \"Convert between different types (Message, Data, DataFrame)\"\n    icon = \"repeat\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Input\",\n            input_types=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Accept Message, Data or DataFrame as input\",\n            required=True,\n        ),\n        TabInput(\n            name=\"output_type\",\n            display_name=\"Output Type\",\n            options=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Select the desired output data type\",\n            real_time_refresh=True,\n            value=\"Message\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message Output\",\n            name=\"message_output\",\n            method=\"convert_to_message\",\n        )\n    ]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"Dynamically show only the relevant output based on the selected output type.\"\"\"\n        if field_name == \"output_type\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n\n            # Add only the selected output type\n            if field_value == \"Message\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Message Output\",\n                        name=\"message_output\",\n                        method=\"convert_to_message\",\n                    ).to_dict()\n                )\n            elif field_value == \"Data\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Data Output\",\n                        name=\"data_output\",\n                        method=\"convert_to_data\",\n                    ).to_dict()\n                )\n            elif field_value == \"DataFrame\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"DataFrame Output\",\n                        name=\"dataframe_output\",\n                        method=\"convert_to_dataframe\",\n                    ).to_dict()\n                )\n\n        return frontend_node\n\n    def convert_to_message(self) -> Message:\n        \"\"\"Convert input to Message type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_message(input_value)\n        self.status = result\n        return result\n\n    def convert_to_data(self) -> Data:\n        \"\"\"Convert input to Data type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_data(input_value)\n        self.status = result\n        return result\n\n    def convert_to_dataframe(self) -> DataFrame:\n        \"\"\"Convert input to DataFrame type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_dataframe(input_value)\n        self.status = result\n        return result\n"
+              },
+              "input_data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "Accept Message, Data or DataFrame as input",
+                "input_types": [
+                  "Message",
+                  "Data",
+                  "DataFrame"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "output_type": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "display_name": "Output Type",
+                "dynamic": false,
+                "info": "Select the desired output data type",
+                "name": "output_type",
+                "options": [
+                  "Message",
+                  "Data",
+                  "DataFrame"
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tab",
+                "value": "Message"
+              }
+            },
+            "tool_mode": false
+          },
+          "selected_output": "message_output",
+          "showNode": true,
+          "type": "TypeConverterComponent"
+        },
+        "dragging": false,
+        "id": "TypeConverterComponent-6kqHz",
+        "measured": {
+          "height": 262,
+          "width": 320
+        },
+        "position": {
+          "x": 1982.2119289336342,
+          "y": 949.6746561296028
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Memory-Esy2a",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -1397,6 +1553,7 @@
                 "group_outputs": false,
                 "method": "retrieve_messages_dataframe",
                 "name": "dataframe",
+                "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
@@ -1656,33 +1813,33 @@
             },
             "tool_mode": false
           },
-          "selected_output": "messages_text",
+          "selected_output": "dataframe",
           "showNode": true,
           "type": "Memory"
         },
         "dragging": false,
-        "id": "Memory-FTgzq",
+        "id": "Memory-Esy2a",
         "measured": {
           "height": 217,
           "width": 320
         },
         "position": {
-          "x": 1919.5916962984827,
-          "y": 635.8153864319635
+          "x": 1872.1863138733531,
+          "y": 662.4809140460989
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -987.6452349689687,
-      "y": -39.91532970722892,
-      "zoom": 0.675028833498803
+      "x": -844.2279175744859,
+      "y": -37.56256528430163,
+      "zoom": 0.6546453758419618
     }
   },
   "description": "Create a chatbot that saves and references previous messages, enabling the model to maintain context throughout the conversation.",
   "endpoint_name": null,
-  "id": "123a386f-d37b-40fb-9027-2602e7754582",
+  "id": "c4833c20-c17f-40e2-88d9-34dfed9f1fc2",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Memory Chatbot",
