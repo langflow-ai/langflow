@@ -219,6 +219,16 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             self.status = results
             return results
 
+        query = self.search_query
+        if not query:
+            self.status = ""
+            return []
+
+        mode = self.search_type
+        k = self.number_of_results
+        filt = self.advance_search_filter
+        threshold = float(self.sim_threshold or 0.0)
+
         if filt:
             self.log(f"Filter: {filt}")
         self.log(f"Search input: {query}")
@@ -226,6 +236,8 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         self.log(f"Number of results: {k}")
         self.log(f"Similarity threshold: {threshold}")
 
+        if mode == "Similarity with Score" and hasattr(vs, "similarity_search_with_score"):
+            # ... rest of the logic ...
         if mode.lower() in ["similarity", "mmr"]:
             if hasattr(vs, "search"):
                 search_args = {
