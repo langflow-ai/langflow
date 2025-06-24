@@ -162,4 +162,3 @@ curl -X POST \
 
 - [Get Vertex builds](/api-monitor#get-vertex-builds)
 - [Delete Vertex builds](/api-monitor#delete-vertex-builds)
-- [Session ID](/session-id)

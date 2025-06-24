@@ -262,7 +262,3 @@ curl --request POST \
 
 To confirm your command is using the tweak, navigate to the **Logs** pane and view the request from the **Chat Input** component.
 The value for `should_store_message` is `false`.
-
-## See also
-
-- [Session ID](/session-id)

@@ -31,8 +31,6 @@ The Agent uses the `perform_search` tool to return a list of RSS feeds.
 7. Enter the name of an RSS feed that interests you.
 The Agent uses the `read_rss` tool to fetch and summarize the latest RSS feed.
 
-Data components bring in data from many sources to Langflow, output as DataFrames or as tools for Agents to use.
-
 ## API Request
 
 This component makes HTTP requests using URLs or cURL commands.
@@ -183,90 +181,9 @@ Archive formats (for bundling multiple files):
 
 The **MCP connection** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
 
-In addition to being an MCP client that can leverage MCP servers, the **MCP connection** component's [SSE mode](#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-overview#projects) as tools within a flow.
+In addition to being an MCP client that can leverage MCP servers, the **MCP connection** component's [SSE mode](#mcp-client#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-overview#projects) as tools within a flow.
 
-To use the **MCP connection** component with an agent component, follow these steps:
-
-1. Add the **MCP connection** component to your workflow.
-
-2. In the **MCP connection** component, in the **MCP Command** field, enter the command to start your MCP server. For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
-
-    ```bash
-    uvx mcp-server-fetch
-    ```
-
-    `uvx` is included with `uv` in the Langflow package.
-    To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
-    For an example of starting `npx` MCP servers, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
-
-    To include environment variables with your server command, add them to the **Env** field like this:
-
-    ```bash
-    ASTRA_DB_APPLICATION_TOKEN=AstraCS:...
-    ```
-
-    :::important
-    Langflow passes environment variables from the `.env` file to MCP, but not global variables declared in the UI.
-    To add a value for an environment variable as a global variable, add it to Langflow's `.env` file at startup.
-    For more information, see [global variables](/configuration-global-variables).
-    :::
-
-3. Click <Icon name="RefreshCw" aria-label="Refresh"/> to get the server's list of **Tools**.
-
-4. In the **Tool** field, select the server tool you want the component to use.
-The available fields change based on the selected tool.
-For information on the parameters, see the MCP server's documentation.
-
-5. In the **MCP connection** component, enable **Tool mode**.
-Connect the **MCP connection** component's **Toolset** port to an **Agent** component's **Tools** port.
-
-    The flow looks similar to the following:
-    ![MCP connection component](/img/component-mcp-stdio.png)
-
-6. Open the **Playground**, and then ask the agent to summarize recent tech news. 
-The agent calls the MCP server function `fetch` and returns the summary.
-This confirms the MCP server is connected, and its tools are being used in Langflow.
-
-For more information, see [MCP server](/mcp-server).
-
-### MCP Server-Sent Events (SSE) mode {#mcp-sse-mode}
-
-:::important
-If you're using **Langflow for Desktop**, the default address is `http://127.0.0.1:7868/`.
-:::
-
-The MCP component's SSE mode connects your flow to the Langflow MCP server through the component.
-This allows you to use all flows within your [project](/concepts-overview#projects) as tools within a flow.
-
-1. In the **MCP connection** component, select **SSE**.
-A default address appears in the **MCP SSE URL** field.
-2. In the **MCP SSE URL** field, modify the default address to point at the SSE endpoint of the Langflow server you're currently running.
-The default value is `http://localhost:7860/api/v1/mcp/sse`.
-3. In the **MCP connection** component, click <Icon name="RefreshCw" aria-label="Refresh"/> to retrieve the server's list of **Tools**.
-4. Click the **Tools** field.
-All of your flows are listed as tools.
-5. Enable **Tool Mode**, and then connect the **MCP connection** component to an agent component's tool port.
-The flow looks like the following:
-![MCP component with SSE mode enabled](/img/component-mcp-sse-mode.png)
-6. Open the **Playground** and chat with your tool.
-The agent chooses the correct tool based on your query.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| command | String | The MCP command. Default: `uvx mcp-sse-shim@latest`. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| tools | List[Tool] | A list of tools exposed by the MCP server. |
-
-</details>
+For more information, see [MCP client](/mcp-client).
 
 ## News search
 
@@ -287,9 +204,9 @@ The latest content is returned in a structured DataFrame, with the key columns `
 | Name | Display Name | Info |
 |------|--------------|------|
 | query | Search Query | Search keywords for news articles. |
-| hl | Language (hl) | Language code, e.g. en-US, fr, de. Default: `en-US`. |
-| gl | Country (gl) | Country code, e.g. US, FR, DE. Default: `US`. |
-| ceid | Country:Language (ceid) | e.g. US:en, FR:fr. Default: `US:en`. |
+| hl | Language (hl) | Language code, such as en-US, fr, de. Default: `en-US`. |
+| gl | Country (gl) | Country code, such as US, FR, DE. Default: `US`. |
+| ceid | Country:Language (ceid) | Language, such as US:en, FR:fr. Default: `US:en`. |
 | topic | Topic | One of: WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SCIENCE, SPORTS, HEALTH. |
 | location | Location (Geo) | City, state, or country for location-based news. Leave blank for keyword search. |
 | timeout | Timeout | Timeout for the request in seconds. |
@@ -308,7 +225,8 @@ This component fetches and parses RSS feeds from any valid RSS feed URL. It retu
 
 To use this component in a flow, do the following:
 
-1. Connect the **RSS reader** output to a component that accepts the DataFrame input, such as a **Chat Output** component. 2. In the **RSS Feed URL** field, enter an RSS feed, such as `https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml` for the New York Times.
+1. Connect the **RSS reader** output to a component that accepts the DataFrame input, such as a **Chat Output** component.
+2. In the **RSS Feed URL** field, enter an RSS feed, such as `https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml` for the New York Times.
 3. Open the **Playground**, and then click **Run Flow**.
 
 The latest content is returned in a structured DataFrame, with the key columns `title`, `link`, `published` and `summary`.
@@ -333,7 +251,8 @@ The latest content is returned in a structured DataFrame, with the key columns `
 
 ## SQL database
 
-This component executes SQL queries on [SQLAlchemy-compatible databases](https://docs.sqlalchemy.org/en/20/). It supports any database that can be connected to using SQLAlchemy, including PostgreSQL, MySQL, SQLite, and others.
+This component executes SQL queries on [SQLAlchemy-compatible databases](https://docs.sqlalchemy.org/en/20/).
+It supports any SQLAlchemy-compatible database, including PostgreSQL, MySQL, SQLite, and others.
 
 To use this component in a flow, do the following:
 

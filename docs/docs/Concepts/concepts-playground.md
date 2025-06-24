@@ -64,7 +64,7 @@ Replace `CUSTOM_SESSION_VALUE` with the session ID you want to send the request 
    }'
 ```
 
-Check your flow's **Playground**. In addition to the messages stored for the Default Session, a new session is started with your custom session ID.
+Check your flow's **Playground**. In addition to the messages stored for the default session, a new session is started with your custom session ID.
 
 ## Work with images in the Playground
 
@@ -99,7 +99,3 @@ curl -X POST "http://localhost:7860/api/v1/run/$FLOW_ID" \
 ```
 
 The image is displayed in the chat interface and can be processed by your flow components.
-
-## See also
-
-- [Session ID](/session-id)

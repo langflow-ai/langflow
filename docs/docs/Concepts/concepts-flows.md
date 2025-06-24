@@ -21,6 +21,8 @@ You can drag and drop Langflow JSON files directly from your file system into th
 
 To **Export** your flow, in the **Playground**, click **Share**, and then click **Export**.
 
+The `FLOW_NAME.json` file is downloaded to your local machine.
+
 ## Langflow JSON file contents
 
 Langflow JSON files contain [nodes](#nodes) and [edges](#edges) that describe components and connections, and [additional metadata](#additional-metadata-and-project-information) that describe the flow.

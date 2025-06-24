@@ -1,5 +1,5 @@
 ---
-title: Publish flows
+title: Share flows
 slug: /concepts-publish
 ---
 
@@ -10,96 +10,21 @@ Langflow provides several ways to publish and integrate your flows into external
 
 ## API access
 
+Langflow provides code snippets to help you get started with the Langflow API.
+
 To access the **API access** pane, click **Share**, and then click **API access**.
 
-![](/img/api-pane.png)
+![API pane](/img/api-pane.png)
 
-<Tabs>
-<TabItem value="python" label="Python">
-
-The **Python** tab displays code to interact with your flow using the Python `requests` library.
-
-1. Copy and paste the code into a Python script.
-2. Run the script.
-
-```
-python3 python-test-script.py --message="tell me about something interesting"
-```
-
-The response content depends on your flow. Make sure the endpoint returns a successful response.
-</TabItem>
-
-<TabItem value="javascript" label="JavaScript">
-
-The **JavaScript API** tab displays code to interact with your flow in JavaScript.
-
-1. Copy and paste the code into a JavaScript file.
-2. Run the script.
-
-```
-node test-script.js "tell me about something interesting"
-```
-
-The response content depends on your flow. Make sure the endpoint returns a successful response.
-
-</TabItem>
-
-<TabItem value="curl" label="curl">
-
-The **cURL** tab displays sample code for posting a query to your flow.
-
-Copy the code and run it to post a query to your flow and get the result.
-
-The response content depends on your flow. Make sure the endpoint returns a successful response.
-
-</TabItem>
-</Tabs>
+For more information, see [Run your flows from external applications](/get-started-quickstart#run-your-flows-from-external-applications).
 
 ### Input schema
 
-The **Input schema** pane displays the available input parameters for your flow.
-Enable individual input parameters in the pane to add a parameter and its default value to the JSON payloads of the code snippets.
-Enabling parameters in the **Input schema** pane does not allow modifications to the listed parameters.
-Instead, copy the code snippet from the **API access** pane into the text editor of your choice, and modify
+Tweaks are added to the `payload` of requests to Langflow's `/run` endpoint to temporarily change component parameters within your flow.
+They don't modify the underlying flow configuration or persist between runs.
+To assist with formatting, you can define tweaks in Langflow's **Input Schema** pane before copying the code snippet.
 
-The **Endpoint name** field changes the endpoint name for your flow from the default UUID to the name you specify here.
-
-The components and their parameters listed in the pane are available to be modified. Modifying the parameters changes the code parameters across all of the code examples.
-
-For example, to change the LLM that the **OpenAI** model component uses for your request, do the following.
-
-1. In the **Input schema** pane, select **Enable Input**.
-2. Select **Model Name**.
-
-In the **API access** pane, inspect the code snippets.
-The `model_name` parameter for the **OpenAI** model is added to the request payload as a tweak.
-
-```text
-"OpenAIModel-G3haJ":  {
-  "model_name": "gpt-4.1-mini"
-}
-```
-
-3. To change the `model_name` parameter, copy and paste the code snippet from the **API access** pane into the text editor of your choice.
-For example, to modify the code snippet to use a different **OpenAI** model, change the value in your text editor:
-```text
-curl --request POST \
-  --url 'http://127.0.0.1:7860/api/v1/run/e32f3f61-008f-4a2a-ad1d-d6688966ed56?stream=false' \
-  --header 'Content-Type: application/json' \
-  --data '{
-  "input_value": "Hello",
-  "output_type": "chat",
-  "input_type": "chat",
-  "tweaks": {
-    "ChatInput-ahcL3": {
-      "files": ""
-    },
-    "OpenAIModel-G3haJ": {
-      "model_name": "gpt-4o"
-    }
-  }
-}'
-```
+For more information, see [Use tweaks to apply temporary overrides to a flow run](/get-started-quickstart#use-tweaks-to-apply-temporary-overrides-to-a-flow-run).
 
 ## Export
 
@@ -115,7 +40,7 @@ You can then **Import** the downloaded flow into another Langflow instance.
 
 For more information, see [MCP server](/mcp-server).
 
-For information about using Langflow as an *MCP client*, see the [MCP connection component](/components-data#mcp-connection).
+For information about using Langflow as an *MCP client*, see [MCP client](/mcp-client).
 
 ## Embed into site
 
@@ -128,5 +53,3 @@ For more information, see [Embedded chat widget](/embedded-chat-widget).
 The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/$FLOW_ID` endpoint.
 
 You can share this endpoint publicly using a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
-
-If you're using **Datastax Langflow**, you can share the URL with any users within your **Organization**.

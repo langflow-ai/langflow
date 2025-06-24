@@ -16,7 +16,7 @@ For an example of using this component in a flow, see the [Python interpreter](/
 
 | Name | Type | Description |
 |------|------|-------------|
-| expression | String | The arithmetic expression to evaluate, such as `4*4*(33/22)+12-20'`. |
+| expression | String | The arithmetic expression to evaluate, such as `4*4*(33/22)+12-20`. |
 
 **Outputs**
 
@@ -55,9 +55,9 @@ Prior to Langflow 1.5, this component was two separate components called **Chat 
 
 This component combines the **Chat History** and **Message Store** component into one component that can utilize Langflow's SQLite database, or connect to external memory, to store and retrieve chat messages.
 
-Chat memory components is distinct from vector store memory components, because they are built specifically for storing and retrieving chat messages from databases.
+Chat memory is distinct from vector store memory, because it is built specifically for storing and retrieving chat messages from databases.
 
-Memory components provide access to their respective external databases **as memory**. This allows Large Language Models (LLMs) or [agents](/components-agents) to access external memory for persistence and context retention.
+Memory components provide access to their respective external databases **as memory**. This allows Large Language Models (LLMs) or [agents](/agents) to access external memory for persistence and context retention.
 
 In **Retrieve** mode, this component retrieves chat messages from Langflow tables or external memory.
 In **Store** mode, this component stores chat messages in Langflow tables or external memory.
@@ -190,7 +190,3 @@ Please list three fruits.
 | output_parser | Parser | The constructed output parser that can be used to parse LLM responses. |
 
 </details>
-
-## See also
-
-- [Session ID](/session-id)
