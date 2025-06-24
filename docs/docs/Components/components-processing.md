@@ -5,7 +5,7 @@ slug: /components-processing
 
 import Icon from "@site/src/components/icon";
 
-Processing components process and transform data within a flow, like converting `Data` to text with a [Parser](#parser) component, filtering data with natural language with the [Smart filter](#smart-filter), or saving data to your local machine with [Save File](#save-file).
+Processing components process and transform data within a flow, like converting `Data` to text with a [Parser](#parser) component, filtering data with natural language with the [Smart function](#smart-function), or saving data to your local machine with [Save File](#save-file).
 
 ## Batch Run
 
