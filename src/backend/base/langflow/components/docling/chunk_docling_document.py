@@ -51,8 +51,7 @@ class ChunkDoclingDocumentComponent(Component):
             name="hf_model_name",
             display_name="HF model name",
             info=(
-                "Model name of the tokenizer to use with the HybridChunker when Hugging Face "
-                "is chosen as a tokenizer."
+                "Model name of the tokenizer to use with the HybridChunker when Hugging Face is chosen as a tokenizer."
             ),
             value="sentence-transformers/all-MiniLM-L6-v2",
             show=True,
