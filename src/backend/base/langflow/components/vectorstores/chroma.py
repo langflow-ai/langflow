@@ -203,7 +203,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         filt = self.advance_search_filter
         threshold = float(self.sim_threshold or 0.0)
 
-        if mode == "Similarity with Score" and hasattr(vs, "similarity_search_with_score"):
+        if mode == "Similarity with Score" and hasattr(vs, "similarity_search_with_relevance_scores"):
             docs_and_scores = vs.similarity_search_with_relevance_scores(
                 query, k=k, filter=filt if filt else None
             )
