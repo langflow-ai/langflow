@@ -3,13 +3,13 @@ import base64
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from functools import wraps
-from typing import Annotated, Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import uuid4
 
 import pydantic
 from anyio import BrokenResourceError
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from loguru import logger
 from mcp import types
@@ -17,13 +17,15 @@ from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
+from langflow.api.utils import CurrentActiveMCPUser
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
+from langflow.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from langflow.base.mcp.util import get_flow_snake_case
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
-from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models import Flow, User
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_db_service,
     get_settings_service,
@@ -179,22 +181,35 @@ async def handle_list_tools():
         async with db_service.with_session() as session:
             flows = (await session.exec(select(Flow))).all()
 
+            existing_names = set()
             for flow in flows:
                 if flow.user_id is None:
                     continue
 
-                flow_name = "_".join(flow.name.lower().split())
+                base_name = "_".join(flow.name.lower().split())
+                name = base_name[:MAX_MCP_TOOL_NAME_LENGTH]
+                if name in existing_names:
+                    i = 1
+                    while True:
+                        suffix = f"_{i}"
+                        truncated_base = base_name[: MAX_MCP_TOOL_NAME_LENGTH - len(suffix)]
+                        candidate = f"{truncated_base}{suffix}"
+                        if candidate not in existing_names:
+                            name = candidate
+                            break
+                        i += 1
                 try:
                     tool = types.Tool(
-                        name=flow_name,
+                        name=name,
                         description=f"{flow.id}: {flow.description}"
                         if flow.description
-                        else f"Tool generated from flow: {flow_name}",
+                        else f"Tool generated from flow: {name}",
                         inputSchema=json_schema_from_flow(flow),
                     )
                     tools.append(tool)
+                    existing_names.add(name)
                 except Exception as e:  # noqa: BLE001
-                    msg = f"Error in listing tools: {e!s} from flow: {flow_name}"
+                    msg = f"Error in listing tools: {e!s} from flow: {base_name}"
                     logger.warning(msg)
                     continue
     except Exception as e:
@@ -330,7 +345,7 @@ async def im_alive():
 
 
 @router.get("/sse", response_class=StreamingResponse)
-async def handle_sse(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
+async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
     msg = f"Starting SSE connection, server name: {server.name}"
     logger.info(msg)
     token = current_user_ctx.set(current_user)

@@ -103,12 +103,14 @@ test(
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
 
-    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
 
     await page.waitForTimeout(600);
 
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(0)
       .click();
 
@@ -128,9 +130,11 @@ test(
       exact: true,
     });
     await page.getByText("Close").first().click();
-    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
       .click();
     await page.waitForTimeout(2000);
@@ -141,12 +145,16 @@ test(
       timeout: 30000 * 3,
     });
 
-    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
     await page.waitForTimeout(600);
-    await page.getByTestId("handle-urlcomponent-shownode-result-right").click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
+      .click();
 
     await page
-      .getByTestId("output-inspection-result-urlcomponent")
+      .getByTestId("output-inspection-extracted pages-urlcomponent")
       .nth(0)
       .click();
 
@@ -161,12 +169,12 @@ test(
     await page.waitForTimeout(600);
 
     await page
-      .getByTestId("handle-urlcomponent-shownode-result-right")
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .nth(0)
       .click();
 
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
       .click();
 
@@ -176,7 +184,9 @@ test(
       timeout: 30000 * 3,
     });
     await page.waitForTimeout(600);
-    await page.getByTestId("output-inspection-result-urlcomponent").click();
+    await page
+      .getByTestId("output-inspection-extracted pages-urlcomponent")
+      .click();
     await page.getByText(`Inspect the output of the component below.`, {
       exact: true,
     });

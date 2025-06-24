@@ -27,7 +27,7 @@ from langflow.utils.util import sync_to_async
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langflow.custom import Component
+    from langflow.custom.custom_component.component import Component
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.base import CycleEdge, Edge
     from langflow.graph.graph.base import Graph
@@ -78,7 +78,7 @@ class Vertex:
         self.built = False
         self._successors_ids: list[str] | None = None
         self.artifacts: dict[str, Any] = {}
-        self.artifacts_raw: dict[str, Any] = {}
+        self.artifacts_raw: dict[str, Any] | None = {}
         self.artifacts_type: dict[str, str] = {}
         self.steps: list[Callable] = [self._build]
         self.steps_ran: list[Callable] = []
@@ -131,12 +131,6 @@ class Vertex:
 
     def add_result(self, name: str, result: Any) -> None:
         self.results[name] = result
-
-    def update_graph_state(self, key, new_state, *, append: bool) -> None:
-        if append:
-            self.graph.append_state(key, new_state, caller=self.id)
-        else:
-            self.graph.update_state(key, new_state, caller=self.id)
 
     def set_state(self, state: str) -> None:
         self.state = VertexStates[state]

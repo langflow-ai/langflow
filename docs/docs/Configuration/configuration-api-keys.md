@@ -51,7 +51,7 @@ To use the API key when making API requests, include the API key in the HTTP hea
 
 ```shell
 curl -X POST \
-  "http://127.0.0.1:7860/api/v1/run/FLOW_ID?stream=false" \
+  "http://localhost:7860/api/v1/run/FLOW_ID?stream=false" \
   -H 'Content-Type: application/json' \
   -H 'x-api-key: API_KEY' \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
@@ -63,7 +63,7 @@ To pass the API key as a query parameter:
 
 ```shell
 curl -X POST \
-  "http://127.0.0.1:7860/api/v1/run/FLOW_ID?x-api-key=API_KEY?stream=false" \
+  "http://localhost:7860/api/v1/run/FLOW_ID?x-api-key=API_KEY?stream=false" \
   -H 'Content-Type: application/json' \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
 ```

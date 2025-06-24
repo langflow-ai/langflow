@@ -48,10 +48,9 @@ export const useUpdateSessionName: useMutationFunctionType<
   const mutation: UseMutationResult<Message[], any, UpdateSessionParams> =
     mutate(["useUpdateSessionName"], updateSessionApi, {
       ...options,
-      onSettled: (data, variables, context) => {
-        // Invalidate and refetch relevant queries
-        queryClient.refetchQueries({
-          queryKey: ["useGetMessagesQuery"],
+      onSettled: () => {
+        queryClient.invalidateQueries({
+          queryKey: ["useGetSessionsFromFlowQuery"],
         });
       },
     });
