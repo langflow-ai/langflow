@@ -32,6 +32,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
     "inputs": {
       "input_value": "Tell me a story"
@@ -59,7 +60,8 @@ curl -X POST \
 ```text
 curl -X GET \
   "$LANGFLOW_URL/api/v1/build/123e4567-e89b-12d3-a456-426614174000/events" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
    </TabItem>
@@ -84,7 +86,8 @@ To disable streaming and get all events at once, set `stream` to `false`.
 ```text
 curl -X GET \
   "$LANGFLOW_URL/api/v1/build/123e4567-e89b-12d3-a456-426614174000/events?stream=false" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 ## Build headers
@@ -136,6 +139,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
     "data": {
       "nodes": [],
