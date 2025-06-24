@@ -124,6 +124,7 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
+    "docling>=2.36.1",
 ]
 
 [dependency-groups]
@@ -218,6 +219,12 @@ nv-ingest = [
 postgresql = [
     "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
     "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+]
+
+[tool.uv]
+override-dependencies = [
+    # temporary force a newer python-pptx
+    "python-pptx>=1.0.2"
 ]
 
 [project.scripts]
