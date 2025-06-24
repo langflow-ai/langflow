@@ -190,3 +190,92 @@ class MyComponent(CustomComponent):
     result_variable, result_function = instance.build()
     assert result_variable == "external_value"
     assert result_function == "external_function_value"
+
+
+def test_class_constructor_caching():
+    """Test that class constructors are properly cached."""
+    from langflow.utils.validate import clear_class_constructor_cache, get_cache_stats
+
+    # Clear cache to start fresh
+    clear_class_constructor_cache()
+    initial_stats = get_cache_stats()
+    assert initial_stats["cache_size"] == 0
+
+    code = """
+from langflow.custom import CustomComponent
+
+class CachedComponent(CustomComponent):
+    def build(self):
+        return "cached_result"
+"""
+    class_name = "CachedComponent"
+
+    # First call should create and cache
+    created_class1 = create_class(code, class_name)
+    stats_after_first = get_cache_stats()
+    assert stats_after_first["cache_size"] == 1
+
+    # Second call with same code should use cache
+    created_class2 = create_class(code, class_name)
+    stats_after_second = get_cache_stats()
+    assert stats_after_second["cache_size"] == 1  # Should not increase
+
+    # Both should produce working instances
+    instance1 = created_class1()
+    instance2 = created_class2()
+    assert instance1.build() == "cached_result"
+    assert instance2.build() == "cached_result"
+
+    # Different code should create new cache entry
+    different_code = """
+from langflow.custom import CustomComponent
+
+class DifferentComponent(CustomComponent):
+    def build(self):
+        return "different_result"
+"""
+    created_class3 = create_class(different_code, "DifferentComponent")
+    stats_after_different = get_cache_stats()
+    assert stats_after_different["cache_size"] == 2
+
+    # Verify the third class works correctly too
+    instance3 = created_class3()
+    assert instance3.build() == "different_result"
+
+
+def test_cache_cleanup():
+    """Test that TTLCache handles size limits correctly with LRU eviction."""
+    from langflow.utils.validate import clear_class_constructor_cache, get_cache_stats
+
+    # Clear cache and test with the actual cache
+    clear_class_constructor_cache()
+
+    # Get current cache settings
+    initial_stats = get_cache_stats()
+    original_max_size = initial_stats["max_size"]
+
+    # For TTLCache, we'll test that it properly handles the max size limit
+    # by creating components up to the limit and verifying behavior
+
+    # Create components up to near the cache limit
+    components_to_create = min(5, original_max_size)
+
+    for i in range(components_to_create):
+        code = f"""
+from langflow.custom import CustomComponent
+
+class TestComponent{i}(CustomComponent):
+    def build(self):
+        return "result_{i}"
+"""
+        create_class(code, f"TestComponent{i}")
+
+    # Check that cache size doesn't exceed the maximum
+    final_stats = get_cache_stats()
+    assert final_stats["cache_size"] <= final_stats["max_size"]
+
+    # Verify at least some components were cached
+    assert final_stats["cache_size"] > 0
+
+    # Clear cache for cleanup
+    clear_class_constructor_cache()

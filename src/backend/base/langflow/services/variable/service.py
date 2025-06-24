@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 from sqlmodel import select
-from typing_extensions import override
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
@@ -49,7 +48,6 @@ class DatabaseVariableService(VariableService, Service):
                             type_=CREDENTIAL_TYPE,
                             session=session,
                         )
-                    logger.debug(f"Processed {var_name} variable from environment.")
                 except Exception as e:  # noqa: BLE001
                     logger.exception(f"Error processing {var_name} variable: {e!s}")
 
@@ -147,7 +145,6 @@ class DatabaseVariableService(VariableService, Service):
         await session.refresh(db_variable)
         return db_variable
 
-    @override
     async def delete_variable(
         self,
         user_id: UUID | str,
@@ -162,7 +159,6 @@ class DatabaseVariableService(VariableService, Service):
         await session.delete(variable)
         await session.commit()
 
-    @override
     async def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: AsyncSession) -> None:
         stmt = select(Variable).where(Variable.user_id == user_id, Variable.id == variable_id)
         variable = (await session.exec(stmt)).first()
