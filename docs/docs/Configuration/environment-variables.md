@@ -411,8 +411,9 @@ To make environment variables available to GUI apps on macOS, you need to use `l
 mkdir -p ~/Library/LaunchAgents
 ```
 
-2. Within the `LaunchAgents` directory, create a file called `dev.langflow.env.plist` with the following content.
-Adjust the variable names and values as needed.
+2. In the `LaunchAgents` directory, create a `.plist` file called `dev.langflow.env`.
+
+ 3. Add the following content to `dev.langflow.env.plist`, and then add, change, or remove Langflow environment variables as needed for your configuration.
 This example sets the `LANGFLOW_CONFIG_DIR` environment variable for all GUI apps launched from the macOS GUI.
 
 ```xml
