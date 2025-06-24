@@ -57,7 +57,7 @@ export default function TableNodeCellRender({
       <div
         className={cn(
           "group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto px-1 py-2.5 custom-scroll",
-          isTweaks && "pointer-events-none opacity-50",
+          isTweaks && "pointer-events-none opacity-30",
         )}
       >
         <ParameterRenderComponent
