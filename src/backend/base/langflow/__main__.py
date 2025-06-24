@@ -616,8 +616,8 @@ def print_banner(host: str, port: int, protocol: str) -> None:
         except UnicodeEncodeError:
             # Last resort: print without Rich formatting
             print(f"Welcome to {package_name}")
-            print(f"GitHub: https://github.com/langflow-ai/langflow")
-            print(f"Discord: https://discord.com/invite/EqksyE2EX9")
+            print("GitHub: https://github.com/langflow-ai/langflow")
+            print("Discord: https://discord.com/invite/EqksyE2EX9")
             print(f"Open Langflow: {protocol}://{access_host}:{port}")
 
 
@@ -816,7 +816,7 @@ def api_key_banner(unmasked_api_key) -> None:
         banner_console = Console(legacy_windows=True, emoji=False)
     else:
         banner_console = Console()
-    
+
     try:
         banner_console.print(panel)
     except UnicodeEncodeError:
