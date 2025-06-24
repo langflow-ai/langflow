@@ -1,9 +1,9 @@
 import shutil
-import sqlite3
 import tarfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING
 from zipfile import ZipFile, is_zipfile
 
 import pandas as pd
@@ -13,6 +13,9 @@ from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class BaseFileComponent(Component, ABC):
@@ -268,13 +271,28 @@ class BaseFileComponent(Component, ABC):
 
         return Message(text="\n".join(paths) if paths else "")
 
-    def try_read_json_with_orients(self, file_path):
-        orients = ["records", "columns", "values", "split", "table", "index"]
-        for orient in orients:
-            try:
-                return pd.read_json(file_path, orient=orient)
-            except Exception as _:  # noqa: BLE001, S110
-                pass
+    def load_files_structured_helper(self, file_path: str) -> list[dict] | None:
+        if not file_path:
+            return None
+
+        # Map file extensions to pandas read functions with type annotation
+        file_readers: dict[str, Callable[[str], pd.DataFrame]] = {
+            ".csv": pd.read_csv,
+            ".xlsx": pd.read_excel,
+            ".parquet": pd.read_parquet,
+            # TODO: sqlite and json support?
+        }
+
+        # Get file extension in lowercase
+        ext = Path(file_path).suffix.lower()
+
+        # Get the appropriate reader function or None
+        reader = file_readers.get(ext)
+
+        if reader:
+            result = reader(file_path)  # MyPy now knows reader is callable
+            return result.to_dict("records")
+
         return None
 
     def load_files_structured(self) -> DataFrame:
@@ -291,19 +309,8 @@ class BaseFileComponent(Component, ABC):
         file_path = data_list[0].data.get(self.SERVER_FILE_PATH_FIELDNAME, None)
 
         # If file_path is provided and is a CSV, read it directly
-        if file_path and str(file_path).lower().endswith(".csv"):
-            rows = pd.read_csv(file_path).to_dict("records")
-        elif file_path and str(file_path).lower().endswith(".json"):
-            rows = self.try_read_json_with_orients(file_path)
-        elif file_path and str(file_path).lower().endswith(".xlsx"):
-            rows = pd.read_excel(file_path).to_dict("records")
-        elif file_path and str(file_path).lower().endswith(".parquet"):
-            rows = pd.read_parquet(file_path).to_dict("records")
-        elif file_path and str(file_path).lower().endswith(".sqlite"):
-            conn = sqlite3.connect(file_path)
-            query = "SELECT * FROM data"
-            rows = pd.read_sql_query(query, conn).to_dict("records")
-            conn.close()
+        if file_path and str(file_path).lower().endswith((".csv", ".xlsx", ".parquet")):
+            rows = self.load_files_structured_helper(file_path)
         else:
             # Convert Data objects to a list of dictionaries
             # TODO: Parse according to docling standards
