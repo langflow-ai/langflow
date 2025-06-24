@@ -413,7 +413,7 @@ mkdir -p ~/Library/LaunchAgents
 
 2. In the `LaunchAgents` directory, create a `.plist` file called `dev.langflow.env`.
 
- 3. Add the following content to `dev.langflow.env.plist`, and then add, change, or remove Langflow environment variables as needed for your configuration.
+3. Add the following content to `dev.langflow.env.plist`, and then add, change, or remove Langflow environment variables as needed for your configuration.
 This example sets the `LANGFLOW_CONFIG_DIR` environment variable for all GUI apps launched from the macOS GUI.
 
 ```xml
@@ -443,7 +443,7 @@ launchctl load ~/Library/LaunchAgents/dev.langflow.env.plist
 ```
 
   </TabItem>
-  <TabItem value="Windows" label="Windows">
+  <TabItem value="System Properties" label="System Properties">
 
 Langflow Desktop for Windows cannot automatically use variables set in your terminal, such as those defined with `set` in `cmd` or `$env:VAR=...` in PowerShell, when launched from the Windows GUI.
 
@@ -460,22 +460,26 @@ To apply the setting to all users, select **System variables**.
 4. Enter the name of the Langflow variable you want to set, such as `LANGFLOW_CONFIG_DIR`, and the desired value, such as `C:\Users\your_user\.langflow_config`.
 5. Click **OK** to save the variable.
 6. Repeat until you have set all necessary Langflow environment variables.
-
-The next time you launch Langflow Desktop, it will have access to these variables.
+7. Launch or restart Langflow Desktop to apply the environment variables.
 
   </TabItem>
     <TabItem value="Powershell" label="Powershell">
 
-Define environment variables for Windows using PowerShell.
-After setting the variables, you need to restart the Langflow Desktop application for the new values to take effect.
+To define environment variables for Windows using PowerShell, do the following:
 
-```powershell
-# For current user
-[System.Environment]::SetEnvironmentVariable("LANGFLOW_CONFIG_DIR", "C:\Users\your_user\.langflow_config", "User")
+1. Enter the name of the Langflow variable you want to set, such as `LANGFLOW_CONFIG_DIR`, and the desired value, such as `C:\Users\your_user\.langflow_config`.
 
-# For all users (requires Administrator privileges)
-[System.Environment]::SetEnvironmentVariable("LANGFLOW_CONFIG_DIR", "C:\Langflow\Config", "Machine")
-```
+    To set an environment variable for the current user:
+    ```powershell
+    [System.Environment]::SetEnvironmentVariable("LANGFLOW_CONFIG_DIR", "C:\Users\your_user\.langflow_config", "User")
+    ```
 
+   To set an environment variable for all users (you must have Administrator priveleges):
+   ```powershell
+   [System.Environment]::SetEnvironmentVariable("LANGFLOW_CONFIG_DIR", "C:\Langflow\Config", "Machine")
+   ```
+
+2. Repeat until you have set all necessary Langflow environment variables.
+3. Launch or restart Langflow Desktop to apply the environment variables.
   </TabItem>
 </Tabs>
