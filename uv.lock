@@ -4085,11 +4085,11 @@ wheels = [
 
 [[package]]
 name = "junitparser"
-version = "4.0.0"
+version = "4.0.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6e/c7/c5741009c9956053f0bffdac6b25c5dd6e53f4c0c2ed4d58956ea0739d46/junitparser-4.0.0.tar.gz", hash = "sha256:e9d234356172750a8b49708500a84bd9fb47c779d629b124de89a3070b310320", size = 25598, upload-time = "2025-06-22T19:45:57.166Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/13/cc/b6ec3f011725b06053c1e849b0be623176951ea518429128c01b73d45b8a/junitparser-4.0.1.tar.gz", hash = "sha256:00be98abaddef8c135db6bda3a52beb801b9b0f698da8cb1572ac2091ceae668", size = 25588, upload-time = "2025-06-23T21:56:43.184Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b9/bd/a795422f9542204e0d32095cb3d2c7916d23043be2d67fa59ba8d69c7c87/junitparser-4.0.0-py3-none-any.whl", hash = "sha256:715b624d0bc40bfc4a31099aa24202bf8aab7933c65ad537e7e34cb9290cd51f", size = 14566, upload-time = "2025-06-22T19:45:55.961Z" },
+    { url = "https://files.pythonhosted.org/packages/96/7f/7a2634e5bc4c4b4b02cbd3fdcd4d99763be04d4e71e2260d647f6146cfe4/junitparser-4.0.1-py3-none-any.whl", hash = "sha256:9c142c3d688c1674cd66905d96963b5e047f9fc079fe66d462b5cd12cf128d55", size = 14566, upload-time = "2025-06-23T21:56:42.004Z" },
 ]
 
 [[package]]
