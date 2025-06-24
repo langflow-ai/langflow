@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ApifyActors",
-            "id": "ApifyActors-CVPGK",
+            "id": "ApifyActors-I9HDQ",
             "name": "tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-yJhxC",
+            "id": "Agent-wmQQE",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ApifyActors-CVPGK{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-CVPGKœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-yJhxC{œfieldNameœ:œtoolsœ,œidœ:œAgent-yJhxCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__ApifyActors-I9HDQ{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-I9HDQœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-wmQQE{œfieldNameœ:œtoolsœ,œidœ:œAgent-wmQQEœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ApifyActors-CVPGK",
-        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-CVPGKœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-yJhxC",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yJhxCœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "ApifyActors-I9HDQ",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-I9HDQœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-wmQQE",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-wmQQEœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ApifyActors",
-            "id": "ApifyActors-tL94Y",
+            "id": "ApifyActors-maVx2",
             "name": "tool",
             "output_types": [
               "Tool"
@@ -43,47 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-yJhxC",
+            "id": "Agent-wmQQE",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ApifyActors-tL94Y{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-tL94Yœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-yJhxC{œfieldNameœ:œtoolsœ,œidœ:œAgent-yJhxCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__ApifyActors-maVx2{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-maVx2œ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-wmQQE{œfieldNameœ:œtoolsœ,œidœ:œAgent-wmQQEœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ApifyActors-tL94Y",
-        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-tL94Yœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-yJhxC",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yJhxCœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-E01OU",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-yJhxC",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-E01OU{œdataTypeœ:œChatInputœ,œidœ:œChatInput-E01OUœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-yJhxC{œfieldNameœ:œinput_valueœ,œidœ:œAgent-yJhxCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-E01OU",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-E01OUœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-yJhxC",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-yJhxCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ApifyActors-maVx2",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-maVx2œ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-wmQQE",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-wmQQEœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -91,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-yJhxC",
+            "id": "Agent-wmQQE",
             "name": "response",
             "output_types": [
               "Message"
@@ -99,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-xSo6b",
+            "id": "ChatOutput-5yecv",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,18 +80,45 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-yJhxC{œdataTypeœ:œAgentœ,œidœ:œAgent-yJhxCœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-xSo6b{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-xSo6bœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__Agent-wmQQE{œdataTypeœ:œAgentœ,œidœ:œAgent-wmQQEœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-5yecv{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-5yecvœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-yJhxC",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-yJhxCœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-xSo6b",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-xSo6bœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "Agent-wmQQE",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-wmQQEœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-5yecv",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-5yecvœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-amkkr",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-wmQQE",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__ChatInput-amkkr{œdataTypeœ:œChatInputœ,œidœ:œChatInput-amkkrœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-wmQQE{œfieldNameœ:œinput_valueœ,œidœ:œAgent-wmQQEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-amkkr",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-amkkrœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-wmQQE",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-wmQQEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ApifyActors-tL94Y",
+          "id": "ApifyActors-I9HDQ",
           "node": {
             "base_classes": [
               "Data",
@@ -308,9 +307,9 @@
           "type": "ApifyActors"
         },
         "dragging": false,
-        "id": "ApifyActors-tL94Y",
+        "id": "ApifyActors-I9HDQ",
         "measured": {
-          "height": 526,
+          "height": 523,
           "width": 320
         },
         "position": {
@@ -322,7 +321,7 @@
       },
       {
         "data": {
-          "id": "ApifyActors-CVPGK",
+          "id": "ApifyActors-maVx2",
           "node": {
             "base_classes": [
               "Data",
@@ -511,9 +510,9 @@
           "type": "ApifyActors"
         },
         "dragging": false,
-        "id": "ApifyActors-CVPGK",
+        "id": "ApifyActors-maVx2",
         "measured": {
-          "height": 526,
+          "height": 523,
           "width": 320
         },
         "position": {
@@ -525,7 +524,7 @@
       },
       {
         "data": {
-          "id": "note-hmQk5",
+          "id": "note-xssJa",
           "node": {
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
@@ -537,7 +536,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-hmQk5",
+        "id": "note-xssJa",
         "measured": {
           "height": 324,
           "width": 324
@@ -551,7 +550,7 @@
       },
       {
         "data": {
-          "id": "note-Utxei",
+          "id": "note-TeGrW",
           "node": {
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
@@ -564,7 +563,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-Utxei",
+        "id": "note-TeGrW",
         "measured": {
           "height": 324,
           "width": 324
@@ -580,7 +579,7 @@
       },
       {
         "data": {
-          "id": "note-NoZ4e",
+          "id": "note-6PTdf",
           "node": {
             "description": "# Social Media Agent\n\nExtract data with **Apify Actors** and analyze the data with an **Agent**.\n\n## Prerequisites\n\n* An [Apify API token](https://docs.apify.com/platform/integrations/api#api-token)\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Enter your **Apify** API token in the **Apify Token** fields of the **Apify Actors** components.  \n2. Enter your **OpenAI** API token in the **OpenAI API Key** field of the **Agent** component.\n3. Open the **Playground** and chat with the agent. For example, task it with retrieving a profile bio and the latest video by using this prompt:  \n   ```\n   Find the TikTok profile of the company OpenAI using Google search, then show me the profile bio and their latest video.\n   ```",
             "display_name": "",
@@ -593,10 +592,10 @@
         },
         "dragging": false,
         "height": 657,
-        "id": "note-NoZ4e",
+        "id": "note-6PTdf",
         "measured": {
           "height": 657,
-          "width": 525
+          "width": 524
         },
         "position": {
           "x": -313.0627945618906,
@@ -609,7 +608,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-E01OU",
+          "id": "ChatInput-amkkr",
           "node": {
             "base_classes": [
               "Message"
@@ -635,7 +634,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.4.2",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -906,7 +905,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-E01OU",
+        "id": "ChatInput-amkkr",
         "measured": {
           "height": 48,
           "width": 192
@@ -920,7 +919,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-xSo6b",
+          "id": "ChatOutput-5yecv",
           "node": {
             "base_classes": [
               "Message"
@@ -1214,7 +1213,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-xSo6b",
+        "id": "ChatOutput-5yecv",
         "measured": {
           "height": 48,
           "width": 192
@@ -1228,7 +1227,7 @@
       },
       {
         "data": {
-          "id": "note-kMYOt",
+          "id": "note-psyK5",
           "node": {
             "description": "### 💡 Add your OpenAI API key here ",
             "display_name": "",
@@ -1240,7 +1239,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-kMYOt",
+        "id": "note-psyK5",
         "measured": {
           "height": 324,
           "width": 324
@@ -1254,7 +1253,7 @@
       },
       {
         "data": {
-          "id": "Agent-yJhxC",
+          "id": "Agent-wmQQE",
           "node": {
             "base_classes": [
               "Message"
@@ -1286,7 +1285,10 @@
               "verbose",
               "max_iterations",
               "agent_description",
+              "mode",
+              "message",
               "memory",
+              "sender_type",
               "sender",
               "sender_name",
               "n_messages",
@@ -1299,7 +1301,6 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
-            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1308,8 +1309,11 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
+                "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1384,13 +1388,7 @@
                 ],
                 "options_metadata": [
                   {
-                    "icon": "Amazon"
-                  },
-                  {
                     "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "Azure"
                   },
                   {
                     "icon": "GoogleGenerativeAI"
@@ -1399,13 +1397,7 @@
                     "icon": "Groq"
                   },
                   {
-                    "icon": "NVIDIA"
-                  },
-                  {
                     "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "SambaNova"
                   },
                   {
                     "icon": "brain"
@@ -1416,6 +1408,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1432,6 +1425,7 @@
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
@@ -1599,7 +1593,7 @@
                 "_input_type": "MessageTextInput",
                 "advanced": true,
                 "display_name": "Message",
-                "dynamic": false,
+                "dynamic": true,
                 "info": "The chat message to be stored.",
                 "input_types": [
                   "Message"
@@ -1610,7 +1604,7 @@
                 "name": "message",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": true,
                 "trace_as_input": true,
@@ -1637,7 +1631,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "tab",
-                "value": "Store"
+                "value": "Retrieve"
               },
               "model_kwargs": {
                 "_input_type": "DictInput",
@@ -1685,10 +1679,11 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4.1"
+                "value": "gpt-4o"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -1701,7 +1696,7 @@
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -1745,6 +1740,7 @@
                 "required": true,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1769,28 +1765,27 @@
                 "value": 1
               },
               "sender": {
-                "_input_type": "DropdownInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
                 "display_name": "Sender",
                 "dynamic": false,
                 "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
+                "input_types": [
+                  "Message"
                 ],
-                "options_metadata": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
+                "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "Machine and User"
+                "value": ""
               },
               "sender_name": {
                 "_input_type": "MessageTextInput",
@@ -1807,7 +1802,7 @@
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -1933,7 +1928,7 @@
                 "name": "template",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -2000,35 +1995,34 @@
             },
             "tool_mode": false
           },
-          "selected_output": "response",
           "showNode": true,
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-yJhxC",
+        "id": "Agent-wmQQE",
         "measured": {
-          "height": 594,
+          "height": 591,
           "width": 320
         },
         "position": {
-          "x": 1023.5315500182937,
-          "y": 280.6548808097231
+          "x": 1040.7328325813182,
+          "y": 309.2404087611358
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 251.14965955941773,
-      "y": 42.193990847111536,
-      "zoom": 0.5946080556136385
+      "x": -11.680210843338386,
+      "y": 7.902598790141155,
+      "zoom": 0.5704013010733382
     }
   },
   "description": "Utilize Apify Actors as agent tools to search and analyze social media profiles.",
   "endpoint_name": null,
-  "id": "08525bf9-dd32-4bbe-920c-169cffc78890",
+  "id": "fc6be8ff-289b-43c5-bb7a-35274b5930af",
   "is_component": false,
-  "last_tested_version": "1.4.2",
+  "last_tested_version": "1.4.3",
   "name": "Social Media Agent",
   "tags": [
     "agent",
