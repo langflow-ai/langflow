@@ -41,7 +41,8 @@ export default function DurationDisplay({
 
   const displayTime = duration ?? durations[chatId] ?? 0;
   const secondsValue = displayTime / 1000;
-  const humanizedTime = secondsValue < 0.05 ? "< 0.1s" : `${secondsValue.toFixed(1)}s`;
+  const humanizedTime =
+    secondsValue < 0.05 ? "< 0.1s" : `${secondsValue.toFixed(1)}s`;
 
   return (
     <div
