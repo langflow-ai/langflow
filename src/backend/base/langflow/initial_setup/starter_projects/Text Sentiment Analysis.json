@@ -2458,7 +2458,7 @@
             "category": "models",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Runs a language model given a specified provider. ",
+            "description": "Generates text using OpenAI LLMs.",
             "display_name": "Language Model",
             "documentation": "",
             "edited": false,
@@ -2472,7 +2472,7 @@
               "temperature"
             ],
             "frozen": false,
-            "icon": "brain-circuit",
+            "icon": "OpenAI",
             "key": "LanguageModelComponent",
             "legacy": false,
             "metadata": {
@@ -2525,14 +2525,14 @@
                 "advanced": false,
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
-                "info": "Model Provider API key",
+                "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
                 "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
                 "real_time_refresh": true,
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "type": "str",
@@ -2554,14 +2554,14 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any\n\nfrom langchain_anthropic import ChatAnthropic\nfrom langchain_google_genai import ChatGoogleGenerativeAI\nfrom langchain_openai import ChatOpenAI\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider. \"\n    icon = \"brain-circuit\"\n    category = \"models\"\n    priority = 0  # Set priority to 0 to make it appear first\n\n    inputs = [\n        DropdownInput(\n            name=\"provider\",\n            display_name=\"Model Provider\",\n            options=[\"OpenAI\", \"Anthropic\", \"Google\"],\n            value=\"OpenAI\",\n            info=\"Select the model provider\",\n            real_time_refresh=True,\n            options_metadata=[{\"icon\": \"OpenAI\"}, {\"icon\": \"Anthropic\"}, {\"icon\": \"GoogleGenerativeAI\"}],\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n            info=\"Select the model to use\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        provider = self.provider\n        model_name = self.model_name\n        temperature = self.temperature\n        stream = self.stream\n\n        if provider == \"OpenAI\":\n            if not self.api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n            return ChatOpenAI(\n                model_name=model_name,\n                temperature=temperature,\n                streaming=stream,\n                openai_api_key=self.api_key,\n            )\n        if provider == \"Anthropic\":\n            if not self.api_key:\n                msg = \"Anthropic API key is required when using Anthropic provider\"\n                raise ValueError(msg)\n            return ChatAnthropic(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                anthropic_api_key=self.api_key,\n            )\n        if provider == \"Google\":\n            if not self.api_key:\n                msg = \"Google API key is required when using Google provider\"\n                raise ValueError(msg)\n            return ChatGoogleGenerativeAI(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                google_api_key=self.api_key,\n            )\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        if field_name == \"provider\":\n            if field_value == \"OpenAI\":\n                build_config[\"model_name\"][\"options\"] = OPENAI_MODEL_NAMES\n                build_config[\"model_name\"][\"value\"] = OPENAI_MODEL_NAMES[0]\n                build_config[\"api_key\"][\"display_name\"] = \"OpenAI API Key\"\n            elif field_value == \"Anthropic\":\n                build_config[\"model_name\"][\"options\"] = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"value\"] = ANTHROPIC_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Anthropic API Key\"\n            elif field_value == \"Google\":\n                build_config[\"model_name\"][\"options\"] = GOOGLE_GENERATIVE_AI_MODELS\n                build_config[\"model_name\"][\"value\"] = GOOGLE_GENERATIVE_AI_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Google API Key\"\n        return build_config\n"
+                "value": "from typing import Any\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import (\n    OPENAI_MODEL_NAMES,\n    OPENAI_REASONING_MODEL_NAMES,\n)\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\nfrom langflow.logging import logger\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[1],\n            combobox=True,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n            required=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            show=True,\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            info=\"The maximum number of retries to make when generating.\",\n            advanced=True,\n            value=5,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"The timeout for requests to OpenAI completion API.\",\n            advanced=True,\n            value=700,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        parameters = {\n            \"api_key\": SecretStr(self.api_key).get_secret_value() if self.api_key else None,\n            \"model_name\": self.model_name,\n            \"max_tokens\": self.max_tokens or None,\n            \"model_kwargs\": self.model_kwargs or {},\n            \"base_url\": self.openai_api_base or \"https://api.openai.com/v1\",\n            \"seed\": self.seed,\n            \"max_retries\": self.max_retries,\n            \"timeout\": self.timeout,\n            \"temperature\": self.temperature if self.temperature is not None else 0.1,\n        }\n\n        logger.info(f\"Model name: {self.model_name}\")\n        if self.model_name in OPENAI_REASONING_MODEL_NAMES:\n            logger.info(\"Getting reasoning model parameters\")\n            parameters.pop(\"temperature\")\n            parameters.pop(\"seed\")\n        output = ChatOpenAI(**parameters)\n        if self.json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n        if field_name in {\"base_url\", \"model_name\", \"api_key\"} and field_value in OPENAI_REASONING_MODEL_NAMES:\n            build_config[\"temperature\"][\"show\"] = False\n            build_config[\"seed\"][\"show\"] = False\n        if field_name in {\"base_url\", \"model_name\", \"api_key\"} and field_value in OPENAI_MODEL_NAMES:\n            build_config[\"temperature\"][\"show\"] = True\n            build_config[\"seed\"][\"show\"] = True\n        return build_config\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
                 "advanced": false,
                 "display_name": "Input",
                 "dynamic": false,
-                "info": "The input text to send to the model",
+                "info": "",
                 "input_types": [
                   "Message"
                 ],
@@ -2579,14 +2579,92 @@
                 "type": "str",
                 "value": ""
               },
+              "json_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "JSON Mode",
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "json_mode",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "max_retries": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "The maximum number of retries to make when generating.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_retries",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 5
+              },
+              "max_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Tokens",
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_tokens",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 128000.0,
+                  "min": 0.0,
+                  "step": 0.1,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": ""
+              },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
-                "combobox": false,
+                "combobox": true,
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
-                "info": "Select the model to use",
+                "info": "",
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -2598,7 +2676,8 @@
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
                   "gpt-4",
-                  "gpt-3.5-turbo"
+                  "gpt-3.5-turbo",
+                  "o1"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -2611,48 +2690,49 @@
                 "type": "str",
                 "value": "gpt-4o-mini"
               },
-              "provider": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
+              "openai_api_base": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "OpenAI API Base",
                 "dynamic": false,
-                "info": "Select the model provider",
-                "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
-                "options_metadata": [
-                  {
-                    "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "Google"
-                  }
-                ],
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "openai_api_base",
                 "placeholder": "",
-                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "OpenAI"
+                "value": ""
+              },
+              "seed": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Seed",
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "seed",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1
               },
               "stream": {
                 "_input_type": "BoolInput",
                 "advanced": true,
                 "display_name": "Stream",
                 "dynamic": false,
-                "info": "Whether to stream the response",
+                "info": "Stream the response from the model. Streaming works only in Chat.",
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "stream",
@@ -2671,7 +2751,7 @@
                 "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
-                "info": "A system message that helps set the behavior of the assistant",
+                "info": "System message to pass to the model.",
                 "input_types": [
                   "Message"
                 ],
@@ -2695,7 +2775,7 @@
                 "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
-                "info": "Controls randomness in responses",
+                "info": "",
                 "max_label": "",
                 "max_label_icon": "",
                 "min_label": "",
@@ -2717,6 +2797,24 @@
                 "tool_mode": false,
                 "type": "slider",
                 "value": 0.1
+              },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "The timeout for requests to OpenAI completion API.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 700
               }
             },
             "tool_mode": false
