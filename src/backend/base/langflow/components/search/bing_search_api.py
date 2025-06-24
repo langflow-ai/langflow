@@ -5,9 +5,10 @@ from langchain_community.utilities import BingSearchAPIWrapper
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import IntInput, MessageTextInput, MultilineInput, SecretStrInput
-from langflow.io import Output
-from langflow.schema import Data, DataFrame
+from langflow.inputs.inputs import IntInput, MessageTextInput, MultilineInput, SecretStrInput
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
+from langflow.template.field.base import Output
 
 
 class BingSearchAPIComponent(LCToolComponent):

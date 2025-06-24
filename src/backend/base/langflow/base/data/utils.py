@@ -8,7 +8,7 @@ import orjson
 import yaml
 from defusedxml import ElementTree
 
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -130,8 +130,7 @@ def read_docx_file(file_path: str) -> str:
 def parse_pdf_to_text(file_path: str) -> str:
     from pypdf import PdfReader
 
-    with Path(file_path).open("rb") as f:
-        reader = PdfReader(f)
+    with Path(file_path).open("rb") as f, PdfReader(f) as reader:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
