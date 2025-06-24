@@ -50,9 +50,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "system_prompt": "You are a helpful assistant.",
             "tools": [],
             "verbose": True,
-            "session_id": str(uuid4()),
-            "sender": MESSAGE_SENDER_AI,
-            "sender_name": MESSAGE_SENDER_NAME_AI,
         }
 
     async def test_build_config_update(self, component_class, default_kwargs):
@@ -129,7 +126,7 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             input_value=input_value,
             api_key=api_key,
             model_name="gpt-4o",
-            llm_type="OpenAI",
+            agent_llm="OpenAI",
             temperature=temperature,
             _session_id=str(uuid4()),
         )
