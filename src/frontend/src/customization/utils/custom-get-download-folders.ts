@@ -16,6 +16,10 @@ export const customGetDownloadFolderBlob = (
   folderName?: string,
   setSuccessData?: (data: any) => void,
 ) => {
+  if (folderName === "My Projects") {
+    folderName = "Starter Project";
+  }
+
   // Create a blob from the response data
   const blob = new Blob([response.data], {
     type: "application/x-zip-compressed",
@@ -29,7 +33,7 @@ export const customGetDownloadFolderBlob = (
   const filename =
     response.headers?.["content-disposition"]
       ?.split("filename=")[1]
-      ?.replace(/['"]/g, "") ?? "flows.zip";
+      ?.replace(/['"]/g, "") ?? `${folderName || "flows"}.zip`;
 
   link.setAttribute("download", filename);
   document.body.appendChild(link);
