@@ -27,9 +27,9 @@
         "id": "reactflow__edge-Agent-D0Kx2{œdataTypeœ:œAgentœ,œidœ:œAgent-D0Kx2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-yhCn0{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-yhCn0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-D0Kx2",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-D0Kx2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-D0Kx2œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-yhCn0",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-yhCn0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-yhCn0œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-CalculatorComponent-hMbFw{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-hMbFwœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-D0Kx2{œfieldNameœ:œtoolsœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "CalculatorComponent-hMbFw",
-        "sourceHandle": "{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-hMbFwœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-hMbFwœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-D0Kx2",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-D0Kx2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-ChatInput-iPUSx{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iPUSxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-D0Kx2{œfieldNameœ:œinput_valueœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-iPUSx",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iPUSxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-iPUSxœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-D0Kx2",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-D0Kx2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -110,9 +110,9 @@
         "id": "xy-edge__URLComponent-TpTHB{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-TpTHBœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-D0Kx2{œfieldNameœ:œtoolsœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URLComponent-TpTHB",
-        "sourceHandle": "{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-TpTHBœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-TpTHBœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-D0Kx2",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-D0Kx2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
