@@ -565,23 +565,6 @@ def print_banner(host: str, port: int, protocol: str) -> None:
     )
 
     title = f"[bold]Welcome to {styled_package_name}[/bold]\n"
-<<<<<<< Updated upstream
-
-    # Use Windows-safe characters to prevent encoding issues
-    import platform
-
-    if platform.system() == "Windows":
-        github_icon = "*"
-        discord_icon = "#"
-        arrow = "->"
-        status_icon = "[OK]"
-    else:
-        github_icon = ":star2:"
-        discord_icon = ":speech_balloon:"
-        arrow = "→"
-        status_icon = "🟢"
-
-=======
     
     # Use Windows-safe characters to prevent encoding issues
     if platform.system() == "Windows":
@@ -595,7 +578,6 @@ def print_banner(host: str, port: int, protocol: str) -> None:
         arrow = "->"
         status_icon = ">"
     
->>>>>>> Stashed changes
     info_text = (
         f"{github_icon} GitHub: Star for updates {arrow} https://github.com/langflow-ai/langflow\n"
         f"{discord_icon} Discord: Join for support {arrow} https://discord.com/invite/EqksyE2EX9"
