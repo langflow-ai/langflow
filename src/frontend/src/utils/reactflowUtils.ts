@@ -333,6 +333,16 @@ export function isValidConnection(
 
   const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle!);
   const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle!);
+  const hasCycle = (node: AllNodeType, visited = new Set()) => {
+    if (visited.has(node.id)) return false;
+
+    visited.add(node.id);
+
+    for (const outgoer of getOutgoers(node, nodesArray, edgesArray)) {
+      if (outgoer.id === source) return true;
+      if (hasCycle(outgoer, visited)) return true;
+    }
+  };
   if (
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,
@@ -350,22 +360,24 @@ export function isValidConnection(
         t === targetHandleObject.type,
     )
   ) {
-    let targetNode = nodesArray.find((node) => node.id === target!)?.data?.node;
-    if (!targetNode) {
-      if (!edgesArray.find((e) => e.targetHandle === targetHandle)) {
-        return true;
-      }
-    } else if (
-      targetHandleObject.output_types &&
-      !edgesArray.find((e) => e.targetHandle === targetHandle)
-    ) {
-      return true;
-    } else if (
-      !targetHandleObject.output_types &&
-      ((!targetNode.template[targetHandleObject.fieldName].list &&
+    let targetNode = nodesArray.find((node) => node.id === target!);
+    let targetNodeDataNode = targetNode?.data?.node;
+    if (
+      (!targetNodeDataNode &&
         !edgesArray.find((e) => e.targetHandle === targetHandle)) ||
-        targetNode.template[targetHandleObject.fieldName].list)
+      (targetNodeDataNode &&
+        targetHandleObject.output_types &&
+        !edgesArray.find((e) => e.targetHandle === targetHandle)) ||
+      (targetNodeDataNode &&
+        !targetHandleObject.output_types &&
+        ((!targetNodeDataNode.template[targetHandleObject.fieldName].list &&
+          !edgesArray.find((e) => e.targetHandle === targetHandle)) ||
+          targetNodeDataNode.template[targetHandleObject.fieldName].list))
     ) {
+      const isLoop = targetNode && hasCycle(targetNode);
+      if (isLoop && !targetHandleObject.output_types) {
+        return false;
+      }
       return true;
     }
   }
