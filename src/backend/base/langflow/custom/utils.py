@@ -536,6 +536,7 @@ def build_custom_components(components_paths: list[str]):
         return {}
 
     logger.info(f"Building custom components from {components_paths}")
+
     custom_components_from_file: dict = {}
     processed_paths = set()
     for path in components_paths:
@@ -560,7 +561,7 @@ async def abuild_custom_components(components_paths: list[str]):
     if not components_paths:
         return {}
 
-    logger.info(f"Building custom components from {components_paths}")
+    logger.debug(f"Building custom components from {components_paths}")
     custom_components_from_file: dict = {}
     processed_paths = set()
     for path in components_paths:

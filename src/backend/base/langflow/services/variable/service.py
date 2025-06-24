@@ -28,10 +28,9 @@ class DatabaseVariableService(VariableService, Service):
 
     async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
         if not self.settings_service.settings.store_environment_variables:
-            logger.info("Skipping environment variable storage.")
+            logger.debug("Skipping environment variable storage.")
             return
 
-        logger.info("Storing environment variables in the database.")
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
             if var_name in os.environ and os.environ[var_name].strip():
                 value = os.environ[var_name].strip()

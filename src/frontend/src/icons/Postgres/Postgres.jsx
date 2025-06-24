@@ -2,10 +2,9 @@ export const SvgPostgres = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     xmlnsXlink="http://www.w3.org/1999/xlink"
-    width="30"
-    height="30"
     version="1"
     viewBox="0 0 369 380.25"
+    {...props}
   >
     <defs>
       <filter id="a5834174ca" width="100%" height="100%" x="0%" y="0%">

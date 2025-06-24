@@ -3,13 +3,13 @@ import base64
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from functools import wraps
-from typing import Annotated, Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import uuid4
 
 import pydantic
 from anyio import BrokenResourceError
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from loguru import logger
 from mcp import types
@@ -17,13 +17,13 @@ from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
+from langflow.api.utils import CurrentActiveMCPUser
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from langflow.base.mcp.util import get_flow_snake_case
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
-from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
@@ -345,7 +345,7 @@ async def im_alive():
 
 
 @router.get("/sse", response_class=StreamingResponse)
-async def handle_sse(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
+async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
     msg = f"Starting SSE connection, server name: {server.name}"
     logger.info(msg)
     token = current_user_ctx.set(current_user)
