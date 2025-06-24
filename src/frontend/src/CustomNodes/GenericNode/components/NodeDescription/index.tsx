@@ -143,9 +143,9 @@ export default function NodeDescription({
   return (
     <div
       className={cn(
-        !editNameDescription ? "overflow-auto" : "",
+        !editNameDescription ? "overflow-auto" : "overflow-hidden",
         hasScroll ? "nowheel" : "",
-        charLimit ? "px-2 pb-4" : "",
+        charLimit ? "flex flex-col" : "",
         "w-full",
       )}
     >
@@ -155,7 +155,9 @@ export default function NodeDescription({
             maxLength={charLimit}
             className={cn(
               "nowheel w-full text-xs focus:border-primary focus:ring-0",
-              stickyNote ? "p-0 pt-0.5 !text-mmd" : "px-2 py-0.5",
+              stickyNote
+                ? "overflow-auto p-0 px-2 pt-0.5 !text-mmd"
+                : "px-2 py-0.5",
               inputClassName,
             )}
             autoFocus
@@ -168,7 +170,7 @@ export default function NodeDescription({
           {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (
             <div
               className={cn(
-                "pt-1 text-left text-mmd",
+                "pt-1 text-left !text-mmd",
                 (nodeDescription?.length ?? 0) >= charLimit
                   ? "text-error"
                   : "text-primary",

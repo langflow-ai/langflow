@@ -1,24 +1,21 @@
 ---
-title: Luna for Langflow
+title: Enterprise support for Langflow
 slug: /luna-for-langflow
 ---
 
-With [Luna for Langflow](https://www.datastax.com/products/luna-langflow) support, you can develop and deploy Langflow applications with confidence.
+With **Luna for Langflow** support, you can develop and deploy Langflow applications with confidence.
 
-**Luna** is a subscription to the Langflow expertise at DataStax. It's meant for users of Langflow who want all the benefits of running their own open-source deployments, but with the peace of mind that comes with having direct access to the team that has authored the majority of the Langflow code.
+Luna is a subscription to the Langflow expertise at DataStax. It's meant for Langflow users who want all the benefits of running their own open-source deployments, as well as the peace of mind that comes with having direct access to the team that has authored the majority of the Langflow code.
 
-**Luna** subscribers can get help with general-purpose and technical questions for their open-source Langflow deployments, and if an issue is encountered, DataStax is there to help.
+Luna subscribers can get help with general-purpose and technical questions for their open-source Langflow deployments.
+If an issue is encountered, DataStax is there to help.
 
-Ready to subscribe?
+:::info
+<!-- Last updated May 1 2025 -->
+As of May 2025, Luna for Langflow support covers Langflow versions 1.4.x.
 
-Visit the [Luna for Langflow](https://www.datastax.com/products/luna-langflow) product page to get started.
+Subscribers must run a supported Python version to receive support.
+Supported versions are `>=3.10, <3.14`, which includes all version from 3.10 through 3.13.x, but not 3.14.
+:::
 
-## Supported software
-
-Luna for Langflow support covers only the following software versions for Langflow.
-
-Last updated: May 1, 2025
-
-## Core information
-- **Langflow Version**: `1.4.x`
-- **Python Version Required**: `>=3.10, <3.14`
+To subscribe or learn more, see [Luna for Langflow](https://www.datastax.com/products/luna-langflow).
