@@ -91,6 +91,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             display_name="Similarity Threshold",
             info="Minimum similarity score (0 to 1) to include a document. Only applies to 'Similarity with Score' search.",
             value=0.0,
+            range_spec={"min": 0.0, "max": 1.0},
             advanced=True,
         ),
         NestedDictInput(
