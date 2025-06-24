@@ -57,12 +57,13 @@ export default function TableNodeCellRender({
       <div
         className={cn(
           "group mx-auto flex h-full max-h-48 w-[300px] items-center justify-center overflow-auto px-1 py-2.5 custom-scroll",
-          isTweaks && "pointer-events-none opacity-70",
+          isTweaks && "pointer-events-none opacity-50",
         )}
       >
         <ParameterRenderComponent
           nodeId={nodeId}
           handleOnNewValue={handleOnNewValue}
+          placeholder={parameter.placeholder}
           templateData={parameter}
           name={parameterId}
           templateValue={parameter.value}
