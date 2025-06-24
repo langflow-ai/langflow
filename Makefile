@@ -458,17 +458,13 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	echo "$(GREEN)Langflow-base version: $$LANGFLOW_BASE_VERSION$(NC)"; \
 	\
 	echo "$(GREEN)Updating main pyproject.toml...$(NC)"; \
-	sed -i.bak "s/^version = \".*\"/version = \"$$LANGFLOW_VERSION\"/" pyproject.toml; \
-	sed -i.bak "s/\"langflow-base==.*\"/\"langflow-base==$$LANGFLOW_BASE_VERSION\"/" pyproject.toml; \
+	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base==.*\"', '\"langflow-base==$$LANGFLOW_BASE_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating langflow-base pyproject.toml...$(NC)"; \
-	sed -i.bak "s/^version = \".*\"/version = \"$$LANGFLOW_BASE_VERSION\"/" src/backend/base/pyproject.toml; \
+	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating frontend package.json...$(NC)"; \
-	sed -i.bak "s/\"version\": \".*\"/\"version\": \"$$LANGFLOW_VERSION\"/" src/frontend/package.json; \
-	\
-	echo "$(GREEN)Cleaning up backup files...$(NC)"; \
-	rm -f pyproject.toml.bak src/backend/base/pyproject.toml.bak src/frontend/package.json.bak; \
+	python -c "import re; fname='src/frontend/package.json'; txt=open(fname).read(); txt=re.sub(r'\"version\": \".*\"', '\"version\": \"$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Syncing backend dependencies...$(NC)"; \
 	uv sync --frozen; \
