@@ -5,7 +5,7 @@ from langflow.schema.dataframe import DataFrame
 
 
 class DataToDataFrameComponent(Component):
-    display_name = "Data → DataFrame"
+    display_name = "Data -> DataFrame"
     description = (
         "Converts one or multiple Data objects into a DataFrame. "
         "Each Data object corresponds to one row. Fields from `.data` become columns, "

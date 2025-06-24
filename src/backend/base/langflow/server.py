@@ -25,6 +25,10 @@ class LangflowUvicornWorker(UvicornWorker):
 
     def handle_exit(self, sig, frame):
         if not self._has_exited:
+<<<<<<< Updated upstream
+=======
+            print("See you next time!")  # noqa: T201
+>>>>>>> Stashed changes
             self._has_exited = True
 
         super().handle_exit(sig, frame)

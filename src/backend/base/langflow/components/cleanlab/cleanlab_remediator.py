@@ -88,7 +88,7 @@ class CleanlabRemediator(Component):
             display_name="Warning for Untrustworthy Response",
             info="Warning to append to the response if Show Untrustworthy Response is enabled and trust score is "
             "below the threshold.",
-            value="⚠️ WARNING: The following response is potentially untrustworthy.",
+            value="WARNING: The following response is potentially untrustworthy.",
         ),
         PromptInput(
             name="fallback_text",
@@ -110,12 +110,12 @@ class CleanlabRemediator(Component):
 
     def remediate_response(self) -> Message:
         if self.score >= self.threshold:
-            self.status = f"Score {self.score:.2f} ≥ threshold {self.threshold:.2f} → accepted"
+            self.status = f"Score {self.score:.2f} >= threshold {self.threshold:.2f} -> accepted"
             return Message(
                 text=f"{self.response}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n**Trust Score:** {self.score:.2f}"
             )
 
-        self.status = f"Score {self.score:.2f} < threshold {self.threshold:.2f} → flagged"
+        self.status = f"Score {self.score:.2f} < threshold {self.threshold:.2f} -> flagged"
 
         if self.show_untrustworthy_response:
             parts = [

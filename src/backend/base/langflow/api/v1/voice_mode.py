@@ -75,10 +75,10 @@ Your instructions will be divided into three mutually exclusive sections: "Perma
 [ADDITIONAL] The following instructions are to be considered only "Additional"
 """
 
-LF_TO_OPENAI = "LF → OpenAI"
-LF_TO_CLIENT = "LF → Client"
-OPENAI_TO_LF = "OpenAI → LF"
-CLIENT_TO_LF = "Client → LF"
+LF_TO_OPENAI = "LF -> OpenAI"
+LF_TO_CLIENT = "LF -> Client"
+OPENAI_TO_LF = "OpenAI -> LF"
+CLIENT_TO_LF = "Client -> LF"
 # --- Helper Functions ---
 
 
@@ -543,7 +543,7 @@ def pcm16_to_float_array(pcm_data):
 
 
 async def text_chunker_with_timeout(chunks, timeout=0.3):
-    splitters = (".", ",", "?", "!", ";", ":", "—", "-", "(", ")", "[", "]", "}", " ")
+    splitters = (".", ",", "?", "!", ";", ":", "--", "-", "(", ")", "[", "]", "}", " ")
     buffer = ""
     ait = chunks.__aiter__()
     while True:
