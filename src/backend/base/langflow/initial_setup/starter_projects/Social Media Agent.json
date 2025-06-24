@@ -23,9 +23,9 @@
         },
         "id": "xy-edge__ApifyActors-DT1xK{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-DT1xKœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-6XgEt{œfieldNameœ:œtoolsœ,œidœ:œAgent-6XgEtœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "source": "ApifyActors-DT1xK",
-        "sourceHandle": "{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-DT1xKœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-DT1xKœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-6XgEt",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-6XgEtœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-6XgEtœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -49,9 +49,9 @@
         },
         "id": "xy-edge__ApifyActors-v3mXE{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-v3mXEœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-6XgEt{œfieldNameœ:œtoolsœ,œidœ:œAgent-6XgEtœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "source": "ApifyActors-v3mXE",
-        "sourceHandle": "{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-v3mXEœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-v3mXEœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-6XgEt",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-6XgEtœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-6XgEtœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -75,9 +75,9 @@
         },
         "id": "xy-edge__ChatInput-MEZLN{œdataTypeœ:œChatInputœ,œidœ:œChatInput-MEZLNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-6XgEt{œfieldNameœ:œinput_valueœ,œidœ:œAgent-6XgEtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "ChatInput-MEZLN",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-MEZLNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-MEZLNœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-6XgEt",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-6XgEtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-6XgEtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
@@ -103,9 +103,9 @@
         },
         "id": "xy-edge__Agent-6XgEt{œdataTypeœ:œAgentœ,œidœ:œAgent-6XgEtœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Fhn7K{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Fhn7Kœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "source": "Agent-6XgEt",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-6XgEtœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-6XgEtœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-Fhn7K",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Fhn7Kœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Fhn7Kœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
