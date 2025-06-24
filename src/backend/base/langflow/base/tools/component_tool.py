@@ -38,7 +38,7 @@ def _get_input_type(input_: InputTypes):
 
 
 def build_description(component: Component) -> str:
-    return f"{component.description}"
+    return component.description or ""
 
 
 async def send_message_noop(
