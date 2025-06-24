@@ -58,9 +58,14 @@ class FileComponent(BaseFileComponent):
 
             # Add outputs based on the number of files in the path
             if len(self.path) == 1:
-                frontend_node["outputs"].append(
-                    Output(display_name="Structured Content", name="dataframe", method="load_files_structured"),
-                )
+                # We need to check if the file is structured content
+                file_path = frontend_node["template"]["path"]["file_path"][0]
+                if file_path.endswith((".csv", ".xlsx", ".parquet")):
+                    frontend_node["outputs"].append(
+                        Output(display_name="Structured Content", name="dataframe", method="load_files_structured"),
+                    )
+
+                # All files get the raw content and path outputs
                 frontend_node["outputs"].append(
                     Output(display_name="Raw Content", name="message", method="load_files_message"),
                 )
@@ -68,6 +73,7 @@ class FileComponent(BaseFileComponent):
                     Output(display_name="File Path", name="path", method="load_files_path"),
                 )
             else:
+                # For multiple files, we only show the files output
                 frontend_node["outputs"].append(
                     Output(display_name="Files", name="dataframe", method="load_files"),
                 )
