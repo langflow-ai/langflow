@@ -467,7 +467,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	python -c "import re; fname='src/frontend/package.json'; txt=open(fname).read(); txt=re.sub(r'\"version\": \".*\"', '\"version\": \"$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Syncing backend dependencies...$(NC)"; \
-	uv sync --frozen; \
+	uv sync; \
 	\
 	echo "$(GREEN)Installing frontend dependencies...$(NC)"; \
 	(cd src/frontend && npm install); \
