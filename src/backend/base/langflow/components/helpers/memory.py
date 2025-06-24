@@ -76,7 +76,7 @@ class MemoryComponent(Component):
             value=100,
             info="Number of messages to retrieve.",
             advanced=True,
-            show=False,
+            show=True,
         ),
         MessageTextInput(
             name="session_id",
@@ -197,28 +197,39 @@ class MemoryComponent(Component):
 
             stored = await self.memory.aget_messages()
             # langchain memories are supposed to return messages in ascending order
+
             if order == "DESC":
                 stored = stored[::-1]
             if n_messages:
-                stored = stored[:n_messages]
+                stored = stored[-n_messages:] if order == "ASC" else stored[:n_messages]
             stored = [Message.from_lc_message(m) for m in stored]
             if sender_type:
                 expected_type = MESSAGE_SENDER_AI if sender_type == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER
                 stored = [m for m in stored if m.type == expected_type]
         else:
+            # For internal memory, we always fetch the last N messages by ordering by DESC
             stored = await aget_messages(
                 sender=sender_type,
                 sender_name=sender_name,
                 session_id=session_id,
-                limit=n_messages,
+                limit=10000,
                 order=order,
             )
-        self.status = stored
+            if n_messages:
+                print("len stored Before", len(stored))
+                stored = stored[-n_messages:] if order == "ASC" else stored[:n_messages]
+                print("len stored After", len(stored))
+            # aget_messages with order="DESC" returns the newest messages first.
+            # If the user wants them in ascending order, we reverse the list.
+            # if order == "ASC":
+            #     stored = stored[::-1]
+
+        # self.status = stored
         return cast(Data, stored)
 
     async def retrieve_messages_as_text(self) -> Message:
         stored_text = data_to_text(self.template, await self.retrieve_messages())
-        self.status = stored_text
+        # self.status = stored_text
         return Message(text=stored_text)
 
     async def retrieve_messages_dataframe(self) -> DataFrame:

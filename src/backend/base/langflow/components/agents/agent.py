@@ -16,7 +16,7 @@ from langflow.components.langchain_utilities.tool_calling import ToolCallingAgen
 from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
 from langflow.field_typing import Tool
-from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
+from langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
 from langflow.logging import logger
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -26,6 +26,7 @@ def set_advanced_true(component_input):
     component_input.advanced = True
     return component_input
 
+MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "Groq", "OpenAI"]
 
 class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
@@ -41,11 +42,11 @@ class AgentComponent(ToolCallingAgentComponent):
             name="agent_llm",
             display_name="Model Provider",
             info="The provider of the language model that the agent will use to generate responses.",
-            options=[*sorted(MODEL_PROVIDERS), "Custom"],
+            options=[*MODEL_PROVIDERS_LIST, "Custom"],
             value="OpenAI",
             real_time_refresh=True,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in sorted(MODEL_PROVIDERS)] + [{"icon": "brain"}],
+            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
         ),
         *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
         MultilineInput(
@@ -54,6 +55,14 @@ class AgentComponent(ToolCallingAgentComponent):
             info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
             advanced=False,
+        ),
+        IntInput(
+            name="n_messages",
+            display_name="Number of Chat History Messages",
+            value=100,
+            info="Number of chat history messages to retrieve.",
+            advanced=True,
+            show=True,
         ),
         *LCToolsAgentComponent._base_inputs,
         # removed memory inputs from agent component
@@ -79,8 +88,8 @@ class AgentComponent(ToolCallingAgentComponent):
 
             # Get memory data
             self.chat_history = await self.get_memory_data()
-            print(self.chat_history)
-            logger.info(f"Chat history: {self.chat_history}")
+            if isinstance(self.chat_history, Message):
+                self.chat_history = [self.chat_history]
 
             # Add current date tool if enabled
             if self.add_current_date_tool:
@@ -115,15 +124,11 @@ class AgentComponent(ToolCallingAgentComponent):
             raise
 
     async def get_memory_data(self):
-        # memory_kwargs = {
-        #     component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
-        # }
-        # # filter out empty values
-        # memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}
-
-        # return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages_as_text()
-        print(f"Session ID: {self.graph.session_id}")
-        return await MemoryComponent(**self.get_base_args()).set(session_id=self.graph.session_id).retrieve_messages()
+        return (
+            await MemoryComponent(**self.get_base_args())
+            .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
+            .retrieve_messages()
+        )
 
     def get_llm(self):
         if not isinstance(self.agent_llm, str):
