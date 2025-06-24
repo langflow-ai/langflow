@@ -215,7 +215,7 @@ class Component(CustomComponent):
         """
         return {
             "_user_id": self.user_id,
-            "_session_id": self.session_id,
+            "_session_id": self.graph.session_id,
             "_tracing_service": self._tracing_service,
         }
 

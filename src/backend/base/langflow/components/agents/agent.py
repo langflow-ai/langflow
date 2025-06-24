@@ -56,7 +56,8 @@ class AgentComponent(ToolCallingAgentComponent):
             advanced=False,
         ),
         *LCToolsAgentComponent._base_inputs,
-        *memory_inputs,
+        # removed memory inputs from agent component
+        # *memory_inputs,
         BoolInput(
             name="add_current_date_tool",
             display_name="Current Date",
@@ -78,6 +79,8 @@ class AgentComponent(ToolCallingAgentComponent):
 
             # Get memory data
             self.chat_history = await self.get_memory_data()
+            print(self.chat_history)
+            logger.info(f"Chat history: {self.chat_history}")
 
             # Add current date tool if enabled
             if self.add_current_date_tool:
@@ -112,13 +115,15 @@ class AgentComponent(ToolCallingAgentComponent):
             raise
 
     async def get_memory_data(self):
-        memory_kwargs = {
-            component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
-        }
-        # filter out empty values
-        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}
+        # memory_kwargs = {
+        #     component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
+        # }
+        # # filter out empty values
+        # memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}
 
-        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()
+        # return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages_as_text()
+        print(f"Session ID: {self.graph.session_id}")
+        return await MemoryComponent(**self.get_base_args()).set(session_id=self.graph.session_id).retrieve_messages()
 
     def get_llm(self):
         if not isinstance(self.agent_llm, str):

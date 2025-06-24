@@ -139,7 +139,12 @@ class LCAgentComponent(Component):
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
-            input_dict["chat_history"] = data_to_messages(self.chat_history)
+            logger.info(f"Chat history: {self.chat_history}")
+            if isinstance(self.chat_history, Data):
+                input_dict["chat_history"] = data_to_messages(self.chat_history)
+                print(f"Chat history: {input_dict['chat_history']}")
+            else:
+                input_dict["chat_history"] = self.chat_history
 
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
