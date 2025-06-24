@@ -191,10 +191,14 @@ def get_lifespan(*, fix_migration=False, version=None):
         finally:
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
+            from langflow.__main__ import get_number_of_workers
             from langflow.cli.progress import create_langflow_shutdown_progress
 
             log_level = os.getenv("LANGFLOW_LOG_LEVEL", "info").lower()
-            shutdown_progress = create_langflow_shutdown_progress(verbose=log_level == "debug")
+            num_workers = get_number_of_workers(get_settings_service().settings.workers)
+            shutdown_progress = create_langflow_shutdown_progress(
+                verbose=log_level == "debug", multiple_workers=num_workers > 1
+            )
 
             try:
                 # Step 0: Stopping Server
@@ -227,7 +231,6 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Show completion summary and farewell
                 shutdown_progress.print_shutdown_summary()
-                shutdown_progress.print_farewell_message()
 
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.DBAPIError) as e:
                 # Case where the database connection is closed during shutdown
