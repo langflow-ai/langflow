@@ -6,37 +6,8 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-GgGua",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-SplPb",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-GgGua{œdataTypeœ:œAgentœ,œidœ:œAgent-GgGuaœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-SplPb{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-SplPbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-GgGua",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-GgGuaœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-SplPb",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-SplPbœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-tqP9Q",
+            "id": "Prompt-PX9QB",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -44,25 +15,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-GgGua",
+            "id": "Agent-sir3U",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-tqP9Q{œdataTypeœ:œPromptœ,œidœ:œPrompt-tqP9Qœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-GgGua{œfieldNameœ:œinput_valueœ,œidœ:œAgent-GgGuaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-tqP9Q",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-tqP9Qœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-GgGua",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-GgGuaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-PX9QB{œdataTypeœ:œPromptœ,œidœ:œPrompt-PX9QBœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-sir3U{œfieldNameœ:œinput_valueœ,œidœ:œAgent-sir3Uœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-PX9QB",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-PX9QBœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-sir3U",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-sir3Uœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-LyoFm",
+            "id": "CalculatorComponent-JhT2c",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -70,18 +43,49 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-GgGua",
+            "id": "Agent-sir3U",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CalculatorComponent-LyoFm{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-LyoFmœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-GgGua{œfieldNameœ:œtoolsœ,œidœ:œAgent-GgGuaœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorComponent-LyoFm",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-LyoFmœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-GgGua",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-GgGuaœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-CalculatorComponent-JhT2c{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-JhT2cœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-sir3U{œfieldNameœ:œtoolsœ,œidœ:œAgent-sir3Uœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "CalculatorComponent-JhT2c",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-JhT2cœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-sir3U",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-sir3Uœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-sir3U",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-tv6P2",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__Agent-sir3U{œdataTypeœ:œAgentœ,œidœ:œAgent-sir3Uœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-tv6P2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tv6P2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Agent-sir3U",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-sir3Uœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-tv6P2",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-tv6P2œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -89,7 +93,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-tqP9Q",
+          "id": "Prompt-PX9QB",
           "node": {
             "base_classes": [
               "Message"
@@ -115,7 +119,7 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.4.2",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -318,7 +322,7 @@
         },
         "dragging": false,
         "height": 693,
-        "id": "Prompt-tqP9Q",
+        "id": "Prompt-PX9QB",
         "measured": {
           "height": 693,
           "width": 320
@@ -339,7 +343,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-SplPb",
+          "id": "ChatOutput-tv6P2",
           "node": {
             "base_classes": [
               "Message"
@@ -360,13 +364,15 @@
               "data_template",
               "background_color",
               "chat_icon",
-              "text_color"
+              "text_color",
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.4.2",
             "metadata": {},
+            "minimized": true,
             "output_types": [],
             "outputs": [
               {
@@ -397,6 +403,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -419,6 +426,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -477,6 +485,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "data_template",
                 "placeholder": "",
@@ -490,7 +499,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Inputs",
                 "dynamic": false,
@@ -501,21 +510,21 @@
                   "Message"
                 ],
                 "list": false,
-                "load_from_db": false,
+                "list_add_label": "Add More",
                 "name": "input_value",
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
-                "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -524,10 +533,12 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -543,6 +554,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -565,6 +577,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -584,11 +597,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -603,6 +618,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -622,7 +638,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-SplPb",
+        "id": "ChatOutput-tv6P2",
         "measured": {
           "height": 234,
           "width": 320
@@ -635,13 +651,13 @@
           "x": 2240.3625274769397,
           "y": 355.16302699218204
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "note-VL2VP",
+          "id": "note-PwGXK",
           "node": {
             "description": "# SaaS Pricing Calculator\n\nWelcome to the SaaS Pricing Calculator! This flow helps you determine the optimal monthly subscription price for your software service.\n\n## Instructions\n\n1. Prepare Your Data\n   - Gather information on monthly infrastructure costs\n   - Calculate customer support expenses\n   - Estimate continuous development costs\n   - Decide on your desired profit margin\n   - Determine the estimated number of subscribers\n\n2. Input Values\n   - Enter the gathered data into the respective fields in the Prompt node\n   - Double-check the accuracy of your inputs\n\n3. Run the Flow\n   - Click the \"Run\" button to start the calculation process\n   - The flow will use Chain-of-Thought prompting to guide the AI through the steps\n\n4. Review the Results\n   - Examine the output in the Chat Output node\n   - The result will show a breakdown of costs and the final subscription price\n\n5. Adjust and Refine\n   - If needed, modify your inputs to explore different pricing scenarios\n   - Re-run the flow to see how changes affect the final price\n\nRemember: Regularly update your costs and subscriber estimates to keep your pricing model accurate and competitive! 💼📊",
             "display_name": "",
@@ -652,10 +668,10 @@
         },
         "dragging": false,
         "height": 800,
-        "id": "note-VL2VP",
+        "id": "note-PwGXK",
         "measured": {
           "height": 800,
-          "width": 324
+          "width": 325
         },
         "position": {
           "x": 689.7659055360411,
@@ -666,7 +682,7 @@
           "y": 68.95847391680593
         },
         "resizing": false,
-        "selected": true,
+        "selected": false,
         "style": {
           "height": 800,
           "width": 324
@@ -678,7 +694,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-GgGua",
+          "id": "Agent-sir3U",
           "node": {
             "base_classes": [
               "Message"
@@ -721,7 +737,7 @@
             "frozen": false,
             "icon": "bot",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.4.2",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -823,7 +839,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1346,7 +1362,7 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-GgGua",
+        "id": "Agent-sir3U",
         "measured": {
           "height": 650,
           "width": 320
@@ -1365,7 +1381,7 @@
       },
       {
         "data": {
-          "id": "CalculatorComponent-LyoFm",
+          "id": "CalculatorComponent-JhT2c",
           "node": {
             "base_classes": [
               "Data"
@@ -1385,6 +1401,7 @@
             "icon": "calculator",
             "key": "CalculatorComponent",
             "legacy": false,
+            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1393,11 +1410,14 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
+                "group_outputs": false,
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
+                "tool_mode": true,
                 "types": [
                   "Tool"
                 ],
@@ -1450,11 +1470,11 @@
                 "value": ""
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -1462,74 +1482,28 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
-                    "name": "None-evaluate_expression",
+                    "args": {
+                      "expression": {
+                        "default": "",
+                        "description": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
+                        "title": "Expression",
+                        "type": "string"
+                      }
+                    },
+                    "description": "CalculatorComponent. evaluate_expression - Perform basic arithmetic operations on a given expression.",
+                    "display_description": "CalculatorComponent. evaluate_expression - Perform basic arithmetic operations on a given expression.",
+                    "display_name": "evaluate_expression",
+                    "name": "evaluate_expression",
+                    "readonly": false,
+                    "status": true,
                     "tags": [
-                      "None-evaluate_expression"
+                      "evaluate_expression"
                     ]
                   }
                 ]
@@ -1542,9 +1516,9 @@
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-LyoFm",
+        "id": "CalculatorComponent-JhT2c",
         "measured": {
-          "height": 333,
+          "height": 218,
           "width": 320
         },
         "position": {
@@ -1556,18 +1530,16 @@
       }
     ],
     "viewport": {
-      "x": -419.5792282920602,
-      "y": 250.7080185506556,
-      "zoom": 0.7037132543294129
+      "x": -514.4665122679305,
+      "y": 57.59497096606026,
+      "zoom": 0.5864177566573868
     }
   },
   "description": "Calculate SaaS subscription price based on costs, profit margin, and subscribers using step-by-step method and Chain-of-Thought prompting. ",
   "endpoint_name": null,
-  "gradient": "3",
-  "icon": "calculator",
-  "id": "9357f72e-2121-4541-8e7d-74b7ba2ada2b",
+  "id": "45470d4c-fade-4ec5-8bc1-96f14160d957",
   "is_component": false,
-  "last_tested_version": "1.1.1",
+  "last_tested_version": "1.4.2",
   "name": "SaaS Pricing",
   "tags": [
     "agents",
