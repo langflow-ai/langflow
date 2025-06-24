@@ -1,4 +1,6 @@
+import json
 import shutil
+import sqlite3
 import tarfile
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -174,8 +176,7 @@ class BaseFileComponent(Component, ABC):
     ]
 
     _base_outputs = [
-        Output(display_name="Loaded Files", name="dataframe", method="load_files"),
-        Output(display_name="Raw Content", name="message", method="load_files_message"),
+        Output(display_name="Files", name="dataframe", method="load_files"),
     ]
 
     @abstractmethod
@@ -257,6 +258,60 @@ class BaseFileComponent(Component, ABC):
 
         return Message(text=sep.join(parts))
 
+    def load_files_path(self) -> Message:
+        """Returns a Message containing file paths from loaded files.
+
+        Returns:
+            Message: Message containing file paths
+        """
+        files = self._validate_and_resolve_paths()
+        paths = [file.path.as_posix() for file in files if file.path.exists()]
+
+        return Message(text="\n".join(paths) if paths else "")
+
+    def try_read_json_with_orients(self, file_path):
+        orients = ["records", "columns", "values", "split", "table", "index"]
+        for orient in orients:
+            try:
+                return pd.read_json(file_path, orient=orient)
+            except Exception as _:  # noqa: BLE001, S110
+                pass
+        return None
+
+    def load_files_structured(self) -> DataFrame:
+        """Load files and return as DataFrame with structured content.
+
+        Returns:
+            DataFrame: DataFrame containing structured content from all files
+        """
+        data_list = self.load_files_core()
+        if not data_list:
+            return DataFrame()
+
+        # Get the file path from the first Data object
+        file_path = data_list[0].data.get(self.SERVER_FILE_PATH_FIELDNAME, None)
+
+        # If file_path is provided and is a CSV, read it directly
+        if file_path and str(file_path).lower().endswith(".csv"):
+            rows = pd.read_csv(file_path).to_dict("records")
+        elif file_path and str(file_path).lower().endswith(".json"):
+            rows = self.try_read_json_with_orients(file_path)
+        elif file_path and str(file_path).lower().endswith(".xlsx"):
+            rows = pd.read_excel(file_path).to_dict("records")
+        elif file_path and str(file_path).lower().endswith(".parquet"):
+            rows = pd.read_parquet(file_path).to_dict("records")
+        elif file_path and str(file_path).lower().endswith(".sqlite"):
+            conn = sqlite3.connect(file_path)
+            query = "SELECT * FROM data"
+            rows = pd.read_sql_query(query, conn).to_dict("records")
+            conn.close()
+        else:
+            # Convert Data objects to a list of dictionaries
+            # TODO: Parse according to docling standards
+            rows = [data.data for data in data_list if data.data]
+
+        return DataFrame(rows)
+
     def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.
 
@@ -267,30 +322,19 @@ class BaseFileComponent(Component, ABC):
         if not data_list:
             return DataFrame()
 
-        # First handle CSV files specially
-        csv_data = []
-        non_csv_rows = []
-
+        # Convert Data objects to a list of dictionaries
+        all_rows = []
         for data in data_list:
             file_path = data.data.get(self.SERVER_FILE_PATH_FIELDNAME)
-            if file_path and str(file_path).lower().endswith(".csv"):
-                try:
-                    csv_data.extend(pd.read_csv(file_path).to_dict("records"))
-                except Exception as e:
-                    self.log(f"Error processing CSV file {file_path}: {e}")
-                    if not self.silent_errors:
-                        raise
-            else:
-                # Handle non-CSV files as before
-                row = dict(data.data) if data.data else {}
-                if "text" in data.data:
-                    row["text"] = data.data["text"]
-                if file_path:
-                    row["file_path"] = file_path
-                non_csv_rows.append(row)
+            row = dict(data.data) if data.data else {}
 
-        # Combine CSV and non-CSV data
-        all_rows = csv_data + non_csv_rows
+            # Add text if available, otherwise use the data's text property
+            if "text" in data.data:
+                row["text"] = data.data["text"]
+            if file_path:
+                row["file_path"] = file_path
+            all_rows.append(row)
+
         return DataFrame(all_rows)
 
     @property

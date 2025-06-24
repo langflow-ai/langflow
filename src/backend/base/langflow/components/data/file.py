@@ -57,16 +57,19 @@ class FileComponent(BaseFileComponent):
             frontend_node["outputs"] = []
 
             # Add outputs based on the number of files in the path
-            if len(self.path) > 1:
+            if len(self.path) == 1:
                 frontend_node["outputs"].append(
-                    Output(display_name="Raw Files", name="dataframe", method="load_files"),
+                    Output(display_name="Structured Content", name="dataframe", method="load_files_structured"),
+                )
+                frontend_node["outputs"].append(
+                    Output(display_name="Raw Content", name="message", method="load_files_message"),
+                )
+                frontend_node["outputs"].append(
+                    Output(display_name="File Path", name="path", method="load_files_path"),
                 )
             else:
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured File", name="dataframe", method="load_files"),
-                )
-                frontend_node["outputs"].append(
-                    Output(display_name="Raw File", name="message", method="load_files_message"),
+                    Output(display_name="Files", name="dataframe", method="load_files"),
                 )
 
         return frontend_node
