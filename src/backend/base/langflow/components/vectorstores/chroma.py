@@ -236,8 +236,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         self.log(f"Number of results: {k}")
         self.log(f"Similarity threshold: {threshold}")
 
-        if mode == "Similarity with Score" and hasattr(vs, "similarity_search_with_score"):
-            # ... rest of the logic ...
         if mode.lower() in ["similarity", "mmr"]:
             if hasattr(vs, "search"):
                 search_args = {
