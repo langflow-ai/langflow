@@ -478,3 +478,81 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
             )
             return fernet.decrypt(encrypted_api_key).decode()
     return ""
+
+
+# MCP-specific authentication functions that always behave as if skip_auth_auto_login is True
+async def get_current_user_mcp(
+    token: Annotated[str, Security(oauth2_login)],
+    query_param: Annotated[str, Security(api_key_query)],
+    header_param: Annotated[str, Security(api_key_header)],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> User:
+    """MCP-specific user authentication that always allows fallback to username lookup.
+
+    This function provides authentication for MCP endpoints with special handling:
+    - If a JWT token is provided, it uses standard JWT authentication
+    - If no API key is provided and AUTO_LOGIN is enabled, it falls back to
+      username lookup using the configured superuser credentials
+    - Otherwise, it validates the provided API key (from query param or header)
+    """
+    if token:
+        return await get_current_user_by_jwt(token, db)
+
+    # MCP-specific authentication logic - always behaves as if skip_auth_auto_login is True
+    settings_service = get_settings_service()
+    result: ApiKey | User | None
+
+    if settings_service.auth_settings.AUTO_LOGIN:
+        # Get the first user
+        if not settings_service.auth_settings.SUPERUSER:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing first superuser credentials",
+            )
+        if not query_param and not header_param:
+            # For MCP endpoints, always fall back to username lookup when no API key is provided
+            result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+            if result:
+                logger.warning(AUTO_LOGIN_WARNING)
+                return result
+        else:
+            result = await check_key(db, query_param or header_param)
+
+    elif not query_param and not header_param:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="An API key must be passed as query or header",
+        )
+
+    elif query_param:
+        result = await check_key(db, query_param)
+
+    else:
+        result = await check_key(db, header_param)
+
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing API key",
+        )
+
+    # If result is a User, return it directly
+    if isinstance(result, User):
+        return result
+
+    # If result is an ApiKey, we need to get the associated user
+    # This should not happen in normal flow, but adding for completeness
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Invalid authentication result",
+    )
+
+
+async def get_current_active_user_mcp(current_user: Annotated[User, Depends(get_current_user_mcp)]):
+    """MCP-specific active user dependency.
+
+    This dependency is temporary and will be removed once MCP is fully integrated.
+    """
+    if not current_user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
+    return current_user
