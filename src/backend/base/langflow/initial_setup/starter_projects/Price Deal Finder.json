@@ -2,12 +2,11 @@
   "data": {
     "edges": [
       {
-        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-reBlu",
+            "id": "AgentQL-fgRow",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,27 +14,77 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-oRYZX",
+            "id": "Agent-ghqeP",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-reBlu{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-reBluœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oRYZX{œfieldNameœ:œtoolsœ,œidœ:œAgent-oRYZXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "AgentQL-reBlu",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-reBluœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-oRYZX",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oRYZXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__AgentQL-fgRow{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-fgRowœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-ghqeP{œfieldNameœ:œtoolsœ,œidœ:œAgent-ghqePœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "AgentQL-fgRow",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-fgRowœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-ghqeP",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-ghqePœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
-        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TavilySearchComponent",
+            "id": "TavilySearchComponent-L8PP0",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-ghqeP",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__TavilySearchComponent-L8PP0{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-L8PP0œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-ghqeP{œfieldNameœ:œtoolsœ,œidœ:œAgent-ghqePœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "TavilySearchComponent-L8PP0",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-L8PP0œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-ghqeP",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-ghqePœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-IrBdK",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-ghqeP",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__ChatInput-IrBdK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-IrBdKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-ghqeP{œfieldNameœ:œinput_valueœ,œidœ:œAgent-ghqePœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-IrBdK",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-IrBdKœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-ghqeP",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-ghqePœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-oRYZX",
+            "id": "Agent-ghqeP",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,7 +92,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-hdvqT",
+            "id": "ChatOutput-jwko6",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,74 +101,17 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-oRYZX{œdataTypeœ:œAgentœ,œidœ:œAgent-oRYZXœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-hdvqT{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hdvqTœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-oRYZX",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-oRYZXœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-hdvqT",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-hdvqTœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-STQC5",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-oRYZX",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-TavilySearchComponent-STQC5{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-STQC5œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-oRYZX{œfieldNameœ:œtoolsœ,œidœ:œAgent-oRYZXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "TavilySearchComponent-STQC5",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-STQC5œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-oRYZX",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-oRYZXœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-DwzkZ",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-oRYZX",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-DwzkZ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DwzkZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-oRYZX{œfieldNameœ:œinput_valueœ,œidœ:œAgent-oRYZXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-DwzkZ",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DwzkZœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-oRYZX",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-oRYZXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__Agent-ghqeP{œdataTypeœ:œAgentœ,œidœ:œAgent-ghqePœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-jwko6{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jwko6œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-ghqeP",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-ghqePœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-jwko6",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-jwko6œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-DwzkZ",
+          "id": "ChatInput-IrBdK",
           "node": {
             "base_classes": [
               "Message"
@@ -418,9 +410,9 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-DwzkZ",
+        "id": "ChatInput-IrBdK",
         "measured": {
-          "height": 66,
+          "height": 48,
           "width": 192
         },
         "position": {
@@ -432,7 +424,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-hdvqT",
+          "id": "ChatOutput-jwko6",
           "node": {
             "base_classes": [
               "Message"
@@ -731,9 +723,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-hdvqT",
+        "id": "ChatOutput-jwko6",
         "measured": {
-          "height": 66,
+          "height": 48,
           "width": 192
         },
         "position": {
@@ -745,7 +737,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-STQC5",
+          "id": "TavilySearchComponent-L8PP0",
           "node": {
             "base_classes": [
               "Data",
@@ -780,9 +772,11 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
+                "group_outputs": false,
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -1055,11 +1049,11 @@
                 "type": "str"
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -1067,87 +1061,28 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "name": "TavilySearchComponent-fetch_content",
+                    "args": {
+                      "query": {
+                        "default": "",
+                        "description": "The search query you want to execute with Tavily.",
+                        "title": "Query",
+                        "type": "string"
+                      }
+                    },
+                    "description": "**Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+                    "display_description": "**Tavily Search** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+                    "display_name": "fetch_content_dataframe",
+                    "name": "fetch_content_dataframe",
+                    "readonly": false,
+                    "status": true,
                     "tags": [
-                      "TavilySearchComponent-fetch_content"
-                    ]
-                  },
-                  {
-                    "description": "fetch_content_text(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "name": "TavilySearchComponent-fetch_content_text",
-                    "tags": [
-                      "TavilySearchComponent-fetch_content_text"
+                      "fetch_content_dataframe"
                     ]
                   }
                 ]
@@ -1183,9 +1118,9 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-STQC5",
+        "id": "TavilySearchComponent-L8PP0",
         "measured": {
-          "height": 437,
+          "height": 316,
           "width": 320
         },
         "position": {
@@ -1199,7 +1134,7 @@
         "data": {
           "description": "Uses AgentQL API to extract structured data from a given URL.",
           "display_name": "AgentQL Query Data",
-          "id": "AgentQL-reBlu",
+          "id": "AgentQL-fgRow",
           "node": {
             "base_classes": [
               "Data"
@@ -1235,6 +1170,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
+                "group_outputs": false,
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
@@ -1432,11 +1368,11 @@
                 "value": 900
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
+                "_input_type": "ToolsInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Actions",
                 "dynamic": false,
-                "info": "",
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -1444,94 +1380,39 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": true,
-                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
-                      "disable_edit": false,
-                      "display_name": "Enable",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "status",
-                      "sortable": true,
-                      "type": "boolean"
-                    }
-                  ]
-                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "type": "tools",
                 "value": [
                   {
-                    "description": "build_output(api_key: Message, url: Message) - Extracts structured data from a web page using an AgentQL query or a Natural Language description.",
-                    "name": "AgentQL-build_output",
+                    "args": {
+                      "prompt": {
+                        "default": "",
+                        "description": "A Natural Language description of the data to extract from the page. Alternative to AgentQL query.",
+                        "title": "Prompt",
+                        "type": "string"
+                      },
+                      "query": {
+                        "default": "",
+                        "description": "The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
+                        "title": "Query",
+                        "type": "string"
+                      },
+                      "url": {
+                        "description": "The URL of the public web page you want to extract data from.",
+                        "title": "Url",
+                        "type": "string"
+                      }
+                    },
+                    "description": "Extracts structured data from a web page using an AgentQL query or a Natural Language description.",
+                    "display_description": "Extracts structured data from a web page using an AgentQL query or a Natural Language description.",
+                    "display_name": "build_output",
+                    "name": "build_output",
+                    "readonly": false,
                     "status": true,
                     "tags": [
-                      "AgentQL-build_output"
+                      "build_output"
                     ]
                   }
                 ]
@@ -1591,9 +1472,9 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-reBlu",
+        "id": "AgentQL-fgRow",
         "measured": {
-          "height": 644,
+          "height": 316,
           "width": 320
         },
         "position": {
@@ -1605,12 +1486,122 @@
       },
       {
         "data": {
-          "id": "Agent-oRYZX",
+          "id": "note-uI2ji",
+          "node": {
+            "description": "### 💡 Add your OpenAI API key here",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "id": "note-uI2ji",
+        "measured": {
+          "height": 324,
+          "width": 324
+        },
+        "position": {
+          "x": 798.1532899902708,
+          "y": 48.63976452163034
+        },
+        "selected": false,
+        "type": "noteNode"
+      },
+      {
+        "data": {
+          "id": "note-K7Df4",
+          "node": {
+            "description": "### 💡 Add your AgentQL API key here",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 346,
+        "id": "note-K7Df4",
+        "measured": {
+          "height": 346,
+          "width": 324
+        },
+        "position": {
+          "x": 416.2302078823729,
+          "y": 51.23403819068896
+        },
+        "selected": false,
+        "type": "noteNode"
+      },
+      {
+        "data": {
+          "id": "note-A4MCV",
+          "node": {
+            "description": "# Price Deal Finder \n\nThis flow searches and compares prices of a product on the web.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"iPhone 16 Pro 512 GB\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
+            "display_name": "",
+            "documentation": "",
+            "template": {}
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 674,
+        "id": "note-A4MCV",
+        "measured": {
+          "height": 674,
+          "width": 466
+        },
+        "position": {
+          "x": -472.5459222813072,
+          "y": 102.70113417861305
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 466
+      },
+      {
+        "data": {
+          "id": "note-AH0tj",
+          "node": {
+            "description": "### 💡 Add your Tavily AI Search key here",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 324,
+        "id": "note-AH0tj",
+        "measured": {
+          "height": 324,
+          "width": 345
+        },
+        "position": {
+          "x": 25.144734571805117,
+          "y": 126.6122587862217
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 345
+      },
+      {
+        "data": {
+          "id": "Agent-ghqeP",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
+            "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -1636,7 +1627,10 @@
               "verbose",
               "max_iterations",
               "agent_description",
+              "mode",
+              "message",
               "memory",
+              "sender_type",
               "sender",
               "sender_name",
               "n_messages",
@@ -1647,8 +1641,8 @@
             ],
             "frozen": false,
             "icon": "bot",
+            "key": "Agent",
             "legacy": false,
-            "lf_version": "1.3.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1660,6 +1654,8 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1669,6 +1665,7 @@
               }
             ],
             "pinned": false,
+            "score": 5.283996070936036e-7,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -1692,6 +1689,7 @@
               "agent_description": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
@@ -1730,12 +1728,29 @@
                   "OpenAI",
                   "Custom"
                 ],
-                "options_metadata": [],
+                "options_metadata": [
+                  {
+                    "icon": "Anthropic"
+                  },
+                  {
+                    "icon": "GoogleGenerativeAI"
+                  },
+                  {
+                    "icon": "Groq"
+                  },
+                  {
+                    "icon": "OpenAI"
+                  },
+                  {
+                    "icon": "brain"
+                  }
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1752,6 +1767,7 @@
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
@@ -1919,7 +1935,7 @@
                 "_input_type": "MessageTextInput",
                 "advanced": true,
                 "display_name": "Message",
-                "dynamic": false,
+                "dynamic": true,
                 "info": "The chat message to be stored.",
                 "input_types": [
                   "Message"
@@ -1930,7 +1946,7 @@
                 "name": "message",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": true,
                 "trace_as_input": true,
@@ -1957,7 +1973,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "tab",
-                "value": "Store"
+                "value": "Retrieve"
               },
               "model_kwargs": {
                 "_input_type": "DictInput",
@@ -2005,10 +2021,11 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4.1-mini"
+                "value": "gpt-4o"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -2021,7 +2038,7 @@
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -2065,6 +2082,7 @@
                 "required": true,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2089,28 +2107,27 @@
                 "value": 1
               },
               "sender": {
-                "_input_type": "DropdownInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
                 "display_name": "Sender",
                 "dynamic": false,
                 "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
+                "input_types": [
+                  "Message"
                 ],
-                "options_metadata": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
+                "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "Machine and User"
+                "value": ""
               },
               "sender_name": {
                 "_input_type": "MessageTextInput",
@@ -2127,7 +2144,7 @@
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -2186,6 +2203,7 @@
               "system_prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
@@ -2205,7 +2223,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are an deal finder assistant that helps find and compare the prices of products across different e-commerce platforms. You must use the Tavily Search API to find the URLs of the ecommerce platforms that sell these products. Then use the AgentQL tool to extract the prices of the product in those websites. Make sure to include the name of the product, the price of the product, the shop name, and the URL link of the page to where you can add the product to a cart or checkout immediately. The price and URL link has to be retrieved, so if it's not available or doesn't work don't include it.\n\nHere's how to write an AgentQL query:\n\nThe AgentQL query serves as the building block of your script. This guide shows you how AgentQL's query structure works and how to write a valid query.\n\n### Single term query\n\nA **single term query** enables you to retrieve a single element on the webpage. Here is an example of how you can write a single term query to retrieve a search box.\n\n```AgentQL\n{\n    search_box\n}\n```\n\n### List term query\n\nA **list term query** enables you to retrieve a list of similar elements on the webpage. Here is an example of how you can write a list term query to retrieve a list of prices of apples.\n\n```AgentQL\n{\n    apple_price[]\n}\n```\n\nYou can also specify the exact field you want to return in the list. Here is an example of how you can specify that you want the name and price from the list of products.\n\n```AgentQL\n{\n    products[] {\n        name\n        price(integer)\n    }\n}\n```\n\n### Combining single term queries and list term queries\n\nYou can query for both **single terms** and **list terms** by combining the preceding formats.\n\n```AgentQL\n{\n    author\n    date_of_birth\n    book_titles[]\n}\n```\n\n### Giving context to queries\n\nThere two main ways you can provide additional context to your queries.\n\n#### Structural context\n\nYou can nest queries within parent containers to indicate that your target web element is in a particular section of the webpage.\n\n```AgentQL\n{\n    footer {\n        social_media_links[]\n    }\n}\n```\n\n#### Semantic context\n\nYou can also provide a short description within parentheses to guide AgentQL in locating the right element(s).\n\n```AgentQL\n{\n    footer {\n        social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n    }\n}\n```\n\n### Syntax guidelines\n\nEnclose all AgentQL query terms within curly braces `{}`. The following query structure isn't valid because the term \"social_media_links\" is wrongly enclosed within parenthesis`()`.\n\n```AgentQL\n( # Should be {\n    social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n) # Should be }\n```\n\nYou can't include new lines in your semantic context. The following query structure isn't valid because the semantic context isn't contained within one line.\n\n```AgentQL\n{\n    social_media_links(The icons that lead\n        to Facebook, Snapchat, etc.)[]\n}\n```"
+                "value": "You are a helpful assistant that can use tools to answer questions and perform tasks."
               },
               "temperature": {
                 "_input_type": "SliderInput",
@@ -2238,6 +2256,7 @@
               "template": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
@@ -2251,7 +2270,7 @@
                 "name": "template",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -2318,145 +2337,34 @@
             },
             "tool_mode": false
           },
-          "selected_output": "response",
           "showNode": true,
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-oRYZX",
+        "id": "Agent-ghqeP",
         "measured": {
-          "height": 624,
+          "height": 593,
           "width": 320
         },
         "position": {
-          "x": 806.8155719016273,
-          "y": 96.34571871117743
+          "x": 797.0440572927098,
+          "y": 100.6793034234862
         },
         "selected": false,
         "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-4MelF",
-          "node": {
-            "description": "### 💡 Add your OpenAI API key here",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "id": "note-4MelF",
-        "measured": {
-          "height": 324,
-          "width": 324
-        },
-        "position": {
-          "x": 798.1532899902708,
-          "y": 48.63976452163034
-        },
-        "selected": false,
-        "type": "noteNode"
-      },
-      {
-        "data": {
-          "id": "note-eqCK2",
-          "node": {
-            "description": "### 💡 Add your AgentQL API key here",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 346,
-        "id": "note-eqCK2",
-        "measured": {
-          "height": 346,
-          "width": 324
-        },
-        "position": {
-          "x": 416.2302078823729,
-          "y": 51.23403819068896
-        },
-        "selected": false,
-        "type": "noteNode"
-      },
-      {
-        "data": {
-          "id": "note-Dkzfl",
-          "node": {
-            "description": "# Price Deal Finder \n\nThis flow searches and compares prices of a product on the web.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"iPhone 16 Pro 512 GB\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
-            "display_name": "",
-            "documentation": "",
-            "template": {}
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 674,
-        "id": "note-Dkzfl",
-        "measured": {
-          "height": 674,
-          "width": 467
-        },
-        "position": {
-          "x": -472.5459222813072,
-          "y": 102.70113417861305
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 466
-      },
-      {
-        "data": {
-          "id": "note-NQ1ez",
-          "node": {
-            "description": "### 💡 Add your Tavily AI Search key here",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-NQ1ez",
-        "measured": {
-          "height": 324,
-          "width": 344
-        },
-        "position": {
-          "x": 25.144734571805117,
-          "y": 126.6122587862217
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 345
       }
     ],
     "viewport": {
-      "x": 340.94156691373735,
-      "y": 122.308952499881,
-      "zoom": 0.5784136824388973
+      "x": 419.87135539102786,
+      "y": 101.46023627307682,
+      "zoom": 0.7403965178705934
     }
   },
   "description": "Searches and compares product prices across multiple e-commerce platforms. ",
   "endpoint_name": null,
-  "icon": "DollarSign",
-  "id": "05ef0b34-a755-4c9e-af28-8cf989d2a9a5",
+  "id": "a7e19be8-8f6d-4a1d-b74e-d00d50d6fa88",
   "is_component": false,
-  "last_tested_version": "1.3.2",
+  "last_tested_version": "1.4.3",
   "name": "Price Deal Finder",
   "tags": [
     "web-scraping",

@@ -1395,13 +1395,7 @@
                 ],
                 "options_metadata": [
                   {
-                    "icon": "Amazon"
-                  },
-                  {
                     "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "Azure"
                   },
                   {
                     "icon": "GoogleGenerativeAI"
@@ -1410,13 +1404,7 @@
                     "icon": "Groq"
                   },
                   {
-                    "icon": "NVIDIA"
-                  },
-                  {
                     "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "SambaNova"
                   },
                   {
                     "icon": "brain"
