@@ -36,6 +36,7 @@ class DataFrameOperationsComponent(Component):
             name="df",
             display_name="DataFrame",
             info="The input DataFrame to operate on.",
+            required=True,
         ),
         DropdownInput(
             name="operation",
