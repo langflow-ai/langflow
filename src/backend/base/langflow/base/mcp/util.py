@@ -394,22 +394,9 @@ class MCPSseClient:
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
                 return False, "Invalid URL format. Must include scheme (http/https) and host."
-
-            async with httpx.AsyncClient() as client:
-                try:
-                    # First try a HEAD request to check if server is reachable
-                    response = await client.head(url, timeout=5.0)
-                    if response.status_code >= HTTP_ERROR_STATUS_CODE:
-                        return False, f"Server returned error status: {response.status_code}"
-
-                except httpx.TimeoutException:
-                    return False, "Connection timed out. Server may be down or unreachable."
-                except httpx.NetworkError:
-                    return False, "Network error. Could not reach the server."
-                else:
-                    return True, ""
-
-        except (httpx.HTTPError, ValueError, OSError) as e:
+            # must not use client.head to validate the url, as SSE will keep the transport open and become timeout
+            return True, ""
+        except ValueError as e:
             return False, f"URL validation error: {e!s}"
 
     async def pre_check_redirect(self, url: str | None) -> str | None:
