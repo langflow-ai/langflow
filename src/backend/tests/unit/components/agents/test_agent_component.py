@@ -4,7 +4,10 @@ from uuid import uuid4
 
 import pytest
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
-from langflow.base.models.model_input_constants import MODEL_PROVIDERS_DICT
+from langflow.base.models.model_input_constants import (
+    MODEL_PROVIDERS,
+    MODEL_PROVIDERS_DICT,
+)
 from langflow.base.models.openai_constants import (
     OPENAI_MODEL_NAMES,
     OPENAI_REASONING_MODEL_NAMES,
@@ -64,7 +67,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert updated_config["agent_llm"]["value"] == "OpenAI"
         assert isinstance(updated_config["agent_llm"]["options"], list)
         assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS_DICT)
+        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
         assert "Custom" in updated_config["agent_llm"]["options"]
 
         # Verify model_name field is populated for OpenAI
@@ -82,7 +85,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert updated_config["agent_llm"]["value"] == "Anthropic"
         assert isinstance(updated_config["agent_llm"]["options"], list)
         assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS_DICT)
+        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
         assert "Anthropic" in updated_config["agent_llm"]["options"]
         assert updated_config["agent_llm"]["input_types"] == []
         options = updated_config["model_name"]["options"]
@@ -94,7 +97,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert updated_config["agent_llm"]["value"] == "Custom"
         assert isinstance(updated_config["agent_llm"]["options"], list)
         assert len(updated_config["agent_llm"]["options"]) > 0
-        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS_DICT)
+        assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
         assert "Custom" in updated_config["agent_llm"]["options"]
         assert updated_config["agent_llm"]["input_types"] == ["LanguageModel"]
 
