@@ -1587,16 +1587,13 @@
                 "info": "Select the model to use",
                 "name": "model_name",
                 "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.1",
-                  "gpt-4.1-mini",
-                  "gpt-4.1-nano",
-                  "gpt-4.5-preview",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo"
+                  "claude-opus-4-20250514",
+                  "claude-sonnet-4-20250514",
+                  "claude-3-7-sonnet-latest",
+                  "claude-3-5-sonnet-latest",
+                  "claude-3-5-haiku-latest",
+                  "claude-3-opus-latest",
+                  "claude-3-sonnet-20240229"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
