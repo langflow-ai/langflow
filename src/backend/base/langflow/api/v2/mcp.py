@@ -123,7 +123,15 @@ async def get_servers(
             server_info["mode"] = mode.lower()
             server_info["toolsCount"] = len(tool_list)
         except Exception as e:  # noqa: BLE001
-            logger.exception(f"Error checking server {server_name}: {e}")
+            # Check if this is an ExceptionGroup (has exceptions attribute)
+            if hasattr(e, "exceptions") and e.exceptions:
+                # Extract the first underlying exception for a more meaningful error message
+                underlying_error = e.exceptions[0]
+                logger.exception(f"Error checking server {server_name}: {underlying_error}")
+                server_info["error"] = f"Error loading server: {underlying_error}"
+            else:
+                logger.exception(f"Error checking server {server_name}: {e}")
+                server_info["error"] = f"Error loading server: {e}"
         return server_info
 
     # Run all server checks concurrently
