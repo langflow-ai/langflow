@@ -9,7 +9,7 @@ The **Playground** is a dynamic interface designed for real-time interaction w
 
 As long as you have a [Chat Input](/components-io) component in your flow, you can run and chat with your flow by clicking the **Playground** button.
 
-## Run a flow in the playgound
+## Run a flow in the playground
 
 To run a flow in the **Playground**, click **Playground**.
 
@@ -51,7 +51,7 @@ The `session_id` value can be configured in the **Controls** of the **Chat Input
 To have more than one session in a single flow, pass a specific session ID to a flow with the `session_id` parameter in the URL. All the components in the flow will automatically use this `session_id` value.
 
 To post a message to a flow with a specific session ID with curl, enter the following command.
-Replace `CUSTOM_SESSION_VALUE` with the session ID you want to 
+Replace `CUSTOM_SESSION_VALUE` with the session ID you want to send the request to.
 
 ```bash
    curl -X POST "http://localhost:7860/api/v1/run/$FLOW_ID" \
@@ -100,3 +100,6 @@ curl -X POST "http://localhost:7860/api/v1/run/$FLOW_ID" \
 
 The image is displayed in the chat interface and can be processed by your flow components.
 
+## See also
+
+- [Session ID](/session-id)

@@ -40,7 +40,7 @@ This component creates an `AstraDBChatMessageHistory` instance, which stores and
 | token            | SecretString  | The authentication token for Astra DB access. Required. |
 | api_endpoint     | SecretString  | The API endpoint URL for the Astra DB service. Required. |
 | namespace        | String        | The optional namespace within Astra DB for the collection. |
-| session_id       | MessageText   | The chat session ID. Uses the current session ID if not provided. |
+| session_id       | MessageText   | The unique identifier for the chat session. Uses the current session ID if not provided. |
 
 **Outputs**
 
@@ -123,7 +123,7 @@ This component retrieves and stores chat messages from Redis.
 | username | Username | The Redis username. |
 | password | Password | The password for the username. |
 | key_prefix | Key prefix | The key prefix. |
-| session_id | Session ID | The session ID for the message. |
+| session_id | Session ID | The unique session identifier for the message. |
 
 **Outputs**
 
