@@ -166,7 +166,7 @@ To manage your Langflow OSS version, use the following commands:
 * Install a specific version of the Langflow package by adding the required version to the command, such as: `uv pip install langflow==1.3.2`
 * Reinstall Langflow and all of its dependencies: `uv pip install langflow --force-reinstall`
 
-### Manage Langflow OSS dependencies
+### Manage your Langflow version in Langflow Desktop
 
 Langflow OSS provides optional dependency groups and support for custom dependencies to extend Langflow functionality.
 For more information, see [Install custom dependencies](/install-custom-dependencies).
