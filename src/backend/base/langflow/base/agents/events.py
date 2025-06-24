@@ -214,7 +214,7 @@ async def handle_on_tool_end(
         # Update the tool content that's actually in the message
         if updated_tool_content:
             updated_tool_content.duration = duration
-            updated_tool_content.header = {"title": f"Executed **{updated_tool_content.name}** end", "icon": "Hammer"}
+            updated_tool_content.header = {"title": f"Executed **{updated_tool_content.name}**", "icon": "Hammer"}
             updated_tool_content.output = event["data"].get("output")
 
             # Update the map reference
