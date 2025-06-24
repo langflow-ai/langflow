@@ -385,6 +385,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     track("Component Connection Deleted", { edgeId });
   },
   paste: (selection, position) => {
+    // Collect IDs of nodes in the selection
+    const selectedNodeIds = new Set(selection.nodes.map((node) => node.id));
+    // Find existing edges in the flow that connect nodes within the selection
+    const existingEdgesToCopy = get().edges.filter((edge) => {
+      return (
+        selectedNodeIds.has(edge.source) &&
+        selectedNodeIds.has(edge.target) &&
+        !selection.edges.some((selEdge) => selEdge.id === edge.id)
+      );
+    });
+    // Add these edges to the selection's edges
+    if (existingEdgesToCopy.length > 0) {
+      selection.edges = selection.edges.concat(existingEdgesToCopy);
+    }
+
     if (
       selection.nodes.some((node) => node.data.type === "ChatInput") &&
       checkChatInput(get().nodes)
@@ -1046,6 +1061,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
     set({ dismissedNodes: newDismissedNodes });
   },
+  setNewChatOnPlayground: (newChat: boolean) => {
+    set({ newChatOnPlayground: newChat });
+  },
+  newChatOnPlayground: false,
 }));
 
 export default useFlowStore;

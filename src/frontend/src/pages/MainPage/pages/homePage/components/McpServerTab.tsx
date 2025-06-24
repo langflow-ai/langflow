@@ -3,6 +3,11 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToolsComponent from "@/components/core/parameterRenderComponent/components/ToolsComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import {
+  DEFAULT_FOLDER,
+  DEFAULT_FOLDER_DEPRECATED,
+  MAX_MCP_SERVER_NAME_LENGTH,
+} from "@/constants/constants";
 import { createApiKey } from "@/controllers/API";
 import {
   useGetFlowsMCP,
@@ -183,7 +188,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const MCP_SERVER_JSON = `{
   "mcpServers": {
-    "lf-${parseString(folderName ?? "project", ["snake_case", "no_blank", "lowercase"]).slice(0, 11)}": {
+    "lf-${parseString(folderName === DEFAULT_FOLDER_DEPRECATED ? DEFAULT_FOLDER : (folderName ?? "project"), ["snake_case", "no_blank", "lowercase"]).slice(0, MAX_MCP_SERVER_NAME_LENGTH - 4)}": {
       "command": "${selectedPlatform === "windows" ? "cmd" : selectedPlatform === "wsl" ? "wsl" : "uvx"}",
       "args": [
         ${
@@ -213,7 +218,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     "https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions";
 
   const MCP_SERVER_DEPLOY_TUTORIAL_LINK =
-    "https://docs.langflow.org/mcp-server#deploy-your-server-externally";
+    "https://docs.langflow.org/mcp-server";
 
   const copyToClipboard = useCallback(() => {
     navigator.clipboard

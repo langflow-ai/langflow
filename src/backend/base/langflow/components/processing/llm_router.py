@@ -7,10 +7,11 @@ import aiohttp
 
 from langflow.base.models.chat_result import get_chat_result
 from langflow.base.models.model_utils import get_model_name
-from langflow.custom import Component
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, Output
-from langflow.schema import Data
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput
+from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.template.field.base import Output
 
 
 class LLMRouterComponent(Component):
