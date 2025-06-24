@@ -64,6 +64,10 @@ class FileComponent(BaseFileComponent):
                     frontend_node["outputs"].append(
                         Output(display_name="Structured Content", name="dataframe", method="load_files_structured"),
                     )
+                elif file_path.endswith(".json"):
+                    frontend_node["outputs"].append(
+                        Output(display_name="Structured Content", name="json", method="load_files_json"),
+                    )
 
                 # All files get the raw content and path outputs
                 frontend_node["outputs"].append(

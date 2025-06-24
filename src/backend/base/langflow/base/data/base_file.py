@@ -1,3 +1,5 @@
+import ast
+import json
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
@@ -314,9 +316,45 @@ class BaseFileComponent(Component, ABC):
         else:
             # Convert Data objects to a list of dictionaries
             # TODO: Parse according to docling standards
-            rows = [data.data for data in data_list if data.data]
+            rows = [data_list[0].data]
 
         return DataFrame(rows)
+
+    def parse_string_to_dict(self, s: str) -> dict:
+        # Try JSON first (handles true/false/null)
+        try:
+            result = json.loads(s)
+            if isinstance(result, dict):
+                return result
+        except json.JSONDecodeError:
+            pass
+
+        # Fall back to Python literal evaluation
+        try:
+            result = ast.literal_eval(s)
+            if isinstance(result, dict):
+                return result
+        except (SyntaxError, ValueError):
+            pass
+
+        # If all parsing fails, return the fallback
+        return {"value": s}
+
+    def load_files_json(self) -> Data:
+        """Load files and return as a single Data object containing JSON content.
+
+        Returns:
+            Data: Data object containing JSON content from all files
+        """
+        data_list = self.load_files_core()
+        if not data_list:
+            return Data()
+
+        # Grab the JSON data
+        json_data = data_list[0].data[data_list[0].text_key]
+        json_data = self.parse_string_to_dict(json_data)
+
+        return Data(data=json_data)
 
     def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.
