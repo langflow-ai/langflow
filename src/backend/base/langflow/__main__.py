@@ -467,8 +467,8 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 
     title = f"[bold]Welcome to {styled_package_name}[/bold]\n"
     info_text = (
-        ":star2: GitHub: Star for updates → https://github.com/langflow-ai/langflow\n"
-        ":speech_balloon: Discord: Join for support → https://discord.com/invite/EqksyE2EX9"
+        "* GitHub: Star for updates → https://github.com/langflow-ai/langflow\n"
+        "* Discord: Join for support → https://discord.com/invite/EqksyE2EX9"
     )
     telemetry_text = (
         (
@@ -482,7 +482,7 @@ def print_banner(host: str, port: int, protocol: str) -> None:
         )
     )
     access_host = get_best_access_host(host, port)
-    access_link = f"[bold]🟢 Open Langflow →[/bold] [link={protocol}://{access_host}:{port}]{protocol}://{access_host}:{port}[/link]"
+    access_link = f"[bold]> Open Langflow →[/bold] [link={protocol}://{access_host}:{port}]{protocol}://{access_host}:{port}[/link]"
 
     message = f"{title}\n{info_text}\n\n{telemetry_text}\n\n{access_link}"
 
