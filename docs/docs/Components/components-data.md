@@ -269,7 +269,8 @@ When a **Webhook** component is added to the workspace, a new **Webhook cURL** t
 ```bash
 curl -X POST \
   "http://localhost:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
-  -H 'Content-Type: application/json'\
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: LANGFLOW_API_KEY' \
   -d '{"any": "data"}'
   ```
 

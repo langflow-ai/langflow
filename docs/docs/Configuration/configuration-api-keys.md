@@ -16,16 +16,25 @@ Generate a user-specific token to use with Langflow.
 ### Generate an API key with the Langflow UI
 
 1. Click your user icon, and then select **Settings**.
-2. Click **Langflow API**, and then click **Add New**.
-3. Name your key, and then click **Create Secret Key**.
+2. Click **Langflow API Keys**, and then click **Add New**.
+3. Name your key, and then click **Create API Key**.
 4. Copy the API key and store it in a secure location.
 
 ### Generate an API key with the Langflow CLI
 
+This command only works if `AUTO_LOGIN` is set to `FALSE` and the user is a superuser.
+
+For example, if you're serving your flow with `--backend-only=true`, you don't have a way to create an API key within the UI.
+
+```
+LANGFLOW_AUTO_LOGIN=False
+LANGFLOW_SUPERUSER=admin
+LANGFLOW_SUPERUSER_PASSWORD=password
+```
+
 ```shell
-langflow api-key
-# or
-python -m langflow api-key
+uv run langflow api-key
+
 ╭─────────────────────────────────────────────────────────────────────╮
 │ API Key Created Successfully:                                       │
 │                                                                     │
@@ -36,7 +45,6 @@ python -m langflow api-key
 │                                                                     │
 │ The API key has been copied to your clipboard. Cmd + V to paste it. │
 ╰──────────────────────────────
-
 ```
 
 ## Authenticate requests with the Langflow API key
@@ -53,7 +61,7 @@ To use the API key when making API requests, include the API key in the HTTP hea
 curl -X POST \
   "http://localhost:7860/api/v1/run/FLOW_ID?stream=false" \
   -H 'Content-Type: application/json' \
-  -H 'x-api-key: API_KEY' \
+  -H 'x-api-key: LANGFLOW_API_KEY' \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
 ```
 

@@ -114,6 +114,7 @@ Replace `YOUR_FLOW_ID` with your flow ID.
 ```bash
 curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
+-H 'x-api-key: LANGFLOW_API_KEY' \
 -d '{
   "id": 1,
   "name": "Leanne Graham",
@@ -207,6 +208,7 @@ This example uses the default Langflow server address.
 ```text
 curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
+-H 'x-api-key: LANGFLOW_API_KEY' \
 -d '{
     "text": "Alex Cruz - Employee Profile",
     "data": {
@@ -229,6 +231,7 @@ The **Data to DataFrame** component converts the webhook request into a `DataFra
 ```text
 curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
+-H 'x-api-key: LANGFLOW_API_KEY' \
 -d '{
     "text": "Kalani Smith - Employee Profile",
     "data": {
@@ -414,6 +417,7 @@ This example uses the default Langflow server address.
 ```text
 curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
+-H 'x-api-key: LANGFLOW_API_KEY' \
 -d '{
     "Name": ["Alex Cruz", "Kalani Smith", "Noam Johnson"],
     "Role": ["Developer", "Designer", "Manager"],
