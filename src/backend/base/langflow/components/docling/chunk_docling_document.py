@@ -7,7 +7,7 @@ from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
 from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
 from docling_core.transforms.chunker.tokenizer.openai import OpenAITokenizer
 
-from langflow.components.docling._utils import extract_docling_documents
+from langflow.base.data.docling_utils import extract_docling_documents
 from langflow.custom import Component
 from langflow.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output, StrInput
 from langflow.schema import Data, DataFrame
