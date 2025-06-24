@@ -440,6 +440,50 @@ alembic-stamp: ## stamp the database with a specific revision
 	cd src/backend/base/langflow/ && uv run alembic stamp $(revision)
 
 ######################
+# VERSION MANAGEMENT
+######################
+
+patch: ## Update version across all projects. Usage: make patch v=1.5.0
+	@if [ -z "$(v)" ]; then \
+		echo "$(RED)Error: Version argument required.$(NC)"; \
+		echo "Usage: make patch v=1.5.0"; \
+		exit 1; \
+	fi; \
+	echo "$(GREEN)Updating version to $(v)$(NC)"; \
+	\
+	LANGFLOW_VERSION="$(v)"; \
+	LANGFLOW_BASE_VERSION=$$(echo "$$LANGFLOW_VERSION" | sed -E 's/^[0-9]+\.(.*)$$/0.\1/'); \
+	\
+	echo "$(GREEN)Langflow version: $$LANGFLOW_VERSION$(NC)"; \
+	echo "$(GREEN)Langflow-base version: $$LANGFLOW_BASE_VERSION$(NC)"; \
+	\
+	echo "$(GREEN)Updating main pyproject.toml...$(NC)"; \
+	sed -i.bak "s/^version = \".*\"/version = \"$$LANGFLOW_VERSION\"/" pyproject.toml; \
+	sed -i.bak "s/\"langflow-base==.*\"/\"langflow-base==$$LANGFLOW_BASE_VERSION\"/" pyproject.toml; \
+	\
+	echo "$(GREEN)Updating langflow-base pyproject.toml...$(NC)"; \
+	sed -i.bak "s/^version = \".*\"/version = \"$$LANGFLOW_BASE_VERSION\"/" src/backend/base/pyproject.toml; \
+	\
+	echo "$(GREEN)Updating frontend package.json...$(NC)"; \
+	sed -i.bak "s/\"version\": \".*\"/\"version\": \"$$LANGFLOW_VERSION\"/" src/frontend/package.json; \
+	\
+	echo "$(GREEN)Cleaning up backup files...$(NC)"; \
+	rm -f pyproject.toml.bak src/backend/base/pyproject.toml.bak src/frontend/package.json.bak; \
+	\
+	echo "$(GREEN)Syncing backend dependencies...$(NC)"; \
+	uv sync --frozen; \
+	\
+	echo "$(GREEN)Installing frontend dependencies...$(NC)"; \
+	(cd src/frontend && npm install); \
+	\
+	echo "$(GREEN)Version update complete!$(NC)"; \
+	echo "$(GREEN)Updated files:$(NC)"; \
+	echo "  - pyproject.toml: $$LANGFLOW_VERSION"; \
+	echo "  - src/backend/base/pyproject.toml: $$LANGFLOW_BASE_VERSION"; \
+	echo "  - src/frontend/package.json: $$LANGFLOW_VERSION"; \
+	echo "$(GREEN)Dependencies synced successfully!$(NC)"
+
+######################
 # LOAD TESTING
 ######################
 
