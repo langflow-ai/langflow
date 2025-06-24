@@ -26,7 +26,9 @@ def set_advanced_true(component_input):
     component_input.advanced = True
     return component_input
 
+
 MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "Groq", "OpenAI"]
+
 
 class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"

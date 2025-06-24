@@ -216,13 +216,7 @@ class MemoryComponent(Component):
                 order=order,
             )
             if n_messages:
-                print("len stored Before", len(stored))
                 stored = stored[-n_messages:] if order == "ASC" else stored[:n_messages]
-                print("len stored After", len(stored))
-            # aget_messages with order="DESC" returns the newest messages first.
-            # If the user wants them in ascending order, we reverse the list.
-            # if order == "ASC":
-            #     stored = stored[::-1]
 
         # self.status = stored
         return cast(Data, stored)
