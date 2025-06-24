@@ -1,5 +1,5 @@
-from .anthropic import AnthropicComponent
+from .anthropic import AnthropicModelComponent
 
 __all__ = [
-    "AnthropicComponent",
+    "AnthropicModelComponent",
 ]
