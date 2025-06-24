@@ -124,7 +124,9 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
+    "filelock>=3.18.0",
     "docling>=2.36.1",
+    "filelock>=3.18.0"
 ]
 
 [dependency-groups]

@@ -154,10 +154,31 @@ def get_lifespan(*, fix_migration=False, version=None):
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             logger.debug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            # Use file-based lock to prevent multiple workers from creating duplicate starter projects concurrently.
+            # Note that it's still possible that one worker may complete this task, release the lock,
+            # then another worker pick it up, but the operation is idempotent so worst case it duplicates
+            # the initialization work.
             current_time = asyncio.get_event_loop().time()
             logger.debug("Creating/updating starter projects")
-            await create_or_update_starter_projects(all_types_dict)
-            logger.debug(f"Starter projects updated in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            import tempfile
+
+            from filelock import FileLock
+
+            lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
+            lock = FileLock(lock_file, timeout=1)
+            try:
+                with lock:
+                    await create_or_update_starter_projects(all_types_dict)
+                    logger.debug(
+                        f"Starter projects created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+            except TimeoutError:
+                # Another process has the lock
+                logger.debug("Another worker is creating starter projects, skipping")
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    f"Failed to acquire lock for starter projects: {e}. Starter projects may not be created or updated."
+                )
 
             current_time = asyncio.get_event_loop().time()
             logger.debug("Starting telemetry service")
