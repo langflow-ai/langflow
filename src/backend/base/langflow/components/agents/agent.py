@@ -5,6 +5,7 @@ from langflow.base.agents.events import ExceptionWithMessageError
 from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
+    MODEL_PROVIDERS,
     MODEL_PROVIDERS_DICT,
     MODELS_METADATA,
 )
@@ -40,11 +41,11 @@ class AgentComponent(ToolCallingAgentComponent):
             name="agent_llm",
             display_name="Model Provider",
             info="The provider of the language model that the agent will use to generate responses.",
-            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
+            options=[*sorted(MODEL_PROVIDERS), "Custom"],
             value="OpenAI",
             real_time_refresh=True,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{"icon": "brain"}],
+            options_metadata=[MODELS_METADATA[key] for key in sorted(MODEL_PROVIDERS)] + [{"icon": "brain"}],
         ),
         *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
         MultilineInput(
@@ -221,7 +222,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 custom_component = DropdownInput(
                     name="agent_llm",
                     display_name="Language Model",
-                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
+                    options=[*sorted(MODEL_PROVIDERS), "Custom"],
                     value="Custom",
                     real_time_refresh=True,
                     input_types=["LanguageModel"],
