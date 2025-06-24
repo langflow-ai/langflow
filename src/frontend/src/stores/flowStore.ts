@@ -46,7 +46,6 @@ import {
   unselectAllNodesEdges,
   updateGroupRecursion,
   validateEdge,
-  validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
@@ -661,7 +660,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setErrorData = useAlertStore.getState().setErrorData;
 
     const edges = get().edges;
-    let error = false;
     let errors: string[] = [];
     for (const edge of edges) {
       const errorsEdge = validateEdge(edge, get().nodes, edges);
@@ -669,12 +667,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         errors.push(errorsEdge.join("\n"));
       }
     }
-    const nodes = get().nodes;
-    const errorsObjs = validateNodes(nodes, edges);
-
-    errors = errors.concat(errorsObjs.map((obj) => obj.errors).flat());
     if (errors.length > 0) {
-      error = true;
       setErrorData({
         title: MISSED_ERROR_ALERT,
         list: errors,
