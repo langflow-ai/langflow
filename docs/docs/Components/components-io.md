@@ -164,7 +164,7 @@ The flow looks like this:
 3. To send a message to your flow, open the **Playground**, and then enter a message.
 The **OpenAI** model component responds.
 Optionally, in the **OpenAI** model component, enter a **System Message** to control the model's response.
-4. In the Langflow UI, click your flow name, and then click **Logs**.
+4. In the Langflow UI, click **Logs**.
 The **Logs** pane opens.
 Here, you can inspect your component logs.
 ![Logs pane](/img/logs.png)

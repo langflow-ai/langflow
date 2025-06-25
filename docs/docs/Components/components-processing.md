@@ -71,45 +71,45 @@ All operations in the component require at least one [Data](/concepts-objects#da
 2. In the **Operations** field, select the operation you want to perform.
 For example, send this request to the **Webhook** component.
 Replace `YOUR_FLOW_ID` with your flow ID.
-```bash
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
--H 'Content-Type: application/json' \
--d '{
-  "id": 1,
-  "name": "Leanne Graham",
-  "username": "Bret",
-  "email": "Sincere@april.biz",
-  "address": {
-    "street": "Kulas Light",
-    "suite": "Apt. 556",
-    "city": "Gwenborough",
-    "zipcode": "92998-3874",
-    "geo": {
-      "lat": "-37.3159",
-      "lng": "81.1496"
-    }
-  },
-  "phone": "1-770-736-8031 x56442",
-  "website": "hildegard.org",
-  "company": {
-    "name": "Romaguera-Crona",
-    "catchPhrase": "Multi-layered client-server neural-net",
-    "bs": "harness real-time e-markets"
-  }
-}'
-```
+    ```bash
+    curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+    -H 'Content-Type: application/json' \
+    -d '{
+      "id": 1,
+      "name": "Leanne Graham",
+      "username": "Bret",
+      "email": "Sincere@april.biz",
+      "address": {
+        "street": "Kulas Light",
+        "suite": "Apt. 556",
+        "city": "Gwenborough",
+        "zipcode": "92998-3874",
+        "geo": {
+          "lat": "-37.3159",
+          "lng": "81.1496"
+        }
+      },
+      "phone": "1-770-736-8031 x56442",
+      "website": "hildegard.org",
+      "company": {
+        "name": "Romaguera-Crona",
+        "catchPhrase": "Multi-layered client-server neural-net",
+        "bs": "harness real-time e-markets"
+      }
+    }'
+    ```
 
 3. In the **Data Operations** component, select the **Select Keys** operation to extract specific user information.
 To add additional keys, click <Icon name="Plus" aria-label="Add"/> **Add More**.
 ![A webhook and data operations component](/img/component-data-operations-select-key.png)
 4. Filter by `name`, `username`, and `email` to select the values from the request.
-```json
-{
-  "name": "Leanne Graham",
-  "username": "Bret",
-  "email": "Sincere@april.biz"
-}
-```
+    ```json
+    {
+      "name": "Leanne Graham",
+      "username": "Bret",
+      "email": "Sincere@april.biz"
+    }
+    ```
 
 ### Operations
 
