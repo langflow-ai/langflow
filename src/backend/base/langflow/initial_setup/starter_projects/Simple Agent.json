@@ -3,39 +3,11 @@
     "edges": [
       {
         "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-qYZ9W",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-aHj8n",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__Agent-qYZ9W{œdataTypeœ:œAgentœ,œidœ:œAgent-qYZ9Wœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-aHj8n{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-aHj8nœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "Agent-qYZ9W",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-qYZ9Wœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-aHj8n",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-aHj8nœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-15FSE",
+            "id": "CalculatorComponent-Sp3Ca",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -43,52 +15,27 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-qYZ9W",
+            "id": "Agent-xD3uW",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__CalculatorComponent-15FSE{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-15FSEœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-qYZ9W{œfieldNameœ:œtoolsœ,œidœ:œAgent-qYZ9Wœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__CalculatorComponent-Sp3Ca{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-Sp3Caœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-xD3uW{œfieldNameœ:œtoolsœ,œidœ:œAgent-xD3uWœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "CalculatorComponent-15FSE",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-15FSEœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-qYZ9W",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-qYZ9Wœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "CalculatorComponent-Sp3Ca",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-Sp3Caœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-xD3uW",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-xD3uWœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-o7GEq",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-qYZ9W",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__URL-o7GEq{œdataTypeœ:œURLœ,œidœ:œURL-o7GEqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-qYZ9W{œfieldNameœ:œtoolsœ,œidœ:œAgent-qYZ9Wœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "URL-o7GEq",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-o7GEqœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-qYZ9W",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-qYZ9Wœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-2YUmA",
+            "id": "ChatInput-S6AhV",
             "name": "message",
             "output_types": [
               "Message"
@@ -96,454 +43,83 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-qYZ9W",
+            "id": "Agent-xD3uW",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-2YUmA{œdataTypeœ:œChatInputœ,œidœ:œChatInput-2YUmAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-qYZ9W{œfieldNameœ:œinput_valueœ,œidœ:œAgent-qYZ9Wœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-2YUmA",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-2YUmAœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-qYZ9W",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-qYZ9Wœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__ChatInput-S6AhV{œdataTypeœ:œChatInputœ,œidœ:œChatInput-S6AhVœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-xD3uW{œfieldNameœ:œinput_valueœ,œidœ:œAgent-xD3uWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-S6AhV",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-S6AhVœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-xD3uW",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-xD3uWœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-xD3uW",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-WciiI",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__Agent-xD3uW{œdataTypeœ:œAgentœ,œidœ:œAgent-xD3uWœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-WciiI{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-WciiIœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Agent-xD3uW",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-xD3uWœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-WciiI",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-WciiIœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "URLComponent",
+            "id": "URLComponent-6fRXe",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-xD3uW",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__URLComponent-6fRXe{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-6fRXeœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-xD3uW{œfieldNameœ:œtoolsœ,œidœ:œAgent-xD3uWœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "URLComponent-6fRXe",
+        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-6fRXeœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-xD3uW",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-xD3uWœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "description": "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-          "display_name": "URL",
-          "id": "URL-o7GEq",
-          "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Fetch content from one or more web pages, following links recursively.",
-            "display_name": "URL",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "urls",
-              "format",
-              "separator",
-              "clean_extra_whitespace"
-            ],
-            "frozen": false,
-            "icon": "layout-template",
-            "legacy": false,
-            "lf_version": "1.2.0",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": false,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Tool",
-                "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "autoset_encoding": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Autoset Encoding",
-                "dynamic": false,
-                "info": "If enabled, automatically sets the encoding of the request.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "autoset_encoding",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "check_response_status": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Check Response Status",
-                "dynamic": false,
-                "info": "If enabled, checks the response status of the request.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "check_response_status",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import re\n\nimport requests\nfrom bs4 import BeautifulSoup\nfrom langchain_community.document_loaders import RecursiveUrlLoader\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.helpers.data import safe_convert\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput\nfrom langflow.schema import DataFrame, Message\nfrom langflow.services.deps import get_settings_service\n\n# Constants\nDEFAULT_TIMEOUT = 30\nDEFAULT_MAX_DEPTH = 1\nDEFAULT_FORMAT = \"Text\"\nURL_REGEX = re.compile(\n    r\"^(https?:\\/\\/)?\" r\"(www\\.)?\" r\"([a-zA-Z0-9.-]+)\" r\"(\\.[a-zA-Z]{2,})?\" r\"(:\\d+)?\" r\"(\\/[^\\s]*)?$\",\n    re.IGNORECASE,\n)\n\n\nclass URLComponent(Component):\n    \"\"\"A component that loads and parses content from web pages recursively.\n\n    This component allows fetching content from one or more URLs, with options to:\n    - Control crawl depth\n    - Prevent crawling outside the root domain\n    - Use async loading for better performance\n    - Extract either raw HTML or clean text\n    - Configure request headers and timeouts\n    \"\"\"\n\n    display_name = \"URL\"\n    description = \"Fetch content from one or more web pages, following links recursively.\"\n    icon = \"layout-template\"\n    name = \"URLComponent\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            info=\"Enter one or more URLs to crawl recursively, by clicking the '+' button.\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n            input_types=[],\n        ),\n        SliderInput(\n            name=\"max_depth\",\n            display_name=\"Depth\",\n            info=(\n                \"Controls how many 'clicks' away from the initial page the crawler will go:\\n\"\n                \"- depth 1: only the initial page\\n\"\n                \"- depth 2: initial page + all pages linked directly from it\\n\"\n                \"- depth 3: initial page + direct links + links found on those direct link pages\\n\"\n                \"Note: This is about link traversal, not URL path depth.\"\n            ),\n            value=DEFAULT_MAX_DEPTH,\n            range_spec=RangeSpec(min=1, max=5, step=1),\n            required=False,\n            min_label=\" \",\n            max_label=\" \",\n            min_label_icon=\"None\",\n            max_label_icon=\"None\",\n            # slider_input=True\n        ),\n        BoolInput(\n            name=\"prevent_outside\",\n            display_name=\"Prevent Outside\",\n            info=(\n                \"If enabled, only crawls URLs within the same domain as the root URL. \"\n                \"This helps prevent the crawler from going to external websites.\"\n            ),\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"use_async\",\n            display_name=\"Use Async\",\n            info=(\n                \"If enabled, uses asynchronous loading which can be significantly faster \"\n                \"but might use more system resources.\"\n            ),\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=\"Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.\",\n            options=[\"Text\", \"HTML\"],\n            value=DEFAULT_FORMAT,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout for the request in seconds.\",\n            value=DEFAULT_TIMEOUT,\n            required=False,\n            advanced=True,\n        ),\n        TableInput(\n            name=\"headers\",\n            display_name=\"Headers\",\n            info=\"The headers to send with the request\",\n            table_schema=[\n                {\n                    \"name\": \"key\",\n                    \"display_name\": \"Header\",\n                    \"type\": \"str\",\n                    \"description\": \"Header name\",\n                },\n                {\n                    \"name\": \"value\",\n                    \"display_name\": \"Value\",\n                    \"type\": \"str\",\n                    \"description\": \"Header value\",\n                },\n            ],\n            value=[{\"key\": \"User-Agent\", \"value\": get_settings_service().settings.user_agent}],\n            advanced=True,\n            input_types=[\"DataFrame\"],\n        ),\n        BoolInput(\n            name=\"filter_text_html\",\n            display_name=\"Filter Text/HTML\",\n            info=\"If enabled, filters out text/css content type from the results.\",\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"continue_on_failure\",\n            display_name=\"Continue on Failure\",\n            info=\"If enabled, continues crawling even if some requests fail.\",\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"check_response_status\",\n            display_name=\"Check Response Status\",\n            info=\"If enabled, checks the response status of the request.\",\n            value=False,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"autoset_encoding\",\n            display_name=\"Autoset Encoding\",\n            info=\"If enabled, automatically sets the encoding of the request.\",\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Result\", name=\"page_results\", method=\"fetch_content\"),\n        Output(display_name=\"Raw Result\", name=\"raw_results\", method=\"as_message\"),\n    ]\n\n    @staticmethod\n    def validate_url(url: str) -> bool:\n        \"\"\"Validates if the given string matches URL pattern.\n\n        Args:\n            url: The URL string to validate\n\n        Returns:\n            bool: True if the URL is valid, False otherwise\n        \"\"\"\n        return bool(URL_REGEX.match(url))\n\n    def ensure_url(self, url: str) -> str:\n        \"\"\"Ensures the given string is a valid URL.\n\n        Args:\n            url: The URL string to validate and normalize\n\n        Returns:\n            str: The normalized URL\n\n        Raises:\n            ValueError: If the URL is invalid\n        \"\"\"\n        url = url.strip()\n        if not url.startswith((\"http://\", \"https://\")):\n            url = \"https://\" + url\n\n        if not self.validate_url(url):\n            msg = f\"Invalid URL: {url}\"\n            raise ValueError(msg)\n\n        return url\n\n    def _create_loader(self, url: str) -> RecursiveUrlLoader:\n        \"\"\"Creates a RecursiveUrlLoader instance with the configured settings.\n\n        Args:\n            url: The URL to load\n\n        Returns:\n            RecursiveUrlLoader: Configured loader instance\n        \"\"\"\n        headers_dict = {header[\"key\"]: header[\"value\"] for header in self.headers}\n        extractor = (lambda x: x) if self.format == \"HTML\" else (lambda x: BeautifulSoup(x, \"lxml\").get_text())\n\n        return RecursiveUrlLoader(\n            url=url,\n            max_depth=self.max_depth,\n            prevent_outside=self.prevent_outside,\n            use_async=self.use_async,\n            extractor=extractor,\n            timeout=self.timeout,\n            headers=headers_dict,\n            check_response_status=self.check_response_status,\n            continue_on_failure=self.continue_on_failure,\n            base_url=url,  # Add base_url to ensure consistent domain crawling\n            autoset_encoding=self.autoset_encoding,  # Enable automatic encoding detection\n            exclude_dirs=[],  # Allow customization of excluded directories\n            link_regex=None,  # Allow customization of link filtering\n        )\n\n    def fetch_url_contents(self) -> list[dict]:\n        \"\"\"Load documents from the configured URLs.\n\n        Returns:\n            List[Data]: List of Data objects containing the fetched content\n\n        Raises:\n            ValueError: If no valid URLs are provided or if there's an error loading documents\n        \"\"\"\n        try:\n            urls = list({self.ensure_url(url) for url in self.urls if url.strip()})\n            logger.info(f\"URLs: {urls}\")\n            if not urls:\n                msg = \"No valid URLs provided.\"\n                raise ValueError(msg)\n\n            all_docs = []\n            for url in urls:\n                logger.info(f\"Loading documents from {url}\")\n\n                try:\n                    loader = self._create_loader(url)\n                    docs = loader.load()\n\n                    if not docs:\n                        logger.warning(f\"No documents found for {url}\")\n                        continue\n\n                    logger.info(f\"Found {len(docs)} documents from {url}\")\n                    all_docs.extend(docs)\n\n                except requests.exceptions.RequestException as e:\n                    logger.exception(f\"Error loading documents from {url}: {e}\")\n                    continue\n\n            if not all_docs:\n                msg = \"No documents were successfully loaded from any URL\"\n                raise ValueError(msg)\n\n            # data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]\n            data = [\n                {\n                    \"text\": safe_convert(doc.page_content, clean_data=True),\n                    \"url\": doc.metadata.get(\"source\", \"\"),\n                    \"title\": doc.metadata.get(\"title\", \"\"),\n                    \"description\": doc.metadata.get(\"description\", \"\"),\n                    \"content_type\": doc.metadata.get(\"content_type\", \"\"),\n                    \"language\": doc.metadata.get(\"language\", \"\"),\n                }\n                for doc in all_docs\n            ]\n        except Exception as e:\n            error_msg = e.message if hasattr(e, \"message\") else e\n            msg = f\"Error loading documents: {error_msg!s}\"\n            logger.exception(msg)\n            raise ValueError(msg) from e\n        return data\n\n    def fetch_content(self) -> DataFrame:\n        \"\"\"Convert the documents to a DataFrame.\"\"\"\n        return DataFrame(data=self.fetch_url_contents())\n\n    def as_message(self) -> Message:\n        \"\"\"Convert the documents to a Message.\"\"\"\n        url_contents = self.fetch_url_contents()\n        return Message(text=\"\\n\\n\".join([x[\"text\"] for x in url_contents]), data={\"data\": url_contents})\n"
-              },
-              "continue_on_failure": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Continue on Failure",
-                "dynamic": false,
-                "info": "If enabled, continues crawling even if some requests fail.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "continue_on_failure",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "filter_text_html": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Filter Text/HTML",
-                "dynamic": false,
-                "info": "If enabled, filters out text/css content type from the results.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "filter_text_html",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "format": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Output Format",
-                "dynamic": false,
-                "info": "Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.",
-                "name": "format",
-                "options": [
-                  "Text",
-                  "HTML"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Text"
-              },
-              "headers": {
-                "_input_type": "TableInput",
-                "advanced": true,
-                "display_name": "Headers",
-                "dynamic": false,
-                "info": "The headers to send with the request",
-                "input_types": [
-                  "DataFrame"
-                ],
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "headers",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "table_icon": "Table",
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Header name",
-                      "disable_edit": false,
-                      "display_name": "Header",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "key",
-                      "sortable": true,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Header value",
-                      "disable_edit": false,
-                      "display_name": "Value",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "value",
-                      "sortable": true,
-                      "type": "str"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Table",
-                "trigger_text": "Open table",
-                "type": "table",
-                "value": [
-                  {
-                    "key": "User-Agent",
-                    "value": "langflow"
-                  }
-                ]
-              },
-              "max_depth": {
-                "_input_type": "SliderInput",
-                "advanced": false,
-                "display_name": "Depth",
-                "dynamic": false,
-                "info": "Controls how many 'clicks' away from the initial page the crawler will go:\n- depth 1: only the initial page\n- depth 2: initial page + all pages linked directly from it\n- depth 3: initial page + direct links + links found on those direct link pages\nNote: This is about link traversal, not URL path depth.",
-                "max_label": " ",
-                "max_label_icon": "None",
-                "min_label": " ",
-                "min_label_icon": "None",
-                "name": "max_depth",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 5.0,
-                  "min": 1.0,
-                  "step": 1.0,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "type": "slider",
-                "value": 1
-              },
-              "prevent_outside": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Prevent Outside",
-                "dynamic": false,
-                "info": "If enabled, only crawls URLs within the same domain as the root URL. This helps prevent the crawler from going to external websites.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "prevent_outside",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "timeout": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Timeout",
-                "dynamic": false,
-                "info": "Timeout for the request in seconds.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 30
-              },
-              "tools_metadata": {
-                "_input_type": "ToolsInput",
-                "advanced": false,
-                "display_name": "Actions",
-                "dynamic": false,
-                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tools",
-                "value": [
-                  {
-                    "args": {
-                      "urls": {
-                        "default": "",
-                        "description": "",
-                        "items": {
-                          "type": "string"
-                        },
-                        "title": "Urls",
-                        "type": "array"
-                      }
-                    },
-                    "description": "URL. fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "display_description": "URL. fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "display_name": "fetch_content",
-                    "name": "fetch_content",
-                    "status": true,
-                    "tags": [
-                      "fetch_content"
-                    ]
-                  },
-                  {
-                    "args": {
-                      "urls": {
-                        "default": "",
-                        "description": "",
-                        "items": {
-                          "type": "string"
-                        },
-                        "title": "Urls",
-                        "type": "array"
-                      }
-                    },
-                    "description": "URL. fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "display_description": "URL. fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "display_name": "fetch_content_text",
-                    "name": "fetch_content_text",
-                    "status": true,
-                    "tags": [
-                      "fetch_content_text"
-                    ]
-                  },
-                  {
-                    "args": {
-                      "urls": {
-                        "default": "",
-                        "description": "",
-                        "items": {
-                          "type": "string"
-                        },
-                        "title": "Urls",
-                        "type": "array"
-                      }
-                    },
-                    "description": "URL. as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "display_description": "URL. as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
-                    "display_name": "as_dataframe",
-                    "name": "as_dataframe",
-                    "status": true,
-                    "tags": [
-                      "as_dataframe"
-                    ]
-                  }
-                ]
-              },
-              "urls": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "URLs",
-                "dynamic": false,
-                "info": "Enter one or more URLs to crawl recursively, by clicking the '+' button.",
-                "input_types": [],
-                "list": true,
-                "list_add_label": "Add URL",
-                "load_from_db": false,
-                "name": "urls",
-                "placeholder": "Enter a URL...",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "use_async": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Async",
-                "dynamic": false,
-                "info": "If enabled, uses asynchronous loading which can be significantly faster but might use more system resources.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_async",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              }
-            },
-            "tool_mode": true
-          },
-          "selected_output": "component_as_tool",
-          "type": "URL"
-        },
-        "dragging": false,
-        "id": "URL-o7GEq",
-        "measured": {
-          "height": 523,
-          "width": 320
-        },
-        "position": {
-          "x": 1236.8269016193576,
-          "y": -173.8644169438124
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-wtgw9",
+          "id": "note-ukwn1",
           "node": {
             "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
             "display_name": "",
@@ -555,10 +131,10 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-wtgw9",
+        "id": "note-ukwn1",
         "measured": {
           "height": 630,
-          "width": 325
+          "width": 575
         },
         "position": {
           "x": 775.5268622081468,
@@ -569,7 +145,7 @@
       },
       {
         "data": {
-          "id": "note-d6QWe",
+          "id": "note-sQfYZ",
           "node": {
             "description": "### 💡 Add your OpenAI API key here👇",
             "display_name": "",
@@ -580,21 +156,22 @@
           },
           "type": "note"
         },
-        "id": "note-d6QWe",
+        "dragging": false,
+        "id": "note-sQfYZ",
         "measured": {
           "height": 324,
           "width": 324
         },
         "position": {
-          "x": 1648.6876745095624,
-          "y": 253.8646618156497
+          "x": 1758.8741678279712,
+          "y": 184.362412184038
         },
         "selected": false,
         "type": "noteNode"
       },
       {
         "data": {
-          "id": "CalculatorComponent-15FSE",
+          "id": "CalculatorComponent-Sp3Ca",
           "node": {
             "base_classes": [
               "Data"
@@ -614,7 +191,7 @@
             "icon": "calculator",
             "key": "CalculatorComponent",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -623,6 +200,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
+                "group_outputs": false,
                 "hidden": false,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
@@ -727,9 +305,9 @@
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-15FSE",
+        "id": "CalculatorComponent-Sp3Ca",
         "measured": {
-          "height": 248,
+          "height": 217,
           "width": 320
         },
         "position": {
@@ -741,7 +319,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-2YUmA",
+          "id": "ChatInput-S6AhV",
           "node": {
             "base_classes": [
               "Message"
@@ -769,6 +347,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -1041,9 +620,9 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-2YUmA",
+        "id": "ChatInput-S6AhV",
         "measured": {
-          "height": 66,
+          "height": 48,
           "width": 192
         },
         "position": {
@@ -1055,7 +634,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-aHj8n",
+          "id": "ChatOutput-WciiI",
           "node": {
             "base_classes": [
               "Message"
@@ -1084,6 +663,7 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -1350,9 +930,9 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-aHj8n",
+        "id": "ChatOutput-WciiI",
         "measured": {
-          "height": 66,
+          "height": 48,
           "width": 192
         },
         "position": {
@@ -1364,7 +944,7 @@
       },
       {
         "data": {
-          "id": "Agent-qYZ9W",
+          "id": "Agent-xD3uW",
           "node": {
             "base_classes": [
               "Message"
@@ -1396,7 +976,10 @@
               "verbose",
               "max_iterations",
               "agent_description",
+              "mode",
+              "message",
               "memory",
+              "sender_type",
               "sender",
               "sender_name",
               "n_messages",
@@ -1409,6 +992,7 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1417,8 +1001,11 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
+                "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1485,10 +1072,14 @@
                 "input_types": [],
                 "name": "agent_llm",
                 "options": [
+                  "Amazon Bedrock",
                   "Anthropic",
+                  "Azure OpenAI",
                   "Google Generative AI",
                   "Groq",
+                  "NVIDIA",
                   "OpenAI",
+                  "SambaNova",
                   "Custom"
                 ],
                 "options_metadata": [
@@ -1542,11 +1133,12 @@
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1709,7 +1301,7 @@
                 "_input_type": "MessageTextInput",
                 "advanced": true,
                 "display_name": "Message",
-                "dynamic": false,
+                "dynamic": true,
                 "info": "The chat message to be stored.",
                 "input_types": [
                   "Message"
@@ -1720,7 +1312,7 @@
                 "name": "message",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": true,
                 "trace_as_input": true,
@@ -1747,7 +1339,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "tab",
-                "value": "Store"
+                "value": "Retrieve"
               },
               "model_kwargs": {
                 "_input_type": "DictInput",
@@ -1799,7 +1391,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4.1"
+                "value": "gpt-4o"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -1812,7 +1404,7 @@
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -1881,29 +1473,27 @@
                 "value": 1
               },
               "sender": {
-                "_input_type": "DropdownInput",
+                "_input_type": "MessageTextInput",
                 "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
                 "display_name": "Sender",
                 "dynamic": false,
                 "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
+                "input_types": [
+                  "Message"
                 ],
-                "options_metadata": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "toggle": false,
                 "tool_mode": false,
+                "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "Machine and User"
+                "value": ""
               },
               "sender_name": {
                 "_input_type": "MessageTextInput",
@@ -1920,7 +1510,7 @@
                 "name": "sender_name",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -2046,7 +1636,7 @@
                 "name": "template",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -2113,35 +1703,431 @@
             },
             "tool_mode": false
           },
-          "selected_output": "response",
           "showNode": true,
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-qYZ9W",
+        "id": "Agent-xD3uW",
         "measured": {
-          "height": 624,
+          "height": 591,
           "width": 320
         },
         "position": {
-          "x": 1641.6239626366948,
-          "y": 301.10345101561927
+          "x": 1763.0750031786254,
+          "y": 232.97801992415862
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "URLComponent-6fRXe",
+          "node": {
+            "base_classes": [
+              "DataFrame",
+              "Message"
+            ],
+            "beta": false,
+            "category": "data",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Fetch content from one or more web pages, following links recursively.",
+            "display_name": "URL",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "urls",
+              "max_depth",
+              "prevent_outside",
+              "use_async",
+              "format",
+              "timeout",
+              "headers",
+              "filter_text_html",
+              "continue_on_failure",
+              "check_response_status",
+              "autoset_encoding"
+            ],
+            "frozen": false,
+            "icon": "layout-template",
+            "key": "URLComponent",
+            "legacy": false,
+            "lf_version": "1.4.3",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "group_outputs": false,
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 2.220446049250313e-16,
+            "template": {
+              "_type": "Component",
+              "autoset_encoding": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Autoset Encoding",
+                "dynamic": false,
+                "info": "If enabled, automatically sets the encoding of the request.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "autoset_encoding",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "check_response_status": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Check Response Status",
+                "dynamic": false,
+                "info": "If enabled, checks the response status of the request.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "check_response_status",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import re\n\nimport requests\nfrom bs4 import BeautifulSoup\nfrom langchain_community.document_loaders import RecursiveUrlLoader\nfrom loguru import logger\n\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.helpers.data import safe_convert\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.services.deps import get_settings_service\n\n# Constants\nDEFAULT_TIMEOUT = 30\nDEFAULT_MAX_DEPTH = 1\nDEFAULT_FORMAT = \"Text\"\nURL_REGEX = re.compile(\n    r\"^(https?:\\/\\/)?\"\n    r\"(www\\.)?\"\n    r\"([a-zA-Z0-9.-]+)\"\n    r\"(\\.[a-zA-Z]{2,})?\"\n    r\"(:\\d+)?\"\n    r\"(\\/[^\\s]*)?$\",\n    re.IGNORECASE,\n)\n\n\nclass URLComponent(Component):\n    \"\"\"A component that loads and parses content from web pages recursively.\n\n    This component allows fetching content from one or more URLs, with options to:\n    - Control crawl depth\n    - Prevent crawling outside the root domain\n    - Use async loading for better performance\n    - Extract either raw HTML or clean text\n    - Configure request headers and timeouts\n    \"\"\"\n\n    display_name = \"URL\"\n    description = \"Fetch content from one or more web pages, following links recursively.\"\n    icon = \"layout-template\"\n    name = \"URLComponent\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            info=\"Enter one or more URLs to crawl recursively, by clicking the '+' button.\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n            input_types=[],\n        ),\n        SliderInput(\n            name=\"max_depth\",\n            display_name=\"Depth\",\n            info=(\n                \"Controls how many 'clicks' away from the initial page the crawler will go:\\n\"\n                \"- depth 1: only the initial page\\n\"\n                \"- depth 2: initial page + all pages linked directly from it\\n\"\n                \"- depth 3: initial page + direct links + links found on those direct link pages\\n\"\n                \"Note: This is about link traversal, not URL path depth.\"\n            ),\n            value=DEFAULT_MAX_DEPTH,\n            range_spec=RangeSpec(min=1, max=5, step=1),\n            required=False,\n            min_label=\" \",\n            max_label=\" \",\n            min_label_icon=\"None\",\n            max_label_icon=\"None\",\n            # slider_input=True\n        ),\n        BoolInput(\n            name=\"prevent_outside\",\n            display_name=\"Prevent Outside\",\n            info=(\n                \"If enabled, only crawls URLs within the same domain as the root URL. \"\n                \"This helps prevent the crawler from going to external websites.\"\n            ),\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"use_async\",\n            display_name=\"Use Async\",\n            info=(\n                \"If enabled, uses asynchronous loading which can be significantly faster \"\n                \"but might use more system resources.\"\n            ),\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=\"Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.\",\n            options=[\"Text\", \"HTML\"],\n            value=DEFAULT_FORMAT,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout for the request in seconds.\",\n            value=DEFAULT_TIMEOUT,\n            required=False,\n            advanced=True,\n        ),\n        TableInput(\n            name=\"headers\",\n            display_name=\"Headers\",\n            info=\"The headers to send with the request\",\n            table_schema=[\n                {\n                    \"name\": \"key\",\n                    \"display_name\": \"Header\",\n                    \"type\": \"str\",\n                    \"description\": \"Header name\",\n                },\n                {\n                    \"name\": \"value\",\n                    \"display_name\": \"Value\",\n                    \"type\": \"str\",\n                    \"description\": \"Header value\",\n                },\n            ],\n            value=[{\"key\": \"User-Agent\", \"value\": get_settings_service().settings.user_agent}],\n            advanced=True,\n            input_types=[\"DataFrame\"],\n        ),\n        BoolInput(\n            name=\"filter_text_html\",\n            display_name=\"Filter Text/HTML\",\n            info=\"If enabled, filters out text/css content type from the results.\",\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"continue_on_failure\",\n            display_name=\"Continue on Failure\",\n            info=\"If enabled, continues crawling even if some requests fail.\",\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"check_response_status\",\n            display_name=\"Check Response Status\",\n            info=\"If enabled, checks the response status of the request.\",\n            value=False,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"autoset_encoding\",\n            display_name=\"Autoset Encoding\",\n            info=\"If enabled, automatically sets the encoding of the request.\",\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Extracted Pages\", name=\"page_results\", method=\"fetch_content\"),\n        Output(display_name=\"Raw Content\", name=\"raw_results\", method=\"fetch_content_as_message\", tool_mode=False),\n    ]\n\n    @staticmethod\n    def validate_url(url: str) -> bool:\n        \"\"\"Validates if the given string matches URL pattern.\n\n        Args:\n            url: The URL string to validate\n\n        Returns:\n            bool: True if the URL is valid, False otherwise\n        \"\"\"\n        return bool(URL_REGEX.match(url))\n\n    def ensure_url(self, url: str) -> str:\n        \"\"\"Ensures the given string is a valid URL.\n\n        Args:\n            url: The URL string to validate and normalize\n\n        Returns:\n            str: The normalized URL\n\n        Raises:\n            ValueError: If the URL is invalid\n        \"\"\"\n        url = url.strip()\n        if not url.startswith((\"http://\", \"https://\")):\n            url = \"https://\" + url\n\n        if not self.validate_url(url):\n            msg = f\"Invalid URL: {url}\"\n            raise ValueError(msg)\n\n        return url\n\n    def _create_loader(self, url: str) -> RecursiveUrlLoader:\n        \"\"\"Creates a RecursiveUrlLoader instance with the configured settings.\n\n        Args:\n            url: The URL to load\n\n        Returns:\n            RecursiveUrlLoader: Configured loader instance\n        \"\"\"\n        headers_dict = {header[\"key\"]: header[\"value\"] for header in self.headers}\n        extractor = (lambda x: x) if self.format == \"HTML\" else (lambda x: BeautifulSoup(x, \"lxml\").get_text())\n\n        return RecursiveUrlLoader(\n            url=url,\n            max_depth=self.max_depth,\n            prevent_outside=self.prevent_outside,\n            use_async=self.use_async,\n            extractor=extractor,\n            timeout=self.timeout,\n            headers=headers_dict,\n            check_response_status=self.check_response_status,\n            continue_on_failure=self.continue_on_failure,\n            base_url=url,  # Add base_url to ensure consistent domain crawling\n            autoset_encoding=self.autoset_encoding,  # Enable automatic encoding detection\n            exclude_dirs=[],  # Allow customization of excluded directories\n            link_regex=None,  # Allow customization of link filtering\n        )\n\n    def fetch_url_contents(self) -> list[dict]:\n        \"\"\"Load documents from the configured URLs.\n\n        Returns:\n            List[Data]: List of Data objects containing the fetched content\n\n        Raises:\n            ValueError: If no valid URLs are provided or if there's an error loading documents\n        \"\"\"\n        try:\n            urls = list({self.ensure_url(url) for url in self.urls if url.strip()})\n            logger.info(f\"URLs: {urls}\")\n            if not urls:\n                msg = \"No valid URLs provided.\"\n                raise ValueError(msg)\n\n            all_docs = []\n            for url in urls:\n                logger.info(f\"Loading documents from {url}\")\n\n                try:\n                    loader = self._create_loader(url)\n                    docs = loader.load()\n\n                    if not docs:\n                        logger.warning(f\"No documents found for {url}\")\n                        continue\n\n                    logger.info(f\"Found {len(docs)} documents from {url}\")\n                    all_docs.extend(docs)\n\n                except requests.exceptions.RequestException as e:\n                    logger.exception(f\"Error loading documents from {url}: {e}\")\n                    continue\n\n            if not all_docs:\n                msg = \"No documents were successfully loaded from any URL\"\n                raise ValueError(msg)\n\n            # data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]\n            data = [\n                {\n                    \"text\": safe_convert(doc.page_content, clean_data=True),\n                    \"url\": doc.metadata.get(\"source\", \"\"),\n                    \"title\": doc.metadata.get(\"title\", \"\"),\n                    \"description\": doc.metadata.get(\"description\", \"\"),\n                    \"content_type\": doc.metadata.get(\"content_type\", \"\"),\n                    \"language\": doc.metadata.get(\"language\", \"\"),\n                }\n                for doc in all_docs\n            ]\n        except Exception as e:\n            error_msg = e.message if hasattr(e, \"message\") else e\n            msg = f\"Error loading documents: {error_msg!s}\"\n            logger.exception(msg)\n            raise ValueError(msg) from e\n        return data\n\n    def fetch_content(self) -> DataFrame:\n        \"\"\"Convert the documents to a DataFrame.\"\"\"\n        return DataFrame(data=self.fetch_url_contents())\n\n    def fetch_content_as_message(self) -> Message:\n        \"\"\"Convert the documents to a Message.\"\"\"\n        url_contents = self.fetch_url_contents()\n        return Message(text=\"\\n\\n\".join([x[\"text\"] for x in url_contents]), data={\"data\": url_contents})\n"
+              },
+              "continue_on_failure": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Continue on Failure",
+                "dynamic": false,
+                "info": "If enabled, continues crawling even if some requests fail.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "continue_on_failure",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "filter_text_html": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Filter Text/HTML",
+                "dynamic": false,
+                "info": "If enabled, filters out text/css content type from the results.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "filter_text_html",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "format": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Output Format",
+                "dynamic": false,
+                "info": "Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.",
+                "name": "format",
+                "options": [
+                  "Text",
+                  "HTML"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Text"
+              },
+              "headers": {
+                "_input_type": "TableInput",
+                "advanced": true,
+                "display_name": "Headers",
+                "dynamic": false,
+                "info": "The headers to send with the request",
+                "input_types": [
+                  "DataFrame"
+                ],
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "headers",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "table_icon": "Table",
+                "table_schema": {
+                  "columns": [
+                    {
+                      "default": "None",
+                      "description": "Header name",
+                      "disable_edit": false,
+                      "display_name": "Header",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "key",
+                      "sortable": true,
+                      "type": "str"
+                    },
+                    {
+                      "default": "None",
+                      "description": "Header value",
+                      "disable_edit": false,
+                      "display_name": "Value",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "value",
+                      "sortable": true,
+                      "type": "str"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "trigger_icon": "Table",
+                "trigger_text": "Open table",
+                "type": "table",
+                "value": [
+                  {
+                    "key": "User-Agent",
+                    "value": "langflow"
+                  }
+                ]
+              },
+              "max_depth": {
+                "_input_type": "SliderInput",
+                "advanced": false,
+                "display_name": "Depth",
+                "dynamic": false,
+                "info": "Controls how many 'clicks' away from the initial page the crawler will go:\n- depth 1: only the initial page\n- depth 2: initial page + all pages linked directly from it\n- depth 3: initial page + direct links + links found on those direct link pages\nNote: This is about link traversal, not URL path depth.",
+                "max_label": " ",
+                "max_label_icon": "None",
+                "min_label": " ",
+                "min_label_icon": "None",
+                "name": "max_depth",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 5,
+                  "min": 1,
+                  "step": 1,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "title_case": false,
+                "tool_mode": false,
+                "type": "slider",
+                "value": 1
+              },
+              "prevent_outside": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Prevent Outside",
+                "dynamic": false,
+                "info": "If enabled, only crawls URLs within the same domain as the root URL. This helps prevent the crawler from going to external websites.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "prevent_outside",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "Timeout for the request in seconds.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 30
+              },
+              "tools_metadata": {
+                "_input_type": "ToolsInput",
+                "advanced": false,
+                "display_name": "Actions",
+                "dynamic": false,
+                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tools",
+                "value": [
+                  {
+                    "args": {
+                      "urls": {
+                        "default": "",
+                        "description": "Enter one or more URLs to crawl recursively, by clicking the '+' button.",
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Urls",
+                        "type": "array"
+                      }
+                    },
+                    "description": "Fetch content from one or more web pages, following links recursively.",
+                    "display_description": "Fetch content from one or more web pages, following links recursively.",
+                    "display_name": "fetch_content",
+                    "name": "fetch_content",
+                    "readonly": false,
+                    "status": true,
+                    "tags": [
+                      "fetch_content"
+                    ]
+                  }
+                ]
+              },
+              "urls": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "URLs",
+                "dynamic": false,
+                "info": "Enter one or more URLs to crawl recursively, by clicking the '+' button.",
+                "input_types": [],
+                "list": true,
+                "list_add_label": "Add URL",
+                "load_from_db": false,
+                "name": "urls",
+                "placeholder": "Enter a URL...",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "use_async": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Use Async",
+                "dynamic": false,
+                "info": "If enabled, uses asynchronous loading which can be significantly faster but might use more system resources.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_async",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": true
+          },
+          "showNode": true,
+          "type": "URLComponent"
+        },
+        "dragging": false,
+        "id": "URLComponent-6fRXe",
+        "measured": {
+          "height": 289,
+          "width": 320
+        },
+        "position": {
+          "x": 1388.440925896035,
+          "y": 2.4339723656417362
         },
         "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -343.42019144353594,
-      "y": 66.6702275988537,
-      "zoom": 0.5868650751024124
+      "x": -398.05374665521265,
+      "y": 135.56417788603605,
+      "zoom": 0.5899089629086188
     }
   },
   "description": "A simple but powerful starter agent.",
   "endpoint_name": null,
-  "id": "85e419cd-33e0-43b7-b5ab-cac101c578f6",
+  "id": "907853a5-ae9a-4636-b629-4c44cfaf6b85",
   "is_component": false,
-  "last_tested_version": "1.3.4",
+  "last_tested_version": "1.4.3",
   "name": "Simple Agent",
   "tags": [
     "assistants",
