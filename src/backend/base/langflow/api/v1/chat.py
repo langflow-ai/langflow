@@ -25,7 +25,6 @@ from langflow.api.build import (
 )
 from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTasks
 from langflow.api.utils import (
-    CurrentActiveUser,
     CurrentActiveUserFlexible,
     DbSession,
     EventDeliveryType,

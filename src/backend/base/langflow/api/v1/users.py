@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from langflow.api.utils import CurrentActiveUser, CurrentActiveUserFlexible, DbSession
+from langflow.api.utils import CurrentActiveUserFlexible, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import (

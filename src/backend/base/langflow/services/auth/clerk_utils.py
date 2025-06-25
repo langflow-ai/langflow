@@ -1,9 +1,10 @@
 import os
+
 import requests
 from fastapi import HTTPException, status
-from jose import jwt, jwk
+from jose import jwk, jwt
+from jose.exceptions import ExpiredSignatureError, JWTClaimsError, JWTError
 from jose.utils import base64url_decode
-from jose.exceptions import JWTError, ExpiredSignatureError, JWTClaimsError
 from loguru import logger
 
 CLERK_JWKS_URL = "https://capable-squid-34.clerk.accounts.dev/.well-known/jwks.json"
@@ -13,18 +14,14 @@ _jwks_cache = None
 
 
 def get_clerk_secret_key():
-    """
-    Retrieves Clerk secret key from environment.
-    """
+    """Retrieves Clerk secret key from environment."""
     secret = os.environ.get("LANGFLOW_CLERK_SECRET_KEY") or os.environ.get("CLERK_SECRET_KEY")
     logger.debug(f"[CLERK] Loaded secret key: {'set' if secret else 'NOT SET'}")
     return secret
 
 
 def get_clerk_jwks():
-    """
-    Downloads Clerk JWKs. Caches them to avoid repeated HTTP calls.
-    """
+    """Downloads Clerk JWKs. Caches them to avoid repeated HTTP calls."""
     global _jwks_cache
     if _jwks_cache is not None:
         return _jwks_cache
@@ -41,9 +38,7 @@ def get_clerk_jwks():
 
 
 def get_public_key_from_jwt(token: str):
-    """
-    Extracts the public key from Clerk JWKs using the token's kid header.
-    """
+    """Extracts the public key from Clerk JWKs using the token's kid header."""
     try:
         headers = jwt.get_unverified_header(token)
         kid = headers["kid"]
@@ -74,7 +69,7 @@ def verify_clerk_token(token: str) -> dict:
         public_key = jwk.construct(key_data)
 
         # Verify the signature
-        message, encoded_signature = token.rsplit('.', 1)
+        message, encoded_signature = token.rsplit(".", 1)
         decoded_signature = base64url_decode(encoded_signature.encode())
 
         if not public_key.verify(message.encode(), decoded_signature):
@@ -94,16 +89,12 @@ def verify_clerk_token(token: str) -> dict:
 
 
 def get_clerk_user_id(claims: dict) -> str:
-    """
-    Returns the Clerk user ID from the claims (usually in 'sub').
-    """
+    """Returns the Clerk user ID from the claims (usually in 'sub')."""
     return claims.get("sub")
 
 
 def get_clerk_user_email(claims: dict) -> str:
-    """
-    Returns the user's email, preferring the first in `email_addresses` if available.
-    """
+    """Returns the user's email, preferring the first in `email_addresses` if available."""
     emails = claims.get("email_addresses", [])
     if emails and isinstance(emails, list):
         return emails[0].get("email_address")
@@ -111,15 +102,12 @@ def get_clerk_user_email(claims: dict) -> str:
 
 
 def get_clerk_username(claims: dict) -> str:
-    """
-    Extracts a username from Clerk claims, preferring 'username', then email prefix, then 'sub'.
-    """
-    if "username" in claims and claims["username"]:
+    """Extracts a username from Clerk claims, preferring 'username', then email prefix, then 'sub'."""
+    if claims.get("username"):
         return claims["username"]
 
     email = claims.get("email") or (
-        claims.get("email_addresses", [{}])[0].get("email_address")
-        if claims.get("email_addresses") else None
+        claims.get("email_addresses", [{}])[0].get("email_address") if claims.get("email_addresses") else None
     )
 
     if email:

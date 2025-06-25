@@ -14,12 +14,17 @@ from loguru import logger
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
 
+from langflow.services.auth.clerk_utils import (
+    get_clerk_user_email,
+    get_clerk_user_id,
+    get_clerk_username,
+    verify_clerk_token,
+)
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_db_service, get_session, get_settings_service
 from langflow.services.settings.service import SettingsService
-from langflow.services.auth.clerk_utils import verify_clerk_token, get_clerk_user_id, get_clerk_username, get_clerk_user_email
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
@@ -528,7 +533,7 @@ async def get_current_user_flexible(
         if token:
             try:
                 return await get_current_user_by_jwt(token, db)
-            except HTTPException as e:
+            except HTTPException:
                 # Allow fallback to legacy if Clerk token is invalid
                 pass
 
@@ -546,6 +551,8 @@ async def get_current_user_flexible(
         if not user:
             raise HTTPException(status_code=403, detail="Invalid API key")
         return user
+
+
 # MCP-specific authentication functions that always behave as if skip_auth_auto_login is True
 async def get_current_user_mcp(
     token: Annotated[str, Security(oauth2_login)],

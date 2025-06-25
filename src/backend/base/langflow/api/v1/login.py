@@ -22,6 +22,7 @@ router = APIRouter(tags=["Login"])
 auth_settings = get_settings_service().auth_settings
 
 if not auth_settings.CLERK_AUTH_ENABLED:
+
     @router.post("/login", response_model=Token)
     async def login_to_get_access_token(
         response: Response,
@@ -78,7 +79,6 @@ if not auth_settings.CLERK_AUTH_ENABLED:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-
     @router.get("/auto_login")
     async def auto_login(response: Response, db: DbSession):
         auth_settings = get_settings_service().auth_settings
@@ -121,7 +121,6 @@ if not auth_settings.CLERK_AUTH_ENABLED:
             },
         )
 
-
     @router.post("/refresh")
     async def refresh_token(
         request: Request,
@@ -159,7 +158,6 @@ if not auth_settings.CLERK_AUTH_ENABLED:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-
     @router.post("/logout")
     async def logout(response: Response):
         response.delete_cookie("refresh_token_lf")
@@ -168,6 +166,7 @@ if not auth_settings.CLERK_AUTH_ENABLED:
         return {"message": "Logout successful"}
 
 else:
+
     @router.post("/login")
     async def login_disabled():
         raise HTTPException(status_code=403, detail="Login is disabled when Clerk auth is enabled.")
@@ -179,7 +178,7 @@ else:
     @router.post("/refresh")
     async def refresh_disabled():
         raise HTTPException(status_code=403, detail="Token refresh is disabled when Clerk auth is enabled.")
-    
+
     @router.post("/logout")
     async def logout(response: Response):
         return {"message": "Logout successful"}

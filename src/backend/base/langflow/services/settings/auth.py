@@ -12,7 +12,6 @@ from langflow.services.settings.utils import read_secret_from_file, write_secret
 
 
 class AuthSettings(BaseSettings):
-
     CLERK_AUTH_ENABLED: bool = Field(default=False)
     AUTO_LOGIN: bool = Field(default=False)
 
