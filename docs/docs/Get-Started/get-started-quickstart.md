@@ -25,7 +25,7 @@ To generate a user-specific token to use with Langflow, do the following.
 3. Name your key, and then click **Create API Key**.
 4. Copy the API key and store it in a secure location.
 5. Include your `LANGFLOW_API_KEY` in requests like this:
-    ```
+    ```text
     curl --request POST \
      --url 'http://localhost:7860/api/v1/run/0901b40b-9212-41cb-87c6-ac66a427913c?stream=false' \
      --header 'Content-Type: application/json' \
