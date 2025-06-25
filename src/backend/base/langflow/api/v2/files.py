@@ -182,6 +182,7 @@ async def get_file_by_name(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching file: {e}") from e
 
+
 async def load_sample_files(current_user: CurrentActiveUser, session: DbSession, storage_service: StorageService):
     # Check if the sample files in the SAMPLE_DATA_DIR exist
     for sample_file_path in Path(SAMPLE_DATA_DIR).iterdir():
@@ -223,6 +224,7 @@ async def load_sample_files(current_user: CurrentActiveUser, session: DbSession,
 
         await session.commit()
         await session.refresh(sample_file)
+
 
 @router.get("")
 @router.get("/", status_code=HTTPStatus.OK)
