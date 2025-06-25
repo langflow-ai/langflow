@@ -167,7 +167,7 @@ class Component(CustomComponent):
         if display_name:
             source_dict["display_name"] = display_name
         if source:
-            # Handle case where source is a ChatOpenAI object
+            # Handle case where source is a ChatOpenAI and other models objects
             if hasattr(source, "model_name"):
                 source_dict["source"] = source.model_name
             elif hasattr(source, "model"):
