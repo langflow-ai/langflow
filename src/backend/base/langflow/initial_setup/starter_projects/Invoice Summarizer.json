@@ -170,7 +170,9 @@
             "is_input": null,
             "is_output": null,
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "minimized": false,
             "name": "",
             "output_types": [],
@@ -301,7 +303,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -662,7 +666,9 @@
             "icon": "Needle",
             "key": "needle",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.needle.needle.NeedleComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -867,7 +873,9 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [

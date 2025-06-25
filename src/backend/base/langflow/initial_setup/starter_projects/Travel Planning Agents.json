@@ -227,7 +227,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -525,7 +527,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1413,7 +1417,9 @@
             "key": "CalculatorComponent",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.helpers.calculator_core.CalculatorComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1568,7 +1574,9 @@
             "icon": "SearchAPI",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.search.search.SearchComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

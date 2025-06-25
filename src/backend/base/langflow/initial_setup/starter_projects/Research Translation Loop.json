@@ -254,7 +254,9 @@
             "icon": "arXiv",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.search.arxiv.ArXivComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -412,7 +414,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -720,7 +724,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1053,7 +1059,9 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.processing.parser.ParserComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1225,7 +1233,9 @@
             "icon": "infinity",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.logic.loop.LoopComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1342,7 +1352,9 @@
             "key": "TypeConverterComponent",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.processing.converter.TypeConverterComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1763,7 +1775,9 @@
             "icon": "repeat",
             "key": "TypeConverterComponent",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.processing.converter.TypeConverterComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

@@ -225,7 +225,9 @@
             "key": "TextInput",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.text.TextInputComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -349,7 +351,8 @@
                 "llm",
                 "language model",
                 "large language model"
-              ]
+              ],
+              "module": "langflow.components.languagemodels.anthropic.AnthropicModelComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -688,7 +691,8 @@
                 "llm",
                 "language model",
                 "large language model"
-              ]
+              ],
+              "module": "langflow.components.languagemodels.anthropic.AnthropicModelComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1019,7 +1023,9 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1471,7 +1477,9 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.processing.structured_output.StructuredOutputComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1811,7 +1819,9 @@
             "key": "File",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.data.file.FileComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -2104,7 +2114,9 @@
             "key": "ParserComponent",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.processing.parser.ParserComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

@@ -236,7 +236,9 @@
             "icon": "message-square-more",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.helpers.memory.MemoryComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -559,7 +561,9 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1948,7 +1952,9 @@
             "key": "ChatInput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -2262,7 +2268,9 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [

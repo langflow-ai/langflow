@@ -115,7 +115,9 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -366,7 +368,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -708,7 +712,9 @@
             "key": "CalculatorComponent",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.helpers.calculator_core.CalculatorComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

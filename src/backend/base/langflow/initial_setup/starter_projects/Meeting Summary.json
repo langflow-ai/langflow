@@ -338,7 +338,9 @@
             "icon": "AssemblyAI",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.assemblyai.assemblyai_poll_transcript.AssemblyAITranscriptionJobPoller"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -485,7 +487,8 @@
             "legacy": true,
             "lf_version": "1.1.5",
             "metadata": {
-              "legacy_name": "Parse Data"
+              "legacy_name": "Parse Data",
+              "module": "langflow.components.processing.parse_data.ParseDataComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -654,7 +657,9 @@
             "is_output": null,
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "minimized": false,
             "name": "",
             "output_types": [],
@@ -807,7 +812,9 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1109,7 +1116,9 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.1.1",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1411,7 +1420,9 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1714,7 +1725,9 @@
             "is_output": null,
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "minimized": false,
             "name": "",
             "output_types": [],
@@ -1887,7 +1900,9 @@
             "icon": "message-square-more",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.helpers.memory.MemoryComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -2214,7 +2229,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -2629,7 +2646,9 @@
             "icon": "AssemblyAI",
             "key": "AssemblyAITranscriptionJobCreator",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.assemblyai.assemblyai_start_transcript.AssemblyAITranscriptionJobCreator"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -3155,7 +3174,9 @@
             "icon": "repeat",
             "key": "TypeConverterComponent",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.processing.converter.TypeConverterComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

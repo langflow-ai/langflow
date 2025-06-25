@@ -337,7 +337,9 @@
             "key": "BatchRunComponent",
             "legacy": false,
             "lf_version": "1.1.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.processing.batch_run.BatchRunComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -552,7 +554,9 @@
             "key": "YouTubeCommentsComponent",
             "legacy": false,
             "lf_version": "1.1.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.youtube.comments.YouTubeCommentsComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1306,7 +1310,9 @@
             "is_output": null,
             "legacy": false,
             "lf_version": "1.1.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "minimized": false,
             "name": "",
             "output_types": [],
@@ -1483,7 +1489,9 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.1.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1790,7 +1798,9 @@
             "icon": "YouTube",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.youtube.youtube_transcripts.YouTubeTranscriptsComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -2034,7 +2044,9 @@
             "key": "ChatInput",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -2433,7 +2445,9 @@
             "key": "ConditionalRouter",
             "legacy": false,
             "lf_version": "1.1.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.logic.conditional_router.ConditionalRouterComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

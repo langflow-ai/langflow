@@ -195,7 +195,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -493,7 +495,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -832,7 +836,9 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.processing.structured_output.StructuredOutputComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1166,7 +1172,9 @@
             "icon": "TavilyIcon",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.tavily.tavily_search.TavilySearchComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

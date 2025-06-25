@@ -176,7 +176,9 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -348,7 +350,9 @@
             "icon": "type",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.text.TextInputComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -461,7 +465,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -781,7 +787,9 @@
             "key": "ParserComponent",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.processing.parser.ParserComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -965,7 +973,9 @@
             "key": "URLComponent",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.data.url.URLComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

@@ -304,7 +304,9 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -462,7 +464,9 @@
             "key": "ChatInput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -757,7 +761,9 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -969,7 +975,9 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1098,7 +1106,9 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1263,7 +1273,9 @@
             "icon": "TavilyIcon",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.tavily.tavily_search.TavilySearchComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1661,7 +1673,9 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [

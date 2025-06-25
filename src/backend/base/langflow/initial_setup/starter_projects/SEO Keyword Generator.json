@@ -121,7 +121,9 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -423,7 +425,9 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -558,7 +562,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "output_types": [],
             "outputs": [
               {

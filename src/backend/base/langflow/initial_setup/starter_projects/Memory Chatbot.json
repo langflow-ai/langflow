@@ -147,7 +147,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -453,7 +455,9 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -823,7 +827,9 @@
             "is_output": null,
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "name": "",
             "output_types": [],
             "outputs": [
@@ -981,7 +987,9 @@
             "key": "Memory",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {},
+            "metadata": {
+              "module": "langflow.components.helpers.memory.MemoryComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
