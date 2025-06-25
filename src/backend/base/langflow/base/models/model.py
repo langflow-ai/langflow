@@ -2,7 +2,6 @@ import importlib
 import json
 import warnings
 from abc import abstractmethod
-from collections.abc import AsyncIterator, Iterator
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
@@ -192,7 +191,7 @@ class LCModelComponent(Component):
         *,
         runnable: LanguageModel,
         stream: bool,
-        input_value: str | Message | AsyncIterator | Iterator,
+        input_value: str | Message,
         system_message: str | None = None,
     ) -> Message:
         """Get chat result from a language model.
@@ -203,7 +202,7 @@ class LCModelComponent(Component):
         Args:
             runnable (LanguageModel): The language model to use for generating responses
             stream (bool): Whether to stream the response
-            input_value (str | Message | AsyncIterator | Iterator): The input to send to the model
+            input_value (str | Message): The input to send to the model
             system_message (str | None, optional): System message to prepend. Defaults to None.
 
         Returns:
