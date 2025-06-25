@@ -26,9 +26,9 @@
         "id": "reactflow__edge-ChatInput-MUBOc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-MUBOcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-8HUfR{œfieldNameœ:œinputœ,œidœ:œPrompt-8HUfRœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-MUBOc",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-MUBOcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-MUBOcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-8HUfR",
-        "targetHandle": "{œfieldNameœ:œinputœ,œidœ:œPrompt-8HUfRœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œPrompt-8HUfRœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -54,9 +54,9 @@
         "id": "reactflow__edge-AssemblyAITranscriptionJobCreator-7dP1c{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-7dP1cœ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}-AssemblyAITranscriptionJobPoller-bmBg5{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-bmBg5œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AssemblyAITranscriptionJobCreator-7dP1c",
-        "sourceHandle": "{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-7dP1cœ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobCreatorœ, œidœ: œAssemblyAITranscriptionJobCreator-7dP1cœ, œnameœ: œtranscript_idœ, œoutput_typesœ: [œDataœ]}",
         "target": "AssemblyAITranscriptionJobPoller-bmBg5",
-        "targetHandle": "{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-bmBg5œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtranscript_idœ, œidœ: œAssemblyAITranscriptionJobPoller-bmBg5œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-AssemblyAITranscriptionJobPoller-bmBg5{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-bmBg5œ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-parser-z4r2L{œfieldNameœ:œinput_dataœ,œidœ:œparser-z4r2Lœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AssemblyAITranscriptionJobPoller-bmBg5",
-        "sourceHandle": "{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-bmBg5œ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobPollerœ, œidœ: œAssemblyAITranscriptionJobPoller-bmBg5œ, œnameœ: œtranscription_resultœ, œoutput_typesœ: [œDataœ]}",
         "target": "parser-z4r2L",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-z4r2Lœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-z4r2Lœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "reactflow__edge-parser-z4r2L{œdataTypeœ:œparserœ,œidœ:œparser-z4r2Lœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-ewnOZ{œfieldNameœ:œtranscriptœ,œidœ:œPrompt-ewnOZœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-z4r2L",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-z4r2Lœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-z4r2Lœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-ewnOZ",
-        "targetHandle": "{œfieldNameœ:œtranscriptœ,œidœ:œPrompt-ewnOZœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œtranscriptœ, œidœ: œPrompt-ewnOZœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -142,9 +142,9 @@
         "id": "reactflow__edge-parser-z4r2L{œdataTypeœ:œparserœ,œidœ:œparser-z4r2Lœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-vHsac{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vHsacœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-z4r2L",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-z4r2Lœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-z4r2Lœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-vHsac",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vHsacœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-vHsacœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -172,9 +172,9 @@
         "id": "reactflow__edge-Memory-VzEYK{œdataTypeœ:œMemoryœ,œidœ:œMemory-VzEYKœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-TypeConverterComponent-pkMal{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-pkMalœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Memory-VzEYK",
-        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-VzEYKœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-VzEYKœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "TypeConverterComponent-pkMal",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-pkMalœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-pkMalœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -201,9 +201,9 @@
         "id": "reactflow__edge-TypeConverterComponent-pkMal{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-pkMalœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-8HUfR{œfieldNameœ:œhistoryœ,œidœ:œPrompt-8HUfRœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TypeConverterComponent-pkMal",
-        "sourceHandle": "{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-pkMalœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-pkMalœ, œnameœ: œmessage_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-8HUfR",
-        "targetHandle": "{œfieldNameœ:œhistoryœ,œidœ:œPrompt-8HUfRœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œhistoryœ, œidœ: œPrompt-8HUfRœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -229,9 +229,9 @@
         "id": "reactflow__edge-Prompt-ewnOZ{œdataTypeœ:œPromptœ,œidœ:œPrompt-ewnOZœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-euznm{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-euznmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-ewnOZ",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-ewnOZœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ewnOZœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-euznm",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-euznmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-euznmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -259,9 +259,9 @@
         "id": "reactflow__edge-LanguageModelComponent-euznm{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-euznmœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DtHhL{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DtHhLœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-euznm",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-euznmœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-euznmœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-DtHhL",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DtHhLœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-DtHhLœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -287,9 +287,9 @@
         "id": "reactflow__edge-Prompt-8HUfR{œdataTypeœ:œPromptœ,œidœ:œPrompt-8HUfRœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-q7Nif{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-q7Nifœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-8HUfR",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-8HUfRœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-8HUfRœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-q7Nif",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-q7Nifœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-q7Nifœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -317,9 +317,9 @@
         "id": "reactflow__edge-LanguageModelComponent-q7Nif{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-q7Nifœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-2rBAf{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-2rBAfœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-q7Nif",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-q7Nifœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-q7Nifœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-2rBAf",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-2rBAfœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-2rBAfœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
