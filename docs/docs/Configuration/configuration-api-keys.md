@@ -7,7 +7,13 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
-Langflow provides an API key functionality that allows users to access their individual components and flows without traditional login authentication.
+Langflow provides an API key functionality that allows users to access their individual components and flows.
+
+## Auto-login and API key authentication
+
+Prior to Langflow v1.5, when `AUTO_LOGIN` was enabled (`AUTO_LOGIN=true`), Langflow automatically logged users in as a superuser without requiring authentication.
+
+As of Langflow v1.5, when `AUTO_LOGIN` is enabled, `AUTO_LOGIN` requires a valid API key.
 
 ## Generate a Langflow API key
 
@@ -22,30 +28,49 @@ Generate a user-specific token to use with Langflow.
 
 ### Generate an API key with the Langflow CLI
 
-This command only works if `AUTO_LOGIN` is set to `FALSE` and the user is a superuser.
+If you're serving your flow with `--backend-only=true`, you don't have a way to create an API key within the UI.
 
-For example, if you're serving your flow with `--backend-only=true`, you don't have a way to create an API key within the UI.
+To create API keys with the Langflow CLI, `AUTO_LOGIN` must be set to `FALSE` and you must be logged in as a superuser.
 
-```
-LANGFLOW_AUTO_LOGIN=False
-LANGFLOW_SUPERUSER=admin
-LANGFLOW_SUPERUSER_PASSWORD=password
-```
+To create an API key for a user from the CLI, do the following:
 
-```shell
-uv run langflow api-key
+1. In your `.env` file, set `AUTO_LOGIN=FALSE`, and set superuser credentials for your server.
 
-╭─────────────────────────────────────────────────────────────────────╮
-│ API Key Created Successfully:                                       │
-│                                                                     │
-│ sk-O0elzoWID1izAH8RUKrnnvyyMwIzHi2Wk-uXWoNJ2Ro                      │
-│                                                                     │
-│ This is the only time the API key will be displayed.                │
-│ Make sure to store it in a secure location.                         │
-│                                                                     │
-│ The API key has been copied to your clipboard. Cmd + V to paste it. │
-╰──────────────────────────────
-```
+    ```text
+    LANGFLOW_AUTO_LOGIN=False
+    LANGFLOW_SUPERUSER=administrator
+    LANGFLOW_SUPERUSER_PASSWORD=securepassword
+    ```
+
+2. To confirm your superuser status, check that `is_superuser` is `true` in the response from the [users/whoami](/api-users#get-current-user) endpoint.
+
+    ```bash
+    curl -X GET \
+      "$LANGFLOW_URL/api/v1/users/whoami" \
+      -H "accept: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY"
+    ```
+
+    Result:
+    ```json
+    {
+      "id": "07e5b864-e367-4f52-b647-a48035ae7e5e",
+      "username": "langflow",
+      "profile_image": null,
+      "store_api_key": null,
+      "is_active": true,
+      "is_superuser": true,
+      "create_at": "2025-05-08T17:59:07.855965",
+      "updated_at": "2025-05-29T15:06:56.157860",
+      "last_login_at": "2025-05-29T15:06:56.157016",
+    }
+    ```
+
+2. To create an API key, run:
+
+    ```shell
+    uv run langflow api-key
+    ```
 
 ## Authenticate requests with the Langflow API key
 
@@ -59,7 +84,7 @@ To use the API key when making API requests, include the API key in the HTTP hea
 
 ```shell
 curl -X POST \
-  "http://localhost:7860/api/v1/run/FLOW_ID?stream=false" \
+  "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false" \
   -H 'Content-Type: application/json' \
   -H 'x-api-key: LANGFLOW_API_KEY' \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
@@ -71,7 +96,7 @@ To pass the API key as a query parameter:
 
 ```shell
 curl -X POST \
-  "http://localhost:7860/api/v1/run/FLOW_ID?x-api-key=API_KEY?stream=false" \
+  "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?x-api-key=LANGFLOW_API_KEY?stream=false" \
   -H 'Content-Type: application/json' \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
 ```
