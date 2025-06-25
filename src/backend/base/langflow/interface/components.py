@@ -133,7 +133,11 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
 
         try:
             comp_instance = obj()
-            comp_template, _ = create_component_template(component_extractor=comp_instance)
+            # modname is the full module name without the name of the obj
+            full_module_name = f"{modname}.{name}"
+            comp_template, _ = create_component_template(
+                component_extractor=comp_instance, module_name=full_module_name
+            )
             component_name = obj.name if hasattr(obj, "name") and obj.name else name
             module_components[component_name] = comp_template
         except Exception as e:  # noqa: BLE001
