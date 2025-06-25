@@ -18,9 +18,10 @@ from sqlmodel import select
 
 # from langflow internal modules
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.deps import get_settings_service
 
-# Settings gives us access to VERIFY_SSL (env → settings)
-from langflow.services.settings.base import Settings
+settings = get_settings_service().settings
+
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
@@ -394,7 +395,7 @@ class MCPSseClient:
         self._connection_params = None
         self._connected = False
         # Pull global default from Settings when caller doesn't provide one
-        self._ssl_verify = ssl_verify if ssl_verify is not None else getattr(Settings(), "verify_ssl", True)
+        self._ssl_verify = ssl_verify if ssl_verify is not None else getattr(settings, "verify_ssl", True)
 
     async def validate_url(self, url: str | None) -> tuple[bool, str]:
         """Validate the SSE URL before attempting connection."""
@@ -548,7 +549,7 @@ async def update_tools(
     if mcp_stdio_client is None:
         mcp_stdio_client = MCPStdioClient()
     # Pick per-server override if present, otherwise fall back to global VERIFY_SSL
-    global_verify_ssl = getattr(Settings(), "verify_ssl", True)
+    global_verify_ssl = getattr(settings, "verify_ssl", True)
     ssl_verify = server_config.get("ssl_verify", global_verify_ssl)
     if mcp_sse_client is None:
         mcp_sse_client = MCPSseClient(ssl_verify)
