@@ -19,11 +19,11 @@ They are distinct from vector store components, because they are built specifica
 
 Memory components provide access to their respective external databases **as memory**. This allows Large Language Models (LLMs) or [agents](/components-agents) to access external memory for persistence and context retention.
 
-This example flow stores and retrieves chat history from an **Astra DB Chat Memory** component with **Store Message** and **Message history** components.
+This example flow stores and retrieves chat history with an **Redis Chat Memory** component connected to **Store Message** and **Message history** components.
 
 The **Store Message** helper component stores chat memories as [Data](/concepts-objects) objects, and the **Message History** helper component retrieves chat messages as [Data](/concepts-objects) objects or strings.
 
-![Sample Flow storing Message history in AstraDB](/img/astra_db_chat_memory_rounded.png)
+![Sample Flow storing Message history in Redis](/img/component-message-history-external-memory.png)
 
 ## AstraDBChatMemory Component
 

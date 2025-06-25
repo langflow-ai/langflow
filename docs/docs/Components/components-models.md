@@ -78,11 +78,10 @@ This model uses Claude 3.5 Haiku, based on [Anthropic's recommendation](https://
 The response from the Anthropic model is less verbose, and lists its sources outside of the informative paragraph.
 For more information, see your LLM provider's documentation.
 
-### Language model output
+### Use the LanguageModel output
 
-The default output of the language model is the model's response as a `Message`.
-The other output type is **LanguageModel**.
-Use the Language Model's **LanguageModel** output to connect it to components that require an LLM.
+The default output of the language model is the model's response as a `Message`, but it also supports a `LanguageModel` output.
+Select the Language Model's **LanguageModel** output to connect it to components that require an LLM.
 
 For an example, see the [Smart function component](/components-processing#smart-function), which requires an LLM connected through this port to create a function from your natural language.
 
