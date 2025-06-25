@@ -179,3 +179,7 @@ else:
     @router.post("/refresh")
     async def refresh_disabled():
         raise HTTPException(status_code=403, detail="Token refresh is disabled when Clerk auth is enabled.")
+    
+    @router.post("/logout")
+    async def logout(response: Response):
+        return {"message": "Logout successful"}

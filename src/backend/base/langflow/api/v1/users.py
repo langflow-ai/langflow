@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, CurrentActiveUserFlexible, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import (
@@ -47,7 +47,7 @@ async def add_user(
 
 @router.get("/whoami", response_model=UserRead)
 async def read_current_user(
-    current_user: CurrentActiveUser,
+    current_user: CurrentActiveUserFlexible,
 ) -> User:
     """Retrieve the current user's data."""
     return current_user
@@ -77,7 +77,7 @@ async def read_all_users(
 async def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
-    user: CurrentActiveUser,
+    user: CurrentActiveUserFlexible,
     session: DbSession,
 ) -> User:
     """Update an existing user's data."""
@@ -104,7 +104,7 @@ async def patch_user(
 async def reset_password(
     user_id: UUID,
     user_update: UserUpdate,
-    user: CurrentActiveUser,
+    user: CurrentActiveUserFlexible,
     session: DbSession,
 ) -> User:
     """Reset a user's password."""

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from cryptography.fernet import Fernet
-from fastapi import Depends, HTTPException, Security, WebSocketException, status
+from fastapi import Depends, HTTPException, Request, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from loguru import logger
@@ -501,3 +501,42 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
             )
             return fernet.decrypt(encrypted_api_key).decode()
     return ""
+
+async def get_current_user_flexible(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    token: Annotated[str | None, Depends(oauth2_login)],
+    query_key: Annotated[str | None, Security(api_key_query)] = None,
+    header_key: Annotated[str | None, Security(api_key_header)] = None,
+) -> User:
+    settings = get_settings_service()
+
+    if token and not token.startswith("Bearer "):
+        token = token.strip()
+
+    if settings.auth_settings.CLERK_AUTH_ENABLED:
+        # Prefer Authorization header; if not available, fallback to Clerk cookies
+        if not token:
+            token = request.cookies.get("__session") or request.cookies.get("access_token_lf")
+
+        if token:
+            try:
+                return await get_current_user_by_jwt(token, db)
+            except HTTPException as e:
+                # Allow fallback to legacy if Clerk token is invalid
+                pass
+
+    # Fallback: legacy API key auth or legacy bearer token
+    key = query_key or header_key or token  # token might be legacy JWT
+
+    if not key:
+        raise HTTPException(status_code=401, detail="API key or token required")
+
+    try:
+        return await get_current_user_by_jwt(key, db)
+    except Exception:
+        # If legacy token fails, try API key flow
+        user = await check_key(db, key)
+        if not user:
+            raise HTTPException(status_code=403, detail="Invalid API key")
+        return user

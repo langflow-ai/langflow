@@ -13,7 +13,7 @@ from sqlalchemy import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import get_current_active_user
+from langflow.services.auth.utils import get_current_active_user, get_current_user_flexible
 from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.message import MessageTable
@@ -33,6 +33,7 @@ MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
+CurrentActiveUserFlexible = Annotated[User, Depends(get_current_user_flexible)]
 DbSession = Annotated[AsyncSession, Depends(get_session)]
 
 
