@@ -165,29 +165,29 @@ class DataFrameOperationsComponent(Component):
         return build_config
 
     def perform_operation(self) -> DataFrame:
-        df = self.df.copy()
+        dataframe = self.df.copy()
         op = self.operation
 
         if op == "Filter":
-            return self.filter_rows_by_value(df)
+            return self.filter_rows_by_value(dataframe)
         if op == "Sort":
-            return self.sort_by_column(df)
+            return self.sort_by_column(dataframe)
         if op == "Drop Column":
-            return self.drop_column(df)
+            return self.drop_column(dataframe)
         if op == "Rename Column":
-            return self.rename_column(df)
+            return self.rename_column(dataframe)
         if op == "Add Column":
-            return self.add_column(df)
+            return self.add_column(dataframe)
         if op == "Select Columns":
-            return self.select_columns(df)
+            return self.select_columns(dataframe)
         if op == "Head":
-            return self.head(df)
+            return self.head(dataframe)
         if op == "Tail":
-            return self.tail(df)
+            return self.tail(dataframe)
         if op == "Replace Value":
-            return self.replace_values(df)
+            return self.replace_values(dataframe)
         if op == "Drop Duplicates":
-            return self.drop_duplicates(df)
+            return self.drop_duplicates(dataframe)
         msg = f"Unsupported operation: {op}"
         logger.error(msg)
         raise ValueError(msg)
