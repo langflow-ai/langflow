@@ -14,15 +14,17 @@ Langflow provides keyboard shortcuts for the **Workspace**.
 In the Langflow header, click your profile icon, select **Settings**, and then click **Shortcuts** to view the available shortcuts.
 :::
 
-## Component menus
+## Add a component to a flow {#component-menus}
 
 To add a component to a flow, drag the component from the **Components** menu to the [**Workspace**](/concepts-overview).
 
 The **Components** menu is organized by component type, and some components are hidden by default:
 
-* **Beta components**: These components are grouped by purpose, such as **Inputs** or **Data**. Be aware that all core components are in beta and not suitable for production workloads.
+* **Beta components**: These are Langflow's core components. They are grouped by purpose, such as **Inputs** or **Data**. Be aware that these components are in beta and not suitable for production workloads.
 * **Legacy components**: You can still use these components, but they are no longer supported. Legacy component are hidden by default. Click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component settings** to expose legacy components.
 * **Bundles**: These components support specific integrations, and they are grouped by provider.
+
+### Configure a component
 
 After adding a component to a flow, configure the component's parameters and connect it to the other components in your flows.
 
@@ -42,6 +44,35 @@ For example:
 - **Tool Mode**: Enable this option when combining a component with an **Agent** component.
 
 For all other options, including **Delete** and **Duplicate** controls, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**.
+
+### Rename a component
+
+To modify a component's name or description, click the component in the **Workspace**, and then click <Icon name="PencilLine" aria-hidden="true"/> **Edit**.
+Component descriptions accept Markdown syntax.
+
+### Run a component
+
+To run a single component, click <Icon name="Play" aria-label="Play button" /> **Run component**.
+A **Last Run** value indicates that the component ran successfully.
+
+Running a single component is different from running an entire flow. In a single component run, the `build_vertex` function is called, which builds and runs only the single component with direct inputs provided through the UI (the `inputs_dict` parameter). The `VertexBuildResult` data is passed to the `build_and_run` method that calls the component's `build` method and runs it. Unlike running an entire flow, running a single component doesn't automatically execute its upstream dependencies.
+
+### Inspect component output and logs
+
+To view the output and logs for a single component, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect**.
+
+### Freeze a component
+
+:::important
+Freezing a component also freezes all components upstream of the selected component.
+:::
+
+Use the freeze option if you expect consistent output from a component _and all upstream components_, and you only need to run those components once.
+
+Freezing a component prevents that component and all upstream components from re-running, and it preserves the last output state for those components.
+Any future flow runs use the preserved output.
+
+To freeze a component, click the component in the **Workspace** to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Freeze**.
 
 ## Component ports
 
@@ -176,35 +207,6 @@ There are two ways to update components:
     To update specific components, select the components you want to update, and then click **Update Components**.
 
 Components are updated to the latest available version, based on the version of Langflow you are running.
-
-## Run one component
-
-To run a single component, click <Icon name="Play" aria-label="Play button" /> **Run component**.
-A **Last Run** value indicates that the component ran successfully.
-
-Running a single component is different from running an entire flow. In a single component run, the `build_vertex` function is called, which builds and runs only the single component with direct inputs provided through the UI (the `inputs_dict` parameter). The `VertexBuildResult` data is passed to the `build_and_run` method that calls the component's `build` method and runs it. Unlike running an entire flow, running a single component doesn't automatically execute its upstream dependencies.
-
-## Freeze components
-
-:::important
-Freezing a component also freezes all components upstream of the selected component.
-:::
-
-Use the freeze option if you expect consistent output from a component _and all upstream components_, and you only need to run those components once.
-
-Freezing a component prevents that component and all upstream components from re-running, and it preserves the last output state for those components.
-Any future flow runs use the preserved output.
-
-To freeze a component, click the component in the **Workspace** to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Freeze**.
-
-## Inspect component output and logs
-
-To view the output and logs for a single component, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect**.
-
-## Rename components
-
-To modify a component's name or description, click the component in the **Workspace**, and then click <Icon name="PencilLine" aria-hidden="true"/> **Edit**.
-Component descriptions accept Markdown syntax.
 
 ## Group components
 
