@@ -95,9 +95,7 @@ class TavilyExtractComponent(Component):
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.HTTPStatusError as exc:
-            error_message = (
-                f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
-            )
+            error_message = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except (ValueError, KeyError, AttributeError, httpx.RequestError) as exc:

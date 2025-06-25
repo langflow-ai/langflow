@@ -18,10 +18,8 @@ from langflow.template.field.base import Output
 
 class TavilyCrawlComponent(Component):
     display_name = "Tavily Crawl API"
-    description = (
-        """**Tavily Crawl** intelligently crawl a website from a starting URL to discover and extract content "
+    description = """**Tavily Crawl** intelligently crawl a website from a starting URL to discover and extract content "
         "across multiple pages."""
-    )
     icon = "TavilyIcon"
 
     inputs = [
@@ -39,9 +37,7 @@ class TavilyCrawlComponent(Component):
             tool_mode=True,
         ),
         MessageTextInput(
-            name="instructions",
-            display_name="Instructions",
-            info="Natural language instructions for the crawler."
+            name="instructions", display_name="Instructions", info="Natural language instructions for the crawler."
         ),
         IntInput(
             name="max_depth",
@@ -69,7 +65,7 @@ class TavilyCrawlComponent(Component):
             display_name="Categories",
             info=(
                 'Enter a JSON array of categories, e.g. ["Careers", "Blog", "Documentation"]. '
-                'Available: Careers, Blog, Documentation, About, Pricing, Community, Developers, Contact, Media'
+                "Available: Careers, Blog, Documentation, About, Pricing, Community, Developers, Contact, Media"
             ),
             advanced=True,
         ),
@@ -77,7 +73,7 @@ class TavilyCrawlComponent(Component):
             name="select_paths",
             display_name="Select Paths",
             info=(
-                'Regex patterns to select only URLs with specific path patterns '
+                "Regex patterns to select only URLs with specific path patterns "
                 '(e.g., /docs/.*, /api/v1.*). Enter as a JSON array: ["/docs/.*", "/api/v1.*"]'
             ),
             advanced=True,
@@ -86,7 +82,7 @@ class TavilyCrawlComponent(Component):
             name="select_domains",
             display_name="Select Domains",
             info=(
-                'Regex patterns to select crawling to specific domains or subdomains '
+                "Regex patterns to select crawling to specific domains or subdomains "
                 '(e.g., ^private\\.example\\.com$). Enter as a JSON array: ["^private\\.example\\.com$"]'
             ),
             advanced=True,
@@ -95,7 +91,7 @@ class TavilyCrawlComponent(Component):
             name="exclude_paths",
             display_name="Exclude Paths",
             info=(
-                'Regex patterns to exclude URLs with specific path patterns '
+                "Regex patterns to exclude URLs with specific path patterns "
                 '(e.g., /private/.*, /admin/.*). Enter as a JSON array: ["/private/.*", "/admin/.*"]'
             ),
             advanced=True,
@@ -104,7 +100,7 @@ class TavilyCrawlComponent(Component):
             name="exclude_domains",
             display_name="Exclude Domains",
             info=(
-                'Regex patterns to exclude specific domains or subdomains from crawling '
+                "Regex patterns to exclude specific domains or subdomains from crawling "
                 '(e.g., ^private\\.example\\.com$). Enter as a JSON array: ["^private\\.example\\.com$"]'
             ),
             advanced=True,
@@ -222,18 +218,14 @@ class TavilyCrawlComponent(Component):
                 message = "No results found in crawl response"
                 if response_time is not None:
                     message += f" (response time: {response_time}s)"
-                data_results.append(
-                    Data(text=message, data={"response_time": response_time})
-                )
+                data_results.append(Data(text=message, data={"response_time": response_time}))
 
         except httpx.TimeoutException:
             error_message = "Request timed out (120s). Please try again or adjust parameters."
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.HTTPStatusError as exc:
-            error_message = (
-                f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
-            )
+            error_message = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.RequestError as exc:
