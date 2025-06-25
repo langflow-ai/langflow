@@ -67,12 +67,13 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             node_data["template"]["code"] = latest_template["code"]
             # skip components that are having dynamic values that need to be persisted for templates
 
-            if node_data.get("key") in SKIPPED_COMPONENTS:
+            if node_type in SKIPPED_COMPONENTS:
                 continue
 
             is_tool_or_agent = node_data.get("tool_mode", False) or node_data.get("key") in {
                 "Agent",
                 "LanguageModelComponent",
+                "TypeConverterComponent",
             }
             has_tool_outputs = any(output.get("types") == ["Tool"] for output in node_data.get("outputs", []))
             if "outputs" in latest_node and not has_tool_outputs and not is_tool_or_agent:
