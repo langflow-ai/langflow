@@ -113,7 +113,7 @@ Langflow provides code snippets to help you get started with the Langflow API.
     # Request headers
     headers = {
         "Content-Type": "application/json",
-        "x-api-key: LANGFLOW_API_KEY"
+        "x-api-key": "LANGFLOW_API_KEY"
     }
 
     try:
@@ -145,7 +145,7 @@ Langflow provides code snippets to help you get started with the Langflow API.
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-api-key: LANGFLOW_API_KEY'
+            'x-api-key': 'LANGFLOW_API_KEY'
         },
         body: JSON.stringify(payload)
     };
@@ -382,7 +382,7 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
 
         headers = {
         "Content-Type": "application/json",
-        "x-api-key: LANGFLOW_API_KEY"
+        "x-api-key": "LANGFLOW_API_KEY"
         }
 
         try:
@@ -457,7 +457,7 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key: LANGFLOW_API_KEY'
+                'x-api-key': 'LANGFLOW_API_KEY'
             },
             body: JSON.stringify(payload)
         };
