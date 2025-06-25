@@ -7,6 +7,8 @@ from langflow.services.flow.flow_runner import LangflowRunnerExperimental
 @pytest.fixture
 def sample_flow_dict():
     return {
+        "id": str(uuid4()),  # Add required ID field
+        "name": "test_flow",  # Add name field
         "data": {
             "nodes": [],
             "edges": [],
@@ -48,9 +50,9 @@ async def test_run_with_dict_input(flow_runner, sample_flow_dict):
     input_value = "test input"
 
     result = await flow_runner.run(
+        session_id=session_id,
         flow=sample_flow_dict,
         input_value=input_value,
-        session_id=session_id,
     )
     assert result is not None
 
@@ -62,16 +64,16 @@ async def test_run_with_different_input_types(flow_runner, sample_flow_dict):
     test_cases = [
         ("text input", "text", "text"),
         ("chat input", "chat", "chat"),
-        ("test input", "chat", "text"),
+        ("test input", "chat", "all"),  # Updated to use "all" as default output_type
     ]
 
     for input_value, input_type, output_type in test_cases:
         result = await flow_runner.run(
+            session_id=session_id,
             flow=sample_flow_dict,
             input_value=input_value,
             input_type=input_type,
             output_type=output_type,
-            session_id=session_id,
         )
         assert result is not None
 
