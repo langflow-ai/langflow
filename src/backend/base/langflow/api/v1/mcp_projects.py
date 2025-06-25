@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import platform
+from asyncio import subprocess
 from asyncio.subprocess import create_subprocess_exec
 from contextvars import ContextVar
 from datetime import datetime, timezone
@@ -451,11 +452,11 @@ async def install_mcp_config(
                                 raise HTTPException(
                                     status_code=400, detail="Windows C: drive not mounted at /mnt/c in WSL"
                                 )
-                    except Exception as e:
+                    except (OSError, subprocess.CalledProcessError) as e:
                         logger.warning("Failed to determine Windows user path in WSL: %s", str(e))
                         raise HTTPException(
-                            status_code=400, detail=f"Could not determine Windows Claude config path in WSL: {str(e)}"
-                        )
+                            status_code=400, detail=f"Could not determine Windows Claude config path in WSL: {e!s}"
+                        ) from e
                 else:
                     # Regular Windows
                     config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
@@ -542,7 +543,6 @@ async def check_installed_mcp_servers(
                         )
             except json.JSONDecodeError:
                 logger.warning("Failed to parse Cursor config JSON at: %s", cursor_config_path)
-                pass
 
         # Check Claude configuration
         claude_config_path = None
@@ -586,7 +586,7 @@ async def check_installed_mcp_servers(
                                 claude_config_path = (
                                     user_dirs[0] / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
                                 )
-                except Exception as e:
+                except (OSError, subprocess.CalledProcessError) as e:
                     logger.warning(
                         "Failed to determine Windows user path in WSL for checking Claude config: %s", str(e)
                     )
@@ -611,7 +611,6 @@ async def check_installed_mcp_servers(
                         )
             except json.JSONDecodeError:
                 logger.warning("Failed to parse Claude config JSON at: %s", claude_config_path)
-                pass
         else:
             logger.debug("Claude config path not found or doesn't exist: %s", claude_config_path)
 
