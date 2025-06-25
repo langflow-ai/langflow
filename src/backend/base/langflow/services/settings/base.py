@@ -20,6 +20,7 @@ from pydantic_settings import (
 )
 from typing_extensions import override
 
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from langflow.utils.util_strings import is_valid_database_url
 
@@ -229,6 +230,12 @@ class Settings(BaseSettings):
     """Path to the SSL certificate file on the local system."""
     ssl_key_file: str | None = None
     """Path to the SSL key file on the local system."""
+    max_text_length: int = MAX_TEXT_LENGTH
+    """Maximum number of characters to store and display in the UI. Responses longer than this
+    will be truncated when displayed in the UI. Does not truncate responses between components nor outputs."""
+    max_items_length: int = MAX_ITEMS_LENGTH
+    """Maximum number of items to store and display in the UI. Lists longer than this
+    will be truncated when displayed in the UI. Does not affect data passed between components nor outputs."""
 
     # MCP Server
     mcp_server_enabled: bool = True
@@ -248,6 +255,14 @@ class Settings(BaseSettings):
     lazy_load_components: bool = False
     """If set to True, Langflow will only partially load components at startup and fully load them on demand.
     This significantly reduces startup time but may cause a slight delay when a component is first used."""
+
+    # Starter Projects
+    create_starter_projects: bool = True
+    """If set to True, Langflow will create starter projects. If False, skips all starter project setup.
+    Note that this doesn't check if the starter projects are already loaded in the db;
+    this is intended to be used to skip all startup project logic."""
+    update_starter_projects: bool = True
+    """If set to True, Langflow will update starter projects."""
 
     @field_validator("event_delivery", mode="before")
     @classmethod
@@ -414,8 +429,14 @@ class Settings(BaseSettings):
                     logger.debug(f"Appending {langflow_component_path} to components_path")
 
         if not value:
-            value = []
-            logger.debug("Setting empty components path")
+            value = [BASE_COMPONENTS_PATH]
+            logger.debug("Setting default components path to components_path")
+        else:
+            if isinstance(value, Path):
+                value = [str(value)]
+            elif isinstance(value, list):
+                value = [str(p) if isinstance(p, Path) else p for p in value]
+            logger.debug("Adding default components path to components_path")
 
         logger.debug(f"Components path: {value}")
         return value
