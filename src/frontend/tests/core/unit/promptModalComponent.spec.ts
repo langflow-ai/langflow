@@ -60,7 +60,7 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
-    await page.waitForSelector('[data-testid=processingPrompt Template]', {
+    await page.waitForSelector("[data-testid=processingPrompt Template]", {
       timeout: 3000,
     });
 
