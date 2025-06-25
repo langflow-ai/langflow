@@ -13,8 +13,8 @@ class TestFileComponentDynamicOutputs:
         assert len(result["outputs"]) == 3
         output_names = [output.name for output in result["outputs"]]
         assert "dataframe" in output_names  # Structured content
-        assert "message" in output_names    # Raw content
-        assert "path" in output_names       # File path
+        assert "message" in output_names  # Raw content
+        assert "path" in output_names  # File path
 
     def test_update_outputs_single_json_file(self):
         """Test single JSON file shows JSON + raw outputs."""
@@ -25,9 +25,9 @@ class TestFileComponentDynamicOutputs:
 
         assert len(result["outputs"]) == 3
         output_names = [output.name for output in result["outputs"]]
-        assert "json" in output_names       # JSON content
-        assert "message" in output_names    # Raw content
-        assert "path" in output_names       # File path
+        assert "json" in output_names  # JSON content
+        assert "message" in output_names  # Raw content
+        assert "path" in output_names  # File path
 
     def test_update_outputs_multiple_files(self):
         """Test multiple files show only Files output."""
