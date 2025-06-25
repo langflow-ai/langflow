@@ -219,7 +219,6 @@ class ComposioBaseComponent(Component):
                         continue
 
                     logger.debug(f"Processing action: {action_key}")
-                    logger.debug(f"Full schema for {action_key}: {schema_dict}")
 
                     # Human-friendly display name (falls back to sanitised key)
                     raw_display_name = schema_dict.get("displayName")
@@ -235,8 +234,6 @@ class ComposioBaseComponent(Component):
                         display_name = clean_name.replace("_", " ").title()
                     
                     logger.debug(f"Processing action {action_key}:")
-                    logger.debug(f"  - Raw displayName from schema: {raw_display_name}")
-                    logger.debug(f"  - Final display_name: {display_name}")
 
                     # Build list of parameter names and track bool fields
                     parameters_schema = schema_dict.get("parameters", {})
@@ -471,6 +468,20 @@ class ComposioBaseComponent(Component):
             
             result = schema_to_langflow_inputs(input_schema)
             logger.debug(f"Schema to langflow inputs result for {action_key}: {len(result) if result else 'None/empty'}")
+            
+            # Set non-required fields as advanced
+            if result and flat_schema.get("required"):
+                required_fields_set = set(flat_schema["required"])
+                for inp in result:
+                    if hasattr(inp, 'name') and inp.name not in required_fields_set:
+                        inp.advanced = True
+                        logger.debug(f"Set field '{inp.name}' as advanced (not required)")
+            elif result:
+                # If no required fields specified, all fields are optional so set as advanced
+                for inp in result:
+                    if hasattr(inp, 'name'):
+                        inp.advanced = True
+                        logger.debug(f"Set field '{inp.name}' as advanced (no required list)")
             
             return result
         except Exception as e:  # noqa: BLE001
