@@ -50,16 +50,16 @@ class FileComponent(BaseFileComponent):
         Output(display_name="Raw Content", name="message", method="load_files_message"),
     ]
 
-    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
+    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Dynamically show only the relevant output based on the number of files processed."""
         if field_name == "path":
-            if len(self.path) == 0:
+            if len(field_value) == 0:
                 return frontend_node
             # Start with empty outputs
             frontend_node["outputs"] = []
 
             # Add outputs based on the number of files in the path
-            if len(self.path) == 1:
+            if len(field_value) == 1:
                 # We need to check if the file is structured content
                 file_path = frontend_node["template"]["path"]["file_path"][0]
                 if file_path.endswith((".csv", ".xlsx", ".parquet")):

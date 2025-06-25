@@ -43,4 +43,4 @@ FIELD_FORMAT_ATTRIBUTES = [
 ]
 SKIPPED_FIELD_ATTRIBUTES = ["advanced"]
 ORJSON_OPTIONS = orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS | orjson.OPT_OMIT_MICROSECONDS
-SKIPPED_COMPONENTS = {"LanguageModelComponent", "Agent", "FileComponent", "File"}
+SKIPPED_COMPONENTS = {"LanguageModelComponent", "Agent"}
