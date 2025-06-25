@@ -43,7 +43,6 @@ withEventDeliveryModes(
 
     const output = await page
       .getByTestId("div-chat-message")
-      .last()
       .innerText();
     expect(output).toContain("Charmander");
     expect(output.length).toBeGreaterThan(100);
