@@ -124,9 +124,8 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
+    "docling_core>=2.36.1",
     "filelock>=3.18.0",
-    "docling>=2.36.1",
-    "filelock>=3.18.0"
 ]
 
 [dependency-groups]
@@ -194,6 +193,10 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
+docling = [
+    "docling>=2.36.1",
+]
+
 audio = [
     "webrtcvad>=2.0.10",
 ]
