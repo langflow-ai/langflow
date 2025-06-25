@@ -40,7 +40,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         # Provide an empty list or the actual mapping if versioned files exist
         return []
 
-    @patch("langflow.components.languagemodels.ollama.ChatOllama")
+    @patch("langflow.components.ollama.ollama.ChatOllama")
     async def test_build_model(self, mock_chat_ollama, component_class, default_kwargs):
         mock_instance = MagicMock()
         mock_chat_ollama.return_value = mock_instance
@@ -68,7 +68,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         )
         assert model == mock_instance
 
-    @patch("langflow.components.languagemodels.ollama.ChatOllama")
+    @patch("langflow.components.ollama.ollama.ChatOllama")
     async def test_build_model_missing_base_url(self, mock_chat_ollama, component_class, default_kwargs):
         # Make the mock raise an exception to simulate connection failure
         mock_chat_ollama.side_effect = Exception("connection error")
@@ -78,8 +78,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
             component.build_model()
 
     @pytest.mark.asyncio
-    @patch("langflow.components.languagemodels.ollama.httpx.AsyncClient.post")
-    @patch("langflow.components.languagemodels.ollama.httpx.AsyncClient.get")
+    @patch("langflow.components.ollama.ollama.httpx.AsyncClient.post")
+    @patch("langflow.components.ollama.ollama.httpx.AsyncClient.get")
     async def test_get_models_success(self, mock_get, mock_post):
         component = ChatOllamaComponent()
         mock_get_response = AsyncMock()
@@ -107,7 +107,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert mock_post.call_count == 2
 
     @pytest.mark.asyncio
-    @patch("langflow.components.languagemodels.ollama.httpx.AsyncClient.get")
+    @patch("langflow.components.ollama.ollama.httpx.AsyncClient.get")
     async def test_get_models_failure(self, mock_get):
         import httpx
 
@@ -147,7 +147,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert updated_config["mirostat_eta"]["value"] == 0.2
         assert updated_config["mirostat_tau"]["value"] == 10
 
-    @patch("langflow.components.languagemodels.ollama.httpx.AsyncClient.get")
+    @patch("langflow.components.ollama.ollama.httpx.AsyncClient.get")
     @pytest.mark.asyncio
     async def test_update_build_config_model_name(self, mock_get):
         component = ChatOllamaComponent()
