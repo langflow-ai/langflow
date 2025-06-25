@@ -113,7 +113,8 @@ For example, when used in a script, the following code snippet calls an ngrok do
 
     # Request headers
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "x-api-key: $LANGFLOW_API_KEY"
     }
 
     try:
