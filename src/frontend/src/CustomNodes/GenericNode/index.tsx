@@ -331,7 +331,7 @@ function GenericNode({
     handleSelectOutput(
       data.node?.outputs?.find((output) => output.selected) || null,
     );
-  }, [data.node?.outputs, data?.selected_output]);
+  }, [data.node?.outputs, data?.selected_output, handleSelectOutput]);
 
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =
     useState(false);
