@@ -27,7 +27,7 @@ To generate a user-specific token to use with Langflow, do the following.
 5. Include your `LANGFLOW_API_KEY` in requests like this:
     ```text
     curl --request POST \
-     --url 'http://localhost:7860/api/v1/run/0901b40b-9212-41cb-87c6-ac66a427913c?stream=false' \
+     --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
      --header 'Content-Type: application/json' \
      --header 'x-api-key: LANGFLOW_API_KEY' \
      --data '{
@@ -162,7 +162,7 @@ Langflow provides code snippets to help you get started with the Langflow API.
 
     ```text
     curl --request POST \
-     --url 'http://localhost:7860/api/v1/run/0901b40b-9212-41cb-87c6-ac66a427913c?stream=false' \
+     --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
      --header 'Content-Type: application/json' \
      --header 'x-api-key: LANGFLOW_API_KEY' \
      --data '{
