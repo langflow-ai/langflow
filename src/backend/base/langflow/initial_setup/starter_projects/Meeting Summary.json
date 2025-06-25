@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-Vzk5z",
+            "id": "Prompt-xAsW6",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-adSHw",
+            "id": "OpenAIModel-tuYcL",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-Vzk5z{œdataTypeœ:œPromptœ,œidœ:œPrompt-Vzk5zœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-adSHw{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-adSHwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-xAsW6{œdataTypeœ:œPromptœ,œidœ:œPrompt-xAsW6œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-tuYcL{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-tuYcLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-Vzk5z",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Vzk5zœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-adSHw",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-adSHwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-xAsW6",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-xAsW6œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-tuYcL",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-tuYcLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-adSHw",
+            "id": "OpenAIModel-tuYcL",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-NbY9b",
+            "id": "ChatOutput-iMVXt",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-adSHw{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-adSHwœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-NbY9b{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NbY9bœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-tuYcL{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-tuYcLœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-iMVXt{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-iMVXtœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-adSHw",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-adSHwœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-NbY9b",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-NbY9bœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "OpenAIModel-tuYcL",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-tuYcLœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-iMVXt",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-iMVXtœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-A8LqG",
+            "id": "OpenAIModel-cZfbm",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -73,7 +73,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-paHng",
+            "id": "ChatOutput-8p086",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -82,12 +82,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-A8LqG{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-A8LqGœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-paHng{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-paHngœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-cZfbm{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-cZfbmœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-8p086{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8p086œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-A8LqG",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-A8LqGœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-paHng",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-paHngœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "OpenAIModel-cZfbm",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-cZfbmœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-8p086",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-8p086œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -95,7 +95,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-xfgsq",
+            "id": "ChatInput-EKNpM",
             "name": "message",
             "output_types": [
               "Message"
@@ -103,7 +103,7 @@
           },
           "targetHandle": {
             "fieldName": "input",
-            "id": "Prompt-iKEvN",
+            "id": "Prompt-fdk2n",
             "inputTypes": [
               "Message",
               "Text"
@@ -111,12 +111,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-xfgsq{œdataTypeœ:œChatInputœ,œidœ:œChatInput-xfgsqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-iKEvN{œfieldNameœ:œinputœ,œidœ:œPrompt-iKEvNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-EKNpM{œdataTypeœ:œChatInputœ,œidœ:œChatInput-EKNpMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-fdk2n{œfieldNameœ:œinputœ,œidœ:œPrompt-fdk2nœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-xfgsq",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-xfgsqœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-iKEvN",
-        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œPrompt-iKEvNœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-EKNpM",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-EKNpMœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-fdk2n",
+        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œPrompt-fdk2nœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -124,7 +124,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-iKEvN",
+            "id": "Prompt-fdk2n",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -132,19 +132,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-A8LqG",
+            "id": "OpenAIModel-cZfbm",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-iKEvN{œdataTypeœ:œPromptœ,œidœ:œPrompt-iKEvNœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-A8LqG{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-A8LqGœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-fdk2n{œdataTypeœ:œPromptœ,œidœ:œPrompt-fdk2nœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-cZfbm{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-cZfbmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-iKEvN",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-iKEvNœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-A8LqG",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-A8LqGœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-fdk2n",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-fdk2nœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-cZfbm",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-cZfbmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -152,7 +152,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AssemblyAITranscriptionJobCreator",
-            "id": "AssemblyAITranscriptionJobCreator-hXp0S",
+            "id": "AssemblyAITranscriptionJobCreator-fVvKQ",
             "name": "transcript_id",
             "output_types": [
               "Data"
@@ -160,19 +160,19 @@
           },
           "targetHandle": {
             "fieldName": "transcript_id",
-            "id": "AssemblyAITranscriptionJobPoller-VCkre",
+            "id": "AssemblyAITranscriptionJobPoller-q3DCs",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AssemblyAITranscriptionJobCreator-hXp0S{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-hXp0Sœ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}-AssemblyAITranscriptionJobPoller-VCkre{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-VCkreœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AssemblyAITranscriptionJobCreator-fVvKQ{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-fVvKQœ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}-AssemblyAITranscriptionJobPoller-q3DCs{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-q3DCsœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AssemblyAITranscriptionJobCreator-hXp0S",
-        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobCreatorœ, œidœ: œAssemblyAITranscriptionJobCreator-hXp0Sœ, œnameœ: œtranscript_idœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AssemblyAITranscriptionJobPoller-VCkre",
-        "targetHandle": "{œfieldNameœ: œtranscript_idœ, œidœ: œAssemblyAITranscriptionJobPoller-VCkreœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "source": "AssemblyAITranscriptionJobCreator-fVvKQ",
+        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobCreatorœ, œidœ: œAssemblyAITranscriptionJobCreator-fVvKQœ, œnameœ: œtranscript_idœ, œoutput_typesœ: [œDataœ]}",
+        "target": "AssemblyAITranscriptionJobPoller-q3DCs",
+        "targetHandle": "{œfieldNameœ: œtranscript_idœ, œidœ: œAssemblyAITranscriptionJobPoller-q3DCsœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -180,7 +180,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AssemblyAITranscriptionJobPoller",
-            "id": "AssemblyAITranscriptionJobPoller-VCkre",
+            "id": "AssemblyAITranscriptionJobPoller-q3DCs",
             "name": "transcription_result",
             "output_types": [
               "Data"
@@ -188,7 +188,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-uRyvX",
+            "id": "parser-9M23i",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -196,12 +196,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AssemblyAITranscriptionJobPoller-VCkre{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-VCkreœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-parser-uRyvX{œfieldNameœ:œinput_dataœ,œidœ:œparser-uRyvXœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AssemblyAITranscriptionJobPoller-q3DCs{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-q3DCsœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-parser-9M23i{œfieldNameœ:œinput_dataœ,œidœ:œparser-9M23iœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AssemblyAITranscriptionJobPoller-VCkre",
-        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobPollerœ, œidœ: œAssemblyAITranscriptionJobPoller-VCkreœ, œnameœ: œtranscription_resultœ, œoutput_typesœ: [œDataœ]}",
-        "target": "parser-uRyvX",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-uRyvXœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "AssemblyAITranscriptionJobPoller-q3DCs",
+        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobPollerœ, œidœ: œAssemblyAITranscriptionJobPoller-q3DCsœ, œnameœ: œtranscription_resultœ, œoutput_typesœ: [œDataœ]}",
+        "target": "parser-9M23i",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-9M23iœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -209,7 +209,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-uRyvX",
+            "id": "parser-9M23i",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -217,7 +217,7 @@
           },
           "targetHandle": {
             "fieldName": "transcript",
-            "id": "Prompt-Vzk5z",
+            "id": "Prompt-xAsW6",
             "inputTypes": [
               "Message",
               "Text"
@@ -225,12 +225,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-uRyvX{œdataTypeœ:œparserœ,œidœ:œparser-uRyvXœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-Vzk5z{œfieldNameœ:œtranscriptœ,œidœ:œPrompt-Vzk5zœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-9M23i{œdataTypeœ:œparserœ,œidœ:œparser-9M23iœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-xAsW6{œfieldNameœ:œtranscriptœ,œidœ:œPrompt-xAsW6œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-uRyvX",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-uRyvXœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Vzk5z",
-        "targetHandle": "{œfieldNameœ: œtranscriptœ, œidœ: œPrompt-Vzk5zœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "parser-9M23i",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-9M23iœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-xAsW6",
+        "targetHandle": "{œfieldNameœ: œtranscriptœ, œidœ: œPrompt-xAsW6œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -238,7 +238,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-uRyvX",
+            "id": "parser-9M23i",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -246,7 +246,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-5pvPL",
+            "id": "ChatOutput-waGZR",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -255,18 +255,20 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-uRyvX{œdataTypeœ:œparserœ,œidœ:œparser-uRyvXœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-5pvPL{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-5pvPLœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-9M23i{œdataTypeœ:œparserœ,œidœ:œparser-9M23iœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-waGZR{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-waGZRœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-uRyvX",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-uRyvXœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-5pvPL",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-5pvPLœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-9M23i",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-9M23iœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-waGZR",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-waGZRœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-YN8aN",
+            "id": "Memory-8DIlq",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -274,7 +276,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "TypeConverterComponent-MzSbu",
+            "id": "TypeConverterComponent-ebXX0",
             "inputTypes": [
               "Message",
               "Data",
@@ -283,17 +285,20 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__Memory-YN8aN{œdataTypeœ:œMemoryœ,œidœ:œMemory-YN8aNœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-TypeConverterComponent-MzSbu{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-MzSbuœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
-        "source": "Memory-YN8aN",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-YN8aNœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "TypeConverterComponent-MzSbu",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-MzSbuœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-Memory-8DIlq{œdataTypeœ:œMemoryœ,œidœ:œMemory-8DIlqœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-TypeConverterComponent-ebXX0{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-ebXX0œ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Memory-8DIlq",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-8DIlqœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "TypeConverterComponent-ebXX0",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-ebXX0œ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "TypeConverterComponent",
-            "id": "TypeConverterComponent-MzSbu",
+            "id": "TypeConverterComponent-ebXX0",
             "name": "message_output",
             "output_types": [
               "Message"
@@ -301,7 +306,7 @@
           },
           "targetHandle": {
             "fieldName": "history",
-            "id": "Prompt-iKEvN",
+            "id": "Prompt-fdk2n",
             "inputTypes": [
               "Message",
               "Text"
@@ -309,17 +314,18 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__TypeConverterComponent-MzSbu{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-MzSbuœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-iKEvN{œfieldNameœ:œhistoryœ,œidœ:œPrompt-iKEvNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "TypeConverterComponent-MzSbu",
-        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-MzSbuœ, œnameœ: œmessage_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-iKEvN",
-        "targetHandle": "{œfieldNameœ: œhistoryœ, œidœ: œPrompt-iKEvNœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-TypeConverterComponent-ebXX0{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-ebXX0œ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-fdk2n{œfieldNameœ:œhistoryœ,œidœ:œPrompt-fdk2nœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "TypeConverterComponent-ebXX0",
+        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-ebXX0œ, œnameœ: œmessage_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-fdk2n",
+        "targetHandle": "{œfieldNameœ: œhistoryœ, œidœ: œPrompt-fdk2nœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "AssemblyAITranscriptionJobPoller-VCkre",
+          "id": "AssemblyAITranscriptionJobPoller-q3DCs",
           "node": {
             "base_classes": [
               "Data"
@@ -450,9 +456,9 @@
           "showNode": true,
           "type": "AssemblyAITranscriptionJobPoller"
         },
-        "id": "AssemblyAITranscriptionJobPoller-VCkre",
+        "id": "AssemblyAITranscriptionJobPoller-q3DCs",
         "measured": {
-          "height": 263,
+          "height": 264,
           "width": 320
         },
         "position": {
@@ -464,7 +470,7 @@
       },
       {
         "data": {
-          "id": "ParseData-X7r7s",
+          "id": "ParseData-ZacMx",
           "node": {
             "base_classes": [
               "Data",
@@ -613,9 +619,9 @@
           "showNode": true,
           "type": "ParseData"
         },
-        "id": "ParseData-X7r7s",
+        "id": "ParseData-ZacMx",
         "measured": {
-          "height": 263,
+          "height": 264,
           "width": 320
         },
         "position": {
@@ -627,7 +633,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-adSHw",
+          "id": "OpenAIModel-tuYcL",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -709,7 +715,7 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1002,9 +1008,9 @@
           "showNode": true,
           "type": "OpenAIModel"
         },
-        "id": "OpenAIModel-adSHw",
+        "id": "OpenAIModel-tuYcL",
         "measured": {
-          "height": 537,
+          "height": 540,
           "width": 320
         },
         "position": {
@@ -1016,7 +1022,7 @@
       },
       {
         "data": {
-          "id": "Prompt-Vzk5z",
+          "id": "Prompt-xAsW6",
           "node": {
             "base_classes": [
               "Message"
@@ -1155,9 +1161,9 @@
           "showNode": true,
           "type": "Prompt"
         },
-        "id": "Prompt-Vzk5z",
+        "id": "Prompt-xAsW6",
         "measured": {
-          "height": 365,
+          "height": 367,
           "width": 320
         },
         "position": {
@@ -1169,7 +1175,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-NbY9b",
+          "id": "ChatOutput-iMVXt",
           "node": {
             "base_classes": [
               "Message"
@@ -1457,9 +1463,9 @@
           "showNode": true,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-NbY9b",
+        "id": "ChatOutput-iMVXt",
         "measured": {
-          "height": 203,
+          "height": 204,
           "width": 320
         },
         "position": {
@@ -1471,7 +1477,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-5pvPL",
+          "id": "ChatOutput-waGZR",
           "node": {
             "base_classes": [
               "Message"
@@ -1759,7 +1765,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-5pvPL",
+        "id": "ChatOutput-waGZR",
         "measured": {
           "height": 48,
           "width": 192
@@ -1773,7 +1779,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-A8LqG",
+          "id": "OpenAIModel-cZfbm",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1855,7 +1861,7 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2148,9 +2154,9 @@
           "showNode": true,
           "type": "OpenAIModel"
         },
-        "id": "OpenAIModel-A8LqG",
+        "id": "OpenAIModel-cZfbm",
         "measured": {
-          "height": 537,
+          "height": 540,
           "width": 320
         },
         "position": {
@@ -2162,7 +2168,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-paHng",
+          "id": "ChatOutput-8p086",
           "node": {
             "base_classes": [
               "Message"
@@ -2450,7 +2456,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-paHng",
+        "id": "ChatOutput-8p086",
         "measured": {
           "height": 48,
           "width": 192
@@ -2464,7 +2470,7 @@
       },
       {
         "data": {
-          "id": "Prompt-iKEvN",
+          "id": "Prompt-fdk2n",
           "node": {
             "base_classes": [
               "Message"
@@ -2627,9 +2633,9 @@
           "showNode": true,
           "type": "Prompt"
         },
-        "id": "Prompt-iKEvN",
+        "id": "Prompt-fdk2n",
         "measured": {
-          "height": 417,
+          "height": 419,
           "width": 320
         },
         "position": {
@@ -2641,7 +2647,7 @@
       },
       {
         "data": {
-          "id": "Memory-YN8aN",
+          "id": "Memory-8DIlq",
           "node": {
             "base_classes": [
               "Data",
@@ -2952,21 +2958,22 @@
           "showNode": true,
           "type": "Memory"
         },
-        "id": "Memory-YN8aN",
+        "dragging": false,
+        "id": "Memory-8DIlq",
         "measured": {
-          "height": 217,
+          "height": 218,
           "width": 320
         },
         "position": {
-          "x": 685.5892616330983,
-          "y": 1365.244705292662
+          "x": 243.43007159070964,
+          "y": 1335.3068434668753
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-xfgsq",
+          "id": "ChatInput-EKNpM",
           "node": {
             "base_classes": [
               "Message"
@@ -3252,7 +3259,7 @@
           "showNode": false,
           "type": "ChatInput"
         },
-        "id": "ChatInput-xfgsq",
+        "id": "ChatInput-EKNpM",
         "measured": {
           "height": 48,
           "width": 192
@@ -3266,7 +3273,7 @@
       },
       {
         "data": {
-          "id": "note-0oxqi",
+          "id": "note-vQAQG",
           "node": {
             "description": "### 💡 Add your Assembly AI API key and audio file here",
             "display_name": "",
@@ -3279,10 +3286,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-0oxqi",
+        "id": "note-vQAQG",
         "measured": {
           "height": 324,
-          "width": 455
+          "width": 456
         },
         "position": {
           "x": 452.7834981529654,
@@ -3295,7 +3302,7 @@
       },
       {
         "data": {
-          "id": "note-YC1zc",
+          "id": "note-TzdC8",
           "node": {
             "description": "### 💡 Add your Assembly AI API key here",
             "display_name": "",
@@ -3308,10 +3315,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-YC1zc",
+        "id": "note-TzdC8",
         "measured": {
           "height": 324,
-          "width": 364
+          "width": 365
         },
         "position": {
           "x": 920.5426847894952,
@@ -3324,7 +3331,7 @@
       },
       {
         "data": {
-          "id": "note-1sAEX",
+          "id": "note-6d5xe",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -3337,10 +3344,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-1sAEX",
+        "id": "note-6d5xe",
         "measured": {
           "height": 324,
-          "width": 334
+          "width": 335
         },
         "position": {
           "x": 2151.1746324575247,
@@ -3353,7 +3360,7 @@
       },
       {
         "data": {
-          "id": "note-aqmS2",
+          "id": "note-WULXD",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -3365,7 +3372,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-aqmS2",
+        "id": "note-WULXD",
         "measured": {
           "height": 324,
           "width": 324
@@ -3379,7 +3386,7 @@
       },
       {
         "data": {
-          "id": "AssemblyAITranscriptionJobCreator-hXp0S",
+          "id": "AssemblyAITranscriptionJobCreator-fVvKQ",
           "node": {
             "base_classes": [
               "Data"
@@ -3697,9 +3704,9 @@
           "type": "AssemblyAITranscriptionJobCreator"
         },
         "dragging": false,
-        "id": "AssemblyAITranscriptionJobCreator-hXp0S",
+        "id": "AssemblyAITranscriptionJobCreator-fVvKQ",
         "measured": {
-          "height": 341,
+          "height": 343,
           "width": 320
         },
         "position": {
@@ -3711,7 +3718,7 @@
       },
       {
         "data": {
-          "id": "note-RCLbs",
+          "id": "note-jjgFX",
           "node": {
             "description": "# Meeting Summary Generator\n\nThis flow automatically transcribes and summarizes meetings by converting audio recordings into concise summaries using **AssemblyAI** and **OpenAI GPT-4**. \n\n## Prerequisites\n\n- **[AssemblyAI API Key](https://www.assemblyai.com/)**\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Upload an audio file. Most common audio file formats are [supported](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/assemblyai/assemblyai_start_transcript.py#L27).\n2. To run the summary generator flow, click **Playground**.\n\nThe flow transcribes the audio using **AssemblyAI**.\nThe transcript is formatted for AI processing.\nThe **GPT-4** model extracts key points and insights.\nThe summarized meeting details are displayed in a chat-friendly format.\n\n\n\n",
             "display_name": "",
@@ -3722,10 +3729,10 @@
         },
         "dragging": false,
         "height": 612,
-        "id": "note-RCLbs",
+        "id": "note-jjgFX",
         "measured": {
           "height": 612,
-          "width": 549
+          "width": 548
         },
         "position": {
           "x": -128.87171443390673,
@@ -3738,7 +3745,7 @@
       },
       {
         "data": {
-          "id": "parser-uRyvX",
+          "id": "parser-9M23i",
           "node": {
             "base_classes": [
               "Message"
@@ -3899,9 +3906,9 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-uRyvX",
+        "id": "parser-9M23i",
         "measured": {
-          "height": 359,
+          "height": 361,
           "width": 320
         },
         "position": {
@@ -3913,7 +3920,7 @@
       },
       {
         "data": {
-          "id": "TypeConverterComponent-MzSbu",
+          "id": "TypeConverterComponent-ebXX0",
           "node": {
             "base_classes": [
               "Message"
@@ -4026,30 +4033,31 @@
           "showNode": true,
           "type": "TypeConverterComponent"
         },
-        "id": "TypeConverterComponent-MzSbu",
+        "dragging": false,
+        "id": "TypeConverterComponent-ebXX0",
         "measured": {
-          "height": 261,
+          "height": 262,
           "width": 320
         },
         "position": {
-          "x": 977.2392682107122,
-          "y": 1192.6380449385947
+          "x": 753.8567607413804,
+          "y": 1222.5759067643814
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -131.07372789550516,
-      "y": -274.4531542699592,
-      "zoom": 0.5495826307500584
+      "x": 120.96031865568148,
+      "y": 56.05426101445158,
+      "zoom": 0.4342327476707958
     }
   },
   "description": "An AI-powered meeting summary generator that transcribes and summarizes meetings using  AssemblyAI and OpenAI for quick insights.",
   "endpoint_name": null,
-  "id": "f05e8cbd-e83e-4c66-9c89-29dd57c72739",
+  "id": "92b5d70f-b9db-4372-b1ed-4cf240123444",
   "is_component": false,
-  "last_tested_version": "1.4.2",
+  "last_tested_version": "1.4.3",
   "name": "Meeting Summary",
   "tags": [
     "chatbots",
