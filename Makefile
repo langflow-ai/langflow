@@ -39,7 +39,6 @@ check_tools:
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
 	@echo "$(GREEN)All required tools are installed.$(NC)"
 
-
 help: ## show this help message
 	@echo '----'
 	@grep -hE '^\S+:.*##' $(MAKEFILE_LIST) | \
@@ -76,12 +75,11 @@ build_frontend: ## build the frontend static files
 	@cp -r src/frontend/build/. src/backend/base/langflow/frontend
 	@echo '==== Frontend build complete ===='
 
-init: check_tools clean_python_cache clean_npm_cache ## initialize the project
+init: check_tools ## initialize the project
 	@make install_backend
 	@make install_frontend
-	@make build_frontend
+	@uvx pre-commit install
 	@echo "$(GREEN)All requirements are installed.$(NC)"
-	@uv run langflow run
 
 ######################
 # CLEAN PROJECT
@@ -440,6 +438,71 @@ alembic-check: ## check migration status
 alembic-stamp: ## stamp the database with a specific revision
 	@echo 'Stamping the database with revision $(revision)'
 	cd src/backend/base/langflow/ && uv run alembic stamp $(revision)
+
+######################
+# VERSION MANAGEMENT
+######################
+
+patch: ## Update version across all projects. Usage: make patch v=1.5.0
+	@if [ -z "$(v)" ]; then \
+		echo "$(RED)Error: Version argument required.$(NC)"; \
+		echo "Usage: make patch v=1.5.0"; \
+		exit 1; \
+	fi; \
+	echo "$(GREEN)Updating version to $(v)$(NC)"; \
+	\
+	LANGFLOW_VERSION="$(v)"; \
+	LANGFLOW_BASE_VERSION=$$(echo "$$LANGFLOW_VERSION" | sed -E 's/^[0-9]+\.(.*)$$/0.\1/'); \
+	\
+	echo "$(GREEN)Langflow version: $$LANGFLOW_VERSION$(NC)"; \
+	echo "$(GREEN)Langflow-base version: $$LANGFLOW_BASE_VERSION$(NC)"; \
+	\
+	echo "$(GREEN)Updating main pyproject.toml...$(NC)"; \
+	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base==.*\"', '\"langflow-base==$$LANGFLOW_BASE_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	\
+	echo "$(GREEN)Updating langflow-base pyproject.toml...$(NC)"; \
+	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \
+	\
+	echo "$(GREEN)Updating frontend package.json...$(NC)"; \
+	python -c "import re; fname='src/frontend/package.json'; txt=open(fname).read(); txt=re.sub(r'\"version\": \".*\"', '\"version\": \"$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	\
+	echo "$(GREEN)Validating version changes...$(NC)"; \
+	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml version validation failed$(NC)"; exit 1; fi; \
+	if ! grep -q "\"langflow-base==$$LANGFLOW_BASE_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -q "^version = \"$$LANGFLOW_BASE_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml version validation failed$(NC)"; exit 1; fi; \
+	if ! grep -q "\"version\": \"$$LANGFLOW_VERSION\"" src/frontend/package.json; then echo "$(RED)✗ Frontend package.json version validation failed$(NC)"; exit 1; fi; \
+	echo "$(GREEN)✓ All versions updated successfully$(NC)"; \
+	\
+	echo "$(GREEN)Syncing dependencies in parallel...$(NC)"; \
+	uv sync --quiet & \
+	(cd src/frontend && npm install --silent) & \
+	wait; \
+	\
+	echo "$(GREEN)Validating final state...$(NC)"; \
+	CHANGED_FILES=$$(git status --porcelain | wc -l | tr -d ' '); \
+	if [ "$$CHANGED_FILES" -lt 5 ]; then \
+		echo "$(RED)✗ Expected at least 5 changed files, but found $$CHANGED_FILES$(NC)"; \
+		echo "$(RED)Changed files:$(NC)"; \
+		git status --porcelain; \
+		exit 1; \
+	fi; \
+	EXPECTED_FILES="pyproject.toml uv.lock src/backend/base/pyproject.toml src/frontend/package.json src/frontend/package-lock.json"; \
+	for file in $$EXPECTED_FILES; do \
+		if ! git status --porcelain | grep -q "$$file"; then \
+			echo "$(RED)✗ Expected file $$file was not modified$(NC)"; \
+			exit 1; \
+		fi; \
+	done; \
+	echo "$(GREEN)✓ All required files were modified.$(NC)"; \
+	\
+	echo "$(GREEN)Version update complete!$(NC)"; \
+	echo "$(GREEN)Updated files:$(NC)"; \
+	echo "  - pyproject.toml: $$LANGFLOW_VERSION"; \
+	echo "  - src/backend/base/pyproject.toml: $$LANGFLOW_BASE_VERSION"; \
+	echo "  - src/frontend/package.json: $$LANGFLOW_VERSION"; \
+	echo "  - uv.lock: dependency lock updated"; \
+	echo "  - src/frontend/package-lock.json: dependency lock updated"; \
+	echo "$(GREEN)Dependencies synced successfully!$(NC)"
 
 ######################
 # LOAD TESTING

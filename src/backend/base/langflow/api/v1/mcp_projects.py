@@ -9,12 +9,11 @@ from contextvars import ContextVar
 from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
-from typing import Annotated
 from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
 
 from anyio import BrokenResourceError
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
@@ -22,6 +21,7 @@ from mcp.server.sse import SseServerTransport
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
+from langflow.api.utils import CurrentActiveMCPUser
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.mcp import (
     current_user_ctx,
@@ -30,11 +30,12 @@ from langflow.api.v1.mcp import (
     with_db_session,
 )
 from langflow.api.v1.schemas import MCPInstallRequest, MCPSettings, SimplifiedAPIRequest
-from langflow.base.mcp.util import get_flow_snake_case
+from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH, MAX_MCP_TOOL_NAME_LENGTH
+from langflow.base.mcp.util import get_flow_snake_case, get_unique_name
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
-from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models import Flow, Folder, User
+from langflow.services.database.models import Flow, Folder
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME, NEW_FOLDER_NAME
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.services.storage.utils import build_content_type_from_extension
 
@@ -60,7 +61,7 @@ def get_project_sse(project_id: UUID) -> SseServerTransport:
 @router.get("/{project_id}")
 async def list_project_tools(
     project_id: UUID,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveMCPUser,
     *,
     mcp_enabled: bool = True,
 ) -> list[MCPSettings]:
@@ -134,7 +135,7 @@ async def im_alive():
 async def handle_project_sse(
     project_id: UUID,
     request: Request,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveMCPUser,
 ):
     """Handle SSE connections for a specific project."""
     # Verify project exists and user has access
@@ -185,9 +186,7 @@ async def handle_project_sse(
 
 
 @router.post("/{project_id}")
-async def handle_project_messages(
-    project_id: UUID, request: Request, current_user: Annotated[User, Depends(get_current_active_user)]
-):
+async def handle_project_messages(project_id: UUID, request: Request, current_user: CurrentActiveMCPUser):
     """Handle POST messages for a project-specific MCP server."""
     # Verify project exists and user has access
     async with session_scope() as session:
@@ -214,9 +213,7 @@ async def handle_project_messages(
 
 
 @router.post("/{project_id}/")
-async def handle_project_messages_with_slash(
-    project_id: UUID, request: Request, current_user: Annotated[User, Depends(get_current_active_user)]
-):
+async def handle_project_messages_with_slash(project_id: UUID, request: Request, current_user: CurrentActiveMCPUser):
     """Handle POST messages for a project-specific MCP server with trailing slash."""
     # Call the original handler
     return await handle_project_messages(project_id, request, current_user)
@@ -226,7 +223,7 @@ async def handle_project_messages_with_slash(
 async def update_project_mcp_settings(
     project_id: UUID,
     settings: list[MCPSettings],
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveMCPUser,
 ):
     """Update the MCP settings of all flows in a project."""
     try:
@@ -327,7 +324,7 @@ async def install_mcp_config(
     project_id: UUID,
     body: MCPInstallRequest,
     request: Request,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveMCPUser,
 ):
     """Install MCP server configuration for Cursor or Claude."""
     # Check if the request is coming from a local IP address
@@ -389,9 +386,17 @@ async def install_mcp_config(
             args = ["/c", "uvx", "mcp-proxy", sse_url]
             logger.debug("Windows detected, using cmd command")
 
+        name = project.name
+        name = NEW_FOLDER_NAME if name == DEFAULT_FOLDER_NAME else name
+
         # Create the MCP configuration
         mcp_config = {
-            "mcpServers": {f"lf-{project.name.lower().replace(' ', '_')[:11]}": {"command": command, "args": args}}
+            "mcpServers": {
+                f"lf-{name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": {
+                    "command": command,
+                    "args": args,
+                }
+            }
         }
 
         # Determine the config file path based on the client and OS
@@ -442,7 +447,7 @@ async def install_mcp_config(
 @router.get("/{project_id}/installed")
 async def check_installed_mcp_servers(
     project_id: UUID,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveMCPUser,
 ):
     """Check if MCP server configuration is installed for this project in Cursor or Claude."""
     try:
@@ -456,7 +461,7 @@ async def check_installed_mcp_servers(
                 raise HTTPException(status_code=404, detail="Project not found")
 
         # Project server name pattern
-        project_server_name = f"lf-{project.name.lower().replace(' ', '_')[:11]}"
+        project_server_name = f"lf-{project.name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
 
         # Check configurations for different clients
         results = []
@@ -517,13 +522,14 @@ class ProjectMCPServer:
                             select(Flow).where(Flow.mcp_enabled == True, Flow.folder_id == self.project_id)  # noqa: E712
                         )
                     ).all()
-
+                    existing_names = set()
                     for flow in flows:
                         if flow.user_id is None:
                             continue
 
                         # Use action_name if available, otherwise construct from flow name
-                        name = flow.action_name or "_".join(flow.name.lower().split())
+                        base_name = flow.action_name or "_".join(flow.name.lower().split())
+                        name = get_unique_name(base_name, MAX_MCP_TOOL_NAME_LENGTH, existing_names)
 
                         # Use action_description if available, otherwise use defaults
                         description = flow.action_description or (
@@ -536,6 +542,7 @@ class ProjectMCPServer:
                             inputSchema=json_schema_from_flow(flow),
                         )
                         tools.append(tool)
+                        existing_names.add(name)
             except Exception as e:  # noqa: BLE001
                 msg = f"Error in listing project tools: {e!s} from flow: {name}"
                 logger.warning(msg)

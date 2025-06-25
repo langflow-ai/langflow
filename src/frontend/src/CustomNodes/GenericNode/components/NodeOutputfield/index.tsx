@@ -216,10 +216,19 @@ function NodeOutputField({
   );
 
   useEffect(() => {
-    if (disabledOutput && hidden) {
+    const outputHasGroupOutputsFalse =
+      data.node?.outputs?.[index]?.group_outputs === false;
+
+    if (disabledOutput && hidden && !outputHasGroupOutputsFalse) {
       handleUpdateOutputHide(false);
     }
-  }, [disabledOutput, handleUpdateOutputHide, hidden]);
+  }, [
+    disabledOutput,
+    handleUpdateOutputHide,
+    hidden,
+    data.node?.outputs,
+    index,
+  ]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
 
@@ -348,7 +357,7 @@ function NodeOutputField({
         </div>
 
         {data.node?.frozen && (
-          <div className="pr-1">
+          <div className="pr-1" data-testid="frozen-icon">
             <SnowflakeIcon />
           </div>
         )}

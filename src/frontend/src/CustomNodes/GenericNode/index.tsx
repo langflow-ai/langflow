@@ -259,7 +259,10 @@ function GenericNode({
   }, [data.node?.outputs]);
 
   const [selectedOutput, setSelectedOutput] = useState<OutputFieldType | null>(
-    () => data.node?.outputs?.find((output) => output.selected) || null,
+    () =>
+      data.node?.outputs?.find(
+        (output) => output.name === data?.selected_output,
+      ) || null,
   );
 
   const handleSelectOutput = useCallback(
@@ -310,7 +313,11 @@ function GenericNode({
             newNode.data.node.outputs[outputIndex].selected =
               output.selected ?? defaultType;
           }
+
+          const selectedOutput = newNode.data.node.outputs[outputIndex]?.name;
+          (newNode.data as NodeDataType).selected_output = selectedOutput;
         }
+
         return newNode;
       });
       updateNodeInternals(data.id);
@@ -547,6 +554,7 @@ function GenericNode({
             <div className="px-4 pb-3">
               <MemoizedNodeDescription
                 description={data.node?.description}
+                charLimit={1000}
                 mdClassName={"dark:prose-invert"}
                 nodeId={data.id}
                 selected={selected}
