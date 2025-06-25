@@ -11,7 +11,9 @@ export const useGetUserData: useMutationFunctionType<undefined, any> = (
   const { mutate } = UseRequestProcessor();
 
   const getUserData = async () => {
+    console.debug("[useGetUserData] Calling /whoami");
     const response = await api.get<Users>(`${getURL("USERS")}/whoami`);
+    console.debug("[useGetUserData] Response:", response);
     setUserData(response["data"]);
     return response["data"];
   };

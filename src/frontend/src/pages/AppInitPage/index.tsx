@@ -1,3 +1,4 @@
+// src/frontend/src/pages/AppInitPage/index.tsx
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 
@@ -10,7 +11,6 @@ import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useGetVersionQuery } from "@/controllers/API/queries/version";
 
 import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primary-loading";
-import { CustomLoadingPage } from "@/customization/components/custom-loading-page";
 import { LoadingPage } from "../LoadingPage";
 
 import useAuthStore from "@/stores/authStore";
@@ -18,69 +18,91 @@ import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 
 import { useUser } from "@clerk/clerk-react";
+import { useAuth } from "@/contexts/authContext";
 
 const IS_CLERK_ENABLED = import.meta.env.VITE_CLERK_AUTH_ENABLED === "true";
 
 export function AppInitPage() {
   const navigate = useNavigate();
 
-  const refreshStars = useDarkStore((state) => state.refreshStars);
-  const refreshDiscordCount = useDarkStore((state) => state.refreshDiscordCount);
-  const isLoading = useFlowsManagerStore((state) => state.isLoading);
+  const refreshStars = useDarkStore((s) => s.refreshStars);
+  const refreshDiscordCount = useDarkStore((s) => s.refreshDiscordCount);
+  const isLoading = useFlowsManagerStore((s) => s.isLoading);
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
   const { isSignedIn, isLoaded: isClerkLoaded } = useUser();
-  const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
+  const setAutoLogin = useAuthStore((s) => s.setAutoLogin);
+  const { getUser, userData } = useAuth();
 
-  // Clerk-only logic
+  // 1️⃣ Clerk Routing
   useEffect(() => {
-    if (IS_CLERK_ENABLED) {
-      if (isClerkLoaded) {
-        if (isSignedIn) {
-          navigate("/flows");
-        } else {
-          navigate("/login");
-        }
-      }
+    if (!IS_CLERK_ENABLED) return;
+    if (!isClerkLoaded) return;
+
+    if (isSignedIn) {
+      navigate("/flows");
+    } else {
+      navigate("/login");
     }
   }, [isClerkLoaded, isSignedIn, navigate]);
 
-  // === Legacy auto-login ===
-  const { isFetched, refetch } = useGetAutoLogin({ enabled: !IS_CLERK_ENABLED && isLoaded });
-  useGetVersionQuery({ enabled: !IS_CLERK_ENABLED && isFetched });
-  const { isFetched: isConfigFetched } = useGetConfig({ enabled: !IS_CLERK_ENABLED && isFetched });
-  useGetGlobalVariables({ enabled: !IS_CLERK_ENABLED && isFetched });
-  useGetTagsQuery({ enabled: !IS_CLERK_ENABLED && isFetched });
-  useGetFoldersQuery({ enabled: !IS_CLERK_ENABLED && isFetched });
+  useEffect(() => {
+    if (IS_CLERK_ENABLED && isClerkLoaded && isSignedIn && !userData) {
+      getUser();
+    }
+  }, [isClerkLoaded, isSignedIn, userData]);
 
-  const { isFetched: isExamplesFetched, refetch: refetchExamples } = useGetBasicExamplesQuery({
-    enabled: !IS_CLERK_ENABLED || (IS_CLERK_ENABLED && isSignedIn && isClerkLoaded),
+  // 2️⃣ Legacy Auth
+  const { isFetched: autoFetched, refetch: refetchAuto } = useGetAutoLogin({
+    enabled: !IS_CLERK_ENABLED && isLoaded,
+  });
+
+  useGetVersionQuery({ enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched, });
+  const { isFetched: configFetched } = useGetConfig({
+    enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched,
+  });
+  useGetGlobalVariables({ enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched, });
+  useGetTagsQuery({ enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched, });
+  useGetFoldersQuery({ enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched, });
+
+  const {
+    isFetched: examplesFetched,
+    refetch: refetchExamples,
+  } = useGetBasicExamplesQuery({
+    enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched,
   });
 
   useEffect(() => {
-    if (!IS_CLERK_ENABLED && isFetched) {
+    if (!IS_CLERK_ENABLED && configFetched) {
+      setAutoLogin(true);
+      refetchAuto();
+      refetchExamples();
       refreshStars();
       refreshDiscordCount();
     }
+  }, [
+    IS_CLERK_ENABLED,
+    configFetched,
+    refetchAuto,
+    refetchExamples,
+    refreshStars,
+    refreshDiscordCount,
+    setAutoLogin,
+  ]);
 
-    if (!IS_CLERK_ENABLED && isConfigFetched) {
-      refetch();
-      refetchExamples();
-    }
-  }, [isFetched, isConfigFetched]);
+  // 3️⃣ Loader
+  const showLoader = IS_CLERK_ENABLED
+    ? !isClerkLoaded
+    : !autoFetched || !examplesFetched || isLoading;
 
-  const showLoader =
-    !isLoaded ||
-    (IS_CLERK_ENABLED
-      ? !isClerkLoaded
-      : isLoading || !isFetched || !isExamplesFetched);
-
-  const canRenderOutlet =
-    IS_CLERK_ENABLED ? isClerkLoaded : isFetched && isExamplesFetched;
+  // 4️⃣ Outlet rendering
+  const canRenderOutlet = IS_CLERK_ENABLED
+  ? isClerkLoaded
+  : autoFetched && examplesFetched;
 
   return (
     <>
-      {showLoader ? <LoadingPage overlay /> : null}
+      {showLoader && <LoadingPage overlay />}
       {canRenderOutlet && <Outlet />}
     </>
   );

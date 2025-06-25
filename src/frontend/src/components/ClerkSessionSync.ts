@@ -14,11 +14,12 @@ export function ClerkSessionSync() {
     setIsAuthenticated(!!isSignedIn);
 
     if (isSignedIn && user) {
-      setUserData({
-        username: user.username || user.id,
+      setUserData((prev: any) => ({
+        ...prev,
+        username: user.username,
         email: user.primaryEmailAddress?.emailAddress,
-        id: user.id,
-      });
+      }));
+
     }
   }, [isSignedIn, user]);
 
