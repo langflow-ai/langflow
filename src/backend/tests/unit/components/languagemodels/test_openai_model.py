@@ -170,14 +170,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         assert updated_config["temperature"]["show"] is True
         assert updated_config["seed"]["show"] is True
 
-    @pytest.mark.api_key_required
-    @patch(
-        "langchain_openai.ChatOpenAI",
-        return_value=ChatOpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="gpt-4.1-nano", base_url="https://api.openai.com/v1"
-        ),
-    )
-    def test_build_model_integration(self, _mock_chat_openai):  # noqa: PT019
+    def test_build_model_integration(self):
         component = OpenAIModelComponent()
         component.api_key = os.getenv("OPENAI_API_KEY")
         component.model_name = "gpt-4.1-nano"
@@ -193,13 +186,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         assert model.model_name == "gpt-4.1-nano"
         assert model.openai_api_base == "https://api.openai.com/v1"
 
-    @patch(
-        "langchain_openai.ChatOpenAI",
-        return_value=ChatOpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="o1", base_url="https://api.openai.com/v1"
-        ),
-    )
-    def test_build_model_integration_reasoning(self, _mock_chat_openai):  # noqa: PT019
+    def test_build_model_integration_reasoning(self):
         component = OpenAIModelComponent()
         component.api_key = os.getenv("OPENAI_API_KEY")
         component.model_name = "o1"
