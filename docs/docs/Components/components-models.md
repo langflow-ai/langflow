@@ -47,13 +47,13 @@ Your flow looks like this:
 8. Open the **Playground**, and ask a question.
 The bot responds to your question with sources.
 
-```
-What is the capital of Utah?
+    ```
+    What is the capital of Utah?
 
-AI
-gpt-4o-mini
-The capital of Utah is Salt Lake City. It is not only the largest city in the state but also serves as the cultural and economic center of Utah. Salt Lake City was founded in 1847 by Mormon pioneers and is known for its proximity to the Great Salt Lake and its role in the history of the Church of Jesus Christ of Latter-day Saints. For more information, you can refer to sources such as the U.S. Geological Survey or the official state website of Utah.
-```
+    AI
+    gpt-4o-mini
+    The capital of Utah is Salt Lake City. It is not only the largest city in the state but also serves as the cultural and economic center of Utah. Salt Lake City was founded in 1847 by Mormon pioneers and is known for its proximity to the Great Salt Lake and its role in the history of the Church of Jesus Christ of Latter-day Saints. For more information, you can refer to sources such as the U.S. Geological Survey or the official state website of Utah.
+    ```
 
 9. Try an alternate model provider, and test how the response differs.
 In the **Language Model** component, in the **Model Provider** field, select **Anthropic**.
@@ -62,21 +62,29 @@ This model uses Claude 3.5 Haiku, based on [Anthropic's recommendation](https://
 11. In the **Anthropic API Key** field, enter your Anthropic API key.
 12. Open the **Playground**, and ask the same question as you did before.
 
-```
-User
-What is the capital of Utah?
+    ```
+    User
+    What is the capital of Utah?
 
-AI
-claude-3-5-haiku-latest
-The capital of Utah is Salt Lake City. It is also the most populous city in the state. Salt Lake City has been the capital of Utah since 1896, when Utah became a state.
-Sources:
-Utah State Government Official Website (utah.gov)
-U.S. Census Bureau
-Encyclopedia Britannica
-```
+    AI
+    claude-3-5-haiku-latest
+    The capital of Utah is Salt Lake City. It is also the most populous city in the state. Salt Lake City has been the capital of Utah since 1896, when Utah became a state.
+    Sources:
+    Utah State Government Official Website (utah.gov)
+    U.S. Census Bureau
+    Encyclopedia Britannica
+    ```
 
 The response from the Anthropic model is less verbose, and lists its sources outside of the informative paragraph.
 For more information, see your LLM provider's documentation.
+
+### Language model output
+
+The default output of the language model is the model's response as a `Message`.
+The other output type is **LanguageModel**.
+Use the Language Model's **LanguageModel** output to connect it to components that require an LLM.
+
+For an example, see the [Smart function component](/components-processing#smart-function), which requires an LLM connected through this port to create a function from your natural language.
 
 <details>
 <summary>Parameters</summary>

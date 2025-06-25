@@ -494,7 +494,7 @@ For `Message` inputs, the component can create:
 Prior to Langflow 1.5, this component was named the Lambda filter.
 :::
 
-This component uses an LLM to generate a Lambda function for filtering or transforming structured data.
+This component uses an LLM to generate a function for filtering or transforming structured data.
 
 To use the **Smart function** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
 
@@ -502,7 +502,7 @@ This example gets JSON data from the `https://jsonplaceholder.typicode.com/users
 The **Instructions** field in the **Smart function** component specifies the task `extract emails`.
 The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
 
-![](/img/component-lambda-filter.png)
+![Smart function connected to an LLM](/img/component-lambda-filter.png)
 
 <details>
 <summary>Parameters</summary>
