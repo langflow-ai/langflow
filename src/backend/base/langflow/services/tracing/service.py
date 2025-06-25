@@ -59,18 +59,6 @@ def _get_traceloop_tracer():
     return TraceloopTracer
 
 
-def _get_traceloop_tracer():
-    from langflow.services.tracing.traceloop import TraceloopTracer
-
-    return TraceloopTracer
-
-
-def _get_traceloop_tracer():
-    from langflow.services.tracing.traceloop import TraceloopTracer
-
-    return TraceloopTracer
-
-
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
 component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
 
