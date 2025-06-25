@@ -13,6 +13,11 @@ The following updates are included in this version:
 
 ### New features and enhancements
 
+- Authentication changes
+
+    The **AUTO_LOGIN** functionality now requires an API key to function. This change enhances security by ensuring that automatic login features are properly authenticated.
+    For more information, see [API keys](/configuration-api-keys).
+
 - New Language Model and Embedding Model components
 
     We moved **Model** and **Embedding Model** components to **Bundles** in the Langflow sidebar. The **Language Model** and **Embedding Model** components are satisfactory for most use cases, and the single-provider components are still available for your flows.
