@@ -160,6 +160,22 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
 
+    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
+        source_dict = {}
+        if id_:
+            source_dict["id"] = id_
+        if display_name:
+            source_dict["display_name"] = display_name
+        if source:
+            # Handle case where source is a ChatOpenAI and other models objects
+            if hasattr(source, "model_name"):
+                source_dict["source"] = source.model_name
+            elif hasattr(source, "model"):
+                source_dict["source"] = str(source.model)
+            else:
+                source_dict["source"] = str(source)
+        return Source(**source_dict)
+
     def get_incoming_edge_by_target_param(self, target_param: str) -> str | None:
         """Get the source vertex ID for an incoming edge that targets a specific parameter.
 
@@ -1354,12 +1370,15 @@ class Component(CustomComponent):
                 )
             )
 
+    def is_connected_to_chat_output(self) -> bool:
+        return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
+
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type."""
         return (
             self._vertex is not None
             and not (self._vertex.is_output or self._vertex.is_input)
-            and not has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
+            and not self.is_connected_to_chat_output()
             and not isinstance(message, ErrorMessage)
         )
 
