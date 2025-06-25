@@ -105,7 +105,7 @@ dependencies = [
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain>=0.1.29",
     "crewai==0.102.0",
-    "mcp>=0.9.1",
+    "mcp>=1.6.0",
     "uv>=0.5.7",
     "scipy>=1.14.1",
     "ag2>=0.1.0",
