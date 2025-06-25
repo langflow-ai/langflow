@@ -222,7 +222,7 @@ async def handle_on_tool_end(
 
             for content in agent_message.content_blocks[0].contents:
                 if isinstance(content, ToolContent):
-                    header_title = content.header.get("title", "N/A") if content.header else "None"
+                    header_title = content.header.get("title", "N/A") if content.header else "None"  # noqa: F841
 
         return agent_message, new_start_time
     return agent_message, start_time
