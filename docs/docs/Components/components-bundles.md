@@ -1535,3 +1535,137 @@ For more information, see the [xAI documentation](https://x.ai/).
 | model | LanguageModel | An instance of ChatOpenAI configured with the specified parameters. |
 
 </details>
+
+## Memory bundles
+
+### AstraDBChatMemory Component
+
+This component creates an `AstraDBChatMessageHistory` instance, which stores and retrieves chat messages using Astra DB, a cloud-native database service.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name             | Type          | Description                                                           |
+|------------------|---------------|-----------------------------------------------------------------------|
+| collection_name  | String        | The name of the Astra DB collection for storing messages. Required. |
+| token            | SecretString  | The authentication token for Astra DB access. Required. |
+| api_endpoint     | SecretString  | The API endpoint URL for the Astra DB service. Required. |
+| namespace        | String        | The optional namespace within Astra DB for the collection. |
+| session_id       | MessageText   | The unique identifier for the chat session. Uses the current session ID if not provided. |
+
+**Outputs**
+
+| Name            | Type                    | Description                                               |
+|-----------------|-------------------------|-----------------------------------------------------------|
+| message_history | BaseChatMessageHistory  | An instance of AstraDBChatMessageHistory for the session. |
+
+</details>
+
+### CassandraChatMemory Component
+
+This component creates a `CassandraChatMessageHistory` instance, enabling storage and retrieval of chat messages using Apache Cassandra or DataStax Astra DB.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name           | Type          | Description                                                                   |
+|----------------|---------------|-------------------------------------------------------------------------------|
+| database_ref   | MessageText   | The contact points for the Cassandra database or Astra DB database ID. Required. |
+| username       | MessageText   | The username for Cassandra. Leave empty for Astra DB. |
+| token          | SecretString  | The password for Cassandra or the token for Astra DB. Required. |
+| keyspace       | MessageText   | The keyspace in Cassandra or namespace in Astra DB. Required. |
+| table_name     | MessageText   | The name of the table or collection for storing messages. Required. |
+| session_id     | MessageText   | The unique identifier for the chat session. Optional. |
+| cluster_kwargs | Dictionary    | Additional keyword arguments for the Cassandra cluster configuration. Optional. |
+
+**Outputs**
+
+| Name            | Type                    | Description                                                  |
+|-----------------|-------------------------|--------------------------------------------------------------|
+| message_history | BaseChatMessageHistory  | An instance of CassandraChatMessageHistory for the session. |
+
+</details>
+
+### Mem0 Chat Memory
+
+The Mem0 Chat Memory component retrieves and stores chat messages using Mem0 memory storage.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| mem0_config | Mem0 Configuration | The configuration dictionary for initializing the Mem0 memory instance. |
+| ingest_message | Message to Ingest | The message content to be ingested into Mem0 memory. |
+| existing_memory | Existing Memory Instance | An optional existing Mem0 memory instance. |
+| user_id | User ID | The identifier for the user associated with the messages. |
+| search_query | Search Query | The input text for searching related memories in Mem0. |
+| mem0_api_key | Mem0 API Key | The API key for the Mem0 platform. Leave empty to use the local version. |
+| metadata | Metadata | The additional metadata to associate with the ingested message. |
+| openai_api_key | OpenAI API Key | The API key for OpenAI. Required when using OpenAI embeddings without a provided configuration. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| memory | Mem0 Memory | The resulting Mem0 Memory object after ingesting data. |
+| search_results | Search Results | The search results from querying Mem0 memory. |
+
+</details>
+
+### Redis Chat Memory
+
+This component retrieves and stores chat messages from Redis.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| host | hostname | The IP address or hostname. |
+| port | port | The Redis Port Number. |
+| database | database | The Redis database. |
+| username | Username | The Redis username. |
+| password | Password | The password for the username. |
+| key_prefix | Key prefix | The key prefix. |
+| session_id | Session ID | The unique session identifier for the message. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| memory | Memory | The Redis chat message history object. |
+
+</details>
+
+### ZepChatMemory Component
+
+This component creates a `ZepChatMessageHistory` instance, enabling storage and retrieval of chat messages using Zep, a memory server for Large Language Models (LLMs).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name          | Type          | Description                                               |
+|---------------|---------------|-----------------------------------------------------------|
+| url           | MessageText   | The URL of the Zep instance. Required. |
+| api_key       | SecretString  | The API Key for authentication with the Zep instance. |
+| api_base_path | Dropdown      | The API version to use. Options include api/v1 or api/v2. |
+| session_id    | MessageText   | The unique identifier for the chat session. Optional. |
+
+**Outputs**
+
+| Name            | Type                    | Description                                           |
+|-----------------|-------------------------|-------------------------------------------------------|
+| message_history | BaseChatMessageHistory  | An instance of ZepChatMessageHistory for the session. |
+
+</details>

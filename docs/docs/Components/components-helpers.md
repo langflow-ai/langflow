@@ -69,12 +69,12 @@ In this example, one **Message History** component stores the complete chat hist
 To configure Langflow to store and retrieve messages from an external database instead of local Langflow memory, follow these steps.
 
 1. Add two **Memory** components to your flow.
-This example uses **Astra DB Chat Memory**.
+This example uses **Redit Chat Memory**.
 2. To enable external memory ports, in both **Memory** components, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, and then enable **External Memory**.
 3. Connect the **Memory** ports to the **Message History** components.
 The flow looks like this:
 ![Message store and history components with external memory](/img/component-message-history-external-memory.png)
-4. In the **Astra DB Chat Memory** components, add your **Astra DB Application Token**, **API Endpoint**, and **Collection Name**. These values are found in your Astra deployment. For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
+4. In the **Redis Chat Memory** components, add your connection information. These values are found in your Redis deployment. For more information, see the [Redis documentation](https://redis.io/docs/latest/).
 
 For more information on configuring memory in Langflow, see [Memory](/memory).
 
