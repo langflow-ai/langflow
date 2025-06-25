@@ -96,7 +96,9 @@ test(
 
     await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
     await expect(page.getByTestId("input_outputChat Output")).not.toBeVisible();
-    await expect(page.getByTestId("processingPrompt Template")).not.toBeVisible();
+    await expect(
+      page.getByTestId("processingPrompt Template"),
+    ).not.toBeVisible();
     await expect(
       page.getByTestId("agentsTool Calling Agent"),
     ).not.toBeVisible();
