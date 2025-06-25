@@ -147,7 +147,7 @@ def _get_anthropic_inputs_and_fields():
 
 def _get_nvidia_inputs_and_fields():
     try:
-        from langflow.components.languagemodels.nvidia import NVIDIAModelComponent
+        from langflow.components.nvidia.nvidia import NVIDIAModelComponent
 
         nvidia_inputs = get_filtered_inputs(NVIDIAModelComponent)
     except ImportError as e:
