@@ -10,10 +10,10 @@ export const ProtectedLoginRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   // ✅ If using Clerk, allow Clerk's SignedIn/SignedOut to handle auth flow
-  const {isSignedIn} = useAuth();
+  const { isSignedIn } = useAuth();
   // ✅ Skip all legacy auth logic if Clerk is active
   if (IS_CLERK_ENABLED) {
-    if(isSignedIn){
+    if (isSignedIn) {
       return children;
     }
   }

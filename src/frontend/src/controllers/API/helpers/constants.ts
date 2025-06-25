@@ -1,6 +1,8 @@
 // Environment config strictly for frontend
-export const CLERK_AUTH_ENABLED = import.meta.env.VITE_CLERK_AUTH_ENABLED === "true";
-export const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "";
+export const CLERK_AUTH_ENABLED =
+  import.meta.env.VITE_CLERK_AUTH_ENABLED === "true";
+export const CLERK_PUBLISHABLE_KEY =
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "";
 
 // API base URLs
 export const BASE_URL_API = "/api/v1/";
@@ -45,7 +47,9 @@ export function getURL(
   v2: boolean = false,
 ): string {
   if (CLERK_AUTH_ENABLED && (key === "LOGIN" || key === "REFRESH")) {
-    throw new Error(`Legacy endpoint "${key}" is disabled under Clerk authentication`);
+    throw new Error(
+      `Legacy endpoint "${key}" is disabled under Clerk authentication`,
+    );
   }
 
   let url = URLs[key];

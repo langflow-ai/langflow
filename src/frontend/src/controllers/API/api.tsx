@@ -11,9 +11,9 @@ import { Cookies } from "react-cookie";
 import { BuildStatus, EventDeliveryType } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
+import { useClerkAccessToken } from "./clerk-access-token";
 import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
 import { useLogout, useRefreshAccessToken } from "./queries/auth";
-import { useClerkAccessToken } from "./clerk-access-token";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -27,14 +27,20 @@ function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const accessToken = useAuthStore((state) => state.accessToken);
-  const authenticationErrorCount = useAuthStore((state) => state.authenticationErrorCount);
-  const setAuthenticationErrorCount = useAuthStore((state) => state.setAuthenticationErrorCount);
+  const authenticationErrorCount = useAuthStore(
+    (state) => state.authenticationErrorCount,
+  );
+  const setAuthenticationErrorCount = useAuthStore(
+    (state) => state.setAuthenticationErrorCount,
+  );
   const { mutate: mutationLogout } = useLogout();
   const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
   const isLoginPage = location.pathname.includes("login");
   const customHeaders = useCustomApiHeaders();
   const getClerkAccessToken = useClerkAccessToken();
-  const setHealthCheckTimeout = useUtilityStore((state) => state.setHealthCheckTimeout);
+  const setHealthCheckTimeout = useUtilityStore(
+    (state) => state.setHealthCheckTimeout,
+  );
 
   useEffect(() => {
     const unregister = fetchIntercept.register({
@@ -60,12 +66,18 @@ function ApiInterceptor() {
         return response;
       },
       async (error: AxiosError) => {
-        const isAuthenticationError = [401, 403].includes(error?.response?.status || 0);
+        const isAuthenticationError = [401, 403].includes(
+          error?.response?.status || 0,
+        );
         const shouldRetryRefresh =
-          (isAuthenticationError && !autoLogin) || (isAuthenticationError && autoLogin === undefined);
+          (isAuthenticationError && !autoLogin) ||
+          (isAuthenticationError && autoLogin === undefined);
 
         if (shouldRetryRefresh) {
-          if (error?.config?.url?.includes("github") || error?.config?.url?.includes("public")) {
+          if (
+            error?.config?.url?.includes("github") ||
+            error?.config?.url?.includes("public")
+          ) {
             return Promise.reject(error);
           }
 
@@ -82,7 +94,7 @@ function ApiInterceptor() {
 
         await clearBuildVerticesState(error);
         if (!isAuthenticationError) return Promise.reject(error);
-      }
+      },
     );
 
     const isAuthorizedURL = (url) => {
@@ -96,8 +108,14 @@ function ApiInterceptor() {
 
       try {
         const parsedURL = new URL(url);
-        return authorizedDomains.some((domain) => parsedURL.origin === new URL(domain).origin) ||
-          authorizedEndpoints.some((endpoint) => parsedURL.pathname.includes(endpoint));
+        return (
+          authorizedDomains.some(
+            (domain) => parsedURL.origin === new URL(domain).origin,
+          ) ||
+          authorizedEndpoints.some((endpoint) =>
+            parsedURL.pathname.includes(endpoint),
+          )
+        );
       } catch {
         return false;
       }
@@ -150,7 +168,7 @@ function ApiInterceptor() {
 
         return { ...config, signal: controller.signal };
       },
-      (error) => Promise.reject(error)
+      (error) => Promise.reject(error),
     );
 
     return () => {
@@ -196,7 +214,9 @@ function ApiInterceptor() {
   async function clearBuildVerticesState(error) {
     if (error?.response?.status === 500) {
       const vertices = useFlowStore.getState().verticesBuild;
-      useFlowStore.getState().updateBuildStatus(vertices?.verticesIds ?? [], BuildStatus.BUILT);
+      useFlowStore
+        .getState()
+        .updateBuildStatus(vertices?.verticesIds ?? [], BuildStatus.BUILT);
       useFlowStore.getState().setIsBuilding(false);
     }
   }

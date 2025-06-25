@@ -17,8 +17,8 @@ import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 
-import { useUser } from "@clerk/clerk-react";
 import { useAuth } from "@/contexts/authContext";
+import { useUser } from "@clerk/clerk-react";
 
 const IS_CLERK_ENABLED = import.meta.env.VITE_CLERK_AUTH_ENABLED === "true";
 
@@ -57,20 +57,26 @@ export function AppInitPage() {
     enabled: !IS_CLERK_ENABLED && isLoaded,
   });
 
-  useGetVersionQuery({ enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched, });
+  useGetVersionQuery({
+    enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched,
+  });
   const { isFetched: configFetched } = useGetConfig({
     enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched,
   });
-  useGetGlobalVariables({ enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched, });
-  useGetTagsQuery({ enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched, });
-  useGetFoldersQuery({ enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched, });
-
-  const {
-    isFetched: examplesFetched,
-    refetch: refetchExamples,
-  } = useGetBasicExamplesQuery({
+  useGetGlobalVariables({
     enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched,
   });
+  useGetTagsQuery({
+    enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched,
+  });
+  useGetFoldersQuery({
+    enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched,
+  });
+
+  const { isFetched: examplesFetched, refetch: refetchExamples } =
+    useGetBasicExamplesQuery({
+      enabled: IS_CLERK_ENABLED ? isSignedIn && isClerkLoaded : autoFetched,
+    });
 
   useEffect(() => {
     if (!IS_CLERK_ENABLED && configFetched) {
@@ -97,8 +103,8 @@ export function AppInitPage() {
 
   // 4️⃣ Outlet rendering
   const canRenderOutlet = IS_CLERK_ENABLED
-  ? isClerkLoaded
-  : autoFetched && examplesFetched;
+    ? isClerkLoaded
+    : autoFetched && examplesFetched;
 
   return (
     <>

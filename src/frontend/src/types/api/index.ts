@@ -348,7 +348,6 @@ export type TableOptionsTypeAPI = {
   description?: string;
 };
 
-
 export type MeResponse = {
   id: string;
   username: string;

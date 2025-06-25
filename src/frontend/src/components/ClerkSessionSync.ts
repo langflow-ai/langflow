@@ -1,8 +1,8 @@
 // ClerkSessionSync.tsx
 
-import { useEffect } from "react";
-import { useUser, useAuth } from "@clerk/clerk-react";
 import useAuthStore from "@/stores/authStore";
+import { useAuth, useUser } from "@clerk/clerk-react";
+import { useEffect } from "react";
 
 export function ClerkSessionSync() {
   const { isSignedIn } = useAuth();
@@ -19,7 +19,6 @@ export function ClerkSessionSync() {
         username: user.username,
         email: user.primaryEmailAddress?.emailAddress,
       }));
-
     }
   }, [isSignedIn, user]);
 

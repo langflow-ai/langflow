@@ -6,9 +6,8 @@ import {
 import { useRefreshAccessToken } from "@/controllers/API/queries/auth";
 import { CustomNavigate } from "@/customization/components/custom-navigate";
 import useAuthStore from "@/stores/authStore";
-import { useEffect } from "react";
 import { useAuth } from "@clerk/clerk-react";
-
+import { useEffect } from "react";
 
 // ✅ Clerk auth flag
 const IS_CLERK_ENABLED = import.meta.env.VITE_CLERK_AUTH_ENABLED === "true";
@@ -19,10 +18,10 @@ export const ProtectedRoute = ({ children }) => {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const isAutoLoginEnv = IS_AUTO_LOGIN;
   const testMockAutoLogin = sessionStorage.getItem("testMockAutoLogin");
-  const {isSignedIn} = useAuth();
+  const { isSignedIn } = useAuth();
   // ✅ Skip all legacy auth logic if Clerk is active
   if (IS_CLERK_ENABLED) {
-    if(isSignedIn){
+    if (isSignedIn) {
       return children;
     }
   }

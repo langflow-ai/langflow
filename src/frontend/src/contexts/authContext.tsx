@@ -1,22 +1,28 @@
+import { ClerkSessionSync } from "@/components/ClerkSessionSync";
 import {
   LANGFLOW_ACCESS_TOKEN,
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
   LANGFLOW_REFRESH_TOKEN,
 } from "@/constants/constants";
+import { useClerkAccessToken } from "@/controllers/API/clerk-access-token";
+import { CLERK_AUTH_ENABLED } from "@/controllers/API/helpers/constants";
 import { useGetUserData } from "@/controllers/API/queries/auth";
 import { useGetGlobalVariablesMutation } from "@/controllers/API/queries/variables/use-get-mutation-global-variables";
 import useAuthStore from "@/stores/authStore";
 import { setLocalStorage } from "@/utils/local-storage-util";
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { useClerk, useUser } from "@clerk/clerk-react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { Cookies } from "react-cookie";
 import { useStoreStore } from "../stores/storeStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
-import { CLERK_AUTH_ENABLED } from "@/controllers/API/helpers/constants";
-import { ClerkSessionSync } from "@/components/ClerkSessionSync";
-import { useUser, useClerk } from "@clerk/clerk-react";
-import { useClerkAccessToken } from "@/controllers/API/clerk-access-token";
 
 const initialValue: AuthContextType = {
   accessToken: null,
@@ -36,11 +42,11 @@ export const AuthContext = createContext<AuthContextType>(initialValue);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const cookies = new Cookies();
   const [accessToken, setAccessToken] = useState<string | null>(
-    cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null
+    cookies.get(LANGFLOW_ACCESS_TOKEN) ?? null,
   );
   const [userData, setUserData] = useState<Users | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(
-    cookies.get(LANGFLOW_API_TOKEN) ?? null
+    cookies.get(LANGFLOW_API_TOKEN) ?? null,
   );
 
   const checkHasStore = useStoreStore((s) => s.checkHasStore);
@@ -94,14 +100,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         onError() {
           setUserData(null);
         },
-      }
+      },
     );
-  }, [isClerkLoaded, isSignedIn, getToken, whoAmIMutate, checkHasStore, fetchApiData]);
+  }, [
+    isClerkLoaded,
+    isSignedIn,
+    getToken,
+    whoAmIMutate,
+    checkHasStore,
+    fetchApiData,
+  ]);
 
   function login(
     newAccessToken: string,
     autoLogin: string,
-    refreshToken?: string
+    refreshToken?: string,
   ) {
     cookies.set(LANGFLOW_ACCESS_TOKEN, newAccessToken, { path: "/" });
     cookies.set(LANGFLOW_AUTO_LOGIN_OPTION, autoLogin, { path: "/" });

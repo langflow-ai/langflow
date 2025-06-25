@@ -1,5 +1,8 @@
+import {
+  IS_AUTO_LOGIN,
+  LANGFLOW_AUTO_LOGIN_OPTION,
+} from "@/constants/constants";
 import { useMutationFunctionType } from "@/types/api";
-import { IS_AUTO_LOGIN, LANGFLOW_AUTO_LOGIN_OPTION } from "@/constants/constants";
 import { useClerk } from "@clerk/clerk-react";
 
 import useAuthStore from "@/stores/authStore";
@@ -14,7 +17,9 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 const CLERK_AUTH_ENABLED = import.meta.env.VITE_CLERK_AUTH_ENABLED === "true";
 
-export const useLogout: useMutationFunctionType<undefined, void> = (options?) => {
+export const useLogout: useMutationFunctionType<undefined, void> = (
+  options?,
+) => {
   const { mutate, queryClient } = UseRequestProcessor();
   const cookies = new Cookies();
   const logout = useAuthStore((state) => state.logout);

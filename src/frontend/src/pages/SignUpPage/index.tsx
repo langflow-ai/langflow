@@ -1,9 +1,11 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
+import { CLERK_AUTH_ENABLED } from "@/controllers/API/helpers/constants";
 import { useAddUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
+import { SignUp as ClerkSignup } from "@clerk/clerk-react";
 import * as Form from "@radix-ui/react-form";
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
@@ -19,17 +21,15 @@ import {
   inputHandlerEventType,
   signUpInputStateType,
 } from "../../types/components";
-import { CLERK_AUTH_ENABLED } from "@/controllers/API/helpers/constants";
-import { SignUp as ClerkSignup } from "@clerk/clerk-react";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
     useState<signUpInputStateType>(CONTROL_INPUT_STATE);
 
-  if(CLERK_AUTH_ENABLED){
-    return <ClerkSignup />
+  if (CLERK_AUTH_ENABLED) {
+    return <ClerkSignup />;
   }
-  
+
   const [isDisabled, setDisableBtn] = useState<boolean>(true);
 
   const { password, cnfPassword, username } = inputState;
