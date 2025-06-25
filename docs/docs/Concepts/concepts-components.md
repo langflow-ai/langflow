@@ -21,7 +21,7 @@ To add a component to a flow, drag the component from the **Components** menu to
 The **Components** menu is organized by component type, and some components are hidden by default:
 
 * **Beta components**: These are Langflow's core components. They are grouped by purpose, such as **Inputs** or **Data**. Be aware that these components are in beta and not suitable for production workloads.
-* **Legacy components**: You can still use these components, but they are no longer supported. Legacy component are hidden by default. Click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component settings** to expose legacy components.
+* **Legacy components**: You can still use these components, but they are no longer supported. Legacy components are hidden by default; click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component settings** to expose legacy components.
 * **Bundles**: These components support specific integrations, and they are grouped by provider.
 
 ### Configure a component
@@ -112,7 +112,7 @@ The following table lists the component port colors and their corresponding inpu
 
 ## Component code
 
-All component have underlying code that determines how you configure them and what actions they can perform.
+All components have underlying code that determines how you configure them and what actions they can perform.
 In the context of creating and running flows, component code does the following:
 
 * Determines what configuration options to show in the Langflow UI.
@@ -120,7 +120,7 @@ In the context of creating and running flows, component code does the following:
 * Processes data using the configured parameters, methods, and functions.
 * Passes results to the next component in the flow.
 
-All components inherit from a base `Component` class that define the component's interface and behavior.
+All components inherit from a base `Component` class that defines the component's interface and behavior.
 For example, the [Recursive character text splitter](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [LCTextSplitterComponent](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
 
 Each component's code includes definitions for inputs and outputs, which are represented in the **Workspace** as [component ports](/concepts-components#component-ports).
@@ -195,7 +195,7 @@ When editing a flow in the **Workspace**, Langflow notifies you if a component's
 * **Update ready**: This notification means the component update contains no breaking changes.
 * **Update available**: This notification means the component update might contain breaking changes.
 
-    Breaking changes modify component inputs and outputs, causing the components to be disconnected and break the flow. After updating the component, you might need to edit the component settings and reconnect component ports.
+    Breaking changes modify component inputs and outputs, causing the components to be disconnected and break the flow. After updating the component, you might need to edit the component settings or reconnect component ports.
 
 There are two ways to update components:
 

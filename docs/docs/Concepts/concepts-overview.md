@@ -11,7 +11,7 @@ This page explores the fundamental building blocks of Langflow, beginning with t
 
 A _flow_ is a functional representation of an application. It receives input, processes it, and produces output.
 
-Flows are comprised of [components](/concepts-components) that you configure and connect in the **Workspace**.
+Flows consist of [components](/concepts-components) that you configure and connect in the **Workspace**.
 
 ![Basic prompting flow within in the workspace](/img/workspace-basic-prompting.png)
 
@@ -135,4 +135,4 @@ The dropdown menu labeled with the project name offers several management and cu
 
 ## Settings
 
-In the Langflow header, click your profile icon, and then select **Settings** to access the following general Langflow settings, including global variables, Langflow API keys, keyboard shortcuts, and log messages regarding flow activity.
+In the Langflow header, click your profile icon, and then select **Settings** to access general Langflow settings, including global variables, Langflow API keys, keyboard shortcuts, and log messages.
