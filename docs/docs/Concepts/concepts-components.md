@@ -49,12 +49,12 @@ Circular port icons (<Icon name="Circle" size="16" aria-label="Circular componen
 
 ![Prompt component with multiple inputs](/img/prompt-component.png)
 
-### Dynamic ports
+<!--### Dynamic ports
 
 Some components have ports that are dynamically added or removed.
 For example, the **Prompt** component accepts inputs within curly braces, and new ports are opened when a value within curly braces is detected in the **Template** field.
 
-![Prompt component with multiple inputs](/img/prompt-component-with-multiple-inputs.png)
+![Prompt component with multiple inputs](/img/prompt-component-with-multiple-inputs.png)-->
 
 ### Port colors
 
