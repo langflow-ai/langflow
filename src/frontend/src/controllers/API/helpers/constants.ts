@@ -35,6 +35,7 @@ export const URLs = {
   VOICE: `voice`,
   PUBLIC_FLOW: `flows/public_flow`,
   MCP: `mcp/project`,
+  MCP_SERVERS: `mcp/servers`,
 } as const;
 
 // URL constructor

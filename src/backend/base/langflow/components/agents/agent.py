@@ -5,11 +5,12 @@ from langflow.base.agents.events import ExceptionWithMessageError
 from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
+    MODEL_PROVIDERS,
     MODEL_PROVIDERS_DICT,
     MODELS_METADATA,
 )
 from langflow.base.models.model_utils import get_model_name
-from langflow.components.helpers import CurrentDateComponent
+from langflow.components.helpers.current_date import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from langflow.custom.custom_component.component import _get_component_toolkit
@@ -40,11 +41,11 @@ class AgentComponent(ToolCallingAgentComponent):
             name="agent_llm",
             display_name="Model Provider",
             info="The provider of the language model that the agent will use to generate responses.",
-            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
+            options=[*sorted(MODEL_PROVIDERS), "Custom"],
             value="OpenAI",
             real_time_refresh=True,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{"icon": "brain"}],
+            options_metadata=[MODELS_METADATA[key] for key in sorted(MODEL_PROVIDERS)] + [{"icon": "brain"}],
         ),
         *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
         MultilineInput(
@@ -87,16 +88,12 @@ class AgentComponent(ToolCallingAgentComponent):
                     msg = "CurrentDateComponent must be converted to a StructuredTool"
                     raise TypeError(msg)
                 self.tools.append(current_date_tool)
-
-            # Validate tools
-            if not self.tools:
-                msg = "Tools are required to run the agent. Please add at least one tool."
-                raise ValueError(msg)
+            # note the tools are not required to run the agent, hence the validation removed.
 
             # Set up and run agent
             self.set(
                 llm=llm_model,
-                tools=self.tools,
+                tools=self.tools or [],
                 chat_history=self.chat_history,
                 input_value=self.input_value,
                 system_prompt=self.system_prompt,
@@ -225,7 +222,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 custom_component = DropdownInput(
                     name="agent_llm",
                     display_name="Language Model",
-                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
+                    options=[*sorted(MODEL_PROVIDERS), "Custom"],
                     value="Custom",
                     real_time_refresh=True,
                     input_types=["LanguageModel"],

@@ -4,9 +4,10 @@ from xml.etree.ElementTree import Element
 
 from defusedxml.ElementTree import fromstring
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DropdownInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
 
 class ArXivComponent(Component):
