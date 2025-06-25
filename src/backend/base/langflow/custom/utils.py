@@ -25,7 +25,6 @@ from langflow.custom.schema import MissingDefault
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.custom import format_type
 from langflow.schema.dotdict import dotdict
-from langflow.services.settings.base import BASE_COMPONENTS_PATH
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
 from langflow.type_extraction.type_extraction import extract_inner_type
@@ -559,7 +558,6 @@ def build_custom_components(components_paths: list[str]):
 
 async def abuild_custom_components(components_paths: list[str]):
     """Build custom components from the specified paths."""
-    components_paths = [path for path in components_paths if path != BASE_COMPONENTS_PATH]
     if not components_paths:
         return {}
 
