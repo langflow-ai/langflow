@@ -14,6 +14,7 @@ from langflow.io import DropdownInput, McpInput, MessageTextInput, Output  # Imp
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
 from langflow.services.auth.utils import create_user_longterm_token
 from langflow.services.cache.utils import CacheMiss
 
@@ -405,7 +406,10 @@ class MCPToolsComponent(ComponentWithCache):
                 for arg in tool_args:
                     value = getattr(self, arg.name, None)
                     if value:
-                        kwargs[arg.name] = value
+                        if isinstance(value, Message):
+                            kwargs[arg.name] = value.text
+                        else:
+                            kwargs[arg.name] = value
 
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
