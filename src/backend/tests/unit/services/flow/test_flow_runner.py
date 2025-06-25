@@ -12,7 +12,7 @@ def sample_flow_dict():
         "data": {
             "nodes": [],
             "edges": [],
-        }
+        },
     }
 
 
