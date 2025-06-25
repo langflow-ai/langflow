@@ -152,11 +152,11 @@ test(
     //---------------------------------- PROMPT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
-    await page.waitForSelector('[data-testid="promptsPrompt"]', {
+    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("promptsPrompt")
+      .getByTestId("processingPrompt Template")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 350, y: 300 },
       });
@@ -165,13 +165,13 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
     await page.waitForSelector(
-      '[data-testid="languagemodels_openai_draggable"]',
+      '[data-testid="openai_openai_draggable"]',
       {
         timeout: 2000,
       },
     );
     await page
-      .getByTestId("languagemodelsOpenAI")
+      .getByTestId("openaiOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 300 },
       });
@@ -261,7 +261,7 @@ test(
       .click();
     //quebrando aqui
     await page
-      .getByTestId("handle-prompt-shownode-true_examples-left")
+      .getByTestId("handle-prompt template-shownode-true_examples-left")
       .nth(0)
       .click();
     await page
@@ -269,7 +269,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-prompt-shownode-false_examples-left")
+      .getByTestId("handle-prompt template-shownode-false_examples-left")
       .nth(0)
       .click();
     await page
@@ -277,11 +277,11 @@ test(
       .nth(2)
       .click();
     await page
-      .getByTestId("handle-prompt-shownode-user_message-left")
+      .getByTestId("handle-prompt template-shownode-user_message-left")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-prompt-shownode-prompt-right")
+      .getByTestId("handle-prompt template-shownode-prompt-right")
       .first()
       .click();
     await page
