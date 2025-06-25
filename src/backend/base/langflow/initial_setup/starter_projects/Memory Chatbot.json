@@ -26,9 +26,9 @@
         "id": "xy-edge__Memory-hMFmY{œdataTypeœ:œMemoryœ,œidœ:œMemory-hMFmYœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-CixsJ{œfieldNameœ:œmemoryœ,œidœ:œPrompt-CixsJœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Memory-hMFmY",
-        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-hMFmYœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-hMFmYœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-CixsJ",
-        "targetHandle": "{œfieldNameœ:œmemoryœ,œidœ:œPrompt-CixsJœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œmemoryœ, œidœ: œPrompt-CixsJœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -54,9 +54,9 @@
         "id": "xy-edge__Prompt-CixsJ{œdataTypeœ:œPromptœ,œidœ:œPrompt-CixsJœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-vvfAj{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-vvfAjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-CixsJ",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-CixsJœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-CixsJœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-vvfAj",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-vvfAjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-vvfAjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -82,9 +82,9 @@
         "id": "xy-edge__ChatInput-5t3wq{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5t3wqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-vvfAj{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-vvfAjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-5t3wq",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5t3wqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5t3wqœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-vvfAj",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-vvfAjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-vvfAjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -112,9 +112,9 @@
         "id": "xy-edge__LanguageModelComponent-vvfAj{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-vvfAjœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-CwxcD{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-CwxcDœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-vvfAj",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-vvfAjœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-vvfAjœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-CwxcD",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-CwxcDœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-CwxcDœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -1006,6 +1006,7 @@
                 "group_outputs": false,
                 "method": "retrieve_messages_dataframe",
                 "name": "dataframe",
+                "selected": null,
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
