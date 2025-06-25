@@ -220,10 +220,6 @@ async def handle_on_tool_end(
             # Update the map reference
             tool_blocks_map[tool_key] = updated_tool_content
 
-            # for content in agent_message.content_blocks[0].contents:
-            #     if isinstance(content, ToolContent):
-            #         header_title = content.header.get("title", "N/A") if content.header else "None"
-
         return agent_message, new_start_time
     return agent_message, start_time
 
