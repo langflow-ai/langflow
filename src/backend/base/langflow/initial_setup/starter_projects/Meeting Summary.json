@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-VajCb",
+            "id": "ChatInput-y1N5A",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input",
-            "id": "Prompt-qm57P",
+            "id": "Prompt-36nA8",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-VajCb{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VajCbœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-qm57P{œfieldNameœ:œinputœ,œidœ:œPrompt-qm57Pœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-y1N5A{œdataTypeœ:œChatInputœ,œidœ:œChatInput-y1N5Aœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-36nA8{œfieldNameœ:œinputœ,œidœ:œPrompt-36nA8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-VajCb",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-VajCbœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-qm57P",
-        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œPrompt-qm57Pœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-y1N5A",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-y1N5Aœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-36nA8",
+        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œPrompt-36nA8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AssemblyAITranscriptionJobCreator",
-            "id": "AssemblyAITranscriptionJobCreator-fAs7l",
+            "id": "AssemblyAITranscriptionJobCreator-Nu1dV",
             "name": "transcript_id",
             "output_types": [
               "Data"
@@ -44,19 +44,19 @@
           },
           "targetHandle": {
             "fieldName": "transcript_id",
-            "id": "AssemblyAITranscriptionJobPoller-GaXh2",
+            "id": "AssemblyAITranscriptionJobPoller-sCJsy",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AssemblyAITranscriptionJobCreator-fAs7l{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-fAs7lœ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}-AssemblyAITranscriptionJobPoller-GaXh2{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-GaXh2œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AssemblyAITranscriptionJobCreator-Nu1dV{œdataTypeœ:œAssemblyAITranscriptionJobCreatorœ,œidœ:œAssemblyAITranscriptionJobCreator-Nu1dVœ,œnameœ:œtranscript_idœ,œoutput_typesœ:[œDataœ]}-AssemblyAITranscriptionJobPoller-sCJsy{œfieldNameœ:œtranscript_idœ,œidœ:œAssemblyAITranscriptionJobPoller-sCJsyœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AssemblyAITranscriptionJobCreator-fAs7l",
-        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobCreatorœ, œidœ: œAssemblyAITranscriptionJobCreator-fAs7lœ, œnameœ: œtranscript_idœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AssemblyAITranscriptionJobPoller-GaXh2",
-        "targetHandle": "{œfieldNameœ: œtranscript_idœ, œidœ: œAssemblyAITranscriptionJobPoller-GaXh2œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "source": "AssemblyAITranscriptionJobCreator-Nu1dV",
+        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobCreatorœ, œidœ: œAssemblyAITranscriptionJobCreator-Nu1dVœ, œnameœ: œtranscript_idœ, œoutput_typesœ: [œDataœ]}",
+        "target": "AssemblyAITranscriptionJobPoller-sCJsy",
+        "targetHandle": "{œfieldNameœ: œtranscript_idœ, œidœ: œAssemblyAITranscriptionJobPoller-sCJsyœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -64,7 +64,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AssemblyAITranscriptionJobPoller",
-            "id": "AssemblyAITranscriptionJobPoller-GaXh2",
+            "id": "AssemblyAITranscriptionJobPoller-sCJsy",
             "name": "transcription_result",
             "output_types": [
               "Data"
@@ -72,7 +72,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-YtYmK",
+            "id": "parser-6bJ9b",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -80,12 +80,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AssemblyAITranscriptionJobPoller-GaXh2{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-GaXh2œ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-parser-YtYmK{œfieldNameœ:œinput_dataœ,œidœ:œparser-YtYmKœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AssemblyAITranscriptionJobPoller-sCJsy{œdataTypeœ:œAssemblyAITranscriptionJobPollerœ,œidœ:œAssemblyAITranscriptionJobPoller-sCJsyœ,œnameœ:œtranscription_resultœ,œoutput_typesœ:[œDataœ]}-parser-6bJ9b{œfieldNameœ:œinput_dataœ,œidœ:œparser-6bJ9bœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AssemblyAITranscriptionJobPoller-GaXh2",
-        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobPollerœ, œidœ: œAssemblyAITranscriptionJobPoller-GaXh2œ, œnameœ: œtranscription_resultœ, œoutput_typesœ: [œDataœ]}",
-        "target": "parser-YtYmK",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-YtYmKœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "AssemblyAITranscriptionJobPoller-sCJsy",
+        "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobPollerœ, œidœ: œAssemblyAITranscriptionJobPoller-sCJsyœ, œnameœ: œtranscription_resultœ, œoutput_typesœ: [œDataœ]}",
+        "target": "parser-6bJ9b",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-6bJ9bœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-YtYmK",
+            "id": "parser-6bJ9b",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -101,7 +101,7 @@
           },
           "targetHandle": {
             "fieldName": "transcript",
-            "id": "Prompt-Nc0MB",
+            "id": "Prompt-AMW8y",
             "inputTypes": [
               "Message",
               "Text"
@@ -109,12 +109,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-YtYmK{œdataTypeœ:œparserœ,œidœ:œparser-YtYmKœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-Nc0MB{œfieldNameœ:œtranscriptœ,œidœ:œPrompt-Nc0MBœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-6bJ9b{œdataTypeœ:œparserœ,œidœ:œparser-6bJ9bœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-AMW8y{œfieldNameœ:œtranscriptœ,œidœ:œPrompt-AMW8yœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-YtYmK",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-YtYmKœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Nc0MB",
-        "targetHandle": "{œfieldNameœ: œtranscriptœ, œidœ: œPrompt-Nc0MBœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "parser-6bJ9b",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-6bJ9bœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-AMW8y",
+        "targetHandle": "{œfieldNameœ: œtranscriptœ, œidœ: œPrompt-AMW8yœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -122,7 +122,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-YtYmK",
+            "id": "parser-6bJ9b",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -130,7 +130,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-m5kak",
+            "id": "ChatOutput-iChI5",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -139,58 +139,142 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-YtYmK{œdataTypeœ:œparserœ,œidœ:œparser-YtYmKœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-m5kak{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-m5kakœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-6bJ9b{œdataTypeœ:œparserœ,œidœ:œparser-6bJ9bœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-iChI5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-iChI5œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-YtYmK",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-YtYmKœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-m5kak",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-m5kakœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-6bJ9b",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-6bJ9bœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-iChI5",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-iChI5œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "Memory",
-            "id": "Memory-W2jhq",
-            "name": "dataframe",
+            "dataType": "Prompt",
+            "id": "Prompt-AMW8y",
+            "name": "prompt",
             "output_types": [
-              "DataFrame"
+              "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "input_data",
-            "id": "TypeConverterComponent-E7sN7",
+            "fieldName": "input_value",
+            "id": "LanguageModelComponent-cPCaH",
             "inputTypes": [
-              "Message",
-              "Data",
-              "DataFrame"
+              "Message"
             ],
-            "type": "other"
+            "type": "str"
           }
         },
-        "id": "reactflow__edge-Memory-W2jhq{œdataTypeœ:œMemoryœ,œidœ:œMemory-W2jhqœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-TypeConverterComponent-E7sN7{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-E7sN7œ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Prompt-AMW8y{œdataTypeœ:œPromptœ,œidœ:œPrompt-AMW8yœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-cPCaH{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-cPCaHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Memory-W2jhq",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-W2jhqœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "TypeConverterComponent-E7sN7",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-E7sN7œ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "Prompt-AMW8y",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-AMW8yœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-cPCaH",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-cPCaHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "TypeConverterComponent",
-            "id": "TypeConverterComponent-E7sN7",
-            "name": "message_output",
+            "dataType": "LanguageModelComponent",
+            "id": "LanguageModelComponent-cPCaH",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-9KeOi",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-LanguageModelComponent-cPCaH{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-cPCaHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-9KeOi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-9KeOiœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "LanguageModelComponent-cPCaH",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-cPCaHœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-9KeOi",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-9KeOiœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-36nA8",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "LanguageModelComponent-mMKmF",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-36nA8{œdataTypeœ:œPromptœ,œidœ:œPrompt-36nA8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-mMKmF{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-mMKmFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-36nA8",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-36nA8œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-mMKmF",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-mMKmFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LanguageModelComponent",
+            "id": "LanguageModelComponent-mMKmF",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-R039P",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-LanguageModelComponent-mMKmF{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-mMKmFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-R039P{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-R039Pœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "LanguageModelComponent-mMKmF",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-mMKmFœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-R039P",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-R039Pœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Memory",
+            "id": "Memory-dFlpS",
+            "name": "messages_text",
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
             "fieldName": "history",
-            "id": "Prompt-qm57P",
+            "id": "Prompt-36nA8",
             "inputTypes": [
               "Message",
               "Text"
@@ -198,126 +282,17 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-TypeConverterComponent-E7sN7{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-E7sN7œ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-qm57P{œfieldNameœ:œhistoryœ,œidœ:œPrompt-qm57Pœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "TypeConverterComponent-E7sN7",
-        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-E7sN7œ, œnameœ: œmessage_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-qm57P",
-        "targetHandle": "{œfieldNameœ: œhistoryœ, œidœ: œPrompt-qm57Pœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-Nc0MB",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "LanguageModelComponent-sdJZz",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Prompt-Nc0MB{œdataTypeœ:œPromptœ,œidœ:œPrompt-Nc0MBœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-sdJZz{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-sdJZzœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-Nc0MB",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Nc0MBœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-sdJZz",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-sdJZzœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-sdJZz",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-LTpUg",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__LanguageModelComponent-sdJZz{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-sdJZzœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-LTpUg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-LTpUgœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "LanguageModelComponent-sdJZz",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-sdJZzœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-LTpUg",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-LTpUgœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-qm57P",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "LanguageModelComponent-LzdL4",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Prompt-qm57P{œdataTypeœ:œPromptœ,œidœ:œPrompt-qm57Pœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-LzdL4{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-LzdL4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-qm57P",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-qm57Pœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-LzdL4",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-LzdL4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-LzdL4",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-SLRFg",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__LanguageModelComponent-LzdL4{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-LzdL4œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-SLRFg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-SLRFgœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "source": "LanguageModelComponent-LzdL4",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-LzdL4œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-SLRFg",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-SLRFgœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__Memory-dFlpS{œdataTypeœ:œMemoryœ,œidœ:œMemory-dFlpSœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-36nA8{œfieldNameœ:œhistoryœ,œidœ:œPrompt-36nA8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Memory-dFlpS",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-dFlpSœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-36nA8",
+        "targetHandle": "{œfieldNameœ: œhistoryœ, œidœ: œPrompt-36nA8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "AssemblyAITranscriptionJobPoller-GaXh2",
+          "id": "AssemblyAITranscriptionJobPoller-sCJsy",
           "node": {
             "base_classes": [
               "Data"
@@ -451,7 +426,7 @@
           "showNode": true,
           "type": "AssemblyAITranscriptionJobPoller"
         },
-        "id": "AssemblyAITranscriptionJobPoller-GaXh2",
+        "id": "AssemblyAITranscriptionJobPoller-sCJsy",
         "measured": {
           "height": 264,
           "width": 320
@@ -465,172 +440,7 @@
       },
       {
         "data": {
-          "id": "ParseData-ZQpM3",
-          "node": {
-            "base_classes": [
-              "Data",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Convert Data objects into Messages using any {field_name} from input data.",
-            "display_name": "Data to Message",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "data",
-              "template",
-              "sep"
-            ],
-            "frozen": false,
-            "icon": "message-square",
-            "legacy": true,
-            "lf_version": "1.1.5",
-            "metadata": {
-              "code_hash": "21413bf76850",
-              "legacy_name": "Parse Data",
-              "module": "langflow.components.processing.parse_data.ParseDataComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Message",
-                "group_outputs": false,
-                "method": "parse_data",
-                "name": "text",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Data List",
-                "group_outputs": false,
-                "method": "parse_data_as_list",
-                "name": "data_list",
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.custom.custom_component.component import Component\nfrom langflow.helpers.data import data_to_text, data_to_text_list\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Data to Message\"\n    description = \"Convert Data objects into Messages using any {field_name} from input data.\"\n    icon = \"message-square\"\n    name = \"ParseData\"\n    legacy = True\n    metadata = {\n        \"legacy_name\": \"Parse Data\",\n    }\n\n    inputs = [\n        DataInput(\n            name=\"data\",\n            display_name=\"Data\",\n            info=\"The data to convert to text.\",\n            is_list=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n            required=True,\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n"
-              },
-              "data": {
-                "_input_type": "DataInput",
-                "advanced": false,
-                "display_name": "Data",
-                "dynamic": false,
-                "info": "The data to convert to text.",
-                "input_types": [
-                  "Data"
-                ],
-                "list": true,
-                "list_add_label": "Add More",
-                "name": "data",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "sep": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "Separator",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sep",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "\n"
-              },
-              "template": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "template",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "{text}"
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "ParseData"
-        },
-        "id": "ParseData-ZQpM3",
-        "measured": {
-          "height": 264,
-          "width": 320
-        },
-        "position": {
-          "x": 1330.927281184057,
-          "y": 382.3516758942169
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "Prompt-Nc0MB",
+          "id": "Prompt-AMW8y",
           "node": {
             "base_classes": [
               "Message"
@@ -772,7 +582,7 @@
           "showNode": true,
           "type": "Prompt"
         },
-        "id": "Prompt-Nc0MB",
+        "id": "Prompt-AMW8y",
         "measured": {
           "height": 367,
           "width": 320
@@ -786,7 +596,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-LTpUg",
+          "id": "ChatOutput-9KeOi",
           "node": {
             "base_classes": [
               "Message"
@@ -1077,7 +887,7 @@
           "showNode": true,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-LTpUg",
+        "id": "ChatOutput-9KeOi",
         "measured": {
           "height": 204,
           "width": 320
@@ -1091,7 +901,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-m5kak",
+          "id": "ChatOutput-iChI5",
           "node": {
             "base_classes": [
               "Message"
@@ -1382,7 +1192,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-m5kak",
+        "id": "ChatOutput-iChI5",
         "measured": {
           "height": 48,
           "width": 192
@@ -1396,7 +1206,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-SLRFg",
+          "id": "ChatOutput-R039P",
           "node": {
             "base_classes": [
               "Message"
@@ -1687,7 +1497,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-SLRFg",
+        "id": "ChatOutput-R039P",
         "measured": {
           "height": 48,
           "width": 192
@@ -1701,7 +1511,7 @@
       },
       {
         "data": {
-          "id": "Prompt-qm57P",
+          "id": "Prompt-36nA8",
           "node": {
             "base_classes": [
               "Message"
@@ -1867,7 +1677,7 @@
           "showNode": true,
           "type": "Prompt"
         },
-        "id": "Prompt-qm57P",
+        "id": "Prompt-36nA8",
         "measured": {
           "height": 419,
           "width": 320
@@ -1881,7 +1691,7 @@
       },
       {
         "data": {
-          "id": "Memory-W2jhq",
+          "id": "Memory-dFlpS",
           "node": {
             "base_classes": [
               "Data",
@@ -1935,7 +1745,7 @@
                 "group_outputs": false,
                 "method": "retrieve_messages_dataframe",
                 "name": "dataframe",
-                "selected": "DataFrame",
+                "selected": null,
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
@@ -2191,26 +2001,26 @@
             },
             "tool_mode": false
           },
-          "selected_output": "dataframe",
+          "selected_output": "messages_text",
           "showNode": true,
           "type": "Memory"
         },
         "dragging": false,
-        "id": "Memory-W2jhq",
+        "id": "Memory-dFlpS",
         "measured": {
           "height": 218,
           "width": 320
         },
         "position": {
-          "x": 441.48054213052956,
-          "y": 1316.8835438817757
+          "x": 612.2852771414528,
+          "y": 1356.026295655112
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-VajCb",
+          "id": "ChatInput-y1N5A",
           "node": {
             "base_classes": [
               "Message"
@@ -2499,7 +2309,7 @@
           "showNode": false,
           "type": "ChatInput"
         },
-        "id": "ChatInput-VajCb",
+        "id": "ChatInput-y1N5A",
         "measured": {
           "height": 48,
           "width": 192
@@ -2513,7 +2323,7 @@
       },
       {
         "data": {
-          "id": "note-X7VVg",
+          "id": "note-KeDpr",
           "node": {
             "description": "### 💡 Add your Assembly AI API key and audio file here",
             "display_name": "",
@@ -2526,7 +2336,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-X7VVg",
+        "id": "note-KeDpr",
         "measured": {
           "height": 324,
           "width": 456
@@ -2542,7 +2352,7 @@
       },
       {
         "data": {
-          "id": "note-KqIow",
+          "id": "note-59kOs",
           "node": {
             "description": "### 💡 Add your Assembly AI API key here",
             "display_name": "",
@@ -2555,7 +2365,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-KqIow",
+        "id": "note-59kOs",
         "measured": {
           "height": 324,
           "width": 365
@@ -2571,7 +2381,7 @@
       },
       {
         "data": {
-          "id": "note-CGltm",
+          "id": "note-KvTWl",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -2584,7 +2394,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-CGltm",
+        "id": "note-KvTWl",
         "measured": {
           "height": 324,
           "width": 335
@@ -2600,7 +2410,7 @@
       },
       {
         "data": {
-          "id": "note-Cy9Wp",
+          "id": "note-cvsjg",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -2612,7 +2422,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-Cy9Wp",
+        "id": "note-cvsjg",
         "measured": {
           "height": 324,
           "width": 324
@@ -2626,7 +2436,7 @@
       },
       {
         "data": {
-          "id": "AssemblyAITranscriptionJobCreator-fAs7l",
+          "id": "AssemblyAITranscriptionJobCreator-Nu1dV",
           "node": {
             "base_classes": [
               "Data"
@@ -2947,7 +2757,7 @@
           "type": "AssemblyAITranscriptionJobCreator"
         },
         "dragging": false,
-        "id": "AssemblyAITranscriptionJobCreator-fAs7l",
+        "id": "AssemblyAITranscriptionJobCreator-Nu1dV",
         "measured": {
           "height": 343,
           "width": 320
@@ -2961,7 +2771,7 @@
       },
       {
         "data": {
-          "id": "note-tPJWf",
+          "id": "note-a9dFN",
           "node": {
             "description": "# Meeting Summary Generator\n\nThis flow automatically transcribes and summarizes meetings by converting audio recordings into concise summaries using **AssemblyAI** and **OpenAI GPT-4**. \n\n## Prerequisites\n\n- **[AssemblyAI API Key](https://www.assemblyai.com/)**\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Upload an audio file. Most common audio file formats are [supported](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/assemblyai/assemblyai_start_transcript.py#L27).\n2. To run the summary generator flow, click **Playground**.\n\nThe flow transcribes the audio using **AssemblyAI**.\nThe transcript is formatted for AI processing.\nThe **GPT-4** model extracts key points and insights.\nThe summarized meeting details are displayed in a chat-friendly format.\n\n\n\n",
             "display_name": "",
@@ -2972,7 +2782,7 @@
         },
         "dragging": false,
         "height": 612,
-        "id": "note-tPJWf",
+        "id": "note-a9dFN",
         "measured": {
           "height": 612,
           "width": 548
@@ -2988,7 +2798,7 @@
       },
       {
         "data": {
-          "id": "parser-YtYmK",
+          "id": "parser-6bJ9b",
           "node": {
             "base_classes": [
               "Message"
@@ -3019,8 +2829,11 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Parsed Text",
+                "group_outputs": false,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3033,6 +2846,24 @@
             "score": 2.220446049250313e-16,
             "template": {
               "_type": "Component",
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Clean Data",
+                "dynamic": false,
+                "info": "Enable to clean the data by removing empty rows and lines in each cell of the DataFrame/ Data object.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -3091,7 +2922,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "tab",
-                "value": "Parser"
+                "value": "Stringify"
               },
               "pattern": {
                 "_input_type": "MultilineInput",
@@ -3109,8 +2940,8 @@
                 "multiline": true,
                 "name": "pattern",
                 "placeholder": "",
-                "required": true,
-                "show": true,
+                "required": false,
+                "show": false,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_input": true,
@@ -3149,152 +2980,21 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-YtYmK",
+        "id": "parser-6bJ9b",
         "measured": {
-          "height": 361,
+          "height": 278,
           "width": 320
         },
         "position": {
-          "x": 1335.003903610802,
-          "y": 362.22452849075586
+          "x": 1315.3283640699676,
+          "y": 413.6106535940148
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "TypeConverterComponent-E7sN7",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "category": "processing",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Convert between different types (Message, Data, DataFrame)",
-            "display_name": "Type Convert",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_data",
-              "output_type"
-            ],
-            "frozen": false,
-            "icon": "repeat",
-            "key": "TypeConverterComponent",
-            "legacy": false,
-            "metadata": {
-              "code_hash": "d6a48de55f13",
-              "module": "langflow.components.processing.converter.TypeConverterComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Message Output",
-                "group_outputs": false,
-                "method": "convert_to_message",
-                "name": "message_output",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.007568328950209746,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any\n\nfrom langflow.custom import Component\nfrom langflow.io import HandleInput, Output, TabInput\nfrom langflow.schema import Data, DataFrame, Message\n\n\ndef convert_to_message(v) -> Message:\n    \"\"\"Convert input to Message type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Message: Converted Message object\n    \"\"\"\n    return v if isinstance(v, Message) else v.to_message()\n\n\ndef convert_to_data(v: DataFrame | Data | Message | dict) -> Data:\n    \"\"\"Convert input to Data type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Data: Converted Data object\n    \"\"\"\n    if isinstance(v, dict):\n        return Data(v)\n    return v if isinstance(v, Data) else v.to_data()\n\n\ndef convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:\n    \"\"\"Convert input to DataFrame type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        DataFrame: Converted DataFrame object\n    \"\"\"\n    if isinstance(v, dict):\n        return DataFrame([v])\n    return v if isinstance(v, DataFrame) else v.to_dataframe()\n\n\nclass TypeConverterComponent(Component):\n    display_name = \"Type Convert\"\n    description = \"Convert between different types (Message, Data, DataFrame)\"\n    icon = \"repeat\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Input\",\n            input_types=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Accept Message, Data or DataFrame as input\",\n            required=True,\n        ),\n        TabInput(\n            name=\"output_type\",\n            display_name=\"Output Type\",\n            options=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Select the desired output data type\",\n            real_time_refresh=True,\n            value=\"Message\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message Output\",\n            name=\"message_output\",\n            method=\"convert_to_message\",\n        )\n    ]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"Dynamically show only the relevant output based on the selected output type.\"\"\"\n        if field_name == \"output_type\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n\n            # Add only the selected output type\n            if field_value == \"Message\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Message Output\",\n                        name=\"message_output\",\n                        method=\"convert_to_message\",\n                    ).to_dict()\n                )\n            elif field_value == \"Data\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Data Output\",\n                        name=\"data_output\",\n                        method=\"convert_to_data\",\n                    ).to_dict()\n                )\n            elif field_value == \"DataFrame\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"DataFrame Output\",\n                        name=\"dataframe_output\",\n                        method=\"convert_to_dataframe\",\n                    ).to_dict()\n                )\n\n        return frontend_node\n\n    def convert_to_message(self) -> Message:\n        \"\"\"Convert input to Message type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_message(input_value)\n        self.status = result\n        return result\n\n    def convert_to_data(self) -> Data:\n        \"\"\"Convert input to Data type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_data(input_value)\n        self.status = result\n        return result\n\n    def convert_to_dataframe(self) -> DataFrame:\n        \"\"\"Convert input to DataFrame type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_dataframe(input_value)\n        self.status = result\n        return result\n"
-              },
-              "input_data": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "Accept Message, Data or DataFrame as input",
-                "input_types": [
-                  "Message",
-                  "Data",
-                  "DataFrame"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "input_data",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "output_type": {
-                "_input_type": "TabInput",
-                "advanced": false,
-                "display_name": "Output Type",
-                "dynamic": false,
-                "info": "Select the desired output data type",
-                "name": "output_type",
-                "options": [
-                  "Message",
-                  "Data",
-                  "DataFrame"
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tab",
-                "value": "Message"
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "message_output",
-          "showNode": true,
-          "type": "TypeConverterComponent"
-        },
-        "dragging": false,
-        "id": "TypeConverterComponent-E7sN7",
-        "measured": {
-          "height": 262,
-          "width": 320
-        },
-        "position": {
-          "x": 818.3383092892287,
-          "y": 1236.393381453206
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "LanguageModelComponent-sdJZz",
+          "id": "LanguageModelComponent-cPCaH",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -3575,7 +3275,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-sdJZz",
+        "id": "LanguageModelComponent-cPCaH",
         "measured": {
           "height": 451,
           "width": 320
@@ -3589,7 +3289,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-LzdL4",
+          "id": "LanguageModelComponent-mMKmF",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -3870,7 +3570,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-LzdL4",
+        "id": "LanguageModelComponent-mMKmF",
         "measured": {
           "height": 451,
           "width": 320
@@ -3879,19 +3579,19 @@
           "x": 1682.4309619697785,
           "y": 1466.0777133523027
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -517.5818469117869,
-      "y": -364.65252188569104,
-      "zoom": 0.637519084679716
+      "x": -95.23081423706287,
+      "y": -97.99210056496133,
+      "zoom": 0.5620453086026018
     }
   },
   "description": "An AI-powered meeting summary generator that transcribes and summarizes meetings using  AssemblyAI and OpenAI for quick insights.",
   "endpoint_name": null,
-  "id": "dd491f01-5b33-449a-9a03-9a840c70cf0f",
+  "id": "5f6a79a4-2a18-4754-b8fb-cbfabce79cc9",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Meeting Summary",
