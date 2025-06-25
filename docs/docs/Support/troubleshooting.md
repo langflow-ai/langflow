@@ -9,7 +9,7 @@ This page provides troubleshooting advice for issues you might encounter when us
 
 As Langflow development continues, components are often recategorized or deprecated for better alignment or to prepare for new components.
 
-If a component appears to be missing from the expected location on the component sidebar, try the following:
+If a component appears to be missing from the expected location on the **Components** menu, try the following:
 
 * Search for the component or check other component categories, including [Bundles](/components-bundle-components).
 * [Expose legacy components](/concepts-components#components-sidebar), which are hidden by default.

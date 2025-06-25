@@ -32,7 +32,7 @@ This component has two modes, depending on the type of server you want to access
     To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
     For an example of an `npx` MCP server in Langflow, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
 
-3. To use environment variables in your server command, enter each variable in the **Env** fields as you would define them in a script, such as `VARIABLE=value`. If the **Env** field isn't shown, enable it in the component's **Controls** in the [component menu](/concepts-components#component-menu).
+3. To use environment variables in your server command, enter each variable in the **Env** fields as you would define them in a script, such as `VARIABLE=value`. If the **Env** field isn't shown, enable it in the component's **Controls** in the [component's header menu](/concepts-components#component-menus).
 
     :::important
     Langflow passes environment variables from the `.env` file to MCP, but it doesn't pass  global variables declared in the Langflow UI.
@@ -48,7 +48,7 @@ This component has two modes, depending on the type of server you want to access
 
     At this point, the **MCP connection** component is serving a tool, but nothing is using the tool. The next steps explain how to make the tool available to an [**Agent** component](/components-agents) so that the agent can use the tool in its responses.
 
-6. In the [component menu](/concepts-components#component-menu), enable **Tool mode** so you can use the component with an agent.
+6. In the [component's header menu](/concepts-components#component-menus), enable **Tool mode** so you can use the component with an agent.
 
 7. Connect the **MCP connection** component's **Toolset** port to an **Agent** component's **Tools** port.
 
@@ -74,7 +74,7 @@ A default address appears in the **MCP SSE URL** field.
 1. Click <Icon name="RefreshCw" aria-label="Refresh"/> to test the endpoint and refresh the **Tools** list.
 In SSE mode, all flows available from the targeted server are treated as tools.
 1. In the **Tool** field, select a flow that you want this component to use, or leave the field blank to allow access to all flows available from the targeted Langflow server.
-2. In the [component menu](/concepts-components#component-menu), enable **Tool mode** so you can use the component with an agent.
+2. In the [component's header menu](/concepts-components#component-menus), enable **Tool mode** so you can use the component with an agent.
 3. Connect the **MCP connection** component's **Toolset** port to an **Agent** component's **Tools** port. If not already present in your flow, make sure you also attach **Chat input** and **Chat output** components to the **Agent** component.
 ![MCP component with SSE mode enabled](/img/component-mcp-sse-mode.png)
 1. Test your flow to make sure the agent uses your flows to respond to queries: Click **Playground**, and then enter a prompt that uses a flow that you connected through the **MCP connection** component.

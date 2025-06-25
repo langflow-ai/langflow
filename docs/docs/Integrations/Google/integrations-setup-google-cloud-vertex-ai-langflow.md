@@ -27,7 +27,7 @@ Now that you have a service account and a JSON private key, you need to configur
 With your service account configured and your credentials JSON file created, follow these steps to authenticate the Langflow application.
 
 1. Create a new project in Langflow.
-2. From the components sidebar, drag and drop either the **Vertex AI** or **Vertex AI Embeddings** component to your workspace.
+2. From the **Components** menu, drag and drop either the **Vertex AI** or **Vertex AI Embeddings** component to your workspace.
 3. In the Vertex AI component's **Credentials** field, add the service account JSON file.
 4. Confirm the component can access the Vertex AI resources.
 Connect a **Chat input** and **Chat output** component to the Vertex AI component.
