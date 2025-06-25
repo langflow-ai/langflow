@@ -2,6 +2,7 @@
 import ast
 import asyncio
 import contextlib
+import hashlib
 import inspect
 import re
 import traceback
@@ -30,6 +31,29 @@ from langflow.template.frontend_node.custom_components import ComponentFrontendN
 from langflow.type_extraction.type_extraction import extract_inner_type
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
+
+
+def _generate_code_hash(obj: type, modname: str) -> str | None:
+    """Generate a hash of the component class source code.
+
+    Args:
+        obj: The component class object
+        modname: The module name for fallback identification
+
+    Returns:
+        SHA256 hash of the source code, or None if unable to extract source
+    """
+    try:
+        # Try to get the source code of the class
+        source_code = inspect.getsource(obj)
+        # Generate SHA256 hash of the source code
+        return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]  # First 12 chars for brevity
+    except (OSError, TypeError) as e:
+        # inspect.getsource can fail for built-in classes, dynamically created classes, etc.
+        logger.debug(f"Could not extract source code for {obj.__name__} in {modname}: {e}")
+        # Fallback: hash the module name + class name as a weak identifier
+        fallback_str = f"{modname}.{obj.__name__}"
+        return hashlib.sha256(fallback_str.encode("utf-8")).hexdigest()[:12]
 
 
 class UpdateBuildConfigError(Exception):
@@ -438,6 +462,12 @@ def build_custom_component_template_from_inputs(
     reorder_fields(frontend_node, cc_instance._get_field_order())
     if module_name:
         frontend_node.metadata["module"] = module_name
+
+        # Generate code hash for cache invalidation and debugging
+        code_hash = _generate_code_hash(cc_instance.__class__, module_name)
+        if code_hash:
+            frontend_node.metadata["code_hash"] = code_hash
+
     return frontend_node.to_dict(keep_name=False), cc_instance
 
 
@@ -499,6 +529,11 @@ def build_custom_component_template(
 
         if module_name:
             frontend_node.metadata["module"] = module_name
+
+            # Generate code hash for cache invalidation and debugging
+            code_hash = _generate_code_hash(custom_instance.__class__, module_name)
+            if code_hash:
+                frontend_node.metadata["code_hash"] = code_hash
 
         return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:
