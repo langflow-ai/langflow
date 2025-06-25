@@ -4,12 +4,12 @@ import json
 import logging
 import os
 import platform
-from asyncio import subprocess
 from asyncio.subprocess import create_subprocess_exec
 from contextvars import ContextVar
 from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
+from subprocess import CalledProcessError
 from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
 
@@ -452,7 +452,7 @@ async def install_mcp_config(
                                 raise HTTPException(
                                     status_code=400, detail="Windows C: drive not mounted at /mnt/c in WSL"
                                 )
-                    except (OSError, subprocess.CalledProcessError) as e:
+                    except (OSError, CalledProcessError) as e:
                         logger.warning("Failed to determine Windows user path in WSL: %s", str(e))
                         raise HTTPException(
                             status_code=400, detail=f"Could not determine Windows Claude config path in WSL: {e!s}"
@@ -586,7 +586,7 @@ async def check_installed_mcp_servers(
                                 claude_config_path = (
                                     user_dirs[0] / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
                                 )
-                except (OSError, subprocess.CalledProcessError) as e:
+                except (OSError, CalledProcessError) as e:
                     logger.warning(
                         "Failed to determine Windows user path in WSL for checking Claude config: %s", str(e)
                     )
