@@ -73,7 +73,6 @@ dependencies = [
     "lark==1.2.2",
     "jq==1.8.0",
     "pydantic-settings>=2.2.0,<3.0.0",
-    "ragstack-ai-knowledge-store==0.2.1",
     "duckduckgo_search==7.2.1",
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
@@ -125,6 +124,9 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
+    "filelock>=3.18.0",
+    "docling>=2.36.1",
+    "filelock>=3.18.0"
 ]
 
 [dependency-groups]
@@ -173,6 +175,7 @@ dev = [
     'elevenlabs>=1.52.0; python_version != "3.12"',
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
+    "pyyaml>=6.0.2",
 ]
 
 [tool.uv.sources]
@@ -215,8 +218,14 @@ nv-ingest = [
 ]
 
 postgresql = [
-  "sqlalchemy[postgresql_psycopg2binary]",
-    "sqlalchemy[postgresql_psycopg]",
+    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
+    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+]
+
+[tool.uv]
+override-dependencies = [
+    # temporary force a newer python-pptx
+    "python-pptx>=1.0.2"
 ]
 
 [project.scripts]
@@ -232,7 +241,7 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 timeout = 120
 timeout_method = "signal"
 minversion = "6.0"
-testpaths = ["tests", "integration"]
+testpaths = ["src/backend/tests"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true

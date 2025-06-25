@@ -12,7 +12,8 @@ from uuid import UUID
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
+from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
+from langchain_core.prompts.prompt import PromptTemplate
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
@@ -402,12 +403,18 @@ class ErrorMessage(Message):
         """Format the error reason without markdown."""
         if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
             reason = f"{exception.body.get('message')}\n"
+        elif hasattr(exception, "_message"):
+            reason = f"{exception._message()}\n" if callable(exception._message) else f"{exception._message}\n"
         elif hasattr(exception, "code"):
             reason = f"Code: {exception.code}\n"
         elif hasattr(exception, "args") and exception.args:
             reason = f"{exception.args[0]}\n"
         elif isinstance(exception, ValidationError):
             reason = f"{exception!s}\n"
+        elif hasattr(exception, "detail"):
+            reason = f"{exception.detail}\n"
+        elif hasattr(exception, "message"):
+            reason = f"{exception.message}\n"
         else:
             reason = "An unknown error occurred.\n"
         return reason
