@@ -148,9 +148,9 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     # Verify each expected node exists with correct type
     for node_id, expected_type in expected_nodes.items():
         assert node_id in node_map, f"Missing node {node_id}"
-        assert node_map[node_id]["type"] == expected_type, (
-            f"Node {node_id} has incorrect type. Expected {expected_type}, got {node_map[node_id]['type']}"
-        )
+        assert (
+            node_map[node_id]["type"] == expected_type
+        ), f"Node {node_id} has incorrect type. Expected {expected_type}, got {node_map[node_id]['type']}"
 
     # Verify all nodes in graph are expected
     unexpected_nodes = set(node_map.keys()) - set(expected_nodes.keys())
@@ -197,7 +197,7 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     assert rag_nodes[4]["data"]["type"] == "ParseData"
     assert rag_nodes[4]["id"] == "parse-data-123"
 
-    assert rag_nodes[5]["data"]["type"] == "Prompt"
+    assert rag_nodes[5]["data"]["type"] == "Prompt Template"
     assert rag_nodes[5]["id"] == "prompt-123"
 
     assert rag_nodes[6]["data"]["type"] == "AstraDB"
@@ -230,9 +230,9 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
         f"Vertices mismatch: {len(ingestion_graph_copy.vertices)} "
         f"!= {len(ingestion_graph.vertices)} + {len(rag_graph.vertices)}"
     )
-    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(rag_graph.edges), (
-        f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
-    )
+    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(
+        rag_graph.edges
+    ), f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
 
     combined_graph_dump = ingestion_graph_copy.dump(
         name="Combined Graph", description="Graph for data ingestion and RAG", endpoint_name="combined"
@@ -257,7 +257,7 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
             {"id": "openai-123", "type": "OpenAIModel"},
             {"id": "openai-embeddings-124", "type": "OpenAIEmbeddings"},
             {"id": "parse-data-123", "type": "ParseData"},
-            {"id": "prompt-123", "type": "Prompt"},
+            {"id": "prompt-123", "type": "Prompt Template"},
             {"id": "rag-vector-store-123", "type": "AstraDB"},
         ],
         key=operator.itemgetter("id"),

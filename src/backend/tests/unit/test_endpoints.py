@@ -143,7 +143,7 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
         files
     )  # Less or equal because we might have some files that don't have the dependencies installed
     assert "ChatInput" in json_response["input_output"]
-    assert "Prompt" in json_response["prompts"]
+    assert "Prompt Template" in json_response["processing"]
     assert "ChatOutput" in json_response["input_output"]
 
 
@@ -434,9 +434,9 @@ async def test_successful_run_with_input_type_text(client, simple_api_test, crea
     assert len(text_input_outputs) == 1
     # Now we check if the input_value is correct
     # We get text key twice because the output is now a Message
-    assert all(output.get("results").get("text").get("text") == "value1" for output in text_input_outputs), (
-        text_input_outputs
-    )
+    assert all(
+        output.get("results").get("text").get("text") == "value1" for output in text_input_outputs
+    ), text_input_outputs
 
 
 @pytest.mark.api_key_required
@@ -468,9 +468,9 @@ async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_a
     chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
     assert len(chat_input_outputs) == 1
     # Now we check if the input_value is correct
-    assert all(output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs), (
-        chat_input_outputs
-    )
+    assert all(
+        output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs
+    ), chat_input_outputs
 
 
 @pytest.mark.benchmark
@@ -524,9 +524,9 @@ async def test_successful_run_with_input_type_any(client, simple_api_test, creat
     all_message_or_text_dicts = [
         result_dict.get("message", result_dict.get("text")) for result_dict in all_result_dicts
     ]
-    assert all(message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts), (
-        any_input_outputs
-    )
+    assert all(
+        message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts
+    ), any_input_outputs
 
 
 async def test_invalid_flow_id(client, created_api_key):
@@ -555,12 +555,12 @@ async def _run_single_stream_test(client: AsyncClient, flow_id: str, headers: di
     final_result = None
 
     async with client.stream("POST", f"/api/v1/run/{flow_id}?stream=true", headers=headers, json=payload) as response:
-        assert response.status_code == status.HTTP_200_OK, (
-            f"Request failed with status {response.status_code}: {response.text}"
-        )
-        assert response.headers["content-type"].startswith("text/event-stream"), (
-            f"Expected event stream content type, got: {response.headers['content-type']}"
-        )
+        assert (
+            response.status_code == status.HTTP_200_OK
+        ), f"Request failed with status {response.status_code}: {response.text}"
+        assert response.headers["content-type"].startswith(
+            "text/event-stream"
+        ), f"Expected event stream content type, got: {response.headers['content-type']}"
 
         async for line in response.aiter_lines():
             if not line or line.strip() == "":
@@ -604,12 +604,12 @@ async def _run_single_stream_test(client: AsyncClient, flow_id: str, headers: di
 
     # Verify we got at least one message or token event before end
     assert len(received_events) > 2, f"Should receive multiple events before the end event. Got: {received_events}"
-    assert any(event == "add_message" for event in received_events), (
-        f"Should receive at least one add_message event. Received events: {received_events}"
-    )
-    assert any(event == "token" for event in received_events), (
-        f"Should receive at least one token event. Received events: {received_events}"
-    )
+    assert any(
+        event == "add_message" for event in received_events
+    ), f"Should receive at least one add_message event. Received events: {received_events}"
+    assert any(
+        event == "token" for event in received_events
+    ), f"Should receive at least one token event. Received events: {received_events}"
 
     # Verify the final result structure in the end event
     assert final_result is not None, "Final result should not be None"
@@ -622,17 +622,17 @@ async def _run_single_stream_test(client: AsyncClient, flow_id: str, headers: di
     # Verify the debug outputs in final result
     assert "inputs" in outputs_dict, f"Missing 'inputs' in outputs_dict: {outputs_dict}"
     assert "outputs" in outputs_dict, f"Missing 'outputs' in outputs_dict: {outputs_dict}"
-    assert outputs_dict["inputs"] == {"input_value": payload["input_value"]}, (
-        f"Input value mismatch. Expected: {{'input_value': {payload['input_value']}}}, Got: {outputs_dict['inputs']}"
-    )
-    assert isinstance(outputs_dict.get("outputs"), list), (
-        f"Expected outputs to be a list, got: {type(outputs_dict.get('outputs'))}"
-    )
+    assert outputs_dict["inputs"] == {
+        "input_value": payload["input_value"]
+    }, f"Input value mismatch. Expected: {{'input_value': {payload['input_value']}}}, Got: {outputs_dict['inputs']}"
+    assert isinstance(
+        outputs_dict.get("outputs"), list
+    ), f"Expected outputs to be a list, got: {type(outputs_dict.get('outputs'))}"
 
     chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
-    assert len(chat_input_outputs) == 1, (
-        f"Expected 1 ChatInput output, got {len(chat_input_outputs)}: {chat_input_outputs}"
-    )
+    assert (
+        len(chat_input_outputs) == 1
+    ), f"Expected 1 ChatInput output, got {len(chat_input_outputs)}: {chat_input_outputs}"
     assert all(
         output.get("results").get("message").get("text") == payload["input_value"] for output in chat_input_outputs
     ), f"Message text mismatch. Expected: {payload['input_value']}, Got: {chat_input_outputs}"

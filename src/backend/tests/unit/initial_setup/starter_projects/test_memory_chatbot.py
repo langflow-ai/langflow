@@ -131,7 +131,7 @@ def test_memory_chatbot_dump_components_and_edges(memory_chatbot_graph: Graph):
     assert nodes[3]["data"]["type"] == "OpenAIModel"
     assert nodes[3]["id"] == "openai"
 
-    assert nodes[4]["data"]["type"] == "Prompt"
+    assert nodes[4]["data"]["type"] == "Prompt Template"
     assert nodes[4]["id"] == "prompt"
 
     # Check edges
