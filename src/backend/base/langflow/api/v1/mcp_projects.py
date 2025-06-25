@@ -401,6 +401,9 @@ async def install_mcp_config(
             }
         }
 
+        server_name = f"lf-{name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+        logger.debug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
+
         # Determine the config file path based on the client and OS
         if body.client.lower() == "cursor":
             config_path = Path.home() / ".cursor" / "mcp.json"
@@ -509,21 +512,36 @@ async def check_installed_mcp_servers(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
-        # Project server name pattern
-        project_server_name = f"lf-{project.name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+        # Project server name pattern (must match the logic in install function)
+        name = project.name
+        name = NEW_FOLDER_NAME if name == DEFAULT_FOLDER_NAME else name
+        project_server_name = f"lf-{name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+
+        logger.debug(
+            "Checking for installed MCP servers for project: %s (server name: %s)", project.name, project_server_name
+        )
 
         # Check configurations for different clients
         results = []
 
         # Check Cursor configuration
         cursor_config_path = Path.home() / ".cursor" / "mcp.json"
+        logger.debug("Checking Cursor config at: %s (exists: %s)", cursor_config_path, cursor_config_path.exists())
         if cursor_config_path.exists():
             try:
                 with cursor_config_path.open("r") as f:
                     cursor_config = json.load(f)
                     if "mcpServers" in cursor_config and project_server_name in cursor_config["mcpServers"]:
+                        logger.debug("Found Cursor config for project server: %s", project_server_name)
                         results.append("cursor")
+                    else:
+                        logger.debug(
+                            "Cursor config exists but no entry for server: %s (available servers: %s)",
+                            project_server_name,
+                            list(cursor_config.get("mcpServers", {}).keys()),
+                        )
             except json.JSONDecodeError:
+                logger.warning("Failed to parse Cursor config JSON at: %s", cursor_config_path)
                 pass
 
         # Check Claude configuration
@@ -578,13 +596,24 @@ async def check_installed_mcp_servers(
                 claude_config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
 
         if claude_config_path and claude_config_path.exists():
+            logger.debug("Checking Claude config at: %s", claude_config_path)
             try:
                 with claude_config_path.open("r") as f:
                     claude_config = json.load(f)
                     if "mcpServers" in claude_config and project_server_name in claude_config["mcpServers"]:
+                        logger.debug("Found Claude config for project server: %s", project_server_name)
                         results.append("claude")
+                    else:
+                        logger.debug(
+                            "Claude config exists but no entry for server: %s (available servers: %s)",
+                            project_server_name,
+                            list(claude_config.get("mcpServers", {}).keys()),
+                        )
             except json.JSONDecodeError:
+                logger.warning("Failed to parse Claude config JSON at: %s", claude_config_path)
                 pass
+        else:
+            logger.debug("Claude config path not found or doesn't exist: %s", claude_config_path)
 
     except Exception as e:
         msg = f"Error checking MCP configuration: {e!s}"
