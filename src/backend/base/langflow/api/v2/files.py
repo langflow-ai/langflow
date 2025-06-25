@@ -71,14 +71,10 @@ async def save_file_routine(file, storage_service, current_user: CurrentActiveUs
     if not file_name:
         file_name = file.filename
 
-    # Get file extension of the file
-    file_extension = "." + file_name.split(".")[-1] if file_name and "." in file_name else ""
-    anonymized_file_name = f"{file_id!s}{file_extension}"
-
     # Save the file using the storage service.
-    await storage_service.save_file(flow_id=str(current_user.id), file_name=anonymized_file_name, data=file_content)
+    await storage_service.save_file(flow_id=str(current_user.id), file_name=file_name, data=file_content)
 
-    return file_id, anonymized_file_name
+    return file_id, file_name
 
 
 @router.post("", status_code=HTTPStatus.CREATED)
@@ -110,7 +106,7 @@ async def upload_user_file(
 
     # Read file content and create a unique file name
     try:
-        file_id, anonymized_file_name = await save_file_routine(file, storage_service, current_user)
+        file_id, file_name = await save_file_routine(file, storage_service, current_user)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving file: {e}") from e
 
@@ -149,18 +145,15 @@ async def upload_user_file(
         # Compute the file size based on the path
         file_size = await storage_service.get_file_size(
             flow_id=str(current_user.id),
-            file_name=anonymized_file_name,
+            file_name=file_name,
         )
-
-        # Compute the file path
-        file_path = f"{current_user.id!s}/{anonymized_file_name}"
 
         # Create a new file record
         new_file = UserFile(
             id=file_id,
             user_id=current_user.id,
             name=root_filename,
-            path=file_path,
+            path=f"{current_user.id}/{file_name}",
             size=file_size,
         )
         session.add(new_file)
@@ -189,57 +182,60 @@ async def get_file_by_name(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching file: {e}") from e
 
+async def load_sample_files(current_user: CurrentActiveUser, session: DbSession, storage_service: StorageService):
+    # Check if the sample files in the SAMPLE_DATA_DIR exist
+    for sample_file_path in Path(SAMPLE_DATA_DIR).iterdir():
+        sample_file_name = sample_file_path.name
+        root_filename, _ = sample_file_name.rsplit(".", 1)
+
+        # Check if the sample file exists in the storage service
+        existing_sample_file = await get_file_by_name(
+            file_name=root_filename, current_user=current_user, session=session
+        )
+        if existing_sample_file:
+            continue
+
+        # Read the binary data of the sample file
+        binary_data = sample_file_path.read_bytes()
+
+        # Write the sample file content to the storage service
+        file_id, _ = await save_file_routine(
+            sample_file_path,
+            storage_service,
+            current_user,
+            file_content=binary_data,
+            file_name=sample_file_name,
+        )
+        file_size = await storage_service.get_file_size(
+            flow_id=str(current_user.id),
+            file_name=sample_file_name,
+        )
+        # Create a UserFile object for the sample file
+        sample_file = UserFile(
+            id=file_id,
+            user_id=current_user.id,
+            name=root_filename,
+            path=sample_file_name,
+            size=file_size,
+        )
+
+        session.add(sample_file)
+
+        await session.commit()
+        await session.refresh(sample_file)
 
 @router.get("")
 @router.get("/", status_code=HTTPStatus.OK)
 async def list_files(
     current_user: CurrentActiveUser,
     session: DbSession,
-    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    # storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> list[UserFile]:
     """List the files available to the current user."""
     try:
-        # Check if the sample files in the SAMPLE_DATA_DIR exist
-        for sample_file_path in Path(SAMPLE_DATA_DIR).iterdir():
-            sample_file_name = sample_file_path.name
-            root_filename, _ = sample_file_name.rsplit(".", 1)
-
-            # Check if the sample file exists in the storage service
-            existing_sample_file = await get_file_by_name(
-                file_name=root_filename, current_user=current_user, session=session
-            )
-            if existing_sample_file:
-                continue
-
-            # Read the binary data of the sample file
-            binary_data = sample_file_path.read_bytes()
-
-            # Write the sample file content to the storage service
-            file_id, anonymized_file_name = await save_file_routine(
-                sample_file_path,
-                storage_service,
-                current_user,
-                file_content=binary_data,
-                file_name=sample_file_name,
-            )
-            file_size = await storage_service.get_file_size(
-                flow_id=str(current_user.id),
-                file_name=anonymized_file_name,
-            )
-            # Create a UserFile object for the sample file
-            sample_file = UserFile(
-                id=file_id,
-                user_id=current_user.id,
-                name=root_filename,
-                path=f"{current_user.id!s}/{anonymized_file_name}",
-                size=file_size,
-            )
-
-            session.add(sample_file)
-
-            await session.commit()
-            await session.refresh(sample_file)
-
+        # Load sample files if they don't exist
+        # TODO: Pending further testing
+        # await load_sample_files(current_user, session, get_storage_service())
         # Fetch from the UserFile table
         stmt = select(UserFile).where(UserFile.user_id == current_user.id)
         results = await session.exec(stmt)

@@ -47,12 +47,14 @@ class FileComponent(BaseFileComponent):
     ]
 
     outputs = [
-        *BaseFileComponent._base_outputs,
+        Output(display_name="Raw Content", name="message", method="load_files_message"),
     ]
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
         """Dynamically show only the relevant output based on the number of files processed."""
         if field_name == "path":
+            if len(self.path) == 0:
+                return frontend_node
             # Start with empty outputs
             frontend_node["outputs"] = []
 

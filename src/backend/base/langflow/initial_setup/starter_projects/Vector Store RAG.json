@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-1w4cJ",
+            "id": "ChatInput-g8ha3",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-I9T0w",
+            "id": "Prompt-HCuAj",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,70 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-1w4cJ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1w4cJœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-I9T0w{œfieldNameœ:œquestionœ,œidœ:œPrompt-I9T0wœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-g8ha3{œdataTypeœ:œChatInputœ,œidœ:œChatInput-g8ha3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-HCuAj{œfieldNameœ:œquestionœ,œidœ:œPrompt-HCuAjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-1w4cJ",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1w4cJœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-I9T0w",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-I9T0wœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-I9T0w",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-GczRI",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-I9T0w{œdataTypeœ:œPromptœ,œidœ:œPrompt-I9T0wœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-GczRI{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-GczRIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-I9T0w",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-I9T0wœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-GczRI",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-GczRIœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-GczRI",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-Dlahs",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-GczRI{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-GczRIœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Dlahs{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Dlahsœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "OpenAIModel-GczRI",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-GczRIœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-Dlahs",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Dlahsœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-g8ha3",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-g8ha3œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-HCuAj",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-HCuAjœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -94,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-IEn6I",
+            "id": "parser-ehrBO",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -102,7 +44,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-I9T0w",
+            "id": "Prompt-HCuAj",
             "inputTypes": [
               "Message",
               "Text"
@@ -110,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-IEn6I{œdataTypeœ:œparserœ,œidœ:œparser-IEn6Iœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-I9T0w{œfieldNameœ:œcontextœ,œidœ:œPrompt-I9T0wœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-ehrBO{œdataTypeœ:œparserœ,œidœ:œparser-ehrBOœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-HCuAj{œfieldNameœ:œcontextœ,œidœ:œPrompt-HCuAjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-IEn6I",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-IEn6Iœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-I9T0w",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-I9T0wœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "parser-ehrBO",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-ehrBOœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-HCuAj",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-HCuAjœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -123,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-OlQ6R",
+            "id": "OpenAIEmbeddings-EjaQd",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -131,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-8AuVs",
+            "id": "AstraDB-H2sZ0",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-OlQ6R{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-OlQ6Rœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-8AuVs{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-8AuVsœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIEmbeddings-EjaQd{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-EjaQdœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-H2sZ0{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-H2sZ0œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIEmbeddings-OlQ6R",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-OlQ6Rœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-8AuVs",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-8AuVsœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OpenAIEmbeddings-EjaQd",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-EjaQdœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-H2sZ0",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-H2sZ0œ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -151,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-ulN0y",
+            "id": "OpenAIEmbeddings-LqNei",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -159,19 +101,19 @@
           },
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-Wep9C",
+            "id": "AstraDB-qCu1f",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-ulN0y{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-ulN0yœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-Wep9C{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-Wep9Cœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIEmbeddings-LqNei{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-LqNeiœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-qCu1f{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-qCu1fœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIEmbeddings-ulN0y",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-ulN0yœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-Wep9C",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-Wep9Cœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "source": "OpenAIEmbeddings-LqNei",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-LqNeiœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-qCu1f",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-qCu1fœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -179,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-1w4cJ",
+            "id": "ChatInput-g8ha3",
             "name": "message",
             "output_types": [
               "Message"
@@ -187,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "AstraDB-Wep9C",
+            "id": "AstraDB-qCu1f",
             "inputTypes": [
               "Message"
             ],
             "type": "query"
           }
         },
-        "id": "reactflow__edge-ChatInput-1w4cJ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-1w4cJœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-Wep9C{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-Wep9Cœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "id": "reactflow__edge-ChatInput-g8ha3{œdataTypeœ:œChatInputœ,œidœ:œChatInput-g8ha3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-qCu1f{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-qCu1fœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
-        "source": "ChatInput-1w4cJ",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-1w4cJœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-Wep9C",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-Wep9Cœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "source": "ChatInput-g8ha3",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-g8ha3œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-qCu1f",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-qCu1fœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
         "animated": false,
@@ -207,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-Wep9C",
+            "id": "AstraDB-qCu1f",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -215,7 +157,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-IEn6I",
+            "id": "parser-ehrBO",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -223,12 +165,41 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraDB-Wep9C{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-Wep9Cœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-IEn6I{œfieldNameœ:œinput_dataœ,œidœ:œparser-IEn6Iœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AstraDB-qCu1f{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-qCu1fœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-ehrBO{œfieldNameœ:œinput_dataœ,œidœ:œparser-ehrBOœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AstraDB-Wep9C",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-Wep9Cœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "parser-IEn6I",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-IEn6Iœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "AstraDB-qCu1f",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-qCu1fœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "parser-ehrBO",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-ehrBOœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "SplitText",
+            "id": "SplitText-iHZQk",
+            "name": "dataframe",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "ingest_data",
+            "id": "AstraDB-H2sZ0",
+            "inputTypes": [
+              "Data",
+              "DataFrame"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-SplitText-iHZQk{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-iHZQkœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-AstraDB-H2sZ0{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-H2sZ0œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "SplitText-iHZQk",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-iHZQkœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "AstraDB-H2sZ0",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-H2sZ0œ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -236,15 +207,15 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-C3stS",
-            "name": "dataframe",
+            "id": "File-J8GVA",
+            "name": "message",
             "output_types": [
-              "DataFrame"
+              "Message"
             ]
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-5RcUo",
+            "id": "SplitText-iHZQk",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -253,41 +224,66 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-C3stS{œdataTypeœ:œFileœ,œidœ:œFile-C3stSœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-5RcUo{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-5RcUoœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__File-J8GVA{œdataTypeœ:œFileœ,œidœ:œFile-J8GVAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SplitText-iHZQk{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-iHZQkœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "File-C3stS",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-C3stSœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "SplitText-5RcUo",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-5RcUoœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "File-J8GVA",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-J8GVAœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SplitText-iHZQk",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-iHZQkœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
-        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "SplitText",
-            "id": "SplitText-5RcUo",
-            "name": "dataframe",
+            "dataType": "Prompt",
+            "id": "Prompt-HCuAj",
+            "name": "prompt",
             "output_types": [
-              "DataFrame"
+              "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "ingest_data",
-            "id": "AstraDB-8AuVs",
+            "fieldName": "input_value",
+            "id": "LanguageModelComponent-cmjdt",
             "inputTypes": [
-              "Data",
-              "DataFrame"
+              "Message"
             ],
-            "type": "other"
+            "type": "str"
           }
         },
-        "id": "reactflow__edge-SplitText-5RcUo{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-5RcUoœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-AstraDB-8AuVs{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-8AuVsœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "SplitText-5RcUo",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-5RcUoœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "AstraDB-8AuVs",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-8AuVsœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__Prompt-HCuAj{œdataTypeœ:œPromptœ,œidœ:œPrompt-HCuAjœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-cmjdt{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-cmjdtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-HCuAj",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-HCuAjœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-cmjdt",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-cmjdtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LanguageModelComponent",
+            "id": "LanguageModelComponent-cmjdt",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-mfQ3f",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__LanguageModelComponent-cmjdt{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-cmjdtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-mfQ3f{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-mfQ3fœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "LanguageModelComponent-cmjdt",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-cmjdtœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-mfQ3f",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-mfQ3fœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -295,7 +291,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-1w4cJ",
+          "id": "ChatInput-g8ha3",
           "node": {
             "base_classes": [
               "Message"
@@ -562,7 +558,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-1w4cJ",
+        "id": "ChatInput-g8ha3",
         "measured": {
           "height": 234,
           "width": 320
@@ -583,7 +579,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-I9T0w",
+          "id": "Prompt-HCuAj",
           "node": {
             "base_classes": [
               "Message"
@@ -744,7 +740,7 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-I9T0w",
+        "id": "Prompt-HCuAj",
         "measured": {
           "height": 433,
           "width": 320
@@ -765,7 +761,7 @@
         "data": {
           "description": "Split text into chunks based on specified criteria.",
           "display_name": "Split Text",
-          "id": "SplitText-5RcUo",
+          "id": "SplitText-iHZQk",
           "node": {
             "base_classes": [
               "Data"
@@ -951,7 +947,7 @@
         },
         "dragging": false,
         "height": 475,
-        "id": "SplitText-5RcUo",
+        "id": "SplitText-iHZQk",
         "measured": {
           "height": 475,
           "width": 320
@@ -970,7 +966,7 @@
       },
       {
         "data": {
-          "id": "note-BG8Kh",
+          "id": "note-B9a7p",
           "node": {
             "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
@@ -983,10 +979,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-BG8Kh",
+        "id": "note-B9a7p",
         "measured": {
           "height": 324,
-          "width": 325
+          "width": 324
         },
         "position": {
           "x": 374.388314931542,
@@ -1007,7 +1003,7 @@
       },
       {
         "data": {
-          "id": "note-IF0Cy",
+          "id": "note-zlGxX",
           "node": {
             "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
             "display_name": "Read Me",
@@ -1020,10 +1016,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-IF0Cy",
+        "id": "note-zlGxX",
         "measured": {
           "height": 324,
-          "width": 325
+          "width": 324
         },
         "position": {
           "x": 191.12162720143235,
@@ -1046,7 +1042,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-Dlahs",
+          "id": "ChatOutput-mfQ3f",
           "node": {
             "base_classes": [
               "Message"
@@ -1329,7 +1325,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-Dlahs",
+        "id": "ChatOutput-mfQ3f",
         "measured": {
           "height": 234,
           "width": 320
@@ -1348,7 +1344,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-ulN0y",
+          "id": "OpenAIEmbeddings-LqNei",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -1825,7 +1821,7 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-ulN0y",
+        "id": "OpenAIEmbeddings-LqNei",
         "measured": {
           "height": 320,
           "width": 320
@@ -1844,7 +1840,7 @@
       },
       {
         "data": {
-          "id": "note-odwIB",
+          "id": "note-qlZFl",
           "node": {
             "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick ▶️ **Run component** on the **Astra DB** component to load your data.\n\n* If you're using OSS Langflow, add your Astra DB Application Token to the Astra DB component.\n\n#### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
@@ -1857,10 +1853,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-odwIB",
+        "id": "note-qlZFl",
         "measured": {
           "height": 324,
-          "width": 325
+          "width": 324
         },
         "position": {
           "x": 955.3277857006676,
@@ -1881,7 +1877,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-OlQ6R",
+          "id": "OpenAIEmbeddings-EjaQd",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -2358,7 +2354,7 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-OlQ6R",
+        "id": "OpenAIEmbeddings-EjaQd",
         "measured": {
           "height": 320,
           "width": 320
@@ -2377,273 +2373,7 @@
       },
       {
         "data": {
-          "id": "File-C3stS",
-          "node": {
-            "base_classes": [
-              "Data"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Loads content from one or more files as a DataFrame.",
-            "display_name": "File",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "path",
-              "silent_errors",
-              "use_multithreading",
-              "concurrency_multithreading"
-            ],
-            "frozen": false,
-            "icon": "file-text",
-            "legacy": false,
-            "lf_version": "1.1.1",
-            "metadata": {},
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Files",
-                "group_outputs": false,
-                "method": "load_files",
-                "name": "dataframe",
-                "selected": "DataFrame",
-                "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from copy import deepcopy\nfrom typing import Any\n\nfrom langflow.base.data.base_file import BaseFileComponent\nfrom langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data\nfrom langflow.io import BoolInput, FileInput, IntInput, Output\nfrom langflow.schema.data import Data\n\n\nclass FileComponent(BaseFileComponent):\n    \"\"\"Handles loading and processing of individual or zipped text files.\n\n    This component supports processing multiple valid files within a zip archive,\n    resolving paths, validating file types, and optionally using multithreading for processing.\n    \"\"\"\n\n    display_name = \"File\"\n    description = \"Loads content from one or more files as a DataFrame.\"\n    icon = \"file-text\"\n    name = \"File\"\n\n    VALID_EXTENSIONS = TEXT_FILE_TYPES\n\n    _base_inputs = deepcopy(BaseFileComponent._base_inputs)\n\n    for input_item in _base_inputs:\n        if isinstance(input_item, FileInput) and input_item.name == \"path\":\n            input_item.real_time_refresh = True\n            break\n\n    inputs = [\n        *_base_inputs,\n        BoolInput(\n            name=\"use_multithreading\",\n            display_name=\"[Deprecated] Use Multithreading\",\n            advanced=True,\n            value=True,\n            info=\"Set 'Processing Concurrency' greater than 1 to enable multithreading.\",\n        ),\n        IntInput(\n            name=\"concurrency_multithreading\",\n            display_name=\"Processing Concurrency\",\n            advanced=True,\n            info=\"When multiple files are being processed, the number of files to process concurrently.\",\n            value=1,\n        ),\n    ]\n\n    outputs = [\n        *BaseFileComponent._base_outputs,\n    ]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002\n        \"\"\"Dynamically show only the relevant output based on the number of files processed.\"\"\"\n        if field_name == \"path\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n\n            # Add outputs based on the number of files in the path\n            if len(self.path) == 1:\n                # We need to check if the file is structured content\n                file_path = frontend_node[\"template\"][\"path\"][\"file_path\"][0]\n                if file_path.endswith((\".csv\", \".xlsx\", \".parquet\")):\n                    frontend_node[\"outputs\"].append(\n                        Output(display_name=\"Structured Content\", name=\"dataframe\", method=\"load_files_structured\"),\n                    )\n                elif file_path.endswith(\".json\"):\n                    frontend_node[\"outputs\"].append(\n                        Output(display_name=\"Structured Content\", name=\"json\", method=\"load_files_json\"),\n                    )\n\n                # All files get the raw content and path outputs\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\"),\n                )\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"File Path\", name=\"path\", method=\"load_files_path\"),\n                )\n            else:\n                # For multiple files, we only show the files output\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Files\", name=\"dataframe\", method=\"load_files\"),\n                )\n\n        return frontend_node\n\n    def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Processes files either sequentially or in parallel, depending on concurrency settings.\n\n        Args:\n            file_list (list[BaseFileComponent.BaseFile]): List of files to process.\n\n        Returns:\n            list[BaseFileComponent.BaseFile]: Updated list of files with merged data.\n        \"\"\"\n\n        def process_file(file_path: str, *, silent_errors: bool = False) -> Data | None:\n            \"\"\"Processes a single file and returns its Data object.\"\"\"\n            try:\n                return parse_text_file_to_data(file_path, silent_errors=silent_errors)\n            except FileNotFoundError as e:\n                msg = f\"File not found: {file_path}. Error: {e}\"\n                self.log(msg)\n                if not silent_errors:\n                    raise\n                return None\n            except Exception as e:\n                msg = f\"Unexpected error processing {file_path}: {e}\"\n                self.log(msg)\n                if not silent_errors:\n                    raise\n                return None\n\n        if not file_list:\n            msg = \"No files to process.\"\n            raise ValueError(msg)\n\n        concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)\n        file_count = len(file_list)\n\n        parallel_processing_threshold = 2\n        if concurrency < parallel_processing_threshold or file_count < parallel_processing_threshold:\n            if file_count > 1:\n                self.log(f\"Processing {file_count} files sequentially.\")\n            processed_data = [process_file(str(file.path), silent_errors=self.silent_errors) for file in file_list]\n        else:\n            self.log(f\"Starting parallel processing of {file_count} files with concurrency: {concurrency}.\")\n            file_paths = [str(file.path) for file in file_list]\n            processed_data = parallel_load_data(\n                file_paths,\n                silent_errors=self.silent_errors,\n                load_function=process_file,\n                max_concurrency=concurrency,\n            )\n\n        # Use rollup_basefile_data to merge processed data with BaseFile objects\n        return self.rollup_data(file_list, processed_data)\n"
-              },
-              "concurrency_multithreading": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Processing Concurrency",
-                "dynamic": false,
-                "info": "When multiple files are being processed, the number of files to process concurrently.",
-                "list": false,
-                "name": "concurrency_multithreading",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 4
-              },
-              "delete_server_file_after_processing": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Delete Server File After Processing",
-                "dynamic": false,
-                "info": "If true, the Server File Path will be deleted after processing.",
-                "list": false,
-                "name": "delete_server_file_after_processing",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "file_path": {
-                "_input_type": "HandleInput",
-                "advanced": true,
-                "display_name": "Server File Path",
-                "dynamic": false,
-                "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
-                "input_types": [
-                  "Data",
-                  "Message"
-                ],
-                "list": true,
-                "name": "file_path",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "ignore_unspecified_files": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Ignore Unspecified Files",
-                "dynamic": false,
-                "info": "If true, Data with no 'file_path' property will be ignored.",
-                "list": false,
-                "name": "ignore_unspecified_files",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "ignore_unsupported_extensions": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Ignore Unsupported Extensions",
-                "dynamic": false,
-                "info": "If true, files with unsupported extensions will not be processed.",
-                "list": false,
-                "name": "ignore_unsupported_extensions",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "path": {
-                "_input_type": "FileInput",
-                "advanced": false,
-                "display_name": "Files",
-                "dynamic": false,
-                "fileTypes": [
-                  "txt",
-                  "md",
-                  "mdx",
-                  "csv",
-                  "json",
-                  "yaml",
-                  "yml",
-                  "xml",
-                  "html",
-                  "htm",
-                  "pdf",
-                  "docx",
-                  "py",
-                  "sh",
-                  "sql",
-                  "js",
-                  "ts",
-                  "tsx",
-                  "zip",
-                  "tar",
-                  "tgz",
-                  "bz2",
-                  "gz"
-                ],
-                "file_path": [],
-                "info": "Supported file extensions: txt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx, py, sh, sql, js, ts, tsx; optionally bundled in file extensions: zip, tar, tgz, bz2, gz",
-                "list": true,
-                "name": "path",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "temp_file": false,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "file",
-                "value": ""
-              },
-              "separator": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "Separator",
-                "dynamic": false,
-                "info": "Specify the separator to use between multiple outputs in Message format.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "separator",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "\n\n"
-              },
-              "silent_errors": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Silent Errors",
-                "dynamic": false,
-                "info": "If true, errors will not raise an exception.",
-                "list": false,
-                "name": "silent_errors",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "use_multithreading": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "[Deprecated] Use Multithreading",
-                "dynamic": false,
-                "info": "Set 'Processing Concurrency' greater than 1 to enable multithreading.",
-                "list": false,
-                "name": "use_multithreading",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "dataframe",
-          "type": "File"
-        },
-        "dragging": false,
-        "height": 367,
-        "id": "File-C3stS",
-        "measured": {
-          "height": 367,
-          "width": 320
-        },
-        "position": {
-          "x": 1314.0643184619548,
-          "y": 1508.2155181023356
-        },
-        "positionAbsolute": {
-          "x": 1318.9043936921921,
-          "y": 1484.0151419511485
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 320
-      },
-      {
-        "data": {
-          "id": "note-aHmST",
+          "id": "note-p3NKF",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2656,7 +2386,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-aHmST",
+        "id": "note-p3NKF",
         "measured": {
           "height": 324,
           "width": 324
@@ -2675,7 +2405,7 @@
       },
       {
         "data": {
-          "id": "note-QvcXX",
+          "id": "note-msH3w",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2688,7 +2418,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-QvcXX",
+        "id": "note-msH3w",
         "measured": {
           "height": 324,
           "width": 324
@@ -2707,7 +2437,7 @@
       },
       {
         "data": {
-          "id": "note-xLYll",
+          "id": "note-5lklz",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2720,14 +2450,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-xLYll",
+        "id": "note-5lklz",
         "measured": {
           "height": 324,
           "width": 324
         },
         "position": {
           "x": 2350.297636215281,
-          "y": 525.0687902842766
+          "y": 577.4592910079571
         },
         "positionAbsolute": {
           "x": 2350.297636215281,
@@ -2739,397 +2469,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-GczRI",
-          "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
-            "beta": false,
-            "category": "models",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Generates text using OpenAI LLMs.",
-            "display_name": "OpenAI",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_value",
-              "system_message",
-              "stream",
-              "max_tokens",
-              "model_kwargs",
-              "json_mode",
-              "model_name",
-              "openai_api_base",
-              "api_key",
-              "temperature",
-              "seed"
-            ],
-            "frozen": false,
-            "icon": "OpenAI",
-            "key": "OpenAIModel",
-            "legacy": false,
-            "metadata": {
-              "keywords": [
-                "model",
-                "llm",
-                "language model",
-                "large language model"
-              ]
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Model Response",
-                "group_outputs": false,
-                "method": "text_response",
-                "name": "text_output",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Language Model",
-                "group_outputs": false,
-                "method": "build_model",
-                "name": "model_output",
-                "selected": "LanguageModel",
-                "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.14285714285714285,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "OPENAI_API_KEY"
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import (\n    OPENAI_MODEL_NAMES,\n    OPENAI_REASONING_MODEL_NAMES,\n)\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\nfrom langflow.logging import logger\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[1],\n            combobox=True,\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n            required=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            show=True,\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            info=\"The maximum number of retries to make when generating.\",\n            advanced=True,\n            value=5,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"The timeout for requests to OpenAI completion API.\",\n            advanced=True,\n            value=700,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        parameters = {\n            \"api_key\": SecretStr(self.api_key).get_secret_value() if self.api_key else None,\n            \"model_name\": self.model_name,\n            \"max_tokens\": self.max_tokens or None,\n            \"model_kwargs\": self.model_kwargs or {},\n            \"base_url\": self.openai_api_base or \"https://api.openai.com/v1\",\n            \"max_retries\": self.max_retries,\n            \"timeout\": self.timeout,\n        }\n\n        logger.info(f\"Model name: {self.model_name}\")\n        if self.model_name not in OPENAI_REASONING_MODEL_NAMES:\n            parameters[\"temperature\"] = self.temperature if self.temperature is not None else 0.1\n            parameters[\"seed\"] = self.seed\n\n        output = ChatOpenAI(**parameters)\n        if self.json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n        if field_name in {\"base_url\", \"model_name\", \"api_key\"} and field_value in OPENAI_REASONING_MODEL_NAMES:\n            build_config[\"temperature\"][\"show\"] = False\n            build_config[\"seed\"][\"show\"] = False\n        if field_name in {\"base_url\", \"model_name\", \"api_key\"} and field_value in OPENAI_MODEL_NAMES:\n            build_config[\"temperature\"][\"show\"] = True\n            build_config[\"seed\"][\"show\"] = True\n        return build_config\n"
-              },
-              "input_value": {
-                "_input_type": "MessageInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "json_mode": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "JSON Mode",
-                "dynamic": false,
-                "info": "If True, it will output JSON regardless of passing a schema.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "json_mode",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "max_retries": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Retries",
-                "dynamic": false,
-                "info": "The maximum number of retries to make when generating.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_retries",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 5
-              },
-              "max_tokens": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Tokens",
-                "dynamic": false,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_tokens",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 128000,
-                  "min": 0,
-                  "step": 0.1,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": ""
-              },
-              "model_kwargs": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "Additional keyword arguments to pass to the model.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "model_name": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": true,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
-                "dynamic": false,
-                "info": "",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.1",
-                  "gpt-4.1-mini",
-                  "gpt-4.1-nano",
-                  "gpt-4.5-preview",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "o1"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4.1-mini"
-              },
-              "openai_api_base": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "OpenAI API Base",
-                "dynamic": false,
-                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "openai_api_base",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "seed": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Seed",
-                "dynamic": false,
-                "info": "The seed controls the reproducibility of the job.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "seed",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1
-              },
-              "stream": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Stream",
-                "dynamic": false,
-                "info": "Stream the response from the model. Streaming works only in Chat.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "stream",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "system_message": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "display_name": "System Message",
-                "dynamic": false,
-                "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "system_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "temperature": {
-                "_input_type": "SliderInput",
-                "advanced": false,
-                "display_name": "Temperature",
-                "dynamic": false,
-                "info": "",
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
-                "name": "temperature",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 1,
-                  "min": 0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "type": "slider",
-                "value": 0.1
-              },
-              "timeout": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Timeout",
-                "dynamic": false,
-                "info": "The timeout for requests to OpenAI completion API.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 700
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "text_output",
-          "showNode": true,
-          "type": "OpenAIModel"
-        },
-        "dragging": false,
-        "id": "OpenAIModel-GczRI",
-        "measured": {
-          "height": 539,
-          "width": 320
-        },
-        "position": {
-          "x": 2365.714820732046,
-          "y": 600.6979286268308
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "parser-IEn6I",
+          "id": "parser-ehrBO",
           "node": {
             "base_classes": [
               "Message"
@@ -3291,7 +2631,7 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-IEn6I",
+        "id": "parser-ehrBO",
         "measured": {
           "height": 360,
           "width": 320
@@ -3305,7 +2645,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-Wep9C",
+          "id": "AstraDB-qCu1f",
           "node": {
             "base_classes": [
               "Data",
@@ -4053,7 +3393,7 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-Wep9C",
+        "id": "AstraDB-qCu1f",
         "measured": {
           "height": 501,
           "width": 320
@@ -4062,12 +3402,12 @@
           "x": 1206.2272993725155,
           "y": 491.41485400844977
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "AstraDB-8AuVs",
+          "id": "AstraDB-H2sZ0",
           "node": {
             "base_classes": [
               "Data",
@@ -4813,7 +4153,7 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-8AuVs",
+        "id": "AstraDB-H2sZ0",
         "measured": {
           "height": 501,
           "width": 320
@@ -4824,17 +4164,591 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "File-J8GVA",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Loads content from one or more files as a DataFrame.",
+            "display_name": "File",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "path",
+              "file_path",
+              "separator",
+              "silent_errors",
+              "delete_server_file_after_processing",
+              "ignore_unsupported_extensions",
+              "ignore_unspecified_files",
+              "use_multithreading",
+              "concurrency_multithreading"
+            ],
+            "frozen": false,
+            "icon": "file-text",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Raw Content",
+                "group_outputs": false,
+                "method": "load_files_message",
+                "name": "message",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from copy import deepcopy\nfrom typing import Any\n\nfrom langflow.base.data.base_file import BaseFileComponent\nfrom langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data\nfrom langflow.io import BoolInput, FileInput, IntInput, Output\nfrom langflow.schema.data import Data\n\n\nclass FileComponent(BaseFileComponent):\n    \"\"\"Handles loading and processing of individual or zipped text files.\n\n    This component supports processing multiple valid files within a zip archive,\n    resolving paths, validating file types, and optionally using multithreading for processing.\n    \"\"\"\n\n    display_name = \"File\"\n    description = \"Loads content from one or more files as a DataFrame.\"\n    icon = \"file-text\"\n    name = \"File\"\n\n    VALID_EXTENSIONS = TEXT_FILE_TYPES\n\n    _base_inputs = deepcopy(BaseFileComponent._base_inputs)\n\n    for input_item in _base_inputs:\n        if isinstance(input_item, FileInput) and input_item.name == \"path\":\n            input_item.real_time_refresh = True\n            break\n\n    inputs = [\n        *_base_inputs,\n        BoolInput(\n            name=\"use_multithreading\",\n            display_name=\"[Deprecated] Use Multithreading\",\n            advanced=True,\n            value=True,\n            info=\"Set 'Processing Concurrency' greater than 1 to enable multithreading.\",\n        ),\n        IntInput(\n            name=\"concurrency_multithreading\",\n            display_name=\"Processing Concurrency\",\n            advanced=True,\n            info=\"When multiple files are being processed, the number of files to process concurrently.\",\n            value=1,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\"),\n    ]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002\n        \"\"\"Dynamically show only the relevant output based on the number of files processed.\"\"\"\n        if field_name == \"path\":\n            if len(self.path) == 0:\n                return frontend_node\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n\n            # Add outputs based on the number of files in the path\n            if len(self.path) == 1:\n                # We need to check if the file is structured content\n                file_path = frontend_node[\"template\"][\"path\"][\"file_path\"][0]\n                if file_path.endswith((\".csv\", \".xlsx\", \".parquet\")):\n                    frontend_node[\"outputs\"].append(\n                        Output(display_name=\"Structured Content\", name=\"dataframe\", method=\"load_files_structured\"),\n                    )\n                elif file_path.endswith(\".json\"):\n                    frontend_node[\"outputs\"].append(\n                        Output(display_name=\"Structured Content\", name=\"json\", method=\"load_files_json\"),\n                    )\n\n                # All files get the raw content and path outputs\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Raw Content\", name=\"message\", method=\"load_files_message\"),\n                )\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"File Path\", name=\"path\", method=\"load_files_path\"),\n                )\n            else:\n                # For multiple files, we only show the files output\n                frontend_node[\"outputs\"].append(\n                    Output(display_name=\"Files\", name=\"dataframe\", method=\"load_files\"),\n                )\n\n        return frontend_node\n\n    def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Processes files either sequentially or in parallel, depending on concurrency settings.\n\n        Args:\n            file_list (list[BaseFileComponent.BaseFile]): List of files to process.\n\n        Returns:\n            list[BaseFileComponent.BaseFile]: Updated list of files with merged data.\n        \"\"\"\n\n        def process_file(file_path: str, *, silent_errors: bool = False) -> Data | None:\n            \"\"\"Processes a single file and returns its Data object.\"\"\"\n            try:\n                return parse_text_file_to_data(file_path, silent_errors=silent_errors)\n            except FileNotFoundError as e:\n                msg = f\"File not found: {file_path}. Error: {e}\"\n                self.log(msg)\n                if not silent_errors:\n                    raise\n                return None\n            except Exception as e:\n                msg = f\"Unexpected error processing {file_path}: {e}\"\n                self.log(msg)\n                if not silent_errors:\n                    raise\n                return None\n\n        if not file_list:\n            msg = \"No files to process.\"\n            raise ValueError(msg)\n\n        concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)\n        file_count = len(file_list)\n\n        parallel_processing_threshold = 2\n        if concurrency < parallel_processing_threshold or file_count < parallel_processing_threshold:\n            if file_count > 1:\n                self.log(f\"Processing {file_count} files sequentially.\")\n            processed_data = [process_file(str(file.path), silent_errors=self.silent_errors) for file in file_list]\n        else:\n            self.log(f\"Starting parallel processing of {file_count} files with concurrency: {concurrency}.\")\n            file_paths = [str(file.path) for file in file_list]\n            processed_data = parallel_load_data(\n                file_paths,\n                silent_errors=self.silent_errors,\n                load_function=process_file,\n                max_concurrency=concurrency,\n            )\n\n        # Use rollup_basefile_data to merge processed data with BaseFile objects\n        return self.rollup_data(file_list, processed_data)\n"
+              },
+              "concurrency_multithreading": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Processing Concurrency",
+                "dynamic": false,
+                "info": "When multiple files are being processed, the number of files to process concurrently.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "concurrency_multithreading",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1
+              },
+              "delete_server_file_after_processing": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Delete Server File After Processing",
+                "dynamic": false,
+                "info": "If true, the Server File Path will be deleted after processing.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "delete_server_file_after_processing",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "file_path": {
+                "_input_type": "HandleInput",
+                "advanced": true,
+                "display_name": "Server File Path",
+                "dynamic": false,
+                "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
+                "input_types": [
+                  "Data",
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "file_path",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "ignore_unspecified_files": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Ignore Unspecified Files",
+                "dynamic": false,
+                "info": "If true, Data with no 'file_path' property will be ignored.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "ignore_unspecified_files",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "ignore_unsupported_extensions": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Ignore Unsupported Extensions",
+                "dynamic": false,
+                "info": "If true, files with unsupported extensions will not be processed.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "ignore_unsupported_extensions",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "path": {
+                "_input_type": "FileInput",
+                "advanced": false,
+                "display_name": "Files",
+                "dynamic": false,
+                "fileTypes": [
+                  "txt",
+                  "md",
+                  "mdx",
+                  "csv",
+                  "json",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "pdf",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx",
+                  "zip",
+                  "tar",
+                  "tgz",
+                  "bz2",
+                  "gz"
+                ],
+                "file_path": [],
+                "info": "Supported file extensions: txt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx, py, sh, sql, js, ts, tsx; optionally bundled in file extensions: zip, tar, tgz, bz2, gz",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "path",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "temp_file": false,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "file",
+                "value": ""
+              },
+              "separator": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "Specify the separator to use between multiple outputs in Message format.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "separator",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "\n\n"
+              },
+              "silent_errors": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Silent Errors",
+                "dynamic": false,
+                "info": "If true, errors will not raise an exception.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "silent_errors",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "use_multithreading": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "[Deprecated] Use Multithreading",
+                "dynamic": false,
+                "info": "Set 'Processing Concurrency' greater than 1 to enable multithreading.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_multithreading",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "File"
+        },
+        "dragging": false,
+        "id": "File-J8GVA",
+        "measured": {
+          "height": 229,
+          "width": 320
+        },
+        "position": {
+          "x": 1330.7650978046952,
+          "y": 1431.5905495627503
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "LanguageModelComponent-cmjdt",
+          "node": {
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Runs a language model given a specified provider. ",
+            "display_name": "Language Model",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "provider",
+              "model_name",
+              "api_key",
+              "input_value",
+              "system_message",
+              "stream",
+              "temperature"
+            ],
+            "frozen": false,
+            "icon": "brain-circuit",
+            "legacy": false,
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Model Response",
+                "group_outputs": false,
+                "method": "text_response",
+                "name": "text_output",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Language Model",
+                "group_outputs": false,
+                "method": "build_model",
+                "name": "model_output",
+                "options": null,
+                "required_inputs": null,
+                "selected": "LanguageModel",
+                "tool_mode": true,
+                "types": [
+                  "LanguageModel"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "priority": 0,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "OpenAI API Key",
+                "dynamic": false,
+                "info": "Model Provider API key",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "OPENAI_API_KEY"
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from typing import Any\n\nfrom langchain_anthropic import ChatAnthropic\nfrom langchain_google_genai import ChatGoogleGenerativeAI\nfrom langchain_openai import ChatOpenAI\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider. \"\n    icon = \"brain-circuit\"\n    category = \"models\"\n    priority = 0  # Set priority to 0 to make it appear first\n\n    inputs = [\n        DropdownInput(\n            name=\"provider\",\n            display_name=\"Model Provider\",\n            options=[\"OpenAI\", \"Anthropic\", \"Google\"],\n            value=\"OpenAI\",\n            info=\"Select the model provider\",\n            real_time_refresh=True,\n            options_metadata=[{\"icon\": \"OpenAI\"}, {\"icon\": \"Anthropic\"}, {\"icon\": \"GoogleGenerativeAI\"}],\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n            info=\"Select the model to use\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        provider = self.provider\n        model_name = self.model_name\n        temperature = self.temperature\n        stream = self.stream\n\n        if provider == \"OpenAI\":\n            if not self.api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n            return ChatOpenAI(\n                model_name=model_name,\n                temperature=temperature,\n                streaming=stream,\n                openai_api_key=self.api_key,\n            )\n        if provider == \"Anthropic\":\n            if not self.api_key:\n                msg = \"Anthropic API key is required when using Anthropic provider\"\n                raise ValueError(msg)\n            return ChatAnthropic(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                anthropic_api_key=self.api_key,\n            )\n        if provider == \"Google\":\n            if not self.api_key:\n                msg = \"Google API key is required when using Google provider\"\n                raise ValueError(msg)\n            return ChatGoogleGenerativeAI(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                google_api_key=self.api_key,\n            )\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        if field_name == \"provider\":\n            if field_value == \"OpenAI\":\n                build_config[\"model_name\"][\"options\"] = OPENAI_MODEL_NAMES\n                build_config[\"model_name\"][\"value\"] = OPENAI_MODEL_NAMES[0]\n                build_config[\"api_key\"][\"display_name\"] = \"OpenAI API Key\"\n            elif field_value == \"Anthropic\":\n                build_config[\"model_name\"][\"options\"] = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"value\"] = ANTHROPIC_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Anthropic API Key\"\n            elif field_value == \"Google\":\n                build_config[\"model_name\"][\"options\"] = GOOGLE_GENERATIVE_AI_MODELS\n                build_config[\"model_name\"][\"value\"] = GOOGLE_GENERATIVE_AI_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Google API Key\"\n        return build_config\n"
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "The input text to send to the model",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "model_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Name",
+                "dynamic": false,
+                "info": "Select the model to use",
+                "name": "model_name",
+                "options": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
+                  "gpt-4.5-preview",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "gpt-4o-mini"
+              },
+              "provider": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Provider",
+                "dynamic": false,
+                "info": "Select the model provider",
+                "name": "provider",
+                "options": [
+                  "OpenAI",
+                  "Anthropic",
+                  "Google"
+                ],
+                "options_metadata": [
+                  {
+                    "icon": "OpenAI"
+                  },
+                  {
+                    "icon": "Anthropic"
+                  },
+                  {
+                    "icon": "GoogleGenerativeAI"
+                  }
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "OpenAI"
+              },
+              "stream": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Stream",
+                "dynamic": false,
+                "info": "Whether to stream the response",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "stream",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "system_message": {
+                "_input_type": "MultilineInput",
+                "advanced": true,
+                "copy_field": false,
+                "display_name": "System Message",
+                "dynamic": false,
+                "info": "A system message that helps set the behavior of the assistant",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "system_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "temperature": {
+                "_input_type": "SliderInput",
+                "advanced": true,
+                "display_name": "Temperature",
+                "dynamic": false,
+                "info": "Controls randomness in responses",
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
+                "name": "temperature",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 1,
+                  "min": 0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "title_case": false,
+                "tool_mode": false,
+                "type": "slider",
+                "value": 0.1
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "LanguageModelComponent"
+        },
+        "dragging": false,
+        "id": "LanguageModelComponent-cmjdt",
+        "measured": {
+          "height": 450,
+          "width": 320
+        },
+        "position": {
+          "x": 2354.7612483129965,
+          "y": 633.8261067248878
+        },
+        "selected": false,
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -218.5246908040316,
-      "y": -275.7883822982229,
-      "zoom": 0.5382133171428375
+      "x": -15.798686238525761,
+      "y": -165.1033705691603,
+      "zoom": 0.4569209426006492
     }
   },
   "description": "Load your data for chat context with Retrieval Augmented Generation.",
   "endpoint_name": null,
-  "id": "20809df7-902f-4ea8-b4e5-c395b171633b",
+  "id": "769ebe18-11b2-4cb3-96a3-eef00d86578e",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Vector Store RAG",
