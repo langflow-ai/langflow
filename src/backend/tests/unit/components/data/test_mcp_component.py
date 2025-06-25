@@ -3,11 +3,41 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.components.data.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
+from langflow.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 # TODO: This test suite is incomplete and is in need of an update to handle the latest MCP component changes.
-pytestmark = pytest.mark.skip(reason="Skipping entire file")
+# pytestmark = pytest.mark.skip(reason="Skipping entire file")
+
+
+class TestMCPToolsComponentBuildOutput:
+    @pytest.fixture
+    def component(self):
+        return MCPToolsComponent()
+
+    @pytest.mark.asyncio
+    async def test_build_output_with_message_object(self, component):
+        # Mock dependencies
+        component.update_tool_list = AsyncMock(return_value=([], None))
+        component.get_inputs_for_all_tools = MagicMock(
+            return_value={
+                "test_tool": [MagicMock(name="input_value")],
+            }
+        )
+        mock_tool = AsyncMock()
+        component._tool_cache = {"test_tool": mock_tool}
+
+        # Set component attributes
+        component.tool = "test_tool"
+        message = Message(text="Hello, world!")
+        component.input_value = message
+
+        # Call the method
+        await component.build_output()
+
+        # Assert that the tool was called with the message text
+        mock_tool.coroutine.assert_awaited_once_with(input_value="Hello, world!")
 
 
 class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
