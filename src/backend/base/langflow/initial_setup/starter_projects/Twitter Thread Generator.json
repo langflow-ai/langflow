@@ -283,6 +283,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
+              "code_hash": "f9edc9cba9f5",
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -594,6 +595,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
+              "code_hash": "06b84be93c17",
               "module": "langflow.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -711,6 +713,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
+              "code_hash": "8564ebe4e79d",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -1019,6 +1022,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
+              "code_hash": "06b84be93c17",
               "module": "langflow.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -1126,6 +1130,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
+              "code_hash": "06b84be93c17",
               "module": "langflow.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -1233,6 +1238,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
+              "code_hash": "06b84be93c17",
               "module": "langflow.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -1340,6 +1346,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
+              "code_hash": "06b84be93c17",
               "module": "langflow.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -1447,6 +1454,7 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {
+              "code_hash": "06b84be93c17",
               "module": "langflow.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -1602,6 +1610,7 @@
             "icon": "braces",
             "legacy": false,
             "metadata": {
+              "code_hash": "d3637e35a7d1",
               "module": "langflow.components.prompts.prompt.PromptComponent"
             },
             "minimized": false,

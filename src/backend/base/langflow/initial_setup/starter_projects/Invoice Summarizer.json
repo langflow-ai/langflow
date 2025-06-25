@@ -171,6 +171,7 @@
             "is_output": null,
             "legacy": false,
             "metadata": {
+              "code_hash": "d3637e35a7d1",
               "module": "langflow.components.prompts.prompt.PromptComponent"
             },
             "minimized": false,
@@ -304,6 +305,7 @@
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {
+              "code_hash": "8564ebe4e79d",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -667,6 +669,7 @@
             "key": "needle",
             "legacy": false,
             "metadata": {
+              "code_hash": "2142cda01c2b",
               "module": "langflow.components.needle.needle.NeedleComponent"
             },
             "minimized": false,
@@ -874,6 +877,7 @@
             "key": "ChatInput",
             "legacy": false,
             "metadata": {
+              "code_hash": "f9edc9cba9f5",
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,

@@ -191,6 +191,7 @@
             "legacy": false,
             "lf_version": "1.2.0",
             "metadata": {
+              "code_hash": "f7979d5cc726",
               "module": "langflow.components.helpers.calculator_core.CalculatorComponent"
             },
             "minimized": false,
@@ -348,6 +349,7 @@
             "key": "ChatInput",
             "legacy": false,
             "metadata": {
+              "code_hash": "f9edc9cba9f5",
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -665,6 +667,7 @@
             "key": "ChatOutput",
             "legacy": false,
             "metadata": {
+              "code_hash": "8564ebe4e79d",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -1522,6 +1525,7 @@
             "key": "URLComponent",
             "legacy": false,
             "metadata": {
+              "code_hash": "85918725b9b5",
               "module": "langflow.components.data.url.URLComponent"
             },
             "minimized": false,

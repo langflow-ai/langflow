@@ -122,6 +122,7 @@
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {
+              "code_hash": "d3637e35a7d1",
               "module": "langflow.components.prompts.prompt.PromptComponent"
             },
             "output_types": [],
@@ -426,6 +427,7 @@
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {
+              "code_hash": "d3637e35a7d1",
               "module": "langflow.components.prompts.prompt.PromptComponent"
             },
             "output_types": [],
@@ -563,6 +565,7 @@
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {
+              "code_hash": "8564ebe4e79d",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
