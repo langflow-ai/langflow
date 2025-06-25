@@ -41,9 +41,7 @@ withEventDeliveryModes(
       await expect(stopButton).toBeHidden({ timeout: 120000 });
     }
 
-    const output = await page
-      .getByTestId("div-chat-message")
-      .innerText();
+    const output = await page.getByTestId("div-chat-message").innerText();
     expect(output).toContain("Charmander");
     expect(output.length).toBeGreaterThan(100);
   },
