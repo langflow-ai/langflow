@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_openai import ChatOpenAI
-from langflow.components.languagemodels.openai_chat_model import OpenAIModelComponent
+from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 

@@ -1110,7 +1110,7 @@
                 "password": true,
                 "placeholder": "",
                 "real_time_refresh": true,
-                "required": true,
+                "required": false,
                 "show": true,
                 "title_case": false,
                 "type": "str",
