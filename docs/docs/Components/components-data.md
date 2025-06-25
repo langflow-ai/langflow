@@ -38,8 +38,6 @@ This component makes HTTP requests using URLs or cURL commands.
 1. To use this component in a flow, connect the **Data** output to a component that accepts the input.
 For example, connect the **API Request** component to a **Chat Output** component.
 
-![API request into a chat output component](/img/component-api-request-chat-output.png)
-
 2. In the API component's **URLs** field, enter the endpoint for your request.
 This example uses `https://dummy-json.mock.beeceptor.com/posts`, which is a list of technology blog posts.
 
@@ -387,8 +385,6 @@ In the component's **URLs** field, enter the URL you want to load. To add multip
 1. To use this component in a flow, connect the **DataFrame** output to a component that accepts the input.
 For example, connect the **URL** component to a **Chat Output** component.
 
-![URL request into a chat output component](/img/component-url.png)
-
 2. In the URL component's **URLs** field, enter the URL for your request.
 This example uses `langflow.org`.
 
@@ -401,22 +397,7 @@ The component crawls by link traversal, not by URL path depth.
 The text contents of the URL are returned to the Playground as a structured DataFrame.
 
 5. In the **URL** component, change the output port to **Message**, and then run the flow again.
-The text contents of the URL are returned as unstructured raw text, which you can extract patterns from with the **Regex Extractor** tool.
-
-6. Connect the **URL** component to a **Regex Extractor** and **Chat Output**.
-
-![Regex extractor connected to url component](/img/component-url-regex.png)
-
-7. In the **Regex Extractor** tool, enter a pattern to extract text from the **URL** component's raw output.
-This example extracts the first paragraph from the "In the News" section of `https://en.wikipedia.org/wiki/Main_Page`.
-```
-In the news\s*\n(.*?)(?=\n\n)
-```
-
-Result:
-```
-Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictured) dies at the age of 89.
-```
+The text contents of the URL are returned as unstructured raw text, which you can extract patterns with the [Parser](/components-processing#parser) component.
 
 <details>
 <summary>Parameters</summary>

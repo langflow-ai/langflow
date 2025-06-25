@@ -240,7 +240,7 @@ This component can perform the following operations on Pandas [DataFrame](https:
 
 ## LLM router
 
-This component routes requests to the most appropriate LLM based on OpenRouter model specifications.
+This component routes requests to the most appropriate LLM based on [OpenRouter](https://openrouter.ai/docs/quickstart) model specifications.
 
 <details>
 <summary>Parameters</summary>
@@ -1098,8 +1098,6 @@ This component extracts patterns from text using regular expressions. It can be 
 To use this component in a flow:
 
 1. Connect the **Regex Extractor** to a **URL** component and a **Chat Output** component.
-
-![Regex extractor connected to url component](/img/component-url-regex.png)
 
 2. In the **Regex Extractor** tool, enter a pattern to extract text from the **URL** component's raw output.
 This example extracts the first paragraph from the "In the News" section of `https://en.wikipedia.org/wiki/Main_Page`:
