@@ -103,7 +103,7 @@
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {
-              "code_hash": "864db2a1d8c5",
+              "code_hash": "cdea312e9de9",
               "module": "langflow.components.scrapegraph.scrapegraph_search_api.ScrapeGraphSearchApi"
             },
             "minimized": false,
@@ -277,7 +277,7 @@
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {
-              "code_hash": "f9edc9cba9f5",
+              "code_hash": "9a4038b06a62",
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -591,7 +591,7 @@
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {
-              "code_hash": "8564ebe4e79d",
+              "code_hash": "ac7bebb9ed88",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,

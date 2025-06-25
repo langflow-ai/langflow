@@ -48,6 +48,7 @@ async def test_code_hash_uniqueness():
             metadata = comp.get("metadata", {})
             if metadata.get("code_hash"):
                 all_hashes.append(metadata["code_hash"])
+
     # Check that we have some components with metadata
     assert len(all_hashes) > 0, "No components with code hashes found"
     # Check that we have reasonable uniqueness in hashes

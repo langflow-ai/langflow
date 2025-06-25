@@ -228,7 +228,7 @@
             "legacy": false,
             "lf_version": "1.2.0",
             "metadata": {
-              "code_hash": "f9edc9cba9f5",
+              "code_hash": "9a4038b06a62",
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "output_types": [],
@@ -529,7 +529,7 @@
             "legacy": false,
             "lf_version": "1.2.0",
             "metadata": {
-              "code_hash": "8564ebe4e79d",
+              "code_hash": "ac7bebb9ed88",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
@@ -1420,7 +1420,7 @@
             "legacy": false,
             "lf_version": "1.2.0",
             "metadata": {
-              "code_hash": "f7979d5cc726",
+              "code_hash": "4fe13f277439",
               "module": "langflow.components.helpers.calculator_core.CalculatorComponent"
             },
             "minimized": false,
@@ -1578,7 +1578,7 @@
             "legacy": false,
             "lf_version": "1.2.0",
             "metadata": {
-              "code_hash": "a559ba348cb2",
+              "code_hash": "727befdc79e7",
               "module": "langflow.components.search.search.SearchComponent"
             },
             "minimized": false,

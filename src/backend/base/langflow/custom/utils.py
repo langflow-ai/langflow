@@ -33,26 +33,30 @@ from langflow.utils import validate
 from langflow.utils.util import get_base_classes
 
 
-def _generate_code_hash(obj: type, modname: str) -> str | None:
-    """Generate a hash of the component class source code.
+def _generate_code_hash(source_code: str, modname: str, class_name: str) -> str | None:
+    """Generate a hash of the component source code.
 
     Args:
-        obj: The component class object
+        source_code: The source code string
         modname: The module name for fallback identification
+        class_name: The class name for fallback identification
 
     Returns:
-        SHA256 hash of the source code, or None if unable to extract source
+        SHA256 hash of the source code, or None if unable to process
     """
     try:
-        # Try to get the source code of the class
-        source_code = inspect.getsource(obj)
+        if not source_code:
+            # Fallback: hash the module name + class name as a weak identifier
+            fallback_str = f"{modname}.{class_name}"
+            return hashlib.sha256(fallback_str.encode("utf-8")).hexdigest()[:12]
+
         # Generate SHA256 hash of the source code
         return hashlib.sha256(source_code.encode("utf-8")).hexdigest()[:12]  # First 12 chars for brevity
-    except (OSError, TypeError) as e:
-        # inspect.getsource can fail for built-in classes, dynamically created classes, etc.
-        logger.debug(f"Could not extract source code for {obj.__name__} in {modname}: {e}")
+    except (UnicodeEncodeError, TypeError, ValueError) as e:
+        # Handle encoding, type, or value errors during hashing
+        logger.debug(f"Could not generate hash for {class_name} in {modname}: {e}")
         # Fallback: hash the module name + class name as a weak identifier
-        fallback_str = f"{modname}.{obj.__name__}"
+        fallback_str = f"{modname}.{class_name}"
         return hashlib.sha256(fallback_str.encode("utf-8")).hexdigest()[:12]
 
 
@@ -464,7 +468,7 @@ def build_custom_component_template_from_inputs(
         frontend_node.metadata["module"] = module_name
 
         # Generate code hash for cache invalidation and debugging
-        code_hash = _generate_code_hash(cc_instance.__class__, module_name)
+        code_hash = _generate_code_hash(custom_component._code, module_name, ctype_name)
         if code_hash:
             frontend_node.metadata["code_hash"] = code_hash
 
@@ -531,7 +535,7 @@ def build_custom_component_template(
             frontend_node.metadata["module"] = module_name
 
             # Generate code hash for cache invalidation and debugging
-            code_hash = _generate_code_hash(custom_instance.__class__, module_name)
+            code_hash = _generate_code_hash(custom_component._code, module_name, custom_component.__class__.__name__)
             if code_hash:
                 frontend_node.metadata["code_hash"] = code_hash
 

@@ -319,7 +319,7 @@
             "legacy": false,
             "lf_version": "1.2.0",
             "metadata": {
-              "code_hash": "f9edc9cba9f5",
+              "code_hash": "9a4038b06a62",
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "output_types": [],
@@ -615,7 +615,7 @@
             "legacy": false,
             "lf_version": "1.1.1",
             "metadata": {
-              "code_hash": "d3637e35a7d1",
+              "code_hash": "3bf0b511e227",
               "module": "langflow.components.prompts.prompt.PromptComponent"
             },
             "name": "",
@@ -793,7 +793,7 @@
             "legacy": false,
             "lf_version": "1.1.1",
             "metadata": {
-              "code_hash": "2eba532117b6",
+              "code_hash": "0ba6d157674c",
               "module": "langflow.components.processing.split_text.SplitTextComponent"
             },
             "output_types": [],
@@ -1081,7 +1081,7 @@
             "legacy": false,
             "lf_version": "1.1.1",
             "metadata": {
-              "code_hash": "8564ebe4e79d",
+              "code_hash": "ac7bebb9ed88",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
@@ -1398,7 +1398,7 @@
             "legacy": false,
             "lf_version": "1.2.0",
             "metadata": {
-              "code_hash": "b59073334ac7",
+              "code_hash": "2691dee277c9",
               "module": "langflow.components.embeddings.openai.OpenAIEmbeddingsComponent"
             },
             "output_types": [],
@@ -1934,7 +1934,7 @@
             "legacy": false,
             "lf_version": "1.1.1",
             "metadata": {
-              "code_hash": "b59073334ac7",
+              "code_hash": "2691dee277c9",
               "module": "langflow.components.embeddings.openai.OpenAIEmbeddingsComponent"
             },
             "output_types": [],
@@ -2416,7 +2416,7 @@
             "legacy": false,
             "lf_version": "1.1.1",
             "metadata": {
-              "code_hash": "2e2ec8b82997",
+              "code_hash": "0c57c835f136",
               "module": "langflow.components.data.file.FileComponent"
             },
             "output_types": [],
@@ -2804,7 +2804,7 @@
             "key": "OpenAIModel",
             "legacy": false,
             "metadata": {
-              "code_hash": "c9cc24acf077",
+              "code_hash": "3fb5e0925af1",
               "keywords": [
                 "model",
                 "llm",
@@ -3382,7 +3382,7 @@
             "icon": "AstraDB",
             "legacy": false,
             "metadata": {
-              "code_hash": "d5814f5fa783",
+              "code_hash": "95887517298c",
               "module": "langflow.components.vectorstores.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,
@@ -4147,7 +4147,7 @@
             "icon": "AstraDB",
             "legacy": false,
             "metadata": {
-              "code_hash": "d5814f5fa783",
+              "code_hash": "95887517298c",
               "module": "langflow.components.vectorstores.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,

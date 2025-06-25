@@ -112,7 +112,7 @@
             "legacy": false,
             "lf_version": "1.2.0",
             "metadata": {
-              "code_hash": "f9edc9cba9f5",
+              "code_hash": "9a4038b06a62",
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -429,7 +429,7 @@
             "legacy": false,
             "lf_version": "1.2.0",
             "metadata": {
-              "code_hash": "8564ebe4e79d",
+              "code_hash": "ac7bebb9ed88",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -831,7 +831,7 @@
             "key": "APIRequest",
             "legacy": false,
             "metadata": {
-              "code_hash": "a88f9e40259e",
+              "code_hash": "56e08ac1c8ae",
               "module": "langflow.components.data.api_request.APIRequestComponent"
             },
             "minimized": false,

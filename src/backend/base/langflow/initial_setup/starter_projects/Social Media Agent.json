@@ -144,7 +144,7 @@
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {
-              "code_hash": "0a7a243e73ac",
+              "code_hash": "233d7ef687d5",
               "module": "langflow.components.apify.apify_actor.ApifyActorsComponent"
             },
             "minimized": false,
@@ -350,7 +350,7 @@
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {
-              "code_hash": "0a7a243e73ac",
+              "code_hash": "233d7ef687d5",
               "module": "langflow.components.apify.apify_actor.ApifyActorsComponent"
             },
             "minimized": false,
@@ -643,7 +643,7 @@
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {
-              "code_hash": "f9edc9cba9f5",
+              "code_hash": "9a4038b06a62",
               "module": "langflow.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -958,7 +958,7 @@
             "legacy": false,
             "lf_version": "1.4.2",
             "metadata": {
-              "code_hash": "8564ebe4e79d",
+              "code_hash": "ac7bebb9ed88",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,

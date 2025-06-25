@@ -254,7 +254,7 @@
             "icon": "file-text",
             "legacy": false,
             "metadata": {
-              "code_hash": "2e2ec8b82997",
+              "code_hash": "0c57c835f136",
               "module": "langflow.components.data.file.FileComponent"
             },
             "minimized": false,
@@ -548,7 +548,7 @@
             "icon": "braces",
             "legacy": false,
             "metadata": {
-              "code_hash": "d3637e35a7d1",
+              "code_hash": "3bf0b511e227",
               "module": "langflow.components.prompts.prompt.PromptComponent"
             },
             "minimized": false,
@@ -699,7 +699,7 @@
             "icon": "braces",
             "legacy": false,
             "metadata": {
-              "code_hash": "d3637e35a7d1",
+              "code_hash": "3bf0b511e227",
               "module": "langflow.components.prompts.prompt.PromptComponent"
             },
             "minimized": false,
@@ -848,7 +848,7 @@
             "icon": "braces",
             "legacy": false,
             "metadata": {
-              "code_hash": "d3637e35a7d1",
+              "code_hash": "3bf0b511e227",
               "module": "langflow.components.prompts.prompt.PromptComponent"
             },
             "minimized": false,
@@ -1008,7 +1008,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
-              "code_hash": "8564ebe4e79d",
+              "code_hash": "ac7bebb9ed88",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -1319,7 +1319,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "metadata": {
-              "code_hash": "8564ebe4e79d",
+              "code_hash": "ac7bebb9ed88",
               "module": "langflow.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
