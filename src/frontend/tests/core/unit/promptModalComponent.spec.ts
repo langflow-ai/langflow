@@ -60,12 +60,12 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
-    await page.waitForSelector('[data-testid="promptsPrompt"]', {
+    await page.waitForSelector('[data-testid=processingPrompt Template]', {
       timeout: 3000,
     });
 
     await page
-      .locator('//*[@id="promptsPrompt"]')
+      .locator('//*[@id="processingPrompt Template"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -145,12 +145,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
-    await page.waitForSelector('[data-testid="promptsPrompt"]', {
+    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
       timeout: 3000,
     });
 
     await page
-      .locator('//*[@id="promptsPrompt"]')
+      .locator('//*[@id="processingPrompt Template"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
