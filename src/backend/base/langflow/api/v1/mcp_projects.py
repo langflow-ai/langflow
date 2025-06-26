@@ -327,7 +327,7 @@ async def install_mcp_config(
     request: Request,
     current_user: CurrentActiveMCPUser,
 ):
-    """Install MCP server configuration for Cursor or Claude."""
+    """Install MCP server configuration for Cursor, Windsurf, or Claude."""
     # Check if the request is coming from a local IP address
     client_ip = get_client_ip(request)
     if not is_local_ip(client_ip):
@@ -408,6 +408,8 @@ async def install_mcp_config(
         # Determine the config file path based on the client and OS
         if body.client.lower() == "cursor":
             config_path = Path.home() / ".cursor" / "mcp.json"
+        elif body.client.lower() == "windsurf":
+            config_path = Path.home() / ".codeium" / "windsurf" / "mcp_config.json"
         elif body.client.lower() == "claude":
             if os_type == "Darwin":  # macOS
                 config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
@@ -502,7 +504,7 @@ async def check_installed_mcp_servers(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
 ):
-    """Check if MCP server configuration is installed for this project in Cursor or Claude."""
+    """Check if MCP server configuration is installed for this project in Cursor, Windsurf, or Claude."""
     try:
         # Verify project exists and user has access
         async with session_scope() as session:
@@ -543,6 +545,27 @@ async def check_installed_mcp_servers(
                         )
             except json.JSONDecodeError:
                 logger.warning("Failed to parse Cursor config JSON at: %s", cursor_config_path)
+
+        # Check Windsurf configuration
+        windsurf_config_path = Path.home() / ".codeium" / "windsurf" / "mcp_config.json"
+        logger.debug(
+            "Checking Windsurf config at: %s (exists: %s)", windsurf_config_path, windsurf_config_path.exists()
+        )
+        if windsurf_config_path.exists():
+            try:
+                with windsurf_config_path.open("r") as f:
+                    windsurf_config = json.load(f)
+                    if "mcpServers" in windsurf_config and project_server_name in windsurf_config["mcpServers"]:
+                        logger.debug("Found Windsurf config for project server: %s", project_server_name)
+                        results.append("windsurf")
+                    else:
+                        logger.debug(
+                            "Windsurf config exists but no entry for server: %s (available servers: %s)",
+                            project_server_name,
+                            list(windsurf_config.get("mcpServers", {}).keys()),
+                        )
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse Windsurf config JSON at: %s", windsurf_config_path)
 
         # Check Claude configuration
         claude_config_path = None
