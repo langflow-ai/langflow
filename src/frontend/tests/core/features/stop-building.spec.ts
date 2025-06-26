@@ -83,7 +83,7 @@ test(
       .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .click();
     await page
-      .getByTestId("handle-splittext-shownode-data or dataframe-left")
+      .getByTestId("handle-splittext-shownode-input-left")
       .click();
 
     //connection 2
