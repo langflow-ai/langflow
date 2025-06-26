@@ -603,6 +603,7 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 
     # Handle Unicode encoding errors on Windows
     try:
+        console.print()  # Add line break before banner
         console.print(Panel.fit(message, border_style="#7528FC", padding=(1, 2)))
     except UnicodeEncodeError:
         # Fallback to a simpler banner without emojis for Windows systems with encoding issues
@@ -614,6 +615,7 @@ def print_banner(host: str, port: int, protocol: str) -> None:
             f"[OK] Open Langflow -> {protocol}://{access_host}:{port}"
         )
         try:
+            console.print()  # Add line break before fallback banner
             console.print(Panel.fit(fallback_message, border_style="#7528FC", padding=(1, 2)))
         except UnicodeEncodeError:
             # Last resort: use logger instead of print
