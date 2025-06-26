@@ -224,7 +224,10 @@ class MCPToolsComponent(ComponentWithCache):
                             build_config["tool"]["value"] = ""
                             build_config["tool"]["placeholder"] = "Error on MCP Server"
                             return build_config
+                        if len(build_config["tool"]["options"]) == 0:
+                            build_config["tool"]["placeholder"] = "No tools found"
                         build_config["tool"]["placeholder"] = ""
+
                     if field_value == "":
                         return build_config
                     tool_obj = None

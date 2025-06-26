@@ -350,7 +350,8 @@ class MCPStdioClient:
             logger.error(f"Failed to connect to MCP stdio server: {e}")
             self._connection_params = None
             self._connected = False
-            return []
+            msg = f"Failed to connect to MCP stdio server: {e}"
+            raise ValueError(msg) from e
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
@@ -481,7 +482,8 @@ class MCPSseClient:
             logger.error(f"Failed to connect to MCP SSE server: {e}")
             self._connection_params = None
             self._connected = False
-            return []
+            msg = f"Failed to connect to MCP SSE server: {e}"
+            raise ValueError(msg) from e
 
     async def connect_to_server(self, url: str, headers: dict[str, str] | None = None) -> list[StructuredTool]:
         """Connect to MCP server using SSE transport (SDK style)."""
@@ -593,7 +595,10 @@ async def update_tools(
                 return "", [], {}
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             logger.error(f"Failed to connect to MCP server '{server_name}': {e}")
-            return "", [], {}
+            # return "", [], {}
+            msg = f"Failed to connect to MCP server '{server_name}': {e}"
+            logger.error(msg)
+            raise ValueError(msg) from e
 
         if not tools or not client or not client._connected:
             logger.warning(f"No tools available from MCP server '{server_name}' or connection failed")
