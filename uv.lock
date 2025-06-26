@@ -4837,7 +4837,7 @@ dependencies = [
     { name = "composio-langchain" },
     { name = "crewai" },
     { name = "datasets" },
-    { name = "docling" },
+    { name = "docling-core" },
     { name = "dspy-ai" },
     { name = "duckduckgo-search" },
     { name = "elasticsearch" },
@@ -4949,6 +4949,9 @@ clickhouse-connect = [
 couchbase = [
     { name = "couchbase" },
 ]
+docling = [
+    { name = "docling" },
+]
 local = [
     { name = "ctransformers" },
     { name = "llama-cpp-python" },
@@ -5034,7 +5037,8 @@ requires-dist = [
     { name = "crewai", specifier = "==0.102.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "datasets", specifier = ">2.14.7" },
-    { name = "docling", specifier = ">=2.36.1" },
+    { name = "docling", marker = "extra == 'docling'", specifier = ">=2.36.1" },
+    { name = "docling-core", specifier = ">=2.36.1" },
     { name = "dspy-ai", specifier = "==2.5.41" },
     { name = "duckduckgo-search", specifier = "==7.2.1" },
     { name = "elasticsearch", specifier = "==8.16.0" },
@@ -5138,7 +5142,7 @@ requires-dist = [
     { name = "youtube-transcript-api", specifier = "==0.6.3" },
     { name = "zep-python", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
+provides-extras = ["docling", "audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
 
 [package.metadata.requires-dev]
 dev = [
