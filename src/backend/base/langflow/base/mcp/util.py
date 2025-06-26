@@ -308,21 +308,11 @@ class MCPStdioClient:
         command = command_str.split(" ")
         env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
 
-        if platform.system() == "Windows":
-            server_params = StdioServerParameters(
-                command="cmd",
-                args=[
-                    "/c",
-                    f"{command[0]} {' '.join(command[1:])} || echo Command failed with exit code %errorlevel% 1>&2",
-                ],
-                env=env_data,
-            )
-        else:
-            server_params = StdioServerParameters(
-                command="bash",
-                args=["-c", f"{command_str} || echo 'Command failed with exit code $?' >&2"],
-                env=env_data,
-            )
+        server_params = StdioServerParameters(
+            command=command[0],
+            args=command[1:],
+            env=env_data,
+        )
 
         # Store connection parameters for later use in run_tool
         self._connection_params = server_params
