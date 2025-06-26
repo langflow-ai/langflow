@@ -1,4 +1,5 @@
 import re
+import uuid
 from typing import Any
 
 from langflow.api.v2.mcp import get_server
@@ -217,6 +218,7 @@ class MCPToolsComponent(ComponentWithCache):
                     if len(self.tools) == 0:
                         try:
                             self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
+                            build_config["tool"]["options"] = [tool.name for tool in self.tools]
                         except ValueError:
                             build_config["tool"]["options"] = []
                             build_config["tool"]["value"] = ""
@@ -242,30 +244,17 @@ class MCPToolsComponent(ComponentWithCache):
                 else:
                     return build_config
             elif field_name == "mcp_server":
-                try:
-                    # field_value is now a dict {name, config}
-                    mcp_server_value = field_value
-                    self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list(mcp_server_value)
-                except ValueError:
-                    if not build_config["tools_metadata"]["show"]:
-                        build_config["tool"]["show"] = True
-                        build_config["tool"]["options"] = []
-                        build_config["tool"]["value"] = ""
-                        build_config["tool"]["placeholder"] = "Error on MCP Server"
-                    else:
-                        build_config["tool"]["show"] = False
-                    self.remove_non_default_keys(build_config)
-                    return build_config
-                build_config["tool"]["placeholder"] = ""
-                if "tool" in build_config and len(self.tools) > 0 and not build_config["tools_metadata"]["show"]:
+                if "tool" in build_config and not build_config["tools_metadata"]["show"]:
                     build_config["tool"]["show"] = True
-                    build_config["tool"]["options"] = [tool.name for tool in self.tools]
-                    await self._update_tool_config(build_config, build_config["tool"]["value"])
-                elif "tool" in build_config and len(self.tools) == 0:
-                    self.remove_non_default_keys(build_config)
+                    build_config["tool"]["options"] = []
+                    random_value = uuid.uuid4()
+                    build_config["tool"]["value"] = random_value
+                    build_config["tool"]["placeholder"] = "Loading MCP servers..."
+                else:
                     build_config["tool"]["show"] = False
                     build_config["tool"]["options"] = []
                     build_config["tool"]["value"] = ""
+                self.remove_non_default_keys(build_config)
             elif field_name == "tool_mode":
                 try:
                     self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
