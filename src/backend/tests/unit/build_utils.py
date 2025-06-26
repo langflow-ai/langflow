@@ -15,13 +15,25 @@ async def create_flow(client: AsyncClient, flow_data: str, headers: dict[str, st
 
 
 async def build_flow(
-    client: AsyncClient, flow_id: UUID, headers: dict[str, str], json: dict[str, Any] | None = None
+    client: AsyncClient,
+    flow_id: UUID,
+    headers: dict[str, str],
+    json: dict[str, Any] | None = None,
+    event_delivery: str | None = None,
 ) -> dict[str, Any]:
-    """Start a flow build and return the job_id."""
+    """Start a flow build and return the job_id or events for direct delivery."""
     if json is None:
         json = {}
-    response = await client.post(f"api/v1/build/{flow_id}/flow", json=json, headers=headers)
+
+    # Add event_delivery to query params if specified
+    params = {}
+    if event_delivery:
+        params["event_delivery"] = event_delivery
+
+    response = await client.post(f"api/v1/build/{flow_id}/flow", json=json, headers=headers, params=params)
     assert response.status_code == codes.OK
+    if event_delivery == "direct":
+        return response
     return response.json()
 
 
