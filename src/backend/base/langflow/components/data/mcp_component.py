@@ -1,5 +1,4 @@
 import re
-import uuid
 from typing import Any
 
 from langflow.api.v2.mcp import get_server
@@ -263,7 +262,6 @@ class MCPToolsComponent(ComponentWithCache):
                 # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
                 # The check for _last_selected_server handles the initial state where the dropdown is
                 # hidden by default but we are not yet in "Tool Mode".
-                # is_in_tool_mode = not build_config["tool"].get("show", False) and self._last_selected_server is not None or build_config["tools_metadata"]["value"] is not None
                 is_in_tool_mode = build_config["tools_metadata"]["value"]
                 self._last_selected_server = current_server_name
                 self.tools = []  # Clear previous tools
@@ -292,7 +290,7 @@ class MCPToolsComponent(ComponentWithCache):
                     elif not is_in_tool_mode:
                         build_config["tool"]["placeholder"] = "No tools found"
 
-                except Exception as e:
+                except (ValueError, AttributeError, KeyError, TypeError, ConnectionError, TimeoutError) as e:
                     logger.error(f"Failed to fetch tools for server '{current_server_name}': {e}")
                     if not is_in_tool_mode:
                         build_config["tool"]["placeholder"] = "Error fetching tools"
