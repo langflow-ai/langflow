@@ -189,7 +189,7 @@ export const CSVViewErrorTitle = "CSV output";
 
 export const CSVNoDataError = "No data available";
 
-export const PDFViewConstant = "Expand the ouptut to see the PDF";
+export const PDFViewConstant = "Expand the output to see the PDF";
 
 export const CSVError = "Error loading CSV";
 
@@ -709,7 +709,7 @@ export const TOOLTIP_HIDDEN_OUTPUTS = "Collapse hidden outputs";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 
-export const SUCCESS_BUILD = "Built sucessfully ✨";
+export const SUCCESS_BUILD = "Built successfully ✨";
 
 export const ALERT_SAVE_WITH_API =
   "Caution: Unchecking this box only removes API keys from fields specifically designated for API keys.";
