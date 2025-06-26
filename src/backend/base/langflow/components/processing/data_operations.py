@@ -1,3 +1,78 @@
+"""Data operations component for comprehensive data manipulation in Langflow.
+
+This module provides the DataOperationsComponent which performs various data
+transformation and manipulation operations on Data objects within Langflow workflows.
+It supports multiple operations for filtering, combining, modifying, and restructuring data.
+
+Supported Operations:
+    - Select Keys: Extract specific fields from data objects
+    - Literal Eval: Parse and evaluate string representations of Python literals
+    - Combine: Merge multiple data objects into a single unified object
+    - Filter Values: Filter list data based on field values and conditions
+    - Append or Update: Add new fields or modify existing fields
+    - Remove Keys: Delete specified keys from data objects
+    - Rename Keys: Change field names while preserving values
+
+Key Features:
+    - Dynamic operation selection with visual icons
+    - Chain multiple operations in sequence
+    - Flexible data manipulation with validation
+    - Support for both single and multiple data objects
+    - Real-time configuration updates
+
+Select Keys Operation:
+    Extracts specified fields from data objects:
+    - Input: Data object with keys ["name", "age", "city"]
+    - Select: ["name", "city"]
+    - Output: Data object with only {"name": "...", "city": "..."}
+
+Literal Eval Operation:
+    Safely evaluates string representations of Python literals:
+    - Strings like "{'key': 'value'}" become actual dictionaries
+    - Lists like "[1, 2, 3]" become actual Python lists
+    - Preserves non-literal strings unchanged
+
+Combine Operation:
+    Merges multiple data objects with intelligent field handling:
+    - Duplicate keys: Convert to lists and merge values
+    - List values: Extend existing lists with new items
+    - Single values: Preserve or convert to lists as needed
+
+Filter Values Operation:
+    Filters list data based on field conditions:
+    - Operators: equals, not equals, contains, starts with, ends with
+    - Example: Filter users where "age" equals "25"
+    - Multiple filter criteria supported
+
+Append or Update Operation:
+    Adds new fields or updates existing ones:
+    - New fields: Added to data object
+    - Existing fields: Values replaced with new values
+    - Dictionary input: {"new_field": "new_value"}
+
+Remove Keys Operation:
+    Deletes specified fields from data objects:
+    - Input: List of field names to remove
+    - Graceful handling of non-existent keys
+    - Warning logs for missing fields
+
+Rename Keys Operation:
+    Changes field names while preserving values:
+    - Input: Dictionary mapping old_name → new_name
+    - Validation ensures source fields exist
+    - Error handling for missing source fields
+
+Data Validation:
+    - Single vs. multiple data object validation
+    - Field existence verification
+    - Type checking for operations
+    - Comprehensive error messages
+
+The component provides a powerful toolkit for data manipulation within
+Langflow workflows, enabling complex data transformations through a
+visual interface.
+"""
+
 import ast
 from typing import TYPE_CHECKING, Any
 

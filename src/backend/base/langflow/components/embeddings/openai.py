@@ -1,3 +1,35 @@
+"""OpenAI embeddings component for Langflow.
+
+This module provides the OpenAIEmbeddingsComponent which integrates OpenAI's
+text embedding models into Langflow workflows for semantic search, clustering,
+and similarity analysis.
+
+Supported Models:
+    Uses OpenAI's embedding models via langchain_openai.OpenAIEmbeddings:
+    - text-embedding-3-small: 1536 dimensions, improved performance
+    - text-embedding-3-large: 3072 dimensions, highest quality
+    - text-embedding-ada-002: 1536 dimensions, legacy model
+    - text-embedding-ada-001: 1024 dimensions, deprecated
+
+Key Features:
+    - Configurable embedding dimensions (for supported models)
+    - Batch processing with chunk_size control
+    - Progress bar display for large datasets
+    - Custom headers and query parameters
+    - TikToken integration for efficient tokenization
+    - Proxy support for enterprise environments
+
+Component Configuration:
+    - API Key: Required OpenAI API key via SecretStrInput
+    - Model Selection: Dropdown with supported model names
+    - Chunk Size: Batch size for processing multiple texts
+    - Dimensions: Output embedding size (model-dependent)
+    - Timeout: Request timeout for API calls
+
+The component wraps langchain_openai.OpenAIEmbeddings and provides
+Langflow-specific input validation and error handling.
+"""
+
 from langchain_openai import OpenAIEmbeddings
 
 from langflow.base.embeddings.model import LCEmbeddingsModel

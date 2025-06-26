@@ -1,3 +1,19 @@
+"""Service factory implementation for dependency injection in Langflow.
+
+This module provides the ServiceFactory pattern for creating and managing
+service instances with automatic dependency resolution, including:
+- Service instantiation with dependency injection
+- Automatic dependency inference from type hints
+- Caching and memoization for service creation
+- Service type mapping and discovery
+- Factory registration and management
+- Circular dependency detection and resolution
+
+The factory pattern enables loose coupling between services while ensuring
+proper dependency management and consistent service creation across the
+Langflow application.
+"""
+
 import importlib
 import inspect
 from typing import TYPE_CHECKING, get_type_hints

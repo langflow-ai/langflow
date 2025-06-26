@@ -1,3 +1,79 @@
+"""Singleton service registry with dependency injection for Langflow services.
+
+This module implements the ServiceManager which acts as a service registry
+and factory orchestrator, providing dependency injection and ensuring
+single instances of services across the application.
+
+Service Registration:
+    Services are automatically discovered and registered via ServiceFactory
+    instances. Each service factory declares its dependencies through type hints:
+
+    ```python
+    class AuthService(Service):
+        def __init__(self, settings_service: SettingsService): ...
+
+    # Factory automatically infers SettingsService dependency
+    ```
+
+Dependency Resolution:
+    The manager resolves dependencies recursively, creating services in
+    dependency order. Circular dependencies are detected and raise errors.
+
+Thread Safety:
+    Uses KeyedMemoryLockManager to ensure thread-safe service creation:
+    - Each service name gets its own lock during creation
+    - Prevents race conditions in multi-threaded service initialization
+    - Services are cached after creation for singleton behavior
+
+Service Lifecycle:
+    1. register_factories(): Auto-discover service factories
+    2. get(service_name): Get or create service instance
+    3. _create_service(): Instantiate with resolved dependencies
+    4. Cached in self.services dict for subsequent requests
+
+Key Components:
+    - services: dict[str, Service] - Singleton service instances
+    - factories: dict[str, ServiceFactory] - Service creation factories
+    - keyed_lock: KeyedMemoryLockManager - Thread-safe creation locks
+
+Factory Discovery:
+    Automatically scans for ServiceFactory subclasses in:
+    - langflow.services.*.factory modules
+    - Each factory defines create() method for service instantiation
+    - Dependencies resolved through constructor type annotations
+
+Example Usage:
+    ```python
+    # Get service instance (creates if not exists)
+    manager = get_service_manager()
+    auth_service = manager.get(AUTH_SERVICE)
+
+    # Services are singletons - same instance returned
+    auth_service2 = manager.get(AUTH_SERVICE)
+    assert auth_service is auth_service2
+    ```
+
+Supported Services:
+    - AUTH_SERVICE: Authentication and user management
+    - SETTINGS_SERVICE: Configuration and environment settings
+    - DATABASE_SERVICE: Database connections and migrations
+    - CHAT_SERVICE: Graph caching and execution state
+    - TELEMETRY_SERVICE: Usage analytics and monitoring
+
+The manager ensures proper initialization order and prevents circular
+dependency issues through topological sorting of service dependencies.
+
+Example Advanced Usage:
+    ```python
+    manager = ServiceManager()
+    auth_service = manager.get("auth_service")  # Creates with dependencies
+    database_service = manager.get("database_service")  # Reuses existing
+    ```
+
+The manager ensures consistent service instantiation and prevents duplicate
+service creation across the Langflow application.
+"""
+
 from __future__ import annotations
 
 import importlib

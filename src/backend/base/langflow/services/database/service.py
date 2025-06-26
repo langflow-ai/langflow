@@ -1,3 +1,48 @@
+"""SQLAlchemy-based database service with Alembic migrations for Langflow.
+
+This module implements the DatabaseService which manages database connections,
+schema migrations, and provides session management for Langflow's data layer.
+
+Supported Databases:
+    - SQLite (default): Uses aiosqlite async driver
+    - PostgreSQL: Supports asyncpg driver with connection pooling
+    - URL format conversion from sync to async drivers automatically
+
+Key Components:
+    - AsyncEngine: SQLAlchemy async engine with connection pooling
+    - Alembic: Schema migration management with version tracking
+    - Session Management: Async context managers for database transactions
+    - Connection Events: SQLite PRAGMA settings and connection configuration
+
+Database URL Conversion:
+    - "sqlite:///path" -> "sqlite+aiosqlite:///path"
+    - "postgresql:///db" -> "postgresql+asyncpg:///db"
+    - Automatic driver selection for async compatibility
+
+Migration Management:
+    The service handles Alembic migrations automatically:
+    ```python
+    db_service = DatabaseService(settings_service)
+    await db_service.run_migrations()  # Apply pending migrations
+    results = await db_service.run_migrations_test()  # Test migration integrity
+    ```
+
+Configuration:
+    Settings from SettingsService.settings:
+    - database_url: Connection string (required)
+    - database_connection_retry: Enable connection retry logic
+    - alembic_log_file: Path for migration logs
+
+Key Methods:
+    - get_session(): Async context manager for database sessions
+    - run_migrations(): Apply pending Alembic migrations
+    - create_db_and_tables(): Initialize database schema
+    - check_schema_health(): Validate database structure
+
+The service automatically configures SQLite with proper PRAGMA settings
+for performance and foreign key enforcement.
+"""
+
 from __future__ import annotations
 
 import asyncio

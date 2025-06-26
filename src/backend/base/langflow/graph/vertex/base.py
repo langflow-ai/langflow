@@ -1,3 +1,54 @@
+"""Graph vertex implementation wrapping Langflow components for execution.
+
+This module implements the Vertex class which wraps individual Langflow
+components and manages their execution within the graph context.
+
+A Vertex represents a single node in the execution graph and handles:
+
+Component Lifecycle:
+    1. Instantiation from NodeData via get_component_class()
+    2. Parameter processing through ParameterHandler
+    3. Execution via _build_component() or _build_component_async()
+    4. Result caching and state management
+    5. Streaming output handling for real-time results
+
+Vertex States (VertexStates enum):
+    - ACTIVE: Vertex can be executed
+    - INACTIVE: Vertex is disabled/skipped
+    - ERROR: Vertex execution failed
+
+Component Types:
+    - Input components: Handle external data ingestion
+    - Output components: Format and return results
+    - Processing components: Transform data between inputs/outputs
+    - State components: Maintain persistent state across executions
+
+Key Attributes:
+    - id: Unique vertex identifier from flow data
+    - data: NodeData containing component configuration
+    - _built_object: Cached component instance after building
+    - _build_params: Processed parameters for component instantiation
+    - will_stream: Boolean indicating if component supports streaming
+    - is_input/is_output: Component type classification
+
+Execution Flow:
+    ```python
+    vertex = Vertex(node_data, graph)
+    await vertex._build_component_async()  # Build component with params
+    result = vertex.get_result()           # Get execution result
+    ```
+
+Parameter Processing:
+    Uses ParameterHandler to resolve parameters from:
+    - Direct values in node data
+    - References to other vertex outputs
+    - Default component values
+    - Runtime context variables
+
+The Vertex class provides the bridge between the declarative flow
+definition and the imperative component execution model.
+"""
+
 from __future__ import annotations
 
 import asyncio

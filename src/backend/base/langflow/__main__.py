@@ -1,3 +1,39 @@
+"""Langflow command-line interface with Uvicorn server management.
+
+This module implements the main CLI entry point using Typer for Langflow server operations,
+database management, and administrative tasks. The CLI provides direct integration with
+Uvicorn ASGI server and SQLAlchemy database operations.
+
+Main Commands:
+    - run: Start Uvicorn server with configurable host/port/workers
+    - superuser: Create admin users via SQLAlchemy User model
+    - api-key: Generate API keys with optional names and database storage
+    - migration: Run Alembic database migrations (upgrade/downgrade)
+    - copy-db: Database replication between different connection strings
+
+Server Configuration:
+    - Host/Port: Configurable via --host/--port or LANGFLOW_HOST/LANGFLOW_PORT
+    - Workers: Multi-process via --workers flag (default: CPU count)
+    - Auto-reload: Development mode with --reload flag
+    - SSL: HTTPS support via --ssl-keyfile/--ssl-certfile
+    - CORS: Cross-origin resource sharing with configurable origins
+
+Database Operations:
+    - Uses SettingsService for database URL resolution
+    - Automatic Alembic migration detection and execution
+    - SQLite/PostgreSQL support with async drivers (aiosqlite, asyncpg)
+    - Database health checks via HTTP /health endpoint
+
+Development Features:
+    - Auto-browser opening via --open-browser flag
+    - Environment variable loading from .env files
+    - Process management with signal handlers (SIGTERM/SIGINT)
+    - Startup validation of database connectivity
+
+The CLI integrates with Langflow's service architecture via ServiceManager
+and provides production-ready server deployment capabilities.
+"""
+
 import asyncio
 import inspect
 import os

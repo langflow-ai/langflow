@@ -1,3 +1,72 @@
+"""Core component framework for Langflow custom components.
+
+This module implements the Component class, which serves as the base class for
+all user-defined and built-in components in Langflow. Components are the
+fundamental building blocks that execute within the graph execution engine.
+
+Component Architecture:
+    Components inherit from CustomComponent and provide a standardized interface for:
+    - Input/output parameter definition via Input and Output classes
+    - Asynchronous execution with optional streaming support
+    - State management and memory integration
+    - Tool creation for LangChain agent integration
+    - Event logging and trace management
+
+Component Lifecycle:
+    1. Initialization: Process inputs and configuration
+    2. Build phase: Component instantiation and parameter validation
+    3. Execution: Run the component logic via build() method
+    4. Output: Return results through defined outputs
+    5. Cleanup: State persistence and log storage
+
+Input/Output System:
+    - inputs: List of InputTypes defining required parameters
+    - outputs: List of Output defining returned values
+    - Automatic parameter binding from graph connections
+    - Type validation and conversion support
+
+Example Component:
+    ```python
+    class CustomTextProcessor(Component):
+        display_name = "Text Processor"
+        inputs = [
+            StrInput(name="text", display_name="Input Text"),
+            IntInput(name="max_length", value=100)
+        ]
+        outputs = [
+            Output(display_name="Processed Text", name="output", method="process_text")
+        ]
+
+        def process_text(self) -> str:
+            text = self.text
+            max_length = self.max_length
+            return text[:max_length]
+    ```
+
+Tool Integration:
+    Components can be automatically converted to LangChain tools:
+    - get_tool(): Creates StructuredTool from component
+    - Tool metadata extracted from inputs/outputs
+    - Async execution support for tool calls
+
+Memory Management:
+    Built-in integration with Langflow's memory system:
+    - Automatic message storage via astore_message() for chat components
+    - Session-aware state persistence using session_id tracking
+    - Memory retrieval and update via aupdate_messages()
+    - Context sharing through graph.context dictionary
+
+Event System:
+    - EventManager integration for real-time UI updates
+    - Message streaming with chunk-by-chunk delivery
+    - Error propagation with source attribution
+    - Log aggregation per output for debugging
+
+The Component class handles the complex orchestration between the visual
+flow editor and the underlying execution engine, providing a clean
+interface for component developers.
+"""
+
 from __future__ import annotations
 
 import ast
