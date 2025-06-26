@@ -1,6 +1,5 @@
 import asyncio
 import os
-import platform
 import shutil
 from collections.abc import Awaitable, Callable
 from typing import Any
