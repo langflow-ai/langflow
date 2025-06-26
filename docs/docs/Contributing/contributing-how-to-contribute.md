@@ -101,59 +101,6 @@ Note: With pre-commit hooks installed, you'll need to use `uv run git commit` in
 5. To test your changes, run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
 To run all tests, including unit tests, integration tests, and coverage, run `make tests`.
 
-### Additional Langflow make commands
-
-This section includes common development `make` commands for Langflow.
-To view all available commands, enter `make help`.
-
-Install only frontend dependencies:
-```bash
-make install_frontend
-```
-
-Build frontend static files:
-```bash
-make build_frontend
-```
-
-Install only backend dependencies:
-```bash
-make install_backend
-```
-
-Run frontend in development mode (hot reload):
-```bash
-make frontend
-```
-
-Run backend in development mode:
-```bash
-make backend
-```
-
-The following commands are for testing code quality.
-Frontend tests are found in `src/frontend/tests`, and backend tests are found in `src/backend/tests`.
-
-Format code (backend & frontend):
-```bash
-make format
-```
-
-Run all tests:
-```bash
-make tests
-```
-
-Run only unit tests:
-```bash
-make unit_tests
-```
-
-Run only integration tests:
-```bash
-make integration_tests
-```
-
 ### Debug
 
 The repo includes a `.vscode/launch.json` file for debugging the backend in VSCode, which is faster than debugging with Docker Compose. To debug Langflow with the `launch.json` file in VSCode:
@@ -164,26 +111,6 @@ The repo includes a `.vscode/launch.json` file for debugging the backend in VSCo
 4. Click the green **Play** button or press F5 to start debugging.
 
 Use `launch.json` to quickly debug different parts of your application, like the backend, frontend, or CLI, directly from VSCode.
-
-### Run Langflow locally
-
-After setting up the environment with `make init`, you can run Langflow's backend and frontend separately for development.
-
-Before you begin, ensure you have [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js](https://nodejs.org/en/download/package-manager) installed.
-
-1. In the repository root, install the dependencies and start the development server for the backend:
-
-```bash
-make backend
-```
-
-2. Install dependencies and start the frontend:
-
-```bash
-make frontend
-```
-
-This approach allows you to work on the backend and frontend independently, with hot-reloading for faster development.
 
 ## Contribute documentation
 
@@ -211,7 +138,7 @@ yarn install
 yarn start
 ```
 
-The documentation will be available at `localhost:3000` and all the files are located in the `docs/docs` folder.
+The documentation will be available at `localhost:3000` and all the files are located in the `/docs` folder.
 
 ## Open a pull request
 
