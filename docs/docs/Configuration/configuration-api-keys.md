@@ -11,9 +11,10 @@ Langflow provides an API key functionality that allows users to access their ind
 
 ## Auto-login and API key authentication
 
-Prior to Langflow v1.5, when `AUTO_LOGIN` was enabled (`AUTO_LOGIN=true`), Langflow automatically logged users in as a superuser without requiring authentication.
+Prior to Langflow v1.5, when `AUTO_LOGIN` was enabled with `AUTO_LOGIN=true`, Langflow automatically logged users in as a superuser without requiring authentication, and API requests could be made without a Langflow API key.
 
-As of Langflow v1.5, when `AUTO_LOGIN` is enabled, `AUTO_LOGIN` requires a valid API key.
+As of Langflow v1.5, all API requests require a Langflow API key, even when `AUTO_LOGIN` is enabled.
+The MCP-related endpoints will continue to require no authentication when `AUTO_LOGIN=true`.
 
 ## Generate a Langflow API key
 
