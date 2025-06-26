@@ -250,10 +250,7 @@ test(
 
     await adjustScreenView(page);
 
-    await page
-      .getByTestId("handle-file-shownode-files-right")
-      .first()
-      .click();
+    await page.getByTestId("handle-file-shownode-files-right").first().click();
 
     await page
       .getByTestId("processingParser")
@@ -263,10 +260,7 @@ test(
       });
 
     await adjustScreenView(page);
-    await page
-      .getByTestId("handle-file-shownode-files-right")
-      .first()
-      .click();
+    await page.getByTestId("handle-file-shownode-files-right").first().click();
 
     await page
       .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
