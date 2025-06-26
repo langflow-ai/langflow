@@ -82,6 +82,7 @@ export default function Dropdown({
     // We should only reset the value if it's not in options and not in filteredOptions
     // and not a recently added custom value
     if (!options.includes(value) && !filteredOptions.includes(value)) {
+      if (value) onSelect("", undefined, true);
       return null;
     }
     return value;

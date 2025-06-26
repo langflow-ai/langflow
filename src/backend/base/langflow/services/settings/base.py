@@ -92,6 +92,10 @@ class Settings(BaseSettings):
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
 
+    mcp_server_timeout: int = 20
+    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
+    database."""
+
     # sqlite configuration
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
     """SQLite pragmas to use when connecting to the database."""

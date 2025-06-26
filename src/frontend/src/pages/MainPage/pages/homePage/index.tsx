@@ -220,7 +220,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
 
   return (
     <CardsWrapComponent
-      onFileDrop={handleFileDrop}
+      onFileDrop={flowType === "mcp" ? undefined : handleFileDrop}
       dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
     >
       <div
