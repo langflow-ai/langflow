@@ -30,10 +30,10 @@ def run_flow(runner, port, components_path, default_settings):
         str(components_path),
         *default_settings,
     ]
--    runner.invoke(app, args)
-+    result = runner.invoke(app, args)
-+    if result.exit_code != 0:
-+        raise RuntimeError(f"CLI failed with exit code {result.exit_code}: {result.output}")
+    result = runner.invoke(app, args)
+    if result.exit_code != 0:
+        msg = f"CLI failed with exit code {result.exit_code}: {result.output}"
+        raise RuntimeError(msg)
 
 
 def test_components_path(runner, default_settings, tmp_path):
