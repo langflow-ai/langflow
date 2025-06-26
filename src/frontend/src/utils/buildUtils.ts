@@ -1,6 +1,5 @@
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
-  BASE_URL_API,
   BUILD_POLLING_INTERVAL,
   POLLING_MESSAGES,
 } from "@/constants/constants";
