@@ -294,8 +294,8 @@ export default function ChatView({
         <CustomChatInput
           playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
-          sendMessage={({ repeat, files }) => {
-            sendMessage({ repeat, files });
+          sendMessage={async ({ repeat, files }) => {
+            await sendMessage({ repeat, files });
             track("Playground Message Sent");
           }}
           inputRef={ref}
