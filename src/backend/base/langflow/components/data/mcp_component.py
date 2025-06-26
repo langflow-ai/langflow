@@ -251,10 +251,10 @@ class MCPToolsComponent(ComponentWithCache):
                     build_config["tool"]["value"] = random_value
                     build_config["tool"]["placeholder"] = "Loading MCP servers..."
                 else:
-                    self.remove_non_default_keys(build_config)
                     build_config["tool"]["show"] = False
                     build_config["tool"]["options"] = []
                     build_config["tool"]["value"] = ""
+                self.remove_non_default_keys(build_config)
             elif field_name == "tool_mode":
                 try:
                     self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
