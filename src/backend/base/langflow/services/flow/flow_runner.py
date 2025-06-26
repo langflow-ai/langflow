@@ -121,18 +121,20 @@ class LangflowRunnerExperimental:
         user_id: str | None = None,
         custom_flow_id: str | None = None,
         session_id: str | None = None,
+        tweaks_values: dict | None = None,
     ) -> dict:
         flow_dict = await self.get_flow_dict(flow)
         session_id = session_id or custom_flow_id or str(uuid4())
         if custom_flow_id:
             flow_dict["id"] = custom_flow_id
-        flow_dict = self.process_tweaks(flow_dict)
+        flow_dict = self.process_tweaks(flow_dict, tweaks_values=tweaks_values)
         await self.clear_flow_state(flow_dict)
         await self.add_flow_to_db(flow_dict, user_id=user_id)
         return flow_dict
 
-    def process_tweaks(self, flow_dict: dict) -> dict:
+    def process_tweaks(self, flow_dict: dict, tweaks_values: dict | None = None) -> dict:
         tweaks: dict = None
+        tweaks_values = tweaks_values or os.environ.copy()
         for vertex in Graph.from_payload(flow_dict).vertices:
             param_handler = ParameterHandler(vertex, get_storage_service())
             field_params, load_from_db_fields = param_handler.process_field_parameters()
@@ -142,7 +144,7 @@ class LangflowRunnerExperimental:
                     tweaks[vertex.id] = tweaks.get(vertex.id, {})
                     tweaks[vertex.id][db_field] = field_params[db_field]
         if tweaks is not None:
-            tweaks = replace_tweaks_with_env(tweaks=tweaks, env_vars=os.environ.copy())
+            tweaks = replace_tweaks_with_env(tweaks=tweaks, env_vars=tweaks_values)
             flow_dict = process_tweaks(flow_dict, tweaks)
 
         # Recursively update load_from_db fields
