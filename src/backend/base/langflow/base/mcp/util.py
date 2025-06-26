@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
 
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.deps import get_settings_service
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
@@ -300,7 +301,7 @@ class MCPStdioClient:
         self._connection_params = None
         self._connected = False
 
-    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
+    async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
         """Connect to MCP server using stdio transport (SDK style)."""
         from mcp import StdioServerParameters
         from mcp.client.stdio import stdio_client
@@ -320,7 +321,7 @@ class MCPStdioClient:
         else:
             server_params = StdioServerParameters(
                 command="bash",
-                args=["-c", f"{command_str} || echo 'Command failed with exit code $?' >&2"],
+                args=["-c", f"exec {command_str} || echo 'Command failed with exit code $?' >&2"],
                 env=env_data,
             )
 
@@ -338,6 +339,19 @@ class MCPStdioClient:
             self._connection_params = None
             self._connected = False
             return []
+
+    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
+        """Connect to MCP server using stdio transport (SDK style)."""
+        try:
+            return await asyncio.wait_for(
+                self._connect_to_server(command_str, env), timeout=get_settings_service().settings.mcp_server_timeout
+            )
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+            logger.error(f"Failed to connect to MCP stdio server: {e}")
+            self._connection_params = None
+            self._connected = False
+            msg = f"Failed to connect to MCP stdio server: {e}"
+            raise ValueError(msg) from e
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
@@ -425,7 +439,7 @@ class MCPSseClient:
             logger.warning(f"Error checking redirects: {e}")
         return url
 
-    async def connect_to_server(
+    async def _connect_to_server(
         self,
         url: str | None,
         headers: dict[str, str] | None = None,
@@ -464,6 +478,19 @@ class MCPSseClient:
                 response = await session.list_tools()
                 self._connected = True
                 return response.tools
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+            logger.error(f"Failed to connect to MCP SSE server: {e}")
+            self._connection_params = None
+            self._connected = False
+            msg = f"Failed to connect to MCP SSE server: {e}"
+            raise ValueError(msg) from e
+
+    async def connect_to_server(self, url: str, headers: dict[str, str] | None = None) -> list[StructuredTool]:
+        """Connect to MCP server using SSE transport (SDK style)."""
+        try:
+            return await asyncio.wait_for(
+                self._connect_to_server(url, headers), timeout=get_settings_service().settings.mcp_server_timeout
+            )
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             logger.error(f"Failed to connect to MCP SSE server: {e}")
             self._connection_params = None
@@ -568,7 +595,10 @@ async def update_tools(
                 return "", [], {}
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             logger.error(f"Failed to connect to MCP server '{server_name}': {e}")
-            return "", [], {}
+            # return "", [], {}
+            msg = f"Failed to connect to MCP server '{server_name}': {e}"
+            logger.error(msg)
+            raise ValueError(msg) from e
 
         if not tools or not client or not client._connected:
             logger.warning(f"No tools available from MCP server '{server_name}' or connection failed")
@@ -598,10 +628,11 @@ async def update_tools(
                 tool_cache[tool.name] = tool_obj
             except (ConnectionError, TimeoutError, OSError, ValueError) as e:
                 logger.error(f"Failed to create tool '{tool.name}' from server '{server_name}': {e}")
-                continue
+                msg = f"Failed to create tool '{tool.name}' from server '{server_name}': {e}"
+                raise ValueError(msg) from e
 
         logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
-    except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+    except (ConnectionError, TimeoutError, OSError, ValueError, AttributeError, AssertionError) as e:
         logger.error(f"Unexpected error while updating tools for MCP server '{server_name}': {e}")
         return "", [], {}
     else:
