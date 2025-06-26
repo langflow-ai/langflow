@@ -68,6 +68,7 @@ class MCPToolsComponent(ComponentWithCache):
     sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
     _tool_cache: dict = {}
+    _last_selected_server: str | None = None  # Cache for the last selected server
     default_keys: list[str] = [
         "code",
         "_type",
@@ -247,17 +248,44 @@ class MCPToolsComponent(ComponentWithCache):
                 else:
                     return build_config
             elif field_name == "mcp_server":
+                if field_value == "":
+                    build_config["tool"]["show"] = False
+                    build_config["tool"]["options"] = []
+                    build_config["tool"]["value"] = ""
+                    build_config["tool"]["placeholder"] = ""
+                    return build_config
+
+                # Extract server name from field_value to compare with cached value
+                current_server_name = None
+                if isinstance(field_value, dict):
+                    current_server_name = field_value.get("name")
+                elif isinstance(field_value, str):
+                    current_server_name = field_value
+
+                # Check if this is the same server as last time
+                is_same_server = self._last_selected_server is None or (
+                    current_server_name is not None and self._last_selected_server == current_server_name
+                )
+
                 if "tool" in build_config and not build_config["tools_metadata"]["show"]:
                     build_config["tool"]["show"] = True
-                    build_config["tool"]["options"] = []
-                    random_value = uuid.uuid4()
-                    build_config["tool"]["value"] = random_value
-                    build_config["tool"]["placeholder"] = "Loading MCP servers..."
+
+                    if not is_same_server:
+                        # Only show loading message if server has changed
+                        random_value = uuid.uuid4()
+                        build_config["tool"]["value"] = random_value
+                        build_config["tool"]["placeholder"] = "Loading MCP servers..."
+                        build_config["tool"]["options"] = []
+                        self.remove_non_default_keys(build_config)
+
                 else:
                     build_config["tool"]["show"] = False
                     build_config["tool"]["options"] = []
                     build_config["tool"]["value"] = ""
-                self.remove_non_default_keys(build_config)
+                    self.remove_non_default_keys(build_config)
+
+                # Update the cached server name
+                self._last_selected_server = current_server_name
             elif field_name == "tool_mode":
                 try:
                     self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
