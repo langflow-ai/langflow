@@ -13,9 +13,9 @@ This procedure also assumes that you're using the default Langflow listening add
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
-- [ngrok installed](https://ngrok.com/docs/getting-started/#1-install-ngrok)
-- [An ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken)
+- [Install Langflow](/get-started-installation)
+- [Install ngrok](https://ngrok.com/docs/getting-started/#1-install-ngrok)
+- [Create an ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken)
 
 ## Expose your Langflow server with ngrok
 
@@ -43,7 +43,7 @@ This procedure also assumes that you're using the default Langflow listening add
     To add authentication or deploy a static domain, see the [ngrok documentation](https://ngrok.com/docs/).
 
 
-    The `Forwarding` row displays the forwarding address for your Langflow server:
+    The `Forwarding` line prints the forwarding address for your Langflow server:
 
     ```
     Forwarding https://94b1-76-64-171-14.ngrok-free.app -> http://localhost:7860

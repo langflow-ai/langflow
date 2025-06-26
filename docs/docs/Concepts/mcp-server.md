@@ -21,7 +21,7 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 * Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer to use MCP Inspector to [test and debug flows](#test-and-debug-flows).
 
-* [ngrok installed](https://ngrok.com/docs/getting-started/#1-install-ngrok) and [an ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) if you want to [deploy your MCP server externally](#deploy-your-server-externally).
+* [ngrok installed](https://ngrok.com/docs/getting-started/#1-install-ngrok) and an [ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) if you want to [deploy your MCP server externally](#deploy-your-server-externally).
 
 ## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
 
