@@ -113,13 +113,13 @@ class ClassConstructorCacheMonitor:
 
     def get_cache_info(self) -> dict:
         """Get detailed cache information including TTL and efficiency metrics."""
-        from langflow.utils.validate import _CLASS_CONSTRUCTOR_CACHE
+        from langflow.utils.validate import CLASS_CONSTRUCTOR_CACHE
 
         # Get cache info from ThreadingInMemoryCache
         cache_info = {
-            "current_size": len(_CLASS_CONSTRUCTOR_CACHE),
-            "max_size": _CLASS_CONSTRUCTOR_CACHE.max_size or 0,
-            "ttl_seconds": _CLASS_CONSTRUCTOR_CACHE.expiration_time or 0,
+            "current_size": len(CLASS_CONSTRUCTOR_CACHE),
+            "max_size": CLASS_CONSTRUCTOR_CACHE.max_size or 0,
+            "ttl_seconds": CLASS_CONSTRUCTOR_CACHE.expiration_time or 0,
         }
 
         # Calculate efficiency metrics

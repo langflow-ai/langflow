@@ -21,7 +21,7 @@ _CACHE_MAX_SIZE = int(os.getenv("LANGFLOW_CLASS_CACHE_SIZE", "1000"))
 _CACHE_TTL_SECONDS = int(os.getenv("LANGFLOW_CLASS_CACHE_TTL", "3600"))  # 1 hour default
 
 # Use Langflow's native cache implementation - it already handles thread safety with RLock
-_CLASS_CONSTRUCTOR_CACHE = ThreadingInMemoryCache(max_size=_CACHE_MAX_SIZE, expiration_time=_CACHE_TTL_SECONDS)
+CLASS_CONSTRUCTOR_CACHE = ThreadingInMemoryCache(max_size=_CACHE_MAX_SIZE, expiration_time=_CACHE_TTL_SECONDS)
 
 
 def _get_code_hash(code: str) -> str:
@@ -42,7 +42,7 @@ def clear_class_constructor_cache() -> None:
     This can be useful for testing or memory management.
     Thread-safe operation using native cache implementation.
     """
-    _CLASS_CONSTRUCTOR_CACHE.clear()
+    CLASS_CONSTRUCTOR_CACHE.clear()
     logger.debug("Cleared class constructor cache")
 
 
@@ -54,7 +54,7 @@ def get_cache_stats() -> dict[str, int]:
     Thread-safe operation using native cache implementation.
     """
     return {
-        "cache_size": len(_CLASS_CONSTRUCTOR_CACHE),
+        "cache_size": len(CLASS_CONSTRUCTOR_CACHE),
         "max_size": _CACHE_MAX_SIZE,
         "ttl_seconds": _CACHE_TTL_SECONDS,
     }
@@ -242,7 +242,7 @@ def create_class(code, class_name):
 
     # Check cache first
     code_hash = _get_code_hash(normalized_code + class_name)
-    cached_constructor = _CLASS_CONSTRUCTOR_CACHE.get(code_hash)
+    cached_constructor = CLASS_CONSTRUCTOR_CACHE.get(code_hash)
     if cached_constructor is not CACHE_MISS:
         # Record cache hit for monitoring
         try:
@@ -278,7 +278,7 @@ def create_class(code, class_name):
             class_constructor = build_class_constructor(compiled_class, exec_globals, class_name)
 
             # Cache the result using native cache implementation
-            _CLASS_CONSTRUCTOR_CACHE.set(code_hash, class_constructor)
+            CLASS_CONSTRUCTOR_CACHE.set(code_hash, class_constructor)
 
         except SyntaxError as e:
             msg = f"Syntax error in code: {e!s}"
