@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ApifyActors",
-            "id": "ApifyActors-CVPGK",
+            "id": "ApifyActors-Zrjnz",
             "name": "tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-yJhxC",
+            "id": "Agent-0vMrI",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ApifyActors-CVPGK{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-CVPGKœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-yJhxC{œfieldNameœ:œtoolsœ,œidœ:œAgent-yJhxCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ApifyActors-Zrjnz{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-Zrjnzœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-0vMrI{œfieldNameœ:œtoolsœ,œidœ:œAgent-0vMrIœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ApifyActors-CVPGK",
-        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-CVPGKœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-yJhxC",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yJhxCœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "ApifyActors-Zrjnz",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-Zrjnzœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-0vMrI",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-0vMrIœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ApifyActors",
-            "id": "ApifyActors-tL94Y",
+            "id": "ApifyActors-8WoKJ",
             "name": "tool",
             "output_types": [
               "Tool"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-yJhxC",
+            "id": "Agent-0vMrI",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ApifyActors-tL94Y{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-tL94Yœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-yJhxC{œfieldNameœ:œtoolsœ,œidœ:œAgent-yJhxCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ApifyActors-8WoKJ{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-8WoKJœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-0vMrI{œfieldNameœ:œtoolsœ,œidœ:œAgent-0vMrIœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ApifyActors-tL94Y",
-        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-tL94Yœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-yJhxC",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yJhxCœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "ApifyActors-8WoKJ",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-8WoKJœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-0vMrI",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-0vMrIœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-E01OU",
+            "id": "ChatInput-RBrnT",
             "name": "message",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-yJhxC",
+            "id": "Agent-0vMrI",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-E01OU{œdataTypeœ:œChatInputœ,œidœ:œChatInput-E01OUœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-yJhxC{œfieldNameœ:œinput_valueœ,œidœ:œAgent-yJhxCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-RBrnT{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RBrnTœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-0vMrI{œfieldNameœ:œinput_valueœ,œidœ:œAgent-0vMrIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-E01OU",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-E01OUœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-yJhxC",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-yJhxCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-RBrnT",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RBrnTœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-0vMrI",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-0vMrIœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-yJhxC",
+            "id": "Agent-0vMrI",
             "name": "response",
             "output_types": [
               "Message"
@@ -99,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-xSo6b",
+            "id": "ChatOutput-Lgpwq",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,18 +108,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-yJhxC{œdataTypeœ:œAgentœ,œidœ:œAgent-yJhxCœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-xSo6b{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-xSo6bœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Agent-0vMrI{œdataTypeœ:œAgentœ,œidœ:œAgent-0vMrIœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Lgpwq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Lgpwqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-yJhxC",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-yJhxCœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-xSo6b",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-xSo6bœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "Agent-0vMrI",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-0vMrIœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-Lgpwq",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Lgpwqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ApifyActors-tL94Y",
+          "id": "ApifyActors-8WoKJ",
           "node": {
             "base_classes": [
               "Data",
@@ -206,7 +206,7 @@
                 "dynamic": false,
                 "info": "The API token for the Apify account.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "apify_token",
                 "password": true,
                 "placeholder": "",
@@ -308,7 +308,7 @@
           "type": "ApifyActors"
         },
         "dragging": false,
-        "id": "ApifyActors-tL94Y",
+        "id": "ApifyActors-8WoKJ",
         "measured": {
           "height": 526,
           "width": 320
@@ -322,7 +322,7 @@
       },
       {
         "data": {
-          "id": "ApifyActors-CVPGK",
+          "id": "ApifyActors-Zrjnz",
           "node": {
             "base_classes": [
               "Data",
@@ -409,7 +409,7 @@
                 "dynamic": false,
                 "info": "The API token for the Apify account.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "apify_token",
                 "password": true,
                 "placeholder": "",
@@ -511,7 +511,7 @@
           "type": "ApifyActors"
         },
         "dragging": false,
-        "id": "ApifyActors-CVPGK",
+        "id": "ApifyActors-Zrjnz",
         "measured": {
           "height": 526,
           "width": 320
@@ -525,7 +525,7 @@
       },
       {
         "data": {
-          "id": "note-hmQk5",
+          "id": "note-do2Nq",
           "node": {
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
@@ -537,7 +537,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-hmQk5",
+        "id": "note-do2Nq",
         "measured": {
           "height": 324,
           "width": 324
@@ -551,7 +551,7 @@
       },
       {
         "data": {
-          "id": "note-Utxei",
+          "id": "note-7z6Er",
           "node": {
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
@@ -564,7 +564,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-Utxei",
+        "id": "note-7z6Er",
         "measured": {
           "height": 324,
           "width": 324
@@ -580,7 +580,7 @@
       },
       {
         "data": {
-          "id": "note-NoZ4e",
+          "id": "note-NZDOa",
           "node": {
             "description": "# Social Media Agent\n\nExtract data with **Apify Actors** and analyze the data with an **Agent**.\n\n## Prerequisites\n\n* An [Apify API token](https://docs.apify.com/platform/integrations/api#api-token)\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Enter your **Apify** API token in the **Apify Token** fields of the **Apify Actors** components.  \n2. Enter your **OpenAI** API token in the **OpenAI API Key** field of the **Agent** component.\n3. Open the **Playground** and chat with the agent. For example, task it with retrieving a profile bio and the latest video by using this prompt:  \n   ```\n   Find the TikTok profile of the company OpenAI using Google search, then show me the profile bio and their latest video.\n   ```",
             "display_name": "",
@@ -593,10 +593,10 @@
         },
         "dragging": false,
         "height": 657,
-        "id": "note-NoZ4e",
+        "id": "note-NZDOa",
         "measured": {
           "height": 657,
-          "width": 525
+          "width": 524
         },
         "position": {
           "x": -313.0627945618906,
@@ -609,7 +609,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-E01OU",
+          "id": "ChatInput-RBrnT",
           "node": {
             "base_classes": [
               "Message"
@@ -906,7 +906,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-E01OU",
+        "id": "ChatInput-RBrnT",
         "measured": {
           "height": 48,
           "width": 192
@@ -920,7 +920,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-xSo6b",
+          "id": "ChatOutput-Lgpwq",
           "node": {
             "base_classes": [
               "Message"
@@ -1214,7 +1214,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-xSo6b",
+        "id": "ChatOutput-Lgpwq",
         "measured": {
           "height": 48,
           "width": 192
@@ -1228,7 +1228,7 @@
       },
       {
         "data": {
-          "id": "note-kMYOt",
+          "id": "note-1Ws1d",
           "node": {
             "description": "### 💡 Add your OpenAI API key here ",
             "display_name": "",
@@ -1240,7 +1240,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-kMYOt",
+        "id": "note-1Ws1d",
         "measured": {
           "height": 324,
           "width": 324
@@ -1254,13 +1254,12 @@
       },
       {
         "data": {
-          "id": "Agent-yJhxC",
+          "id": "Agent-0vMrI",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
-            "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -1280,26 +1279,18 @@
               "max_retries",
               "timeout",
               "system_prompt",
+              "n_messages",
               "tools",
               "input_value",
               "handle_parsing_errors",
               "verbose",
               "max_iterations",
               "agent_description",
-              "memory",
-              "sender",
-              "sender_name",
-              "n_messages",
-              "session_id",
-              "order",
-              "template",
               "add_current_date_tool"
             ],
             "frozen": false,
             "icon": "bot",
-            "key": "Agent",
             "legacy": false,
-            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1308,8 +1299,12 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
+                "group_outputs": false,
+                "hidden": null,
                 "method": "message_response",
                 "name": "response",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1319,7 +1314,6 @@
               }
             ],
             "pinned": false,
-            "score": 1.1732828199964098e-19,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -1376,25 +1370,15 @@
                 "input_types": [],
                 "name": "agent_llm",
                 "options": [
-                  "Amazon Bedrock",
                   "Anthropic",
-                  "Azure OpenAI",
                   "Google Generative AI",
                   "Groq",
-                  "NVIDIA",
                   "OpenAI",
-                  "SambaNova",
                   "Custom"
                 ],
                 "options_metadata": [
                   {
-                    "icon": "Amazon"
-                  },
-                  {
                     "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "Azure"
                   },
                   {
                     "icon": "GoogleGenerativeAI"
@@ -1403,13 +1387,7 @@
                     "icon": "Groq"
                   },
                   {
-                    "icon": "NVIDIA"
-                  },
-                  {
                     "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "SambaNova"
                   },
                   {
                     "icon": "brain"
@@ -1420,6 +1398,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1432,10 +1411,11 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
@@ -1458,7 +1438,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.agents.events import ExceptionWithMessageError\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS_DICT,\n    MODELS_METADATA,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers.current_date import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.custom.custom_component.component import _get_component_toolkit\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.field_typing import Tool\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{\"icon\": \"brain\"}],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            # Get LLM model and validate\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected. Please choose a model to proceed.\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n\n            # Get memory data\n            self.chat_history = await self.get_memory_data()\n\n            # Add current date tool if enabled\n            if self.add_current_date_tool:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n                if not isinstance(current_date_tool, StructuredTool):\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n                self.tools.append(current_date_tool)\n            # note the tools are not required to run the agent, hence the validation removed.\n\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            return await self.run_agent(agent)\n\n        except (ValueError, TypeError, KeyError) as e:\n            logger.error(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            logger.error(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        except Exception as e:\n            logger.error(f\"Unexpected error: {e!s}\")\n            raise\n\n    async def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n        # filter out empty values\n        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}\n\n        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if not isinstance(self.agent_llm, str):\n            return self.agent_llm, None\n\n        try:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if not provider_info:\n                msg = f\"Invalid model provider: {self.agent_llm}\"\n                raise ValueError(msg)\n\n            component_class = provider_info.get(\"component_class\")\n            display_name = component_class.display_name\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\", \"\")\n\n            return self._build_llm_model(component_class, inputs, prefix), display_name\n\n        except Exception as e:\n            logger.error(f\"Error building {self.agent_llm} language model: {e!s}\")\n            msg = f\"Failed to initialize language model: {e!s}\"\n            raise ValueError(msg) from e\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {}\n        for input_ in inputs:\n            if hasattr(self, f\"{prefix}{input_.name}\"):\n                model_kwargs[input_.name] = getattr(self, f\"{prefix}{input_.name}\")\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]\n                    + [{\"icon\": \"brain\"}],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n\n    async def _get_tools(self) -> list[Tool]:\n        component_toolkit = _get_component_toolkit()\n        tools_names = self._build_tools_names()\n        agent_description = self.get_tool_description()\n        # TODO: Agent Description Depreciated Feature to be removed\n        description = f\"{agent_description}{tools_names}\"\n        tools = component_toolkit(component=self).get_tools(\n            tool_name=\"Call_Agent\", tool_description=description, callbacks=self.get_langchain_callbacks()\n        )\n        if hasattr(self, \"tools_metadata\"):\n            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)\n        return tools\n"
+                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.agents.events import ExceptionWithMessageError\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS,\n    MODEL_PROVIDERS_DICT,\n    MODELS_METADATA,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers.current_date import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.custom.custom_component.component import _get_component_toolkit\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.field_typing import Tool\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nMODEL_PROVIDERS_LIST = [\"Anthropic\", \"Google Generative AI\", \"Groq\", \"OpenAI\"]\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*MODEL_PROVIDERS_LIST, \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{\"icon\": \"brain\"}],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Chat History Messages\",\n            value=100,\n            info=\"Number of chat history messages to retrieve.\",\n            advanced=True,\n            show=True,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        # removed memory inputs from agent component\n        # *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            # Get LLM model and validate\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected. Please choose a model to proceed.\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n\n            # Get memory data\n            self.chat_history = await self.get_memory_data()\n            if isinstance(self.chat_history, Message):\n                self.chat_history = [self.chat_history]\n\n            # Add current date tool if enabled\n            if self.add_current_date_tool:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n                if not isinstance(current_date_tool, StructuredTool):\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n                self.tools.append(current_date_tool)\n            # note the tools are not required to run the agent, hence the validation removed.\n\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            return await self.run_agent(agent)\n\n        except (ValueError, TypeError, KeyError) as e:\n            logger.error(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            logger.error(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        except Exception as e:\n            logger.error(f\"Unexpected error: {e!s}\")\n            raise\n\n    async def get_memory_data(self):\n        return (\n            await MemoryComponent(**self.get_base_args())\n            .set(session_id=self.graph.session_id, order=\"Ascending\", n_messages=self.n_messages)\n            .retrieve_messages()\n        )\n\n    def get_llm(self):\n        if not isinstance(self.agent_llm, str):\n            return self.agent_llm, None\n\n        try:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if not provider_info:\n                msg = f\"Invalid model provider: {self.agent_llm}\"\n                raise ValueError(msg)\n\n            component_class = provider_info.get(\"component_class\")\n            display_name = component_class.display_name\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\", \"\")\n\n            return self._build_llm_model(component_class, inputs, prefix), display_name\n\n        except Exception as e:\n            logger.error(f\"Error building {self.agent_llm} language model: {e!s}\")\n            msg = f\"Failed to initialize language model: {e!s}\"\n            raise ValueError(msg) from e\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {}\n        for input_ in inputs:\n            if hasattr(self, f\"{prefix}{input_.name}\"):\n                model_kwargs[input_.name] = getattr(self, f\"{prefix}{input_.name}\")\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]\n                    + [{\"icon\": \"brain\"}],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n\n    async def _get_tools(self) -> list[Tool]:\n        component_toolkit = _get_component_toolkit()\n        tools_names = self._build_tools_names()\n        agent_description = self.get_tool_description()\n        # TODO: Agent Description Depreciated Feature to be removed\n        description = f\"{agent_description}{tools_names}\"\n        tools = component_toolkit(component=self).get_tools(\n            tool_name=\"Call_Agent\", tool_description=description, callbacks=self.get_langchain_callbacks()\n        )\n        if hasattr(self, \"tools_metadata\"):\n            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)\n        return tools\n"
               },
               "handle_parsing_errors": {
                 "_input_type": "BoolInput",
@@ -1579,70 +1559,6 @@
                 "type": "int",
                 "value": ""
               },
-              "memory": {
-                "_input_type": "HandleInput",
-                "advanced": true,
-                "display_name": "External Memory",
-                "dynamic": false,
-                "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": [
-                  "Memory"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "memory",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "message": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Message",
-                "dynamic": false,
-                "info": "The chat message to be stored.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "mode": {
-                "_input_type": "TabInput",
-                "advanced": true,
-                "display_name": "Mode",
-                "dynamic": false,
-                "info": "Operation mode: Store messages or Retrieve messages.",
-                "name": "mode",
-                "options": [
-                  "Retrieve",
-                  "Store"
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tab",
-                "value": "Store"
-              },
               "model_kwargs": {
                 "_input_type": "DictInput",
                 "advanced": true,
@@ -1669,6 +1585,7 @@
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
+                "load_from_db": false,
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -1689,6 +1606,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1697,9 +1615,9 @@
               "n_messages": {
                 "_input_type": "IntInput",
                 "advanced": true,
-                "display_name": "Number of Messages",
+                "display_name": "Number of Chat History Messages",
                 "dynamic": false,
-                "info": "Number of messages to retrieve.",
+                "info": "Number of chat history messages to retrieve.",
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "n_messages",
@@ -1731,29 +1649,6 @@
                 "type": "str",
                 "value": ""
               },
-              "order": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Order",
-                "dynamic": false,
-                "info": "Order of the messages.",
-                "name": "order",
-                "options": [
-                  "Ascending",
-                  "Descending"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Ascending"
-              },
               "seed": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -1771,101 +1666,6 @@
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 1
-              },
-              "sender": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender",
-                "dynamic": false,
-                "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Machine and User"
-              },
-              "sender_name": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Sender Name",
-                "dynamic": false,
-                "info": "Filter by sender name.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sender_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "sender_type": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender Type",
-                "dynamic": false,
-                "info": "Filter by sender type.",
-                "name": "sender_type",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Machine and User"
-              },
-              "session_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Session ID",
-                "dynamic": false,
-                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "session_id",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
               },
               "system_prompt": {
                 "_input_type": "MultilineInput",
@@ -1919,31 +1719,6 @@
                 "tool_mode": false,
                 "type": "slider",
                 "value": 0.1
-              },
-              "template": {
-                "_input_type": "MultilineInput",
-                "advanced": true,
-                "copy_field": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "{sender_name}: {text}"
               },
               "timeout": {
                 "_input_type": "IntInput",
@@ -2009,7 +1784,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-yJhxC",
+        "id": "Agent-0vMrI",
         "measured": {
           "height": 594,
           "width": 320
@@ -2018,21 +1793,21 @@
           "x": 1023.5315500182937,
           "y": 280.6548808097231
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 251.14965955941773,
-      "y": 42.193990847111536,
-      "zoom": 0.5946080556136385
+      "x": 281.02651297047544,
+      "y": 209.9438393445942,
+      "zoom": 0.6868478679218015
     }
   },
   "description": "Utilize Apify Actors as agent tools to search and analyze social media profiles.",
   "endpoint_name": null,
-  "id": "08525bf9-dd32-4bbe-920c-169cffc78890",
+  "id": "6c13c359-1078-452d-acdb-863aedd98e23",
   "is_component": false,
-  "last_tested_version": "1.4.2",
+  "last_tested_version": "1.4.3",
   "name": "Social Media Agent",
   "tags": [
     "agent",

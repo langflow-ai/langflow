@@ -34,10 +34,6 @@ If you get an API key error when running a flow, try the following:
 
 The following issues can occur when installing Langflow.
 
-### C++ build tools required for Langflow Desktop on Windows
-
-Microsoft Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or [install Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
-
 ### Langflow installation freezes at pip dependency resolution
 
 Installing Langflow OSS with `pip install langflow` slowly fails with this error message:
