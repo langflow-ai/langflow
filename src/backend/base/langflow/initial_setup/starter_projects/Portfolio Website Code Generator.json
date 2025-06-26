@@ -403,7 +403,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ANTHROPIC_API_KEY"
               },
               "base_url": {
                 "_input_type": "MessageTextInput",
@@ -742,7 +742,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ANTHROPIC_API_KEY"
               },
               "base_url": {
                 "_input_type": "MessageTextInput",
