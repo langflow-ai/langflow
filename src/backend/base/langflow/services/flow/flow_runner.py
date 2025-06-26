@@ -21,7 +21,7 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.user import User
 from langflow.services.database.models.variable import Variable
 from langflow.services.database.utils import initialize_database
-from langflow.services.deps import get_cache_service, session_scope
+from langflow.services.deps import get_cache_service, get_storage_service, session_scope
 from langflow.utils.util import update_settings
 
 
@@ -132,9 +132,9 @@ class LangflowRunnerExperimental:
         return flow_dict
 
     def process_tweaks(self, flow_dict: dict) -> dict:
-        tweaks = None
+        tweaks: dict = None
         for vertex in Graph.from_payload(flow_dict).vertices:
-            param_handler = ParameterHandler(vertex, None)
+            param_handler = ParameterHandler(vertex, get_storage_service())
             field_params, load_from_db_fields = param_handler.process_field_parameters()
             for db_field in load_from_db_fields:
                 if field_params[db_field]:
