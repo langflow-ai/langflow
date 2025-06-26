@@ -21,9 +21,14 @@ You can drag and drop Langflow JSON files directly from your file system into th
 
 To **Export** your flow, in the **Playground**, click **Share**, and then click **Export**.
 
-Select **Save with my API keys** to save the flow with any **Global Variables** included.
-Raw values such as API keys are **not included** with your flow file, only the global variable you created to contain the value.
-When you share your flow file with another user who has these global variables populated, the flow will run without requiring keys to be added again.
+Select **Save with my API keys** to save the flow with any **Global ariables** included.
+
+:::important
+If your key is saved as a **Global variable**, only the global variable you created to contain the value is saved.
+If your key value is manually entered into a component field, the actual key value is saved in the JSON file.
+:::
+
+When you share your flow file with another user who has the same global variables populated, the flow runs without requiring keys to be added again.
 
 The `FLOW_NAME.json` file is downloaded to your local machine.
 
