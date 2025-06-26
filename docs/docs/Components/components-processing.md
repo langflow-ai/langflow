@@ -242,6 +242,42 @@ This component can perform the following operations on Pandas [DataFrame](https:
 
 This component routes requests to the most appropriate LLM based on [OpenRouter](https://openrouter.ai/docs/quickstart) model specifications.
 
+The judge LLM analyzed your input message to understand the evaluation context, and then selects the most appropriate model from your LLM pool.
+
+The selected model processes your input and returns the response.
+
+To use the **LLM Router** component in a flow, do the following:
+
+1. Connect multiple **Language Model** components to the **LLM Router**'s **Language Models** input.
+
+2. Connect a **Judge LLM** component to the **Judge LLM** input.
+
+3. Connect **Chat Input** and **Chat Output** components to the **LLM Router**.
+The flow looks like this:
+
+![LLM router component](/img/component-llm-router.png)
+
+4. In the LLM Router component, set your **Optimization** preference:
+   - **Quality**: Prioritizes the highest quality response.
+   - **Speed**: Prioritizes the fastest response time.
+   - **Cost**: Prioritizes the most cost-effective option.
+   - **Balanced**: Strikes a balance between quality, speed, and cost.
+
+5. Run the flow.
+Your input is the task that the LLM router evaluates the models against, such as `Write a story about horses` or `How do I parse data objects out of JSON?`.
+6. In the LLM Router component, select the **Model Selection Decision** output to view the router's reasoning.
+
+    ```text
+    Model Selection Decision:
+    - Selected Model Index: 0
+    - Selected Langflow Model Name: gpt-4o-mini
+    - Selected API Model ID (if resolved): openai/gpt-4o-mini
+    - Optimization Preference: cost
+    - Input Query Length: 27 characters (~5 tokens)
+    - Number of Models Considered: 2
+    - Specifications Source: OpenRouter API
+    ```
+
 <details>
 <summary>Parameters</summary>
 
