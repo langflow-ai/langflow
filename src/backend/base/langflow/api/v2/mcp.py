@@ -122,8 +122,28 @@ async def get_servers(
             )
             server_info["mode"] = mode.lower()
             server_info["toolsCount"] = len(tool_list)
+        except ValueError as e:
+            # Configuration validation errors, invalid URLs, etc.
+            logger.error(f"Configuration error for server {server_name}: {e}")
+            server_info["error"] = f"Configuration error: {e}"
+        except (ConnectionError, TimeoutError) as e:
+            # Network connection and timeout issues
+            logger.error(f"Connection error for server {server_name}: {e}")
+            server_info["error"] = f"Connection failed: {e}"
+        except OSError as e:
+            # System-level errors (process execution, file access)
+            logger.error(f"System error for server {server_name}: {e}")
+            server_info["error"] = f"System error: {e}"
+        except (KeyError, TypeError) as e:
+            # Data parsing and access errors
+            logger.error(f"Data error for server {server_name}: {e}")
+            server_info["error"] = f"Configuration data error: {e}"
+        except (RuntimeError, ProcessLookupError, PermissionError) as e:
+            # Runtime and process-related errors
+            logger.error(f"Runtime error for server {server_name}: {e}")
+            server_info["error"] = f"Runtime error: {e}"
         except Exception as e:  # noqa: BLE001
-            # Check if this is an ExceptionGroup (has exceptions attribute)
+            # Generic catch-all for other exceptions (including ExceptionGroup)
             if hasattr(e, "exceptions") and e.exceptions:
                 # Extract the first underlying exception for a more meaningful error message
                 underlying_error = e.exceptions[0]
