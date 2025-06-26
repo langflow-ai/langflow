@@ -73,7 +73,17 @@ export function checkWebhookInput(nodes: Node[]) {
   return nodes.some((node) => node.data.type === "Webhook");
 }
 
-export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
+export function cleanEdges({
+  nodes,
+  edges,
+  componentId,
+  data,
+}: {
+  nodes: AllNodeType[];
+  edges: EdgeType[];
+  componentId?: string;
+  data?: APIClassType;
+}) {
   let newEdges: EdgeType[] = cloneDeep(
     edges.map((edge) => ({ ...edge, selected: false, animated: false })),
   );
@@ -161,11 +171,64 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         }
       }
     }
-
     newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
   });
+
+  if (componentId && data) {
+    clearHandlesFromAdvancedFields(componentId, data, newEdges);
+  }
+
   return newEdges;
 }
+
+export function clearHandlesFromAdvancedFields(
+  componentId: string,
+  data: APIClassType,
+  edges: EdgeType[],
+): void {
+  if (!componentId || !data?.template) {
+    return;
+  }
+
+  try {
+    const flowStore = useFlowStore.getState();
+    const { deleteEdge } = flowStore;
+
+    const connectedTargetEdges = edges.filter(
+      (edge) => edge.target === componentId,
+    );
+
+    const connectedSourceEdges = edges.filter(
+      (edge) => edge.source === componentId,
+    );
+
+    if (
+      connectedTargetEdges.length === 0 &&
+      connectedSourceEdges.length === 0
+    ) {
+      return;
+    }
+
+    const edgeIdsToDelete: string[] = [];
+
+    for (const edge of connectedTargetEdges) {
+      const fieldName = edge.data?.targetHandle?.fieldName;
+
+      if (fieldName && isAdvancedField(data, fieldName)) {
+        edgeIdsToDelete.push(edge.id);
+      }
+    }
+
+    edgeIdsToDelete.forEach(deleteEdge);
+  } catch (error) {
+    console.error("Error clearing handles from advanced fields:", error);
+  }
+}
+
+const isAdvancedField = (data: APIClassType, fieldName: string): boolean => {
+  const field = data.template[fieldName];
+  return field && "advanced" in field && field.advanced === true;
+};
 
 export function filterHiddenFieldsEdges(
   edge: EdgeType,

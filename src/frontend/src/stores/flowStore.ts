@@ -218,7 +218,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         list: brokenEdges.map((edge) => brokenEdgeMessage(edge)),
       });
     }
-    let newEdges = cleanEdges(nodes, edges);
+    let newEdges = cleanEdges({ nodes, edges });
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
     set({
@@ -271,7 +271,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setNodes: (change) => {
     let newChange = typeof change === "function" ? change(get().nodes) : change;
-    let newEdges = cleanEdges(newChange, get().edges);
+    let newEdges = cleanEdges({ nodes: newChange, edges: get().edges });
     const { inputs, outputs } = getInputsAndOutputs(newChange);
     get().updateComponentsToUpdate(newChange);
     set({
@@ -325,7 +325,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       return node;
     });
 
-    const newEdges = cleanEdges(newNodes, get().edges);
+    const newEdges = cleanEdges({ nodes: newNodes, edges: get().edges });
 
     set((state) => {
       if (callback) {
@@ -610,7 +610,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newNodes = cloneDeep(get().nodes);
     newNodes.forEach((node) => {
       node.selected = false;
-      let newEdges = cleanEdges(newNodes, get().edges);
+      let newEdges = cleanEdges({ nodes: newNodes, edges: get().edges });
       set({
         nodes: newNodes,
         edges: newEdges,
