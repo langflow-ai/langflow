@@ -9,6 +9,7 @@ from uuid import UUID
 import httpx
 from httpx import codes as httpx_codes
 from langchain_core.tools import StructuredTool
+from langflow.services.deps import get_settings_service
 from loguru import logger
 from mcp import ClientSession
 from pydantic import BaseModel, Field, create_model
@@ -299,7 +300,7 @@ class MCPStdioClient:
         self._connection_params = None
         self._connected = False
 
-    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
+    async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
         """Connect to MCP server using stdio transport (SDK style)."""
         from mcp import StdioServerParameters
         from mcp.client.stdio import stdio_client
@@ -322,6 +323,18 @@ class MCPStdioClient:
                 response = await session.list_tools()
                 self._connected = True
                 return response.tools
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+            logger.error(f"Failed to connect to MCP stdio server: {e}")
+            self._connection_params = None
+            self._connected = False
+            return []
+
+    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
+        """Connect to MCP server using stdio transport (SDK style)."""
+        try:
+            return await asyncio.wait_for(
+                self._connect_to_server(command_str, env), timeout=get_settings_service().settings.mcp_server_timeout
+            )
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             logger.error(f"Failed to connect to MCP stdio server: {e}")
             self._connection_params = None
@@ -414,7 +427,7 @@ class MCPSseClient:
             logger.warning(f"Error checking redirects: {e}")
         return url
 
-    async def connect_to_server(
+    async def _connect_to_server(
         self,
         url: str | None,
         headers: dict[str, str] | None = None,
@@ -453,6 +466,18 @@ class MCPSseClient:
                 response = await session.list_tools()
                 self._connected = True
                 return response.tools
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+            logger.error(f"Failed to connect to MCP SSE server: {e}")
+            self._connection_params = None
+            self._connected = False
+            return []
+
+    async def connect_to_server(self, url: str, headers: dict[str, str] | None = None) -> list[StructuredTool]:
+        """Connect to MCP server using SSE transport (SDK style)."""
+        try:
+            return await asyncio.wait_for(
+                self._connect_to_server(url, headers), timeout=get_settings_service().settings.mcp_server_timeout
+            )
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
             logger.error(f"Failed to connect to MCP SSE server: {e}")
             self._connection_params = None

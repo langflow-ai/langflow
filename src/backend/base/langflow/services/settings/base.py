@@ -92,7 +92,7 @@ class Settings(BaseSettings):
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
 
-    mcp_server_timeout: int = 30
+    mcp_server_timeout: int = 60
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
 
