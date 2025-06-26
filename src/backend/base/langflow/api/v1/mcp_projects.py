@@ -9,6 +9,7 @@ from contextvars import ContextVar
 from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
+from subprocess import CalledProcessError
 from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
 
@@ -355,7 +356,9 @@ async def install_mcp_config(
         args = ["mcp-proxy", sse_url]
 
         # Check if running on WSL (will appear as Linux but with Microsoft in release info)
-        if os_type == "Linux" and "microsoft" in platform.uname().release.lower():
+        is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
+
+        if is_wsl:
             logger.debug("WSL detected, using Windows-specific configuration")
 
             # If we're in WSL and the host is localhost, we might need to adjust the URL
@@ -399,14 +402,64 @@ async def install_mcp_config(
             }
         }
 
+        server_name = f"lf-{name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+        logger.debug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
+
         # Determine the config file path based on the client and OS
         if body.client.lower() == "cursor":
             config_path = Path.home() / ".cursor" / "mcp.json"
         elif body.client.lower() == "claude":
             if os_type == "Darwin":  # macOS
                 config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
-            elif os_type == "Windows":
-                config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
+            elif os_type == "Windows" or is_wsl:  # Windows or WSL (Claude runs on Windows host)
+                if is_wsl:
+                    # In WSL, we need to access the Windows APPDATA directory
+                    try:
+                        # First try to get the Windows username
+                        proc = await create_subprocess_exec(
+                            "/mnt/c/Windows/System32/cmd.exe",
+                            "/c",
+                            "echo %USERNAME%",
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE,
+                        )
+                        stdout, stderr = await proc.communicate()
+
+                        if proc.returncode == 0 and stdout.strip():
+                            windows_username = stdout.decode().strip()
+                            config_path = Path(
+                                f"/mnt/c/Users/{windows_username}/AppData/Roaming/Claude/claude_desktop_config.json"
+                            )
+                        else:
+                            # Fallback: try to find the Windows user directory
+                            users_dir = Path("/mnt/c/Users")
+                            if users_dir.exists():
+                                # Get the first non-system user directory
+                                user_dirs = [
+                                    d
+                                    for d in users_dir.iterdir()
+                                    if d.is_dir() and not d.name.startswith(("Default", "Public", "All Users"))
+                                ]
+                                if user_dirs:
+                                    config_path = (
+                                        user_dirs[0] / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
+                                    )
+                                else:
+                                    raise HTTPException(
+                                        status_code=400, detail="Could not find Windows user directory in WSL"
+                                    )
+                            else:
+                                raise HTTPException(
+                                    status_code=400, detail="Windows C: drive not mounted at /mnt/c in WSL"
+                                )
+                    except (OSError, CalledProcessError) as e:
+                        logger.warning("Failed to determine Windows user path in WSL: %s", str(e))
+                        raise HTTPException(
+                            status_code=400, detail=f"Could not determine Windows Claude config path in WSL: {e!s}"
+                        ) from e
+                else:
+                    # Regular Windows
+                    config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
             else:
                 raise HTTPException(status_code=400, detail="Unsupported operating system for Claude configuration")
         else:
@@ -460,40 +513,106 @@ async def check_installed_mcp_servers(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
-        # Project server name pattern
-        project_server_name = f"lf-{project.name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+        # Project server name pattern (must match the logic in install function)
+        name = project.name
+        name = NEW_FOLDER_NAME if name == DEFAULT_FOLDER_NAME else name
+        project_server_name = f"lf-{name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+
+        logger.debug(
+            "Checking for installed MCP servers for project: %s (server name: %s)", project.name, project_server_name
+        )
 
         # Check configurations for different clients
         results = []
 
         # Check Cursor configuration
         cursor_config_path = Path.home() / ".cursor" / "mcp.json"
+        logger.debug("Checking Cursor config at: %s (exists: %s)", cursor_config_path, cursor_config_path.exists())
         if cursor_config_path.exists():
             try:
                 with cursor_config_path.open("r") as f:
                     cursor_config = json.load(f)
                     if "mcpServers" in cursor_config and project_server_name in cursor_config["mcpServers"]:
+                        logger.debug("Found Cursor config for project server: %s", project_server_name)
                         results.append("cursor")
+                    else:
+                        logger.debug(
+                            "Cursor config exists but no entry for server: %s (available servers: %s)",
+                            project_server_name,
+                            list(cursor_config.get("mcpServers", {}).keys()),
+                        )
             except json.JSONDecodeError:
-                pass
+                logger.warning("Failed to parse Cursor config JSON at: %s", cursor_config_path)
 
         # Check Claude configuration
         claude_config_path = None
-        if platform.system() == "Darwin":  # macOS
+        os_type = platform.system()
+        is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
+
+        if os_type == "Darwin":  # macOS
             claude_config_path = (
                 Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
             )
-        elif platform.system() == "Windows":
-            claude_config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
+        elif os_type == "Windows" or is_wsl:  # Windows or WSL (Claude runs on Windows host)
+            if is_wsl:
+                # In WSL, we need to access the Windows APPDATA directory
+                try:
+                    # First try to get the Windows username
+                    proc = await create_subprocess_exec(
+                        "/mnt/c/Windows/System32/cmd.exe",
+                        "/c",
+                        "echo %USERNAME%",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                    )
+                    stdout, stderr = await proc.communicate()
+
+                    if proc.returncode == 0 and stdout.strip():
+                        windows_username = stdout.decode().strip()
+                        claude_config_path = Path(
+                            f"/mnt/c/Users/{windows_username}/AppData/Roaming/Claude/claude_desktop_config.json"
+                        )
+                    else:
+                        # Fallback: try to find the Windows user directory
+                        users_dir = Path("/mnt/c/Users")
+                        if users_dir.exists():
+                            # Get the first non-system user directory
+                            user_dirs = [
+                                d
+                                for d in users_dir.iterdir()
+                                if d.is_dir() and not d.name.startswith(("Default", "Public", "All Users"))
+                            ]
+                            if user_dirs:
+                                claude_config_path = (
+                                    user_dirs[0] / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
+                                )
+                except (OSError, CalledProcessError) as e:
+                    logger.warning(
+                        "Failed to determine Windows user path in WSL for checking Claude config: %s", str(e)
+                    )
+                    # Don't set claude_config_path, so it will be skipped
+            else:
+                # Regular Windows
+                claude_config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
 
         if claude_config_path and claude_config_path.exists():
+            logger.debug("Checking Claude config at: %s", claude_config_path)
             try:
                 with claude_config_path.open("r") as f:
                     claude_config = json.load(f)
                     if "mcpServers" in claude_config and project_server_name in claude_config["mcpServers"]:
+                        logger.debug("Found Claude config for project server: %s", project_server_name)
                         results.append("claude")
+                    else:
+                        logger.debug(
+                            "Claude config exists but no entry for server: %s (available servers: %s)",
+                            project_server_name,
+                            list(claude_config.get("mcpServers", {}).keys()),
+                        )
             except json.JSONDecodeError:
-                pass
+                logger.warning("Failed to parse Claude config JSON at: %s", claude_config_path)
+        else:
+            logger.debug("Claude config path not found or doesn't exist: %s", claude_config_path)
 
     except Exception as e:
         msg = f"Error checking MCP configuration: {e!s}"
