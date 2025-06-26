@@ -1,7 +1,6 @@
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
-import useFlowStore from "@/stores/flowStore";
-import { cleanEdges } from "@/utils/reactflowUtils";
+import { clearHandlesFromAdvancedFields } from "@/utils/reactflowUtils";
 import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/ext-searchbox";
@@ -61,8 +60,6 @@ export default function CodeAreaModal({
   } | null>(null);
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
-  const nodes = useFlowStore((state) => state.nodes);
-  const edges = useFlowStore((state) => state.edges);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -123,8 +120,7 @@ export default function CodeAreaModal({
         onSuccess: ({ data, type }) => {
           if (data && type) {
             setValue(code);
-
-            cleanEdges({ nodes, edges, componentId, data });
+            clearHandlesFromAdvancedFields(componentId!, data);
 
             setNodeClass(data, type);
             setError({ detail: { error: undefined, traceback: undefined } });
