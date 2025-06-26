@@ -357,13 +357,13 @@ To find your NPX path, run `which npx`.
 
 ## Auto-install Langflow MCP servers {#auto-install}
 
-In the **MCP server** tab, an **Auto install** option is available for **Cursor** and **Claude**.
+In the **MCP server** tab, an **Auto install** option is available for multiple MCP clients.
 
 To auto install your current Langflow project as an MCP server, click <Icon name="Plus" aria-hidden="True"/> **Add**.
 The installation adds the server's configuration file to the selected client's configuration file.
 
 Auto installation only works if your HTTP client and Langflow server are on the same local machine.
-You can still configure the client with the code in the **JSON** tab.
+In this is not the case, configure the client with the code in the **JSON** tab.
 
 ## See also
 
