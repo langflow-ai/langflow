@@ -205,9 +205,10 @@ export const FILE_ICONS = {
 
 export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
+  { display_name: "I/O", name: "input_output", icon: "Cable" },
   { display_name: "Inputs", name: "inputs", icon: "Download" },
   { display_name: "Outputs", name: "outputs", icon: "Upload" },
-  { display_name: "Prompts", name: "prompts", icon: "TerminalSquare" },
+  { display_name: "Prompts", name: "prompts", icon: "braces" },
   { display_name: "Models", name: "models", icon: "BrainCog" },
   { display_name: "Data", name: "data", icon: "Database" },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
@@ -217,7 +218,6 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Chains", name: "chains", icon: "Link" },
   { display_name: "Loaders", name: "documentloaders", icon: "Paperclip" },
   { display_name: "Link Extractors", name: "link_extractors", icon: "Link2" },
-  { display_name: "Memories", name: "memories", icon: "Cpu" },
   { display_name: "Output Parsers", name: "output_parsers", icon: "Compass" },
   { display_name: "Prototypes", name: "prototypes", icon: "FlaskConical" },
   { display_name: "Retrievers", name: "retrievers", icon: "FileSearch" },
@@ -229,14 +229,17 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   {
     display_name: "Language Models",
     name: "languagemodels",
     icon: "BrainCircuit",
   },
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
+  { display_name: "Memories", name: "memories", icon: "Cpu" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
+  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   { display_name: "GitHub", name: "github", icon: "Github" },
   {
     display_name: "Googlecalendar",
@@ -253,6 +256,7 @@ export const SIDEBAR_BUNDLES = [
     name: "datastax",
     icon: "AstraDB",
   },
+  { display_name: "Docling", name: "docling", icon: "Docling" },
   { display_name: "Olivya", name: "olivya", icon: "Olivya" },
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
@@ -278,15 +282,17 @@ export const SIDEBAR_BUNDLES = [
     name: "homeassistant",
     icon: "HomeAssistant",
   },
+  { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
   { display_name: "Search", name: "search", icon: "Search" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
 ];
 
 export const categoryIcons: Record<string, string> = {
   saved_components: "GradientSave",
+  input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
-  prompts: "TerminalSquare",
+  prompts: "Braces",
   data: "Database",
   models: "BrainCircuit",
   helpers: "Wand2",
@@ -311,9 +317,10 @@ export const categoryIcons: Record<string, string> = {
 
 export const nodeIconToDisplayIconMap: Record<string, string> = {
   //Category Icons
+  input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
-  prompts: "TerminalSquare",
+  prompts: "Braces",
   data: "Database",
   models: "BrainCog",
   helpers: "Wand2",
@@ -336,6 +343,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatInput: "MessagesSquare",
   ChatOutput: "MessagesSquare",
   //Integration Icons
+  Outlook: "Outlook",
   AIML: "AI/ML",
   AgentQL: "AgentQL",
   LanguageModels: "BrainCircuit",

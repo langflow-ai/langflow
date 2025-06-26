@@ -287,4 +287,6 @@ export type FlowStoreType = {
   updateToolMode: (nodeId: string, toolMode: boolean) => void;
   helperLineEnabled: boolean;
   setHelperLineEnabled: (helperLineEnabled: boolean) => void;
+  newChatOnPlayground: boolean;
+  setNewChatOnPlayground: (newChat: boolean) => void;
 };

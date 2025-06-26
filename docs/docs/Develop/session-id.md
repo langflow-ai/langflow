@@ -19,7 +19,7 @@ If you set a custom session ID in a payload, all downstream components use the u
 
 ```
 curl --request POST \
-  --url 'http://127.0.0.1:7860/api/v1/run/$FLOW_ID' \
+  --url 'http://localhost:7860/api/v1/run/$FLOW_ID' \
   --header 'Content-Type: application/json' \
   --data '{
   "input_value": "Hello",
@@ -36,6 +36,6 @@ The `my_custom_session_value` value is used in components that accept it, and th
 To retrieve messages from local Langflow memory, add a [Message history](/components-helpers#message-history) component to your flow.
 The component accepts `sessionID` as a filter parameter, and uses the session ID value from upstream automatically to retrieve message history by session ID from storage.
 
-Messages can be retrieved by `session_id` from the `/monitor` endpoint in the API. For more information, see the [API examples](https://docs.langflow.org/api-reference-api-examples#get-messages).
+Messages can be retrieved by `session_id` from the Langflow API at `GET /v1/monitor/messages`. For more information, see [Monitor endpoints](https://docs.langflow.org/api-monitor).
 
 For an example of session ID in action, see [Use Session IDs in Langflow](https://www.youtube.com/watch?v=nJiF_eF21MY).

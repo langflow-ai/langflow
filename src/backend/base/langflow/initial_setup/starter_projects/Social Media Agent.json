@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ApifyActors",
-            "id": "ApifyActors-n0Tjo",
+            "id": "ApifyActors-Zrjnz",
             "name": "tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-EePDq",
+            "id": "Agent-0vMrI",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ApifyActors-n0Tjo{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-n0Tjoœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-EePDq{œfieldNameœ:œtoolsœ,œidœ:œAgent-EePDqœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ApifyActors-Zrjnz{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-Zrjnzœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-0vMrI{œfieldNameœ:œtoolsœ,œidœ:œAgent-0vMrIœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ApifyActors-n0Tjo",
-        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-n0Tjoœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-EePDq",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EePDqœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "ApifyActors-Zrjnz",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-Zrjnzœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-0vMrI",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-0vMrIœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ApifyActors",
-            "id": "ApifyActors-t44sy",
+            "id": "ApifyActors-8WoKJ",
             "name": "tool",
             "output_types": [
               "Tool"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-EePDq",
+            "id": "Agent-0vMrI",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ApifyActors-t44sy{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-t44syœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-EePDq{œfieldNameœ:œtoolsœ,œidœ:œAgent-EePDqœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ApifyActors-8WoKJ{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-8WoKJœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-0vMrI{œfieldNameœ:œtoolsœ,œidœ:œAgent-0vMrIœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ApifyActors-t44sy",
-        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-t44syœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-EePDq",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EePDqœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "ApifyActors-8WoKJ",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-8WoKJœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-0vMrI",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-0vMrIœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-9joxW",
+            "id": "ChatInput-RBrnT",
             "name": "message",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-EePDq",
+            "id": "Agent-0vMrI",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-9joxW{œdataTypeœ:œChatInputœ,œidœ:œChatInput-9joxWœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-EePDq{œfieldNameœ:œinput_valueœ,œidœ:œAgent-EePDqœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-RBrnT{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RBrnTœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-0vMrI{œfieldNameœ:œinput_valueœ,œidœ:œAgent-0vMrIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-9joxW",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-9joxWœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-EePDq",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-EePDqœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-RBrnT",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RBrnTœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-0vMrI",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-0vMrIœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-EePDq",
+            "id": "Agent-0vMrI",
             "name": "response",
             "output_types": [
               "Message"
@@ -99,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-dWtqL",
+            "id": "ChatOutput-Lgpwq",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,18 +108,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-EePDq{œdataTypeœ:œAgentœ,œidœ:œAgent-EePDqœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-dWtqL{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-dWtqLœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Agent-0vMrI{œdataTypeœ:œAgentœ,œidœ:œAgent-0vMrIœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Lgpwq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Lgpwqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "Agent-EePDq",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-EePDqœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-dWtqL",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-dWtqLœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "Agent-0vMrI",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-0vMrIœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-Lgpwq",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Lgpwqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ApifyActors-t44sy",
+          "id": "ApifyActors-8WoKJ",
           "node": {
             "base_classes": [
               "Data",
@@ -142,6 +142,7 @@
             "frozen": false,
             "icon": "Apify",
             "legacy": false,
+            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -154,7 +155,6 @@
                 "method": "run_model",
                 "name": "output",
                 "required_inputs": null,
-                "selected": "Data",
                 "tool_mode": true,
                 "types": [
                   "Data"
@@ -206,7 +206,7 @@
                 "dynamic": false,
                 "info": "The API token for the Apify account.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "apify_token",
                 "password": true,
                 "placeholder": "",
@@ -214,7 +214,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "APIFY_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -232,7 +232,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import json\nimport string\nfrom typing import Any, cast\n\nfrom apify_client import ApifyClient\nfrom langchain_community.document_loaders.apify_dataset import ApifyDatasetLoader\nfrom langchain_core.tools import BaseTool\nfrom pydantic import BaseModel, Field, field_serializer\n\nfrom langflow.custom import Component\nfrom langflow.field_typing import Tool\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import MultilineInput, Output, SecretStrInput, StrInput\nfrom langflow.schema import Data\n\nMAX_DESCRIPTION_LEN = 250\n\n\nclass ApifyActorsComponent(Component):\n    display_name = \"Apify Actors\"\n    description = (\n        \"Use Apify Actors to extract data from hundreds of places fast. \"\n        \"This component can be used in a flow to retrieve data or as a tool with an agent.\"\n    )\n    documentation: str = \"http://docs.langflow.org/integrations-apify\"\n    icon = \"Apify\"\n    name = \"ApifyActors\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"apify_token\",\n            display_name=\"Apify Token\",\n            info=\"The API token for the Apify account.\",\n            required=True,\n            password=True,\n        ),\n        StrInput(\n            name=\"actor_id\",\n            display_name=\"Actor\",\n            info=(\n                \"Actor name from Apify store to run. For example 'apify/website-content-crawler' \"\n                \"to use the Website Content Crawler Actor.\"\n            ),\n            value=\"apify/website-content-crawler\",\n            required=True,\n        ),\n        # multiline input is more pleasant to use than the nested dict input\n        MultilineInput(\n            name=\"run_input\",\n            display_name=\"Run input\",\n            info=(\n                'The JSON input for the Actor run. For example for the \"apify/website-content-crawler\" Actor: '\n                '{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}'\n            ),\n            value='{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}',\n            required=True,\n        ),\n        MultilineInput(\n            name=\"dataset_fields\",\n            display_name=\"Output fields\",\n            info=(\n                \"Fields to extract from the dataset, split by commas. \"\n                \"Other fields will be ignored. Dots in nested structures will be replaced by underscores. \"\n                \"Sample input: 'text, metadata.title'. \"\n                \"Sample output: {'text': 'page content here', 'metadata_title': 'page title here'}. \"\n                \"For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, \"\n                \"which is the content of the website in markdown format.\"\n            ),\n        ),\n        BoolInput(\n            name=\"flatten_dataset\",\n            display_name=\"Flatten output\",\n            info=(\n                \"The output dataset will be converted from a nested format to a flat structure. \"\n                \"Dots in nested structure will be replaced by underscores. \"\n                \"This is useful for further processing of the Data object. \"\n                \"For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}.\"\n            ),\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", type_=list[Data], method=\"run_model\"),\n        Output(display_name=\"Tool\", name=\"tool\", type_=Tool, method=\"build_tool\"),\n    ]\n\n    def __init__(self, *args, **kwargs) -> None:\n        super().__init__(*args, **kwargs)\n        self._apify_client: ApifyClient | None = None\n\n    def run_model(self) -> list[Data]:\n        \"\"\"Run the Actor and return node output.\"\"\"\n        input_ = json.loads(self.run_input)\n        fields = ApifyActorsComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None\n        res = self._run_actor(self.actor_id, input_, fields=fields)\n        if self.flatten_dataset:\n            res = [ApifyActorsComponent.flatten(item) for item in res]\n        data = [Data(data=item) for item in res]\n\n        self.status = data\n        return data\n\n    def build_tool(self) -> Tool:\n        \"\"\"Build a tool for an agent that runs the Apify Actor.\"\"\"\n        actor_id = self.actor_id\n\n        build = self._get_actor_latest_build(actor_id)\n        readme = build.get(\"readme\", \"\")[:250] + \"...\"\n        if not (input_schema_str := build.get(\"inputSchema\")):\n            msg = \"Input schema not found\"\n            raise ValueError(msg)\n        input_schema = json.loads(input_schema_str)\n        properties, required = ApifyActorsComponent.get_actor_input_schema_from_build(input_schema)\n        properties = {\"run_input\": properties}\n\n        # works from input schema\n        info_ = [\n            (\n                \"JSON encoded as a string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\\n\\n\"\n                f\"{json.dumps(properties, separators=(',', ':'))}\"\n            )\n        ]\n        if required:\n            info_.append(\"\\n\\nRequired fields:\\n\" + \"\\n\".join(required))\n\n        info = \"\".join(info_)\n\n        input_model_cls = ApifyActorsComponent.create_input_model_class(info)\n        tool_cls = ApifyActorsComponent.create_tool_class(self, readme, input_model_cls, actor_id)\n\n        return cast(\"Tool\", tool_cls())\n\n    @staticmethod\n    def create_tool_class(\n        parent: \"ApifyActorsComponent\", readme: str, input_model: type[BaseModel], actor_id: str\n    ) -> type[BaseTool]:\n        \"\"\"Create a tool class that runs an Apify Actor.\"\"\"\n\n        class ApifyActorRun(BaseTool):\n            \"\"\"Tool that runs Apify Actors.\"\"\"\n\n            name: str = f\"apify_actor_{ApifyActorsComponent.actor_id_to_tool_name(actor_id)}\"\n            description: str = (\n                \"Run an Apify Actor with the given input. \"\n                \"Here is a part of the currently loaded Actor README:\\n\\n\"\n                f\"{readme}\\n\\n\"\n            )\n\n            args_schema: type[BaseModel] = input_model\n\n            @field_serializer(\"args_schema\")\n            def serialize_args_schema(self, args_schema):\n                return args_schema.schema()\n\n            def _run(self, run_input: str | dict) -> str:\n                \"\"\"Use the Apify Actor.\"\"\"\n                input_dict = json.loads(run_input) if isinstance(run_input, str) else run_input\n\n                # retrieve if nested, just in case\n                input_dict = input_dict.get(\"run_input\", input_dict)\n\n                res = parent._run_actor(actor_id, input_dict)\n                return \"\\n\\n\".join([ApifyActorsComponent.dict_to_json_str(item) for item in res])\n\n        return ApifyActorRun\n\n    @staticmethod\n    def create_input_model_class(description: str) -> type[BaseModel]:\n        \"\"\"Create a Pydantic model class for the Actor input.\"\"\"\n\n        class ActorInput(BaseModel):\n            \"\"\"Input for the Apify Actor tool.\"\"\"\n\n            run_input: str = Field(..., description=description)\n\n        return ActorInput\n\n    def _get_apify_client(self) -> ApifyClient:\n        \"\"\"Get the Apify client.\n\n        Is created if not exists or token changes.\n        \"\"\"\n        if not self.apify_token:\n            msg = \"API token is required.\"\n            raise ValueError(msg)\n        # when token changes, create a new client\n        if self._apify_client is None or self._apify_client.token != self.apify_token:\n            self._apify_client = ApifyClient(self.apify_token)\n            if httpx_client := self._apify_client.http_client.httpx_client:\n                httpx_client.headers[\"user-agent\"] += \"; Origin/langflow\"\n        return self._apify_client\n\n    def _get_actor_latest_build(self, actor_id: str) -> dict:\n        \"\"\"Get the latest build of an Actor from the default build tag.\"\"\"\n        client = self._get_apify_client()\n        actor = client.actor(actor_id=actor_id)\n        if not (actor_info := actor.get()):\n            msg = f\"Actor {actor_id} not found.\"\n            raise ValueError(msg)\n\n        default_build_tag = actor_info.get(\"defaultRunOptions\", {}).get(\"build\")\n        latest_build_id = actor_info.get(\"taggedBuilds\", {}).get(default_build_tag, {}).get(\"buildId\")\n\n        if (build := client.build(latest_build_id).get()) is None:\n            msg = f\"Build {latest_build_id} not found.\"\n            raise ValueError(msg)\n\n        return build\n\n    @staticmethod\n    def get_actor_input_schema_from_build(input_schema: dict) -> tuple[dict, list[str]]:\n        \"\"\"Get the input schema from the Actor build.\n\n        Trim the description to 250 characters.\n        \"\"\"\n        properties = input_schema.get(\"properties\", {})\n        required = input_schema.get(\"required\", [])\n\n        properties_out: dict = {}\n        for item, meta in properties.items():\n            properties_out[item] = {}\n            if desc := meta.get(\"description\"):\n                properties_out[item][\"description\"] = (\n                    desc[:MAX_DESCRIPTION_LEN] + \"...\" if len(desc) > MAX_DESCRIPTION_LEN else desc\n                )\n            for key_name in (\"type\", \"default\", \"prefill\", \"enum\"):\n                if value := meta.get(key_name):\n                    properties_out[item][key_name] = value\n\n        return properties_out, required\n\n    def _get_run_dataset_id(self, run_id: str) -> str:\n        \"\"\"Get the dataset id from the run id.\"\"\"\n        client = self._get_apify_client()\n        run = client.run(run_id=run_id)\n        if (dataset := run.dataset().get()) is None:\n            msg = \"Dataset not found\"\n            raise ValueError(msg)\n        if (did := dataset.get(\"id\")) is None:\n            msg = \"Dataset id not found\"\n            raise ValueError(msg)\n        return did\n\n    @staticmethod\n    def dict_to_json_str(d: dict) -> str:\n        \"\"\"Convert a dictionary to a JSON string.\"\"\"\n        return json.dumps(d, separators=(\",\", \":\"), default=lambda _: \"<n/a>\")\n\n    @staticmethod\n    def actor_id_to_tool_name(actor_id: str) -> str:\n        \"\"\"Turn actor_id into a valid tool name.\n\n        Tool name must only contain letters, numbers, underscores, dashes,\n            and cannot contain spaces.\n        \"\"\"\n        valid_chars = string.ascii_letters + string.digits + \"_-\"\n        return \"\".join(char if char in valid_chars else \"_\" for char in actor_id)\n\n    def _run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:\n        \"\"\"Run an Apify Actor and return the output dataset.\n\n        Args:\n            actor_id: Actor name from Apify store to run.\n            run_input: JSON input for the Actor.\n            fields: List of fields to extract from the dataset. Other fields will be ignored.\n        \"\"\"\n        client = self._get_apify_client()\n        if (details := client.actor(actor_id=actor_id).call(run_input=run_input, wait_secs=1)) is None:\n            msg = \"Actor run details not found\"\n            raise ValueError(msg)\n        if (run_id := details.get(\"id\")) is None:\n            msg = \"Run id not found\"\n            raise ValueError(msg)\n\n        if (run_client := client.run(run_id)) is None:\n            msg = \"Run client not found\"\n            raise ValueError(msg)\n\n        # stream logs\n        with run_client.log().stream() as response:\n            if response:\n                for line in response.iter_lines():\n                    self.log(line)\n        run_client.wait_for_finish()\n\n        dataset_id = self._get_run_dataset_id(run_id)\n\n        loader = ApifyDatasetLoader(\n            dataset_id=dataset_id,\n            dataset_mapping_function=lambda item: item\n            if not fields\n            else {k.replace(\".\", \"_\"): ApifyActorsComponent.get_nested_value(item, k) for k in fields},\n        )\n        return loader.load()\n\n    @staticmethod\n    def get_nested_value(data: dict[str, Any], key: str) -> Any:\n        \"\"\"Get a nested value from a dictionary.\"\"\"\n        keys = key.split(\".\")\n        value = data\n        for k in keys:\n            if not isinstance(value, dict) or k not in value:\n                return None\n            value = value[k]\n        return value\n\n    @staticmethod\n    def parse_dataset_fields(dataset_fields: str) -> list[str]:\n        \"\"\"Convert a string of comma-separated fields into a list of fields.\"\"\"\n        dataset_fields = dataset_fields.replace(\"'\", \"\").replace('\"', \"\").replace(\"`\", \"\")\n        return [field.strip() for field in dataset_fields.split(\",\")]\n\n    @staticmethod\n    def flatten(d: dict) -> dict:\n        \"\"\"Flatten a nested dictionary.\"\"\"\n\n        def items():\n            for key, value in d.items():\n                if isinstance(value, dict):\n                    for subkey, subvalue in ApifyActorsComponent.flatten(value).items():\n                        yield key + \"_\" + subkey, subvalue\n                else:\n                    yield key, value\n\n        return dict(items())\n"
+                "value": "import json\nimport string\nfrom typing import Any, cast\n\nfrom apify_client import ApifyClient\nfrom langchain_community.document_loaders.apify_dataset import ApifyDatasetLoader\nfrom langchain_core.tools import BaseTool\nfrom pydantic import BaseModel, Field, field_serializer\n\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.field_typing import Tool\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import MultilineInput, Output, SecretStrInput, StrInput\nfrom langflow.schema.data import Data\n\nMAX_DESCRIPTION_LEN = 250\n\n\nclass ApifyActorsComponent(Component):\n    display_name = \"Apify Actors\"\n    description = (\n        \"Use Apify Actors to extract data from hundreds of places fast. \"\n        \"This component can be used in a flow to retrieve data or as a tool with an agent.\"\n    )\n    documentation: str = \"http://docs.langflow.org/integrations-apify\"\n    icon = \"Apify\"\n    name = \"ApifyActors\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"apify_token\",\n            display_name=\"Apify Token\",\n            info=\"The API token for the Apify account.\",\n            required=True,\n            password=True,\n        ),\n        StrInput(\n            name=\"actor_id\",\n            display_name=\"Actor\",\n            info=(\n                \"Actor name from Apify store to run. For example 'apify/website-content-crawler' \"\n                \"to use the Website Content Crawler Actor.\"\n            ),\n            value=\"apify/website-content-crawler\",\n            required=True,\n        ),\n        # multiline input is more pleasant to use than the nested dict input\n        MultilineInput(\n            name=\"run_input\",\n            display_name=\"Run input\",\n            info=(\n                'The JSON input for the Actor run. For example for the \"apify/website-content-crawler\" Actor: '\n                '{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}'\n            ),\n            value='{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}',\n            required=True,\n        ),\n        MultilineInput(\n            name=\"dataset_fields\",\n            display_name=\"Output fields\",\n            info=(\n                \"Fields to extract from the dataset, split by commas. \"\n                \"Other fields will be ignored. Dots in nested structures will be replaced by underscores. \"\n                \"Sample input: 'text, metadata.title'. \"\n                \"Sample output: {'text': 'page content here', 'metadata_title': 'page title here'}. \"\n                \"For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, \"\n                \"which is the content of the website in markdown format.\"\n            ),\n        ),\n        BoolInput(\n            name=\"flatten_dataset\",\n            display_name=\"Flatten output\",\n            info=(\n                \"The output dataset will be converted from a nested format to a flat structure. \"\n                \"Dots in nested structure will be replaced by underscores. \"\n                \"This is useful for further processing of the Data object. \"\n                \"For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}.\"\n            ),\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", type_=list[Data], method=\"run_model\"),\n        Output(display_name=\"Tool\", name=\"tool\", type_=Tool, method=\"build_tool\"),\n    ]\n\n    def __init__(self, *args, **kwargs) -> None:\n        super().__init__(*args, **kwargs)\n        self._apify_client: ApifyClient | None = None\n\n    def run_model(self) -> list[Data]:\n        \"\"\"Run the Actor and return node output.\"\"\"\n        input_ = json.loads(self.run_input)\n        fields = ApifyActorsComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None\n        res = self._run_actor(self.actor_id, input_, fields=fields)\n        if self.flatten_dataset:\n            res = [ApifyActorsComponent.flatten(item) for item in res]\n        data = [Data(data=item) for item in res]\n\n        self.status = data\n        return data\n\n    def build_tool(self) -> Tool:\n        \"\"\"Build a tool for an agent that runs the Apify Actor.\"\"\"\n        actor_id = self.actor_id\n\n        build = self._get_actor_latest_build(actor_id)\n        readme = build.get(\"readme\", \"\")[:250] + \"...\"\n        if not (input_schema_str := build.get(\"inputSchema\")):\n            msg = \"Input schema not found\"\n            raise ValueError(msg)\n        input_schema = json.loads(input_schema_str)\n        properties, required = ApifyActorsComponent.get_actor_input_schema_from_build(input_schema)\n        properties = {\"run_input\": properties}\n\n        # works from input schema\n        info_ = [\n            (\n                \"JSON encoded as a string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\\n\\n\"\n                f\"{json.dumps(properties, separators=(',', ':'))}\"\n            )\n        ]\n        if required:\n            info_.append(\"\\n\\nRequired fields:\\n\" + \"\\n\".join(required))\n\n        info = \"\".join(info_)\n\n        input_model_cls = ApifyActorsComponent.create_input_model_class(info)\n        tool_cls = ApifyActorsComponent.create_tool_class(self, readme, input_model_cls, actor_id)\n\n        return cast(\"Tool\", tool_cls())\n\n    @staticmethod\n    def create_tool_class(\n        parent: \"ApifyActorsComponent\", readme: str, input_model: type[BaseModel], actor_id: str\n    ) -> type[BaseTool]:\n        \"\"\"Create a tool class that runs an Apify Actor.\"\"\"\n\n        class ApifyActorRun(BaseTool):\n            \"\"\"Tool that runs Apify Actors.\"\"\"\n\n            name: str = f\"apify_actor_{ApifyActorsComponent.actor_id_to_tool_name(actor_id)}\"\n            description: str = (\n                \"Run an Apify Actor with the given input. \"\n                \"Here is a part of the currently loaded Actor README:\\n\\n\"\n                f\"{readme}\\n\\n\"\n            )\n\n            args_schema: type[BaseModel] = input_model\n\n            @field_serializer(\"args_schema\")\n            def serialize_args_schema(self, args_schema):\n                return args_schema.schema()\n\n            def _run(self, run_input: str | dict) -> str:\n                \"\"\"Use the Apify Actor.\"\"\"\n                input_dict = json.loads(run_input) if isinstance(run_input, str) else run_input\n\n                # retrieve if nested, just in case\n                input_dict = input_dict.get(\"run_input\", input_dict)\n\n                res = parent._run_actor(actor_id, input_dict)\n                return \"\\n\\n\".join([ApifyActorsComponent.dict_to_json_str(item) for item in res])\n\n        return ApifyActorRun\n\n    @staticmethod\n    def create_input_model_class(description: str) -> type[BaseModel]:\n        \"\"\"Create a Pydantic model class for the Actor input.\"\"\"\n\n        class ActorInput(BaseModel):\n            \"\"\"Input for the Apify Actor tool.\"\"\"\n\n            run_input: str = Field(..., description=description)\n\n        return ActorInput\n\n    def _get_apify_client(self) -> ApifyClient:\n        \"\"\"Get the Apify client.\n\n        Is created if not exists or token changes.\n        \"\"\"\n        if not self.apify_token:\n            msg = \"API token is required.\"\n            raise ValueError(msg)\n        # when token changes, create a new client\n        if self._apify_client is None or self._apify_client.token != self.apify_token:\n            self._apify_client = ApifyClient(self.apify_token)\n            if httpx_client := self._apify_client.http_client.httpx_client:\n                httpx_client.headers[\"user-agent\"] += \"; Origin/langflow\"\n        return self._apify_client\n\n    def _get_actor_latest_build(self, actor_id: str) -> dict:\n        \"\"\"Get the latest build of an Actor from the default build tag.\"\"\"\n        client = self._get_apify_client()\n        actor = client.actor(actor_id=actor_id)\n        if not (actor_info := actor.get()):\n            msg = f\"Actor {actor_id} not found.\"\n            raise ValueError(msg)\n\n        default_build_tag = actor_info.get(\"defaultRunOptions\", {}).get(\"build\")\n        latest_build_id = actor_info.get(\"taggedBuilds\", {}).get(default_build_tag, {}).get(\"buildId\")\n\n        if (build := client.build(latest_build_id).get()) is None:\n            msg = f\"Build {latest_build_id} not found.\"\n            raise ValueError(msg)\n\n        return build\n\n    @staticmethod\n    def get_actor_input_schema_from_build(input_schema: dict) -> tuple[dict, list[str]]:\n        \"\"\"Get the input schema from the Actor build.\n\n        Trim the description to 250 characters.\n        \"\"\"\n        properties = input_schema.get(\"properties\", {})\n        required = input_schema.get(\"required\", [])\n\n        properties_out: dict = {}\n        for item, meta in properties.items():\n            properties_out[item] = {}\n            if desc := meta.get(\"description\"):\n                properties_out[item][\"description\"] = (\n                    desc[:MAX_DESCRIPTION_LEN] + \"...\" if len(desc) > MAX_DESCRIPTION_LEN else desc\n                )\n            for key_name in (\"type\", \"default\", \"prefill\", \"enum\"):\n                if value := meta.get(key_name):\n                    properties_out[item][key_name] = value\n\n        return properties_out, required\n\n    def _get_run_dataset_id(self, run_id: str) -> str:\n        \"\"\"Get the dataset id from the run id.\"\"\"\n        client = self._get_apify_client()\n        run = client.run(run_id=run_id)\n        if (dataset := run.dataset().get()) is None:\n            msg = \"Dataset not found\"\n            raise ValueError(msg)\n        if (did := dataset.get(\"id\")) is None:\n            msg = \"Dataset id not found\"\n            raise ValueError(msg)\n        return did\n\n    @staticmethod\n    def dict_to_json_str(d: dict) -> str:\n        \"\"\"Convert a dictionary to a JSON string.\"\"\"\n        return json.dumps(d, separators=(\",\", \":\"), default=lambda _: \"<n/a>\")\n\n    @staticmethod\n    def actor_id_to_tool_name(actor_id: str) -> str:\n        \"\"\"Turn actor_id into a valid tool name.\n\n        Tool name must only contain letters, numbers, underscores, dashes,\n            and cannot contain spaces.\n        \"\"\"\n        valid_chars = string.ascii_letters + string.digits + \"_-\"\n        return \"\".join(char if char in valid_chars else \"_\" for char in actor_id)\n\n    def _run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:\n        \"\"\"Run an Apify Actor and return the output dataset.\n\n        Args:\n            actor_id: Actor name from Apify store to run.\n            run_input: JSON input for the Actor.\n            fields: List of fields to extract from the dataset. Other fields will be ignored.\n        \"\"\"\n        client = self._get_apify_client()\n        if (details := client.actor(actor_id=actor_id).call(run_input=run_input, wait_secs=1)) is None:\n            msg = \"Actor run details not found\"\n            raise ValueError(msg)\n        if (run_id := details.get(\"id\")) is None:\n            msg = \"Run id not found\"\n            raise ValueError(msg)\n\n        if (run_client := client.run(run_id)) is None:\n            msg = \"Run client not found\"\n            raise ValueError(msg)\n\n        # stream logs\n        with run_client.log().stream() as response:\n            if response:\n                for line in response.iter_lines():\n                    self.log(line)\n        run_client.wait_for_finish()\n\n        dataset_id = self._get_run_dataset_id(run_id)\n\n        loader = ApifyDatasetLoader(\n            dataset_id=dataset_id,\n            dataset_mapping_function=lambda item: item\n            if not fields\n            else {k.replace(\".\", \"_\"): ApifyActorsComponent.get_nested_value(item, k) for k in fields},\n        )\n        return loader.load()\n\n    @staticmethod\n    def get_nested_value(data: dict[str, Any], key: str) -> Any:\n        \"\"\"Get a nested value from a dictionary.\"\"\"\n        keys = key.split(\".\")\n        value = data\n        for k in keys:\n            if not isinstance(value, dict) or k not in value:\n                return None\n            value = value[k]\n        return value\n\n    @staticmethod\n    def parse_dataset_fields(dataset_fields: str) -> list[str]:\n        \"\"\"Convert a string of comma-separated fields into a list of fields.\"\"\"\n        dataset_fields = dataset_fields.replace(\"'\", \"\").replace('\"', \"\").replace(\"`\", \"\")\n        return [field.strip() for field in dataset_fields.split(\",\")]\n\n    @staticmethod\n    def flatten(d: dict) -> dict:\n        \"\"\"Flatten a nested dictionary.\"\"\"\n\n        def items():\n            for key, value in d.items():\n                if isinstance(value, dict):\n                    for subkey, subvalue in ApifyActorsComponent.flatten(value).items():\n                        yield key + \"_\" + subkey, subvalue\n                else:\n                    yield key, value\n\n        return dict(items())\n"
               },
               "dataset_fields": {
                 "_input_type": "MultilineInput",
@@ -303,13 +303,14 @@
             },
             "tool_mode": false
           },
+          "selected_output": "tool",
           "showNode": true,
           "type": "ApifyActors"
         },
         "dragging": false,
-        "id": "ApifyActors-t44sy",
+        "id": "ApifyActors-8WoKJ",
         "measured": {
-          "height": 628,
+          "height": 526,
           "width": 320
         },
         "position": {
@@ -321,7 +322,7 @@
       },
       {
         "data": {
-          "id": "ApifyActors-n0Tjo",
+          "id": "ApifyActors-Zrjnz",
           "node": {
             "base_classes": [
               "Data",
@@ -344,6 +345,7 @@
             "frozen": false,
             "icon": "Apify",
             "legacy": false,
+            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -356,7 +358,6 @@
                 "method": "run_model",
                 "name": "output",
                 "required_inputs": null,
-                "selected": "Data",
                 "tool_mode": true,
                 "types": [
                   "Data"
@@ -408,7 +409,7 @@
                 "dynamic": false,
                 "info": "The API token for the Apify account.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "apify_token",
                 "password": true,
                 "placeholder": "",
@@ -416,7 +417,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "APIFY_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -434,7 +435,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import json\nimport string\nfrom typing import Any, cast\n\nfrom apify_client import ApifyClient\nfrom langchain_community.document_loaders.apify_dataset import ApifyDatasetLoader\nfrom langchain_core.tools import BaseTool\nfrom pydantic import BaseModel, Field, field_serializer\n\nfrom langflow.custom import Component\nfrom langflow.field_typing import Tool\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import MultilineInput, Output, SecretStrInput, StrInput\nfrom langflow.schema import Data\n\nMAX_DESCRIPTION_LEN = 250\n\n\nclass ApifyActorsComponent(Component):\n    display_name = \"Apify Actors\"\n    description = (\n        \"Use Apify Actors to extract data from hundreds of places fast. \"\n        \"This component can be used in a flow to retrieve data or as a tool with an agent.\"\n    )\n    documentation: str = \"http://docs.langflow.org/integrations-apify\"\n    icon = \"Apify\"\n    name = \"ApifyActors\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"apify_token\",\n            display_name=\"Apify Token\",\n            info=\"The API token for the Apify account.\",\n            required=True,\n            password=True,\n        ),\n        StrInput(\n            name=\"actor_id\",\n            display_name=\"Actor\",\n            info=(\n                \"Actor name from Apify store to run. For example 'apify/website-content-crawler' \"\n                \"to use the Website Content Crawler Actor.\"\n            ),\n            value=\"apify/website-content-crawler\",\n            required=True,\n        ),\n        # multiline input is more pleasant to use than the nested dict input\n        MultilineInput(\n            name=\"run_input\",\n            display_name=\"Run input\",\n            info=(\n                'The JSON input for the Actor run. For example for the \"apify/website-content-crawler\" Actor: '\n                '{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}'\n            ),\n            value='{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}',\n            required=True,\n        ),\n        MultilineInput(\n            name=\"dataset_fields\",\n            display_name=\"Output fields\",\n            info=(\n                \"Fields to extract from the dataset, split by commas. \"\n                \"Other fields will be ignored. Dots in nested structures will be replaced by underscores. \"\n                \"Sample input: 'text, metadata.title'. \"\n                \"Sample output: {'text': 'page content here', 'metadata_title': 'page title here'}. \"\n                \"For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, \"\n                \"which is the content of the website in markdown format.\"\n            ),\n        ),\n        BoolInput(\n            name=\"flatten_dataset\",\n            display_name=\"Flatten output\",\n            info=(\n                \"The output dataset will be converted from a nested format to a flat structure. \"\n                \"Dots in nested structure will be replaced by underscores. \"\n                \"This is useful for further processing of the Data object. \"\n                \"For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}.\"\n            ),\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", type_=list[Data], method=\"run_model\"),\n        Output(display_name=\"Tool\", name=\"tool\", type_=Tool, method=\"build_tool\"),\n    ]\n\n    def __init__(self, *args, **kwargs) -> None:\n        super().__init__(*args, **kwargs)\n        self._apify_client: ApifyClient | None = None\n\n    def run_model(self) -> list[Data]:\n        \"\"\"Run the Actor and return node output.\"\"\"\n        input_ = json.loads(self.run_input)\n        fields = ApifyActorsComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None\n        res = self._run_actor(self.actor_id, input_, fields=fields)\n        if self.flatten_dataset:\n            res = [ApifyActorsComponent.flatten(item) for item in res]\n        data = [Data(data=item) for item in res]\n\n        self.status = data\n        return data\n\n    def build_tool(self) -> Tool:\n        \"\"\"Build a tool for an agent that runs the Apify Actor.\"\"\"\n        actor_id = self.actor_id\n\n        build = self._get_actor_latest_build(actor_id)\n        readme = build.get(\"readme\", \"\")[:250] + \"...\"\n        if not (input_schema_str := build.get(\"inputSchema\")):\n            msg = \"Input schema not found\"\n            raise ValueError(msg)\n        input_schema = json.loads(input_schema_str)\n        properties, required = ApifyActorsComponent.get_actor_input_schema_from_build(input_schema)\n        properties = {\"run_input\": properties}\n\n        # works from input schema\n        info_ = [\n            (\n                \"JSON encoded as a string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\\n\\n\"\n                f\"{json.dumps(properties, separators=(',', ':'))}\"\n            )\n        ]\n        if required:\n            info_.append(\"\\n\\nRequired fields:\\n\" + \"\\n\".join(required))\n\n        info = \"\".join(info_)\n\n        input_model_cls = ApifyActorsComponent.create_input_model_class(info)\n        tool_cls = ApifyActorsComponent.create_tool_class(self, readme, input_model_cls, actor_id)\n\n        return cast(\"Tool\", tool_cls())\n\n    @staticmethod\n    def create_tool_class(\n        parent: \"ApifyActorsComponent\", readme: str, input_model: type[BaseModel], actor_id: str\n    ) -> type[BaseTool]:\n        \"\"\"Create a tool class that runs an Apify Actor.\"\"\"\n\n        class ApifyActorRun(BaseTool):\n            \"\"\"Tool that runs Apify Actors.\"\"\"\n\n            name: str = f\"apify_actor_{ApifyActorsComponent.actor_id_to_tool_name(actor_id)}\"\n            description: str = (\n                \"Run an Apify Actor with the given input. \"\n                \"Here is a part of the currently loaded Actor README:\\n\\n\"\n                f\"{readme}\\n\\n\"\n            )\n\n            args_schema: type[BaseModel] = input_model\n\n            @field_serializer(\"args_schema\")\n            def serialize_args_schema(self, args_schema):\n                return args_schema.schema()\n\n            def _run(self, run_input: str | dict) -> str:\n                \"\"\"Use the Apify Actor.\"\"\"\n                input_dict = json.loads(run_input) if isinstance(run_input, str) else run_input\n\n                # retrieve if nested, just in case\n                input_dict = input_dict.get(\"run_input\", input_dict)\n\n                res = parent._run_actor(actor_id, input_dict)\n                return \"\\n\\n\".join([ApifyActorsComponent.dict_to_json_str(item) for item in res])\n\n        return ApifyActorRun\n\n    @staticmethod\n    def create_input_model_class(description: str) -> type[BaseModel]:\n        \"\"\"Create a Pydantic model class for the Actor input.\"\"\"\n\n        class ActorInput(BaseModel):\n            \"\"\"Input for the Apify Actor tool.\"\"\"\n\n            run_input: str = Field(..., description=description)\n\n        return ActorInput\n\n    def _get_apify_client(self) -> ApifyClient:\n        \"\"\"Get the Apify client.\n\n        Is created if not exists or token changes.\n        \"\"\"\n        if not self.apify_token:\n            msg = \"API token is required.\"\n            raise ValueError(msg)\n        # when token changes, create a new client\n        if self._apify_client is None or self._apify_client.token != self.apify_token:\n            self._apify_client = ApifyClient(self.apify_token)\n            if httpx_client := self._apify_client.http_client.httpx_client:\n                httpx_client.headers[\"user-agent\"] += \"; Origin/langflow\"\n        return self._apify_client\n\n    def _get_actor_latest_build(self, actor_id: str) -> dict:\n        \"\"\"Get the latest build of an Actor from the default build tag.\"\"\"\n        client = self._get_apify_client()\n        actor = client.actor(actor_id=actor_id)\n        if not (actor_info := actor.get()):\n            msg = f\"Actor {actor_id} not found.\"\n            raise ValueError(msg)\n\n        default_build_tag = actor_info.get(\"defaultRunOptions\", {}).get(\"build\")\n        latest_build_id = actor_info.get(\"taggedBuilds\", {}).get(default_build_tag, {}).get(\"buildId\")\n\n        if (build := client.build(latest_build_id).get()) is None:\n            msg = f\"Build {latest_build_id} not found.\"\n            raise ValueError(msg)\n\n        return build\n\n    @staticmethod\n    def get_actor_input_schema_from_build(input_schema: dict) -> tuple[dict, list[str]]:\n        \"\"\"Get the input schema from the Actor build.\n\n        Trim the description to 250 characters.\n        \"\"\"\n        properties = input_schema.get(\"properties\", {})\n        required = input_schema.get(\"required\", [])\n\n        properties_out: dict = {}\n        for item, meta in properties.items():\n            properties_out[item] = {}\n            if desc := meta.get(\"description\"):\n                properties_out[item][\"description\"] = (\n                    desc[:MAX_DESCRIPTION_LEN] + \"...\" if len(desc) > MAX_DESCRIPTION_LEN else desc\n                )\n            for key_name in (\"type\", \"default\", \"prefill\", \"enum\"):\n                if value := meta.get(key_name):\n                    properties_out[item][key_name] = value\n\n        return properties_out, required\n\n    def _get_run_dataset_id(self, run_id: str) -> str:\n        \"\"\"Get the dataset id from the run id.\"\"\"\n        client = self._get_apify_client()\n        run = client.run(run_id=run_id)\n        if (dataset := run.dataset().get()) is None:\n            msg = \"Dataset not found\"\n            raise ValueError(msg)\n        if (did := dataset.get(\"id\")) is None:\n            msg = \"Dataset id not found\"\n            raise ValueError(msg)\n        return did\n\n    @staticmethod\n    def dict_to_json_str(d: dict) -> str:\n        \"\"\"Convert a dictionary to a JSON string.\"\"\"\n        return json.dumps(d, separators=(\",\", \":\"), default=lambda _: \"<n/a>\")\n\n    @staticmethod\n    def actor_id_to_tool_name(actor_id: str) -> str:\n        \"\"\"Turn actor_id into a valid tool name.\n\n        Tool name must only contain letters, numbers, underscores, dashes,\n            and cannot contain spaces.\n        \"\"\"\n        valid_chars = string.ascii_letters + string.digits + \"_-\"\n        return \"\".join(char if char in valid_chars else \"_\" for char in actor_id)\n\n    def _run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:\n        \"\"\"Run an Apify Actor and return the output dataset.\n\n        Args:\n            actor_id: Actor name from Apify store to run.\n            run_input: JSON input for the Actor.\n            fields: List of fields to extract from the dataset. Other fields will be ignored.\n        \"\"\"\n        client = self._get_apify_client()\n        if (details := client.actor(actor_id=actor_id).call(run_input=run_input, wait_secs=1)) is None:\n            msg = \"Actor run details not found\"\n            raise ValueError(msg)\n        if (run_id := details.get(\"id\")) is None:\n            msg = \"Run id not found\"\n            raise ValueError(msg)\n\n        if (run_client := client.run(run_id)) is None:\n            msg = \"Run client not found\"\n            raise ValueError(msg)\n\n        # stream logs\n        with run_client.log().stream() as response:\n            if response:\n                for line in response.iter_lines():\n                    self.log(line)\n        run_client.wait_for_finish()\n\n        dataset_id = self._get_run_dataset_id(run_id)\n\n        loader = ApifyDatasetLoader(\n            dataset_id=dataset_id,\n            dataset_mapping_function=lambda item: item\n            if not fields\n            else {k.replace(\".\", \"_\"): ApifyActorsComponent.get_nested_value(item, k) for k in fields},\n        )\n        return loader.load()\n\n    @staticmethod\n    def get_nested_value(data: dict[str, Any], key: str) -> Any:\n        \"\"\"Get a nested value from a dictionary.\"\"\"\n        keys = key.split(\".\")\n        value = data\n        for k in keys:\n            if not isinstance(value, dict) or k not in value:\n                return None\n            value = value[k]\n        return value\n\n    @staticmethod\n    def parse_dataset_fields(dataset_fields: str) -> list[str]:\n        \"\"\"Convert a string of comma-separated fields into a list of fields.\"\"\"\n        dataset_fields = dataset_fields.replace(\"'\", \"\").replace('\"', \"\").replace(\"`\", \"\")\n        return [field.strip() for field in dataset_fields.split(\",\")]\n\n    @staticmethod\n    def flatten(d: dict) -> dict:\n        \"\"\"Flatten a nested dictionary.\"\"\"\n\n        def items():\n            for key, value in d.items():\n                if isinstance(value, dict):\n                    for subkey, subvalue in ApifyActorsComponent.flatten(value).items():\n                        yield key + \"_\" + subkey, subvalue\n                else:\n                    yield key, value\n\n        return dict(items())\n"
+                "value": "import json\nimport string\nfrom typing import Any, cast\n\nfrom apify_client import ApifyClient\nfrom langchain_community.document_loaders.apify_dataset import ApifyDatasetLoader\nfrom langchain_core.tools import BaseTool\nfrom pydantic import BaseModel, Field, field_serializer\n\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.field_typing import Tool\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import MultilineInput, Output, SecretStrInput, StrInput\nfrom langflow.schema.data import Data\n\nMAX_DESCRIPTION_LEN = 250\n\n\nclass ApifyActorsComponent(Component):\n    display_name = \"Apify Actors\"\n    description = (\n        \"Use Apify Actors to extract data from hundreds of places fast. \"\n        \"This component can be used in a flow to retrieve data or as a tool with an agent.\"\n    )\n    documentation: str = \"http://docs.langflow.org/integrations-apify\"\n    icon = \"Apify\"\n    name = \"ApifyActors\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"apify_token\",\n            display_name=\"Apify Token\",\n            info=\"The API token for the Apify account.\",\n            required=True,\n            password=True,\n        ),\n        StrInput(\n            name=\"actor_id\",\n            display_name=\"Actor\",\n            info=(\n                \"Actor name from Apify store to run. For example 'apify/website-content-crawler' \"\n                \"to use the Website Content Crawler Actor.\"\n            ),\n            value=\"apify/website-content-crawler\",\n            required=True,\n        ),\n        # multiline input is more pleasant to use than the nested dict input\n        MultilineInput(\n            name=\"run_input\",\n            display_name=\"Run input\",\n            info=(\n                'The JSON input for the Actor run. For example for the \"apify/website-content-crawler\" Actor: '\n                '{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}'\n            ),\n            value='{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}',\n            required=True,\n        ),\n        MultilineInput(\n            name=\"dataset_fields\",\n            display_name=\"Output fields\",\n            info=(\n                \"Fields to extract from the dataset, split by commas. \"\n                \"Other fields will be ignored. Dots in nested structures will be replaced by underscores. \"\n                \"Sample input: 'text, metadata.title'. \"\n                \"Sample output: {'text': 'page content here', 'metadata_title': 'page title here'}. \"\n                \"For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, \"\n                \"which is the content of the website in markdown format.\"\n            ),\n        ),\n        BoolInput(\n            name=\"flatten_dataset\",\n            display_name=\"Flatten output\",\n            info=(\n                \"The output dataset will be converted from a nested format to a flat structure. \"\n                \"Dots in nested structure will be replaced by underscores. \"\n                \"This is useful for further processing of the Data object. \"\n                \"For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}.\"\n            ),\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", type_=list[Data], method=\"run_model\"),\n        Output(display_name=\"Tool\", name=\"tool\", type_=Tool, method=\"build_tool\"),\n    ]\n\n    def __init__(self, *args, **kwargs) -> None:\n        super().__init__(*args, **kwargs)\n        self._apify_client: ApifyClient | None = None\n\n    def run_model(self) -> list[Data]:\n        \"\"\"Run the Actor and return node output.\"\"\"\n        input_ = json.loads(self.run_input)\n        fields = ApifyActorsComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None\n        res = self._run_actor(self.actor_id, input_, fields=fields)\n        if self.flatten_dataset:\n            res = [ApifyActorsComponent.flatten(item) for item in res]\n        data = [Data(data=item) for item in res]\n\n        self.status = data\n        return data\n\n    def build_tool(self) -> Tool:\n        \"\"\"Build a tool for an agent that runs the Apify Actor.\"\"\"\n        actor_id = self.actor_id\n\n        build = self._get_actor_latest_build(actor_id)\n        readme = build.get(\"readme\", \"\")[:250] + \"...\"\n        if not (input_schema_str := build.get(\"inputSchema\")):\n            msg = \"Input schema not found\"\n            raise ValueError(msg)\n        input_schema = json.loads(input_schema_str)\n        properties, required = ApifyActorsComponent.get_actor_input_schema_from_build(input_schema)\n        properties = {\"run_input\": properties}\n\n        # works from input schema\n        info_ = [\n            (\n                \"JSON encoded as a string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\\n\\n\"\n                f\"{json.dumps(properties, separators=(',', ':'))}\"\n            )\n        ]\n        if required:\n            info_.append(\"\\n\\nRequired fields:\\n\" + \"\\n\".join(required))\n\n        info = \"\".join(info_)\n\n        input_model_cls = ApifyActorsComponent.create_input_model_class(info)\n        tool_cls = ApifyActorsComponent.create_tool_class(self, readme, input_model_cls, actor_id)\n\n        return cast(\"Tool\", tool_cls())\n\n    @staticmethod\n    def create_tool_class(\n        parent: \"ApifyActorsComponent\", readme: str, input_model: type[BaseModel], actor_id: str\n    ) -> type[BaseTool]:\n        \"\"\"Create a tool class that runs an Apify Actor.\"\"\"\n\n        class ApifyActorRun(BaseTool):\n            \"\"\"Tool that runs Apify Actors.\"\"\"\n\n            name: str = f\"apify_actor_{ApifyActorsComponent.actor_id_to_tool_name(actor_id)}\"\n            description: str = (\n                \"Run an Apify Actor with the given input. \"\n                \"Here is a part of the currently loaded Actor README:\\n\\n\"\n                f\"{readme}\\n\\n\"\n            )\n\n            args_schema: type[BaseModel] = input_model\n\n            @field_serializer(\"args_schema\")\n            def serialize_args_schema(self, args_schema):\n                return args_schema.schema()\n\n            def _run(self, run_input: str | dict) -> str:\n                \"\"\"Use the Apify Actor.\"\"\"\n                input_dict = json.loads(run_input) if isinstance(run_input, str) else run_input\n\n                # retrieve if nested, just in case\n                input_dict = input_dict.get(\"run_input\", input_dict)\n\n                res = parent._run_actor(actor_id, input_dict)\n                return \"\\n\\n\".join([ApifyActorsComponent.dict_to_json_str(item) for item in res])\n\n        return ApifyActorRun\n\n    @staticmethod\n    def create_input_model_class(description: str) -> type[BaseModel]:\n        \"\"\"Create a Pydantic model class for the Actor input.\"\"\"\n\n        class ActorInput(BaseModel):\n            \"\"\"Input for the Apify Actor tool.\"\"\"\n\n            run_input: str = Field(..., description=description)\n\n        return ActorInput\n\n    def _get_apify_client(self) -> ApifyClient:\n        \"\"\"Get the Apify client.\n\n        Is created if not exists or token changes.\n        \"\"\"\n        if not self.apify_token:\n            msg = \"API token is required.\"\n            raise ValueError(msg)\n        # when token changes, create a new client\n        if self._apify_client is None or self._apify_client.token != self.apify_token:\n            self._apify_client = ApifyClient(self.apify_token)\n            if httpx_client := self._apify_client.http_client.httpx_client:\n                httpx_client.headers[\"user-agent\"] += \"; Origin/langflow\"\n        return self._apify_client\n\n    def _get_actor_latest_build(self, actor_id: str) -> dict:\n        \"\"\"Get the latest build of an Actor from the default build tag.\"\"\"\n        client = self._get_apify_client()\n        actor = client.actor(actor_id=actor_id)\n        if not (actor_info := actor.get()):\n            msg = f\"Actor {actor_id} not found.\"\n            raise ValueError(msg)\n\n        default_build_tag = actor_info.get(\"defaultRunOptions\", {}).get(\"build\")\n        latest_build_id = actor_info.get(\"taggedBuilds\", {}).get(default_build_tag, {}).get(\"buildId\")\n\n        if (build := client.build(latest_build_id).get()) is None:\n            msg = f\"Build {latest_build_id} not found.\"\n            raise ValueError(msg)\n\n        return build\n\n    @staticmethod\n    def get_actor_input_schema_from_build(input_schema: dict) -> tuple[dict, list[str]]:\n        \"\"\"Get the input schema from the Actor build.\n\n        Trim the description to 250 characters.\n        \"\"\"\n        properties = input_schema.get(\"properties\", {})\n        required = input_schema.get(\"required\", [])\n\n        properties_out: dict = {}\n        for item, meta in properties.items():\n            properties_out[item] = {}\n            if desc := meta.get(\"description\"):\n                properties_out[item][\"description\"] = (\n                    desc[:MAX_DESCRIPTION_LEN] + \"...\" if len(desc) > MAX_DESCRIPTION_LEN else desc\n                )\n            for key_name in (\"type\", \"default\", \"prefill\", \"enum\"):\n                if value := meta.get(key_name):\n                    properties_out[item][key_name] = value\n\n        return properties_out, required\n\n    def _get_run_dataset_id(self, run_id: str) -> str:\n        \"\"\"Get the dataset id from the run id.\"\"\"\n        client = self._get_apify_client()\n        run = client.run(run_id=run_id)\n        if (dataset := run.dataset().get()) is None:\n            msg = \"Dataset not found\"\n            raise ValueError(msg)\n        if (did := dataset.get(\"id\")) is None:\n            msg = \"Dataset id not found\"\n            raise ValueError(msg)\n        return did\n\n    @staticmethod\n    def dict_to_json_str(d: dict) -> str:\n        \"\"\"Convert a dictionary to a JSON string.\"\"\"\n        return json.dumps(d, separators=(\",\", \":\"), default=lambda _: \"<n/a>\")\n\n    @staticmethod\n    def actor_id_to_tool_name(actor_id: str) -> str:\n        \"\"\"Turn actor_id into a valid tool name.\n\n        Tool name must only contain letters, numbers, underscores, dashes,\n            and cannot contain spaces.\n        \"\"\"\n        valid_chars = string.ascii_letters + string.digits + \"_-\"\n        return \"\".join(char if char in valid_chars else \"_\" for char in actor_id)\n\n    def _run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:\n        \"\"\"Run an Apify Actor and return the output dataset.\n\n        Args:\n            actor_id: Actor name from Apify store to run.\n            run_input: JSON input for the Actor.\n            fields: List of fields to extract from the dataset. Other fields will be ignored.\n        \"\"\"\n        client = self._get_apify_client()\n        if (details := client.actor(actor_id=actor_id).call(run_input=run_input, wait_secs=1)) is None:\n            msg = \"Actor run details not found\"\n            raise ValueError(msg)\n        if (run_id := details.get(\"id\")) is None:\n            msg = \"Run id not found\"\n            raise ValueError(msg)\n\n        if (run_client := client.run(run_id)) is None:\n            msg = \"Run client not found\"\n            raise ValueError(msg)\n\n        # stream logs\n        with run_client.log().stream() as response:\n            if response:\n                for line in response.iter_lines():\n                    self.log(line)\n        run_client.wait_for_finish()\n\n        dataset_id = self._get_run_dataset_id(run_id)\n\n        loader = ApifyDatasetLoader(\n            dataset_id=dataset_id,\n            dataset_mapping_function=lambda item: item\n            if not fields\n            else {k.replace(\".\", \"_\"): ApifyActorsComponent.get_nested_value(item, k) for k in fields},\n        )\n        return loader.load()\n\n    @staticmethod\n    def get_nested_value(data: dict[str, Any], key: str) -> Any:\n        \"\"\"Get a nested value from a dictionary.\"\"\"\n        keys = key.split(\".\")\n        value = data\n        for k in keys:\n            if not isinstance(value, dict) or k not in value:\n                return None\n            value = value[k]\n        return value\n\n    @staticmethod\n    def parse_dataset_fields(dataset_fields: str) -> list[str]:\n        \"\"\"Convert a string of comma-separated fields into a list of fields.\"\"\"\n        dataset_fields = dataset_fields.replace(\"'\", \"\").replace('\"', \"\").replace(\"`\", \"\")\n        return [field.strip() for field in dataset_fields.split(\",\")]\n\n    @staticmethod\n    def flatten(d: dict) -> dict:\n        \"\"\"Flatten a nested dictionary.\"\"\"\n\n        def items():\n            for key, value in d.items():\n                if isinstance(value, dict):\n                    for subkey, subvalue in ApifyActorsComponent.flatten(value).items():\n                        yield key + \"_\" + subkey, subvalue\n                else:\n                    yield key, value\n\n        return dict(items())\n"
               },
               "dataset_fields": {
                 "_input_type": "MultilineInput",
@@ -505,13 +506,14 @@
             },
             "tool_mode": false
           },
+          "selected_output": "tool",
           "showNode": true,
           "type": "ApifyActors"
         },
         "dragging": false,
-        "id": "ApifyActors-n0Tjo",
+        "id": "ApifyActors-Zrjnz",
         "measured": {
-          "height": 628,
+          "height": 526,
           "width": 320
         },
         "position": {
@@ -523,7 +525,7 @@
       },
       {
         "data": {
-          "id": "note-QhVg5",
+          "id": "note-do2Nq",
           "node": {
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
@@ -535,7 +537,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-QhVg5",
+        "id": "note-do2Nq",
         "measured": {
           "height": 324,
           "width": 324
@@ -549,7 +551,7 @@
       },
       {
         "data": {
-          "id": "note-JuSWo",
+          "id": "note-7z6Er",
           "node": {
             "description": "### 💡 Add your Apify API key here ",
             "display_name": "",
@@ -562,7 +564,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-JuSWo",
+        "id": "note-7z6Er",
         "measured": {
           "height": 324,
           "width": 324
@@ -578,7 +580,7 @@
       },
       {
         "data": {
-          "id": "note-yDKv9",
+          "id": "note-NZDOa",
           "node": {
             "description": "# Social Media Agent\n\nExtract data with **Apify Actors** and analyze the data with an **Agent**.\n\n## Prerequisites\n\n* An [Apify API token](https://docs.apify.com/platform/integrations/api#api-token)\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Enter your **Apify** API token in the **Apify Token** fields of the **Apify Actors** components.  \n2. Enter your **OpenAI** API token in the **OpenAI API Key** field of the **Agent** component.\n3. Open the **Playground** and chat with the agent. For example, task it with retrieving a profile bio and the latest video by using this prompt:  \n   ```\n   Find the TikTok profile of the company OpenAI using Google search, then show me the profile bio and their latest video.\n   ```",
             "display_name": "",
@@ -591,10 +593,10 @@
         },
         "dragging": false,
         "height": 657,
-        "id": "note-yDKv9",
+        "id": "note-NZDOa",
         "measured": {
           "height": 657,
-          "width": 525
+          "width": 524
         },
         "position": {
           "x": -313.0627945618906,
@@ -607,7 +609,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-9joxW",
+          "id": "ChatInput-RBrnT",
           "node": {
             "base_classes": [
               "Message"
@@ -633,7 +635,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -641,7 +643,8 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Message",
+                "display_name": "Chat Message",
+                "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -717,7 +720,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -766,7 +769,7 @@
               "input_value": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
-                "display_name": "Text",
+                "display_name": "Input Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
                 "input_types": [],
@@ -898,13 +901,14 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message",
           "showNode": false,
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-9joxW",
+        "id": "ChatInput-RBrnT",
         "measured": {
-          "height": 66,
+          "height": 48,
           "width": 192
         },
         "position": {
@@ -916,7 +920,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-dWtqL",
+          "id": "ChatOutput-Lgpwq",
           "node": {
             "base_classes": [
               "Message"
@@ -943,7 +947,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.4.2",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -951,7 +955,8 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Message",
+                "display_name": "Output Message",
+                "group_outputs": false,
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
@@ -1045,7 +1050,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                return self._serialize_data(data)\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n\n                # Replace pipe characters to avoid markdown table issues\n                processed_data = data.replace(r\"\\|\", r\"\\\\|\", regex=True)\n\n                processed_data = processed_data.map(\n                    lambda x: str(x).replace(\"\\n\", \"<br/>\") if isinstance(x, str) else x\n                )\n\n                return processed_data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.helpers.data import safe_convert\nfrom langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.template.field.base import Output\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([safe_convert(item, clean_data=self.clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
               },
               "data_template": {
                 "_input_type": "MessageTextInput",
@@ -1073,7 +1078,7 @@
               "input_value": {
                 "_input_type": "HandleInput",
                 "advanced": false,
-                "display_name": "Text",
+                "display_name": "Inputs",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
                 "input_types": [
@@ -1209,9 +1214,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-dWtqL",
+        "id": "ChatOutput-Lgpwq",
         "measured": {
-          "height": 66,
+          "height": 48,
           "width": 192
         },
         "position": {
@@ -1223,7 +1228,7 @@
       },
       {
         "data": {
-          "id": "note-NYz05",
+          "id": "note-1Ws1d",
           "node": {
             "description": "### 💡 Add your OpenAI API key here ",
             "display_name": "",
@@ -1235,7 +1240,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-NYz05",
+        "id": "note-1Ws1d",
         "measured": {
           "height": 324,
           "width": 324
@@ -1249,13 +1254,12 @@
       },
       {
         "data": {
-          "id": "Agent-EePDq",
+          "id": "Agent-0vMrI",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
-            "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -1275,24 +1279,17 @@
               "max_retries",
               "timeout",
               "system_prompt",
+              "n_messages",
               "tools",
               "input_value",
               "handle_parsing_errors",
               "verbose",
               "max_iterations",
               "agent_description",
-              "memory",
-              "sender",
-              "sender_name",
-              "n_messages",
-              "session_id",
-              "order",
-              "template",
               "add_current_date_tool"
             ],
             "frozen": false,
             "icon": "bot",
-            "key": "Agent",
             "legacy": false,
             "metadata": {},
             "minimized": false,
@@ -1302,8 +1299,12 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
+                "group_outputs": false,
+                "hidden": null,
                 "method": "message_response",
                 "name": "response",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1313,7 +1314,6 @@
               }
             ],
             "pinned": false,
-            "score": 1.1732828199964098e-19,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -1370,25 +1370,15 @@
                 "input_types": [],
                 "name": "agent_llm",
                 "options": [
-                  "Amazon Bedrock",
                   "Anthropic",
-                  "Azure OpenAI",
                   "Google Generative AI",
                   "Groq",
-                  "NVIDIA",
                   "OpenAI",
-                  "SambaNova",
                   "Custom"
                 ],
                 "options_metadata": [
                   {
-                    "icon": "Amazon"
-                  },
-                  {
                     "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "Azure"
                   },
                   {
                     "icon": "GoogleGenerativeAI"
@@ -1397,13 +1387,7 @@
                     "icon": "Groq"
                   },
                   {
-                    "icon": "NVIDIA"
-                  },
-                  {
                     "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "SambaNova"
                   },
                   {
                     "icon": "brain"
@@ -1414,6 +1398,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1426,15 +1411,16 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": true,
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1452,7 +1438,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.agents.events import ExceptionWithMessageError\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS_DICT,\n    MODELS_METADATA,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{\"icon\": \"brain\"}],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            # Get LLM model and validate\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected. Please choose a model to proceed.\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n\n            # Get memory data\n            self.chat_history = await self.get_memory_data()\n\n            # Add current date tool if enabled\n            if self.add_current_date_tool:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n                if not isinstance(current_date_tool, StructuredTool):\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n                self.tools.append(current_date_tool)\n\n            # Validate tools\n            if not self.tools:\n                msg = \"Tools are required to run the agent. Please add at least one tool.\"\n                raise ValueError(msg)\n\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools,\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            return await self.run_agent(agent)\n\n        except (ValueError, TypeError, KeyError) as e:\n            logger.error(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            logger.error(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        except Exception as e:\n            logger.error(f\"Unexpected error: {e!s}\")\n            raise\n\n    async def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n        # filter out empty values\n        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}\n\n        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if not isinstance(self.agent_llm, str):\n            return self.agent_llm, None\n\n        try:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if not provider_info:\n                msg = f\"Invalid model provider: {self.agent_llm}\"\n                raise ValueError(msg)\n\n            component_class = provider_info.get(\"component_class\")\n            display_name = component_class.display_name\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\", \"\")\n\n            return self._build_llm_model(component_class, inputs, prefix), display_name\n\n        except Exception as e:\n            logger.error(f\"Error building {self.agent_llm} language model: {e!s}\")\n            msg = f\"Failed to initialize language model: {e!s}\"\n            raise ValueError(msg) from e\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]\n                    + [{\"icon\": \"brain\"}],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n"
+                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.agents.events import ExceptionWithMessageError\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS,\n    MODEL_PROVIDERS_DICT,\n    MODELS_METADATA,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers.current_date import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.custom.custom_component.component import _get_component_toolkit\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.field_typing import Tool\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nMODEL_PROVIDERS_LIST = [\"Anthropic\", \"Google Generative AI\", \"Groq\", \"OpenAI\"]\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*MODEL_PROVIDERS_LIST, \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{\"icon\": \"brain\"}],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Chat History Messages\",\n            value=100,\n            info=\"Number of chat history messages to retrieve.\",\n            advanced=True,\n            show=True,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        # removed memory inputs from agent component\n        # *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            # Get LLM model and validate\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected. Please choose a model to proceed.\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n\n            # Get memory data\n            self.chat_history = await self.get_memory_data()\n            if isinstance(self.chat_history, Message):\n                self.chat_history = [self.chat_history]\n\n            # Add current date tool if enabled\n            if self.add_current_date_tool:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n                if not isinstance(current_date_tool, StructuredTool):\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n                self.tools.append(current_date_tool)\n            # note the tools are not required to run the agent, hence the validation removed.\n\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools or [],\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            return await self.run_agent(agent)\n\n        except (ValueError, TypeError, KeyError) as e:\n            logger.error(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            logger.error(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        except Exception as e:\n            logger.error(f\"Unexpected error: {e!s}\")\n            raise\n\n    async def get_memory_data(self):\n        return (\n            await MemoryComponent(**self.get_base_args())\n            .set(session_id=self.graph.session_id, order=\"Ascending\", n_messages=self.n_messages)\n            .retrieve_messages()\n        )\n\n    def get_llm(self):\n        if not isinstance(self.agent_llm, str):\n            return self.agent_llm, None\n\n        try:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if not provider_info:\n                msg = f\"Invalid model provider: {self.agent_llm}\"\n                raise ValueError(msg)\n\n            component_class = provider_info.get(\"component_class\")\n            display_name = component_class.display_name\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\", \"\")\n\n            return self._build_llm_model(component_class, inputs, prefix), display_name\n\n        except Exception as e:\n            logger.error(f\"Error building {self.agent_llm} language model: {e!s}\")\n            msg = f\"Failed to initialize language model: {e!s}\"\n            raise ValueError(msg) from e\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {}\n        for input_ in inputs:\n            if hasattr(self, f\"{prefix}{input_.name}\"):\n                model_kwargs[input_.name] = getattr(self, f\"{prefix}{input_.name}\")\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]\n                    + [{\"icon\": \"brain\"}],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n\n    async def _get_tools(self) -> list[Tool]:\n        component_toolkit = _get_component_toolkit()\n        tools_names = self._build_tools_names()\n        agent_description = self.get_tool_description()\n        # TODO: Agent Description Depreciated Feature to be removed\n        description = f\"{agent_description}{tools_names}\"\n        tools = component_toolkit(component=self).get_tools(\n            tool_name=\"Call_Agent\", tool_description=description, callbacks=self.get_langchain_callbacks()\n        )\n        if hasattr(self, \"tools_metadata\"):\n            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)\n        return tools\n"
               },
               "handle_parsing_errors": {
                 "_input_type": "BoolInput",
@@ -1573,26 +1559,6 @@
                 "type": "int",
                 "value": ""
               },
-              "memory": {
-                "_input_type": "HandleInput",
-                "advanced": true,
-                "display_name": "External Memory",
-                "dynamic": false,
-                "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": [
-                  "Memory"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "memory",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
               "model_kwargs": {
                 "_input_type": "DictInput",
                 "advanced": true,
@@ -1619,6 +1585,7 @@
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
+                "load_from_db": false,
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -1639,6 +1606,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1647,9 +1615,9 @@
               "n_messages": {
                 "_input_type": "IntInput",
                 "advanced": true,
-                "display_name": "Number of Messages",
+                "display_name": "Number of Chat History Messages",
                 "dynamic": false,
-                "info": "Number of messages to retrieve.",
+                "info": "Number of chat history messages to retrieve.",
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "n_messages",
@@ -1681,29 +1649,6 @@
                 "type": "str",
                 "value": ""
               },
-              "order": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Order",
-                "dynamic": false,
-                "info": "Order of the messages.",
-                "name": "order",
-                "options": [
-                  "Ascending",
-                  "Descending"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Ascending"
-              },
               "seed": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -1721,76 +1666,6 @@
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 1
-              },
-              "sender": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender Type",
-                "dynamic": false,
-                "info": "Filter by sender type.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Machine and User"
-              },
-              "sender_name": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Sender Name",
-                "dynamic": false,
-                "info": "Filter by sender name.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sender_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "session_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Session ID",
-                "dynamic": false,
-                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "session_id",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
               },
               "system_prompt": {
                 "_input_type": "MultilineInput",
@@ -1844,31 +1719,6 @@
                 "tool_mode": false,
                 "type": "slider",
                 "value": 0.1
-              },
-              "template": {
-                "_input_type": "MultilineInput",
-                "advanced": true,
-                "copy_field": false,
-                "display_name": "Template",
-                "dynamic": false,
-                "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "{sender_name}: {text}"
               },
               "timeout": {
                 "_input_type": "IntInput",
@@ -1929,34 +1779,35 @@
             },
             "tool_mode": false
           },
+          "selected_output": "response",
           "showNode": true,
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-EePDq",
+        "id": "Agent-0vMrI",
         "measured": {
-          "height": 624,
+          "height": 594,
           "width": 320
         },
         "position": {
           "x": 1023.5315500182937,
           "y": 280.6548808097231
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 280.5777285013439,
-      "y": 153.83586264930773,
-      "zoom": 0.6859951115676428
+      "x": 281.02651297047544,
+      "y": 209.9438393445942,
+      "zoom": 0.6868478679218015
     }
   },
   "description": "Utilize Apify Actors as agent tools to search and analyze social media profiles.",
   "endpoint_name": null,
-  "id": "6aa57fa5-c085-4a30-8654-b56b4944679a",
+  "id": "6c13c359-1078-452d-acdb-863aedd98e23",
   "is_component": false,
-  "last_tested_version": "1.2.0",
+  "last_tested_version": "1.4.3",
   "name": "Social Media Agent",
   "tags": [
     "agent",

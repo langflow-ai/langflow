@@ -884,3 +884,111 @@ export const formatNumber = (num: number | undefined): string => {
   }
   return num?.toString();
 };
+
+export function getOS() {
+  const platform = (
+    window.navigator?.userAgentData?.platform || window.navigator.platform
+  ).toLowerCase();
+
+  let os: string | null = null;
+
+  if (platform.includes("mac") || platform.includes("darwin")) {
+    os = "macos";
+  } else if (platform.includes("win")) {
+    os = "windows";
+  } else if (platform.includes("linux")) {
+    os = "linux";
+  }
+
+  return os;
+}
+
+/**
+ * Encodes a session ID for safe URL transmission
+ * Handles both UUID format and date-time format session IDs
+ * @param {string} session_id - The session ID to encode
+ * @returns {string} The URL-encoded session ID
+ */
+export function encodeSessionId(session_id: string): string {
+  if (!session_id) return "";
+  // Use encodeURIComponent to properly encode spaces, commas, colons, etc.
+  return encodeURIComponent(session_id);
+}
+
+/**
+ * Decodes a session ID from URL encoding
+ * @param {string} encoded_session_id - The URL-encoded session ID
+ * @returns {string} The decoded session ID
+ */
+export function decodeSessionId(encoded_session_id: string): string {
+  if (!encoded_session_id) return "";
+  try {
+    return decodeURIComponent(encoded_session_id);
+  } catch (error) {
+    console.warn("Failed to decode session ID:", encoded_session_id, error);
+    return encoded_session_id; // Return as-is if decoding fails
+  }
+}
+
+/**
+ * Validates if a string is a valid UUID format
+ * @param {string} str - The string to validate
+ * @returns {boolean} True if the string is a valid UUID format
+ */
+export function isUUID(str: string): boolean {
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+/**
+ * Validates if a string is a date-time session format
+ * @param {string} str - The string to validate
+ * @returns {boolean} True if the string appears to be a date-time session format
+ */
+export function isDateTimeSession(str: string): boolean {
+  // Check for patterns like "Session Jun 16, 15:44:08" or similar
+  const dateTimeSessionRegex =
+    /^Session\s+\w{3}\s+\d{1,2},\s+\d{2}:\d{2}:\d{2}$/;
+  return dateTimeSessionRegex.test(str);
+}
+
+/**
+ * Formats and normalizes session IDs for consistent handling
+ * Handles both UUID format and date-time format session IDs
+ * @param {string} session_id - The session ID to format
+ * @returns {string} The formatted session ID
+ */
+export function sessionIdFormatted(session_id: string): string {
+  if (!session_id) return "";
+
+  // Decode if it appears to be URL encoded
+  let decodedId = session_id;
+  if (session_id.includes("%") || session_id.includes("+")) {
+    decodedId = decodeSessionId(session_id);
+  }
+
+  // If it's a UUID, return as-is (already in good format)
+  if (isUUID(decodedId)) {
+    return decodedId;
+  }
+
+  // If it's a date-time session, return as-is
+  if (isDateTimeSession(decodedId)) {
+    return decodedId;
+  }
+
+  // For any other format, return as-is but ensure it's properly trimmed
+  return decodedId.trim();
+}
+
+/**
+ * Safely prepares a session ID for API requests
+ * This function should be used when adding session_id to API parameters
+ * @param {string} session_id - The session ID to prepare
+ * @returns {string} The properly encoded session ID for API use
+ */
+export function prepareSessionIdForAPI(session_id: string): string {
+  const formatted = sessionIdFormatted(session_id);
+  return encodeSessionId(formatted);
+}

@@ -10,7 +10,7 @@ from langflow.base.models.openai_constants import (
 )
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from langflow.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from langflow.logging import logger
 
 
@@ -103,17 +103,15 @@ class OpenAIModelComponent(LCModelComponent):
             "max_tokens": self.max_tokens or None,
             "model_kwargs": self.model_kwargs or {},
             "base_url": self.openai_api_base or "https://api.openai.com/v1",
-            "seed": self.seed,
             "max_retries": self.max_retries,
             "timeout": self.timeout,
-            "temperature": self.temperature if self.temperature is not None else 0.1,
         }
 
         logger.info(f"Model name: {self.model_name}")
-        if self.model_name in OPENAI_REASONING_MODEL_NAMES:
-            logger.info("Getting reasoning model parameters")
-            parameters.pop("temperature")
-            parameters.pop("seed")
+        if self.model_name not in OPENAI_REASONING_MODEL_NAMES:
+            parameters["temperature"] = self.temperature if self.temperature is not None else 0.1
+            parameters["seed"] = self.seed
+
         output = ChatOpenAI(**parameters)
         if self.json_mode:
             output = output.bind(response_format={"type": "json_object"})

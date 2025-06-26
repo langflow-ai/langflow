@@ -151,7 +151,7 @@ const HeaderComponent = ({
                   data-testid="search-store-input"
                   type="text"
                   placeholder={`Search ${flowType}...`}
-                  className="mr-2"
+                  className="mr-2 !text-mmd"
                   inputClassName="!text-mmd"
                   value={debouncedSearch}
                   onChange={handleSearch}
@@ -191,7 +191,7 @@ const HeaderComponent = ({
               <div className="flex items-center">
                 <div
                   className={cn(
-                    "-mr-3 flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
+                    "flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
                     selectedFlows.length > 0 && "w-36 opacity-100",
                   )}
                 >
