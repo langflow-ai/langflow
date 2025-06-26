@@ -1,6 +1,7 @@
 import asyncio
 import os
 import platform
+import shlex
 import shutil
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -318,9 +319,10 @@ class MCPStdioClient:
                 env=env_data,
             )
         else:
+            quoted_command = shlex.quote(command_str)
             server_params = StdioServerParameters(
                 command="bash",
-                args=["-c", f"{command_str} || echo 'Command failed with exit code $?' >&2"],
+                args=["-c", f"exec {quoted_command} || echo 'Command failed with exit code $?' >&2"],
                 env=env_data,
             )
 
