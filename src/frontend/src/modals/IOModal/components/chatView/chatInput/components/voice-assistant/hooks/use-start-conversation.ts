@@ -4,7 +4,6 @@ export const useStartConversation = (
   flowId: string,
   wsRef: React.MutableRefObject<WebSocket | null>,
   setStatus: (status: string) => void,
-  startRecording: () => void,
   handleWebSocketMessage: (event: MessageEvent) => void,
   stopRecording: () => void,
   currentSessionId: string,
@@ -46,7 +45,6 @@ export const useStartConversation = (
           }),
         );
 
-        // For flow_tts endpoint, we need to use the proper session update format
         if (audioSettings.provider !== "elevenlabs") {
           wsRef.current.send(
             JSON.stringify({
@@ -56,9 +54,6 @@ export const useStartConversation = (
             }),
           );
         }
-        setTimeout(() => {
-          startRecording();
-        }, 300);
       }
     };
 
@@ -66,7 +61,6 @@ export const useStartConversation = (
 
     wsRef.current.onclose = (event) => {
       if (event.code !== 1000) {
-        // 1000 is normal closure
         console.warn(`WebSocket closed with code ${event.code}`);
       }
       setStatus(`Disconnected (${event.code})`);
