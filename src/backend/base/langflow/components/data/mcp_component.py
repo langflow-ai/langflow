@@ -429,4 +429,5 @@ class MCPToolsComponent(ComponentWithCache):
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
         mcp_server = getattr(self, "mcp_server", None)
-        return await self.update_tool_list(mcp_server)
+        tools, _ = await self.update_tool_list(mcp_server)
+        return tools
