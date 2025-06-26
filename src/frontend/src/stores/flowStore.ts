@@ -701,6 +701,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         title: MISSED_ERROR_ALERT,
         list: errors,
       });
+      const ids = errorsObjs.map((obj) => obj.id).flat();
+      get().updateBuildStatus(ids, BuildStatus.ERROR); // Set only the build status as error without adding info to the flow pool
+
       get().setIsBuilding(false);
       throw new Error("Invalid components");
     }
