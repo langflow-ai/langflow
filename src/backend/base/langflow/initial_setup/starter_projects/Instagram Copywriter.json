@@ -279,7 +279,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.1.1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "9a4038b06a62",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -574,7 +577,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -745,7 +751,10 @@
             "icon": "type",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "5c1f7acbd97f",
+              "module": "langflow.components.input_output.text.TextInputComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -857,7 +866,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1014,7 +1026,10 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "ac7bebb9ed88",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1315,7 +1330,10 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -1659,7 +1677,10 @@
             "frozen": false,
             "icon": "TavilyIcon",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "6843645056d9",
+              "module": "langflow.components.tavily.tavily_search.TavilySearchComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [

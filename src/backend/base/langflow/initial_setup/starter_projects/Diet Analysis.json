@@ -118,7 +118,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.1.4.post1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "9a4038b06a62",
+              "module": "langflow.components.input_output.chat.ChatInput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -383,9 +386,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "message",
           "showNode": false,
-          "type": "ChatInput",
-          "selected_output": "message"
+          "type": "ChatInput"
         },
         "dragging": false,
         "id": "ChatInput-Enwwh",
@@ -429,7 +432,10 @@
             "is_output": null,
             "legacy": false,
             "lf_version": "1.1.4.post1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "minimized": false,
             "name": "",
             "output_types": [],
@@ -514,9 +520,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "prompt",
           "showNode": true,
-          "type": "Prompt",
-          "selected_output": "prompt"
+          "type": "Prompt"
         },
         "dragging": false,
         "id": "Prompt-YubZ1",
@@ -564,12 +570,14 @@
             "legacy": false,
             "lf_version": "1.1.4.post1",
             "metadata": {
+              "code_hash": "6fb30f05af54",
               "keywords": [
                 "model",
                 "llm",
                 "language model",
                 "large language model"
-              ]
+              ],
+              "module": "langflow.components.languagemodels.novita.NovitaModelComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -890,9 +898,9 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
-          "type": "NovitaModel",
-          "selected_output": "text_output"
+          "type": "NovitaModel"
         },
         "dragging": false,
         "id": "NovitaModel-20MWu",
@@ -936,7 +944,10 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.1.4.post1",
-            "metadata": {},
+            "metadata": {
+              "code_hash": "ac7bebb9ed88",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [

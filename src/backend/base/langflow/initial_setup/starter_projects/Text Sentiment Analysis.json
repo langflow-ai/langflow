@@ -253,7 +253,10 @@
             "frozen": false,
             "icon": "file-text",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "0c57c835f136",
+              "module": "langflow.components.data.file.FileComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -544,7 +547,10 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -692,7 +698,10 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -838,7 +847,10 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "3bf0b511e227",
+              "module": "langflow.components.prompts.prompt.PromptComponent"
+            },
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -995,7 +1007,10 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "ac7bebb9ed88",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1303,7 +1318,10 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "metadata": {},
+            "metadata": {
+              "code_hash": "ac7bebb9ed88",
+              "module": "langflow.components.input_output.chat_output.ChatOutput"
+            },
             "minimized": true,
             "output_types": [],
             "outputs": [
