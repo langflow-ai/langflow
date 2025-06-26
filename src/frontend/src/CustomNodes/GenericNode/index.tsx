@@ -566,6 +566,7 @@ function GenericNode({
             <div className="px-4 pb-3">
               <MemoizedNodeDescription
                 description={data.node?.description}
+                charLimit={1000}
                 mdClassName={"dark:prose-invert"}
                 nodeId={data.id}
                 selected={selected}
