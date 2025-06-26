@@ -326,7 +326,11 @@ function GenericNode({
   );
 
   useEffect(() => {
-    if (data?.selected_output || (data?.node?.outputs?.length ?? 0) <= 1)
+    if (
+      data?.selected_output ||
+      (data?.node?.outputs?.filter((output) => !output.group_outputs)?.length ??
+        0) <= 1
+    )
       return;
     handleSelectOutput(
       data.node?.outputs?.find((output) => output.selected) || null,

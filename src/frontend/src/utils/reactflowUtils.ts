@@ -145,7 +145,9 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           sourceNode.data.node!.outputs?.find(
             (output) =>
               (output.selected ||
-                sourceNode.data.node!.outputs?.length === 1) &&
+                (sourceNode.data.node!.outputs?.filter(
+                  (output) => !output.group_outputs,
+                )?.length ?? 0) <= 1) &&
               output.name === name,
           );
 
