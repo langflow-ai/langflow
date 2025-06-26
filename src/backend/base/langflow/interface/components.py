@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from langflow.custom.utils import abuild_custom_components, create_component_template
+from langflow.utils.validate import CLASS_CONSTRUCTOR_CACHE
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -135,6 +136,14 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
             comp_template, _ = create_component_template(component_extractor=comp_instance)
             component_name = obj.name if hasattr(obj, "name") and obj.name else name
             module_components[component_name] = comp_template
+
+            # Populate the global CLASS_CONSTRUCTOR_CACHE if the template includes a code hash
+            code_hash = comp_template.get("metadata", {}).get("code_hash") if isinstance(comp_template, dict) else None
+            if code_hash:
+                try:
+                    CLASS_CONSTRUCTOR_CACHE.set(code_hash, obj)
+                except Exception as cache_exc:  # noqa: BLE001
+                    logger.debug(f"Failed to cache constructor for {name}: {cache_exc}")
         except Exception as e:  # noqa: BLE001
             failed_count.append(f"{name}: {e}")
             continue
