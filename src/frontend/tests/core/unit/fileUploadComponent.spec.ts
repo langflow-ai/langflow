@@ -251,7 +251,7 @@ test(
     await adjustScreenView(page);
 
     await page
-      .getByTestId("handle-file-shownode-files-right")
+      .getByTestId("handle-file-shownode-raw content-right")
       .first()
       .click();
 
@@ -264,7 +264,7 @@ test(
 
     await adjustScreenView(page);
     await page
-      .getByTestId("handle-file-shownode-files-right")
+      .getByTestId("handle-file-shownode-raw content-right")
       .first()
       .click();
 
