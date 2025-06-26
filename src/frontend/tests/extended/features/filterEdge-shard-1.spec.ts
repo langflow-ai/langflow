@@ -56,7 +56,7 @@ test(
     });
 
     const disclosureTestIds = [
-      "disclosure-i/o",
+      "disclosure-input / output",
       "disclosure-data",
       "disclosure-models",
       "disclosure-helpers",
@@ -103,14 +103,13 @@ test(
     const visibleModelSpecsTestIds = [
       "languagemodelsCohere",
       "languagemodelsGroq",
-      "languagemodelsHuggingFace",
       "languagemodelsLM Studio",
       "languagemodelsMaritalk",
       "languagemodelsMistralAI",
       "languagemodelsPerplexity",
       "languagemodelsQianfan",
       "languagemodelsSambaNova",
-      "languagemodelsVertex AI",
+      "languagemodelsxAI",
     ];
 
     await Promise.all(
