@@ -68,6 +68,7 @@ class LangflowRunnerExperimental:
         user_id: str | None = None,
         generate_user: bool = False,  # If True, generates a new user for the flow
         cleanup: bool = True,  # If True, clears flow state after execution
+        tweaks_values: dict | None = None,
     ):
         try:
             logger.info(f"Start Handling {session_id=}")
@@ -81,6 +82,7 @@ class LangflowRunnerExperimental:
                 flow=flow,
                 user_id=user_id,
                 session_id=session_id,
+                tweaks_values=tweaks_values,
             )
             return await self.run_flow(
                 input_value=input_value,
