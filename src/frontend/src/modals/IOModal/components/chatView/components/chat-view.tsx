@@ -191,20 +191,24 @@ export default function ChatView({
     if (!messagesRef.current) return;
 
     const { scrollTop, scrollHeight, clientHeight } = messagesRef.current;
-    const atBottom = scrollHeight - clientHeight <= scrollTop + 3;
+    const atBottom = scrollHeight - clientHeight <= scrollTop + 30;
 
     if (scrollDir === Direction.Up) {
       setCanScroll(false);
       setScrolledUp(true);
     } else {
-      if (atBottom || !scrolledUp) {
+      if (atBottom && !scrolledUp) {
         setCanScroll(true);
       }
       setScrolledUp(false);
     }
   };
+  const setPlaygroundScrollBehaves = useUtilityStore(
+    (state) => state.setPlaygroundScrollBehaves,
+  );
 
   useEffect(() => {
+    setPlaygroundScrollBehaves("smooth");
     setCanScroll(true);
   }, [chatHistory?.length]);
 
@@ -290,8 +294,8 @@ export default function ChatView({
         <CustomChatInput
           playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
-          sendMessage={({ repeat, files }) => {
-            sendMessage({ repeat, files });
+          sendMessage={async ({ repeat, files }) => {
+            await sendMessage({ repeat, files });
             track("Playground Message Sent");
           }}
           inputRef={ref}

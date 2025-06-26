@@ -81,7 +81,7 @@ The **Astra DB Vector Store** component offers two methods for generating embedd
 The embedding model selection is made when creating a new collection and cannot be changed later.
 :::
 
-For an example of using the **Astra DB Vector Store** component with an embedding model, see the [Vector Store RAG starter project](/starter-projects-vector-store-rag).
+For an example of using the **Astra DB Vector Store** component with an embedding model, see the [Vector Store RAG starter project](/vector-store-rag).
 
 For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
 
@@ -399,7 +399,7 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 | Name | Type | Description |
 |------|------|-------------|
 | collection_name | String | The name of the Chroma collection. Default: "langflow". |
-| persist_directory | String | Custom base directory to save the vector store. Collections are stored under `{directory}/vector_stores/{collection_name}`. If not specified, it will use your system's cache folder. |
+| persist_directory | String | Custom base directory to save the vector store. Collections are stored under `$DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, it uses your system's cache folder. |
 | existing_collections | String | Select a previously created collection to search through its stored data. |
 | embedding | Embeddings | The embedding function to use for the vector store. |
 | allow_duplicates | Boolean | If false, will not add documents that are already in the Vector Store. |

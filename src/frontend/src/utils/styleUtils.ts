@@ -257,6 +257,7 @@ export const SIDEBAR_BUNDLES = [
     name: "datastax",
     icon: "AstraDB",
   },
+  { display_name: "Docling", name: "docling", icon: "Docling" },
   { display_name: "Olivya", name: "olivya", icon: "Olivya" },
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },

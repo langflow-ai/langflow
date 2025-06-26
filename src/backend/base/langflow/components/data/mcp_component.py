@@ -8,13 +8,15 @@ from langflow.base.mcp.util import (
     create_input_schema_from_json_schema,
     update_tools,
 )
-from langflow.custom.custom_component.component import Component
+from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs.inputs import InputTypes
 from langflow.io import DropdownInput, McpInput, MessageTextInput, Output  # Import McpInput from langflow.io
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
 from langflow.services.auth.utils import create_user_longterm_token
+from langflow.services.cache.utils import CacheMiss
 
 # Import get_server from the backend API
 from langflow.services.database.models.user.crud import get_user_by_id
@@ -59,7 +61,7 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
     return nested
 
 
-class MCPToolsComponent(Component):
+class MCPToolsComponent(ComponentWithCache):
     schema_inputs: list = []
     stdio_client: MCPStdioClient = MCPStdioClient()
     sse_client: MCPSseClient = MCPSseClient()
@@ -136,17 +138,35 @@ class MCPToolsComponent(Component):
         else:
             return schema_inputs
 
-    async def update_tool_list(self):
-        server_name = getattr(self, "mcp_server", None)
+    async def update_tool_list(self, mcp_server_value=None):
+        # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
+        mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
+        server_name = None
+        server_config_from_value = None
+        if isinstance(mcp_server, dict):
+            server_name = mcp_server.get("name")
+            server_config_from_value = mcp_server.get("config")
+        else:
+            server_name = mcp_server
         if not server_name:
             self.tools = []
-            return []
+            return [], {"name": server_name, "config": server_config_from_value}
+
+        # Use shared cache if available
+        cached = self._shared_component_cache.get(server_name)
+        if not isinstance(cached, CacheMiss):
+            self.tools = cached["tools"]
+            self.tool_names = cached["tool_names"]
+            self._tool_cache = cached["tool_cache"]
+            server_config_from_value = cached["config"]
+            return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
             async for db in get_session():
                 user_id, _ = await create_user_longterm_token(db)
                 current_user = await get_user_by_id(db, user_id)
 
+                # Try to get server config from DB/API
                 server_config = await get_server(
                     server_name,
                     current_user,
@@ -155,9 +175,13 @@ class MCPToolsComponent(Component):
                     settings_service=get_settings_service(),
                 )
 
+                # If get_server returns empty but we have a config, use it
+                if not server_config and server_config_from_value:
+                    server_config = server_config_from_value
+
                 if not server_config:
                     self.tools = []
-                    return []
+                    return [], {"name": server_name, "config": server_config}
 
                 _, tool_list, tool_cache = await update_tools(
                     server_name=server_name,
@@ -168,7 +192,18 @@ class MCPToolsComponent(Component):
 
                 self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
                 self._tool_cache = tool_cache
-                return tool_list
+                self.tools = tool_list
+                # Cache the result using shared cache
+                self._shared_component_cache.set(
+                    server_name,
+                    {
+                        "tools": tool_list,
+                        "tool_names": self.tool_names,
+                        "tool_cache": tool_cache,
+                        "config": server_config,
+                    },
+                )
+                return tool_list, {"name": server_name, "config": server_config}
         except Exception as e:
             msg = f"Error updating tool list: {e!s}"
             logger.exception(msg)
@@ -181,7 +216,7 @@ class MCPToolsComponent(Component):
                 try:
                     if len(self.tools) == 0:
                         try:
-                            self.tools = await self.update_tool_list()
+                            self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
                         except ValueError:
                             build_config["tool"]["options"] = []
                             build_config["tool"]["value"] = ""
@@ -208,7 +243,9 @@ class MCPToolsComponent(Component):
                     return build_config
             elif field_name == "mcp_server":
                 try:
-                    self.tools = await self.update_tool_list()
+                    # field_value is now a dict {name, config}
+                    mcp_server_value = field_value
+                    self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list(mcp_server_value)
                 except ValueError:
                     if not build_config["tools_metadata"]["show"]:
                         build_config["tool"]["show"] = True
@@ -231,7 +268,7 @@ class MCPToolsComponent(Component):
                     build_config["tool"]["value"] = ""
             elif field_name == "tool_mode":
                 try:
-                    self.tools = await self.update_tool_list()
+                    self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
                 except ValueError:
                     if not build_config["tools_metadata"]["show"]:
                         build_config["tool"]["show"] = True
@@ -294,7 +331,7 @@ class MCPToolsComponent(Component):
     async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
         """Update tool configuration with proper error handling."""
         if not self.tools:
-            self.tools = await self.update_tool_list()
+            self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
 
         if not tool_name:
             return
@@ -361,7 +398,7 @@ class MCPToolsComponent(Component):
     async def build_output(self) -> DataFrame:
         """Build output with improved error handling and validation."""
         try:
-            self.tools = await self.update_tool_list()
+            self.tools, _ = await self.update_tool_list()
             if self.tool != "":
                 exec_tool = self._tool_cache[self.tool]
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
@@ -369,7 +406,10 @@ class MCPToolsComponent(Component):
                 for arg in tool_args:
                     value = getattr(self, arg.name, None)
                     if value:
-                        kwargs[arg.name] = value
+                        if isinstance(value, Message):
+                            kwargs[arg.name] = value.text
+                        else:
+                            kwargs[arg.name] = value
 
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
@@ -388,11 +428,5 @@ class MCPToolsComponent(Component):
 
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
-        # if not self.tools:
-        if not self.mcp_server:
-            msg = "MCP Server is not set"
-            self.tools = []
-            self.tool_names = []
-            logger.exception(msg)
-
-        return await self.update_tool_list()
+        mcp_server = getattr(self, "mcp_server", None)
+        return await self.update_tool_list(mcp_server)
