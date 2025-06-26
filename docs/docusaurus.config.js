@@ -277,6 +277,10 @@ const config = {
             to: "/vector-store-rag",
             from: "/starter-projects-vector-store-rag",
           },
+          {
+            to: "/contributing-github-issues",
+            from: "/contributing-github-discussions",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
