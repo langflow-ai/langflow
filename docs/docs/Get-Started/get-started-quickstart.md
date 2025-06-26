@@ -160,16 +160,15 @@ Langflow provides code snippets to help you get started with the Langflow API.
 
       <TabItem value="curl" label="curl">
 
-    ```text
+    ```bash
     curl --request POST \
-     --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
-     --header 'Content-Type: application/json' \
-     --header 'x-api-key: LANGFLOW_API_KEY' \
-     --data '{
-       "output_type": "chat",
-       "input_type": "chat",
-       "input_value": "Hello"
-     }'
+         --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false' \
+         --header 'Content-Type: application/json' \
+         --data '{
+          "output_type": "chat",
+          "input_type": "chat",
+          "input_value": "hello world!"
+          }'
 
     # A 200 response confirms the call succeeded.
     ```
