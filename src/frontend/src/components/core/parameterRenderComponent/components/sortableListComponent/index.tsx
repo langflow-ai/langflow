@@ -79,6 +79,7 @@ const SortableListItem = memo(
 const SortableListComponent = ({
   tooltip = "",
   name,
+  editNode = false,
   helperText = "",
   helperMetadata = { icon: undefined, variant: "muted-foreground" },
   options = [],
@@ -139,10 +140,18 @@ const SortableListComponent = ({
             size="xs"
             role="combobox"
             onClick={handleOpenListSelectionDialog}
-            className="dropdown-component-outline input-edit-node w-full py-2"
+            className={cn(
+              "dropdown-component-outline input-edit-node w-full",
+              editNode ? "py-1" : "py-2",
+            )}
             data-testid="button_open_list_selection"
           >
-            <div className={cn("flex items-center text-sm font-semibold")}>
+            <div
+              className={cn(
+                "flex items-center",
+                editNode ? "text-xs" : "text-sm",
+              )}
+            >
               {placeholder}
             </div>
           </Button>
@@ -182,6 +191,7 @@ const SortableListComponent = ({
         open={open}
         onClose={handleCloseListSelectionDialog}
         searchCategories={searchCategory}
+        editNode={editNode}
         setSelectedList={setListDataHandler}
         selectedList={listData}
         options={options}

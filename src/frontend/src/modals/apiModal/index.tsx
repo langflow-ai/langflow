@@ -216,8 +216,17 @@ export default function ApiModal({
               />
             </Label>
           )}
-          <div className="h-full w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll">
-            <TweaksComponent open={openTweaks} />
+          <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+            <div className="flex flex-col gap-1">
+              <span className="shrink-0 text-sm font-medium">Expose API</span>
+              <span className="text-mmd text-muted-foreground">
+                Select which component fields to expose as inputs in this flow's
+                API schema.
+              </span>
+            </div>
+            <div className="min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll">
+              <TweaksComponent open={openTweaks} />
+            </div>
           </div>
         </BaseModal.Content>
       </BaseModal>
