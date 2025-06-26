@@ -693,7 +693,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         errors.push(errorsEdge.join("\n"));
       }
     }
-    const errorsObjs = validateNodes(nodesToValidate, edgesToValidate);
+    const errorsObjs = validateNodes(nodesToValidate, edges);
 
     errors = errors.concat(errorsObjs.map((obj) => obj.errors).flat());
     if (errors.length > 0) {
