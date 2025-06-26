@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from langflow.custom.utils import abuild_custom_components, create_component_template
+from langflow.custom.utils import abuild_custom_components, create_component_template, get_all_types_dict
 from langflow.services.settings.base import BASE_COMPONENTS_PATH
 
 if TYPE_CHECKING:
@@ -153,6 +153,29 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     return (top_level, module_components)
 
 
+async def _determine_loading_strategy(settings_service: SettingsService) -> dict:
+    """Determines and executes the appropriate component loading strategy.
+
+    Args:
+        settings_service: Service providing access to application settings
+
+    Returns:
+        Dictionary containing loaded component types and templates
+    """
+    if settings_service.settings.lazy_load_components:
+        # Partial loading mode - just load component metadata
+        logger.debug("Using partial component loading")
+        return await aget_component_metadata(settings_service.settings.components_path)
+    if (
+        settings_service.settings.components_path
+        and BASE_COMPONENTS_PATH not in settings_service.settings.components_path
+    ):
+        # Traditional full loading
+        return await get_all_types_dict(settings_service.settings.components_path)
+    # No custom components to load
+    return {}
+
+
 async def get_and_cache_all_types_dict(
     settings_service: SettingsService,
 ):
@@ -167,28 +190,17 @@ async def get_and_cache_all_types_dict(
         logger.debug("Building components cache")
 
         langflow_components = await import_langflow_components()
-        component_cache.all_types_dict = {}
-        if settings_service.settings.lazy_load_components:
-            # Partial loading mode - just load component metadata
-            logger.debug("Using partial component loading")
-            component_cache.all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
-        elif (
-            settings_service.settings.components_path
-            and BASE_COMPONENTS_PATH not in settings_service.settings.components_path
-        ):
-            # Traditional full loading
-            component_cache.all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
+        custom_components_dict = await _determine_loading_strategy(settings_service)
 
         # Log custom component loading stats
-        components_dict = component_cache.all_types_dict or {}
-        component_count = sum(len(comps) for comps in components_dict.get("components", {}).values())
+        component_count = sum(len(comps) for comps in custom_components_dict.values())
         if component_count > 0 and settings_service.settings.components_path:
             logger.debug(f"Built {component_count} custom components from {settings_service.settings.components_path}")
 
         # merge the dicts
         component_cache.all_types_dict = {
             **langflow_components["components"],
-            **components_dict,
+            **custom_components_dict,
         }
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
         logger.debug(f"Loaded {component_count} components")
