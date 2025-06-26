@@ -227,6 +227,7 @@ export default function IOModal({
           eventDelivery: eventDeliveryConfig,
         }).catch((err) => {
           console.error(err);
+          throw err;
         });
       }
     },

@@ -162,11 +162,21 @@ export default function ChatInput({
     };
   }, [handleFileChange, currentFlowId, isBuilding]);
 
-  const send = () => {
-    sendMessage({
-      repeat: 1,
-      files: files.map((file) => file.path ?? "").filter((file) => file !== ""),
-    });
+  const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
+
+  const send = async () => {
+    const storedChatValue = chatValue;
+    try {
+      await sendMessage({
+        repeat: 1,
+        files: files
+          .map((file) => file.path ?? "")
+          .filter((file) => file !== ""),
+      });
+    } catch (error) {
+      setChatValueStore(storedChatValue);
+    }
+
     setFiles([]);
   };
 

@@ -3,6 +3,7 @@ import {
   STATUS_BUILD,
   STATUS_BUILDING,
   STATUS_INACTIVE,
+  STATUS_MISSING_FIELDS_ERROR,
 } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
 
@@ -56,6 +57,11 @@ const BuildStatusDisplay = ({
 
   if (buildStatus === BuildStatus.INACTIVE) {
     return <StatusMessage>{STATUS_INACTIVE}</StatusMessage>;
+  }
+
+  if (buildStatus === BuildStatus.ERROR && !validationStatus) {
+    // If the build status is error and there is no validation status, it means that it failed before building, so show the Missing Required Fields error message
+    return <StatusMessage>{STATUS_MISSING_FIELDS_ERROR}</StatusMessage>;
   }
 
   if (!validationStatus) {
