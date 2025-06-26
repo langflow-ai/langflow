@@ -356,6 +356,8 @@ class BaseFileComponent(Component, ABC):
         json_data = data_list[0].data[data_list[0].text_key]
         json_data = self.parse_string_to_dict(json_data)
 
+        self.status = Data(data=json_data)
+
         return Data(data=json_data)
 
     def load_files(self) -> DataFrame:
