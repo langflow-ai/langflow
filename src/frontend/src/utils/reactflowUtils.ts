@@ -138,9 +138,18 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const name = parsedSourceHandle.name;
 
       if (sourceNode.type == "genericNode") {
-        const output = sourceNode.data
-          .node!.outputs?.filter((output) => output.selected)
-          .find((output) => output.name === name);
+        const output =
+          sourceNode.data.node!.outputs?.find(
+            (output) => output.name === sourceNode.data.selected_output,
+          ) ??
+          sourceNode.data.node!.outputs?.find(
+            (output) =>
+              (output.selected ||
+                (sourceNode.data.node!.outputs?.filter(
+                  (output) => !output.group_outputs,
+                )?.length ?? 0) <= 1) &&
+              output.name === name,
+          );
 
         if (output) {
           const outputTypes =
