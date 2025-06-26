@@ -40,7 +40,7 @@ class StorageService(Service):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_file_size(self, flow_id: str) -> list[str]:
+    async def get_file_size(self, flow_id: str, file_name: str) -> int:
         raise NotImplementedError
 
     @abstractmethod
