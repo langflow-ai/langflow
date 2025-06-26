@@ -9,7 +9,7 @@ Flows in Langflow are fully serializable and can be saved and loaded from the fi
 
 ## Import flow
 
-If you already have a Langflow JSON file, from the **Projects** page, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
+If you already have a Langflow JSON file on your local machine, from the **Projects** page, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
 
 Once imported, your flow is ready to use.
 
@@ -21,7 +21,7 @@ You can drag and drop Langflow JSON files directly from your file system into th
 
 To **Export** your flow, in the **Playground**, click **Share**, and then click **Export**.
 
-Select **Save with my API keys** to save the flow with any **Global ariables** included.
+Select **Save with my API keys** to save the flow with any **Global variables** included.
 
 :::important
 If your key is saved as a **Global variable**, only the global variable you created to contain the value is saved.

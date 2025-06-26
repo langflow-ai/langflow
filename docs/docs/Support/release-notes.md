@@ -7,7 +7,7 @@ This page summarizes significant changes and updates to Langflow.
 
 For the complete changelog, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
-## 1.5
+## 1.5.0
 
 The following updates are included in this version:
 
@@ -15,7 +15,7 @@ The following updates are included in this version:
 
 - Authentication changes
 
-    The **AUTO_LOGIN** functionality now requires an API key to function. This change enhances security by ensuring that automatic login features are properly authenticated.
+    All API endpoints now require a Langflow API key to function, even when **AUTO_LOGIN** is enabled. This change enhances security by ensuring that automatic login features are properly authenticated.
     For more information, see [API keys](/configuration-api-keys).
 
 - New Language Model and Embedding Model components

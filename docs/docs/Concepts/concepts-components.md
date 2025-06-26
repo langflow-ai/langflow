@@ -9,9 +9,13 @@ A component is a single building block within a flow with inputs, outputs, funct
 
 ## Component menu
 
-To add a component to a flow, drag it from the **Components** menu to the **Workspace**.
+To add a component to a flow, drag it from the **Components** menu to the [**Workspace**](/concepts-overview), and then configure the component's parameters and connect it to the other components in your flows.
 
-Each component is unique, but all have a menu bar at the top that looks something like the following:
+Each component has inputs, outputs, parameters, and controls related to the component's purpose.
+By default, components show only required and common options.
+To access additional settings and controls, including meta settings, use the component's header menu.
+
+To access a component's header menu, select the component in your **Workspace**.
 
 ![Agent component](/img/agent-component.png)
 
