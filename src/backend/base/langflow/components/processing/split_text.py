@@ -95,7 +95,7 @@ class SplitTextComponent(Component):
                 msg = f"Error converting DataFrame to documents: {e}"
                 raise TypeError(msg) from e
         elif isinstance(self.data_inputs, Message):
-            self.data_inputs = [Data(text=self.data_inputs.text)]
+            self.data_inputs = [self.data_inputs.to_data()]
             return self.split_text_base()
         else:
             if not self.data_inputs:
