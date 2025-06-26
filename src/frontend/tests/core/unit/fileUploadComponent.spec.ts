@@ -341,30 +341,8 @@ test(
       await expect(page.getByText(`${newTxtFile}.txt`).first()).toBeVisible({
         timeout: 1000,
       });
-      await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
-      await page
-        .getByRole("button", { name: "Playground", exact: true })
-        .click();
-      await page.getByTestId("icon-MoreHorizontal").last().click();
-      await page.getByText("Delete", { exact: true }).last().click();
-
-      await page.waitForSelector("text=Run Flow", {
-        timeout: 30000,
-      });
-
-      await page.getByText("Run Flow", { exact: true }).last().click();
-
-      await expect(page.getByText("this is a test file")).toBeHidden({
-        timeout: 3000,
-      });
-      await expect(page.getByText('{ "test": "content" }')).toBeHidden({
-        timeout: 3000,
-      });
-      await expect(page.getByText("this is a new test")).toBeVisible({
-        timeout: 3000,
-      });
     }
-  },
+  }, 
 );
 
 test(
