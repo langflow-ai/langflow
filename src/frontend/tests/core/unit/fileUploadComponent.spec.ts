@@ -324,7 +324,10 @@ test(
       });
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
 
-      await page.getByTestId("handle-file-shownode-raw content-right").first().click();
+      await page
+        .getByTestId("handle-file-shownode-raw content-right")
+        .first()
+        .click();
 
       await page
         .getByTestId("handle-chatoutput-noshownode-inputs-target")
