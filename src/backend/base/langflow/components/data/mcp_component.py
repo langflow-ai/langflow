@@ -246,44 +246,62 @@ class MCPToolsComponent(ComponentWithCache):
                 else:
                     return build_config
             elif field_name == "mcp_server":
-                if field_value == "":
+                if not field_value:
                     build_config["tool"]["show"] = False
                     build_config["tool"]["options"] = []
                     build_config["tool"]["value"] = ""
                     build_config["tool"]["placeholder"] = ""
+                    self.remove_non_default_keys(build_config)
                     return build_config
 
-                # Extract server name from field_value to compare with cached value
-                current_server_name = None
-                if isinstance(field_value, dict):
-                    current_server_name = field_value.get("name")
-                elif isinstance(field_value, str):
-                    current_server_name = field_value
+                current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
 
-                # Check if this is the same server as last time
-                is_same_server = self._last_selected_server is None or (
-                    current_server_name is not None and self._last_selected_server == current_server_name
-                )
+                # To avoid unnecessary updates, only proceed if the server has actually changed
+                if self._last_selected_server == current_server_name:
+                    return build_config
 
-                if "tool" in build_config and not build_config["tools_metadata"]["show"]:
+                # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
+                # The check for _last_selected_server handles the initial state where the dropdown is
+                # hidden by default but we are not yet in "Tool Mode".
+                # is_in_tool_mode = not build_config["tool"].get("show", False) and self._last_selected_server is not None or build_config["tools_metadata"]["value"] is not None
+                is_in_tool_mode = build_config["tools_metadata"]["value"]
+                self._last_selected_server = current_server_name
+                self.tools = []  # Clear previous tools
+                self.remove_non_default_keys(build_config)  # Clear previous tool inputs
+
+                # Only show the tool dropdown if not in tool_mode
+                if not is_in_tool_mode:
                     build_config["tool"]["show"] = True
-
-                    if not is_same_server:
-                        # Only show loading message if server has changed
-                        random_value = uuid.uuid4()
-                        build_config["tool"]["value"] = random_value
-                        build_config["tool"]["placeholder"] = "Loading MCP servers..."
-                        build_config["tool"]["options"] = []
-                        self.remove_non_default_keys(build_config)
-
-                else:
-                    build_config["tool"]["show"] = False
+                    build_config["tool"]["placeholder"] = "Loading tools..."
                     build_config["tool"]["options"] = []
                     build_config["tool"]["value"] = ""
-                    self.remove_non_default_keys(build_config)
+                else:
+                    # Keep the tool dropdown hidden if in tool_mode
+                    build_config["tool"]["show"] = False
 
-                # Update the cached server name
-                self._last_selected_server = current_server_name
+                try:
+                    # Fetch tools for the newly selected server
+                    tools, server_info = await self.update_tool_list(field_value)
+                    build_config["mcp_server"]["value"] = server_info
+
+                    if tools:
+                        tool_names = [tool.name for tool in tools]
+                        if not is_in_tool_mode:
+                            build_config["tool"]["options"] = tool_names
+                            build_config["tool"]["placeholder"] = "Select a tool"
+                    elif not is_in_tool_mode:
+                        build_config["tool"]["placeholder"] = "No tools found"
+
+                except Exception as e:
+                    logger.error(f"Failed to fetch tools for server '{current_server_name}': {e}")
+                    if not is_in_tool_mode:
+                        build_config["tool"]["placeholder"] = "Error fetching tools"
+                        build_config["tool"]["options"] = []
+                        build_config["tool"]["value"] = ""
+                finally:
+                    # Ensure we don't show inputs for a tool that might no longer be valid
+                    await self._update_tool_config(build_config, "")
+
             elif field_name == "tool_mode":
                 try:
                     self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
