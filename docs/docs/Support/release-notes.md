@@ -1,6 +1,6 @@
 ---
 title: Langflow release notes
-slug: /release notes
+slug: /release-notes
 ---
 
 This page summarizes significant changes and updates to Langflow.

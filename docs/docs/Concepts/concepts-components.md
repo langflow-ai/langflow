@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 
 A component is a single building block within a flow with inputs, outputs, functions, and parameters that define its functionality. A single component is like a class within a larger application.
 
-## Component menu
+## Component menus
 
 To add a component to a flow, drag it from the **Components** menu to the [**Workspace**](/concepts-overview), and then configure the component's parameters and connect it to the other components in your flows.
 
