@@ -135,7 +135,7 @@ class LangflowRunnerExperimental:
         return flow_dict
 
     def process_tweaks(self, flow_dict: dict, tweaks_values: dict | None = None) -> dict:
-        tweaks: dict = None
+        tweaks: dict | None = None
         tweaks_values = tweaks_values or os.environ.copy()
         for vertex in Graph.from_payload(flow_dict).vertices:
             param_handler = ParameterHandler(vertex, get_storage_service())
