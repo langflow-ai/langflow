@@ -120,7 +120,7 @@ wget https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/hea
 ```dockerfile
 FROM langflowai/langflow-backend:latest
 RUN mkdir /app/flows
-COPY ./*json /app/flows/.
+COPY ./*.json /app/flows/
 ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows
 ```
 
