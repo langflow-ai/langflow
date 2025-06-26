@@ -63,17 +63,10 @@ class ComposioBaseComponent(Component):
             limit=1,
         ),
     ]
-    _all_fields: set[str] = set()
-    _bool_variables: set[str] = set()
-    _actions_data: dict[str, dict[str, Any]] = {}
-    _default_tools: set[str] = set()
-    _display_to_key_map: dict[str, str] = {}
-    _key_to_display_map: dict[str, str] = {}
-    _sanitized_names: dict[str, str] = {}
+    
+    # Remove class-level variables to prevent shared state between components
+    # These will be initialized as instance variables in __init__
     _name_sanitizer = re.compile(r"[^a-zA-Z0-9_-]")
-
-    # Cache for action → schema objects fetched from Composio
-    _action_schemas: dict[str, Any] = {}
 
     outputs = [
         Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
@@ -81,6 +74,19 @@ class ComposioBaseComponent(Component):
 
     # Ensure every Composio component automatically exposes the common inputs
     inputs = list(_base_inputs)
+
+    def __init__(self, **kwargs):
+        """Initialize instance variables to prevent shared state between components."""
+        super().__init__(**kwargs)
+        # Initialize instance variables (previously class variables)
+        self._all_fields: set[str] = set()
+        self._bool_variables: set[str] = set()
+        self._actions_data: dict[str, dict[str, Any]] = {}
+        self._default_tools: set[str] = set()
+        self._display_to_key_map: dict[str, str] = {}
+        self._key_to_display_map: dict[str, str] = {}
+        self._sanitized_names: dict[str, str] = {}
+        self._action_schemas: dict[str, Any] = {}
 
     def as_message(self) -> Message:
         result = self.execute_action()
