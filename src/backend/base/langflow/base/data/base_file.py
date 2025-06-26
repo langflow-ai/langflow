@@ -318,6 +318,8 @@ class BaseFileComponent(Component, ABC):
             # TODO: Parse according to docling standards
             rows = [data_list[0].data]
 
+        self.status = DataFrame(rows)
+
         return DataFrame(rows)
 
     def parse_string_to_dict(self, s: str) -> dict:
@@ -378,6 +380,8 @@ class BaseFileComponent(Component, ABC):
             if file_path:
                 row["file_path"] = file_path
             all_rows.append(row)
+
+        self.status = DataFrame(all_rows)
 
         return DataFrame(all_rows)
 
