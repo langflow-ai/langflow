@@ -250,33 +250,8 @@ test(
 
     await adjustScreenView(page);
 
-    await page
-      .getByTestId("handle-file-shownode-loaded files-right")
-      .first()
-      .click();
+    await page.getByTestId("handle-file-shownode-files-right").first().click();
 
-    await page
-      .getByTestId("processingParser")
-      .hover()
-      .then(async () => {
-        await page.getByTestId("add-component-button-parser").click();
-      });
-
-    await adjustScreenView(page);
-    await page
-      .getByTestId("handle-file-shownode-loaded files-right")
-      .first()
-      .click();
-
-    await page
-      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
-      .first()
-      .click();
-
-    await page
-      .getByTestId("handle-parsercomponent-shownode-parsed text-right")
-      .first()
-      .click();
     await page
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .first()
@@ -348,6 +323,17 @@ test(
         timeout: 1000,
       });
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
+
+      await page
+        .getByTestId("handle-file-shownode-raw content-right")
+        .first()
+        .click();
+
+      await page
+        .getByTestId("handle-chatoutput-noshownode-inputs-target")
+        .first()
+        .click();
+
       await page
         .getByRole("button", { name: "Playground", exact: true })
         .click();
