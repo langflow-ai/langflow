@@ -122,6 +122,8 @@ async def get_servers(
             )
             server_info["mode"] = mode.lower()
             server_info["toolsCount"] = len(tool_list)
+            if len(tool_list) == 0:
+                server_info["error"] = "No tools found"
         except ValueError as e:
             # Configuration validation errors, invalid URLs, etc.
             logger.error(f"Configuration error for server {server_name}: {e}")
@@ -154,9 +156,18 @@ async def get_servers(
                 server_info["error"] = f"Error loading server: {e}"
         return server_info
 
+    async def check_server_with_timeout(server_name: str) -> dict:
+        try:
+            return await asyncio.wait_for(
+                check_server(server_name), timeout=get_settings_service().settings.mcp_server_timeout
+            )
+        except asyncio.TimeoutError:
+            logger.error(f"Timeout checking server {server_name}")
+            return {"name": server_name, "mode": None, "toolsCount": None, "error": "Server check timed out."}
+
     # Run all server checks concurrently
-    tasks = [check_server(server) for server in server_list["mcpServers"]]
-    return await asyncio.gather(*tasks, return_exceptions=False)
+    tasks = [check_server_with_timeout(server) for server in server_list["mcpServers"]]
+    return await asyncio.gather(*tasks, return_exceptions=True)
 
 
 @router.get("/servers/{server_name}")

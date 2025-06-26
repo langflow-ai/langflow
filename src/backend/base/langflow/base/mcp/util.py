@@ -598,10 +598,11 @@ async def update_tools(
                 tool_cache[tool.name] = tool_obj
             except (ConnectionError, TimeoutError, OSError, ValueError) as e:
                 logger.error(f"Failed to create tool '{tool.name}' from server '{server_name}': {e}")
-                continue
+                msg = f"Failed to create tool '{tool.name}' from server '{server_name}': {e}"
+                raise ValueError(msg) from e
 
         logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
-    except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+    except (ConnectionError, TimeoutError, OSError, ValueError, AttributeError, AssertionError) as e:
         logger.error(f"Unexpected error while updating tools for MCP server '{server_name}': {e}")
         return "", [], {}
     else:
