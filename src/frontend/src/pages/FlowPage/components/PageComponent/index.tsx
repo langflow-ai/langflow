@@ -24,6 +24,7 @@ import {
   ReactFlow,
   reconnectEdge,
   SelectionDragHandler,
+  XYPosition,
 } from "@xyflow/react";
 import { AnimatePresence } from "framer-motion";
 import _, { cloneDeep } from "lodash";
@@ -362,96 +363,100 @@ export default function Page({
   const [isDragging, setIsDragging] = useState(false);
   const helperLineEnabled = useFlowStore((state) => state.helperLineEnabled);
 
-  const onNodeDragStart: OnNodeDrag = useCallback(() => {
-    // 👇 make dragging a node undoable
-    takeSnapshot();
-    setIsDragging(true);
-    // 👉 you can place your event handlers here
-  }, [takeSnapshot]);
+  const onNodeDrag: OnNodeDrag = useCallback(
+    (_, node) => {
+      if (helperLineEnabled) {
+        const currentHelperLines = getHelperLines(node, nodes);
+        setHelperLines(currentHelperLines);
+      }
+    },
+    [helperLineEnabled, nodes],
+  );
 
-  const onNodeDragStop: OnNodeDrag = useCallback(() => {
-    // 👇 make moving the canvas undoable
-    autoSaveFlow();
-    updateCurrentFlow({ nodes });
-    setPositionDictionary({});
-    setIsDragging(false);
-    setHelperLines({});
-  }, [
-    takeSnapshot,
-    autoSaveFlow,
-    nodes,
-    edges,
-    reactFlowInstance,
-    setPositionDictionary,
-  ]);
+  const onNodeDragStart: OnNodeDrag = useCallback(
+    (_, node) => {
+      // 👇 make dragging a node undoable
+      takeSnapshot();
+      setIsDragging(true);
+      // 👉 you can place your event handlers here
+    },
+    [takeSnapshot],
+  );
+
+  const onNodeDragStop: OnNodeDrag = useCallback(
+    (_, node) => {
+      // 👇 make moving the canvas undoable
+      autoSaveFlow();
+      updateCurrentFlow({ nodes });
+      setPositionDictionary({});
+      setIsDragging(false);
+      setHelperLines({});
+    },
+    [
+      takeSnapshot,
+      autoSaveFlow,
+      nodes,
+      edges,
+      reactFlowInstance,
+      setPositionDictionary,
+    ],
+  );
 
   const onNodesChangeWithHelperLines = useCallback(
     (changes: NodeChange<AllNodeType>[]) => {
-      // Only process helper lines if the feature is enabled
-      if (helperLineEnabled) {
-        const dragChange = changes.find(
-          (change) =>
-            change.type === "position" &&
-            "dragging" in change &&
-            change.dragging &&
-            "id" in change,
-        );
+      if (!helperLineEnabled) {
+        onNodesChange(changes);
+        return;
+      }
 
+      // Apply snapping to position changes during drag
+      const modifiedChanges = changes.map((change) => {
         if (
-          dragChange &&
-          dragChange.type === "position" &&
-          "position" in dragChange &&
+          change.type === "position" &&
+          "dragging" in change &&
+          "position" in change &&
+          "id" in change &&
           isDragging
         ) {
-          const draggingNode = nodes.find((node) => node.id === dragChange.id);
-          if (draggingNode && dragChange.position) {
-            const updatedNode = {
-              ...draggingNode,
-              position: dragChange.position,
-            };
+          const nodeId = change.id as string;
+          const draggedNode = nodes.find((n) => n.id === nodeId);
 
-            const currentHelperLines = getHelperLines(updatedNode, nodes);
-            setHelperLines(currentHelperLines);
+          if (draggedNode && change.position) {
+            const updatedNode = {
+              ...draggedNode,
+              position: change.position,
+            };
 
             const snapPosition = getSnapPosition(updatedNode, nodes);
 
-            if (
-              snapPosition.x !== dragChange.position.x ||
-              snapPosition.y !== dragChange.position.y
-            ) {
-              const updatedChanges = changes.map((change) => {
-                if (
-                  "id" in change &&
-                  change.id === dragChange.id &&
-                  change.type === "position" &&
-                  "position" in change
-                ) {
-                  return {
-                    ...change,
-                    position: snapPosition,
-                  };
-                }
-                return change;
-              });
-              onNodesChange(updatedChanges);
-              return;
+            // Only snap if we're actively dragging
+            if (change.dragging) {
+              // Apply snap if there's a significant difference
+              if (
+                Math.abs(snapPosition.x - change.position.x) > 0.1 ||
+                Math.abs(snapPosition.y - change.position.y) > 0.1
+              ) {
+                return {
+                  ...change,
+                  position: snapPosition,
+                };
+              }
+            } else {
+              // This is the final position change when drag ends
+              // Force snap to ensure it stays where it should
+              return {
+                ...change,
+                position: snapPosition,
+              };
             }
           }
         }
+        return change;
+      });
 
-        if (!isDragging && (helperLines.horizontal || helperLines.vertical)) {
-          setHelperLines({});
-        }
-      } else {
-        // Clear helper lines if feature is disabled
-        if (helperLines.horizontal || helperLines.vertical) {
-          setHelperLines({});
-        }
-      }
-
-      onNodesChange(changes);
+      onNodesChange(modifiedChanges);
     },
-    [onNodesChange, nodes, isDragging, helperLines, helperLineEnabled],
+    [onNodesChange, nodes, isDragging, helperLineEnabled],
   );
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
@@ -682,6 +687,7 @@ export default function Page({
             onReconnect={isLocked ? undefined : onEdgeUpdate}
             onReconnectStart={isLocked ? undefined : onEdgeUpdateStart}
             onReconnectEnd={isLocked ? undefined : onEdgeUpdateEnd}
+            onNodeDrag={onNodeDrag}
             onNodeDragStart={onNodeDragStart}
             onSelectionDragStart={onSelectionDragStart}
             elevateEdgesOnSelect={true}
