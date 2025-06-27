@@ -135,6 +135,10 @@ export const lazyIconsMapping = {
     import("@/icons/GridHorizontal").then((mod) => ({
       default: mod.GridHorizontalIcon,
     })),
+  GridGain: () =>
+    import("@/icons/GridGain").then((module) => ({
+      default: module.GridGainIcon,
+    })),
   Groq: () => import("@/icons/Groq").then((mod) => ({ default: mod.GroqIcon })),
   HackerNews: () =>
     import("@/icons/hackerNews").then((mod) => ({

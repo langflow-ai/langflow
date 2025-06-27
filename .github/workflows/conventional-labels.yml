@@ -1,6 +1,13 @@
 # Warning, do not check out untrusted code with
 # the pull_request_target event.
 name: Label PRs with Conventional Commits
+
+# Add permissions at the top level for all jobs
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 on:
   pull_request_target:
     types: [opened, edited, synchronize]
@@ -27,3 +34,4 @@ jobs:
       - uses: bcoe/conventional-release-labels@v1
         with:
           type_labels: '{"feat": "enhancement","fix": "bug","docs": "documentation","style": "style","refactor": "refactor","perf": "performance","test": "test","chore": "chore","build": "build"}'
+          token: ${{ secrets.GITHUB_TOKEN }}  # Also add the token parameter

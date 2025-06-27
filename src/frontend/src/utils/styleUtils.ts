@@ -245,6 +245,7 @@ export const SIDEBAR_BUNDLES = [
     name: "googlecalendar",
     icon: "Googlecalendar",
   },
+  { display_name: "GridGain", name: "gridgain", icon: "GridGain" },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
@@ -385,6 +386,8 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   GoogleSearchResults: "Google",
   GoogleSearchRun: "Google",
   GoogleSerperAPI: "Google",
+  GridGain: "GridGain",
+  gridgain: "GridGain",
   group_components: "GradientUngroup",
   HNLoader: "HackerNews",
   HuggingFaceEmbeddings: "HuggingFace",
