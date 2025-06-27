@@ -36,6 +36,11 @@ To generate a user-specific token to use with Langflow, do the following.
        "input_value": "Hello"
      }'
     ```
+6. Alternatively, the API pane's code snippets include a script to detect your local `LANGFLOW_API_KEY`.
+Set this variable in your terminal so you can copy and paste the commands.
+    ```bash
+    export LANGFLOW_API_KEY="sk..."
+    ```
 </details>
 
 ## Run the Simple Agent template flow
