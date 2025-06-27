@@ -375,6 +375,11 @@ module.exports = {
           id: "Support/luna-for-langflow",
           label: "Enterprise support",
         },
+        {
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
+        },
       ],
     },
     {
