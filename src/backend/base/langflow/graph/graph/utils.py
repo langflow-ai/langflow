@@ -3,8 +3,6 @@ from collections import defaultdict, deque
 from collections.abc import Callable
 from typing import Any
 
-import networkx as nx
-
 PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
 MAX_CYCLE_APPEARANCES = 2
 
@@ -444,17 +442,69 @@ def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) 
     return max(yielded_counts.values(), default=0) <= max_iterations
 
 
-def find_cycle_vertices(edges):
-    graph = nx.DiGraph(edges)
+def find_sccs_tarjan(edges: list[tuple[str, str]]):
+    graph = defaultdict(list)
+    nodes = set()
+    for u, v in edges:
+        graph[u].append(v)
+        nodes.add(u)
+        nodes.add(v)
 
-    # Initialize a set to collect vertices part of any cycle
+    ids = {}
+    low = {}
+    on_stack = set()
+    stack = []
+    at = 0
+    sccs = []
+
+    def dfs(node):
+        nonlocal at
+        stack.append(node)
+        on_stack.add(node)
+        ids[node] = low[node] = at
+        at += 1
+
+        for to in graph[node]:
+            if to not in ids:
+                dfs(to)
+            if to in on_stack:
+                low[node] = min(low[node], low[to])
+
+        if ids[node] == low[node]:
+            scc = []
+            while stack:
+                n = stack.pop()
+                on_stack.remove(n)
+                low[n] = ids[node]
+                scc.append(n)
+                if n == node:
+                    break
+            sccs.append(scc)
+
+    for node in nodes:
+        if node not in ids:
+            dfs(node)
+    return sccs
+
+
+def find_cycle_vertices(edges: list[tuple[str, str]]) -> list[str]:
+    """Finds all vertices that are part of a cycle in a directed graph.
+
+    This implementation uses Tarjan's algorithm to find strongly connected components.
+    """
+    sccs = find_sccs_tarjan(edges)
     cycle_vertices = set()
+    graph = defaultdict(list)
+    for u, v in edges:
+        graph[u].append(v)
 
-    # Utilize the strong component feature in NetworkX to find cycles
-    for component in nx.strongly_connected_components(graph):
-        if len(component) > 1 or graph.has_edge(tuple(component)[0], tuple(component)[0]):  # noqa: RUF015
-            cycle_vertices.update(component)
-
+    for scc in sccs:
+        if len(scc) > 1:
+            cycle_vertices.update(scc)
+        elif len(scc) == 1:
+            node = scc[0]
+            if node in graph.get(node, []):
+                cycle_vertices.add(node)
     return sorted(cycle_vertices)
 
 
