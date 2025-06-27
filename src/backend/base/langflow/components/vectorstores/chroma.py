@@ -108,7 +108,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         raw_filter = params.get("search_filter", "")
         if raw_filter:
             try:
-                self.advance_search_filter = json.loads(raw_filter)
+                self.advance_search_filter = raw_filter
             except json.JSONDecodeError:
                 raise ValueError("The 'advance_search_filter' must be a valid JSON dictionary.")
         else:
