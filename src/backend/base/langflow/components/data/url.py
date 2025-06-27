@@ -18,12 +18,7 @@ DEFAULT_TIMEOUT = 30
 DEFAULT_MAX_DEPTH = 1
 DEFAULT_FORMAT = "Text"
 URL_REGEX = re.compile(
-    r"^(https?:\/\/)?"
-    r"(www\.)?"
-    r"([a-zA-Z0-9.-]+)"
-    r"(\.[a-zA-Z]{2,})?"
-    r"(:\d+)?"
-    r"(\/[^\s]*)?$",
+    r"^(https?:\/\/)?" r"(www\.)?" r"([a-zA-Z0-9.-]+)" r"(\.[a-zA-Z]{2,})?" r"(:\d+)?" r"(\/[^\s]*)?$",
     re.IGNORECASE,
 )
 
@@ -41,6 +36,7 @@ class URLComponent(Component):
 
     display_name = "URL"
     description = "Fetch content from one or more web pages, following links recursively."
+    documentation: str = "https://docs.langflow.org/components-data#url"
     icon = "layout-template"
     name = "URLComponent"
 

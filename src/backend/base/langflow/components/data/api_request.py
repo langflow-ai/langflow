@@ -45,6 +45,7 @@ DEFAULT_FIELDS = ["mode"]
 class APIRequestComponent(Component):
     display_name = "API Request"
     description = "Make HTTP requests using URL or cURL commands."
+    documentation: str = "https://docs.langflow.org/components-data#api-request"
     icon = "Globe"
     name = "APIRequest"
 

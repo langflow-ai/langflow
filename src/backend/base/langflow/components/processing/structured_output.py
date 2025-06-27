@@ -18,6 +18,7 @@ from langflow.schema.table import EditMode
 class StructuredOutputComponent(Component):
     display_name = "Structured Output"
     description = "Uses an LLM to generate structured data. Ideal for extraction and consistency."
+    documentation: str = "https://docs.langflow.org/components-processing#structured-output"
     name = "StructuredOutput"
     icon = "braces"
 

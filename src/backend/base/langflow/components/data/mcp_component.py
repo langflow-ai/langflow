@@ -79,6 +79,7 @@ class MCPToolsComponent(ComponentWithCache):
 
     display_name = "MCP Connection"
     description = "Connect to an MCP server to use its tools."
+    documentation: str = "https://docs.langflow.org/mcp-client"
     icon = "Mcp"
     name = "MCPTools"
 
