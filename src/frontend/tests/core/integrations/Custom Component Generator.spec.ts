@@ -40,6 +40,9 @@ withEventDeliveryModes(
     await page.waitForTimeout(1000);
 
     try {
+      await page.waitForSelector("anchor-popover-anchor-input-api_key", {
+        timeout: 5000,
+      });
       await page
         .getByTestId("anchor-popover-anchor-input-api_key")
         .locator("input")

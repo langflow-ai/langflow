@@ -1263,7 +1263,7 @@
                 "info": "The API Endpoint for the Astra DB instance. Supercedes database selection.",
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_endpoint",
                 "placeholder": "",
                 "required": false,
@@ -1272,7 +1272,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "https://f3166ac4-3e2f-4b32-880c-231d1f9e3f3e-us-east-2.apps.astra.datastax.com"
+                "value": "ASTRA_DB_API_ENDPOINT"
               },
               "astradb_vectorstore_kwargs": {
                 "_input_type": "NestedDictInput",
