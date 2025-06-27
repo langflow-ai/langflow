@@ -86,7 +86,7 @@ def test_cycle_in_graph_max_iterations():
     text_input = TextInputComponent(_id="text_input")
     router = ConditionalRouterComponent(_id="router")
     # Connect text_input to router's input
-    text_input.set(input_value=router.false_result)
+    text_input.set(input_value=router.false_response)
     concat_component = Concatenate(_id="concatenate")
     concat_component.set(text=text_input.text_response)
     # Connect concatenate output back to router's input to create cycle
