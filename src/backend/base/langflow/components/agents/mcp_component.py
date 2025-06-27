@@ -67,6 +67,7 @@ class MCPToolsComponent(ComponentWithCache):
     sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
     _tool_cache: dict = {}
+    _last_selected_server: str | None = None  # Cache for the last selected server
     default_keys: list[str] = [
         "code",
         "_type",
@@ -217,12 +218,14 @@ class MCPToolsComponent(ComponentWithCache):
                     if len(self.tools) == 0:
                         try:
                             self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
+                            build_config["tool"]["options"] = [tool.name for tool in self.tools]
                         except ValueError:
                             build_config["tool"]["options"] = []
                             build_config["tool"]["value"] = ""
                             build_config["tool"]["placeholder"] = "Error on MCP Server"
                             return build_config
                         build_config["tool"]["placeholder"] = ""
+
                     if field_value == "":
                         return build_config
                     tool_obj = None
@@ -242,30 +245,61 @@ class MCPToolsComponent(ComponentWithCache):
                 else:
                     return build_config
             elif field_name == "mcp_server":
-                try:
-                    # field_value is now a dict {name, config}
-                    mcp_server_value = field_value
-                    self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list(mcp_server_value)
-                except ValueError:
-                    if not build_config["tools_metadata"]["show"]:
-                        build_config["tool"]["show"] = True
-                        build_config["tool"]["options"] = []
-                        build_config["tool"]["value"] = ""
-                        build_config["tool"]["placeholder"] = "Error on MCP Server"
-                    else:
-                        build_config["tool"]["show"] = False
-                    self.remove_non_default_keys(build_config)
-                    return build_config
-                build_config["tool"]["placeholder"] = ""
-                if "tool" in build_config and len(self.tools) > 0 and not build_config["tools_metadata"]["show"]:
-                    build_config["tool"]["show"] = True
-                    build_config["tool"]["options"] = [tool.name for tool in self.tools]
-                    await self._update_tool_config(build_config, build_config["tool"]["value"])
-                elif "tool" in build_config and len(self.tools) == 0:
-                    self.remove_non_default_keys(build_config)
+                if not field_value:
                     build_config["tool"]["show"] = False
                     build_config["tool"]["options"] = []
                     build_config["tool"]["value"] = ""
+                    build_config["tool"]["placeholder"] = ""
+                    self.remove_non_default_keys(build_config)
+                    return build_config
+
+                current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
+
+                # To avoid unnecessary updates, only proceed if the server has actually changed
+                if self._last_selected_server == current_server_name:
+                    return build_config
+
+                # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
+                # The check for _last_selected_server handles the initial state where the dropdown is
+                # hidden by default but we are not yet in "Tool Mode".
+                is_in_tool_mode = build_config["tools_metadata"]["value"]
+                self._last_selected_server = current_server_name
+                self.tools = []  # Clear previous tools
+                self.remove_non_default_keys(build_config)  # Clear previous tool inputs
+
+                # Only show the tool dropdown if not in tool_mode
+                if not is_in_tool_mode:
+                    build_config["tool"]["show"] = True
+                    build_config["tool"]["placeholder"] = "Loading tools..."
+                    build_config["tool"]["options"] = []
+                    build_config["tool"]["value"] = ""
+                else:
+                    # Keep the tool dropdown hidden if in tool_mode
+                    build_config["tool"]["show"] = False
+
+                try:
+                    # Fetch tools for the newly selected server
+                    tools, server_info = await self.update_tool_list(field_value)
+                    build_config["mcp_server"]["value"] = server_info
+
+                    if tools:
+                        tool_names = [tool.name for tool in tools]
+                        if not is_in_tool_mode:
+                            build_config["tool"]["options"] = tool_names
+                            build_config["tool"]["placeholder"] = "Select a tool"
+                    elif not is_in_tool_mode:
+                        build_config["tool"]["placeholder"] = "No tools found"
+
+                except (ValueError, AttributeError, KeyError, TypeError, ConnectionError, TimeoutError) as e:
+                    logger.error(f"Failed to fetch tools for server '{current_server_name}': {e}")
+                    if not is_in_tool_mode:
+                        build_config["tool"]["placeholder"] = "Error fetching tools"
+                        build_config["tool"]["options"] = []
+                        build_config["tool"]["value"] = ""
+                finally:
+                    # Ensure we don't show inputs for a tool that might no longer be valid
+                    await self._update_tool_config(build_config, "")
+
             elif field_name == "tool_mode":
                 try:
                     self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
@@ -429,4 +463,5 @@ class MCPToolsComponent(ComponentWithCache):
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
         mcp_server = getattr(self, "mcp_server", None)
-        return await self.update_tool_list(mcp_server)
+        tools, _ = await self.update_tool_list(mcp_server)
+        return tools

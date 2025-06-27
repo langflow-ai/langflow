@@ -228,7 +228,6 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
-  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   {
     display_name: "Language Models",
     name: "languagemodels",

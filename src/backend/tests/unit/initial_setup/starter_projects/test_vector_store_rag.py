@@ -14,6 +14,7 @@ from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
 
 
 @pytest.fixture
@@ -21,9 +22,9 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent(_id="file-123")
     file_component.set(path="test.txt")
-    file_component.set_on_output(name="dataframe", value=Data(text="This is a test file."), cache=True)
+    file_component.set_on_output(name="message", value=Message(text="This is a test file."), cache=True)
     text_splitter = SplitTextComponent(_id="text-splitter-123")
-    text_splitter.set(data_inputs=file_component.load_files)
+    text_splitter.set(data_inputs=file_component.load_files_message)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
     openai_embeddings.set(
         openai_api_key="sk-123", openai_api_base="https://api.openai.com/v1", openai_api_type="openai"
@@ -148,9 +149,9 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     # Verify each expected node exists with correct type
     for node_id, expected_type in expected_nodes.items():
         assert node_id in node_map, f"Missing node {node_id}"
-        assert node_map[node_id]["type"] == expected_type, (
-            f"Node {node_id} has incorrect type. Expected {expected_type}, got {node_map[node_id]['type']}"
-        )
+        assert (
+            node_map[node_id]["type"] == expected_type
+        ), f"Node {node_id} has incorrect type. Expected {expected_type}, got {node_map[node_id]['type']}"
 
     # Verify all nodes in graph are expected
     unexpected_nodes = set(node_map.keys()) - set(expected_nodes.keys())
@@ -230,9 +231,9 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
         f"Vertices mismatch: {len(ingestion_graph_copy.vertices)} "
         f"!= {len(ingestion_graph.vertices)} + {len(rag_graph.vertices)}"
     )
-    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(rag_graph.edges), (
-        f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
-    )
+    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(
+        rag_graph.edges
+    ), f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
 
     combined_graph_dump = ingestion_graph_copy.dump(
         name="Combined Graph", description="Graph for data ingestion and RAG", endpoint_name="combined"
