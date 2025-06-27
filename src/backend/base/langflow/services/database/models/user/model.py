@@ -19,6 +19,7 @@ class UserOptin(BaseModel):
     github_starred: bool = Field(default=False)
     dialog_dismissed: bool = Field(default=False)
     discord_clicked: bool = Field(default=False)
+    enable_telemetry: bool = Field(default=True)
     # Add more opt-in actions as needed
 
 
@@ -55,7 +56,7 @@ class UserCreate(SQLModel):
     username: str = Field()
     password: str = Field()
     optins: dict[str, Any] | None = Field(
-        default={"github_starred": False, "dialog_dismissed": False, "discord_clicked": False}
+        default={"github_starred": False, "dialog_dismissed": False, "discord_clicked": False, "enable_telemetry": True}
     )
 
 

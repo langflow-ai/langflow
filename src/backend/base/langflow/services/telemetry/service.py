@@ -23,6 +23,7 @@ from langflow.utils.version import get_version_info
 if TYPE_CHECKING:
     from pydantic import BaseModel
 
+    from langflow.services.database.models.user.model import User
     from langflow.services.settings.service import SettingsService
 
 
@@ -47,18 +48,40 @@ class TelemetryService(Service):
         )
         self.log_package_version_task: asyncio.Task | None = None
 
+    def is_telemetry_enabled(self, user: "User | None" = None) -> bool:
+        """Check if telemetry is enabled based on global settings and user preferences."""
+        # Global do-not-track setting takes precedence
+        if self.do_not_track:
+            return False
+        
+        # If no user provided, default to enabled (for system-level telemetry)
+        if user is None:
+            return True
+            
+        # Check user's telemetry preference
+        user_optins = user.optins or {}
+        return user_optins.get("enable_telemetry", True)
+
     async def telemetry_worker(self) -> None:
         while self.running:
-            func, payload, path = await self.telemetry_queue.get()
+            event = await self.telemetry_queue.get()
             try:
-                await func(payload, path)
+                if len(event) == 4:  # (func, payload, path, user)
+                    func, payload, path, user = event
+                    await func(payload, path, user)
+                elif len(event) == 3:  # (func, payload, path) - backward compatibility
+                    func, payload, path = event
+                    await func(payload, path)
+                else:  # Simple payload
+                    payload = event
+                    await self.send_telemetry_data(payload)
             except Exception:  # noqa: BLE001
                 logger.error("Error sending telemetry data")
             finally:
                 self.telemetry_queue.task_done()
 
-    async def send_telemetry_data(self, payload: BaseModel, path: str | None = None) -> None:
-        if self.do_not_track:
+    async def send_telemetry_data(self, payload: BaseModel, path: str | None = None, user: "User | None" = None) -> None:
+        if not self.is_telemetry_enabled(user):
             logger.debug("Telemetry tracking is disabled.")
             return
 
@@ -79,15 +102,15 @@ class TelemetryService(Service):
         except Exception:  # noqa: BLE001
             logger.error("Unexpected error occurred")
 
-    async def log_package_run(self, payload: RunPayload) -> None:
-        await self._queue_event((self.send_telemetry_data, payload, "run"))
+    async def log_package_run(self, payload: RunPayload, user: "User | None" = None) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "run", user), user)
 
     async def log_package_shutdown(self) -> None:
         payload = ShutdownPayload(time_running=(datetime.now(timezone.utc) - self._start_time).seconds)
         await self._queue_event(payload)
 
-    async def _queue_event(self, payload) -> None:
-        if self.do_not_track or self._stopping:
+    async def _queue_event(self, payload, user: "User | None" = None) -> None:
+        if not self.is_telemetry_enabled(user) or self._stopping:
             return
         await self.telemetry_queue.put(payload)
 
@@ -113,11 +136,11 @@ class TelemetryService(Service):
         )
         await self._queue_event((self.send_telemetry_data, payload, None))
 
-    async def log_package_playground(self, payload: PlaygroundPayload) -> None:
-        await self._queue_event((self.send_telemetry_data, payload, "playground"))
+    async def log_package_playground(self, payload: PlaygroundPayload, user: "User | None" = None) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "playground", user), user)
 
-    async def log_package_component(self, payload: ComponentPayload) -> None:
-        await self._queue_event((self.send_telemetry_data, payload, "component"))
+    async def log_package_component(self, payload: ComponentPayload, user: "User | None" = None) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "component", user), user)
 
     def start(self) -> None:
         if self.running or self.do_not_track:
