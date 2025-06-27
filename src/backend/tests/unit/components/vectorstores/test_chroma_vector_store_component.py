@@ -19,7 +19,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self, tmp_path: Path) -> dict[str, Any]:
         """Return the default kwargs for the component."""
-        from langflow.components.embeddings.openai import OpenAIEmbeddingsComponent
+        from langflow.components.openai.openai import OpenAIEmbeddingsComponent
 
         if os.getenv("OPENAI_API_KEY") is None:
             pytest.skip("OPENAI_API_KEY is not set")

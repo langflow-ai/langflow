@@ -14,6 +14,7 @@ from .message_to_data import MessageToDataComponent
 from .parse_data import ParseDataComponent
 from .parse_json_data import ParseJSONDataComponent
 from .parser import ParserComponent
+from .prompt import PromptComponent
 from .python_repl_core import PythonREPLComponent
 from .regex import RegexExtractorComponent
 from .select_data import SelectDataComponent
@@ -38,6 +39,7 @@ __all__ = [
     "ParseDataFrameComponent",
     "ParseJSONDataComponent",
     "ParserComponent",
+    "PromptComponent",
     "PythonREPLComponent",
     "RegexExtractorComponent",
     "SelectDataComponent",

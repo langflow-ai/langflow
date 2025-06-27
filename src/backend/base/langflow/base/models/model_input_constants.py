@@ -2,13 +2,13 @@ from typing_extensions import TypedDict
 
 from langflow.base.models.model import LCModelComponent
 from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
-from langflow.components.languagemodels.anthropic import AnthropicModelComponent
-from langflow.components.languagemodels.azure_openai import AzureChatOpenAIComponent
-from langflow.components.languagemodels.google_generative_ai import GoogleGenerativeAIComponent
+from langflow.components.anthropic.anthropic import AnthropicModelComponent
+from langflow.components.azure.azure_openai import AzureChatOpenAIComponent
+from langflow.components.google.google_generative_ai import GoogleGenerativeAIComponent
 from langflow.components.languagemodels.groq import GroqModel
-from langflow.components.languagemodels.nvidia import NVIDIAModelComponent
-from langflow.components.languagemodels.openai_chat_model import OpenAIModelComponent
 from langflow.components.languagemodels.sambanova import SambaNovaComponent
+from langflow.components.nvidia.nvidia import NVIDIAModelComponent
+from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
 
@@ -89,7 +89,7 @@ def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Inpu
 
 def _get_google_generative_ai_inputs_and_fields():
     try:
-        from langflow.components.languagemodels.google_generative_ai import GoogleGenerativeAIComponent
+        from langflow.components.google.google_generative_ai import GoogleGenerativeAIComponent
 
         google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
     except ImportError as e:
@@ -103,7 +103,7 @@ def _get_google_generative_ai_inputs_and_fields():
 
 def _get_openai_inputs_and_fields():
     try:
-        from langflow.components.languagemodels.openai_chat_model import OpenAIModelComponent
+        from langflow.components.openai.openai_chat_model import OpenAIModelComponent
 
         openai_inputs = get_filtered_inputs(OpenAIModelComponent)
     except ImportError as e:
@@ -114,7 +114,7 @@ def _get_openai_inputs_and_fields():
 
 def _get_azure_inputs_and_fields():
     try:
-        from langflow.components.languagemodels.azure_openai import AzureChatOpenAIComponent
+        from langflow.components.azure.azure_openai import AzureChatOpenAIComponent
 
         azure_inputs = get_filtered_inputs(AzureChatOpenAIComponent)
     except ImportError as e:
@@ -136,7 +136,7 @@ def _get_groq_inputs_and_fields():
 
 def _get_anthropic_inputs_and_fields():
     try:
-        from langflow.components.languagemodels.anthropic import AnthropicModelComponent
+        from langflow.components.anthropic.anthropic import AnthropicModelComponent
 
         anthropic_inputs = get_filtered_inputs(AnthropicModelComponent)
     except ImportError as e:
@@ -147,7 +147,7 @@ def _get_anthropic_inputs_and_fields():
 
 def _get_nvidia_inputs_and_fields():
     try:
-        from langflow.components.languagemodels.nvidia import NVIDIAModelComponent
+        from langflow.components.nvidia.nvidia import NVIDIAModelComponent
 
         nvidia_inputs = get_filtered_inputs(NVIDIAModelComponent)
     except ImportError as e:

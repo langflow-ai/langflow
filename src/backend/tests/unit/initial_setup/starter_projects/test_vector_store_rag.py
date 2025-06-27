@@ -4,12 +4,11 @@ from textwrap import dedent
 
 import pytest
 from langflow.components.data import FileComponent
-from langflow.components.embeddings import OpenAIEmbeddingsComponent
 from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.components.languagemodels import OpenAIModelComponent
-from langflow.components.processing import ParseDataComponent
+from langflow.components.openai.openai import OpenAIEmbeddingsComponent
+from langflow.components.openai.openai_chat_model import OpenAIModelComponent
+from langflow.components.processing import ParseDataComponent, PromptComponent
 from langflow.components.processing.split_text import SplitTextComponent
-from langflow.components.prompts import PromptComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
@@ -199,7 +198,7 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     assert rag_nodes[4]["data"]["type"] == "ParseData"
     assert rag_nodes[4]["id"] == "parse-data-123"
 
-    assert rag_nodes[5]["data"]["type"] == "Prompt"
+    assert rag_nodes[5]["data"]["type"] == "Prompt Template"
     assert rag_nodes[5]["id"] == "prompt-123"
 
     assert rag_nodes[6]["data"]["type"] == "AstraDB"
@@ -259,7 +258,7 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
             {"id": "openai-123", "type": "OpenAIModel"},
             {"id": "openai-embeddings-124", "type": "OpenAIEmbeddings"},
             {"id": "parse-data-123", "type": "ParseData"},
-            {"id": "prompt-123", "type": "Prompt"},
+            {"id": "prompt-123", "type": "Prompt Template"},
             {"id": "rag-vector-store-123", "type": "AstraDB"},
         ],
         key=operator.itemgetter("id"),
