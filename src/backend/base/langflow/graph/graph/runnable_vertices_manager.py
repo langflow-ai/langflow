@@ -28,7 +28,10 @@ class RunnableVerticesManager:
     def from_dict(cls, data: dict) -> "RunnableVerticesManager":
         instance = cls()
         instance.run_map = data["run_map"]
-        instance.run_predecessors = data["run_predecessors"]
+        # Ensure run_predecessors values are always sets
+        instance.run_predecessors = defaultdict(
+            set, {k: set(v) if not isinstance(v, set) else v for k, v in data["run_predecessors"].items()}
+        )
         instance.vertices_to_run = data["vertices_to_run"]
         instance.vertices_being_run = data["vertices_being_run"]
         instance.cycle_vertices = set(data.get("cycle_vertices", set()))
@@ -47,7 +50,10 @@ class RunnableVerticesManager:
 
     def __setstate__(self, state: dict) -> None:
         self.run_map = state["run_map"]
-        self.run_predecessors = state["run_predecessors"]
+        # Ensure run_predecessors values are always sets
+        self.run_predecessors = defaultdict(
+            set, {k: set(v) if not isinstance(v, set) else v for k, v in state["run_predecessors"].items()}
+        )
         self.vertices_to_run = state["vertices_to_run"]
         self.vertices_being_run = state["vertices_being_run"]
         self.cycle_vertices = set(state.get("cycle_vertices", set()))
@@ -60,12 +66,18 @@ class RunnableVerticesManager:
     async def update_run_state(self, *, run_predecessors, vertices_to_run) -> None:
         """Updates the run state with new predecessors and vertices to run."""
         async with self._lock:
-            self.run_predecessors = run_predecessors
+            # Ensure run_predecessors values are always sets
+            self.run_predecessors = defaultdict(
+                set, {k: set(v) if not isinstance(v, set) else v for k, v in run_predecessors.items()}
+            )
             self.vertices_to_run = vertices_to_run
 
     def update_run_state_sync(self, *, run_predecessors, vertices_to_run) -> None:
         """Synchronous version for graph setup/modification operations."""
-        self.run_predecessors = run_predecessors
+        # Ensure run_predecessors values are always sets
+        self.run_predecessors = defaultdict(
+            set, {k: set(v) if not isinstance(v, set) else v for k, v in run_predecessors.items()}
+        )
         self.vertices_to_run = vertices_to_run
 
     async def is_vertex_runnable(self, vertex_id: str, *, is_active: bool, is_loop: bool = False) -> bool:
@@ -117,16 +129,9 @@ class RunnableVerticesManager:
             bool: True if all predecessor conditions are met, False otherwise
         """
         pending: set[str] = self.run_predecessors.get(vertex_id, set())
-        # Ensure pending is always a set (defensive programming)
-        if not isinstance(pending, set):
-            pending = set(pending)
 
         if not pending:
             return True
-
-        # Ensure cycle_vertices is always a set (defensive programming)
-        if not isinstance(self.cycle_vertices, set):
-            self.cycle_vertices = set(self.cycle_vertices)
 
         if vertex_id in self.cycle_vertices:
             # If this is a loop vertex that has run before and has pending predecessors,
