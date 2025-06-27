@@ -85,10 +85,11 @@ def test_cycle_in_graph():
 def test_cycle_in_graph_max_iterations():
     text_input = TextInputComponent(_id="text_input")
     router = ConditionalRouterComponent(_id="router")
-    text_input.set(input_value=router.false_case_message)
-    text_input.set(input_value=router.true_case_message)
+    # Connect text_input to router's input
+    text_input.set(input_value=router.false_result)
     concat_component = Concatenate(_id="concatenate")
     concat_component.set(text=text_input.text_response)
+    # Connect concatenate output back to router's input to create cycle
     router.set(
         input_text=text_input.text_response,
         match_text="testtesttesttest",
@@ -97,14 +98,14 @@ def test_cycle_in_graph_max_iterations():
         false_case_message=concat_component.concatenate,
     )
     text_output = TextOutputComponent(_id="text_output")
-    text_output.set(input_value=router.true_response)
+    text_output.set(input_value=router.true_result)
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=text_output.text_response)
 
     graph = Graph(text_input, chat_output)
     assert graph.is_cyclic is True
 
-    # Run queue should contain chat_input and not router
+    # Run queue should contain text_input and not router
     assert "text_input" in graph._run_queue
     assert "router" not in graph._run_queue
 
@@ -115,9 +116,8 @@ def test_cycle_in_graph_max_iterations():
 def test_that_outputs_cache_is_set_to_false_in_cycle():
     chat_input = ChatInput(_id="chat_input")
     router = ConditionalRouterComponent(_id="router")
-    # Use router's true_result output instead of message
-    chat_input.set(input_value=router.true_case_message)
-    chat_input.set(input_value=router.false_case_message)
+    # Connect chat_input to router's output to create cycle
+    chat_input.set(input_value=router.true_result)
     concat_component = Concatenate(_id="concatenate")
     concat_component.set(text=chat_input.message_response)
     router.set(
@@ -128,7 +128,7 @@ def test_that_outputs_cache_is_set_to_false_in_cycle():
         false_case_message=concat_component.concatenate,
     )
     text_output = TextOutputComponent(_id="text_output")
-    text_output.set(input_value=router.true_response)
+    text_output.set(input_value=router.true_result)
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=text_output.text_response)
 
