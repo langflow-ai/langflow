@@ -20,6 +20,7 @@ class RunnableVerticesManager:
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
             "vertices_being_run": self.vertices_being_run,
+            "cycle_vertices": self.cycle_vertices,
             "ran_at_least_once": self.ran_at_least_once,
         }
 
@@ -30,6 +31,7 @@ class RunnableVerticesManager:
         instance.run_predecessors = data["run_predecessors"]
         instance.vertices_to_run = data["vertices_to_run"]
         instance.vertices_being_run = data["vertices_being_run"]
+        instance.cycle_vertices = set(data.get("cycle_vertices", set()))
         instance.ran_at_least_once = data.get("ran_at_least_once", set())
         return instance
 
@@ -39,6 +41,7 @@ class RunnableVerticesManager:
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
             "vertices_being_run": self.vertices_being_run,
+            "cycle_vertices": self.cycle_vertices,
             "ran_at_least_once": self.ran_at_least_once,
         }
 
@@ -47,6 +50,7 @@ class RunnableVerticesManager:
         self.run_predecessors = state["run_predecessors"]
         self.vertices_to_run = state["vertices_to_run"]
         self.vertices_being_run = state["vertices_being_run"]
+        self.cycle_vertices = set(state.get("cycle_vertices", set()))
         self.ran_at_least_once = state.get("ran_at_least_once", set())
 
     async def all_predecessors_are_fulfilled(self) -> bool:
@@ -113,8 +117,16 @@ class RunnableVerticesManager:
             bool: True if all predecessor conditions are met, False otherwise
         """
         pending: set[str] = self.run_predecessors.get(vertex_id, set())
+        # Ensure pending is always a set (defensive programming)
+        if not isinstance(pending, set):
+            pending = set(pending)
+
         if not pending:
             return True
+
+        # Ensure cycle_vertices is always a set (defensive programming)
+        if not isinstance(self.cycle_vertices, set):
+            self.cycle_vertices = set(self.cycle_vertices)
 
         if vertex_id in self.cycle_vertices:
             # If this is a loop vertex that has run before and has pending predecessors,
@@ -185,3 +197,7 @@ class RunnableVerticesManager:
     async def add_to_cycle_vertices(self, v_id):
         async with self._lock:
             self.cycle_vertices.add(v_id)
+
+    def add_to_cycle_vertices_sync(self, v_id):
+        """Synchronous version for graph setup/initialization."""
+        self.cycle_vertices.add(v_id)

@@ -1216,7 +1216,7 @@ class Graph:
         self._set_cache_if_listen_notify_components()
         for vertex in self.vertices:
             if vertex.id in self.cycle_vertices:
-                self.run_manager.add_to_cycle_vertices(vertex.id)
+                self.run_manager.add_to_cycle_vertices_sync(vertex.id)
 
     def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
         """Returns the edges of the graph as a list of tuples.
@@ -1956,7 +1956,7 @@ class Graph:
         for vertex_id in first_layer:
             self.run_manager.vertices_being_run.add(vertex_id)
             if vertex_id in self.cycle_vertices:
-                self.run_manager.cycle_vertices.add(vertex_id)
+                self.run_manager.add_to_cycle_vertices_sync(vertex_id)
         self._first_layer = sorted(first_layer)
         self._run_queue = deque(self._first_layer)
         self._prepared = True
