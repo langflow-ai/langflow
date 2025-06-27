@@ -32,15 +32,17 @@ class Concatenate(Component):
 def test_cycle_in_graph():
     chat_input = ChatInput(_id="chat_input")
     router = ConditionalRouterComponent(_id="router", default_route="true_result")
-    # Use router's message output instead of false_response
-    chat_input.set(input_value=router.message)
+    # Use router's true_result output instead of message
+    chat_input.set(input_value=router.true_case_message)
+    chat_input.set(input_value=router.false_case_message)
     concat_component = Concatenate(_id="concatenate")
     concat_component.set(text=chat_input.message_response)
     router.set(
         input_text=chat_input.message_response,
         match_text="testtesttesttest",
         operator="equals",
-        message=concat_component.concatenate,
+        true_case_message=concat_component.concatenate,
+        false_case_message=concat_component.concatenate,
     )
     text_output = TextOutputComponent(_id="text_output")
     text_output.set(input_value=router.true_response)
@@ -83,14 +85,16 @@ def test_cycle_in_graph():
 def test_cycle_in_graph_max_iterations():
     text_input = TextInputComponent(_id="text_input")
     router = ConditionalRouterComponent(_id="router")
-    text_input.set(input_value=router.false_response)
+    text_input.set(input_value=router.false_case_message)
+    text_input.set(input_value=router.true_case_message)
     concat_component = Concatenate(_id="concatenate")
     concat_component.set(text=text_input.text_response)
     router.set(
         input_text=text_input.text_response,
         match_text="testtesttesttest",
         operator="equals",
-        message=concat_component.concatenate,
+        true_case_message=concat_component.concatenate,
+        false_case_message=concat_component.concatenate,
     )
     text_output = TextOutputComponent(_id="text_output")
     text_output.set(input_value=router.true_response)
@@ -111,15 +115,17 @@ def test_cycle_in_graph_max_iterations():
 def test_that_outputs_cache_is_set_to_false_in_cycle():
     chat_input = ChatInput(_id="chat_input")
     router = ConditionalRouterComponent(_id="router")
-    # Use router's message output instead of false_response
-    chat_input.set(input_value=router.message)
+    # Use router's true_result output instead of message
+    chat_input.set(input_value=router.true_case_message)
+    chat_input.set(input_value=router.false_case_message)
     concat_component = Concatenate(_id="concatenate")
     concat_component.set(text=chat_input.message_response)
     router.set(
         input_text=chat_input.message_response,
         match_text="testtesttesttest",
         operator="equals",
-        message=concat_component.concatenate,
+        true_case_message=concat_component.concatenate,
+        false_case_message=concat_component.concatenate,
     )
     text_output = TextOutputComponent(_id="text_output")
     text_output.set(input_value=router.true_response)
@@ -167,7 +173,8 @@ def test_updated_graph_with_prompts():
         input_text=openai_component_1.text_response,
         match_text=chat_input.message_response,
         operator="contains",
-        message=openai_component_1.text_response,
+        true_case_message=openai_component_1.text_response,
+        false_case_message=openai_component_1.text_response,
     )
 
     # Second prompt: After the last try, provide a new hint
@@ -236,7 +243,8 @@ def test_updated_graph_with_max_iterations():
         input_text=openai_component_1.text_response,
         match_text=chat_input.message_response,
         operator="contains",
-        message=openai_component_1.text_response,
+        true_case_message=openai_component_1.text_response,
+        false_case_message=openai_component_1.text_response,
     )
 
     # Second prompt: After the last try, provide a new hint
@@ -290,7 +298,8 @@ def test_conditional_router_max_iterations():
         input_text=text_input.text_response,
         match_text="bacon",
         operator="equals",
-        message="This message should not be routed to true_result",
+        true_case_message="This message should not be routed to true_result",
+        false_case_message="This message should not be routed to false_result",
         max_iterations=5,
         default_route="true_result",
     )
