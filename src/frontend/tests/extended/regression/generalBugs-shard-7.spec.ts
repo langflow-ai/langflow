@@ -26,12 +26,12 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
-    await page.waitForSelector('[data-testid="embeddingsOllama Embeddings"]', {
+    await page.waitForSelector('[data-testid="ollamaOllama Embeddings"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("embeddingsOllama Embeddings")
+      .getByTestId("ollamaOllama Embeddings")
       .hover()
       .then(async () => {
         await page
