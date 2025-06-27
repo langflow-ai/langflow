@@ -77,7 +77,7 @@ class MCPToolsComponent(ComponentWithCache):
         "tool",
     ]
 
-    display_name = "MCP Connection"
+    display_name = "MCP Tools"
     description = "Connect to an MCP server to use its tools."
     icon = "Mcp"
     name = "MCPTools"
