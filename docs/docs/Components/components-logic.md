@@ -222,6 +222,84 @@ The following actions occur when processing a list of Data objects:
 - Objects not meeting the condition go to false_output
 - If all objects go to one output, the other output is empty
 
+### Listen
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
+This component listens for a notification and retrieves its associated state.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type   | Description                                    |
+|------|--------|------------------------------------------------|
+| name | String | The name of the notification to listen for. |
+
+**Outputs**
+
+| Name   | Type | Description                                |
+|--------|------|--------------------------------------------|
+| output | Data | The state associated with the notification. |
+
+</details>
+
+## Notify
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
+This component generates a notification for the Listen component to use.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name   | Type    | Description                                                       |
+|--------|---------|-------------------------------------------------------------------|
+| name   | String  | The name of the notification. |
+| data   | Data    | The data to store in the notification. |
+| append | Boolean | When set to true, the record is added to the existing notification. |
+
+**Outputs**
+
+| Name   | Type | Description                             |
+|--------|------|-----------------------------------------|
+| output | Data | The data stored in the notification. |
+
+</details>
+
+### Pass
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
+
+This component forwards the input message, unchanged.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_message | Input Message | The message to forward. |
+| ignored_message | Ignored Message | A second message that is ignored. Used as a workaround for continuity. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| output_message | Output Message | The forwarded message from the input. |
+
+</details>
+
 ## Deprecated components
 
 Deprecated components have been replaced by newer alternatives and should not be used in new projects.
