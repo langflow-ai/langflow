@@ -102,6 +102,11 @@ const autoInstallers = [
     title: "Claude",
     icon: "Claude",
   },
+  {
+    name: "windsurf",
+    title: "Windsurf",
+    icon: "Windsurf",
+  },
 ];
 
 const operatingSystemTabs = [

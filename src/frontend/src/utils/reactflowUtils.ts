@@ -176,6 +176,45 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
   return newEdges;
 }
 
+export function clearHandlesFromAdvancedFields(
+  componentId: string,
+  data: APIClassType,
+): void {
+  if (!componentId || !data?.template) {
+    return;
+  }
+
+  try {
+    const flowStore = useFlowStore.getState();
+    const { edges, deleteEdge } = flowStore;
+
+    const connectedEdges = edges.filter((edge) => edge.target === componentId);
+
+    if (connectedEdges.length === 0) {
+      return;
+    }
+
+    const edgeIdsToDelete: string[] = [];
+
+    for (const edge of connectedEdges) {
+      const fieldName = edge.data?.targetHandle?.fieldName;
+
+      if (fieldName && isAdvancedField(data, fieldName)) {
+        edgeIdsToDelete.push(edge.id);
+      }
+    }
+
+    edgeIdsToDelete.forEach(deleteEdge);
+  } catch (error) {
+    console.error("Error clearing handles from advanced fields:", error);
+  }
+}
+
+const isAdvancedField = (data: APIClassType, fieldName: string): boolean => {
+  const field = data.template[fieldName];
+  return field && "advanced" in field && field.advanced === true;
+};
+
 export function filterHiddenFieldsEdges(
   edge: EdgeType,
   newEdges: EdgeType[],
@@ -2093,4 +2132,45 @@ export function buildPositionDictionary(nodes: AllNodeType[]) {
 
 export function hasStreaming(nodes: AllNodeType[]) {
   return nodes.some((node) => node.data.node?.template?.stream?.value);
+}
+
+// Utility to get all connected nodes and edges from a given nodeId, in a given direction
+export function getConnectedSubgraph(
+  nodeId: string,
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+  direction: "upstream" | "downstream",
+): { nodes: AllNodeType[]; edges: EdgeType[] } {
+  const visited = new Set<string>();
+  const resultNodes: AllNodeType[] = [];
+  const resultEdges: EdgeType[] = [];
+
+  function dfs(currentId: string) {
+    if (visited.has(currentId)) return;
+    visited.add(currentId);
+    const node = nodes.find((n) => n.id === currentId);
+    if (node) {
+      resultNodes.push(node);
+      if (direction === "upstream") {
+        // Find all incoming edges
+        const incomingEdges = edges.filter((e) => e.target === currentId);
+        for (const edge of incomingEdges) {
+          resultEdges.push(edge);
+          dfs(edge.source);
+        }
+      } else {
+        // downstream: Find all outgoing edges
+        const outgoingEdges = edges.filter((e) => e.source === currentId);
+        for (const edge of outgoingEdges) {
+          resultEdges.push(edge);
+          dfs(edge.target);
+        }
+      }
+    }
+  }
+  dfs(nodeId);
+  return {
+    nodes: resultNodes,
+    edges: resultEdges,
+  };
 }
