@@ -56,6 +56,8 @@ export const lazyIconsMapping = {
     import("@/icons/Cohere").then((mod) => ({ default: mod.CohereIcon })),
   Composio: () =>
     import("@/icons/Composio").then((mod) => ({ default: mod.ComposioIcon })),
+  Reddit: () =>
+    import("@/icons/reddit").then((mod) => ({ default: mod.RedditIcon })),
   Confluence: () =>
     import("@/icons/Confluence").then((mod) => ({
       default: mod.ConfluenceIcon,
