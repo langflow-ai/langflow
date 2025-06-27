@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 class BatchRunComponent(Component):
     display_name = "Batch Run"
     description = "Runs an LLM on each row of a DataFrame column. If no column is specified, all columns are used."
+    documentation: str = "https://docs.langflow.org/components-processing#batch-run"
     icon = "List"
 
     inputs = [
