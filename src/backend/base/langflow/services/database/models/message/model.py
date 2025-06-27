@@ -62,13 +62,14 @@ class MessageBase(SQLModel):
                 if hasattr(file, "path") and hasattr(file, "url") and file.path:
                     session_id = message.session_id
                     if session_id:
-                      #Split only once, if session_id not found, fall back to the basename to avoid indexError.
+                        # Split only once, if session_id not found, fall back to the basename to avoid indexError.
                         parts = file.path.split(str(session_id), 1)
                         if len(parts) > 1:
                             fname = parts[1]
                         else:
-                             import os
-                             fname = os.path.basename(file.path)
+                            import os
+
+                            fname = os.path.basename(file.path)
                         image_paths.append(f"{session_id}{fname}")
                     else:
                         image_paths.append(file.path)
