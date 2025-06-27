@@ -25,7 +25,9 @@ export default function McpComponent({
         name: server.name,
         description:
           server.toolsCount === null
-            ? "Loading..."
+            ? server.error
+              ? "Error"
+              : "Loading..."
             : !server.toolsCount
               ? "No actions found"
               : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`,

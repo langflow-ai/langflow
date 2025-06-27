@@ -296,6 +296,8 @@ export const lazyIconsMapping = {
     import("@/icons/Wikipedia/Wikipedia").then((mod) => ({
       default: mod.default,
     })),
+  Windsurf: () =>
+    import("@/icons/Windsurf").then((mod) => ({ default: mod.WindsurfIcon })),
   Wolfram: () =>
     import("@/icons/Wolfram/Wolfram").then((mod) => ({ default: mod.default })),
   xAI: () => import("@/icons/xAI").then((mod) => ({ default: mod.XAIIcon })),
