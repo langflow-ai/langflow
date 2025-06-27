@@ -24,6 +24,8 @@ import { useFileHandler } from "../chatInput/hooks/use-file-handler";
 import ChatMessage from "../chatMessage/chat-message";
 import { ChatScrollAnchor } from "./chat-scroll-anchor";
 
+const TIME_TO_DISABLE_SCROLL = 2000;
+
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
     prevProps.chat.message === nextProps.chat.message &&
@@ -129,11 +131,7 @@ export default function ChatView({
     // trigger focus on chat when new session is set
   }, [focusChat]);
 
-  function updateChat(
-    chat: ChatMessageType,
-    message: string,
-    stream_url?: string,
-  ) {
+  function updateChat(chat: ChatMessageType, message: string) {
     chat.message = message;
     if (chat.componentId)
       updateFlowPool(chat.componentId, {
@@ -151,7 +149,7 @@ export default function ChatView({
     !!playgroundPage,
   );
 
-  const onDrop = (e) => {
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) {
       e.stopPropagation();
       return;
@@ -186,6 +184,8 @@ export default function ChatView({
 
   const [canScroll, setCanScroll] = useState<boolean>(false);
   const [scrolledUp, setScrolledUp] = useState<boolean>(false);
+  const [isLlmResponding, setIsLlmResponding] = useState<boolean>(false);
+  const [lastMessageContent, setLastMessageContent] = useState<string>("");
 
   const handleScroll = () => {
     if (!messagesRef.current) return;
@@ -209,8 +209,43 @@ export default function ChatView({
 
   useEffect(() => {
     setPlaygroundScrollBehaves("smooth");
-    setCanScroll(true);
-  }, [chatHistory?.length]);
+
+    if (!chatHistory || chatHistory.length === 0) {
+      setCanScroll(true);
+      return;
+    }
+
+    const lastMessage = chatHistory[chatHistory.length - 1];
+    const currentMessageContent =
+      typeof lastMessage.message === "string"
+        ? lastMessage.message
+        : JSON.stringify(lastMessage.message);
+
+    const isNewMessage = lastMessage.isSend;
+
+    const isStreamingUpdate =
+      !lastMessage.isSend &&
+      currentMessageContent !== lastMessageContent &&
+      currentMessageContent.length > lastMessageContent.length;
+
+    if (isStreamingUpdate) {
+      if (!isLlmResponding) {
+        setIsLlmResponding(true);
+        setCanScroll(true);
+
+        setTimeout(() => {
+          setCanScroll(false);
+        }, TIME_TO_DISABLE_SCROLL);
+      }
+    } else if (isNewMessage || lastMessage.isSend) {
+      setCanScroll(true);
+      if (isLlmResponding) {
+        setIsLlmResponding(false);
+      }
+    }
+
+    setLastMessageContent(currentMessageContent);
+  }, [chatHistory, isLlmResponding, lastMessageContent]);
 
   return (
     <div
