@@ -443,6 +443,14 @@ def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) 
 
 
 def find_sccs_tarjan(edges: list[tuple[str, str]]):
+    """Finds all strongly connected components in a directed graph using Tarjan's algorithm.
+
+    Args:
+        edges: A list of tuples representing the directed edges of the graph.
+
+    Returns:
+        A list of lists, where each inner list contains the vertices of a strongly connected component.
+    """
     graph = defaultdict(list)
     nodes = set()
     for u, v in edges:
@@ -491,6 +499,13 @@ def find_cycle_vertices(edges: list[tuple[str, str]]) -> list[str]:
     """Finds all vertices that are part of a cycle in a directed graph.
 
     This implementation uses Tarjan's algorithm to find strongly connected components.
+    Any SCC with more than one vertex or a single vertex with a self-loop is a cycle.
+
+    Args:
+        edges: A list of tuples representing the directed edges of the graph.
+
+    Returns:
+        A sorted list of vertices that are part of a cycle.
     """
     sccs = find_sccs_tarjan(edges)
     cycle_vertices = set()
