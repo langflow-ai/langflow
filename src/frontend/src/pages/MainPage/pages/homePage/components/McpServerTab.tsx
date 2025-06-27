@@ -102,6 +102,11 @@ const autoInstallers = [
     title: "Claude",
     icon: "Claude",
   },
+  {
+    name: "windsurf",
+    title: "Windsurf",
+    icon: "Windsurf",
+  },
 ];
 
 const operatingSystemTabs = [
@@ -409,7 +414,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       {
                         onSuccess: () => {
                           setSuccessData({
-                            title: `MCP Server installed successfully on ${installer.title}`,
+                            title: `MCP Server installed successfully on ${installer.title}. You may need to restart your client to see the changes.`,
                           });
                           setLoadingMCP(
                             loadingMCP.filter(
