@@ -18,7 +18,8 @@ Retrieve Vertex builds for a specific flow.
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -397,7 +398,8 @@ Delete Vertex builds for a specific flow.
 ```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID" \
-  -H "accept: */*"
+  -H "accept: */*" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -417,7 +419,8 @@ Retrieve a list of all messages:
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/messages" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 To filter messages, use the `flow_id`, `session_id`, `sender`, and `sender_name` query parameters.
@@ -432,7 +435,8 @@ This example retrieves messages sent by `Machine` and `AI` in a given chat sessi
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/messages?flow_id=$FLOW_ID&session_id=01ce083d-748b-4b8d-97b6-33adbb6a528a&sender=Machine&sender_name=AI&order_by=timestamp" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -488,6 +492,7 @@ curl -v -X DELETE \
   "$LANGFLOW_URL/api/v1/monitor/messages" \
   -H "accept: */*" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '["MESSAGE_ID_1", "MESSAGE_ID_2"]'
 ```
 
@@ -515,6 +520,7 @@ curl -X PUT \
   "$LANGFLOW_URL/api/v1/monitor/messages/3ab66cc6-c048-48f8-ab07-570f5af7b160" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
   "text": "testing 1234"
 }'
@@ -566,7 +572,8 @@ This example updates the `session_ID` value `01ce083d-748b-4b8d-97b6-33adbb6a528
 ```bash
 curl -X PATCH \
   "$LANGFLOW_URL/api/v1/monitor/messages/session/01ce083d-748b-4b8d-97b6-33adbb6a528a?new_session_id=different_session_id" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -618,7 +625,8 @@ Delete all messages for a specific session.
 ```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v1/monitor/messages/session/different_session_id_2" \
-  -H "accept: */*"
+  -H "accept: */*" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -641,7 +649,8 @@ Retrieve all transactions, which are interactions between components, for a spec
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/transactions?flow_id=$FLOW_ID&page=1&size=50" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>

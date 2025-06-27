@@ -24,6 +24,11 @@ You can copy the contents of this file into your own `.env` file and replace the
 
 ### LANGFLOW_AUTO_LOGIN
 
+:::important
+As of Langflow v1.5, all API requests require a Langflow API key, even when `AUTO_LOGIN` is enabled.
+The MCP-related endpoints will continue to require no authentication when `AUTO_LOGIN=true`.
+:::
+
 When `True`, Langflow automatically logs users in with username `langflow` and password `langflow` without requiring user authentication.
 To disable automatic login and enforce user authentication, set this value to `False` in your `.env` file.
 By default, this variable is set to `True`.

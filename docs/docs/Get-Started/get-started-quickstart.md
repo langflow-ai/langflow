@@ -13,6 +13,35 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
 - [A running Langflow instance](/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/api-keys)
+- [A Langflow API key](/configuration-api-keys)
+
+<details>
+<summary>Need help creating an API key?</summary>
+
+To generate a user-specific token to use with Langflow, do the following.
+
+1. Open the Langflow UI, click your user icon, and then select **Settings**.
+2. Click **Langflow API Keys**, and then click **Add New**.
+3. Name your key, and then click **Create API Key**.
+4. Copy the API key and store it in a secure location.
+5. Include your `LANGFLOW_API_KEY` in requests like this:
+    ```text
+    curl --request POST \
+     --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
+     --header 'Content-Type: application/json' \
+     --header 'x-api-key: LANGFLOW_API_KEY' \
+     --data '{
+       "output_type": "chat",
+       "input_type": "chat",
+       "input_value": "Hello"
+     }'
+    ```
+6. Alternatively, the API pane's code snippets include a script to detect your local `LANGFLOW_API_KEY`.
+Set this variable in your terminal so you can copy and paste the commands.
+    ```bash
+    export LANGFLOW_API_KEY="sk..."
+    ```
+</details>
 
 ## Run the Simple Agent template flow
 
@@ -88,7 +117,8 @@ Langflow provides code snippets to help you get started with the Langflow API.
 
     # Request headers
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "x-api-key": "LANGFLOW_API_KEY"
     }
 
     try:
@@ -119,7 +149,8 @@ Langflow provides code snippets to help you get started with the Langflow API.
     const options = {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'x-api-key': 'LANGFLOW_API_KEY'
         },
         body: JSON.stringify(payload)
     };
@@ -353,7 +384,10 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
             "input_value": question,
         }
 
-        headers = {"Content-Type": "application/json"}
+        headers = {
+        "Content-Type": "application/json",
+        "x-api-key": "LANGFLOW_API_KEY"
+        }
 
         try:
             response = requests.post(url, json=payload, headers=headers)
@@ -426,7 +460,8 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
         const options = {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'x-api-key': 'LANGFLOW_API_KEY'
             },
             body: JSON.stringify(payload)
         };

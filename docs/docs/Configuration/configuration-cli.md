@@ -33,7 +33,7 @@ python -m langflow [OPTIONS]
 
 ### langflow api-key
 
-Create an API key for the default superuser if the `LANGFLOW_AUTO_LOGIN` environment variable is set to `true`.
+To create API keys with the Langflow CLI, `AUTO_LOGIN` must be set to `FALSE` and you must be logged in as a superuser.
 
 ```bash
 langflow api-key [OPTIONS]

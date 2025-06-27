@@ -84,7 +84,7 @@ For example:
 export LANGFLOW_URL="http://localhost:7860"
 export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 export PROJECT_ID="1415de42-8f01-4f36-bf34-539f23e47466"
-export API_KEY="sk-..."
+export LANGFLOW_API_KEY="sk-..."
 ```
 
 :::tip
@@ -145,14 +145,15 @@ curl -X GET \
 ```
 </details>
 
-### Get all components
+### Get current user
 
-Returns a dictionary of all Langflow components:
+Returns a user object.
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/all" \
-  -H "accept: application/json"
+  "$LANGFLOW_URL/api/v1/users/whoami" \
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 ## Next steps
