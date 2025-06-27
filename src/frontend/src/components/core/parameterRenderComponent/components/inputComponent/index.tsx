@@ -157,6 +157,7 @@ export default function InputComponent({
               commandWidth={commandWidth}
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
+              name={name}
             />
           )}
         </>
@@ -187,9 +188,9 @@ export default function InputComponent({
               )}
             >
               {name === "api_key" ? (
-                <span className="text-input-foreground text-[12px] underline">
+                <div className="text-input-foreground text-[12px]">
                   {value === "" ? "Add" : "Save"} variable
-                </span>
+                </div>
               ) : (
                 <ForwardedIconComponent
                   name={

@@ -27,8 +27,6 @@ export default function NewInputGlobalComponent({
 }: InputProps<string, InputGlobalComponentType>): JSX.Element {
   const { nodeInformationMetadata } = baseInputProps;
 
-  console.log("nodeInformationMetadata", nodeInformationMetadata);
-
   const { data: globalVariables } = useGetGlobalVariables();
   const unavailableFields = useGlobalVariablesStore(
     (state) => state.unavailableFields,

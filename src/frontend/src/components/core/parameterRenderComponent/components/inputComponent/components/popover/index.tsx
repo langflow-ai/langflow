@@ -129,13 +129,23 @@ const getInputClassName = (
   password: boolean,
   selectedOptions: string[],
   blockAddNewGlobalVariable: boolean = false,
+  isGlobalVariable: boolean = false,
 ) => {
+  console.log("logivv", {
+    isGlobalVariable,
+    password,
+    blockAddNewGlobalVariable,
+    selectedOptions,
+    editNode,
+    disabled,
+  });
   return cn(
     "popover-input nodrag w-full truncate px-1 pr-4",
     editNode && "pl-2 pr-6",
     editNode && disabled && "h-fit w-fit",
     disabled &&
       "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
+    isGlobalVariable && "text-clip !pr-[7.5rem]",
     password && "text-clip pr-14",
     blockAddNewGlobalVariable && "text-clip pr-8",
     selectedOptions?.length > 0 && "cursor-default",
@@ -187,7 +197,9 @@ const CustomInputPopover = ({
   commandWidth,
   blockAddNewGlobalVariable,
   hasRefreshButton,
+  name,
 }) => {
+  const isGlobalVariable = name === "api_key";
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
@@ -286,6 +298,7 @@ const CustomInputPopover = ({
                 password,
                 selectedOptions,
                 blockAddNewGlobalVariable,
+                isGlobalVariable,
               )}
               placeholder={
                 !disabled && (selectedOptions?.length > 0 || selectedOption)
