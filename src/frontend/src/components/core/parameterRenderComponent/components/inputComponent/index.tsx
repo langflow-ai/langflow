@@ -157,6 +157,7 @@ export default function InputComponent({
               commandWidth={commandWidth}
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
+              name={name}
             />
           )}
         </>
@@ -186,23 +187,31 @@ export default function InputComponent({
                 !disabled && "hover:text-foreground",
               )}
             >
-              <ForwardedIconComponent
-                name={
-                  getIconName(
-                    disabled!,
-                    selectedOption!,
-                    optionsIcon,
-                    nodeStyle!,
-                    isToolMode!,
-                  ) || "ChevronsUpDown"
-                }
-                className={cn(
-                  disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
-                  "icon-size",
-                )}
-                strokeWidth={ICON_STROKE_WIDTH}
-                aria-hidden="true"
-              />
+              {name === "api_key" ? (
+                <div className="text-input-foreground text-[12px]">
+                  {value === "" ? "Add" : "Save"} variable
+                </div>
+              ) : (
+                <ForwardedIconComponent
+                  name={
+                    getIconName(
+                      disabled!,
+                      selectedOption!,
+                      optionsIcon,
+                      nodeStyle!,
+                      isToolMode!,
+                    ) || "ChevronsUpDown"
+                  }
+                  className={cn(
+                    disabled
+                      ? "cursor-grab text-placeholder"
+                      : "cursor-pointer",
+                    "icon-size",
+                  )}
+                  strokeWidth={ICON_STROKE_WIDTH}
+                  aria-hidden="true"
+                />
+              )}
             </button>
           </span>
         )}
