@@ -192,34 +192,40 @@ async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio
 
     This coroutine continuously pulls events from the input queue and yields them to the client.
     It tracks timing metrics for how long events spend in the queue and how long the client takes
-    to process them.
+    to process them. Sends Keep-Alive events every 15 seconds when no events are available.
 
     Args:
         queue (asyncio.Queue): The queue containing events to be consumed and yielded
         client_consumed_queue (asyncio.Queue): A queue for tracking when the client has consumed events
 
     Yields:
-        The value from each event in the queue
+        The value from each event in the queue, or Keep-Alive events
 
     Notes:
         - Events are tuples of (event_id, value, put_time)
         - Breaks the loop when receiving a None value, signaling completion
         - Tracks and logs timing metrics for queue time and client processing time
         - Notifies client consumption via client_consumed_queue
+        - Sends Keep-Alive events every 15 seconds during idle periods
     """
     while True:
-        event_id, value, put_time = await queue.get()
-        if value is None:
-            break
-        get_time = time.time()
-        yield value
-        get_time_yield = time.time()
-        client_consumed_queue.put_nowait(event_id)
-        logger.debug(
-            f"consumed event {event_id} "
-            f"(time in queue, {get_time - put_time:.4f}, "
-            f"client {get_time_yield - get_time:.4f})"
-        )
+        try:
+            event_id, value, put_time = await asyncio.wait_for(queue.get(), timeout=15.0)
+            if value is None:
+                break
+            get_time = time.time()
+            yield value
+            get_time_yield = time.time()
+            client_consumed_queue.put_nowait(event_id)
+            logger.debug(
+                f"consumed event {event_id} "
+                f"(time in queue, {get_time - put_time:.4f}, "
+                f"client {get_time_yield - get_time:.4f})"
+            )
+        except asyncio.TimeoutError:
+            # Send Keep-Alive when no events are available for 15 seconds
+            yield '{"event": "keepalive", "data": {}}\n\n'
+            logger.debug("Sent Keep-Alive event due to 15-second timeout")
 
 
 async def run_flow_generator(
