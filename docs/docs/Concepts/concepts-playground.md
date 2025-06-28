@@ -23,7 +23,7 @@ The `build` function allows components to execute logic at runtime. For example,
 When you send a message from the **Playground** interface, the interactions are stored in the **Message Logs** by `session_id`.
 A single flow can have multiple chats, and different flows can share the same chat. Each chat will have a different `session_id`.
 
-To view messages by `session_id` within the Playground, click the <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> menu of any chat session, and then select **Message Logs**.
+To view messages by `session_id` within the Playground, click the <Icon name="Ellipsis" aria-hidden="true"/> **Options** menu of any chat session, and then select **Message Logs**.
 
 ![](/img/messages-logs.png)
 

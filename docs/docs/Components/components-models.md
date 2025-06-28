@@ -233,7 +233,7 @@ This component generates text using Groq's language models.
 
 2. In the **Groq API Key** field, paste your Groq API key.
 The Groq model component automatically retrieves a list of the latest models.
-To refresh your list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
+To refresh your list of models, click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh**.
 3. In the **Model** field, select the model you want to use for your LLM.
 This example uses [llama-3.1-8b-instant](https://console.groq.com/docs/model/llama-3.1-8b-instant), which Groq recommends for real-time conversational interfaces.
 4. In the **Prompt** component, enter:
@@ -543,7 +543,7 @@ To use this component in a flow, connect Langflow to your locally running Ollama
 1. In the Ollama component, in the **Base URL** field, enter the address for your locally running Ollama server.
 This value is set as the `OLLAMA_HOST` environment variable in Ollama.
 The default base URL is `http://localhost:11434`.
-2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
+2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh**.
 3. In the **Model Name** field, select a model. This example uses `llama3.2:latest`.
 4. Connect the **Ollama** model component to a flow. For example, this flow connects a local Ollama server running a Llama 3.2 model as the custom model for an [Agent](/components-agents) component.
 

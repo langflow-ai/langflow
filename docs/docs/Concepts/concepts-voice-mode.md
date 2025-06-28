@@ -22,7 +22,7 @@ Chat with an agent in the **Playground**, and get more recent results by asking 
 1. Create a [Simple agent starter project](/simple-agent).
 2. Add your **OpenAI API key** credentials to the **Agent** component.
 3. To start a chat session, click **Playground**.
-4. To enable voice mode, click the <Icon name="Mic" aria-label="Microphone"/> icon.
+4. To enable voice mode, click the <Icon name="Mic" aria-hidden="true"/> **Microphone** icon.
 The **Voice mode** pane opens.
 5. In the **OpenAI API Key** field, add your **OpenAI API key** credentials.
 This key is saved as a [global variable](/configuration-global-variables) in Langflow and is accessible from any component or flow.
