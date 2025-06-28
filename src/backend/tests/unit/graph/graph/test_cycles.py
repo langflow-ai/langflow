@@ -98,7 +98,7 @@ def test_cycle_in_graph_max_iterations():
         false_case_message=concat_component.concatenate,
     )
     text_output = TextOutputComponent(_id="text_output")
-    text_output.set(input_value=router.true_result)
+    text_output.set(input_value=router.true_response)
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=text_output.text_response)
 
@@ -117,7 +117,7 @@ def test_that_outputs_cache_is_set_to_false_in_cycle():
     chat_input = ChatInput(_id="chat_input")
     router = ConditionalRouterComponent(_id="router")
     # Connect chat_input to router's output to create cycle
-    chat_input.set(input_value=router.true_result)
+    chat_input.set(input_value=router.true_response)
     concat_component = Concatenate(_id="concatenate")
     concat_component.set(text=chat_input.message_response)
     router.set(
@@ -128,7 +128,7 @@ def test_that_outputs_cache_is_set_to_false_in_cycle():
         false_case_message=concat_component.concatenate,
     )
     text_output = TextOutputComponent(_id="text_output")
-    text_output.set(input_value=router.true_result)
+    text_output.set(input_value=router.true_response)
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=text_output.text_response)
 
