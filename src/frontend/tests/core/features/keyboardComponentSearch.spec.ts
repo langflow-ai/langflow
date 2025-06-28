@@ -22,25 +22,25 @@ test(
     await expect(page.getByTestId("sidebar-search-input")).toBeFocused({
       timeout: 1000,
     });
-    await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
+    await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
 
     // Type "chat" to search for chat components
     await page.keyboard.type("chat");
 
-    await expect(page.getByTestId("inputsChat Input")).toBeVisible({
+    await expect(page.getByTestId("input_outputChat Input")).toBeVisible({
       timeout: 1000,
     });
 
     // Verify disclosures open when search has content
-    await expect(page.getByTestId("inputsChat Input")).toBeVisible();
+    await expect(page.getByTestId("input_outputChat Input")).toBeVisible();
 
     // Press Tab to focus first result
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
 
     // Verify some expected chat-related components are visible
-    await expect(page.getByTestId("inputsChat Input")).toBeVisible();
-    await expect(page.getByTestId("outputsChat Output")).toBeVisible();
+    await expect(page.getByTestId("input_outputChat Input")).toBeVisible();
+    await expect(page.getByTestId("input_outputChat Output")).toBeVisible();
 
     // Press Space to select the component
     await page.keyboard.press("Space");
@@ -51,14 +51,14 @@ test(
 
     // Clear search input and verify disclosures are closed
     await page.getByTestId("sidebar-search-input").clear();
-    await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
+    await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
 
     // Test Enter key selection
     await page.keyboard.press("/");
     await page.keyboard.type("prompt");
 
     // Verify disclosures open with new search
-    await expect(page.getByTestId("promptsPrompt")).toBeVisible();
+    await expect(page.getByTestId("processingPrompt Template")).toBeVisible();
 
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
@@ -72,11 +72,11 @@ test(
     await page.keyboard.press("/");
     await page.getByTestId("sidebar-search-input").clear();
     await expect(page.getByTestId("sidebar-search-input")).toHaveValue("");
-    await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
+    await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
 
     await expect(page.getByTestId("sidebar-search-input")).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("sidebar-search-input")).not.toBeFocused();
-    await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
+    await expect(page.getByTestId("input_outputChat Input")).not.toBeVisible();
   },
 );

@@ -4,7 +4,7 @@ import { cn } from "@/utils/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent/ChatCodeTabComponent";
+import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
 import LogoIcon from "./chat-logo-icon";
 
 export const ErrorView = ({

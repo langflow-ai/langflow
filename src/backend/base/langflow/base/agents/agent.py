@@ -9,17 +9,16 @@ from langchain_core.runnables import Runnable
 from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.events import ExceptionWithMessageError, process_agent_events
 from langflow.base.agents.utils import data_to_messages
-from langflow.custom import Component
-from langflow.custom.custom_component.component import _get_component_toolkit
+from langflow.custom.custom_component.component import Component, _get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import InputTypes, MultilineInput
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.logging import logger
 from langflow.memory import delete_message
-from langflow.schema import Data
 from langflow.schema.content_block import ContentBlock
+from langflow.schema.data import Data
 from langflow.schema.message import Message
-from langflow.template import Output
+from langflow.template.field.base import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
@@ -125,15 +124,13 @@ class LCAgentComponent(Component):
         if isinstance(agent, AgentExecutor):
             runnable = agent
         else:
-            if not hasattr(self, "tools") or not self.tools:
-                msg = "Tools are required to run the agent."
-                raise ValueError(msg)
+            # note the tools are not required to run the agent, hence the validation removed.
             handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
             verbose = hasattr(self, "verbose") and self.verbose
             max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,
-                tools=self.tools,
+                tools=self.tools or [],
                 handle_parsing_errors=handle_parsing_errors,
                 verbose=verbose,
                 max_iterations=max_iterations,
@@ -142,7 +139,10 @@ class LCAgentComponent(Component):
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
-            input_dict["chat_history"] = data_to_messages(self.chat_history)
+            if isinstance(self.chat_history, Data):
+                input_dict["chat_history"] = data_to_messages(self.chat_history)
+            if all(isinstance(m, Message) for m in self.chat_history):
+                input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
 
         if hasattr(self, "graph"):
             session_id = self.graph.session_id

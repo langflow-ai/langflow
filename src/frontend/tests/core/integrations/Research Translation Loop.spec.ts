@@ -35,6 +35,9 @@ withEventDeliveryModes(
       skipSelectGptModel: true,
     });
 
+    await page.getByTestId("dropdown_str_provider").click();
+    await page.getByTestId("Anthropic-1-option").click();
+
     await page
       .getByTestId("popover-anchor-input-api_key")
       .last()

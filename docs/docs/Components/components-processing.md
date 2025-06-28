@@ -15,48 +15,21 @@ The component offers control over chunk size, overlap, and separator, which affe
 
 ![](/img/vector-store-document-ingestion.png)
 
-## Combine data
-
-:::important
-Prior to Langflow version 1.1.3, this component was named **Merge Data**.
-:::
-
-This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
-
-The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | A list of data objects to be merged. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
-
-</details>
-
 ## DataFrame operations
 
 This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
 
 To use this component in a flow, connect a component that outputs [DataFrame](/concepts-objects#dataframe-object) to the **DataFrame Operations** component.
 
-This example fetches JSON data from an API. The **Lambda filter** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
+This example fetches JSON data from an API. The **Smart function** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
 
 ![Dataframe operations with flattened dataframe](/img/component-dataframe-operations.png)
 
 1. The **API Request** component retrieves data with only `source` and `result` fields.
 For this example, the desired data is nested within the `result` field.
-2. Connect a **Lambda Filter** to the API request component, and a **Language model** to the **Lambda Filter**. This example connects a **Groq** model component.
+2. Connect a **Smart function** to the API request component, and a **Language model** to the **Smart function**. This example connects a **Groq** model component.
 3. In the **Groq** model component, add your **Groq** API key.
-4. To filter the data, in the **Lambda filter** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
+4. To filter the data, in the **Smart function** component, in the **Instructions** field, use natural language to describe how the data should be filtered.
 For this example, enter:
 ```
 I want to explode the result column out into a Data object
@@ -64,8 +37,8 @@ I want to explode the result column out into a Data object
 :::tip
 Avoid punctuation in the **Instructions** field, as it can cause errors.
 :::
-5. To run the flow, in the **Lambda Filter** component, click <Icon name="Play" aria-label="Play icon" />.
-6. To inspect the filtered data, in the **Lambda Filter** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+5. To run the flow, in the **Smart function** component, click <Icon name="Play" aria-label="Play icon" />.
+6. To inspect the filtered data, in the **Smart function** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
 The result is a structured DataFrame.
 ```text
 id | name             | company               | username        | email                              | address           | zip
@@ -90,17 +63,17 @@ John Smith
 
 This component can perform the following operations on Pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html).
 
-| Operation | Description | Required Inputs |
-|-----------|-------------|-----------------|
-| Add Column | Adds a new column with a constant value | new_column_name, new_column_value |
-| Drop Column | Removes a specified column | column_name |
-| Filter | Filters rows based on column value | column_name, filter_value |
-| Head | Returns first n rows | num_rows |
-| Rename Column | Renames an existing column | column_name, new_column_name |
-| Replace Value | Replaces values in a column | column_name, replace_value, replacement_value |
-| Select Columns | Selects specific columns | columns_to_select |
-| Sort | Sorts DataFrame by column | column_name, ascending |
-| Tail | Returns last n rows | num_rows |
+| Operation | Required Inputs | Info |
+|-----------|----------------|-------------|
+| Add Column | new_column_name, new_column_value | Adds a new column with a constant value. |
+| Drop Column | column_name | Removes a specified column. |
+| Filter | column_name, filter_value | Filters rows based on column value. |
+| Head | num_rows | Returns first `n` rows. |
+| Rename Column | column_name, new_column_name | Renames an existing column. |
+| Replace Value | column_name, replace_value, replacement_value | Replaces values in a column. |
+| Select Columns | columns_to_select | Selects specific columns. |
+| Sort | column_name, ascending | Sorts DataFrame by column. |
+| Tail | num_rows | Returns last `n` rows. |
 
 <details>
 <summary>Parameters</summary>
@@ -129,6 +102,95 @@ This component can perform the following operations on Pandas [DataFrame](https:
 
 </details>
 
+## Data operations
+
+This component performs operations on [Data](/concepts-objects#data-object) objects, including selecting keys, evaluating literals, combining data, filtering values, appending/updating data, removing keys, and renaming keys.
+
+1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data Operations** component's input.
+All operations in the component require at least one [Data](/concepts-objects#data-object) input.
+2. In the **Operations** field, select the operation you want to perform.
+For example, send this request to the **Webhook** component.
+Replace `YOUR_FLOW_ID` with your flow ID.
+```bash
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
+  "id": 1,
+  "name": "Leanne Graham",
+  "username": "Bret",
+  "email": "Sincere@april.biz",
+  "address": {
+    "street": "Kulas Light",
+    "suite": "Apt. 556",
+    "city": "Gwenborough",
+    "zipcode": "92998-3874",
+    "geo": {
+      "lat": "-37.3159",
+      "lng": "81.1496"
+    }
+  },
+  "phone": "1-770-736-8031 x56442",
+  "website": "hildegard.org",
+  "company": {
+    "name": "Romaguera-Crona",
+    "catchPhrase": "Multi-layered client-server neural-net",
+    "bs": "harness real-time e-markets"
+  }
+}'
+```
+
+3. In the **Data Operations** component, select the **Select Keys** operation to extract specific user information.
+To add additional keys, click <Icon name="Plus" aria-label="Add"/> **Add More**.
+![A webhook and data operations component](/img/component-data-operations-select-key.png)
+4. Filter by `name`, `username`, and `email` to select the values from the request.
+```json
+{
+  "name": "Leanne Graham",
+  "username": "Bret",
+  "email": "Sincere@april.biz"
+}
+```
+
+### Operations
+
+The component supports the following operations.
+All operations in the **Data operations** component require at least one [Data](/concepts-objects#data-object) input.
+
+| Operation | Required Inputs | Info |
+|-----------|----------------|-------------|
+| Select Keys | `select_keys_input` | Selects specific keys from the data. |
+| Literal Eval | None | Evaluates string values as Python literals. |
+| Combine | None | Combines multiple data objects into one. |
+| Filter Values | `filter_key`, `filter_values`, `operator` | Filters data based on key-value pair. |
+| Append or Update | `append_update_data` | Adds or updates key-value pairs. |
+| Remove Keys | `remove_keys_input` | Removes specified keys from the data. |
+| Rename Keys | `rename_keys_input` | Renames keys in the data. |
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The [Data](/concepts-objects#data-object) object to operate on. |
+| operations | Operations | The operation to perform on the data. |
+| select_keys_input | Select Keys | A list of keys to select from the data. |
+| filter_key | Filter Key | The key to filter by. |
+| operator | Comparison Operator | The operator to apply for comparing values. |
+| filter_values | Filter Values | A list of values to filter by. |
+| append_update_data | Append or Update | The data to append or update the existing data with. |
+| remove_keys_input | Remove Keys | A list of keys to remove from the data. |
+| rename_keys_input | Rename Keys | A list of keys to rename in the data. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data_output | Data | The resulting Data object after the operation. |
+
+</details>
+
 ## Data to DataFrame
 
 This component converts one or multiple [Data](/concepts-objects#data-object) objects into a [DataFrame](/concepts-objects#dataframe-object). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
@@ -143,7 +205,7 @@ This example connects a **Webhook** component to convert `text` and `data` into 
 Replace `YOUR_FLOW_ID` with your flow ID.
 This example uses the default Langflow server address.
 ```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
     "text": "Alex Cruz - Employee Profile",
@@ -165,7 +227,7 @@ The **Data to DataFrame** component converts the webhook request into a `DataFra
 
 5. Send another employee data object.
 ```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
     "text": "Kalani Smith - Employee Profile",
@@ -198,93 +260,6 @@ curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
 | Name | Display Name | Info |
 |------|--------------|------|
 | dataframe | DataFrame | A DataFrame built from each Data object's fields plus a text column. |
-
-</details>
-
-## Filter data
-
-:::important
-This component is in **Beta** as of Langflow version 1.1.3, and is not yet fully supported.
-:::
-
-This component filters a [Data](/concepts-objects#data-object) object based on a list of keys.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The Data object to filter. |
-| filter_criteria | Filter Criteria | A list of keys to filter by. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| filtered_data | Filtered Data | A new Data object containing only the key-value pairs that match the filter criteria. |
-
-</details>
-
-## Filter values
-
-:::important
-This component is in **Beta** as of Langflow version 1.1.3, and is not yet fully supported.
-:::
-
-The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-| Name | Display Name | Info |
-|------|--------------|------|
-| input_data | Input data | The list of data items to filter. |
-| filter_key | Filter Key | The key to filter on. |
-| filter_value | Filter Value | The value to filter by. |
-| operator | Comparison Operator | The operator to apply for comparing the values. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| filtered_data | Filtered data | The resulting list of filtered data items. |
-
-</details>
-
-## Lambda filter
-
-This component uses an LLM to generate a Lambda function for filtering or transforming structured data.
-
-To use the **Lambda filter** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
-
-This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
-The **Instructions** field in the **Lambda filter** component specifies the task `extract emails`.
-The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
-
-![](/img/component-lambda-filter.png)
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The structured data to filter or transform using a Lambda function. |
-| llm | Language Model | The connection port for a [Model](/components-models) component. |
-| filter_instruction | Instructions | The natural language instructions for how to filter or transform the data using a Lambda function, such as `Filter the data to only include items where the 'status' is 'active'`. |
-| sample_size | Sample Size | For large datasets, the number of characters to sample from the dataset head and tail. |
-| max_size | Max Size | The number of characters for the data to be considered "large", which triggers sampling by the `sample_size` value. |
-
-**Outputs**
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| filtered_data | Filtered Data | The filtered or transformed [Data object](/concepts-objects#data-object). |
-| dataframe | DataFrame | The filtered data as a [DataFrame](/concepts-objects#dataframe-object). |
 
 </details>
 
@@ -437,7 +412,7 @@ For example, if the selected `file_format` is `csv`, and you enter `file_path` a
 Replace `YOUR_FLOW_ID` with your flow ID.
 This example uses the default Langflow server address.
 ```text
-curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
 -d '{
     "Name": ["Alex Cruz", "Kalani Smith", "Noam Johnson"],
@@ -493,6 +468,40 @@ For `Message` inputs, the component can create:
 | data | Data | A list of extracted matches as Data objects. |
 | text | Message | The extracted matches formatted as a Message object. |
 | confirmation | Confirmation | The confirmation message after saving the file. |
+
+</details>
+
+## Smart function
+
+This component uses an LLM to generate a Lambda function for filtering or transforming structured data.
+
+To use the **Smart function** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
+
+This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
+The **Instructions** field in the **Smart function** component specifies the task `extract emails`.
+The connected LLM creates a filter based on the instructions, and successfully extracts a list of email addresses from the JSON data.
+
+![](/img/component-lambda-filter.png)
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The structured data to filter or transform using a Lambda function. |
+| llm | Language Model | The connection port for a [Model](/components-models) component. |
+| filter_instruction | Instructions | The natural language instructions for how to filter or transform the data using a Lambda function, such as `Filter the data to only include items where the 'status' is 'active'`. |
+| sample_size | Sample Size | For large datasets, the number of characters to sample from the dataset head and tail. |
+| max_size | Max Size | The number of characters for the data to be considered "large", which triggers sampling by the `sample_size` value. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| filtered_data | Filtered Data | The filtered or transformed [Data object](/concepts-objects#data-object). |
+| dataframe | DataFrame | The filtered data as a [DataFrame](/concepts-objects#dataframe-object). |
 
 </details>
 
@@ -599,6 +608,11 @@ This component dynamically updates or appends data with specified fields.
 
 ### Alter metadata
 
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+Instead, use the [Data operations](#data-operations) component.
+:::
+
 This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects#data-object) objects, and can also create a new Data object from user-provided text.
 
 <details>
@@ -608,24 +622,52 @@ This component modifies metadata of input objects. It can add new metadata, upda
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_value | Input | Objects to which Metadata should be added |
+| input_value | Input | Objects to which Metadata should be added. |
 | text_in | User Text | Text input; the value is contained in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
-| metadata | Metadata | Metadata to add to each object |
-| remove_fields | Fields to Remove | Metadata fields to remove |
+| metadata | Metadata | Metadata to add to each object. |
+| remove_fields | Fields to Remove | Metadata fields to remove. |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | List of Input objects, each with added metadata |
+| data | Data | List of Input objects, each with added metadata. |
 
 </details>
+
+### Combine data
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+Prior to Langflow version 1.1.3, this component was named **Merge Data**.
+:::
+
+This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
+
+The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | A list of data objects to be merged. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
+
+</details>
+
 
 ### Combine text
 
 :::important
-This component is in **Legacy**, which means it is no longer in active development.
-Instead, use the [Combine data](#combine-data) component.
+This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
 This component concatenates two text sources into a single text chunk using a specified delimiter.
@@ -671,7 +713,7 @@ Here's the second part. We'll see how combining text works.
 ### Create data
 
 :::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
 This component dynamically creates a [Data](/concepts-objects#data-object) object with a specified number of fields.
@@ -694,7 +736,67 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 
 </details>
 
+
+### Filter data
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+Instead, use the [Data operations](#data-operations) component.
+:::
+
+This component filters a [Data](/concepts-objects#data-object) object based on a list of keys.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The Data object to filter. |
+| filter_criteria | Filter Criteria | A list of keys to filter by. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| filtered_data | Filtered Data | A new Data object containing only the key-value pairs that match the filter criteria. |
+
+</details>
+
+### Filter values
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+Instead, use the [Data operations](#data-operations) component.
+:::
+
+The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_data | Input data | The list of data items to filter. |
+| filter_key | Filter Key | The key to filter on. |
+| filter_value | Filter Value | The value to filter by. |
+| operator | Comparison Operator | The operator to apply for comparing the values. |
+
+**Outputs**
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| filtered_data | Filtered data | The resulting list of filtered data items. |
+
+</details>
+
 ### JSON cleaner
+
+:::important
+This component is in **Legacy**, which means it is available for use but no longer in active development.
+:::
 
 The JSON cleaner component cleans JSON strings to ensure they are fully compliant with the JSON specification.
 
@@ -721,7 +823,7 @@ The JSON cleaner component cleans JSON strings to ensure they are fully complian
 ### Parse DataFrame
 
 :::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+This component is in **Legacy**, which means it is available for use but no longer in active development.
 Instead, use the [Parser](#parser) component.
 :::
 
@@ -749,7 +851,7 @@ This component converts DataFrames into plain text using templates.
 ### Parse JSON
 
 :::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
 This component converts and extracts JSON fields using JQ queries.
@@ -775,7 +877,7 @@ This component converts and extracts JSON fields using JQ queries.
 ### Select data
 
 :::important
-This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
 This component selects a single [Data](/concepts-objects#data-object) item from a list.

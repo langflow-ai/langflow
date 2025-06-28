@@ -110,6 +110,8 @@ export type NodeOutputFieldComponentType = {
   isToolMode?: boolean;
   showHiddenOutputs?: boolean;
   hidden?: boolean;
+  outputs?: any;
+  handleSelectOutput?: (output: any) => void;
 };
 
 export type NodeInputFieldComponentType = {
@@ -145,6 +147,9 @@ export type outputComponentType = {
   name: string;
   proxy?: OutputFieldProxyType;
   isToolMode?: boolean;
+  outputs?: any;
+  handleSelectOutput?: (output: any) => void;
+  outputName?: string;
 };
 
 export type DisclosureComponentType = {
@@ -546,7 +551,7 @@ export type ChatInputType = {
   }: {
     repeat: number;
     files?: string[];
-  }) => void;
+  }) => Promise<void>;
   playgroundPage: boolean;
 };
 
@@ -835,7 +840,7 @@ export type chatViewProps = {
   }: {
     repeat: number;
     files?: string[];
-  }) => void;
+  }) => Promise<void>;
   visibleSession?: string;
   focusChat?: string;
   closeChat?: () => void;

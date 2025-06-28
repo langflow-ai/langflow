@@ -1,5 +1,6 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
+import CustomChatInput from "@/customization/components/custom-chat-input";
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
@@ -18,11 +19,12 @@ import useFlowStore from "../../../../../stores/flowStore";
 import { ChatMessageType } from "../../../../../types/chat";
 import { chatViewProps } from "../../../../../types/components";
 import FlowRunningSqueleton from "../../flow-running-squeleton";
-import ChatInput from "../chatInput/chat-input";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "../chatInput/hooks/use-file-handler";
 import ChatMessage from "../chatMessage/chat-message";
 import { ChatScrollAnchor } from "./chat-scroll-anchor";
+
+const TIME_TO_DISABLE_SCROLL = 2000;
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -129,11 +131,7 @@ export default function ChatView({
     // trigger focus on chat when new session is set
   }, [focusChat]);
 
-  function updateChat(
-    chat: ChatMessageType,
-    message: string,
-    stream_url?: string,
-  ) {
+  function updateChat(chat: ChatMessageType, message: string) {
     chat.message = message;
     if (chat.componentId)
       updateFlowPool(chat.componentId, {
@@ -151,7 +149,7 @@ export default function ChatView({
     !!playgroundPage,
   );
 
-  const onDrop = (e) => {
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) {
       e.stopPropagation();
       return;
@@ -186,27 +184,68 @@ export default function ChatView({
 
   const [canScroll, setCanScroll] = useState<boolean>(false);
   const [scrolledUp, setScrolledUp] = useState<boolean>(false);
+  const [isLlmResponding, setIsLlmResponding] = useState<boolean>(false);
+  const [lastMessageContent, setLastMessageContent] = useState<string>("");
 
   const handleScroll = () => {
     if (!messagesRef.current) return;
 
     const { scrollTop, scrollHeight, clientHeight } = messagesRef.current;
-    const atBottom = scrollHeight - clientHeight <= scrollTop + 3;
+    const atBottom = scrollHeight - clientHeight <= scrollTop + 30;
 
     if (scrollDir === Direction.Up) {
       setCanScroll(false);
       setScrolledUp(true);
     } else {
-      if (atBottom || !scrolledUp) {
+      if (atBottom && !scrolledUp) {
         setCanScroll(true);
       }
       setScrolledUp(false);
     }
   };
+  const setPlaygroundScrollBehaves = useUtilityStore(
+    (state) => state.setPlaygroundScrollBehaves,
+  );
 
   useEffect(() => {
-    setCanScroll(true);
-  }, [chatHistory?.length]);
+    setPlaygroundScrollBehaves("smooth");
+
+    if (!chatHistory || chatHistory.length === 0) {
+      setCanScroll(true);
+      return;
+    }
+
+    const lastMessage = chatHistory[chatHistory.length - 1];
+    const currentMessageContent =
+      typeof lastMessage.message === "string"
+        ? lastMessage.message
+        : JSON.stringify(lastMessage.message);
+
+    const isNewMessage = lastMessage.isSend;
+
+    const isStreamingUpdate =
+      !lastMessage.isSend &&
+      currentMessageContent !== lastMessageContent &&
+      currentMessageContent.length > lastMessageContent.length;
+
+    if (isStreamingUpdate) {
+      if (!isLlmResponding) {
+        setIsLlmResponding(true);
+        setCanScroll(true);
+
+        setTimeout(() => {
+          setCanScroll(false);
+        }, TIME_TO_DISABLE_SCROLL);
+      }
+    } else if (isNewMessage || lastMessage.isSend) {
+      setCanScroll(true);
+      if (isLlmResponding) {
+        setIsLlmResponding(false);
+      }
+    }
+
+    setLastMessageContent(currentMessageContent);
+  }, [chatHistory, isLlmResponding, lastMessageContent]);
 
   return (
     <div
@@ -287,11 +326,11 @@ export default function ChatView({
       </div>
 
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
-        <ChatInput
+        <CustomChatInput
           playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
-          sendMessage={({ repeat, files }) => {
-            sendMessage({ repeat, files });
+          sendMessage={async ({ repeat, files }) => {
+            await sendMessage({ repeat, files });
             track("Playground Message Sent");
           }}
           inputRef={ref}

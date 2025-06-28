@@ -37,7 +37,6 @@ export function TweakComponent({
       <EditNodeComponent
         open={open}
         autoHeight
-        hideVisibility
         nodeClass={nodeClass}
         isTweaks
         nodeId={node.data.id}
