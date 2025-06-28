@@ -1,6 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
@@ -27,6 +28,9 @@ interface HeaderComponentProps {
   setSearch: (search: string) => void;
   isEmptyFolder: boolean;
   selectedFlows: string[];
+  totalFlowsCount: number;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
 }
 
 const HeaderComponent = ({
@@ -39,6 +43,9 @@ const HeaderComponent = ({
   setSearch,
   isEmptyFolder,
   selectedFlows,
+  totalFlowsCount,
+  onSelectAll,
+  onDeselectAll,
 }: HeaderComponentProps) => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const isMCPEnabled = ENABLE_MCP;
@@ -142,10 +149,11 @@ const HeaderComponent = ({
               </Button>
             ))}
           </div>
+
           {/* Search and filters */}
           {flowType !== "mcp" && (
-            <div className="flex justify-between">
-              <div className="flex w-full xl:w-5/12">
+            <div className="flex justify-between gap-2">
+              <div className="flex w-full items-center xl:w-5/12">
                 <Input
                   icon="Search"
                   data-testid="search-store-input"
@@ -187,7 +195,40 @@ const HeaderComponent = ({
                     </Button>
                   ))}
                 </div>
+
+                {/* Checkbox with counter */}
+                <div className="flex items-center gap-2 whitespace-nowrap">
+                  <Checkbox
+                    id="selectedFlows"
+                    checked={
+                      selectedFlows.length > 0 &&
+                      selectedFlows.length === totalFlowsCount
+                    }
+                    indeterminate={
+                      selectedFlows.length > 0 &&
+                      selectedFlows.length < totalFlowsCount
+                    }
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        onSelectAll();
+                      } else {
+                        onDeselectAll();
+                      }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    data-testid="checkbox-bulk"
+                  />
+                  <label
+                    htmlFor="selectedFlows"
+                    className="w-[100px] cursor-pointer text-sm text-muted-foreground"
+                  >
+                    {selectedFlows.length > 0
+                      ? `${selectedFlows.length} selected`
+                      : "Select all"}
+                  </label>
+                </div>
               </div>
+
               <div className="flex items-center">
                 <div
                   className={cn(
