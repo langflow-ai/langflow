@@ -75,7 +75,7 @@ dependencies = [
     "defusedxml>=0.7.1,<1.0.0",
     "pypdf~=5.1.0",
     "validators>=0.34.0",
-    "networkx>=3.4.2",
+
     "json-repair>=0.30.3",
     "mcp~=1.9.4",
     "aiosqlite>=0.20.0",
