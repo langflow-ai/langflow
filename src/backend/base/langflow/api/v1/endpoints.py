@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
@@ -58,6 +59,9 @@ if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
+
+# Get keep-alive timeout from environment variable, default to 15 seconds
+KEEP_ALIVE_TIMEOUT = float(os.getenv("LANGFLOW_KEEP_ALIVE_TIMEOUT", "15.0"))
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
@@ -192,7 +196,7 @@ async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio
 
     This coroutine continuously pulls events from the input queue and yields them to the client.
     It tracks timing metrics for how long events spend in the queue and how long the client takes
-    to process them. Sends Keep-Alive events every 15 seconds when no events are available.
+    to process them. Sends Keep-Alive events when no events are available for the configured timeout period.
 
     Args:
         queue (asyncio.Queue): The queue containing events to be consumed and yielded
@@ -206,11 +210,11 @@ async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio
         - Breaks the loop when receiving a None value, signaling completion
         - Tracks and logs timing metrics for queue time and client processing time
         - Notifies client consumption via client_consumed_queue
-        - Sends Keep-Alive events every 15 seconds during idle periods
+        - Sends Keep-Alive events based on LANGFLOW_KEEP_ALIVE_TIMEOUT environment variable (default: 15 seconds)
     """
     while True:
         try:
-            event_id, value, put_time = await asyncio.wait_for(queue.get(), timeout=15.0)
+            event_id, value, put_time = await asyncio.wait_for(queue.get(), timeout=KEEP_ALIVE_TIMEOUT)
             if value is None:
                 break
             get_time = time.time()
@@ -223,9 +227,9 @@ async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio
                 f"client {get_time_yield - get_time:.4f})"
             )
         except asyncio.TimeoutError:
-            # Send Keep-Alive when no events are available for 15 seconds
+            # Send Keep-Alive when no events are available for configured timeout
             yield '{"event": "keepalive", "data": {}}\n\n'
-            logger.debug("Sent Keep-Alive event due to 15-second timeout")
+            logger.debug(f"Sent Keep-Alive event due to {KEEP_ALIVE_TIMEOUT}-second timeout")
 
 
 async def run_flow_generator(
