@@ -207,7 +207,8 @@ jobs:
     env:
       JOBS_JSON: ${{ toJSON(needs) }}
       RESULTS_JSON: ${{ toJSON(needs.*.result) }}
-      EXIT_CODE: ${{ ((!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.set-ci-condition.outputs.should-run-ci == 'true') || (needs.set-ci-condition.outputs.should-run-tests == 'false' && needs.set-ci-condition.outputs.should-run-ci == 'true')) && '0' || '1' }}
+      EXIT_CODE: ${{ (!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')) && '0' || '1' }}
+
     steps:
       - name: "CI Success"
         run: |
