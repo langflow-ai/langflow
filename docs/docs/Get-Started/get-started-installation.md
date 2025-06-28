@@ -129,6 +129,10 @@ It can take a few minutes for Langflow to start.
 
 After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
 
+### Install Langflow from source
+
+To install Langflow from source, see [Install Langflow from source](/contributing-how-to-contribute#install-langflow-from-source).
+
 ### Manage Langflow OSS versions
 
 :::important
