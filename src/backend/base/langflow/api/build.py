@@ -151,17 +151,25 @@ async def create_flow_response(
     event_manager: EventManager,
     event_task: asyncio.Task,
 ) -> DisconnectHandlerStreamingResponse:
-    """Create a streaming response for the flow build process."""
+    """Create a streaming response for the flow build process.
+
+    Yields:
+        The value from each event in the queue, or Keep-Alive events every 15 seconds.
+    """
 
     async def consume_and_yield() -> AsyncIterator[str]:
         while True:
             try:
-                event_id, value, put_time = await queue.get()
+                event_id, value, put_time = await asyncio.wait_for(queue.get(), timeout=15.0)
                 if value is None:
                     break
                 get_time = time.time()
                 yield value.decode("utf-8")
                 logger.debug(f"Event {event_id} consumed in {get_time - put_time:.4f}s")
+            except asyncio.TimeoutError:
+                # Send Keep-Alive when no events are available for 15 seconds
+                yield '{"event": "keepalive", "data": {}}\n\n'
+                logger.debug("Sent Keep-Alive event due to 15-second timeout")
             except Exception as exc:  # noqa: BLE001
                 logger.exception(f"Error consuming event: {exc}")
                 break
