@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 from aiofile import async_open
 from loguru import logger
-from sqlmodel import delete, text
+from sqlmodel import delete, select, text
 
 from langflow.api.utils import cascade_delete_flow
 from langflow.graph import Graph
@@ -17,9 +17,7 @@ from langflow.services.auth.utils import (
     get_password_hash,
 )
 from langflow.services.cache.service import AsyncBaseCacheService
-from langflow.services.database.models.flow import Flow
-from langflow.services.database.models.user import User
-from langflow.services.database.models.variable import Variable
+from langflow.services.database.models import Flow, MessageTable, User, Variable
 from langflow.services.database.utils import initialize_database
 from langflow.services.deps import get_cache_service, get_storage_service, session_scope
 from langflow.utils.util import update_settings
@@ -228,10 +226,13 @@ class LangflowRunnerExperimental:
     @staticmethod
     async def clear_user_state(user_id: str):
         async with session_scope() as session:
-            await session.exec(delete(Flow).where(Flow.user_id == user_id))
-            await session.exec(delete(User).where(User.id == user_id))
+            flows = await session.exec(select(Flow.id).where(Flow.user_id == user_id))
+            flow_ids = flows.scalars().all()
+            await session.exec(delete(MessageTable).where(MessageTable.flow_id.in_(flow_ids)))
+            await session.exec(delete(Flow).where(Flow.id.in_(flow_ids)))
             await session.exec(delete(Variable).where(Variable.user_id == user_id))
-
+            await session.exec(delete(User).where(User.id == user_id))
+            
     async def init_db_if_needed(self):
         if not await self.database_exists_check() and self.should_initialize_db:
             logger.info("Initializing database...")
