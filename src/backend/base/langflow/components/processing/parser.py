@@ -8,13 +8,10 @@ from langflow.template.field.base import Output
 
 
 class DotDictFormatter(string.Formatter):
-    def get_field(self, field_name, args, kwargs):
+    def get_field(self, field_name, _, kwargs):
         obj = kwargs
         for attr in field_name.split("."):
-            if isinstance(obj, dict):
-                obj = obj.get(attr)
-            else:
-                obj = getattr(obj, attr, None)
+            obj = obj.get(attr) if isinstance(obj, dict) else getattr(obj, attr, None)
             if obj is None:
                 break
         return obj, field_name
@@ -123,7 +120,6 @@ class ParserComponent(Component):
                     raise ValueError(msg) from e
             case list() if all(isinstance(item, dict) for item in input_data):
                 try:
-                    data_objs = [Data(**item) for item in input_data]
                     msg = "List of Data objects is not supported."
                     raise ValueError(msg)
                 except Exception as e:
