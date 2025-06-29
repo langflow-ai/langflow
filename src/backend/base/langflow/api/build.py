@@ -151,7 +151,7 @@ async def get_flow_events_response(
 
 
 async def create_flow_response(
-    queue: asyncio.Queue,
+    queue: asyncio.Queue[tuple[str | None, bytes | None, float]],
     event_manager: EventManager,
     event_task: asyncio.Task,
 ) -> DisconnectHandlerStreamingResponse:
