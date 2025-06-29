@@ -191,7 +191,9 @@ async def simple_run_flow_task(
         logger.exception(f"Error running flow {flow.id} task")
 
 
-async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
+async def consume_and_yield(
+    queue: asyncio.Queue[tuple[str | None, bytes | None, float]], client_consumed_queue: asyncio.Queue[str | None]
+) -> AsyncGenerator[bytes]:
     """Consumes events from a queue and yields them to the client while tracking timing metrics.
 
     This coroutine continuously pulls events from the input queue and yields them to the client.
@@ -228,7 +230,7 @@ async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio
             )
         except asyncio.TimeoutError:
             # Send Keep-Alive when no events are available for configured timeout
-            yield '{"event": "keepalive", "data": {}}\n\n'
+            yield b'{"event": "keepalive", "data": {}}\n\n'
             logger.debug(f"Sent Keep-Alive event due to {KEEP_ALIVE_TIMEOUT}-second timeout")
 
 
@@ -327,8 +329,8 @@ async def simplified_run_flow(
     start_time = time.perf_counter()
 
     if stream:
-        asyncio_queue: asyncio.Queue = asyncio.Queue()
-        asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
+        asyncio_queue: asyncio.Queue[tuple[str | None, bytes | None, float]] = asyncio.Queue()
+        asyncio_queue_client_consumed: asyncio.Queue[str | None] = asyncio.Queue()
         event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
         main_task = asyncio.create_task(
             run_flow_generator(
