@@ -1,5 +1,6 @@
 import string
 
+
 class DotDictFormatter(string.Formatter):
     def get_field(self, field_name, _, kwargs):
         obj = kwargs
