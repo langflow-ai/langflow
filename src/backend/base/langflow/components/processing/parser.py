@@ -10,7 +10,7 @@ from langflow.template.field.base import Output
 class DotDictFormatter(string.Formatter):
     def get_field(self, field_name, args, kwargs):
         obj = kwargs
-        for attr in field_name.split('.'):
+        for attr in field_name.split("."):
             if isinstance(obj, dict):
                 obj = obj.get(attr)
             else:
@@ -23,6 +23,7 @@ class DotDictFormatter(string.Formatter):
         if isinstance(key, str):
             return kwargs.get(key, None)
         return super().get_value(key, args, kwargs)
+
 
 class ParserComponent(Component):
     display_name = "Parser"
