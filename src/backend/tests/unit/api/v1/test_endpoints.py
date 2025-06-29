@@ -1,10 +1,14 @@
 import asyncio
 import inspect
+import time
 from typing import Any
+from unittest.mock import AsyncMock
 
+import pytest
 from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
+from langflow.api.v1.endpoints import consume_and_yield
 from langflow.api.v1.schemas import UpdateCustomComponentRequest
 from langflow.components.agents.agent import AgentComponent
 from langflow.custom.utils import build_custom_component_template
@@ -56,7 +60,7 @@ async def test_update_component_outputs(client: AsyncClient, logged_in_headers: 
 async def test_update_component_model_name_options(client: AsyncClient, logged_in_headers: dict):
     """Test that model_name options are updated when selecting a provider."""
     component = AgentComponent()
-    component_node, _cc_instance = build_custom_component_template(
+    component_node, _ = build_custom_component_template(
         component,
     )
 
@@ -106,3 +110,101 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     assert response.status_code == status.HTTP_200_OK
     assert "template" in result
     assert "model_name" not in result["template"]
+
+
+async def test_consume_and_yield_with_events():
+    """Test consume_and_yield function handles events correctly."""
+    # Create asyncio queues
+    queue = asyncio.Queue()
+    client_consumed_queue = asyncio.Queue()
+
+    # Add test events to the queue
+    test_events = [
+        (1, b'{"event": "test1", "data": "value1"}', time.time()),
+        (2, b'{"event": "test2", "data": "value2"}', time.time()),
+        (None, None, time.time()),  # End of stream
+    ]
+
+    for event in test_events:
+        await queue.put(event)
+
+    # Collect yielded values
+    yielded_values = [value async for value in consume_and_yield(queue, client_consumed_queue)]
+
+    # Verify the correct values were yielded
+    assert len(yielded_values) == 2
+    assert yielded_values[0] == b'{"event": "test1", "data": "value1"}'
+    assert yielded_values[1] == b'{"event": "test2", "data": "value2"}'
+
+    # Verify client consumption tracking
+    consumed_events = []
+    while not client_consumed_queue.empty():
+        consumed_events.append(client_consumed_queue.get_nowait())
+
+    assert len(consumed_events) == 2
+    assert consumed_events == [1, 2]
+
+
+async def test_consume_and_yield_keepalive_timeout():
+    """Test consume_and_yield sends Keep-Alive events on timeout."""
+    import os
+
+    # Set a short timeout for testing
+    original_timeout = os.getenv("LANGFLOW_KEEP_ALIVE_TIMEOUT")
+    os.environ["LANGFLOW_KEEP_ALIVE_TIMEOUT"] = "0.1"
+
+    # Reload the module to pick up the new timeout value
+    import importlib
+
+    from langflow.api.v1 import endpoints
+
+    importlib.reload(endpoints)
+
+    try:
+        # Create empty queues (no events will be available)
+        queue = asyncio.Queue()
+        client_consumed_queue = asyncio.Queue()
+
+        # Start the generator
+        generator = endpoints.consume_and_yield(queue, client_consumed_queue)
+
+        # Wait for the first keepalive (should happen after 0.1 seconds)
+        start_time = time.time()
+        value = await generator.__anext__()
+        elapsed = time.time() - start_time
+
+        # Verify we got a keepalive event after the timeout
+        assert elapsed >= 0.1
+        assert value == b'{"event": "keepalive", "data": {}}\n\n'
+
+        # Cancel the generator by adding None to queue
+        await queue.put((None, None, time.time()))
+
+        # The generator should break on the next iteration
+        import contextlib
+
+        with contextlib.suppress(StopAsyncIteration):
+            await generator.__anext__()
+
+    finally:
+        # Restore original timeout
+        if original_timeout is not None:
+            os.environ["LANGFLOW_KEEP_ALIVE_TIMEOUT"] = original_timeout
+        else:
+            os.environ.pop("LANGFLOW_KEEP_ALIVE_TIMEOUT", None)
+
+        # Reload to restore original state
+        importlib.reload(endpoints)
+
+
+async def test_consume_and_yield_exception_handling():
+    """Test consume_and_yield propagates exceptions correctly."""
+    queue = asyncio.Queue()
+    client_consumed_queue = asyncio.Queue()
+
+    # Create a mock queue that raises an exception
+    queue.get = AsyncMock(side_effect=Exception("Test exception"))
+
+    # The generator should propagate the exception to the caller
+    with pytest.raises(Exception, match="Test exception"):
+        [value async for value in consume_and_yield(queue, client_consumed_queue)]
