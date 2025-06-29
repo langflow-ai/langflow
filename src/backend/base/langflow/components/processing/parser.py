@@ -1,27 +1,11 @@
-import string
-
 from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import safe_convert
+from langflow.helpers.formatter import DotDictFormatter
 from langflow.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
-
-
-class DotDictFormatter(string.Formatter):
-    def get_field(self, field_name, _, kwargs):
-        obj = kwargs
-        for attr in field_name.split("."):
-            obj = obj.get(attr) if isinstance(obj, dict) else getattr(obj, attr, None)
-            if obj is None:
-                break
-        return obj, field_name
-
-    def get_value(self, key, args, kwargs):
-        if isinstance(key, str):
-            return kwargs.get(key, None)
-        return super().get_value(key, args, kwargs)
 
 
 class ParserComponent(Component):
