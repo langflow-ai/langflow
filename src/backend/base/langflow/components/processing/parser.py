@@ -1,5 +1,6 @@
 from langflow.custom.custom_component.component import Component
 from langflow.helpers.data import safe_convert
+from langflow.helpers.formatter import DotDictFormatter
 from langflow.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
@@ -103,6 +104,13 @@ class ParserComponent(Component):
                 except (TypeError, ValueError, KeyError) as e:
                     msg = f"Invalid structured input provided: {e!s}"
                     raise ValueError(msg) from e
+            case list() if all(isinstance(item, dict) for item in input_data):
+                try:
+                    msg = "List of Data objects is not supported."
+                    raise ValueError(msg)
+                except Exception as e:
+                    msg = f"Invalid list of dicts provided: {e!s}"
+                    raise ValueError(msg) from e
             case _:
                 msg = f"Unsupported input type: {type(input_data)}. Expected DataFrame or Data."
                 raise ValueError(msg)
@@ -114,14 +122,14 @@ class ParserComponent(Component):
             return self.convert_to_string()
 
         df, data = self._clean_args()
-
+        formatter = DotDictFormatter()
         lines = []
         if df is not None:
             for _, row in df.iterrows():
-                formatted_text = self.pattern.format(**row.to_dict())
+                formatted_text = formatter.format(self.pattern, **row.to_dict())
                 lines.append(formatted_text)
         elif data is not None:
-            formatted_text = self.pattern.format(**data.data)
+            formatted_text = formatter.format(self.pattern, **data.data)
             lines.append(formatted_text)
 
         combined_text = self.sep.join(lines)
