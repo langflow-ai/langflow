@@ -232,7 +232,7 @@ class LangflowRunnerExperimental:
             await session.exec(delete(Flow).where(Flow.id.in_(flow_ids)))
             await session.exec(delete(Variable).where(Variable.user_id == user_id))
             await session.exec(delete(User).where(User.id == user_id))
-            
+
     async def init_db_if_needed(self):
         if not await self.database_exists_check() and self.should_initialize_db:
             logger.info("Initializing database...")
