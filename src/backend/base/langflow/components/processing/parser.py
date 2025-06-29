@@ -7,6 +7,23 @@ from langflow.schema.message import Message
 from langflow.template.field.base import Output
 
 
+class DotDictFormatter(string.Formatter):
+    def get_field(self, field_name, args, kwargs):
+        obj = kwargs
+        for attr in field_name.split('.'):
+            if isinstance(obj, dict):
+                obj = obj.get(attr)
+            else:
+                obj = getattr(obj, attr, None)
+            if obj is None:
+                break
+        return obj, field_name
+
+    def get_value(self, key, args, kwargs):
+        if isinstance(key, str):
+            return kwargs.get(key, None)
+        return super().get_value(key, args, kwargs)
+
 class ParserComponent(Component):
     display_name = "Parser"
     description = "Extracts text using a template."
@@ -103,6 +120,14 @@ class ParserComponent(Component):
                 except (TypeError, ValueError, KeyError) as e:
                     msg = f"Invalid structured input provided: {e!s}"
                     raise ValueError(msg) from e
+            case list() if all(isinstance(item, dict) for item in input_data):
+                try:
+                    data_objs = [Data(**item) for item in input_data]
+                    msg = "List of Data objects is not supported."
+                    raise ValueError(msg)
+                except Exception as e:
+                    msg = f"Invalid list of dicts provided: {e!s}"
+                    raise ValueError(msg) from e
             case _:
                 msg = f"Unsupported input type: {type(input_data)}. Expected DataFrame or Data."
                 raise ValueError(msg)
@@ -114,14 +139,14 @@ class ParserComponent(Component):
             return self.convert_to_string()
 
         df, data = self._clean_args()
-
+        formatter = DotDictFormatter()
         lines = []
         if df is not None:
             for _, row in df.iterrows():
-                formatted_text = self.pattern.format(**row.to_dict())
+                formatted_text = formatter.format(self.pattern, **row.to_dict())
                 lines.append(formatted_text)
         elif data is not None:
-            formatted_text = self.pattern.format(**data.data)
+            formatted_text = formatter.format(self.pattern, **data.data)
             lines.append(formatted_text)
 
         combined_text = self.sep.join(lines)
