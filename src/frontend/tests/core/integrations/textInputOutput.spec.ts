@@ -34,7 +34,7 @@ test.skip(
     await page.getByTestId("sidebar-search-input").fill("openai");
     await page.waitForTimeout(1000);
     await page
-      .getByTestId("languagemodelsOpenAI")
+      .getByTestId("openaiOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
