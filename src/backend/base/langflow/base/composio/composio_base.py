@@ -2,15 +2,14 @@ import re
 from abc import abstractmethod
 from typing import Any
 
-from composio.client.collections import AppAuthScheme
-from composio.client.exceptions import NoItemsFound
-from composio.exceptions import ApiKeyError
-from composio_langchain import ComposioToolSet
+from composio import Composio
+from composio_langchain import LangchainProvider
 from langchain_core.tools import Tool
 
 from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import (
     AuthInput,
+    ConnectionInput,
     MessageTextInput,
     SecretStrInput,
     SortableListInput,
@@ -137,16 +136,11 @@ class ComposioBaseComponent(Component):
                 action: self._name_sanitizer.sub("-", self.sanitize_action_name(action))
                 for action in self._actions_data
             }
-            
-            logger.debug(f"Built action maps for {getattr(self, 'app_name', 'unknown app')}:")
-            logger.debug(f"  _key_to_display_map: {self._key_to_display_map}")
-            logger.debug(f"  _display_to_key_map: {self._display_to_key_map}")
 
     def sanitize_action_name(self, action_name: str) -> str:
         """Convert action name to display name using lookup."""
         self._build_action_maps()
         result = self._key_to_display_map.get(action_name, action_name)
-        logger.debug(f"sanitize_action_name: '{action_name}' -> '{result}'")
         return result
 
     def desanitize_action_name(self, action_name: str) -> str:
@@ -160,13 +154,13 @@ class ComposioBaseComponent(Component):
             return set()
         return set(self._actions_data[action_key]["action_fields"]) if action_key in self._actions_data else set()
 
-    def _build_wrapper(self) -> ComposioToolSet:
-        """Build the Composio toolset wrapper."""
+    def _build_wrapper(self) -> Composio:
+        """Build the Composio wrapper."""
         try:
             if not self.api_key:
                 msg = "Composio API Key is required"
                 raise ValueError(msg)
-            return ComposioToolSet(api_key=self.api_key)
+            return Composio(api_key=self.api_key, provider=LangchainProvider())
 
         except ValueError as e:
             logger.error(f"Error building Composio wrapper: {e}")
@@ -218,36 +212,32 @@ class ComposioBaseComponent(Component):
             return
 
         try:
-            toolset = self._build_wrapper()
-            # Fetch schemas for this app without enforcing a connection check
-            from composio import App  # Local import to avoid breaking import order
+            composio = self._build_wrapper()
+            # Fetch schemas for this toolkit using the new SDK
+            toolkit_slug = self.app_name.lower()
+            
+            raw_tools = composio.tools.get_raw_composio_tools(toolkits=[toolkit_slug]) or []
 
-            app_enum = getattr(App, self.app_name.upper(), None)
-            if app_enum is None:
-                logger.warning(f"App enum not found for app name: {self.app_name}")
-                return
-
-            schemas = toolset.get_action_schemas(apps=[app_enum], check_connected_accounts=False) or []
-
-            for schema in schemas:
+            for raw_tool in raw_tools:
                 try:
-                    schema_dict = schema.model_dump() if hasattr(schema, "model_dump") else schema
-                    if not schema_dict:
-                        logger.warning(f"Schema is None or empty for action: {schema}")
-                        continue
-
-                    action_key = schema_dict.get("name")
-                    if not action_key:
-                        logger.warning(f"Action key is missing in schema: {schema_dict}")
-                        continue
-
-                    logger.debug(f"Processing action: {action_key}")
-
-                    # Human-friendly display name (falls back to sanitised key)
-                    raw_display_name = schema_dict.get("displayName")
-                    if raw_display_name:
-                        display_name = raw_display_name
+                    # Convert raw_tool to dict-like structure
+                    if hasattr(raw_tool, '__dict__'):
+                        tool_dict = raw_tool.__dict__
                     else:
+                        tool_dict = raw_tool
+                    
+                    if not tool_dict:
+                        logger.warning(f"Tool is None or empty: {raw_tool}")
+                        continue
+
+                    action_key = tool_dict.get("slug")
+                    if not action_key:
+                        logger.warning(f"Action key (slug) is missing in tool: {tool_dict}")
+                        continue
+
+                    # Human-friendly display name
+                    display_name = tool_dict.get("name") or tool_dict.get("display_name")
+                    if not display_name:
                         # Better fallback: convert GMAIL_SEND_EMAIL to "Send Email"
                         # Remove app prefix and convert to title case
                         clean_name = action_key
@@ -256,28 +246,17 @@ class ComposioBaseComponent(Component):
                         # Convert underscores to spaces and title case
                         display_name = clean_name.replace("_", " ").title()
                     
-                    logger.debug(f"Processing action {action_key}:")
-
                     # Build list of parameter names and track bool fields
-                    parameters_schema = schema_dict.get("parameters", {})
+                    parameters_schema = tool_dict.get("input_parameters", {})
                     if parameters_schema is None:
                         logger.warning(f"Parameters schema is None for action key: {action_key}")
                         # Still add the action but with empty fields
-                        self._action_schemas[action_key] = schema_dict
+                        self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": [],
                         }
                         continue
-
-                    logger.debug(f"Parameters schema for {action_key}: {parameters_schema}")
-                    
-                    # Log the original schema structure to understand what Composio provides
-                    if parameters_schema and isinstance(parameters_schema, dict):
-                        props = parameters_schema.get("properties", {})
-                        logger.debug(f"Original schema properties for {action_key}:")
-                        for prop_name, prop_def in props.items():
-                            logger.debug(f"  {prop_name}: {prop_def}")
 
                     try:
                         # Special handling for unusual schema structures
@@ -290,7 +269,7 @@ class ComposioBaseComponent(Component):
                                 parameters_schema = parameters_schema.__dict__
                             else:
                                 logger.warning(f"Cannot process parameters schema for {action_key}, skipping")
-                                self._action_schemas[action_key] = schema_dict
+                                self._action_schemas[action_key] = tool_dict
                                 self._actions_data[action_key] = {
                                     "display_name": display_name,
                                     "action_fields": [],
@@ -299,25 +278,42 @@ class ComposioBaseComponent(Component):
 
                         # Validate parameters_schema has required structure before flattening
                         if not parameters_schema.get("properties") and not parameters_schema.get("$defs"):
-                            logger.debug(f"Parameters schema for {action_key} has no properties or $defs, creating minimal schema")
                             # Create a minimal valid schema to avoid errors
                             parameters_schema = {"type": "object", "properties": {}}
 
                         # Sanitize the schema before passing to flatten_schema
                         # Handle case where 'required' is explicitly None (causes "'NoneType' object is not iterable")
                         if parameters_schema.get("required") is None:
-                            logger.debug(f"Sanitizing required field for {action_key}: None -> []")
                             parameters_schema = parameters_schema.copy()  # Don't modify the original
                             parameters_schema["required"] = []
 
                         try:
+                            # Preserve original descriptions before flattening to restore if lost
+                            original_descriptions = {}
+                            original_props = parameters_schema.get("properties", {})
+                            for prop_name, prop_schema in original_props.items():
+                                if isinstance(prop_schema, dict) and "description" in prop_schema:
+                                    original_descriptions[prop_name] = prop_schema["description"]
+                            
                             flat_schema = flatten_schema(parameters_schema)
-                            logger.debug(f"flatten_schema returned: {flat_schema}")
+                            
+                            # Restore lost descriptions in flattened schema
+                            if flat_schema and isinstance(flat_schema, dict) and "properties" in flat_schema:
+                                flat_props = flat_schema["properties"]
+                                for field_name, field_schema in flat_props.items():
+                                    # Check if this field lost its description during flattening
+                                    if isinstance(field_schema, dict) and "description" not in field_schema:
+                                        # Try to find the original description
+                                        # Handle array fields like bcc[0] -> bcc
+                                        base_field_name = field_name.replace("[0]", "")
+                                        if base_field_name in original_descriptions:
+                                            field_schema["description"] = original_descriptions[base_field_name]
+                                        elif field_name in original_descriptions:
+                                            field_schema["description"] = original_descriptions[field_name]
                         except Exception as flatten_error:
                             logger.error(f"flatten_schema failed for {action_key}: {flatten_error}")
-                            logger.debug(f"Parameters schema that caused flatten error: {parameters_schema}")
                             # Still add the action but with empty fields so the UI doesn't break
-                            self._action_schemas[action_key] = schema_dict
+                            self._action_schemas[action_key] = tool_dict
                             self._actions_data[action_key] = {
                                 "display_name": display_name,
                                 "action_fields": [],
@@ -326,22 +322,30 @@ class ComposioBaseComponent(Component):
                             
                         if flat_schema is None:
                             logger.warning(f"Flat schema is None for action key: {action_key}")
-                            logger.debug(f"Parameters schema that resulted in None: {parameters_schema}")
                             # Still add the action but with empty fields so the UI doesn't break
-                            self._action_schemas[action_key] = schema_dict
+                            self._action_schemas[action_key] = tool_dict
                             self._actions_data[action_key] = {
                                 "display_name": display_name,
                                 "action_fields": [],
                             }
                             continue
 
-                        logger.debug(f"Flat parameters for {action_key}: {flat_schema}")
-
                         # Extract field names and clean them up (remove [0] suffixes)
                         raw_action_fields = list(flat_schema.get("properties", {}).keys())
-                        action_fields = [field.replace("[0]", "") for field in raw_action_fields]
+                        action_fields = []
+                        attachment_related_found = False
                         
-                        logger.debug(f"Field names for {action_key}: {raw_action_fields} -> {action_fields}")
+                        for field in raw_action_fields:
+                            clean_field = field.replace("[0]", "")
+                            # Check if this field is attachment-related
+                            if clean_field.lower().startswith("attachment."):
+                                attachment_related_found = True
+                                continue  # Skip individual attachment fields
+                            action_fields.append(clean_field)
+                        
+                        # Add consolidated attachment field if we found attachment-related fields
+                        if attachment_related_found:
+                            action_fields.append("attachment")
 
                         # Track boolean parameters so we can coerce them later
                         properties = flat_schema.get("properties", {})
@@ -352,33 +356,27 @@ class ComposioBaseComponent(Component):
                                     clean_field_name = p_name.replace("[0]", "")
                                     self._bool_variables.add(clean_field_name)
 
-                        self._action_schemas[action_key] = schema_dict
+                        self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": action_fields,
                         }
-                        
-                        logger.debug(f"Successfully processed action {action_key} with {len(action_fields)} fields: {action_fields}")
 
                     except Exception as schema_error:
                         logger.warning(f"Failed to process schema for action {action_key}: {schema_error}")
-                        logger.debug(f"Schema processing error details for {action_key}:", exc_info=True)
                         # Still add the action but with empty fields so the UI doesn't break
-                        self._action_schemas[action_key] = schema_dict
+                        self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": [],
                         }
                 except Exception as e:  # pragma: no cover – schema edge-cases
-                    logger.warning(f"Failed processing Composio schema for action {schema}: {e}")
+                    logger.warning(f"Failed processing Composio tool for action {raw_tool}: {e}")
 
             # Helper look-ups used elsewhere
             self._all_fields = {f for d in self._actions_data.values() for f in d["action_fields"]}
             self._build_action_maps()
             
-            logger.debug(f"Final _actions_data for {self.app_name}:")
-            for action_key, action_data in self._actions_data.items():
-                logger.debug(f"  {action_key} -> display_name: '{action_data['display_name']}'")
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Could not populate Composio actions for {self.app_name}: {e}")
 
@@ -394,15 +392,10 @@ class ComposioBaseComponent(Component):
             return []
 
         try:
-            logger.debug(f"Processing schema for action key: {action_key}")
-            
-            parameters_schema = schema_dict.get("parameters", {})
+            parameters_schema = schema_dict.get("input_parameters", {})
             if parameters_schema is None:
                 logger.warning(f"Parameters schema is None for action key: {action_key}")
                 return []
-            
-            logger.debug(f"Parameters schema type for {action_key}: {type(parameters_schema)}")
-            logger.debug(f"Parameters schema keys for {action_key}: {list(parameters_schema.keys()) if isinstance(parameters_schema, dict) else 'Not a dict'}")
 
             # Check if parameters_schema has the expected structure
             if not isinstance(parameters_schema, dict):
@@ -411,32 +404,45 @@ class ComposioBaseComponent(Component):
 
             # Validate parameters_schema has required structure before flattening
             if not parameters_schema.get("properties") and not parameters_schema.get("$defs"):
-                logger.debug(f"Parameters schema for {action_key} has no properties or $defs, creating minimal schema")
                 # Create a minimal valid schema to avoid errors
                 parameters_schema = {"type": "object", "properties": {}}
 
             # Sanitize the schema before passing to flatten_schema
             # Handle case where 'required' is explicitly None (causes "'NoneType' object is not iterable")
             if parameters_schema.get("required") is None:
-                logger.debug(f"Sanitizing required field for {action_key}: None -> []")
                 parameters_schema = parameters_schema.copy()  # Don't modify the original
                 parameters_schema["required"] = []
 
             try:
+                # Preserve original descriptions before flattening to restore if lost
+                original_descriptions = {}
+                original_props = parameters_schema.get("properties", {})
+                for prop_name, prop_schema in original_props.items():
+                    if isinstance(prop_schema, dict) and "description" in prop_schema:
+                        original_descriptions[prop_name] = prop_schema["description"]
+                
                 flat_schema = flatten_schema(parameters_schema)
-                logger.debug(f"flatten_schema returned: {flat_schema}")
+                
+                # Restore lost descriptions in flattened schema
+                if flat_schema and isinstance(flat_schema, dict) and "properties" in flat_schema:
+                    flat_props = flat_schema["properties"]
+                    for field_name, field_schema in flat_props.items():
+                        # Check if this field lost its description during flattening
+                        if isinstance(field_schema, dict) and "description" not in field_schema:
+                            # Try to find the original description
+                            # Handle array fields like bcc[0] -> bcc
+                            base_field_name = field_name.replace("[0]", "")
+                            if base_field_name in original_descriptions:
+                                field_schema["description"] = original_descriptions[base_field_name]
+                            elif field_name in original_descriptions:
+                                field_schema["description"] = original_descriptions[field_name]
             except Exception as flatten_error:
                 logger.error(f"flatten_schema failed for {action_key}: {flatten_error}")
-                logger.debug(f"Parameters schema that caused flatten error: {parameters_schema}")
                 return []
                 
             if flat_schema is None:
                 logger.warning(f"Flat schema is None for action key: {action_key}")
-                logger.debug(f"Parameters schema that resulted in None: {parameters_schema}")
                 return []
-            
-            logger.debug(f"Flat schema type for {action_key}: {type(flat_schema)}")
-            logger.debug(f"Flat schema keys for {action_key}: {list(flat_schema.keys()) if isinstance(flat_schema, dict) else 'Not a dict'}")
 
             # Additional check for flat_schema structure
             if not isinstance(flat_schema, dict):
@@ -450,16 +456,34 @@ class ComposioBaseComponent(Component):
                 flat_schema["type"] = "object"
             
             if "properties" not in flat_schema:
-                logger.debug(f"Flat schema for {action_key} has no properties, adding empty properties")
                 flat_schema["properties"] = {}
 
             # Clean up field names - remove [0] suffixes from array fields
             cleaned_properties = {}
+            attachment_related_fields = set()  # Track fields that are attachment-related
+            
             for field_name, field_schema in flat_schema.get("properties", {}).items():
                 # Remove [0] suffix from field names (e.g., "bcc[0]" -> "bcc", "cc[0]" -> "cc")
                 clean_field_name = field_name.replace("[0]", "")
+                
+                # Check if this field is attachment-related (contains "attachment." prefix)
+                if clean_field_name.lower().startswith("attachment."):
+                    attachment_related_fields.add(clean_field_name)
+                    # Don't add individual attachment sub-fields to the schema
+                    continue
+                
+                # Preserve the full schema information, not just the type
                 cleaned_properties[clean_field_name] = field_schema
-                logger.debug(f"Field name cleanup: '{field_name}' -> '{clean_field_name}'")
+            
+            # If we found attachment-related fields, add a single "attachment" field
+            if attachment_related_fields:
+                # Create a generic attachment field schema
+                attachment_schema = {
+                    "type": "string",
+                    "description": "File attachment for the email",
+                    "title": "Attachment"
+                }
+                cleaned_properties["attachment"] = attachment_schema
             
             # Update the flat schema with cleaned field names
             flat_schema["properties"] = cleaned_properties
@@ -474,12 +498,6 @@ class ComposioBaseComponent(Component):
                 logger.warning(f"Input schema is None for action key: {action_key}")
                 return []
             
-            logger.debug(f"Input schema created successfully for {action_key}: {input_schema}")
-            logger.debug(f"Input schema type: {type(input_schema)}")
-            logger.debug(f"Input schema has model_fields: {hasattr(input_schema, 'model_fields')}")
-            logger.debug(f"Input schema model_fields value: {getattr(input_schema, 'model_fields', 'NOT_FOUND')}")
-            logger.debug(f"Input schema model_fields type: {type(getattr(input_schema, 'model_fields', None))}")
-            
             # Additional safety check before calling schema_to_langflow_inputs
             if not hasattr(input_schema, 'model_fields'):
                 logger.warning(f"Input schema for {action_key} does not have model_fields attribute")
@@ -490,27 +508,28 @@ class ComposioBaseComponent(Component):
                 return []
             
             result = schema_to_langflow_inputs(input_schema)
-            logger.debug(f"Schema to langflow inputs result for {action_key}: {len(result) if result else 'None/empty'}")
             
             # Process inputs to handle attachment fields and set advanced status
             if result:
                 processed_inputs = []
                 required_fields_set = set(flat_schema.get("required", []))
                 
-                # Get attachment fields for this action (if any)
+                # Get attachment fields for this action (if any) - now includes our consolidated "attachment" field
                 attachment_fields = self.ATTACHMENT_FIELDS.get(action_key, set())
+                if attachment_related_fields:  # If we consolidated attachment fields
+                    attachment_fields = attachment_fields | {"attachment"}
                 
                 for inp in result:
                     if hasattr(inp, 'name'):
                         # Check if this specific field is an attachment field
-                        if inp.name.lower() in attachment_fields:
+                        if inp.name.lower() in attachment_fields or inp.name.lower() == "attachment":
                             # Replace with FileInput for attachment fields
                             file_input = FileInput(
                                 name=inp.name,
-                                display_name=getattr(inp, 'display_name', inp.name),
+                                display_name=getattr(inp, 'display_name', inp.name.replace('_', ' ').title()),
                                 required=inp.name in required_fields_set,
                                 advanced=inp.name not in required_fields_set,
-                                info=getattr(inp, 'info', f"Upload file for {inp.name}"),
+                                info=getattr(inp, 'info', "Upload file attachment"),
                                 show=True,
                                 file_types=[
                                     "csv", "txt", "doc", "docx", "xls", "xlsx", "pdf",
@@ -518,12 +537,27 @@ class ComposioBaseComponent(Component):
                                 ],
                             )
                             processed_inputs.append(file_input)
-                            logger.debug(f"Converted field '{inp.name}' to FileInput (attachment field)")
                         else:
+                            # Ensure proper display_name and info are set for regular fields
+                            if not hasattr(inp, 'display_name') or not inp.display_name:
+                                inp.display_name = inp.name.replace('_', ' ').title()
+                            
+                            # Preserve description from schema if available
+                            field_schema = flat_schema.get("properties", {}).get(inp.name, {})
+                            schema_description = field_schema.get("description")
+                            current_info = getattr(inp, 'info', None)
+                            
+                            # Use schema description if available, otherwise keep current info or create from name
+                            if schema_description:
+                                inp.info = schema_description
+                            elif not current_info:
+                                # Fallback: create a basic description from the field name if no description exists
+                                inp.info = f"{inp.name.replace('_', ' ').title()} field"
+                            
                             # Set advanced status for non-attachment fields
                             if inp.name not in required_fields_set:
                                 inp.advanced = True
-                                logger.debug(f"Set field '{inp.name}' as advanced (not required)")
+                            
                             processed_inputs.append(inp)
                     else:
                         processed_inputs.append(inp)
@@ -533,7 +567,6 @@ class ComposioBaseComponent(Component):
             return result
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Error generating inputs for {action_key}: {e}")
-            logger.debug(f"Full exception details for {action_key}:", exc_info=True)
             return []
 
     def _get_inputs_for_all_actions(self) -> dict[str, list[InputTypes]]:
@@ -582,19 +615,14 @@ class ComposioBaseComponent(Component):
         self._all_fields.update({i.name for i in lf_inputs})
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
-        """Optimized build config updates."""
-        # Get app name for logging
-        app_name = getattr(self, 'app_name', 'unknown')
-        
+        """Simplified build config updates."""
+
         # Ensure dynamic action metadata is available whenever we have an API key
         if (field_name == "api_key" and field_value) or (self.api_key and not self._actions_data):
             self._populate_actions_data()
 
         if field_name == "tool_mode":
-            # Always show action field regardless of tool_mode for manual testing
-            logger.debug(f"TOOL_MODE: Before - action config: {build_config.get('action', 'NOT_FOUND')}")
-            build_config["action"]["show"] = True  # Changed from: not field_value
-            logger.debug(f"TOOL_MODE: After - action config: {build_config.get('action', 'NOT_FOUND')}")
+            build_config["action"]["show"] = True
             for field in self._all_fields:
                 build_config[field]["show"] = not field_value
             return build_config
@@ -602,10 +630,11 @@ class ComposioBaseComponent(Component):
         if field_name == "action":
             # Dynamically inject parameter fields for the chosen action
             self._update_action_config(build_config, field_value)
-            # Keep the existing show/hide behaviour for backwards-compat
+            # Keep the existing show/hide behaviour
             self.show_hide_fields(build_config, field_value)
-            if build_config["auth_link"]["value"] == "validated":
-                return build_config
+            return build_config
+            
+        # Handle API key removal
         if field_name == "api_key" and len(field_value) == 0:
             build_config["auth_link"]["value"] = ""
             build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
@@ -613,122 +642,143 @@ class ComposioBaseComponent(Component):
             build_config["action"]["helper_text"] = "Please connect before selecting actions."
             build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
             return build_config
+
+        # Only proceed with connection logic if we have an API key
         if not hasattr(self, "api_key") or not self.api_key:
             return build_config
 
-        # Build the action maps before using them
+        # Update action options
         self._build_action_maps()
-
-        # Update the action options
         build_config["action"]["options"] = [
-            {
-                "name": self.sanitize_action_name(action),
-                "metadata": action,
-            }
+            {"name": self.sanitize_action_name(action), "metadata": action}
             for action in self._actions_data
         ]
-        
-        # Clear error state when actions are successfully populated
-        if build_config["action"]["options"]:
-            build_config["action"]["helper_text"] = ""
-            build_config["action"]["helper_text_metadata"] = {}
-        
-        # Ensure action field is always visible and properly configured
         build_config["action"]["show"] = True
 
         try:
             toolset = self._build_wrapper()
-            entity = toolset.client.get_entity(id=self.entity_id)
-
+            toolkit_slug = self.app_name.lower()
+            
+            # Handle disconnection first (if user clicked disconnect)
+            if field_name == "auth_link" and field_value == "disconnect":
+                try:
+                    connections = toolset.connected_accounts.list(user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug])
+                    # Validate response structure before accessing items
+                    if connections and hasattr(connections, 'items') and connections.items:
+                        if isinstance(connections.items, list) and len(connections.items) > 0:
+                            # Find the first ACTIVE connection to disconnect
+                            active_connection = None
+                            for connection in connections.items:
+                                if getattr(connection, 'status', None) == 'ACTIVE':
+                                    active_connection = connection
+                                    break
+                            
+                            if active_connection:
+                                connection_id = getattr(active_connection, 'id', None)
+                                if connection_id:
+                                    toolset.connected_accounts.delete(nanoid=connection_id)
+                                    logger.info(f"Disconnected ACTIVE connection from {toolkit_slug}")
+                                else:
+                                    logger.warning(f"ACTIVE connection found but no ID available for {toolkit_slug}")
+                            else:
+                                logger.warning(f"Found {len(connections.items)} connection(s) for {toolkit_slug}, but none are ACTIVE to disconnect")
+                        else:
+                            logger.warning(f"No connections to disconnect for {toolkit_slug}")
+                    else:
+                        logger.warning(f"Invalid connection response structure for {toolkit_slug}")
+                    
+                    # After disconnection, fall through to check connection status
+                except Exception as e:
+                    logger.error(f"Error disconnecting: {e}")
+                    build_config["auth_link"]["value"] = "error"
+                    build_config["auth_link"]["auth_tooltip"] = f"Disconnect failed: {e!s}"
+                    return build_config
+            
+            # Check current connection status and set appropriate auth_link value
             try:
-                entity.get_connection(app=self.app_name)
-                build_config["auth_link"]["value"] = "validated"
-                build_config["auth_link"]["auth_tooltip"] = "Disconnect"
-                build_config["action"]["helper_text"] = None
-                build_config["action"]["helper_text_metadata"] = {}
-            except NoItemsFound:
-                auth_scheme = self._get_auth_scheme(self.app_name)
-                if auth_scheme and auth_scheme.auth_mode == "OAUTH2":
+                connection_list = toolset.connected_accounts.list(user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug])
+                
+                # Validate response structure and check for valid connections
+                has_active_connections = False
+                if connection_list and hasattr(connection_list, 'items') and connection_list.items:
+                    # Check if items is a list and has valid connections
+                    if isinstance(connection_list.items, list) and len(connection_list.items) > 0:
+                        # Check if any connection has status 'ACTIVE'
+                        active_connections = []
+                        for connection in connection_list.items:
+                            connection_status = getattr(connection, 'status', None)
+                            if connection_status == 'ACTIVE':
+                                active_connections.append(connection)
+                        
+                        if active_connections:
+                            has_active_connections = True
+                            logger.debug(f"Found {len(active_connections)} ACTIVE connection(s) out of {len(connection_list.items)} total for {toolkit_slug}")
+                        else:
+                            logger.debug(f"Found {len(connection_list.items)} connection(s) for {toolkit_slug}, but none are ACTIVE")
+                    else:
+                        logger.debug(f"No valid connections found for {toolkit_slug}: items is not a valid list")
+                else:
+                    logger.debug(f"No connections found for {toolkit_slug}: invalid response structure")
+                
+                if has_active_connections:
+                    # User has active connection
+                    build_config["auth_link"]["value"] = "validated"
+                    build_config["auth_link"]["auth_tooltip"] = "Disconnect"
+                    build_config["action"]["helper_text"] = ""
+                    build_config["action"]["helper_text_metadata"] = {}
+                else:
+                    # No active connection - create OAuth connection and set redirect URL immediately
                     try:
-                        build_config["auth_link"]["value"] = self._initiate_default_connection(entity, self.app_name)
+                        logger.info(f"No active connection found. Creating OAuth connection for {toolkit_slug}...")
+                        connection = toolset.toolkits.authorize(user_id=self.entity_id, toolkit=toolkit_slug)
+                        
+                        # Get the redirect URL
+                        redirect_url = getattr(connection, 'redirect_url', None)
+                        if not redirect_url:
+                            # Try accessing it as a property or method
+                            if hasattr(connection, 'redirect_url'):
+                                redirect_url = connection.redirect_url
+                            else:
+                                raise ValueError("No redirect URL received from Composio")
+                        
+                        # Validate the URL format
+                        if not redirect_url.startswith(('http://', 'https://')):
+                            raise ValueError(f"Invalid redirect URL format: {redirect_url}")
+                        
+                        # Log the URL for debugging and manual use if needed
+                        logger.info(f"🔗 Composio OAuth URL for {toolkit_slug}: {redirect_url}")
+                        
+                        # Set the redirect URL directly - like the old implementation
+                        build_config["auth_link"]["value"] = redirect_url
                         build_config["auth_link"]["auth_tooltip"] = "Connect"
-                    except (ValueError, ConnectionError, ApiKeyError) as e:
-                        build_config["auth_link"]["value"] = "disabled"
+                        build_config["action"]["helper_text"] = "Please connect before selecting actions."
+                        build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
+                    except Exception as e:
+                        logger.error(f"Error creating OAuth connection: {e}")
+                        build_config["auth_link"]["value"] = "connect"
                         build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
-                        logger.error(f"Error checking auth status: {e}")
-
-        except (ValueError, ConnectionError) as e:
-            build_config["auth_link"]["value"] = "error"
-            build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
-            logger.error(f"Error checking auth status: {e}")
-        except ApiKeyError as e:
-            build_config["auth_link"]["value"] = ""
-            build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
-            # DON'T clear action options if they were already populated successfully
-            if not build_config["action"].get("options"):
-                build_config["action"]["options"] = []
-                build_config["action"]["value"] = ""
-                build_config["action"]["helper_text"] = "Please connect before selecting actions."
-                build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
-            else:
-                # Keep existing options but show auth warning
-                build_config["action"]["helper_text"] = "Authentication issue detected. Please check your API key."
-                build_config["action"]["helper_text_metadata"] = {"variant": "warning"}
-            logger.error(f"Error checking auth status: {e}")
-
-        # Handle disconnection
-        if field_name == "auth_link" and field_value == "disconnect":
-            try:
-                for field in self._all_fields:
-                    build_config[field]["show"] = False
-                toolset = self._build_wrapper()
-                entity = toolset.client.get_entity(id=self.entity_id)
-                self.disconnect_connection(entity, self.app_name)
-                build_config["auth_link"]["value"] = self._initiate_default_connection(entity, self.app_name)
+                        build_config["action"]["helper_text"] = "Please connect before selecting actions."
+                        build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
+                        
+            except Exception as e:
+                logger.error(f"Error checking connection status for {toolkit_slug}: {e}")
+                # Default to disconnected state on error
+                build_config["auth_link"]["value"] = "connect"
                 build_config["auth_link"]["auth_tooltip"] = "Connect"
                 build_config["action"]["helper_text"] = "Please connect before selecting actions."
-                build_config["action"]["helper_text_metadata"] = {
-                    "variant": "destructive",
-                }
-                build_config["action"]["options"] = []
-                build_config["action"]["value"] = ""
-            except (ValueError, ConnectionError, ApiKeyError) as e:
-                build_config["auth_link"]["value"] = "error"
-                build_config["auth_link"]["auth_tooltip"] = f"Failed to disconnect from the app: {e}"
-                logger.error(f"Error disconnecting: {e}")
-        if field_name == "auth_link" and field_value == "validated":
-            build_config["action"]["helper_text"] = ""
-            build_config["action"]["helper_text_metadata"] = {"icon": "Check", "variant": "success"}
+                build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
+
+        except Exception as e:
+            build_config["auth_link"]["value"] = ""
+            build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
+            build_config["action"]["helper_text"] = "Please connect before selecting actions."
+            build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
+            logger.error(f"Error in auth flow: {e}")
 
         return build_config
 
-    def _get_auth_scheme(self, app_name: str) -> AppAuthScheme:
-        """Get the primary auth scheme for an app."""
-        toolset = self._build_wrapper()
-        try:
-            return toolset.get_auth_scheme_for_app(app=app_name.lower())
-        except (ValueError, ConnectionError, NoItemsFound):
-            logger.exception(f"Error getting auth scheme for {app_name}")
-            return None
-
-    def _initiate_default_connection(self, entity: Any, app: str) -> str:
-        connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)
-        return connection.redirectUrl
-
-    def disconnect_connection(self, entity: Any, app: str) -> None:
-        """Disconnect a Composio connection."""
-        try:
-            # Get the connection first
-            connection = entity.get_connection(app=app)
-            # Delete the connection using the integrations collection
-            entity.client.integrations.remove(id=connection.integrationId)
-        except Exception as e:
-            logger.error(f"Error disconnecting from {app}: {e}")
-            msg = f"Failed to disconnect from {app}: {e}"
-            raise ValueError(msg) from e
-
-    def configure_tools(self, toolset: ComposioToolSet) -> list[Tool]:
-        tools = toolset.get_tools(actions=self._actions_data.keys())
+    def configure_tools(self, composio: Composio) -> list[Tool]:
+        tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()])
         logger.info(f"Tools: {tools}")
         configured_tools = []
         for tool in tools:
@@ -744,9 +794,9 @@ class ComposioBaseComponent(Component):
 
     async def _get_tools(self) -> list[Tool]:
         """Get tools with cached results and optimized name sanitization."""
-        toolset = self._build_wrapper()
+        composio = self._build_wrapper()
         self.set_default_tools()
-        return self.configure_tools(toolset)
+        return self.configure_tools(composio)
 
     @property
     def enabled_tools(self):
@@ -771,8 +821,8 @@ class ComposioBaseComponent(Component):
     def execute_action(self):  # noqa: C901  – the branching mirrors Composio responses
         """Execute the selected Composio action and return its raw `data` payload."""
 
-        # Build toolset & make sure schemas are present
-        toolset = self._build_wrapper()
+        # Build composio & make sure schemas are present
+        composio = self._build_wrapper()
         self._populate_actions_data()
         self._build_action_maps()
 
@@ -782,28 +832,21 @@ class ComposioBaseComponent(Component):
         )
         action_key = self._display_to_key_map.get(display_name)
         
-        logger.debug(f"Executing action for {getattr(self, 'app_name', 'unknown app')}:")
-        logger.debug(f"  Raw self.action: {getattr(self, 'action', None)}")
-        logger.debug(f"  Resolved display_name: {display_name}")
-        logger.debug(f"  Mapped to action_key: {action_key}")
-        logger.debug(f"  Available display_to_key_map: {self._display_to_key_map}")
-        
         if not action_key:
             msg = f"Invalid action: {display_name}"
             raise ValueError(msg)
 
         try:
-            from composio import Action as ComposioAction  # Local import to avoid global dependency at import time
-
-            enum_name = getattr(ComposioAction, action_key)
+            # No more enums - use action slug directly
+            action_slug = action_key
 
             # Gather parameters from component inputs
-            params: dict[str, Any] = {}
+            arguments: dict[str, Any] = {}
             param_fields = self._actions_data.get(action_key, {}).get("action_fields", [])
             
             # Get the schema for this action to check for defaults
             schema_dict = self._action_schemas.get(action_key, {})
-            parameters_schema = schema_dict.get("parameters", {})
+            parameters_schema = schema_dict.get("input_parameters", {})
             schema_properties = parameters_schema.get("properties", {}) if parameters_schema else {}
             # Handle case where 'required' field is None (causes "'NoneType' object is not iterable")
             required_list = parameters_schema.get("required", []) if parameters_schema else []
@@ -832,7 +875,6 @@ class ComposioBaseComponent(Component):
                     # Skip fields that look like auto-generated UUIDs for optional fields
                     # This is a heuristic to avoid passing system-generated IDs
                     if isinstance(value, str) and len(value) == 36 and value.count("-") == 4:
-                        logger.debug(f"Skipping auto-generated UUID-like value for optional field '{field}': {value}")
                         continue
 
                 # Convert comma-separated to list for array parameters (heuristic)
@@ -843,25 +885,15 @@ class ComposioBaseComponent(Component):
                 if field in self._bool_variables:
                     value = bool(value)
 
-                params[field] = value
-
-            # Temporary special-case Gmail alias (kept for backward compatibility)
-            # if params.get("gmail_user_id"):
-            #     params["user_id"] = params.pop("gmail_user_id")
+                arguments[field] = value
             
-            logger.debug(f"Params: {params}")
-            
+            # Execute using new SDK
+            result = composio.tools.execute(
+                slug=action_slug,
+                arguments=arguments,
+                user_id=self.entity_id,
+            )
 
-            result = toolset.execute_action(action=enum_name, params=params)
-
-            # if not result.get("successful", False):
-            #     # Pass through error payload, ensure it's never None
-            #     data = result.get("data", {})
-            #     return data if data is not None else {}
-
-            # # Ensure successful result data is never None
-            # data = result.get("data", {})
-            # return data if data is not None else {}
             return {"response": result}
 
         except Exception as e:  # noqa: BLE001
