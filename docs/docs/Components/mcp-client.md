@@ -40,9 +40,7 @@ This component has two modes, depending on the type of server you want to access
     For more information, see [global variables](/configuration-global-variables).
     :::
 
-4. Click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh** to test the command and retrieve the list of tools provided by the MCP server.
-
-5. In the **Tool** field, select a tool that you want this component to use, or leave the field blank to allow access to all tools provided by the MCP server.
+1. Click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh** to test the command and retrieve the list of tools provided by the MCP server.
 
     If you select a specific tool, you might need to configure additional tool-specific fields. For information about tool-specific fields, see your MCP server's documentation.
 
