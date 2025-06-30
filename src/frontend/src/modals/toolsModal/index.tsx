@@ -18,6 +18,7 @@ interface ToolsModalProps {
     description: string;
     status: boolean;
   }[];
+  placeholder: string;
   handleOnNewValue: handleOnNewValueType;
   title: string;
   icon?: string;
@@ -29,6 +30,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
     {
       description,
       rows,
+      placeholder,
       handleOnNewValue,
       title,
       icon,
@@ -69,6 +71,7 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
               <ToolsTable
                 rows={rows}
                 isAction={isAction}
+                placeholder={placeholder}
                 data={data}
                 setData={setData}
                 open={open}

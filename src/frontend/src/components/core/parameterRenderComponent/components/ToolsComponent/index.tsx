@@ -50,6 +50,7 @@ export default function ToolsComponent({
       {value && (
         <ToolsModal
           open={isModalOpen}
+          placeholder={placeholder || ""}
           setOpen={setIsModalOpen}
           isAction={isAction}
           description={description}

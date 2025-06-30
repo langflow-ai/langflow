@@ -25,6 +25,7 @@ export default function ToolsTable({
   data,
   setData,
   isAction,
+  placeholder,
   open,
   handleOnNewValue,
 }: {
@@ -34,6 +35,7 @@ export default function ToolsTable({
   open: boolean;
   handleOnNewValue: handleOnNewValueType;
   isAction: boolean;
+  placeholder: string;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
@@ -77,7 +79,7 @@ export default function ToolsTable({
   }, [agGrid.current]);
 
   useEffect(() => {
-    if (!open) {
+    if (!open || placeholder.startsWith("Loading")) {
       handleOnNewValue({
         value: data.map((row) => {
           const name = parseString(row.name, [
@@ -126,7 +128,7 @@ export default function ToolsTable({
         }),
       });
     }
-  }, [open]);
+  }, [open, placeholder]);
 
   useEffect(() => {
     if (focusedRow) {
