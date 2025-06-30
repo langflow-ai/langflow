@@ -97,7 +97,6 @@ export default function NewInputGlobalComponent({
     <InputComponent
       nodeStyle
       popoverWidth="17.5rem"
-      //   placeholder={getPlaceholder(disabled, placeholder)}
       placeholder="sk-..."
       id={id}
       editNode={editNode}
@@ -106,26 +105,7 @@ export default function NewInputGlobalComponent({
       password={true} // Shows eye icon
       value={value ?? ""}
       options={globalVariables?.map((variable) => variable.name) ?? []}
-      //   optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
-      //   optionsButton={
-      //     <GlobalVariableModal referenceField={display_name} disabled={disabled}>
-      //     <CommandItem value="doNotFilter-addNewVariable">
-      //       <ForwardedIconComponent
-      //         name="Plus"
-      //         className={cn("mr-2 h-4 w-4 text-primary")}
-      //         aria-hidden="true"
-      //       />
-      //       <span>Add New Variable</span>
-      //     </CommandItem>
-      //     </GlobalVariableModal>
-      //   }
-      //   optionButton={(option) => (
-      //     <GeneralDeleteConfirmationModal
-      //       option={option}
-      //       onConfirmDelete={() => handleDelete(option)}
-      //     />
-      //   )}
       selectedOption={load_from_db && valueExists ? value : ""}
       setSelectedOption={(value) => {
         handleOnNewValue({
@@ -140,7 +120,6 @@ export default function NewInputGlobalComponent({
         );
       }}
       isToolMode={isToolMode}
-      //   hasRefreshButton={hasRefreshButton}
     />
   );
 }

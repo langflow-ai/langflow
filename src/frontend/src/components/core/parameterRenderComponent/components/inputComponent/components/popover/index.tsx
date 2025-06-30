@@ -1,6 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandGroup,
@@ -253,6 +254,21 @@ const CustomInputPopover = ({
                   className="rounded-[3px] p-1 font-mono"
                 />
               ))}
+            </div>
+          ) : !disabled && selectedOption?.length > 0 && isGlobalVariable ? (
+            <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
+              <span>{selectedOption}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedOption("")}
+              >
+                <ForwardedIconComponent
+                  name="X"
+                  className="h-4 w-4 text-primary"
+                  aria-hidden="true"
+                />
+              </Button>
             </div>
           ) : !disabled && selectedOption?.length > 0 ? (
             <ShadTooltip content={selectedOption} side="left">
