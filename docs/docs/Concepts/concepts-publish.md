@@ -32,6 +32,16 @@ For more information, see [Use tweaks to apply temporary overrides to a flow run
 
 1. To **Export** your flow, in the **Playground**, click **Share**, and then click **Export**.
 2. To save your API keys with the flow, select **Save with my API keys**.
+Your flow is saved with any Global variables included.
+
+:::important
+If your key is saved as a Global variable, only the global variable you created to contain the value is saved. If your key value is manually entered into a component field, the actual key value is saved in the JSON file.
+:::
+
+When you share your flow file with another user who has the same global variables populated, the flow runs without requiring keys to be added again.
+
+The `FLOW_NAME.json` file is downloaded to your local machine.
+
 You can then **Import** the downloaded flow into another Langflow instance.
 
 ## MCP server
