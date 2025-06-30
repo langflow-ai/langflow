@@ -1340,7 +1340,6 @@ class Component(CustomComponent):
             placeholder=placeholder or "Loading actions...",
             display_name="Actions",
             info=TOOLS_METADATA_INFO,
-            id=str(uuid.uuid4()),
             value=tool_data,
         )
 
