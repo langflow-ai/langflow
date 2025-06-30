@@ -35,7 +35,6 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
       open,
       isAction = false,
       setOpen,
-      ...props
     }: ToolsModalProps,
     ref: ForwardedRef<AgGridReact>,
   ) => {
