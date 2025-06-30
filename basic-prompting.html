@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.530387df.css">
-<script src="/assets/js/runtime~main.1999e7c0.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.4bdc02ef.js" defer="defer"></script>
 <script src="/assets/js/main.d105d1da.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -49,41 +49,41 @@
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="create-the-basic-prompting-flow">Create the basic prompting flow<a href="#create-the-basic-prompting-flow" class="hash-link" aria-label="Direct link to Create the basic prompting flow" title="Direct link to Create the basic prompting flow">​</a></h2>
 <ol>
 <li>
-<p>From the Langflow dashboard, click <strong>New Flow</strong>.</p>
+<p>From the Langflow dashboard, click <strong>New Flow</strong>.</p>
 </li>
 <li>
-<p>Select <strong>Basic Prompting</strong>.</p>
+<p>Select <strong>Basic Prompting</strong>.</p>
 </li>
 <li>
-<p>The <strong>Basic Prompting</strong> flow is created.</p>
+<p>The <strong>Basic Prompting</strong> flow is created.</p>
 </li>
 </ol>
 <p><img decoding="async" loading="lazy" src="/assets/images/starter-flow-basic-prompting-09331815d7282bd6a3feedf84838ba20.png" width="2500" height="1528" class="img_ev3q"></p>
-<p>This flow allows you to chat with the <strong>OpenAI model</strong> component.
-The model will respond according to the prompt constructed in the <strong>Prompt</strong> component.</p>
+<p>This flow allows you to chat with the <strong>OpenAI model</strong> component.
+The model will respond according to the prompt constructed in the <strong>Prompt</strong> component.</p>
 <ol start="4">
 <li>To examine the <strong>Template</strong>, in the <strong>Prompt</strong> component, click the <strong>Template</strong> field.</li>
 </ol>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.</span></div></div><br></code></div></div>
 <ol start="5">
 <li>
-<p>To create an environment variable for the <strong>OpenAI</strong> component, in the <strong>OpenAI API Key</strong> field, click the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe" aria-label="Globe icon"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg> <strong>Globe</strong> button, and then click <strong>Add New Variable</strong>.</p>
+<p>To create an environment variable for the <strong>OpenAI</strong> component, in the <strong>OpenAI API Key</strong> field, click the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg> <strong>Globe</strong> button, and then click <strong>Add New Variable</strong>.</p>
 <ol>
-<li>In the <strong>Variable Name</strong> field, enter <code>openai_api_key</code>.</li>
-<li>In the <strong>Value</strong> field, paste your OpenAI API Key (<code>sk-...</code>).</li>
-<li>Click <strong>Save Variable</strong>.</li>
+<li>In the <strong>Variable Name</strong> field, enter <code>openai_api_key</code>.</li>
+<li>In the <strong>Value</strong> field, paste your OpenAI API Key (<code>sk-...</code>).</li>
+<li>Click <strong>Save Variable</strong>.</li>
 </ol>
 </li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="run-the-basic-prompting-flow">Run the basic prompting flow<a href="#run-the-basic-prompting-flow" class="hash-link" aria-label="Direct link to Run the basic prompting flow" title="Direct link to Run the basic prompting flow">​</a></h2>
 <ol>
-<li>Click the <strong>Playground</strong> button.</li>
+<li>Click the <strong>Playground</strong> button.</li>
 <li>Type a message and press Enter. The bot should respond in a markedly piratical manner!</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="modify-the-prompt-for-a-different-result">Modify the prompt for a different result<a href="#modify-the-prompt-for-a-different-result" class="hash-link" aria-label="Direct link to Modify the prompt for a different result" title="Direct link to Modify the prompt for a different result">​</a></h2>
 <ol>
-<li>To modify your prompt results, in the <strong>Prompt</strong> component, click the <strong>Template</strong> field. The <strong>Edit Prompt</strong> window opens.</li>
-<li>Change the existing prompt to a different character, perhaps <code>Answer the user as if you were Hermione Granger.</code></li>
+<li>To modify your prompt results, in the <strong>Prompt</strong> component, click the <strong>Template</strong> field. The <strong>Edit Prompt</strong> window opens.</li>
+<li>Change the existing prompt to a different character, perhaps <code>Answer the user as if you were Hermione Granger.</code></li>
 <li>Run the workflow again and notice how the prompt changes the model&#x27;s response.</li>
 </ol></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/get-started-quickstart"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Quickstart</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/simple-agent"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Simple agent</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#create-the-basic-prompting-flow" class="table-of-contents__link toc-highlight">Create the basic prompting flow</a></li><li><a href="#run-the-basic-prompting-flow" class="table-of-contents__link toc-highlight">Run the basic prompting flow</a></li><li><a href="#modify-the-prompt-for-a-different-result" class="table-of-contents__link toc-highlight">Modify the prompt for a different result</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>

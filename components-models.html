@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.530387df.css">
-<script src="/assets/js/runtime~main.1999e7c0.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.4bdc02ef.js" defer="defer"></script>
 <script src="/assets/js/main.d105d1da.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -83,7 +83,7 @@
 <ol start="2">
 <li>In the <strong>Groq API Key</strong> field, paste your Groq API key.
 The Groq model component automatically retrieves a list of the latest models.
-To refresh your list of models, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw" aria-label="Refresh"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>.</li>
+To refresh your list of models, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg> <strong>Refresh</strong>.</li>
 <li>In the <strong>Model</strong> field, select the model you want to use for your LLM.
 This example uses <a href="https://console.groq.com/docs/model/llama-3.1-8b-instant" target="_blank" rel="noopener noreferrer">llama-3.1-8b-instant</a>, which Groq recommends for real-time conversational interfaces.</li>
 <li>In the <strong>Prompt</strong> component, enter:</li>
@@ -159,7 +159,7 @@ For more information, see the <a href="https://python.langchain.com/docs/integra
 <li>In the Ollama component, in the <strong>Base URL</strong> field, enter the address for your locally running Ollama server.
 This value is set as the <code>OLLAMA_HOST</code> environment variable in Ollama.
 The default base URL is <code>http://localhost:11434</code>.</li>
-<li>To refresh the server&#x27;s list of models, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw" aria-label="Refresh"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>.</li>
+<li>To refresh the server&#x27;s list of models, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg> <strong>Refresh</strong>.</li>
 <li>In the <strong>Model Name</strong> field, select a model. This example uses <code>llama3.2:latest</code>.</li>
 <li>Connect the <strong>Ollama</strong> model component to a flow. For example, this flow connects a local Ollama server running a Llama 3.2 model as the custom model for an <a href="/components-agents">Agent</a> component.</li>
 </ol>

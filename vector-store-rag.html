@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.530387df.css">
-<script src="/assets/js/runtime~main.1999e7c0.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.4bdc02ef.js" defer="defer"></script>
 <script src="/assets/js/main.d105d1da.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -37,14 +37,14 @@
           </div>
         </a>
       </li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Templates</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Vector store RAG</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Vector store RAG</h1></header><p>Retrieval Augmented Generation, or RAG, is a pattern for training LLMs on your data and querying it.</p>
-<p>RAG is backed by a <strong>vector store</strong>, a vector database which stores embeddings of the ingested data.</p>
-<p>This enables <strong>vector search</strong>, a more powerful and context-aware search.</p>
-<p>We&#x27;ve chosen <a href="https://astra.datastax.com/signup?utm_source=langflow-pre-release&amp;utm_medium=referral&amp;utm_campaign=langflow-announcement&amp;utm_content=create-a-free-astra-db-account" target="_blank" rel="noopener noreferrer">Astra DB</a> as the vector database for this starter flow, but you can follow along with any of Langflow&#x27;s vector database options.</p>
+<p>RAG is backed by a <strong>vector store</strong>, a vector database which stores embeddings of the ingested data.</p>
+<p>This enables <strong>vector search</strong>, a more powerful and context-aware search.</p>
+<p>We&#x27;ve chosen <a href="https://astra.datastax.com/signup?utm_source=langflow-pre-release&amp;utm_medium=referral&amp;utm_campaign=langflow-announcement&amp;utm_content=create-a-free-astra-db-account" target="_blank" rel="noopener noreferrer">Astra DB</a> as the vector database for this starter flow, but you can follow along with any of Langflow&#x27;s vector database options.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
 <li><a href="/get-started-installation">A running Langflow instance</a></li>
 <li><a href="https://platform.openai.com/" target="_blank" rel="noopener noreferrer">An OpenAI API key</a></li>
-<li><a href="https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html" target="_blank" rel="noopener noreferrer">An Astra DB vector database</a> with the following:<!-- -->
+<li><a href="https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html" target="_blank" rel="noopener noreferrer">An Astra DB vector database</a> with the following:<!-- -->
 <ul>
 <li>An Astra DB application token scoped to read and write to the database</li>
 <li>A collection created in <a href="https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection" target="_blank" rel="noopener noreferrer">Astra</a> or a new collection created in the <strong>Astra DB</strong> component</li>
@@ -53,17 +53,17 @@
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="open-langflow-and-start-a-new-project">Open Langflow and start a new project<a href="#open-langflow-and-start-a-new-project" class="hash-link" aria-label="Direct link to Open Langflow and start a new project" title="Direct link to Open Langflow and start a new project">​</a></h2>
 <ol>
-<li>From the Langflow dashboard, click <strong>New Flow</strong>.</li>
-<li>Select <strong>Vector Store RAG</strong>.</li>
-<li>The <strong>Vector Store RAG</strong> flow is created.</li>
+<li>From the Langflow dashboard, click <strong>New Flow</strong>.</li>
+<li>Select <strong>Vector Store RAG</strong>.</li>
+<li>The <strong>Vector Store RAG</strong> flow is created.</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="build-the-vector-rag-flow">Build the vector RAG flow<a href="#build-the-vector-rag-flow" class="hash-link" aria-label="Direct link to Build the vector RAG flow" title="Direct link to Build the vector RAG flow">​</a></h2>
 <p>The vector store RAG flow is built of two separate flows for ingestion and query.</p>
 <p><img decoding="async" loading="lazy" src="/assets/images/starter-flow-vector-rag-53aa6c362abccc7e01e69c80d6194315.png" width="2694" height="1558" class="img_ev3q"></p>
-<p>The <strong>Load Data Flow</strong> (bottom of the screen) creates a searchable index to be queried for contextual similarity.
+<p>The <strong>Load Data Flow</strong> (bottom of the screen) creates a searchable index to be queried for contextual similarity.
 This flow populates the vector store with data from a local file.
 It ingests data from a local file, splits it into chunks, indexes it in Astra DB, and computes embeddings for the chunks using the OpenAI embeddings model.</p>
-<p>The <strong>Retriever Flow</strong> (top of the screen) embeds the user&#x27;s queries into vectors, which are compared to the vector store data from the <strong>Load Data Flow</strong> for contextual similarity.</p>
+<p>The <strong>Retriever Flow</strong> (top of the screen) embeds the user&#x27;s queries into vectors, which are compared to the vector store data from the <strong>Load Data Flow</strong> for contextual similarity.</p>
 <ul>
 <li><strong>Chat Input</strong> receives user input from the <strong>Playground</strong>.</li>
 <li><strong>OpenAI Embeddings</strong> converts the user query into vector form.</li>
@@ -77,10 +77,10 @@ It ingests data from a local file, splits it into chunks, indexes it in Astra DB
 <li>
 <p>Configure the <strong>OpenAI</strong> model component.</p>
 <ol>
-<li>To create a global variable for the <strong>OpenAI</strong> component, in the <strong>OpenAI API Key</strong> field, click the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe" aria-label="Globe"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg> <strong>Globe</strong> button, and then click <strong>Add New Variable</strong>.</li>
-<li>In the <strong>Variable Name</strong> field, enter <code>openai_api_key</code>.</li>
-<li>In the <strong>Value</strong> field, paste your OpenAI API Key (<code>sk-...</code>).</li>
-<li>Click <strong>Save Variable</strong>.</li>
+<li>To create a global variable for the <strong>OpenAI</strong> component, in the <strong>OpenAI API Key</strong> field, click the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe" aria-hidden="True"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg> <strong>Globe</strong> button, and then click <strong>Add New Variable</strong>.</li>
+<li>In the <strong>Variable Name</strong> field, enter <code>openai_api_key</code>.</li>
+<li>In the <strong>Value</strong> field, paste your OpenAI API Key (<code>sk-...</code>).</li>
+<li>Click <strong>Save Variable</strong>.</li>
 </ol>
 </li>
 <li>
@@ -117,7 +117,7 @@ Complete the <strong>Name</strong>, <strong>Cloud provider</strong>, and <strong
 <p>If you used Langflow&#x27;s <strong>Global Variables</strong> feature, the RAG application flow components are already configured with the necessary credentials.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="run-the-vector-store-rag-flow">Run the Vector Store RAG flow<a href="#run-the-vector-store-rag-flow" class="hash-link" aria-label="Direct link to Run the Vector Store RAG flow" title="Direct link to Run the Vector Store RAG flow">​</a></h2>
 <ol>
-<li>Click the <strong>Playground</strong> button. Here you can chat with the AI that uses context from the database you created.</li>
+<li>Click <strong>Playground</strong>. Here you can chat with the AI that uses context from the database you created.</li>
 <li>Type a message and press Enter. (Try something like &quot;What topics do you know about?&quot;)</li>
 <li>The bot will respond with a summary of the data you&#x27;ve embedded.</li>
 </ol></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/memory-chatbot"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Memory chatbot</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/financial-report-parser"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Financial report parser</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#open-langflow-and-start-a-new-project" class="table-of-contents__link toc-highlight">Open Langflow and start a new project</a></li><li><a href="#build-the-vector-rag-flow" class="table-of-contents__link toc-highlight">Build the vector RAG flow</a></li><li><a href="#run-the-vector-store-rag-flow" class="table-of-contents__link toc-highlight">Run the Vector Store RAG flow</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
