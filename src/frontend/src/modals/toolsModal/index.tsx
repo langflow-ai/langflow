@@ -1,10 +1,9 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { APITemplateType } from "@/types/api";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
-import { ForwardedRef, forwardRef, useState } from "react";
+import { ForwardedRef, forwardRef, useEffect, useState } from "react";
 import BaseModal from "../baseModal";
 import ToolsTable from "./components/toolsTable";
 
@@ -47,6 +46,14 @@ const ToolsModal = forwardRef<AgGridReact, ToolsModalProps>(
     };
 
     const [data, setData] = useState<any[]>(cloneDeep(rows));
+
+    useEffect(() => {
+      if (placeholder === "Loading actions...") {
+        handleOnNewValue({
+          value: [],
+        });
+      }
+    }, [placeholder]);
 
     return (
       <BaseModal
