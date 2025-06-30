@@ -281,6 +281,10 @@ const config = {
             to: "/contributing-github-issues",
             from: "/contributing-github-discussions",
           },
+          {
+            to: "/agents",
+            from: "/agents-tool-calling-agent-component",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
