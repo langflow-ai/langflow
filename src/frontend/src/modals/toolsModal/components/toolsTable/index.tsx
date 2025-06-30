@@ -77,7 +77,7 @@ export default function ToolsTable({
   }, [agGrid.current]);
 
   useEffect(() => {
-    if (!open && selectedRows) {
+    if (!open) {
       handleOnNewValue({
         value: data.map((row) => {
           const name = parseString(row.name, [
