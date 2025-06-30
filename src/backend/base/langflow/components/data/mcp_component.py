@@ -212,7 +212,7 @@ class MCPToolsComponent(ComponentWithCache):
             msg = f"Timeout updating tool list: {e!s}"
             logger.exception(msg)
             raise TimeoutError(msg) from e
-        except (ConnectionError, OSError, ValueError) as e:
+        except Exception as e:
             msg = f"Error updating tool list: {e!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
