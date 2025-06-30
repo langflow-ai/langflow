@@ -1,7 +1,6 @@
 import asyncio
 import json
 import time
-import traceback
 import uuid
 from collections.abc import AsyncIterator
 
@@ -15,10 +14,7 @@ from langflow.api.utils import (
     EventDeliveryType,
     build_graph_from_data,
     build_graph_from_db,
-    format_elapsed_time,
-    format_exception_message,
     get_top_level_vertices,
-    parse_exception,
 )
 from langflow.api.v1.schemas import (
     FlowDataRequest,
@@ -27,12 +23,10 @@ from langflow.api.v1.schemas import (
     VertexBuildResponse,
 )
 from langflow.events.event_manager import EventManager
-from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.graph.utils import log_vertex_build
 from langflow.schema.message import ErrorMessage
-from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
@@ -285,159 +279,6 @@ async def generate_flow_events(
             logger.exception("Error sorting vertices")
             return graph.sort_vertices()
 
-    async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
-        flow_id_str = str(flow_id)
-        next_runnable_vertices = []
-        top_level_vertices = []
-        start_time = time.perf_counter()
-        error_message = None
-        try:
-            vertex = graph.get_vertex(vertex_id)
-            try:
-                lock = chat_service.async_cache_locks[flow_id_str]
-                vertex_build_result = await graph.build_vertex(
-                    vertex_id=vertex_id,
-                    user_id=str(current_user.id),
-                    inputs_dict=inputs.model_dump() if inputs else {},
-                    files=files,
-                    get_cache=chat_service.get_cache,
-                    set_cache=chat_service.set_cache,
-                    event_manager=event_manager,
-                )
-                result_dict = vertex_build_result.result_dict
-                params = vertex_build_result.params
-                valid = vertex_build_result.valid
-                artifacts = vertex_build_result.artifacts
-                next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
-                top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
-
-                result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
-            except Exception as exc:  # noqa: BLE001
-                if isinstance(exc, ComponentBuildError):
-                    params = exc.message
-                    tb = exc.formatted_traceback
-                else:
-                    tb = traceback.format_exc()
-                    logger.exception("Error building Component")
-                    params = format_exception_message(exc)
-                message = {"errorMessage": params, "stackTrace": tb}
-                valid = False
-                error_message = params
-                output_label = vertex.outputs[0]["name"] if vertex.outputs else "output"
-                outputs = {output_label: OutputValue(message=message, type="error")}
-                result_data_response = ResultDataResponse(results={}, outputs=outputs)
-                artifacts = {}
-                background_tasks.add_task(graph.end_all_traces_in_context(error=exc))
-
-            result_data_response.message = artifacts
-
-            # Log the vertex build
-            if not vertex.will_stream and log_builds:
-                background_tasks.add_task(
-                    log_vertex_build,
-                    flow_id=flow_id_str,
-                    vertex_id=vertex_id,
-                    valid=valid,
-                    params=params,
-                    data=result_data_response,
-                    artifacts=artifacts,
-                )
-            else:
-                await chat_service.set_cache(flow_id_str, graph)
-
-            timedelta = time.perf_counter() - start_time
-            duration = format_elapsed_time(timedelta)
-            result_data_response.duration = duration
-            result_data_response.timedelta = timedelta
-            vertex.add_build_time(timedelta)
-            inactivated_vertices = list(graph.inactivated_vertices)
-            graph.reset_inactivated_vertices()
-            graph.reset_activated_vertices()
-            # graph.stop_vertex tells us if the user asked
-            # to stop the build of the graph at a certain vertex
-            # if it is in next_vertices_ids, we need to remove other
-            # vertices from next_vertices_ids
-            if graph.stop_vertex and graph.stop_vertex in next_runnable_vertices:
-                next_runnable_vertices = [graph.stop_vertex]
-
-            if not graph.run_manager.vertices_being_run and not next_runnable_vertices:
-                background_tasks.add_task(graph.end_all_traces_in_context())
-
-            build_response = VertexBuildResponse(
-                inactivated_vertices=list(set(inactivated_vertices)),
-                next_vertices_ids=list(set(next_runnable_vertices)),
-                top_level_vertices=list(set(top_level_vertices)),
-                valid=valid,
-                params=params,
-                id=vertex.id,
-                data=result_data_response,
-            )
-            background_tasks.add_task(
-                telemetry_service.log_package_component,
-                ComponentPayload(
-                    component_name=vertex_id.split("-")[0],
-                    component_seconds=int(time.perf_counter() - start_time),
-                    component_success=valid,
-                    component_error_message=error_message,
-                ),
-            )
-        except Exception as exc:
-            background_tasks.add_task(
-                telemetry_service.log_package_component,
-                ComponentPayload(
-                    component_name=vertex_id.split("-")[0],
-                    component_seconds=int(time.perf_counter() - start_time),
-                    component_success=False,
-                    component_error_message=str(exc),
-                ),
-            )
-            logger.exception("Error building Component")
-            message = parse_exception(exc)
-            raise HTTPException(status_code=500, detail=message) from exc
-
-        return build_response
-
-    async def build_vertices(
-        vertex_id: str,
-        graph: Graph,
-        event_manager: EventManager,
-    ) -> None:
-        """Build vertices and handle their events.
-
-        Args:
-            vertex_id: The ID of the vertex to build
-            graph: The graph instance
-            event_manager: Manager for handling events
-        """
-        try:
-            vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
-        except asyncio.CancelledError as exc:
-            logger.error(f"Build cancelled: {exc}")
-            raise
-
-        # send built event or error event
-        try:
-            vertex_build_response_json = vertex_build_response.model_dump_json()
-            build_data = json.loads(vertex_build_response_json)
-        except Exception as exc:
-            msg = f"Error serializing vertex build response: {exc}"
-            raise ValueError(msg) from exc
-
-        event_manager.on_end_vertex(data={"build_data": build_data})
-
-        if vertex_build_response.valid and vertex_build_response.next_vertices_ids:
-            tasks = []
-            for next_vertex_id in vertex_build_response.next_vertices_ids:
-                task = asyncio.create_task(
-                    build_vertices(
-                        next_vertex_id,
-                        graph,
-                        event_manager,
-                    )
-                )
-                tasks.append(task)
-            await asyncio.gather(*tasks)
-
     try:
         ids, vertices_to_run, graph = await build_graph_and_get_order()
     except Exception as e:
@@ -535,9 +376,12 @@ async def generate_flow_events(
                                 data=result_data_response,
                                 artifacts=step_result.artifacts,
                             )
-                        except Exception:
+                        except (ValueError, TypeError) as exc:
                             # Don't fail the whole process if logging fails
-                            pass
+                            logger.warning(f"Failed to log vertex build for {vertex.id}: {exc}")
+                        except Exception as exc:  # noqa: BLE001
+                            # Don't fail the whole process if logging fails
+                            logger.warning(f"Unexpected error logging vertex build for {vertex.id}: {exc}")
                     else:
                         await chat_service.set_cache(flow_id_str, graph)
 
@@ -573,7 +417,7 @@ async def generate_flow_events(
         raise
     except Exception as e:
         logger.error(f"Error building vertices: {e}")
-        some_vertex_id = list(graph.vertices.keys())[0]
+        some_vertex_id = next(iter(graph.vertices.keys()))
         custom_component = graph.get_vertex(some_vertex_id).custom_component
         trace_name = getattr(custom_component, "trace_name", None)
         error_message = ErrorMessage(
