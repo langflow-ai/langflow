@@ -85,11 +85,11 @@ class LanguageModelComponent(LCModelComponent):
             if not self.api_key:
                 msg = "OpenAI API key is required when using OpenAI provider"
                 raise ValueError(msg)
-            
+
             if model_name.startswith("o1"):
                 # o1 models do not support temperature (yet)
                 temperature = None
-            
+
             return ChatOpenAI(
                 model_name=model_name,
                 temperature=temperature,
