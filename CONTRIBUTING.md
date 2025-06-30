@@ -11,24 +11,25 @@ Install Langflow from source by forking the repository, and then set up your dev
 
 ### Prerequisites
 
-* [uv(>=0.4)](https://docs.astral.sh/uv/getting-started/installation/)
+* [uv](https://docs.astral.sh/uv/getting-started/installation/) version 0.4 or later
 * [Node.js](https://nodejs.org/en/download/package-manager)
 * [Make](https://www.gnu.org/software/make/#documentation)
 
 ### Clone the Langflow repository
 
-1. Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow), and then click **Fork**.
+1. Fork the [Langflow GitHub repository](https://github.com/langflow-ai/langflow).
 
 2. Add the new remote to your local repository on your local machine:
-Replace `YOUR_FORK_NAME` with a name for your fork.
-Replace `YOUR_GIT_USERNAME` with your Git username.
 ```bash
-git remote add YOUR_FORK_NAME https://github.com/YOUR_GIT_USERNAME/langflow.git
+git remote add FORK_NAME https://github.com/GIT_USERNAME/langflow.git
 ```
+Replace the following:
+* `FORK_NAME`: A name for your fork of the repository
+* `GIT_USERNAME`: Your Git username
 
 ### Set up your Langflow development environment
 
-1. Change your directory to the root of the local Langflow repository:
+1. Change to the root of your local Langflow repository:
 ```bash
 cd langflow
 ```
@@ -38,7 +39,7 @@ cd langflow
 make init
 ```
 
-This command sets up the development environment by:
+This command sets up the development environment by doing the following:
 - Checking for uv and npm.
 - Installing backend and frontend dependencies.
 - Installing pre-commit hooks.
@@ -57,20 +58,16 @@ make frontend
 
 The `make backend` and `make frontend` commands automatically install dependencies, so you don't need to run install commands separately.
 
-If you're not developing, but want to run Langflow from source, run:
+If you're not developing, but want to run Langflow from source, run `make run_cli`.
 
-```bash
-make run_cli
-```
-
-This command:
+This command does the following:
 - Installs frontend and backend dependencies
 - Builds the frontend static files
 - Starts the application with default settings
 
 After running `make init` once to set up your environment, you can use `make run_cli` for subsequent runs. The `make run_cli` command allows you to configure the application such as logging level, host, port, and environment variables.
 
-For example, this command starts Langflow with custom settings for the logging level, host binding, and port number, and specifies a custom `.env` file.
+For example, the following command starts Langflow with custom settings for the logging level, host binding, and port number, and specifies a custom `.env` file:
 
 ```bash
 make run_cli log_level=info host=localhost port=8000 env=.env.custom
@@ -86,24 +83,28 @@ The `make run_cli` command accepts the following parameters:
 | `env` | `.env` | Path to the environment file containing configuration variables. |
 | `open_browser` | `true` | Whether to automatically open the browser when starting. Set to `false` to disable. |
 
-4. (Optional) Install pre-commit hooks to help keep your changes clean and well-formatted. `make init` runs this automatically.
+4. Optional: Install pre-commit hooks to help keep your changes clean and well-formatted. `make init` runs this automatically.
 
 ```bash
 uv sync
 uv run pre-commit install
 ```
 
-Note: With pre-commit hooks installed, you'll need to use `uv run git commit` instead of `git commit` directly.
+:::tip
+If you installed pre-commit hooks, you must use `uv run git commit` instead of `git commit` directly.
+:::
 
 5. To test your changes, run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
 To run all tests, including unit tests, integration tests, and coverage, run `make tests`.
 
 ### Debug
 
-The repo includes a `.vscode/launch.json` file for debugging the backend in VSCode, which is faster than debugging with Docker Compose. To debug Langflow with the `launch.json` file in VSCode:
+The repo includes a `.vscode/launch.json` file for debugging the backend in VS Code, which is faster than debugging with Docker Compose.
 
-1. Open Langflow in VSCode.
-2. Press **Ctrl+Shift+D** for Windows **or Cmd+Shift+D** for Mac to open the Run and Debug view.
+To debug Langflow with the `launch.json` file in VS Code, do the following:
+
+1. Open Langflow in VS Code.
+2. Press <kbd>Ctrl+Shift+D</kbd> (or <kbd>Cmd+Shift+D</kbd> on macOS) to open the **Run and Debug** view.
 3. From the **Run and Debug** dropdown, choose a debugging configuration.
 4. Click the green **Play** button or press F5 to start debugging.
 
@@ -119,12 +120,12 @@ The documentation is built using [Docusaurus](https://docusaurus.io/) and writte
 
 ### Clone the Langflow repository
 
-1. Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow), and then click **Fork**.
+1. Fork the [Langflow GitHub repository](https://github.com/langflow-ai/langflow).
 
 2. Add the new remote to your local repository on your local machine:
 
 ```bash
-git remote add fork https://github.com/<your_git_username>/langflow.git
+git remote add fork https://github.com/GIT_USERNAME/langflow.git
 ```
 
 3. To run the documentation locally, run the following commands:
