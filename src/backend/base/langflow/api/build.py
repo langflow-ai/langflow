@@ -299,51 +299,44 @@ async def generate_flow_events(
         # Prepare the graph for execution - this was missing and caused "Graph not prepared" error
         graph.prepare(stop_component_id, start_component_id)
 
-        # Set up inputs for graph.async_start properly - it expects a list of dicts
-        # where each dict maps vertex IDs to their input values
-        graph_inputs = []
-        if inputs:
-            inputs_dict = inputs.model_dump()
-
-            # Only add non-empty inputs
-            if inputs_dict:
-                graph_inputs.append(inputs_dict)
-
-        # Use astep in a loop instead of async_start to have more control over the process
-        # This ensures we maintain the exact same build logic as the original implementation
+        # Use async_start to process the graph and emit events for each vertex completion
+        # This is cleaner than manually managing the astep loop
         async def build_with_astep():
             flow_id_str = str(flow_id)
-            while True:
-                try:
-                    # Capture the run_queue state before astep to see what gets added
-                    queue_before = list(graph._run_queue)
 
-                    # Call astep with proper parameters to match original _build_vertex behavior
-                    step_result = await graph.astep(
-                        inputs=inputs,
-                        files=files,
-                        user_id=str(current_user.id),
-                        event_manager=event_manager,
-                    )
+            # Set session_id on components that have it
+            # I don't know why this is needed, but it is
+            if inputs and inputs.session:
+                for vertex in graph.vertices:
+                    if hasattr(vertex, "has_session_id") and vertex.has_session_id:
+                        vertex.update_raw_params({"session_id": inputs.session}, overwrite=True)
 
+            # Track start time for component execution timing
+            step_start_time = time.perf_counter()
+
+            try:
+                # Use async_start with empty inputs since we've already set the values on vertices
+                async for step_result in graph.async_start(
+                    inputs=[inputs.model_dump()],
+                    event_manager=event_manager,
+                    files=files,
+                    user_id=str(current_user.id),
+                ):
+                    # Skip if this is the Finish result
                     if isinstance(step_result, Finish):
                         break
 
-                    # Capture what was added to the run_queue by astep
-                    queue_after = list(graph._run_queue)
-                    # The difference gives us the next_runnable_vertices that were actually added
-                    next_runnable_vertices = [v for v in queue_after if v not in queue_before]
-
-                    # Get the vertex and other info from step_result
+                    # Get the vertex and build information from step_result
                     vertex = step_result.vertex
 
-                    # Get top level vertices and inactivated vertices from graph state
-                    # (astep already reset these, so we need to get them before the reset happened)
-                    # We can approximate this from the next_runnable_vertices
+                    # For async_start, we need to get the next_runnable_vertices differently
+                    # since we don't have direct access to the queue changes.
+                    # We can get them from the current graph state after the step
+                    next_runnable_vertices = list(graph._run_queue)
                     top_level_vertices = (
                         graph.get_top_level_vertices(next_runnable_vertices) if next_runnable_vertices else []
                     )
-                    inactivated_vertices = []  # astep already reset these, so they're gone
+                    inactivated_vertices = []  # async_start already manages these
 
                     # Create the VertexBuildResponse that matches the original format
                     build_response = VertexBuildResponse(
@@ -385,12 +378,17 @@ async def generate_flow_events(
                     else:
                         await chat_service.set_cache(flow_id_str, graph)
 
+                    # Calculate component execution time
+                    # Since async_start doesn't provide timing info directly, we need to track it
+                    # We'll use the current time as an approximation for the step completion time
+                    component_execution_time = int(time.perf_counter() - step_start_time)
+
                     # Log telemetry for the component
                     background_tasks.add_task(
                         telemetry_service.log_package_component,
                         ComponentPayload(
                             component_name=vertex.id.split("-")[0],
-                            component_seconds=0,  # astep doesn't provide timing info
+                            component_seconds=component_execution_time,
                             component_success=step_result.valid,
                             component_error_message=None,
                         ),
@@ -403,11 +401,15 @@ async def generate_flow_events(
                     # in the VertexBuildResponse, which indicates which vertices will be built next.
                     event_manager.on_end_vertex(data={"build_data": build_data})
 
-                except StopAsyncIteration:
-                    break
-                except Exception as e:
-                    logger.error(f"Error in astep: {e}")
-                    raise
+                    # Reset timer for next step
+                    step_start_time = time.perf_counter()
+
+            except StopAsyncIteration:
+                # Normal completion of async generator
+                pass
+            except Exception as e:
+                logger.error(f"Error in async_start: {e}")
+                raise
 
         # Execute the build process
         await build_with_astep()
@@ -417,7 +419,7 @@ async def generate_flow_events(
         raise
     except Exception as e:
         logger.error(f"Error building vertices: {e}")
-        some_vertex_id = next(iter(graph.vertices.keys()))
+        some_vertex_id = next(iter(graph.vertex_map.keys()))
         custom_component = graph.get_vertex(some_vertex_id).custom_component
         trace_name = getattr(custom_component, "trace_name", None)
         error_message = ErrorMessage(
