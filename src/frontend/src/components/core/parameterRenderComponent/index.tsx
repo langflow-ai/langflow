@@ -294,8 +294,5 @@ export function ParameterRenderComponent({
     }
   };
 
-  return useMemo(
-    () => renderComponent(),
-    [templateData, disabled, nodeId, editNode, nodeClass, name, templateValue],
-  );
+  return renderComponent();
 }

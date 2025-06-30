@@ -373,8 +373,6 @@ export default function Dropdown({
     </div>
   );
 
-  console.log(filteredMetadata);
-
   const renderOptionsList = () => (
     <CommandList className="max-h-[300px] overflow-y-auto">
       <CommandGroup defaultChecked={false} className="p-0">
@@ -509,6 +507,7 @@ export default function Dropdown({
             <Button
               className="w-full"
               unstyled
+              data-testid={`refresh-dropdown-list-${name}`}
               onClick={() => {
                 handleRefreshButtonPress();
               }}
@@ -556,6 +555,7 @@ export default function Dropdown({
               <Button
                 className="w-full"
                 unstyled
+                data-testid={`refresh-dropdown-list-${name}`}
                 onClick={() => {
                   handleRefreshButtonPress();
                 }}
