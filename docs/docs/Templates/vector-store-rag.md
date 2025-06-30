@@ -85,6 +85,6 @@ If you used Langflow's **Global Variables** feature, the RAG application flow co
 
 ## Run the Vector Store RAG flow
 
-1. Click the **Playground** button. Here you can chat with the AI that uses context from the database you created.
+1. Click **Playground**. Here you can chat with the AI that uses context from the database you created.
 2. Type a message and press Enter. (Try something like "What topics do you know about?")
 3. The bot will respond with a summary of the data you've embedded.
