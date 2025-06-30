@@ -7,7 +7,7 @@ from langchain_openai import ChatOpenAI
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
 from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
+from langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import BoolInput
@@ -35,8 +35,8 @@ class LanguageModelComponent(LCModelComponent):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            options=OPENAI_MODEL_NAMES,
-            value=OPENAI_MODEL_NAMES[0],
+            options=OPENAI_CHAT_MODEL_NAMES,
+            value=OPENAI_CHAT_MODEL_NAMES[0],
             info="Select the model to use",
         ),
         SecretStrInput(
@@ -117,8 +117,8 @@ class LanguageModelComponent(LCModelComponent):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "provider":
             if field_value == "OpenAI":
-                build_config["model_name"]["options"] = OPENAI_MODEL_NAMES
-                build_config["model_name"]["value"] = OPENAI_MODEL_NAMES[0]
+                build_config["model_name"]["options"] = OPENAI_CHAT_MODEL_NAMES
+                build_config["model_name"]["value"] = OPENAI_CHAT_MODEL_NAMES[0]
                 build_config["api_key"]["display_name"] = "OpenAI API Key"
             elif field_value == "Anthropic":
                 build_config["model_name"]["options"] = ANTHROPIC_MODELS

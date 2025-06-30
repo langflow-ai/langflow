@@ -6,7 +6,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
 from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
-from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
+from langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES
 from langflow.components.models.language_model import LanguageModelComponent
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -66,8 +66,8 @@ class TestLanguageModelComponent(ComponentTestBaseWithoutClient):
             "api_key": {"display_name": "API Key"},
         }
         updated_config = component.update_build_config(build_config, "OpenAI", "provider")
-        assert updated_config["model_name"]["options"] == OPENAI_MODEL_NAMES
-        assert updated_config["model_name"]["value"] == OPENAI_MODEL_NAMES[0]
+        assert updated_config["model_name"]["options"] == OPENAI_CHAT_MODEL_NAMES
+        assert updated_config["model_name"]["value"] == OPENAI_CHAT_MODEL_NAMES[0]
         assert updated_config["api_key"]["display_name"] == "OpenAI API Key"
 
     async def test_update_build_config_anthropic(self, component_class, default_kwargs):

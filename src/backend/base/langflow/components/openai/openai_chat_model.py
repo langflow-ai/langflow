@@ -5,7 +5,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import (
-    OPENAI_MODEL_NAMES,
+    OPENAI_CHAT_MODEL_NAMES,
     OPENAI_REASONING_MODEL_NAMES,
 )
 from langflow.field_typing import LanguageModel
@@ -45,8 +45,8 @@ class OpenAIModelComponent(LCModelComponent):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=OPENAI_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,
-            value=OPENAI_MODEL_NAMES[1],
+            options=OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,
+            value=OPENAI_CHAT_MODEL_NAMES[0],
             combobox=True,
             real_time_refresh=True,
         ),
@@ -97,6 +97,7 @@ class OpenAIModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        logger.debug(f"Executing request with model: {self.model_name}")
         parameters = {
             "api_key": SecretStr(self.api_key).get_secret_value() if self.api_key else None,
             "model_name": self.model_name,
@@ -107,10 +108,14 @@ class OpenAIModelComponent(LCModelComponent):
             "timeout": self.timeout,
         }
 
-        logger.info(f"Model name: {self.model_name}")
+        # TODO: Revisit if/once parameters are supported for reasoning models
+        unsupported_params_for_reasoning_models = ["temperature", "seed"]
+
         if self.model_name not in OPENAI_REASONING_MODEL_NAMES:
             parameters["temperature"] = self.temperature if self.temperature is not None else 0.1
             parameters["seed"] = self.seed
+        else:
+            logger.debug(f"{self.model_name} is a reasoning model, {', '.join(unsupported_params_for_reasoning_models)} are not configurable. Ignoring.")
 
         output = ChatOpenAI(**parameters)
         if self.json_mode:
@@ -141,7 +146,11 @@ class OpenAIModelComponent(LCModelComponent):
         if field_name in {"base_url", "model_name", "api_key"} and field_value in OPENAI_REASONING_MODEL_NAMES:
             build_config["temperature"]["show"] = False
             build_config["seed"]["show"] = False
-        if field_name in {"base_url", "model_name", "api_key"} and field_value in OPENAI_MODEL_NAMES:
+            # Hide system_message for o1 models - currently unsupported
+            if field_value.startswith("o1"):
+                build_config["system_message"]["show"] = False
+        if field_name in {"base_url", "model_name", "api_key"} and field_value in OPENAI_CHAT_MODEL_NAMES:
             build_config["temperature"]["show"] = True
             build_config["seed"]["show"] = True
+            build_config["system_message"]["show"] = True
         return build_config
