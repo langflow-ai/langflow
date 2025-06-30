@@ -13,6 +13,7 @@ import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { AzureIcon } from "@/icons/Azure";
 import { BingIcon } from "@/icons/Bing";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
+import { BrightDataIcon } from "@/icons/BrightData";
 import { BWPythonIcon } from "@/icons/BW python";
 import { CassandraIcon } from "@/icons/Cassandra";
 import { ChromaIcon } from "@/icons/ChromaIcon";
@@ -131,6 +132,7 @@ export const eagerIconsMapping = {
   AWSInverted: AWSInvertedIcon,
   Azure: AzureIcon,
   Bing: BingIcon,
+  BrightData: BrightDataIcon,
   BotMessageSquare: BotMessageSquareIcon,
   BWPython: BWPythonIcon,
   Cassandra: CassandraIcon,

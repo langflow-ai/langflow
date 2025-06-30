@@ -1,4 +1,5 @@
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
+import { BrightDataIcon } from "@/icons/BrightData";
 import { GradientSave } from "@/icons/GradientSparkles";
 import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
@@ -142,6 +143,9 @@ export const nodeColorsName: { [char: string]: string } = {
   chains: "orange",
   list: "lime",
   agents: "purple",
+  BrightDataStructuredDataEnhancedComponent: "BrightData",
+  BrightDataSearchEngineComponent: "BrightData",
+  BrightDataWebScraperComponent: "BrightData",
   tools: "cyan",
   memories: "amber",
   saved_components: "lime",
@@ -238,6 +242,15 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "AI/ML", name: "aiml", icon: "AI/ML" },
   { display_name: "Anthropic", name: "anthropic", icon: "Anthropic" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
+  { display_name: "Bright Data", name: "brightdata", icon: "BrightData" },
+  { display_name: "Gmail", name: "gmail", icon: "Gmail" },
+  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
+  { display_name: "GitHub", name: "github", icon: "Github" },
+  {
+    display_name: "Googlecalendar",
+    name: "googlecalendar",
+    icon: "Googlecalendar",
+  },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
@@ -466,6 +479,7 @@ export const eagerLoadedIconsMap = {
   // Custom icons
   GradientSave: GradientSave,
   BotMessageSquareIcon: BotMessageSquareIcon,
+  BrightData: BrightDataIcon,
 
   // React icon
   FaApple: FaApple,
