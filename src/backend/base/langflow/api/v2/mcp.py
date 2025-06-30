@@ -153,7 +153,13 @@ async def get_servers(
             if hasattr(e, "exceptions") and e.exceptions:
                 # Extract the first underlying exception for a more meaningful error message
                 underlying_error = e.exceptions[0]
-                logger.exception(f"Error checking server {server_name}: {underlying_error}")
+                if hasattr(underlying_error, "exceptions"):
+                    logger.error(
+                        f"Error checking server {server_name}: {underlying_error}, {underlying_error.exceptions}"
+                    )
+                    underlying_error = underlying_error.exceptions[0]
+                else:
+                    logger.exception(f"Error checking server {server_name}: {underlying_error}")
                 server_info["error"] = f"Error loading server: {underlying_error}"
             else:
                 logger.exception(f"Error checking server {server_name}: {e}")
