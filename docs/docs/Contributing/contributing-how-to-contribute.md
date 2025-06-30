@@ -14,7 +14,7 @@ Install Langflow from source by forking the repository, and then set up your dev
 
 ### Prerequisites
 
-* [uv(>=0.4)](https://docs.astral.sh/uv/getting-started/installation/)
+* [uv](https://docs.astral.sh/uv/getting-started/installation/) version 0.4 or later
 * [Node.js](https://nodejs.org/en/download/package-manager)
 * [Make](https://www.gnu.org/software/make/#documentation)
 
@@ -46,8 +46,6 @@ This command sets up the development environment by:
 - Installing backend and frontend dependencies.
 - Installing pre-commit hooks.
 
-There are two different workflows depending on whether you're a developer or just running Langflow from source.
-
 Developers typically run the backend and frontend separately for development:
 
 ```bash
@@ -60,6 +58,20 @@ make frontend
 
 The `make backend` and `make frontend` commands automatically install dependencies, so you don't need to run install commands separately.
 
+4. (Optional) Install pre-commit hooks to help keep your changes clean and well-formatted. `make init` runs this automatically.
+
+```bash
+uv sync
+uv run pre-commit install
+```
+
+Note: With pre-commit hooks installed, you'll need to use `uv run git commit` instead of `git commit` directly.
+
+5. To test your changes, run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
+To run all tests, including unit tests, integration tests, and coverage, run `make tests`.
+
+### Run Langflow from source
+
 If you're not developing, but want to run Langflow from source, run:
 
 ```bash
@@ -71,7 +83,7 @@ This command:
 - Builds the frontend static files
 - Starts the application with default settings
 
-After running `make init` once to set up your environment, you can use `make run_cli` for subsequent runs. The `make run_cli` command allows you to configure the application such as logging level, host, port, and environment variables.
+The `make run_cli` command allows you to configure the application such as logging level, host, port, and environment variables.
 
 For example, this command starts Langflow with custom settings for the logging level, host binding, and port number, and specifies a custom `.env` file.
 
@@ -88,18 +100,6 @@ The `make run_cli` command accepts the following parameters:
 | `port` | `7860` | The port number to run the server on. |
 | `env` | `.env` | Path to the environment file containing configuration variables. |
 | `open_browser` | `true` | Whether to automatically open the browser when starting. Set to `false` to disable. |
-
-4. (Optional) Install pre-commit hooks to help keep your changes clean and well-formatted. `make init` runs this automatically.
-
-```bash
-uv sync
-uv run pre-commit install
-```
-
-Note: With pre-commit hooks installed, you'll need to use `uv run git commit` instead of `git commit` directly.
-
-5. To test your changes, run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
-To run all tests, including unit tests, integration tests, and coverage, run `make tests`.
 
 ### Debug
 
