@@ -50,7 +50,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       const folderExists = folders.find((folder) => folder.id === folderId);
       if (!folderExists) {
         // Folder doesn't exist for this user, redirect to /all
-        console.log("Invalid folderId, redirecting to /all");
+        console.error("Invalid folderId, redirecting to /all");
         navigate("/all");
       }
     }
