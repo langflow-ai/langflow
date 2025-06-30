@@ -5,7 +5,6 @@
   "private": false,
   "scripts": {
     "clear-docs": "rimraf ./docs/",
-    "pull": "yarn clear-docs && yarn dlx @sillsdev/docu-notion -n $NOTION_TOKEN -r $NOTION_DOCS_ROOT_PAGE_ID",
     "start": "docusaurus start",
     "build": "docusaurus build",
     "deploy": "docusaurus deploy",
@@ -39,7 +38,6 @@
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.8.1",
     "@tsconfig/docusaurus": "^2.0.3",
-    "cross-var": "^1.1.0",
     "typescript": "^5.2.2"
   },
   "browserslist": {

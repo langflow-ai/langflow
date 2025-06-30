@@ -17,12 +17,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
 
-    await page.waitForSelector('[data-testid="languagemodelsOpenAI"]', {
+    await page.waitForSelector('[data-testid="openaiOpenAI"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("languagemodelsOpenAI")
+      .getByTestId("openaiOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();

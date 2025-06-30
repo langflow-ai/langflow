@@ -2765,7 +2765,7 @@
                 "info": "The API Endpoint for the Astra DB instance. Supercedes database selection.",
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_endpoint",
                 "placeholder": "",
                 "required": false,
@@ -2774,7 +2774,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_API_ENDPOINT"
               },
               "astradb_vectorstore_kwargs": {
                 "_input_type": "NestedDictInput",
@@ -3526,7 +3526,7 @@
                 "info": "The API Endpoint for the Astra DB instance. Supercedes database selection.",
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_endpoint",
                 "placeholder": "",
                 "required": false,
@@ -3535,7 +3535,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_API_ENDPOINT"
               },
               "astradb_vectorstore_kwargs": {
                 "_input_type": "NestedDictInput",
