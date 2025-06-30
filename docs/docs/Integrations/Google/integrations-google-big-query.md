@@ -35,7 +35,7 @@ Now that you have a service account and a JSON private key, you need to configur
 With your service account configured and your credentials JSON file created, follow these steps to authenticate the Langflow application.
 
 1. Create a new project in Langflow.
-2. From the components sidebar, drag and drop the BigQuery component to your workspace.
+2. From the **Components** menu, drag and drop the BigQuery component to your workspace.
 3. In the BigQuery component's **Upload Service Account JSON** field, click **Select file**.
 4. In the **My Files** pane, select **Click or drag files here**.
 Your file browser opens.

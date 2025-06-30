@@ -216,7 +216,7 @@ Inputs and outputs define how data flows through the component, how it appears i
 
 ### Inputs
 
-Inputs are defined in a class-level `inputs` list. When Langflow loads the component, it uses this list to render fields and handles in the UI. Users or other components provide values or connections to fill these inputs.
+Inputs are defined in a class-level `inputs` list. When Langflow loads the component, it uses this list to render component fields and [ports](/concepts-components#component-ports) in the UI. Users or other components provide values or connections to fill these inputs.
 
 An input is usually an instance of a class from `langflow.io` (such as `StrInput`, `DataInput`, or `MessageTextInput`). The most common constructor parameters are:
 
