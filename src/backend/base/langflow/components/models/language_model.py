@@ -7,7 +7,7 @@ from langchain_openai import ChatOpenAI
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
 from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES
+from langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import BoolInput
@@ -35,7 +35,7 @@ class LanguageModelComponent(LCModelComponent):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            options=OPENAI_CHAT_MODEL_NAMES,
+            options=OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,
             value=OPENAI_CHAT_MODEL_NAMES[0],
             info="Select the model to use",
         ),
@@ -85,6 +85,11 @@ class LanguageModelComponent(LCModelComponent):
             if not self.api_key:
                 msg = "OpenAI API key is required when using OpenAI provider"
                 raise ValueError(msg)
+            
+            if model_name.startswith("o1"):
+                # o1 models do not support temperature (yet)
+                temperature = None
+            
             return ChatOpenAI(
                 model_name=model_name,
                 temperature=temperature,
@@ -115,9 +120,10 @@ class LanguageModelComponent(LCModelComponent):
         raise ValueError(msg)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+        print(f"field_name: {field_name}, field_value: {field_value}")
         if field_name == "provider":
             if field_value == "OpenAI":
-                build_config["model_name"]["options"] = OPENAI_CHAT_MODEL_NAMES
+                build_config["model_name"]["options"] = OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES
                 build_config["model_name"]["value"] = OPENAI_CHAT_MODEL_NAMES[0]
                 build_config["api_key"]["display_name"] = "OpenAI API Key"
             elif field_value == "Anthropic":
@@ -128,4 +134,9 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["model_name"]["options"] = GOOGLE_GENERATIVE_AI_MODELS
                 build_config["model_name"]["value"] = GOOGLE_GENERATIVE_AI_MODELS[0]
                 build_config["api_key"]["display_name"] = "Google API Key"
+        elif field_name == "model_name" and field_value.startswith("o1") and self.provider == "OpenAI":
+            # Hide system_message for o1 models - currently unsupported
+            build_config["system_message"]["show"] = False
+        elif field_name == "model_name" and not field_value.startswith("o1"):
+            build_config["system_message"]["show"] = True
         return build_config
