@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-hMFmY",
+            "id": "Memory-MKGtC",
             "name": "messages_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "memory",
-            "id": "Prompt-CixsJ",
+            "id": "Prompt-9wc4j",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__Memory-hMFmY{œdataTypeœ:œMemoryœ,œidœ:œMemory-hMFmYœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-CixsJ{œfieldNameœ:œmemoryœ,œidœ:œPrompt-CixsJœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Memory-MKGtC{œdataTypeœ:œMemoryœ,œidœ:œMemory-MKGtCœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-9wc4j{œfieldNameœ:œmemoryœ,œidœ:œPrompt-9wc4jœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Memory-hMFmY",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-hMFmYœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-CixsJ",
-        "targetHandle": "{œfieldNameœ: œmemoryœ, œidœ: œPrompt-CixsJœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "Memory-MKGtC",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-MKGtCœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-9wc4j",
+        "targetHandle": "{œfieldNameœ: œmemoryœ, œidœ: œPrompt-9wc4jœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-CixsJ",
+            "id": "Prompt-9wc4j",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -44,19 +44,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "LanguageModelComponent-vvfAj",
+            "id": "LanguageModelComponent-n8KRg",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-CixsJ{œdataTypeœ:œPromptœ,œidœ:œPrompt-CixsJœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-vvfAj{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-vvfAjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-9wc4j{œdataTypeœ:œPromptœ,œidœ:œPrompt-9wc4jœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-n8KRg{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-n8KRgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-CixsJ",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-CixsJœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-vvfAj",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-vvfAjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-9wc4j",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-9wc4jœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-n8KRg",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-n8KRgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -64,7 +64,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-5t3wq",
+            "id": "ChatInput-xLWhw",
             "name": "message",
             "output_types": [
               "Message"
@@ -72,19 +72,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-vvfAj",
+            "id": "LanguageModelComponent-n8KRg",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-5t3wq{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5t3wqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-vvfAj{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-vvfAjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-xLWhw{œdataTypeœ:œChatInputœ,œidœ:œChatInput-xLWhwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-n8KRg{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-n8KRgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-5t3wq",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5t3wqœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-vvfAj",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-vvfAjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-xLWhw",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-xLWhwœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-n8KRg",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-n8KRgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -92,7 +92,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-vvfAj",
+            "id": "LanguageModelComponent-n8KRg",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -100,7 +100,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-CwxcD",
+            "id": "ChatOutput-2ljRT",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -109,18 +109,18 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__LanguageModelComponent-vvfAj{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-vvfAjœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-CwxcD{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-CwxcDœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-n8KRg{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-n8KRgœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-2ljRT{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-2ljRTœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-vvfAj",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-vvfAjœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-CwxcD",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-CwxcDœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "LanguageModelComponent-n8KRg",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-n8KRgœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-2ljRT",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-2ljRTœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-5t3wq",
+          "id": "ChatInput-xLWhw",
           "node": {
             "base_classes": [
               "Message"
@@ -405,7 +405,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-5t3wq",
+        "id": "ChatInput-xLWhw",
         "measured": {
           "height": 234,
           "width": 320
@@ -426,7 +426,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-CwxcD",
+          "id": "ChatOutput-2ljRT",
           "node": {
             "base_classes": [
               "Message"
@@ -709,7 +709,7 @@
         },
         "dragging": true,
         "height": 234,
-        "id": "ChatOutput-CwxcD",
+        "id": "ChatOutput-2ljRT",
         "measured": {
           "height": 234,
           "width": 320
@@ -728,9 +728,9 @@
       },
       {
         "data": {
-          "id": "note-gqfuY",
+          "id": "note-hLqzd",
           "node": {
-            "description": "# Memory Chatbot\n\nA flexible chatbot implementation featuring advanced conversation memory capabilities. This serves as a foundational tool for building chat experiences with persistent context.\n\n## Core Components\n\n1. **Chat Input**\n   - Accepts user messages\n   - Configures conversation storage\n   - Tracks session identity\n\n2. **Chat Memory**\n   - Stores and retrieves up to 100 previous messages\n   - Maintains conversation context\n   - Tracks separate chat sessions\n   - Preserves sender information and message order\n\n3. **Prompt**\n   - Creates dynamic prompt templates\n   - Integrates memory into conversation flow\n\n4. **OpenAI**\n   - Processes user input with context\n   - Accesses conversation history\n   - Includes options for model configuration and API key setup\n\n5. **Chat Output**\n   - Displays formatted responses\n   - Maintains conversation flow\n   - Syncs with memory storage\n\n## Memory Features\n\n- Stores message history\n- Plans conversation trajectory\n- Differentiates between chat sessions\n- Preserves sender and message metadata\n\n## Quick Start\n\n1. **Initialize** with a clear session ID\n2. **Enter** message in Chat Input\n3. **AI Processes** with context from memory\n4. **Response** appears in Chat Output\n5. Context remains available for follow-ups\n\nThis robust system demonstrates thorough memory integration with minimal complexity. 🧠💬\n",
+            "description": "# Memory Chatbot\n\nThis flow extends the basic prompting flow with a Message history component that stores up to 100 previous chat messages and uses them to provide context for the current conversation.\n\n## Prerequisites\n\n* [OpenAI API Key](https://platform.openai.com/)\n\n## Quickstart\n\n1. In the **Language Model** component, add your OpenAI API Key.\n\n2. Open the **Playground**. Tell the chat your name.\n\n3. Start a new chat session in the Playground, and ask, `what is my name`. The Prompt component will still remember your name, because it's connected to the Message History component.\n\n",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -738,15 +738,15 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 736,
-        "id": "note-gqfuY",
+        "height": 666,
+        "id": "note-hLqzd",
         "measured": {
-          "height": 736,
-          "width": 324
+          "height": 666,
+          "width": 383
         },
         "position": {
-          "x": 1512.8976594415833,
-          "y": 312.9558305744385
+          "x": 1462.894231659186,
+          "y": 345.8660745626851
         },
         "positionAbsolute": {
           "x": 1512.8976594415833,
@@ -759,43 +759,11 @@
           "width": 324
         },
         "type": "noteNode",
-        "width": 324
+        "width": 383
       },
       {
         "data": {
-          "id": "note-9LNqT",
-          "node": {
-            "description": "## Get Your OpenAI API Key\n\n**Steps**:\n\n1. **Visit** [OpenAI's API Key Page](https://platform.openai.com/api-keys).\n\n2. **Log In/Sign Up**:\n   - Log in or create a new OpenAI account.\n\n3. **Generate API Key**:\n   - Click \"Create New Secret Key\" to obtain your key.\n\n4. **Store Your Key Securely**:\n   - Note it down as it will only display once.\n\n5. **Enter API Key**:\n   - Input your key in the OpenAI API Key field within the component setup.\n\nKeep your key safe and manage it responsibly!",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "rose"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 325,
-        "id": "note-9LNqT",
-        "measured": {
-          "height": 325,
-          "width": 325
-        },
-        "position": {
-          "x": 2727.7060397092964,
-          "y": 115.42518754847691
-        },
-        "positionAbsolute": {
-          "x": 2727.7060397092964,
-          "y": 115.42518754847691
-        },
-        "selected": false,
-        "type": "noteNode",
-        "width": 325
-      },
-      {
-        "data": {
-          "id": "Prompt-CixsJ",
+          "id": "Prompt-9wc4j",
           "node": {
             "base_classes": [
               "Message"
@@ -933,7 +901,7 @@
         },
         "dragging": false,
         "height": 347,
-        "id": "Prompt-CixsJ",
+        "id": "Prompt-9wc4j",
         "measured": {
           "height": 347,
           "width": 320
@@ -952,7 +920,7 @@
       },
       {
         "data": {
-          "id": "Memory-hMFmY",
+          "id": "Memory-MKGtC",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -1271,9 +1239,9 @@
           "type": "Memory"
         },
         "dragging": false,
-        "id": "Memory-hMFmY",
+        "id": "Memory-MKGtC",
         "measured": {
-          "height": 217,
+          "height": 218,
           "width": 320
         },
         "position": {
@@ -1285,7 +1253,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-vvfAj",
+          "id": "LanguageModelComponent-n8KRg",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1560,13 +1528,14 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-vvfAj",
+        "id": "LanguageModelComponent-n8KRg",
         "measured": {
-          "height": 532,
+          "height": 534,
           "width": 320
         },
         "position": {
@@ -1578,14 +1547,14 @@
       }
     ],
     "viewport": {
-      "x": -973.6452349689689,
-      "y": -40.91532970722892,
-      "zoom": 0.675028833498803
+      "x": -903.7157907161627,
+      "y": 4.769953886051155,
+      "zoom": 0.6492225868554724
     }
   },
   "description": "Create a chatbot that saves and references previous messages, enabling the model to maintain context throughout the conversation.",
   "endpoint_name": null,
-  "id": "0c265260-8489-4304-bd4e-1a672a8441ab",
+  "id": "abdc8216-e400-48c4-8d11-0f21441b50ea",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Memory Chatbot",
