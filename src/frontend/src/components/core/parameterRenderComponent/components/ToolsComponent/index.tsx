@@ -15,6 +15,7 @@ export default function ToolsComponent({
   id = "",
   handleOnNewValue,
   isAction = false,
+  placeholder,
   button_description,
   title,
   icon,
@@ -133,7 +134,10 @@ export default function ToolsComponent({
             onClick={() => setIsModalOpen(true)}
           >
             <span>
-              {value.length === 0 ? "No actions available" : "Select actions"}
+              {placeholder ||
+                (value.length === 0
+                  ? "No actions available"
+                  : "Select actions")}
             </span>
           </Button>
         )}
