@@ -328,30 +328,17 @@ class MCPStdioClient:
         # Store connection parameters for later use in run_tool
         self._connection_params = server_params
 
-        try:
-            async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
-                await session.initialize()
-                response = await session.list_tools()
-                self._connected = True
-                return response.tools
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            logger.error(f"Failed to connect to MCP stdio server: {e}")
-            self._connection_params = None
-            self._connected = False
-            return []
+        async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
+            await session.initialize()
+            response = await session.list_tools()
+            self._connected = True
+            return response.tools
 
     async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
         """Connect to MCP server using stdio transport (SDK style)."""
-        try:
-            return await asyncio.wait_for(
-                self._connect_to_server(command_str, env), timeout=get_settings_service().settings.mcp_server_timeout
-            )
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            logger.error(f"Failed to connect to MCP stdio server: {e}")
-            self._connection_params = None
-            self._connected = False
-            msg = f"Failed to connect to MCP stdio server: {e}"
-            raise ValueError(msg) from e
+        return await asyncio.wait_for(
+            self._connect_to_server(command_str, env), timeout=get_settings_service().settings.mcp_server_timeout
+        )
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
@@ -469,33 +456,20 @@ class MCPSseClient:
             "sse_read_timeout_seconds": sse_read_timeout_seconds,
         }
 
-        try:
-            async with (
-                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds) as (read, write),
-                ClientSession(read, write) as session,
-            ):
-                await session.initialize()
-                response = await session.list_tools()
-                self._connected = True
-                return response.tools
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            logger.error(f"Failed to connect to MCP SSE server: {e}")
-            self._connection_params = None
-            self._connected = False
-            msg = f"Failed to connect to MCP SSE server: {e}"
-            raise ValueError(msg) from e
+        async with (
+            sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds) as (read, write),
+            ClientSession(read, write) as session,
+        ):
+            await session.initialize()
+            response = await session.list_tools()
+            self._connected = True
+            return response.tools
 
     async def connect_to_server(self, url: str, headers: dict[str, str] | None = None) -> list[StructuredTool]:
         """Connect to MCP server using SSE transport (SDK style)."""
-        try:
-            return await asyncio.wait_for(
-                self._connect_to_server(url, headers), timeout=get_settings_service().settings.mcp_server_timeout
-            )
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            logger.error(f"Failed to connect to MCP SSE server: {e}")
-            self._connection_params = None
-            self._connected = False
-            return []
+        return await asyncio.wait_for(
+            self._connect_to_server(url, headers), timeout=get_settings_service().settings.mcp_server_timeout
+        )
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
@@ -562,78 +536,66 @@ async def update_tools(
     if mcp_sse_client is None:
         mcp_sse_client = MCPSseClient()
 
+    # Fetch server config from backend
+    mode = "Stdio" if "command" in server_config else "SSE" if "url" in server_config else ""
+    command = server_config.get("command", "")
+    url = server_config.get("url", "")
+    tools = []
+    headers = _process_headers(server_config.get("headers", {}))
+
     try:
-        # Fetch server config from backend
-        mode = "Stdio" if "command" in server_config else "SSE" if "url" in server_config else ""
-        command = server_config.get("command", "")
-        url = server_config.get("url", "")
-        tools = []
-        headers = _process_headers(server_config.get("headers", {}))
+        await _validate_connection_params(mode, command, url)
+    except ValueError as e:
+        logger.error(f"Invalid MCP server configuration for '{server_name}': {e}")
+        raise
 
-        try:
-            await _validate_connection_params(mode, command, url)
-        except ValueError as e:
-            logger.error(f"Invalid MCP server configuration for '{server_name}': {e}")
-            return "", [], {}
+    # Determine connection type and parameters
+    client: MCPStdioClient | MCPSseClient | None = None
+    if mode == "Stdio":
+        # Stdio connection
+        args = server_config.get("args", [])
+        env = server_config.get("env", {})
+        full_command = " ".join([command, *args])
+        tools = await mcp_stdio_client.connect_to_server(full_command, env)
+        client = mcp_stdio_client
+    elif mode == "SSE":
+        # SSE connection
+        tools = await mcp_sse_client.connect_to_server(url, headers=headers)
+        client = mcp_sse_client
+    else:
+        logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")
+        return "", [], {}
 
-        # Determine connection type and parameters
-        client: MCPStdioClient | MCPSseClient | None = None
+    if not tools or not client or not client._connected:
+        logger.warning(f"No tools available from MCP server '{server_name}' or connection failed")
+        return "", [], {}
+
+    tool_list = []
+    tool_cache: dict[str, StructuredTool] = {}
+    for tool in tools:
+        if not tool or not hasattr(tool, "name"):
+            continue
         try:
-            if mode == "Stdio":
-                # Stdio connection
-                args = server_config.get("args", [])
-                env = server_config.get("env", {})
-                full_command = " ".join([command, *args])
-                tools = await mcp_stdio_client.connect_to_server(full_command, env)
-                client = mcp_stdio_client
-            elif mode == "SSE":
-                # SSE connection
-                tools = await mcp_sse_client.connect_to_server(url, headers=headers)
-                client = mcp_sse_client
-            else:
-                logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")
-                return "", [], {}
+            args_schema = create_input_schema_from_json_schema(tool.inputSchema)
+            if not args_schema:
+                logger.warning(f"Could not create schema for tool '{tool.name}' from server '{server_name}'")
+                continue
+
+            tool_obj = StructuredTool(
+                name=tool.name,
+                description=tool.description or "",
+                args_schema=args_schema,
+                func=create_tool_func(tool.name, args_schema, client),
+                coroutine=create_tool_coroutine(tool.name, args_schema, client),
+                tags=[tool.name],
+                metadata={"server_name": server_name},
+            )
+            tool_list.append(tool_obj)
+            tool_cache[tool.name] = tool_obj
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            logger.error(f"Failed to connect to MCP server '{server_name}': {e}")
-            # return "", [], {}
-            msg = f"Failed to connect to MCP server '{server_name}': {e}"
-            logger.error(msg)
+            logger.error(f"Failed to create tool '{tool.name}' from server '{server_name}': {e}")
+            msg = f"Failed to create tool '{tool.name}' from server '{server_name}': {e}"
             raise ValueError(msg) from e
 
-        if not tools or not client or not client._connected:
-            logger.warning(f"No tools available from MCP server '{server_name}' or connection failed")
-            return "", [], {}
-
-        tool_list = []
-        tool_cache: dict[str, StructuredTool] = {}
-        for tool in tools:
-            if not tool or not hasattr(tool, "name"):
-                continue
-            try:
-                args_schema = create_input_schema_from_json_schema(tool.inputSchema)
-                if not args_schema:
-                    logger.warning(f"Could not create schema for tool '{tool.name}' from server '{server_name}'")
-                    continue
-
-                tool_obj = StructuredTool(
-                    name=tool.name,
-                    description=tool.description or "",
-                    args_schema=args_schema,
-                    func=create_tool_func(tool.name, args_schema, client),
-                    coroutine=create_tool_coroutine(tool.name, args_schema, client),
-                    tags=[tool.name],
-                    metadata={"server_name": server_name},
-                )
-                tool_list.append(tool_obj)
-                tool_cache[tool.name] = tool_obj
-            except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-                logger.error(f"Failed to create tool '{tool.name}' from server '{server_name}': {e}")
-                msg = f"Failed to create tool '{tool.name}' from server '{server_name}': {e}"
-                raise ValueError(msg) from e
-
-        logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
-    except (ConnectionError, TimeoutError, OSError, ValueError, AttributeError, AssertionError) as e:
-        logger.error(f"Unexpected error while updating tools for MCP server '{server_name}': {e}")
-        return "", [], {}
-    else:
-        return mode, tool_list, tool_cache
+    logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
+    return mode, tool_list, tool_cache
