@@ -248,6 +248,8 @@ async def generate_flow_events(
                 playground_success=success,
                 playground_error_message=str(error_message) if error_message else "",
             ),
+            current_user.id if current_user else None,
+            None,  # session is not available in background task
         )
 
     async def create_graph(fresh_session, flow_id_str: str, flow_name: str | None) -> Graph:
@@ -379,6 +381,8 @@ async def generate_flow_events(
                     component_success=valid,
                     component_error_message=error_message,
                 ),
+                current_user.id if current_user else None,
+                None,  # session is not available in background task
             )
         except Exception as exc:
             background_tasks.add_task(
@@ -389,6 +393,8 @@ async def generate_flow_events(
                     component_success=False,
                     component_error_message=str(exc),
                 ),
+                current_user.id if current_user else None,
+                None,  # session is not available in background task
             )
             logger.exception("Error building Component")
             message = parse_exception(exc)

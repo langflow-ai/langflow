@@ -1,12 +1,13 @@
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.exc import NoResultFound
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.services.database.models.variable.model import VariableCreate, VariableRead, VariableUpdate
+from langflow.services.database.models.variable import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
-from langflow.services.variable.constants import CREDENTIAL_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE, VALID_CATEGORIES
 from langflow.services.variable.service import DatabaseVariableService
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
@@ -39,6 +40,7 @@ async def create_variable(
             value=variable.value,
             default_fields=variable.default_fields or [],
             type_=variable.type or CREDENTIAL_TYPE,
+            category=variable.category,
             session=session,
         )
     except Exception as e:
@@ -60,6 +62,29 @@ async def read_variables(
         raise TypeError(msg)
     try:
         return await variable_service.get_all(user_id=current_user.id, session=session)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/category/{category}", response_model=list[VariableRead], status_code=200)
+async def read_variables_by_category(
+    *,
+    session: DbSession,
+    category: str,
+    current_user: CurrentActiveUser,
+):
+    """Read all variables for a specific category."""
+    variable_service = get_variable_service()
+    if not isinstance(variable_service, DatabaseVariableService):
+        msg = "Variable service is not an instance of DatabaseVariableService"
+        raise TypeError(msg)
+
+    # Validate category
+    if category not in VALID_CATEGORIES:
+        raise HTTPException(status_code=400, detail=f"Invalid category. Must be one of: {', '.join(VALID_CATEGORIES)}")
+
+    try:
+        return await variable_service.get_by_category(user_id=current_user.id, category=category, session=session)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

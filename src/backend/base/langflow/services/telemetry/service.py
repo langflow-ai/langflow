@@ -21,7 +21,10 @@ from langflow.services.telemetry.schema import (
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from pydantic import BaseModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.user.model import User
     from langflow.services.settings.service import SettingsService
@@ -48,27 +51,79 @@ class TelemetryService(Service):
         )
         self.log_package_version_task: asyncio.Task | None = None
 
-    def is_telemetry_enabled(self, user: "User | None" = None) -> bool:
+    async def is_telemetry_enabled(self, user_id: "UUID | None" = None, session: "AsyncSession | None" = None) -> bool:
         """Check if telemetry is enabled based on global settings and user preferences."""
         # Global do-not-track setting takes precedence
         if self.do_not_track:
             return False
         
         # If no user provided, default to enabled (for system-level telemetry)
-        if user is None:
+        if user_id is None:
             return True
             
-        # Check user's telemetry preference
-        user_optins = user.optins or {}
-        return user_optins.get("enable_telemetry", True)
+        # Check user's telemetry preference using the variable system
+        if session is None:
+            # If no session is provided, we can't check user preferences, default to enabled
+            return True
+            
+        try:
+            from langflow.services.deps import get_variable_service
+            
+            variable_service = get_variable_service()
+            # Try to get the telemetry setting from user variables
+            telemetry_enabled = await variable_service.get_variable(
+                user_id=user_id,
+                name="enable_telemetry",
+                field="value",
+                session=session
+            )
+            return telemetry_enabled.lower() == "true"
+        except ValueError:
+            # Variable not found, default to enabled for backward compatibility
+            return True
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Error checking telemetry setting for user {user_id}: {e}")
+            # On any error, default to enabled
+            return True
+
+    async def save_telemetry_preference(self, user_id: "UUID", enabled: bool, session: "AsyncSession") -> None:
+        """Save user's telemetry preference as a variable in the Settings category."""
+        try:
+            from langflow.services.deps import get_variable_service
+            from langflow.services.variable.constants import CATEGORY_SETTINGS, GENERIC_TYPE
+            
+            variable_service = get_variable_service()
+            
+            # Try to update existing variable, or create if it doesn't exist
+            try:
+                await variable_service.update_variable(
+                    user_id=user_id,
+                    name="enable_telemetry",
+                    value="true" if enabled else "false",
+                    session=session,
+                    category=CATEGORY_SETTINGS
+                )
+            except ValueError:
+                # Variable doesn't exist, create it
+                await variable_service.create_variable(
+                    user_id=user_id,
+                    name="enable_telemetry",
+                    value="true" if enabled else "false",
+                    default_fields=[],
+                    type_=GENERIC_TYPE,
+                    category=CATEGORY_SETTINGS,
+                    session=session,
+                )
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error saving telemetry preference for user {user_id}: {e}")
 
     async def telemetry_worker(self) -> None:
         while self.running:
             event = await self.telemetry_queue.get()
             try:
-                if len(event) == 4:  # (func, payload, path, user)
-                    func, payload, path, user = event
-                    await func(payload, path, user)
+                if len(event) == 4:  # (func, payload, path, user_id, session)
+                    func, payload, path, user_id, session = event
+                    await func(payload, path, user_id, session)
                 elif len(event) == 3:  # (func, payload, path) - backward compatibility
                     func, payload, path = event
                     await func(payload, path)
@@ -80,8 +135,8 @@ class TelemetryService(Service):
             finally:
                 self.telemetry_queue.task_done()
 
-    async def send_telemetry_data(self, payload: BaseModel, path: str | None = None, user: "User | None" = None) -> None:
-        if not self.is_telemetry_enabled(user):
+    async def send_telemetry_data(self, payload: BaseModel, path: str | None = None, user_id: "UUID | None" = None, session: "AsyncSession | None" = None) -> None:
+        if not await self.is_telemetry_enabled(user_id, session):
             logger.debug("Telemetry tracking is disabled.")
             return
 
@@ -102,15 +157,15 @@ class TelemetryService(Service):
         except Exception:  # noqa: BLE001
             logger.error("Unexpected error occurred")
 
-    async def log_package_run(self, payload: RunPayload, user: "User | None" = None) -> None:
-        await self._queue_event((self.send_telemetry_data, payload, "run", user), user)
+    async def log_package_run(self, payload: RunPayload, user_id: "UUID | None" = None, session: "AsyncSession | None" = None) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "run", user_id, session), user_id, session)
 
     async def log_package_shutdown(self) -> None:
         payload = ShutdownPayload(time_running=(datetime.now(timezone.utc) - self._start_time).seconds)
         await self._queue_event(payload)
 
-    async def _queue_event(self, payload, user: "User | None" = None) -> None:
-        if not self.is_telemetry_enabled(user) or self._stopping:
+    async def _queue_event(self, payload, user_id: "UUID | None" = None, session: "AsyncSession | None" = None) -> None:
+        if not await self.is_telemetry_enabled(user_id, session) or self._stopping:
             return
         await self.telemetry_queue.put(payload)
 
@@ -136,11 +191,11 @@ class TelemetryService(Service):
         )
         await self._queue_event((self.send_telemetry_data, payload, None))
 
-    async def log_package_playground(self, payload: PlaygroundPayload, user: "User | None" = None) -> None:
-        await self._queue_event((self.send_telemetry_data, payload, "playground", user), user)
+    async def log_package_playground(self, payload: PlaygroundPayload, user_id: "UUID | None" = None, session: "AsyncSession | None" = None) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "playground", user_id, session), user_id, session)
 
-    async def log_package_component(self, payload: ComponentPayload, user: "User | None" = None) -> None:
-        await self._queue_event((self.send_telemetry_data, payload, "component", user), user)
+    async def log_package_component(self, payload: ComponentPayload, user_id: "UUID | None" = None, session: "AsyncSession | None" = None) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "component", user_id, session), user_id, session)
 
     def start(self) -> None:
         if self.running or self.do_not_track:
@@ -188,3 +243,46 @@ class TelemetryService(Service):
 
     async def teardown(self) -> None:
         await self.stop()
+
+    async def migrate_telemetry_preferences(self, session: "AsyncSession") -> None:
+        """Migrate existing telemetry preferences from user optins to variables system."""
+        try:
+            from sqlmodel import select
+
+            from langflow.services.database.models.user.model import User
+            from langflow.services.deps import get_variable_service
+            from langflow.services.variable.constants import CATEGORY_SETTINGS, GENERIC_TYPE
+            
+            # Get all users with optins
+            stmt = select(User).where(User.optins.is_not(None))
+            users = (await session.exec(stmt)).all()
+            
+            variable_service = get_variable_service()
+            
+            for user in users:
+                if user.optins and "enable_telemetry" in user.optins:
+                    try:
+                        # Check if variable already exists
+                        await variable_service.get_variable(
+                            user_id=user.id,
+                            name="enable_telemetry",
+                            field="value",
+                            session=session
+                        )
+                        logger.debug(f"Telemetry preference already migrated for user {user.id}")
+                    except ValueError:
+                        # Variable doesn't exist, create it
+                        telemetry_enabled = user.optins.get("enable_telemetry", True)
+                        await variable_service.create_variable(
+                            user_id=user.id,
+                            name="enable_telemetry",
+                            value="true" if telemetry_enabled else "false",
+                            default_fields=[],
+                            type_=GENERIC_TYPE,
+                            category=CATEGORY_SETTINGS,
+                            session=session,
+                        )
+                        logger.info(f"Migrated telemetry preference for user {user.id}: {telemetry_enabled}")
+                        
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error migrating telemetry preferences: {e}")

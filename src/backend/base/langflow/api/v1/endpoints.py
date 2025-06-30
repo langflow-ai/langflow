@@ -352,6 +352,8 @@ async def simplified_run_flow(
                 run_success=True,
                 run_error_message="",
             ),
+            api_key_user.id if api_key_user else None,
+            None,  # session is not available in background task
         )
 
     except ValueError as exc:
@@ -363,6 +365,8 @@ async def simplified_run_flow(
                 run_success=False,
                 run_error_message=str(exc),
             ),
+            api_key_user.id if api_key_user else None,
+            None,  # session is not available in background task
         )
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
@@ -381,6 +385,8 @@ async def simplified_run_flow(
                 run_success=False,
                 run_error_message=str(exc),
             ),
+            api_key_user.id if api_key_user else None,
+            None,  # session is not available in background task
         )
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
 
@@ -457,6 +463,8 @@ async def webhook_run_flow(
                 run_success=not error_msg,
                 run_error_message=error_msg,
             ),
+            user.id if user else None,
+            None,  # session is not available in background task
         )
 
     return {"message": "Task started in the background", "status": "in progress"}

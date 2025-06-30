@@ -121,6 +121,8 @@ async def retrieve_vertices_order(
                 playground_component_count=components_count,
                 playground_success=True,
             ),
+            None,  # No user context available in this deprecated endpoint
+            None,  # session is not available in background task
         )
         return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
     except Exception as exc:
@@ -132,6 +134,8 @@ async def retrieve_vertices_order(
                 playground_success=False,
                 playground_error_message=str(exc),
             ),
+            None,  # No user context available in this deprecated endpoint
+            None,  # session is not available in background task
         )
         if "stream or streaming set to True" in str(exc):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -397,6 +401,8 @@ async def build_vertex(
                 component_success=valid,
                 component_error_message=error_message,
             ),
+            current_user.id if current_user else None,
+            None,  # session is not available in background task
         )
     except Exception as exc:
         background_tasks.add_task(
@@ -407,6 +413,8 @@ async def build_vertex(
                 component_success=False,
                 component_error_message=str(exc),
             ),
+            current_user.id if current_user else None,
+            None,  # session is not available in background task
         )
         logger.exception("Error building Component")
         message = parse_exception(exc)

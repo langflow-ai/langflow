@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 from pydantic import ValidationInfo, field_validator
 from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel, func
 
-from langflow.services.variable.constants import CREDENTIAL_TYPE
+from langflow.services.variable.constants import CATEGORY_GLOBAL, CREDENTIAL_TYPE, VALID_CATEGORIES
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
@@ -18,8 +18,19 @@ def utc_now():
 class VariableBase(SQLModel):
     name: str = Field(description="Name of the variable")
     value: str = Field(description="Encrypted value of the variable")
-    default_fields: list[str] | None = Field(sa_column=Column(JSON))
+    default_fields: list[str] | None = Field(default=[], sa_column=Column(JSON))
     type: str | None = Field(None, description="Type of the variable")
+    category: str | None = Field(
+        default=CATEGORY_GLOBAL, description="Category of the variable (global, settings, llm_settings, etc.)"
+    )
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, v: str):
+        if v not in VALID_CATEGORIES:
+            msg = f"Category must be one of: {', '.join(VALID_CATEGORIES)}"
+            raise ValueError(msg)
+        return v
 
 
 class Variable(VariableBase, table=True):  # type: ignore[call-arg]
@@ -47,7 +58,6 @@ class Variable(VariableBase, table=True):  # type: ignore[call-arg]
 
 class VariableCreate(VariableBase):
     created_at: datetime | None = Field(default_factory=utc_now, description="Creation time of the variable")
-
     updated_at: datetime | None = Field(default_factory=utc_now, description="Creation time of the variable")
 
 
@@ -57,6 +67,7 @@ class VariableRead(SQLModel):
     type: str | None = Field(None, description="Type of the variable")
     value: str | None = Field(None, description="Encrypted value of the variable")
     default_fields: list[str] | None = Field(None, description="Default fields for the variable")
+    category: str = Field(default=CATEGORY_GLOBAL, description="Category of the variable")
 
     @field_validator("value")
     @classmethod
@@ -71,3 +82,12 @@ class VariableUpdate(SQLModel):
     name: str | None = Field(None, description="Name of the variable")
     value: str | None = Field(None, description="Encrypted value of the variable")
     default_fields: list[str] | None = Field(None, description="Default fields for the variable")
+    category: str | None = Field(None, description="Category of the variable")
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, v: str | None):
+        if v is not None and v not in VALID_CATEGORIES:
+            msg = f"Category must be one of: {', '.join(VALID_CATEGORIES)}"
+            raise ValueError(msg)
+        return v

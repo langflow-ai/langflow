@@ -237,6 +237,16 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     async with db_service.with_session() as session:
         settings_service = get_service(ServiceType.SETTINGS_SERVICE)
         await setup_superuser(settings_service, session)
+        
+        # Migrate telemetry preferences from optins to variables system
+        try:
+            from langflow.services.deps import get_telemetry_service
+            telemetry_service = get_telemetry_service()
+            await telemetry_service.migrate_telemetry_preferences(session)
+        except Exception as e:
+            # Don't fail initialization if migration fails
+            logger.warning(f"Failed to migrate telemetry preferences: {e}")
+            
     try:
         await get_db_service().assign_orphaned_flows_to_superuser()
     except sqlalchemy_exc.IntegrityError as exc:
