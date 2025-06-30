@@ -1,4 +1,6 @@
+import asyncio
 import re
+import uuid
 from typing import Any
 
 from langflow.api.v2.mcp import get_server
@@ -10,7 +12,7 @@ from langflow.base.mcp.util import (
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs.inputs import InputTypes
-from langflow.io import DropdownInput, McpInput, MessageTextInput, Output  # Import McpInput from langflow.io
+from langflow.io import DropdownInput, McpInput, MessageTextInput, Output
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
@@ -66,6 +68,7 @@ class MCPToolsComponent(ComponentWithCache):
     stdio_client: MCPStdioClient = MCPStdioClient()
     sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
+    _load_actions: bool = False
     _tool_cache: dict = {}
     _last_selected_server: str | None = None  # Cache for the last selected server
     default_keys: list[str] = [
@@ -205,7 +208,11 @@ class MCPToolsComponent(ComponentWithCache):
                     },
                 )
                 return tool_list, {"name": server_name, "config": server_config}
-        except Exception as e:
+        except (TimeoutError, asyncio.TimeoutError) as e:
+            msg = f"Timeout updating tool list: {e!s}"
+            logger.exception(msg)
+            raise TimeoutError(msg) from e
+        except (ConnectionError, OSError, ValueError) as e:
             msg = f"Error updating tool list: {e!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
@@ -219,12 +226,25 @@ class MCPToolsComponent(ComponentWithCache):
                         try:
                             self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
                             build_config["tool"]["options"] = [tool.name for tool in self.tools]
+                            build_config["tool"]["placeholder"] = "Select a tool"
+                        except (TimeoutError, asyncio.TimeoutError) as e:
+                            msg = f"Timeout updating tool list: {e!s}"
+                            logger.exception(msg)
+                            if not build_config["tools_metadata"]["show"]:
+                                build_config["tool"]["show"] = True
+                                build_config["tool"]["options"] = []
+                                build_config["tool"]["value"] = ""
+                                build_config["tool"]["placeholder"] = "Timeout loading MCP server"
+                            else:
+                                build_config["tool"]["show"] = False
                         except ValueError:
-                            build_config["tool"]["options"] = []
-                            build_config["tool"]["value"] = ""
-                            build_config["tool"]["placeholder"] = "Error on MCP Server"
-                            return build_config
-                        build_config["tool"]["placeholder"] = ""
+                            if not build_config["tools_metadata"]["show"]:
+                                build_config["tool"]["show"] = True
+                                build_config["tool"]["options"] = []
+                                build_config["tool"]["value"] = ""
+                                build_config["tool"]["placeholder"] = "Error on MCP Server"
+                            else:
+                                build_config["tool"]["show"] = False
 
                     if field_value == "":
                         return build_config
@@ -262,7 +282,7 @@ class MCPToolsComponent(ComponentWithCache):
                 # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
                 # The check for _last_selected_server handles the initial state where the dropdown is
                 # hidden by default but we are not yet in "Tool Mode".
-                is_in_tool_mode = build_config["tools_metadata"]["value"]
+                is_in_tool_mode = build_config["tools_metadata"]["show"]
                 self._last_selected_server = current_server_name
                 self.tools = []  # Clear previous tools
                 self.remove_non_default_keys(build_config)  # Clear previous tool inputs
@@ -272,53 +292,27 @@ class MCPToolsComponent(ComponentWithCache):
                     build_config["tool"]["show"] = True
                     build_config["tool"]["placeholder"] = "Loading tools..."
                     build_config["tool"]["options"] = []
-                    build_config["tool"]["value"] = ""
+                    build_config["tool"]["value"] = uuid.uuid4()
                 else:
                     # Keep the tool dropdown hidden if in tool_mode
+                    self._load_actions = False
                     build_config["tool"]["show"] = False
 
-                try:
-                    # Fetch tools for the newly selected server
-                    tools, server_info = await self.update_tool_list(field_value)
-                    build_config["mcp_server"]["value"] = server_info
-
-                    if tools:
-                        tool_names = [tool.name for tool in tools]
-                        if not is_in_tool_mode:
-                            build_config["tool"]["options"] = tool_names
-                            build_config["tool"]["placeholder"] = "Select a tool"
-                    elif not is_in_tool_mode:
-                        build_config["tool"]["placeholder"] = "No tools found"
-
-                except (ValueError, AttributeError, KeyError, TypeError, ConnectionError, TimeoutError) as e:
-                    logger.error(f"Failed to fetch tools for server '{current_server_name}': {e}")
-                    if not is_in_tool_mode:
-                        build_config["tool"]["placeholder"] = "Error fetching tools"
-                        build_config["tool"]["options"] = []
-                        build_config["tool"]["value"] = ""
-                finally:
-                    # Ensure we don't show inputs for a tool that might no longer be valid
-                    await self._update_tool_config(build_config, "")
-
             elif field_name == "tool_mode":
-                try:
-                    self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
-                except ValueError:
-                    if not build_config["tools_metadata"]["show"]:
-                        build_config["tool"]["show"] = True
-                        build_config["tool"]["options"] = []
-                        build_config["tool"]["value"] = ""
-                        build_config["tool"]["placeholder"] = "Error on MCP Server"
-                    else:
-                        build_config["tool"]["show"] = False
                 build_config["tool"]["placeholder"] = ""
                 build_config["tool"]["show"] = not field_value
-                for key, value in list(build_config.items()):
-                    if key not in self.default_keys and isinstance(value, dict) and "show" in value:
-                        build_config[key]["show"] = not field_value
-                if not field_value:
-                    build_config["tool"]["options"] = [tool.name for tool in self.tools]
-                    await self._update_tool_config(build_config, build_config["tool"]["value"])
+                self.remove_non_default_keys(build_config)
+                self.tool = build_config["tool"]["value"]
+                if field_value:
+                    self._load_actions = False
+                    build_config["tools_metadata"]["placeholder"] = "Loading actions..."
+                else:
+                    build_config["tool"]["value"] = uuid.uuid4()
+                    build_config["tool"]["options"] = []
+                    build_config["tool"]["show"] = True
+                    build_config["tool"]["placeholder"] = "Loading tools..."
+            elif field_name == "tools_metadata":
+                self._load_actions = True
 
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
@@ -463,5 +457,7 @@ class MCPToolsComponent(ComponentWithCache):
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
         mcp_server = getattr(self, "mcp_server", None)
-        tools, _ = await self.update_tool_list(mcp_server)
-        return tools
+        if self._load_actions:
+            tools, _ = await self.update_tool_list(mcp_server)
+            return tools
+        return []
