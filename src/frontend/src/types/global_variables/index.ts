@@ -4,4 +4,5 @@ export type GlobalVariable = {
   default_fields: string[];
   name: string;
   value?: string;
+  category?: string | null;
 };

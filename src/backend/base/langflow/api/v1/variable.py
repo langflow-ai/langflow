@@ -79,12 +79,19 @@ async def read_variables_by_category(
         msg = "Variable service is not an instance of DatabaseVariableService"
         raise TypeError(msg)
 
-    # Validate category
-    if category not in VALID_CATEGORIES:
-        raise HTTPException(status_code=400, detail=f"Invalid category. Must be one of: {', '.join(VALID_CATEGORIES)}")
+    normalized_category = category.lower()
+    category_mapping = {cat.lower(): cat for cat in VALID_CATEGORIES}
+
+    if normalized_category not in category_mapping:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid category. Must be one of: {', '.join(VALID_CATEGORIES)}",
+        )
+    
+    correct_category = category_mapping[normalized_category]
 
     try:
-        return await variable_service.get_by_category(user_id=current_user.id, category=category, session=session)
+        return await variable_service.get_by_category(user_id=current_user.id, category=correct_category, session=session)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

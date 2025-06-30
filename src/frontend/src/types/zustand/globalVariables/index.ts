@@ -7,4 +7,6 @@ export type GlobalVariablesStore = {
   setUnavailableFields: (fields: { [name: string]: string }) => void;
   globalVariablesEntities: Array<GlobalVariable> | undefined;
   setGlobalVariablesEntities: (entities: GlobalVariable[]) => void;
+  usageData: GlobalVariable | undefined;
+  setUsageData: (usageData: GlobalVariable) => void;
 };

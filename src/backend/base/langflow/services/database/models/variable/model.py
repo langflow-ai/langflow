@@ -26,8 +26,8 @@ class VariableBase(SQLModel):
 
     @field_validator("category")
     @classmethod
-    def validate_category(cls, v: str):
-        if v not in VALID_CATEGORIES:
+    def validate_category(cls, v: str | None):
+        if v is not None and v not in VALID_CATEGORIES:
             msg = f"Category must be one of: {', '.join(VALID_CATEGORIES)}"
             raise ValueError(msg)
         return v
@@ -67,7 +67,7 @@ class VariableRead(SQLModel):
     type: str | None = Field(None, description="Type of the variable")
     value: str | None = Field(None, description="Encrypted value of the variable")
     default_fields: list[str] | None = Field(None, description="Default fields for the variable")
-    category: str = Field(default=CATEGORY_GLOBAL, description="Category of the variable")
+    category: str | None = Field(default=CATEGORY_GLOBAL, description="Category of the variable")
 
     @field_validator("value")
     @classmethod
@@ -83,6 +83,7 @@ class VariableUpdate(SQLModel):
     value: str | None = Field(None, description="Encrypted value of the variable")
     default_fields: list[str] | None = Field(None, description="Default fields for the variable")
     category: str | None = Field(None, description="Category of the variable")
+    type: str | None = Field(None, description="Type of the variable")
 
     @field_validator("category")
     @classmethod
