@@ -164,7 +164,7 @@ Enabling **Freeze** freezes all components upstream of the selected component.
 
 Click <Icon name="Ellipsis" aria-hidden="true"/> **All** to see additional options for a component.
 
-To modify a component's name or description, click the <Icon name="PencilLine" aria-hidden="true"/> icon. Component descriptions accept Markdown syntax.
+To modify a component's name or description, click <Icon name="PencilLine" aria-hidden="true"/> **Edit name/description**. Component descriptions accept Markdown syntax.
 
 ### Component shortcuts
 
