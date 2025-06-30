@@ -3,7 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
-  "user must be able to change mode of MCP connection without any issues",
+  "user must be able to change mode of MCP tools without any issues",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
@@ -13,14 +13,14 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("mcp connection");
+    await page.getByTestId("sidebar-search-input").fill("mcp tools");
 
-    await page.waitForSelector('[data-testid="dataMCP Connection"]', {
+    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("dataMCP Connection")
+      .getByTestId("agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 0, y: 0 },
       });
@@ -181,6 +181,28 @@ test(
 
     await expect(page.getByText("test_server")).not.toBeVisible({
       timeout: 3000,
+    });
+
+    await awaitBootstrapTest(page, { skipModal: true });
+    await page.getByText("Untitled document").first().click();
+
+    await page.waitForTimeout(1000);
+
+    await page.waitForSelector('[data-testid="save-mcp-server-button"]', {
+      timeout: 10000,
+    });
+
+    await page.getByTestId("save-mcp-server-button").click({ timeout: 10000 });
+
+    await page.waitForTimeout(1000);
+
+    await expect(page.getByTestId("save-mcp-server-button")).toBeHidden({
+      timeout: 10000,
+    });
+
+    await page.getByTestId("mcp-server-dropdown").click({ timeout: 10000 });
+    await expect(page.getByText("test_server")).toHaveCount(2, {
+      timeout: 10000,
     });
   },
 );

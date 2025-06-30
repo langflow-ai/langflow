@@ -214,7 +214,6 @@ async def generate_flow_events(
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
-            graph.validate_stream()
             first_layer = sort_vertices(graph)
 
             for vertex_id in first_layer:

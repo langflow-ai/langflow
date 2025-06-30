@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,6 +15,7 @@ import AddMcpServerModal from "@/modals/addMcpServerModal";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { MCPServerInfoType } from "@/types/mcp";
+import { cn } from "@/utils/utils";
 import { useState } from "react";
 
 export default function MCPServersPage() {
@@ -101,10 +103,20 @@ export default function MCPServersPage() {
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{server.name}</span>
-                    <span className="text-mmd text-muted-foreground">
-                      {server.toolsCount} action
-                      {server.toolsCount === 1 ? "" : "s"}
-                    </span>
+                    <ShadTooltip content={server.error}>
+                      <span
+                        className={cn(
+                          "cursor-default select-none !text-mmd text-muted-foreground",
+                          server.error && "text-accent-red-foreground",
+                        )}
+                      >
+                        {server.toolsCount === null
+                          ? server.error
+                            ? "Error"
+                            : "Loading..."
+                          : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`}
+                      </span>
+                    </ShadTooltip>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
