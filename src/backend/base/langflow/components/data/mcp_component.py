@@ -239,7 +239,7 @@ class MCPToolsComponent(ComponentWithCache):
                                 build_config["tool"]["show"] = True
                                 build_config["tool"]["options"] = []
                                 build_config["tool"]["value"] = ""
-                                build_config["tool"]["placeholder"] = "Timeout loading MCP server"
+                                build_config["tool"]["placeholder"] = "Timeout on MCP server"
                             else:
                                 build_config["tool"]["show"] = False
                         except ValueError:
