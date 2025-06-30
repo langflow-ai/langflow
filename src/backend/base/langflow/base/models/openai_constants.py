@@ -10,10 +10,11 @@ OPENAI_MODELS_DETAILED = [
     create_model_metadata(provider="OpenAI", name="gpt-4.1-nano", icon="OpenAI", tool_calling=True),
     create_model_metadata(provider="OpenAI", name="gpt-4.5-preview", icon="OpenAI", tool_calling=True, preview=True),
     create_model_metadata(provider="OpenAI", name="gpt-4-turbo", icon="OpenAI", tool_calling=True),
-    create_model_metadata(provider="OpenAI", name="gpt-4-turbo-preview", icon="OpenAI", tool_calling=True, preview=True),
+    create_model_metadata(
+        provider="OpenAI", name="gpt-4-turbo-preview", icon="OpenAI", tool_calling=True, preview=True
+    ),
     create_model_metadata(provider="OpenAI", name="gpt-4", icon="OpenAI", tool_calling=True),
     create_model_metadata(provider="OpenAI", name="gpt-3.5-turbo", icon="OpenAI", tool_calling=True),
-
     # Reasoning Models
     create_model_metadata(provider="OpenAI", name="o1", icon="OpenAI", reasoning=True),
     create_model_metadata(provider="OpenAI", name="o1-mini", icon="OpenAI", reasoning=True),
@@ -23,7 +24,6 @@ OPENAI_MODELS_DETAILED = [
     create_model_metadata(provider="OpenAI", name="o3-pro", icon="OpenAI", reasoning=True),
     create_model_metadata(provider="OpenAI", name="o4-mini", icon="OpenAI", reasoning=True),
     create_model_metadata(provider="OpenAI", name="o4-mini-high", icon="OpenAI", reasoning=True),
-
     # Search Models
     create_model_metadata(
         provider="OpenAI",
@@ -41,7 +41,6 @@ OPENAI_MODELS_DETAILED = [
         search=True,
         preview=True,
     ),
-
     # Not Supported Models
     create_model_metadata(
         provider="OpenAI", name="computer-use-preview", icon="OpenAI", not_supported=True, preview=True

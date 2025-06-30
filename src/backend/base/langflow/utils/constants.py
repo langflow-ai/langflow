@@ -19,7 +19,7 @@ CHAT_OPENAI_MODELS = [
     "gpt-4.1",
     "gpt-4.1-mini",
     "gpt-4.1-nano",
-    "gpt-4.5", 
+    "gpt-4.5",
 ]
 REASONING_OPENAI_MODELS = [
     "o1",
