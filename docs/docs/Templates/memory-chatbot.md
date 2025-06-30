@@ -57,7 +57,7 @@ What is the second subject I asked you about?
 
 The chatbot remembers your name and previous questions.
 
-3. To view the **Message Logs** pane, click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" />, and then click **Message Logs**.
+3. To view the **Message Logs** pane, click <Icon name="Ellipsis" aria-hidden="true"/> **Options**, and then click **Message Logs**.
 The **Message Logs** pane displays all previous messages, with each conversation sorted by `session_id`.
 
 ![](/img/messages-logs.png)

@@ -198,7 +198,7 @@ Click **Outputs** to view the sent message:
 ```
 
 :::tip
-Optionally, to view the outputs of each component in the flow, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+Optionally, to view the outputs of each component in the flow, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
 :::
 
 ### Send chat messages with the API

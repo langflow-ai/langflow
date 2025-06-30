@@ -77,7 +77,7 @@ The **Tool Parameters** configuration pane allows you to define parameters for [
 
 These filters become available as parameters that the LLM can use when calling the tool, with a better understanding of each parameter provided by the **Description** field.
 
-1. To define a parameter for your query, in the **Tool Parameters** pane, click <Icon name="Plus" aria-label="Add"/>.
+1. To define a parameter for your query, in the **Tool Parameters** pane, click <Icon name="Plus" aria-hidden="true"/> **Add a new row**.
 2. Complete the fields based on your data. For example, with this filter, the LLM can filter by unique `customer_id` values.
 
 * Name: `customer_id`
