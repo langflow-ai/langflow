@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { APITemplateType } from "@/types/api";
 import { parseString } from "@/utils/stringManipulation";
 import { ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
@@ -79,7 +78,7 @@ export default function ToolsTable({
   }, [agGrid.current]);
 
   useEffect(() => {
-    if (!open || placeholder.startsWith("Loading")) {
+    if (!open) {
       handleOnNewValue({
         value: data.map((row) => {
           const name = parseString(row.name, [
@@ -128,7 +127,7 @@ export default function ToolsTable({
         }),
       });
     }
-  }, [open, placeholder]);
+  }, [open]);
 
   useEffect(() => {
     if (focusedRow) {
