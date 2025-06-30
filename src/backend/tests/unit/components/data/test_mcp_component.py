@@ -2,7 +2,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.components.data.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
+from langflow.components.agents.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
