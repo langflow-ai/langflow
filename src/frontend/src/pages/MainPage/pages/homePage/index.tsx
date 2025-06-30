@@ -8,6 +8,7 @@ import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_MCP,
 } from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { FlowType } from "@/types/flow";
@@ -30,6 +31,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
+  const navigate = useCustomNavigate();
 
   const [flowType, setFlowType] = useState<"flows" | "components" | "mcp">(
     type,
@@ -41,6 +43,18 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     folders[0]?.name ??
     "";
   const flows = useFlowsManagerStore((state) => state.flows);
+
+  useEffect(() => {
+    // Only check if we have a folderId and folders have loaded
+    if (folderId && folders && folders.length > 0) {
+      const folderExists = folders.find((folder) => folder.id === folderId);
+      if (!folderExists) {
+        // Folder doesn't exist for this user, redirect to /all
+        console.log("Invalid folderId, redirecting to /all");
+        navigate("/all");
+      }
+    }
+  }, [folderId, folders, navigate]);
 
   const { data: folderData, isLoading } = useGetFolderQuery({
     id: folderId ?? myCollectionId!,
