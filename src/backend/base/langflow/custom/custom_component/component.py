@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
+import uuid
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
@@ -1294,7 +1295,19 @@ class Component(CustomComponent):
         }
 
     async def _build_tools_metadata_input(self):
-        tools = await self._get_tools()
+        try:
+            from langflow.io import ToolsInput
+        except ImportError as e:
+            msg = "Failed to import ToolsInput from langflow.io"
+            raise ImportError(msg) from e
+        placeholder = None
+        tools = []
+        try:
+            tools = await self._get_tools()
+        except (TimeoutError, asyncio.TimeoutError):
+            placeholder = "Timeout loading actions"
+        except (ConnectionError, OSError, ValueError):
+            placeholder = "Error loading actions"
         # Always use the latest tool data
         tool_data = [self._build_tool_data(tool) for tool in tools]
         # print(tool_data)
@@ -1322,16 +1335,12 @@ class Component(CustomComponent):
                     item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
             self.tools_metadata = tool_data
 
-        try:
-            from langflow.io import ToolsInput
-        except ImportError as e:
-            msg = "Failed to import ToolsInput from langflow.io"
-            raise ImportError(msg) from e
-
         return ToolsInput(
             name=TOOLS_METADATA_INPUT_NAME,
+            placeholder=placeholder or "Loading actions...",
             display_name="Actions",
             info=TOOLS_METADATA_INFO,
+            id=str(uuid.uuid4()),
             value=tool_data,
         )
 
