@@ -1,0 +1,74 @@
+name: Run Frontend Jest Unit Tests
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
+
+env:
+  NODE_VERSION: "21"
+
+jobs:
+  jest-unit-tests:
+    name: Frontend Jest Unit Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./src/frontend/package-lock.json
+
+      - name: Run Frontend Unit Tests
+        run: make test_frontend_ci
+
+      - name: Publish Test Results
+        uses: mikepenz/action-junit-report@v5
+        if: always()
+        with:
+          report_paths: 'src/frontend/test-results/junit.xml'
+          check_name: 'Frontend Unit Test Results'
+          fail_on_failure: true
+          require_tests: true
+
+      - name: Add Coverage PR Comment
+        uses: MishaKav/jest-coverage-comment@main
+        if: github.event_name == 'pull_request'
+        with:
+          coverage-summary-path: src/frontend/coverage/coverage-summary.json
+          title: Frontend Unit Test Coverage Report
+          summary-title: Coverage Summary
+          badge-title: Coverage
+          hide-comment: false
+          create-new-comment: false
+          hide-summary: false
+          junitxml-title: Unit Test Results
+          junitxml-path: src/frontend/test-results/junit.xml
+
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-coverage-report
+          path: src/frontend/coverage/
+          retention-days: 30
