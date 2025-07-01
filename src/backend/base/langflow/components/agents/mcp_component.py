@@ -8,13 +8,15 @@ from langflow.base.mcp.util import (
     create_input_schema_from_json_schema,
     update_tools,
 )
-from langflow.custom.custom_component.component import Component
+from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs.inputs import InputTypes
 from langflow.io import DropdownInput, McpInput, MessageTextInput, Output  # Import McpInput from langflow.io
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
 from langflow.services.auth.utils import create_user_longterm_token
+from langflow.services.cache.utils import CacheMiss
 
 # Import get_server from the backend API
 from langflow.services.database.models.user.crud import get_user_by_id
@@ -59,12 +61,13 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
     return nested
 
 
-class MCPToolsComponent(Component):
+class MCPToolsComponent(ComponentWithCache):
     schema_inputs: list = []
     stdio_client: MCPStdioClient = MCPStdioClient()
     sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
     _tool_cache: dict = {}
+    _last_selected_server: str | None = None  # Cache for the last selected server
     default_keys: list[str] = [
         "code",
         "_type",
@@ -74,7 +77,7 @@ class MCPToolsComponent(Component):
         "tool",
     ]
 
-    display_name = "MCP Connection"
+    display_name = "MCP Tools"
     description = "Connect to an MCP server to use its tools."
     icon = "Mcp"
     name = "MCPTools"
@@ -136,17 +139,35 @@ class MCPToolsComponent(Component):
         else:
             return schema_inputs
 
-    async def update_tool_list(self):
-        server_name = getattr(self, "mcp_server", None)
+    async def update_tool_list(self, mcp_server_value=None):
+        # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
+        mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
+        server_name = None
+        server_config_from_value = None
+        if isinstance(mcp_server, dict):
+            server_name = mcp_server.get("name")
+            server_config_from_value = mcp_server.get("config")
+        else:
+            server_name = mcp_server
         if not server_name:
             self.tools = []
-            return []
+            return [], {"name": server_name, "config": server_config_from_value}
+
+        # Use shared cache if available
+        cached = self._shared_component_cache.get(server_name)
+        if not isinstance(cached, CacheMiss):
+            self.tools = cached["tools"]
+            self.tool_names = cached["tool_names"]
+            self._tool_cache = cached["tool_cache"]
+            server_config_from_value = cached["config"]
+            return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
             async for db in get_session():
                 user_id, _ = await create_user_longterm_token(db)
                 current_user = await get_user_by_id(db, user_id)
 
+                # Try to get server config from DB/API
                 server_config = await get_server(
                     server_name,
                     current_user,
@@ -155,9 +176,13 @@ class MCPToolsComponent(Component):
                     settings_service=get_settings_service(),
                 )
 
+                # If get_server returns empty but we have a config, use it
+                if not server_config and server_config_from_value:
+                    server_config = server_config_from_value
+
                 if not server_config:
                     self.tools = []
-                    return []
+                    return [], {"name": server_name, "config": server_config}
 
                 _, tool_list, tool_cache = await update_tools(
                     server_name=server_name,
@@ -168,7 +193,18 @@ class MCPToolsComponent(Component):
 
                 self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
                 self._tool_cache = tool_cache
-                return tool_list
+                self.tools = tool_list
+                # Cache the result using shared cache
+                self._shared_component_cache.set(
+                    server_name,
+                    {
+                        "tools": tool_list,
+                        "tool_names": self.tool_names,
+                        "tool_cache": tool_cache,
+                        "config": server_config,
+                    },
+                )
+                return tool_list, {"name": server_name, "config": server_config}
         except Exception as e:
             msg = f"Error updating tool list: {e!s}"
             logger.exception(msg)
@@ -181,13 +217,15 @@ class MCPToolsComponent(Component):
                 try:
                     if len(self.tools) == 0:
                         try:
-                            self.tools = await self.update_tool_list()
+                            self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
+                            build_config["tool"]["options"] = [tool.name for tool in self.tools]
                         except ValueError:
                             build_config["tool"]["options"] = []
                             build_config["tool"]["value"] = ""
                             build_config["tool"]["placeholder"] = "Error on MCP Server"
                             return build_config
                         build_config["tool"]["placeholder"] = ""
+
                     if field_value == "":
                         return build_config
                     tool_obj = None
@@ -207,31 +245,64 @@ class MCPToolsComponent(Component):
                 else:
                     return build_config
             elif field_name == "mcp_server":
-                try:
-                    self.tools = await self.update_tool_list()
-                except ValueError:
-                    if not build_config["tools_metadata"]["show"]:
-                        build_config["tool"]["show"] = True
-                        build_config["tool"]["options"] = []
-                        build_config["tool"]["value"] = ""
-                        build_config["tool"]["placeholder"] = "Error on MCP Server"
-                    else:
-                        build_config["tool"]["show"] = False
-                    self.remove_non_default_keys(build_config)
-                    return build_config
-                build_config["tool"]["placeholder"] = ""
-                if "tool" in build_config and len(self.tools) > 0 and not build_config["tools_metadata"]["show"]:
-                    build_config["tool"]["show"] = True
-                    build_config["tool"]["options"] = [tool.name for tool in self.tools]
-                    await self._update_tool_config(build_config, build_config["tool"]["value"])
-                elif "tool" in build_config and len(self.tools) == 0:
-                    self.remove_non_default_keys(build_config)
+                if not field_value:
                     build_config["tool"]["show"] = False
                     build_config["tool"]["options"] = []
                     build_config["tool"]["value"] = ""
+                    build_config["tool"]["placeholder"] = ""
+                    self.remove_non_default_keys(build_config)
+                    return build_config
+
+                current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
+
+                # To avoid unnecessary updates, only proceed if the server has actually changed
+                if self._last_selected_server == current_server_name:
+                    return build_config
+
+                # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
+                # The check for _last_selected_server handles the initial state where the dropdown is
+                # hidden by default but we are not yet in "Tool Mode".
+                is_in_tool_mode = build_config["tools_metadata"]["value"]
+                self._last_selected_server = current_server_name
+                self.tools = []  # Clear previous tools
+                self.remove_non_default_keys(build_config)  # Clear previous tool inputs
+
+                # Only show the tool dropdown if not in tool_mode
+                if not is_in_tool_mode:
+                    build_config["tool"]["show"] = True
+                    build_config["tool"]["placeholder"] = "Loading tools..."
+                    build_config["tool"]["options"] = []
+                    build_config["tool"]["value"] = ""
+                else:
+                    # Keep the tool dropdown hidden if in tool_mode
+                    build_config["tool"]["show"] = False
+
+                try:
+                    # Fetch tools for the newly selected server
+                    tools, server_info = await self.update_tool_list(field_value)
+                    build_config["mcp_server"]["value"] = server_info
+
+                    if tools:
+                        tool_names = [tool.name for tool in tools]
+                        if not is_in_tool_mode:
+                            build_config["tool"]["options"] = tool_names
+                            build_config["tool"]["placeholder"] = "Select a tool"
+                    elif not is_in_tool_mode:
+                        build_config["tool"]["placeholder"] = "No tools found"
+
+                except (ValueError, AttributeError, KeyError, TypeError, ConnectionError, TimeoutError) as e:
+                    logger.error(f"Failed to fetch tools for server '{current_server_name}': {e}")
+                    if not is_in_tool_mode:
+                        build_config["tool"]["placeholder"] = "Error fetching tools"
+                        build_config["tool"]["options"] = []
+                        build_config["tool"]["value"] = ""
+                finally:
+                    # Ensure we don't show inputs for a tool that might no longer be valid
+                    await self._update_tool_config(build_config, "")
+
             elif field_name == "tool_mode":
                 try:
-                    self.tools = await self.update_tool_list()
+                    self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
                 except ValueError:
                     if not build_config["tools_metadata"]["show"]:
                         build_config["tool"]["show"] = True
@@ -294,7 +365,7 @@ class MCPToolsComponent(Component):
     async def _update_tool_config(self, build_config: dict, tool_name: str) -> None:
         """Update tool configuration with proper error handling."""
         if not self.tools:
-            self.tools = await self.update_tool_list()
+            self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
 
         if not tool_name:
             return
@@ -361,7 +432,7 @@ class MCPToolsComponent(Component):
     async def build_output(self) -> DataFrame:
         """Build output with improved error handling and validation."""
         try:
-            self.tools = await self.update_tool_list()
+            self.tools, _ = await self.update_tool_list()
             if self.tool != "":
                 exec_tool = self._tool_cache[self.tool]
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
@@ -369,7 +440,10 @@ class MCPToolsComponent(Component):
                 for arg in tool_args:
                     value = getattr(self, arg.name, None)
                     if value:
-                        kwargs[arg.name] = value
+                        if isinstance(value, Message):
+                            kwargs[arg.name] = value.text
+                        else:
+                            kwargs[arg.name] = value
 
                 unflattened_kwargs = maybe_unflatten_dict(kwargs)
 
@@ -388,11 +462,6 @@ class MCPToolsComponent(Component):
 
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
-        # if not self.tools:
-        if not self.mcp_server:
-            msg = "MCP Server is not set"
-            self.tools = []
-            self.tool_names = []
-            logger.exception(msg)
-
-        return await self.update_tool_list()
+        mcp_server = getattr(self, "mcp_server", None)
+        tools, _ = await self.update_tool_list(mcp_server)
+        return tools

@@ -205,16 +205,17 @@ export const FILE_ICONS = {
 
 export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
-  { display_name: "I/O", name: "input_output", icon: "Cable" },
+  { display_name: "Input / Output", name: "input_output", icon: "Cable" },
+  { display_name: "Agents", name: "agents", icon: "Bot" },
+  { display_name: "Models", name: "models", icon: "BrainCog" },
+  { display_name: "Data", name: "data", icon: "Database" },
+  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
+  { display_name: "Processing", name: "processing", icon: "ListFilter" },
+  { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
+  { display_name: "Helpers", name: "helpers", icon: "Wand2" },
   { display_name: "Inputs", name: "inputs", icon: "Download" },
   { display_name: "Outputs", name: "outputs", icon: "Upload" },
   { display_name: "Prompts", name: "prompts", icon: "braces" },
-  { display_name: "Models", name: "models", icon: "BrainCog" },
-  { display_name: "Data", name: "data", icon: "Database" },
-  { display_name: "Processing", name: "processing", icon: "ListFilter" },
-
-  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
-  { display_name: "Agents", name: "agents", icon: "Bot" },
   { display_name: "Chains", name: "chains", icon: "Link" },
   { display_name: "Loaders", name: "documentloaders", icon: "Paperclip" },
   { display_name: "Link Extractors", name: "link_extractors", icon: "Link2" },
@@ -224,12 +225,9 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Text Splitters", name: "textsplitters", icon: "Scissors" },
   { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
   { display_name: "Tools", name: "tools", icon: "Hammer" },
-  { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
-  { display_name: "Helpers", name: "helpers", icon: "Wand2" },
 ];
 
 export const SIDEBAR_BUNDLES = [
-  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   {
     display_name: "Language Models",
     name: "languagemodels",
@@ -237,27 +235,34 @@ export const SIDEBAR_BUNDLES = [
   },
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
+  { display_name: "AI/ML", name: "aiml", icon: "AI/ML" },
+  { display_name: "Anthropic", name: "anthropic", icon: "Anthropic" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
+  // Add apify
+  { display_name: "Apify", name: "apify", icon: "Apify" },
+  { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
+  { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
+  { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
+  { display_name: "Azure", name: "azure", icon: "Azure" },
+  {
+    display_name: "DataStax",
+    name: "datastax",
+    icon: "AstraDB",
+  },
+  { display_name: "Docling", name: "docling", icon: "Docling" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
-  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
   { display_name: "GitHub", name: "github", icon: "Github" },
   {
     display_name: "Googlecalendar",
     name: "googlecalendar",
     icon: "Googlecalendar",
   },
-  // Add apify
-  { display_name: "Apify", name: "apify", icon: "Apify" },
-  { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
-  { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
-  { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
-  {
-    display_name: "DataStax",
-    name: "datastax",
-    icon: "AstraDB",
-  },
-  { display_name: "Olivya", name: "olivya", icon: "Olivya" },
+  { display_name: "HuggingFace", name: "huggingface", icon: "HuggingFace" },
+  { display_name: "IBM", name: "ibm", icon: "WatsonxAI" },
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
+  { display_name: "Olivya", name: "olivya", icon: "Olivya" },
+  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
+  { display_name: "OpenAI", name: "openai", icon: "OpenAI" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "Needle", name: "needle", icon: "Needle" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
@@ -284,6 +289,8 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
   { display_name: "Search", name: "search", icon: "Search" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
+  { display_name: "Ollama", name: "ollama", icon: "Ollama" },
+  { display_name: "VertexAI", name: "vertexai", icon: "VertexAI" },
 ];
 
 export const categoryIcons: Record<string, string> = {

@@ -48,8 +48,8 @@ To use all three columns from the **Batch Run** component, include them like thi
 ```text
 record_number: {batch_index}, name: {text_input}, summary: {model_response}
 ```
-7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-label="Play icon" />.
-8. To view your created DataFrame, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-hidden="true"/> **Run component**.
+8. To view your created DataFrame, in the **Parser** component, click <Icon name="TextSearch" aria-hidden="true"/>.
 9. Optionally, connect a **Chat Output** component, and open the **Playground** to see the output.
 
 <details>
@@ -298,3 +298,7 @@ Please list three fruits.
 | output_parser | Parser | The constructed output parser that can be used to parse LLM responses. |
 
 </details>
+
+## See also
+
+- [Session ID](/session-id)

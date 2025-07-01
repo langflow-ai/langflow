@@ -92,6 +92,10 @@ class Settings(BaseSettings):
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
 
+    mcp_server_timeout: int = 20
+    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
+    database."""
+
     # sqlite configuration
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
     """SQLite pragmas to use when connecting to the database."""
@@ -429,8 +433,14 @@ class Settings(BaseSettings):
                     logger.debug(f"Appending {langflow_component_path} to components_path")
 
         if not value:
-            value = []
-            logger.debug("Setting empty components path")
+            value = [BASE_COMPONENTS_PATH]
+            logger.debug("Setting default components path to components_path")
+        else:
+            if isinstance(value, Path):
+                value = [str(value)]
+            elif isinstance(value, list):
+                value = [str(p) if isinstance(p, Path) else p for p in value]
+            logger.debug("Adding default components path to components_path")
 
         logger.debug(f"Components path: {value}")
         return value

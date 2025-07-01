@@ -191,7 +191,7 @@ const HeaderComponent = ({
               <div className="flex items-center">
                 <div
                   className={cn(
-                    "-mr-3 flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
+                    "flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
                     selectedFlows.length > 0 && "w-36 opacity-100",
                   )}
                 >
