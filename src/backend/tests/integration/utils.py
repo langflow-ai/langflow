@@ -191,5 +191,8 @@ def build_component_instance_for_tests(version: str, module: str, file_name: str
 
 
 def pyleak_marker(**extra_args):
-    default_args = {"enable_task_creation_tracking": True, "thread_name_filter": r"^(?!asyncio_\d+$).*"}
+    default_args = {
+        "enable_task_creation_tracking": True,  # log task creation stacks
+        "thread_name_filter": r"^(?!asyncio_\d+$).*",  # exclude `asyncio_{num}` threads
+    }
     return pytest.mark.no_leaks(**default_args, **extra_args)
