@@ -65,12 +65,17 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
 
 class MCPToolsComponent(ComponentWithCache):
     schema_inputs: list = []
-    stdio_client: MCPStdioClient = MCPStdioClient()
-    sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
     _load_actions: bool = False
     _tool_cache: dict = {}
     _last_selected_server: str | None = None  # Cache for the last selected server
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Initialize clients with access to the component cache
+        self.stdio_client: MCPStdioClient = MCPStdioClient(component_cache=self._shared_component_cache)
+        self.sse_client: MCPSseClient = MCPSseClient(component_cache=self._shared_component_cache)
+
     default_keys: list[str] = [
         "code",
         "_type",
@@ -428,6 +433,12 @@ class MCPToolsComponent(ComponentWithCache):
         try:
             self.tools, _ = await self.update_tool_list()
             if self.tool != "":
+                # Set session context for persistent MCP sessions using Langflow session ID
+                session_context = self._get_session_context()
+                if session_context:
+                    self.stdio_client.set_session_context(session_context)
+                    self.sse_client.set_session_context(session_context)
+
                 exec_tool = self._tool_cache[self.tool]
                 tool_args = self.get_inputs_for_all_tools(self.tools)[self.tool]
                 kwargs = {}
@@ -453,6 +464,21 @@ class MCPToolsComponent(ComponentWithCache):
             msg = f"Error in build_output: {e!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
+
+    def _get_session_context(self) -> str | None:
+        """Get the Langflow session ID for MCP session caching."""
+        # Try to get session ID from the component's execution context
+        if hasattr(self, "graph") and hasattr(self.graph, "session_id"):
+            session_id = self.graph.session_id
+            # Include server name to ensure different servers get different sessions
+            server_name = ""
+            mcp_server = getattr(self, "mcp_server", None)
+            if isinstance(mcp_server, dict):
+                server_name = mcp_server.get("name", "")
+            elif mcp_server:
+                server_name = str(mcp_server)
+            return f"{session_id}_{server_name}" if session_id else None
+        return None
 
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
