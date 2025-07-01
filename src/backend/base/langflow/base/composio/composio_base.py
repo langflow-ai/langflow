@@ -973,8 +973,26 @@ class ComposioBaseComponent(Component):
                 arguments=arguments,
                 user_id=self.entity_id,
             )
-
-            return {"response": result} #noqa: TRY300
+            
+            # Log the result and its type for debugging
+            logger.debug(f"Execute result type: {type(result)}")
+            logger.debug(f"Execute result: {result}")
+            
+            # Check if the result has successful field
+            if isinstance(result, dict) and "successful" in result:
+                successful_value = result["successful"]
+                logger.debug(f"Successful field type: {type(successful_value)}, value: {successful_value}")
+                
+                if result["successful"]:
+                    # Return the data field if successful
+                    return result.get("data", result)
+                else:
+                    # Raise error if not successful
+                    error_msg = result.get("error", "Tool execution failed")
+                    raise ValueError(error_msg)
+            
+            # Fallback for results without successful field
+            return result
 
         except ValueError as e:
             logger.error(f"Failed to execute {action_key}: {e}")
