@@ -10,11 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  DEFAULT_FOLDER,
-  DEFAULT_FOLDER_DEPRECATED,
-  SAVED_HOVER,
-} from "@/constants/constants";
+import { SAVED_HOVER } from "@/constants/constants";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -115,9 +111,7 @@ export const MenuBar = memo((): JSX.Element => {
                     );
                   }}
                 >
-                  {currentFolder?.name == DEFAULT_FOLDER_DEPRECATED
-                    ? DEFAULT_FOLDER
-                    : currentFolder?.name}
+                  {currentFolder?.name}
                 </div>
               </div>
             )}
