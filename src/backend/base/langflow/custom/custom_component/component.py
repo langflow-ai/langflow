@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
-import uuid
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
