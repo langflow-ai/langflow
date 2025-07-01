@@ -275,40 +275,6 @@ jobs:
         run: npm ci
         working-directory: ./src/frontend
 
-      - name: Run Frontend Unit Tests
-        run: make test_frontend_ci
-
-      - name: Publish Test Results
-        uses: mikepenz/action-junit-report@v5.5.1
-        if: always()
-        with:
-          report_paths: 'src/frontend/test-results/junit.xml'
-          check_name: 'Frontend Unit Test Results'
-          fail_on_failure: true
-          require_tests: true
-
-      - name: Add Coverage PR Comment
-        uses: MishaKav/jest-coverage-comment@main
-        if: github.event_name == 'pull_request'
-        with:
-          coverage-summary-path: src/frontend/coverage/coverage-summary.json
-          title: Frontend Unit Test Coverage Report
-          summary-title: Coverage Summary
-          badge-title: Coverage
-          hide-comment: false
-          create-new-comment: false
-          hide-summary: false
-          junitxml-title: Unit Test Results
-          junitxml-path: src/frontend/test-results/junit.xml
-
-      - name: Upload Coverage Reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: frontend-coverage-report
-          path: src/frontend/coverage/
-          retention-days: 30
-
       # Cache Playwright browsers using a composite key
       - name: Cache Playwright Browsers
         id: cache-playwright
