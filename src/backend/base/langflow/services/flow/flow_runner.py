@@ -227,7 +227,7 @@ class LangflowRunnerExperimental:
     async def clear_user_state(user_id: str):
         async with session_scope() as session:
             flows = await session.exec(select(Flow.id).where(Flow.user_id == user_id))
-            flow_ids = [fid for fid in flows.scalars().all() if fid is not None]
+            flow_ids: list[UUID] = [fid for fid in flows.scalars().all() if fid is not None]
             if flow_ids:
                 await session.exec(delete(MessageTable).where(MessageTable.flow_id.in_(flow_ids)))
                 await session.exec(delete(Flow).where(Flow.id.in_(flow_ids)))
