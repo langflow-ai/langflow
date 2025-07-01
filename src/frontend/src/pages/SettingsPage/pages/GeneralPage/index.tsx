@@ -10,6 +10,7 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
+import { CustomTermsLinks } from "@/customization/components/custom-terms-links";
 import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { cloneDeep } from "lodash";
@@ -160,6 +161,8 @@ export const GeneralPage = () => {
           />
         )}
       </div>
+
+      <CustomTermsLinks />
     </div>
   );
 };
