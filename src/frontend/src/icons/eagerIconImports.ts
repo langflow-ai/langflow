@@ -55,6 +55,7 @@ import { HuggingFaceIcon } from "@/icons/HuggingFace";
 import { WatsonxAiIcon } from "@/icons/IBMWatsonx";
 import { IcosaIcon } from "@/icons/Icosa";
 import { IFixIcon } from "@/icons/IFixIt";
+import { JigsawStackIcon } from "@/icons/JigsawStack";
 import { JSIcon } from "@/icons/JSicon";
 import { LangChainIcon } from "@/icons/LangChain";
 import { LangwatchIcon } from "@/icons/Langwatch";
@@ -231,4 +232,5 @@ export const eagerIconsMapping = {
   xAI: XAIIcon,
   YouTube: YouTubeIcon,
   ZepMemory: ZepMemoryIcon,
+  JigsawStack: JigsawStackIcon,
 };

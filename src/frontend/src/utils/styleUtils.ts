@@ -424,7 +424,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   WolframAlphaAPI: "Wolfram",
   WolframAlphaAPIWrapper: "Wolfram",
   WolframAlphaQueryRun: "Wolfram",
-
+  JigsawStack: "JigsawStack",
   //Node Icons
   model_specs: "FileSliders",
   advanced: "Laptop2",
