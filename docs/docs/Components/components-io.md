@@ -211,9 +211,9 @@ To send the same example messages programmatically to your Langflow server, do t
 It looks similar to this:
 ```text
 curl --request POST \
-  --url 'http://localhost:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
-  --header 'Content-Type: application/json' \
-  --header 'x-api-key: LANGFLOW_API_KEY' \
+  --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+  --header "Content-Type: application/json" \
+  --header "x-api-key: LANGFLOW_API_KEY" \
   --data '{
   "input_value": "What's the recommended way to install Docker on Mac M1?",
   "output_type": "chat",
@@ -227,9 +227,9 @@ Note the `output_type` and `input_type` parameters that are passed with the mess
 4. Add a custom `session_id` to the message's `data` object.
 ```text
 curl --request POST \
-  --url 'http://localhost:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
-  --header 'Content-Type: application/json' \
-  --header 'x-api-key: LANGFLOW_API_KEY' \
+  --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+  --header "Content-Type: application/json" \
+  --header "x-api-key: LANGFLOW_API_KEY" \
   --data '{
   "input_value": "Whats the recommended way to install Docker on Mac M1",
   "session_id": "docker-question-on-m1",
@@ -244,13 +244,13 @@ Your request is answered.
 6. Navigate to the **Playground**.
 A new chat session called `docker-question-on-m1` has appeared, using your unique `session_id`.
 7. To modify additional parameters with **Tweaks** for your **Chat Input** and **Chat Output** components, click **Publish**, and then click **API access**.
-8. Click **Tweaks** to modify parameters in the component's `data` object.
+8. Click **Input schema** to modify parameters in the component's `data` object.
 For example, disabling storing messages from the **Chat Input** component adds a **Tweak** to your command:
 ```text
 curl --request POST \
-  --url 'http://localhost:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
-  --header 'Content-Type: application/json' \
-  --header 'x-api-key: LANGFLOW_API_KEY' \
+  --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+  --header "Content-Type: application/json" \
+  --header "x-api-key: LANGFLOW_API_KEY" \
   --data '{
   "input_value": "Text to input to the flow",
   "output_type": "chat",
