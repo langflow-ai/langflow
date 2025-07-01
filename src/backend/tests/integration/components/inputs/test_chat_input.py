@@ -2,7 +2,9 @@ from langflow.components.input_output import ChatInput
 from langflow.memory import aget_messages
 from langflow.schema.message import Message
 
-from tests.integration.utils import run_single_component
+from tests.integration.utils import pyleak_marker, run_single_component
+
+pytestmark = pyleak_marker()
 
 
 async def test_default():

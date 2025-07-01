@@ -3,6 +3,7 @@ import os
 import uuid
 from typing import Any
 
+import pytest
 import requests
 from astrapy.admin import parse_api_endpoint
 from langflow.api.v1.schemas import InputValueRequest
@@ -187,3 +188,8 @@ def build_component_instance_for_tests(version: str, module: str, file_name: str
     component = download_component_from_github(module, file_name, version)
     cc_class = eval_custom_component_code(component._code)
     return cc_class(**kwargs), component._code
+
+
+def pyleak_marker(**extra_args):
+    default_args = {"enable_task_creation_tracking": True, "thread_name_filter": r"^(?!asyncio_\d+$).*"}
+    return pytest.mark.no_leaks(**default_args, **extra_args)
