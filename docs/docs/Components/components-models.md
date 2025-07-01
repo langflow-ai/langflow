@@ -6,27 +6,18 @@ slug: /components-models
 import Icon from "@site/src/components/icon";
 
 :::important
-Components in the **Language models** category are moved to **Bundles** as of Langflow 1.5.
-Instead, use the [Language model](/components-models#language-model) component.
+In [Langflow version 1.5](/release-notes), the singular **Language model** component replaces many provider-specific model components. Any provider-specific model components that weren't incorporated into the singular component were moved to [Bundles](/components-bundle-components).
 :::
 
-Language model components in Langflow generate text using the selected Large Language Model.
+Language components in Langflow generate text using the selected Large Language Model (LLM). The core **Language model** component supports many LLM providers, models, and use cases. For additional providers and models not supported by the core **Language model** component, see [**Bundles**](/components-bundle-components).
 
-Prior to Langflow 1.5, each LLM and embedding model provider had its own component in the Components menu.
+Most use cases can be performed with the **Language Model** and **Embedding Model** components.
 
-Most use cases can be performed with the **Language Model** and **Embeddings Model** components.
-
-If you want to try additional providers not supported by the new components, the single-provider LLM components of both the **Model** and **Embedding Model** types are now found in **Bundles**, and are still available to use.
-
-## Language model
-
-This component generates text using language models selected within the dropdown menu.
-
-Instead of swapping out model components when you want to try a different provider, like switching between OpenAI and Anthropic components, change the provider dropdown in this single component. This makes it easier to experiment with and compare different models while keeping the rest of your flow intact.
+If you want to try additional providers not supported by the new components, the single-provider LLM components of both the **Language Model** and **Embedding Model** types are now found in **Bundles**, and are still available for use.
 
 ### Use a Language Model component in a flow
 
-Use a **Language Moodel** component in your flow anywhere you would use an LLM.
+Use a **Language Model** component in your flow anywhere you would use an LLM.
 
 Model components receive inputs and prompts for generating text, and the generated text is sent to an output component.
 
@@ -107,3 +98,7 @@ For an example, see the [Smart function component](/components-processing#smart-
 | model | LanguageModel | An instance of Chat configured with the specified parameters. |
 
 </details>
+
+## Language models bundles
+
+If your provider or model isn't supported by the core **Language model** component, see [Bundles](/components-bundle-components) for additional language model and embedding model components developed by third-party contributors.
