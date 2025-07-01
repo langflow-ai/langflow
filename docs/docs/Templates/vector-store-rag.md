@@ -85,7 +85,7 @@ If you used Langflow's **Global Variables** feature, the RAG application flow co
 
 ## Run the Vector Store RAG flow
 
-1. To run the flow, click <Icon name="Play" aria-hidden="true/> **Playground**.
+1. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 In the **Playground**, you can chat with the LLM that uses context from the database you created.
 2. Enter a message and press <kbd>Enter</kbd>. Try something like, "What topics do you know about?"
 3. The bot will respond with a summary of the data you've embedded.
