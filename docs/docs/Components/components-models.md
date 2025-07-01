@@ -10,7 +10,7 @@ Components in the **Language models** category are moved to **Bundles** as of La
 Instead, use the [Language model](/components-models#language-model) component.
 :::
 
-Model components in Langflow generate text or text embeddings using the selected Large Language Model.
+Language model components in Langflow generate text using the selected Large Language Model.
 
 Prior to Langflow 1.5, each LLM and embedding model provider had its own component in the Components menu.
 

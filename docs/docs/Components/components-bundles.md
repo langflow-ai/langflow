@@ -5,21 +5,21 @@ slug: /components-bundle-components
 
 import Icon from "@site/src/components/icon";
 
-**Bundles** are third-party components grouped by provider.
+Bundled components are based on standard Langflow functionality, so you add them to your flows and configure them in much the same way as the standard components.
+This documentation summarizes each bundled component and its parameters.
+For details about provider-specific aspects of bundled components, this documentation provides links to relevant component provider documentation.
 
-For more information on bundled components, see the component provider's documentation.
-
-## Agent components
+## Agent bundles
 
 **Agents** use LLMs as a brain to analyze problems and select external tools.
 
 For more information, see [Agents](/agents).
 
-### CrewAI Agent
+### CrewAI bundles
 
-This component represents an Agent of CrewAI allowing for the creation of specialized AI agents with defined roles goals and capabilities within a crew.
+This bundle represents Agents of CrewAI allowing for the creation of specialized AI agents with defined roles goals and capabilities within a crew.
 
-For more information, see the [CrewAI documentation](https://docs.crewai.com/core-concepts/Agents/).
+For more information, see the [CrewAI agents documentation](https://docs.crewai.com/core-concepts/Agents/).
 
 <details>
 <summary>Parameters</summary>
@@ -47,11 +47,11 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/cor
 
 </details>
 
-### Hierarchical Crew
+#### Hierarchical Crew
 
 This component represents a group of agents managing how they should collaborate and the tasks they should perform in a hierarchical structure. This component allows for the creation of a crew with a manager overseeing the task execution.
 
-For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Hierarchical/).
+For more information, see the [CrewAI hierarchical crew ocumentation](https://docs.crewai.com/how-to/Hierarchical/).
 
 <details>
 <summary>Parameters</summary>
@@ -79,88 +79,11 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 
 </details>
 
-### CSV Agent
-
-This component creates a CSV agent from a CSV file and LLM.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use for the agent. |
-| path | File | The path to the CSV file. |
-| agent_type | String | The type of agent to create. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The CSV agent instance. |
-
-</details>
-
-### OpenAI Tools Agent
-
-This component creates an OpenAI Tools Agent.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use. |
-| tools | List of Tools | The tools to give the agent access to. |
-| system_prompt | String | The system prompt to provide context to the agent. |
-| input_value | String | The user's input to the agent. |
-| memory | Memory | The memory for the agent to use for context persistence. |
-| max_iterations | Integer | The maximum number of iterations to allow the agent to execute. |
-| verbose | Boolean | This determines whether to print out the agent's intermediate steps. |
-| handle_parsing_errors | Boolean | This determines whether to handle parsing errors in the agent. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The OpenAI Tools agent instance. |
-| output | String | The output from executing the agent on the input. |
-
-</details>
-
-### OpenAPI Agent
-
-This component creates an agent for interacting with OpenAPI services.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | The language model to use. |
-| openapi_spec | String | The OpenAPI specification for the service. |
-| base_url | String | The base URL for the API. |
-| headers | Dict | The optional headers for API requests. |
-| agent_executor_kwargs | Dict | The optional parameters for the agent executor. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| agent | AgentExecutor | The OpenAPI agent instance. |
-
-</details>
-
-### Sequential Crew
+#### Sequential crew
 
 This component represents a group of agents with tasks that are executed sequentially. This component allows for the creation of a crew that performs tasks in a specific order.
 
-For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Sequential/).
+For more information, see the [CrewAI sequential crew documentation](https://docs.crewai.com/how-to/Sequential/).
 
 <details>
 <summary>Parameters</summary>
@@ -185,11 +108,11 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 
 </details>
 
-### Sequential task agent
+#### Sequential task agent
 
 This component creates a CrewAI Task and its associated Agent allowing for the definition of sequential tasks with specific agent roles and capabilities.
 
-For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Sequential/).
+For more information, see the [CrewAI sequential agents documentation](https://docs.crewai.com/how-to/Sequential/).
 
 <details>
 <summary>Parameters</summary>
@@ -221,9 +144,94 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 
 </details>
 
+### CSV Agent
+
+This component creates a CSV agent from a CSV file and LLM.
+
+For more information, see the [Langchain CSV agent documentation](https://python.langchain.com/api_reference/experimental/agents/langchain_experimental.agents.agent_toolkits.csv.base.create_csv_agent.html).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use for the agent. |
+| path | File | The path to the CSV file. |
+| agent_type | String | The type of agent to create. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | The CSV agent instance. |
+
+</details>
+
+### OpenAI Tools Agent
+
+This component creates an OpenAI Tools Agent.
+
+For more information, see the [Langchain OpenAI agent documentation](https://api.python.langchain.com/en/latest/agents/langchain.agents.openai_functions_agent.base.create_openai_functions_agent.html).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use. |
+| tools | List of Tools | The tools to give the agent access to. |
+| system_prompt | String | The system prompt to provide context to the agent. |
+| input_value | String | The user's input to the agent. |
+| memory | Memory | The memory for the agent to use for context persistence. |
+| max_iterations | Integer | The maximum number of iterations to allow the agent to execute. |
+| verbose | Boolean | This determines whether to print out the agent's intermediate steps. |
+| handle_parsing_errors | Boolean | This determines whether to handle parsing errors in the agent. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | The OpenAI Tools agent instance. |
+| output | String | The output from executing the agent on the input. |
+
+</details>
+
+### OpenAPI Agent
+
+This component creates an agent for interacting with OpenAPI services.
+
+For more information, see the [Langchain OpenAPI toolkit documentation](https://python.langchain.com/docs/integrations/tools/openapi/).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | The language model to use. |
+| openapi_spec | String | The OpenAPI specification for the service. |
+| base_url | String | The base URL for the API. |
+| headers | Dict | The optional headers for API requests. |
+| agent_executor_kwargs | Dict | The optional parameters for the agent executor. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| agent | AgentExecutor | The OpenAPI agent instance. |
+
+</details>
+
 ### SQL Agent
 
 This component creates an agent for interacting with SQL databases.
+
+For more information, see the [Langchain SQL agent documentation](https://python.langchain.com/docs/tutorials/sql_qa/).
 
 <details>
 <summary>Parameters</summary>
@@ -253,6 +261,8 @@ This component creates an agent for interacting with SQL databases.
 ### Tool Calling Agent
 
 This component creates an agent for structured tool calling with various language models.
+
+For more information, see the [Langchain tool calling documentation](https://python.langchain.com/docs/concepts/tool_calling/).
 
 <details>
 <summary>Parameters</summary>
@@ -284,6 +294,8 @@ This component creates an XML Agent using LangChain.
 
 The agent uses XML formatting for tool instructions to the Language Model.
 
+For more information, see the [Langchain XML Agent documentation](https://python.langchain.com/api_reference/langchain/agents/langchain.agents.xml.base.XMLAgent.html).
+
 <details>
 <summary>Parameters</summary>
 
@@ -304,6 +316,12 @@ The agent uses XML formatting for tool instructions to the Language Model.
 </details>
 
 ## Embedding models bundles
+
+Embedding model components in Langflow generate text embeddings using the selected Large Language Model.
+
+For more information, see [Embedding models](/components-embedding-models).
+
+For more information on a specific embedding model bundle, see the provider's documentation.
 
 ### AI/ML
 
@@ -832,11 +850,11 @@ This component is a wrapper around [Google Vertex AI](https://cloud.google.com/v
 
 ## Language model bundles
 
-As of Langflow 1.5 the following components are now part of **Bundles**.
+Language model components in Langflow generate text using the selected Large Language Model.
 
-**Bundles** are third-party components grouped by provider.
+For more information, see [Language models](/components-models).
 
-For more information on bundled components, see the component provider's documentation.
+For more information on a specific model bundle, see the provider's documentation.
 
 ### AIML
 

@@ -6,25 +6,14 @@ slug: /components-embedding-models
 import Icon from "@site/src/components/icon";
 
 :::important
-Components in the **Embedding models** category are moved to **Bundles** as of Langflow 1.5.
-Instead, use the [Embedding model](/components-embedding-models#embedding-model) component.
+In [Langflow version 1.5](/release-notes), the singular **Embedding model** component replaces many provider-specific embedding models components. Any provider-specific embedding model components that weren't incorporated into the singular component were moved to [**Bundles**](/components-bundle-components).
 :::
 
-Embedding model components in Langflow generate text embeddings using the selected Large Language Model.
-
-Prior to Langflow 1.5, each embedding model provider had its own component in the **Components** menu and **Playground**.
+Embedding model components in Langflow generate text embeddings using the selected Large Language Model (LLM). The core **Embedding model** component supports many LLM providers, models, and use cases. For additional providers and models not supported by the core **Embedding model** component, see [**Bundles**](/components-bundle-components).
 
 Most use cases can be performed with the **Language Model** and **Embedding Model** components.
 
 If you want to try additional providers not supported by the new components, the single-provider LLM components of both the **Language Model** and **Embedding Model** types are now found in **Bundles**, and are still available for use.
-
-## Embedding model
-
-Use an **Embedding Model** component in your flow anywhere you would use an embedding model.
-
-Embedding models convert text into numerical vectors. These embeddings capture the semantic meaning of the input text, and allow LLMs to understand context.
-
-This embeddings component uses an OpenAI API key for authentication.
 
 ## Use an Embedding Model component in a flow
 
@@ -84,11 +73,4 @@ The Playground returns the most semantically similar text chunks.
 
 ## Embedding models bundles
 
-As of Langflow 1.5, the additional embedding models components are now found under [Bundles](/components-bundle-components) in the components sidebar.
-
-**Bundles** are third-party components grouped by provider.
-
-For more information on bundled components, see the component provider's documentation.
-
-
-
+If your provider or model isn't supported by the core **Embedding model** component, see [Bundles](/components-bundle-components) for additional language model and embedding model components developed by third-party contributors.
