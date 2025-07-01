@@ -228,9 +228,8 @@ class LangflowRunnerExperimental:
         async with session_scope() as session:
             flows = await session.exec(select(Flow.id).where(Flow.user_id == user_id))
             flow_ids: list[UUID] = [fid for fid in flows.scalars().all() if fid is not None]
-            if flow_ids:
-                await session.exec(delete(MessageTable).where(MessageTable.flow_id.in_(flow_ids)))
-                await session.exec(delete(Flow).where(Flow.id.in_(flow_ids)))
+            for flow_id in flow_ids:
+                await cascade_delete_flow(session, flow_id)
             await session.exec(delete(Variable).where(Variable.user_id == user_id))
             await session.exec(delete(User).where(User.id == user_id))
 
