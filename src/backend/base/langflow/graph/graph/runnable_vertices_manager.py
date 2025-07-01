@@ -86,13 +86,17 @@ class RunnableVerticesManager:
         # For cycle vertices, check if any pending predecessors are also in cycle
         # Using set intersection is faster than iteration
         if vertex_id in self.cycle_vertices:
-            # If this is a loop vertex that has run before and has no pending predecessors,
-            # it should not run again to prevent infinite loops
-            if is_loop and vertex_id in self.ran_at_least_once and bool(set(pending)):
-                return False
-            # For loop vertices, allow running if it's a loop or if none of its pending
-            # predecessors are also cycle vertices (preventing circular dependencies)
-            return is_loop or not bool(set(pending) & self.cycle_vertices)
+            pending_set = set(pending)
+            running_predecessors = pending_set & self.vertices_being_run
+
+            # If this vertex has already run at least once, be strict: wait until NOTHING is pending or running
+            if vertex_id in self.ran_at_least_once:
+                # Wait if there are still pending or running predecessors; otherwise allow.
+                return not (pending_set or running_predecessors)
+
+            # FIRST execution of a cycle vertex
+            # Allow running **only** if it's a loop AND *all* pending predecessors are cycle vertices
+            return not (is_loop and pending_set <= self.cycle_vertices)
 
         return False
 
