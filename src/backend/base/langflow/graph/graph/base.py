@@ -705,6 +705,9 @@ class Graph:
                 raise ValueError(msg)
             vertex.update_raw_params(inputs, overwrite=True)
 
+    def dummy_sleep(self):
+        time.sleep(1)
+
     async def _run(
         self,
         *,
@@ -773,7 +776,7 @@ class Graph:
             raise ValueError(msg) from exc
 
         # a dummy sleep to show an exception raised by pyleak
-        time.sleep(1)
+        self.dummy_sleep()
 
         self._end_all_traces_async()
         # Get the outputs
