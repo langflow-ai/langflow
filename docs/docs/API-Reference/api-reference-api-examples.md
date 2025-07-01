@@ -96,7 +96,7 @@ export LANGFLOW_API_KEY="sk-..."
 
 Once you have your Langflow server URL, try calling these endpoints that return Langflow metadata.
 
-If authentication is required, include an `x-api-key` header or query parameter with a valid [Langflow API key](/configuration-api-keys), such as `-H 'x-api-key: $API_KEY'`.
+If authentication is required, include an `x-api-key` header or query parameter with a valid [Langflow API key](/configuration-api-keys), such as `-H "x-api-key: $API_KEY"`.
 
 ### Get version
 
@@ -145,13 +145,13 @@ curl -X GET \
 ```
 </details>
 
-### Get current user
+### Get all components
 
-Returns a user object.
+Returns a dictionary of all Langflow components:
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/users/whoami" \
+  "$LANGFLOW_URL/api/v1/all" \
   -H "accept: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY"
 ```
