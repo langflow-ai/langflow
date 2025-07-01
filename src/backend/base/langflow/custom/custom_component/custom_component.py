@@ -425,14 +425,13 @@ class CustomComponent(BaseComponent):
         else:
             msg = f"Invalid user id: {self.user_id}"
             raise TypeError(msg)
-        
+
         if session is not None:
             # Use the provided session instead of creating a new one
             return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
-        else:
-            # Fallback to creating a new session (for backward compatibility)
-            async with session_scope() as session:
-                return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
+        # Fallback to creating a new session (for backward compatibility)
+        async with session_scope() as session:
+            return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
     async def list_key_names(self):
         """Lists the names of the variables for the current user.

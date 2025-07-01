@@ -717,7 +717,7 @@ async def custom_component_update(
                 for field_name, field_dict in template.items()
                 if isinstance(field_dict, dict) and field_dict.get("load_from_db") and field_dict.get("value")
             ]
-            
+
             # Use a single database session for all load_from_db operations to prevent connection pool exhaustion
             async with session_scope() as session:
                 params = await update_params_with_load_from_db_fields(

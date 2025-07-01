@@ -60,7 +60,11 @@ async def get_instance_results(
     session=None,
 ):
     custom_params = await update_params_with_load_from_db_fields(
-        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars=fallback_to_env_vars, session=session
+        custom_component,
+        custom_params,
+        vertex.load_from_db_fields,
+        fallback_to_env_vars=fallback_to_env_vars,
+        session=session,
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
