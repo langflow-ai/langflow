@@ -5,6 +5,7 @@ module.exports = {
       type: "category",
       label: "Get started",
       items: [
+        "Get-Started/about-langflow",
         "Get-Started/get-started-installation",
         "Get-Started/get-started-quickstart",
       ],
@@ -26,16 +27,51 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Concepts",
+      label: "Flows",
       items: [
-        "Concepts/concepts-overview",
-        "Concepts/concepts-playground",
-        "Concepts/concepts-flows",
-        "Concepts/concepts-objects",
-        "Concepts/concepts-publish",
-        "Concepts/embedded-chat-widget",
-        "Concepts/concepts-file-management",
-        "Concepts/concepts-voice-mode",
+        {
+          type: "doc",
+          id: "Concepts/concepts-overview",
+          label: "Use the visual editor"
+        },
+        {
+          type: "category",
+          label: "Manage flows",
+          items: [
+            {
+              type: "doc",
+              id: "Concepts/concepts-flows",
+              label: "Create flows"
+            },
+            {
+              type: "doc",
+              id: "Concepts/concepts-publish",
+              label: "Publish flows"
+              //Combine and redirect Concepts/embedded-chat-widget
+            },
+            {
+              type: "doc",
+              id: "Concepts/concepts-flows-import",
+              label: "Import and export flows"
+            },
+          ]
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-playground",
+          label: "Playground"
+          //Combine and redirect Concepts/concepts-voice-mode
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-objects",
+          label: "Langflow objects"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-file-management",
+          label: "Manage files"
+        },
       ],
     },
     {

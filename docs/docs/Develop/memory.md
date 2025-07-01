@@ -7,7 +7,7 @@ Langflow provides flexible memory management options for storage and retrieval.
 
 This page details the following memory configuration options in Langflow.
 
-- [Use local Langflow database tables](#local-langflow-database-tables)
+- [Local Langflow database tables](#local-langflow-database-tables)
 - [Store messages in local memory](#store-messages-in-local-memory)
 - [Configure external memory](#configure-external-memory)
 - [Configure the external database connection](#configure-the-external-database-connection)
@@ -25,7 +25,7 @@ The following tables are stored in `langflow.db`:
 
 • **User** - Stores user account information including credentials, permissions, and profiles. For more information, see [Authentication](/configuration-authentication).
 
-• **Flow** - Contains flow configurations. For more information, see [Flows](/concepts-flows).
+• **Flow** - Contains flow configurations. For more information, see [Create and manage flows](/concepts-flows).
 
 • **Message** - Stores chat messages and interactions that occur between components. For more information, see [Message objects](/concepts-objects#message-object).
 

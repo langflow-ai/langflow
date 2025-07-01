@@ -138,7 +138,7 @@ To install Langflow from source, see [Install Langflow from source](/contributin
 :::important
 The Langflow team recommends installing new Langflow versions in a new virtual environment before upgrading your primary installation.
 
-This allows you to [import flows](/concepts-flows#import-flow) from your existing installation and test them in the new version without disrupting your existing installation.
+This allows you to [import flows](/concepts-flows-import#import-a-flow) from your existing installation and test them in the new version without disrupting your existing installation.
 In the event of breaking changes or bugs, your existing installation is preserved in a stable state.
 :::
 
