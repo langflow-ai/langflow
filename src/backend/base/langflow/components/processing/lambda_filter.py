@@ -17,7 +17,7 @@ class LambdaFilterComponent(Component):
     display_name = "Smart Function"
     description = "Uses an LLM to generate a function for filtering or transforming structured data."
     documentation: str = "https://docs.langflow.org/components-processing#smart-function"
-    icon = "test-tube-diagonal"
+    icon = "square-function"
     name = "Smart Function"
 
     inputs = [
