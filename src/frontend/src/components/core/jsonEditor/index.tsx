@@ -3,10 +3,13 @@ import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   Content,
   createJSONEditor,
+  MenuItem,
+  Mode,
   JsonEditor as VanillaJsonEditor,
 } from "vanilla-jsoneditor";
 import useAlertStore from "../../../stores/alertStore";
 import { cn } from "../../../utils/utils";
+import { useMenuCustomization } from "./useMenuCustomization";
 
 interface JsonEditorProps {
   data?: Content;
@@ -43,6 +46,9 @@ const JsonEditor = ({
   const [originalData, setOriginalData] = useState(data);
   const [isFiltered, setIsFiltered] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  
+  const { customizeMenu } = useMenuCustomization(setSuccessData, setErrorData);
 
   // Apply initial filter when component mounts
   useEffect(() => {
@@ -59,12 +65,6 @@ const JsonEditor = ({
       (Array.isArray(result) ||
         (typeof result === "object" && !Array.isArray(result)))
     );
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTransformQuery(e.target.value);
-    setIsFiltered(false);
-    setShowSuccess(false);
   };
 
   const applyFilter = (filtered: { json: any }, query: string) => {
@@ -339,6 +339,8 @@ const JsonEditor = ({
       containerRef.current.style.height = height;
     }
 
+    let editorInstance: VanillaJsonEditor | null = null;
+    
     const editor = createJSONEditor({
       target: containerRef.current,
       props: {
@@ -350,8 +352,18 @@ const JsonEditor = ({
         onChange: (content) => {
           onChange?.(content);
         },
+        onRenderMenu: (
+          items: MenuItem[],
+          context: { mode: Mode; modal: boolean; readOnly: boolean },
+        ) => {
+          // Use a getter function that will return the editor when called
+          return customizeMenu(items, context, () => editorInstance);
+        },
       },
     });
+    
+    // Set the editor instance immediately after creation
+    editorInstance = editor;
 
     setTimeout(() => editor.focus(), 100);
 
