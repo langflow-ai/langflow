@@ -17,7 +17,7 @@ As of Langflow version 1.5, all API requests require authentication with a Langf
 <details>
 <summary>Need help creating an API key?</summary>
 
-To generate a user-specific token to use with Langflow, do the following.
+To generate an API key to use with Langflow, do the following.
 
 1. Open the Langflow UI, click your user icon, and then select **Settings**.
 2. Click **Langflow API Keys**, and then click **Add New**.
@@ -26,16 +26,16 @@ To generate a user-specific token to use with Langflow, do the following.
 5. Use your Langflow API key in your API requests. For example:
     ```text
     curl --request POST \
-     --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
-     --header 'Content-Type: application/json' \
-     --header 'x-api-key: LANGFLOW_API_KEY' \
+     --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+     --header "Content-Type: application/json" \
+     --header "x-api-key: LANGFLOW_API_KEY" \
      --data '{
        "output_type": "chat",
        "input_type": "chat",
        "input_value": "Hello"
      }'
     ```
-6. Alternatively, the API pane's code snippets include a script to detect your local `LANGFLOW_API_KEY`.
+Alternatively, the API pane's code snippets include a script to detect your local `LANGFLOW_API_KEY`.
 To set this variable in your terminal:
 ```bash
 export LANGFLOW_API_KEY="sk..."

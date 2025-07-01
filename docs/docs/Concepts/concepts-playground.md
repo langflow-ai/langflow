@@ -43,9 +43,9 @@ To have more than one session in a single flow, pass a specific session ID to a 
 To post a message to a flow with a specific Session ID with curl, enter the following command:
 
 ```bash
-   curl -X POST "http://localhost:7860/api/v1/run/$FLOW_ID" \
-   -H 'Content-Type: application/json' \
-   -H 'x-api-key: LANGFLOW_API_KEY' \
+   curl -X POST "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+   -H "Content-Type: application/json" \
+   -H "x-api-key: LANGFLOW_API_KEY" \
    -d '{
        "session_id": "custom_session_123",
        "input_value": "message",
@@ -78,8 +78,8 @@ This example sends a base64-encoded image to the Playground using curl:
 
 ```bash
 curl -X POST "http://localhost:7860/api/v1/run/$FLOW_ID" \
--H 'Content-Type: application/json' \
--H 'x-api-key: LANGFLOW_API_KEY' \
+-H "Content-Type: application/json" \
+-H "x-api-key: LANGFLOW_API_KEY" \
 -d '{
     "session_id": "custom_session_123",
     "input_value": "What is in this image?",

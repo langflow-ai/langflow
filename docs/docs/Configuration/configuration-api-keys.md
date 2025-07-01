@@ -7,29 +7,42 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
-Langflow provides an API key functionality that allows users to access their individual components and flows.
+You can use Langflow API keys to interact with Langflow programmatically.
 
-## Auto-login and API key authentication
+The API key has the same permissions and access as you do when logged in through the web interface. This means your API key can only access your own flows, components, and data, and cannot access other users' resources.
+The API key represents the user who created them. If you create your key as a superuser, you will have superuser privileges and can manage other users, but will do so with your API key.
+
+<details open>
+<summary>Auto-login and API key authentication</summary>
 
 Prior to Langflow v1.5, when `AUTO_LOGIN` was enabled with `AUTO_LOGIN=true`, Langflow automatically logged users in as a superuser without requiring authentication, and API requests could be made without a Langflow API key.
 
 As of Langflow v1.5, all API requests require a Langflow API key, even when `AUTO_LOGIN` is enabled.
+
+The only exceptions are the MCP endpoints at `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`.
 The MCP-related endpoints will continue to require no authentication when `AUTO_LOGIN=true`.
+
+</details>
 
 ## Generate a Langflow API key
 
-Generate a user-specific token to use with Langflow.
+You can generate a Langflow API key with the UI, or the CLI.
 
-### Generate an API key with the Langflow UI
+The UI-generated key is appropriate for most cases. The CLI key is needed when your Langflow server is running in `--backend-only` mode.
+
+<Tabs>
+  <TabItem value="Langflow UI" label="Langflow UI" default>
 
 1. Click your user icon, and then select **Settings**.
 2. Click **Langflow API Keys**, and then click **Add New**.
 3. Name your key, and then click **Create API Key**.
 4. Copy the API key and store it in a secure location.
 
-### Generate an API key with the Langflow CLI
+  </TabItem>
 
-If you're serving your flow with `--backend-only=true`, you don't have a way to create an API key within the UI.
+  <TabItem value="Langflow CLI" label="Langflow CLI">
+
+    If you're serving your flow with `--backend-only=true`, you don't have a way to create an API key within the UI.
 
 To create API keys with the Langflow CLI, `AUTO_LOGIN` must be set to `FALSE` and you must be logged in as a superuser.
 
@@ -73,13 +86,18 @@ To create an API key for a user from the CLI, do the following:
     uv run langflow api-key
     ```
 
+
+  </TabItem>
+</Tabs>
+
 ## Authenticate requests with the Langflow API key
 
 Include your API key in API requests to authenticate requests to Langflow.
 
 API keys allow access only to the flows and components of the specific user to whom the key was issued.
 
-### Include the API key in the HTTP header
+<Tabs>
+  <TabItem value="HTTP header" label="HTTP header" default>
 
 To use the API key when making API requests, include the API key in the HTTP header:
 
@@ -91,7 +109,8 @@ curl -X POST \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
 ```
 
-### Include the API key as a query parameter
+  </TabItem>
+  <TabItem value="Query parameter" label="Query parameter">
 
 To pass the API key as a query parameter:
 
@@ -101,6 +120,8 @@ curl -X POST \
   -H 'Content-Type: application/json' \
   -d '{"inputs": {"text":""}, "tweaks": {}}'
 ```
+  </TabItem>
+</Tabs>
 
 ## Generate a Langflow secret key
 
