@@ -59,6 +59,7 @@ async def api_key_security(
                 if settings_service.auth_settings.skip_auth_auto_login:
                     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
                     logger.warning(AUTO_LOGIN_WARNING)
+                    return UserRead.model_validate(result, from_attributes=True)
                 else:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
@@ -72,19 +73,18 @@ async def api_key_security(
                 detail="An API key must be passed as query or header",
             )
 
-        elif query_param:
-            result = await check_key(db, query_param)
-
         else:
-            result = await check_key(db, header_param)
+            result = await check_key(db, query_param or header_param)
 
         if not result:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid or missing API key",
             )
+
         if isinstance(result, User):
             return UserRead.model_validate(result, from_attributes=True)
+
     msg = "Invalid result type"
     raise ValueError(msg)
 
