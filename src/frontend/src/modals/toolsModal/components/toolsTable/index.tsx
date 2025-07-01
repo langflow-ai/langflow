@@ -13,8 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { APITemplateType } from "@/types/api";
-import { parseString } from "@/utils/stringManipulation";
+import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
 import { ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
@@ -25,6 +24,7 @@ export default function ToolsTable({
   data,
   setData,
   isAction,
+  placeholder,
   open,
   handleOnNewValue,
 }: {
@@ -34,6 +34,7 @@ export default function ToolsTable({
   open: boolean;
   handleOnNewValue: handleOnNewValueType;
   isAction: boolean;
+  placeholder: string;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
@@ -94,7 +95,7 @@ export default function ToolsTable({
             name !== "" && name !== display_name
               ? name
               : isAction
-                ? ""
+                ? sanitizeMcpName(display_name || row.name, 46)
                 : display_name
           ).slice(0, 46);
 
@@ -172,11 +173,7 @@ export default function ToolsTable({
               "uppercase",
             ])
           : isAction
-            ? parseString(params.data.display_name, [
-                "snake_case",
-                "no_blank",
-                "uppercase",
-              ])
+            ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
             : parseString(params.data.tags.join(", "), [
                 "snake_case",
                 "uppercase",
@@ -237,8 +234,10 @@ export default function ToolsTable({
   };
 
   const handleNameChange = (e) => {
-    setSidebarName(e.target.value);
-    handleSidebarInputChange("name", e.target.value);
+    const rawValue = e.target.value;
+    const sanitizedValue = isAction ? sanitizeMcpName(rawValue, 46) : rawValue;
+    setSidebarName(sanitizedValue);
+    handleSidebarInputChange("name", sanitizedValue);
   };
 
   const handleSearchChange = (e) => setSearchQuery(e.target.value);

@@ -20,7 +20,6 @@ import McpComponent from "./components/mcpComponent";
 import MultiselectComponent from "./components/multiselectComponent";
 import PromptAreaComponent from "./components/promptComponent";
 import QueryComponent from "./components/queryComponent";
-import { RefreshParameterComponent } from "./components/refreshParameterComponent";
 import SortableListComponent from "./components/sortableListComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
@@ -295,20 +294,5 @@ export function ParameterRenderComponent({
     }
   };
 
-  return useMemo(
-    () => (
-      <RefreshParameterComponent
-        templateData={templateData}
-        disabled={disabled}
-        nodeId={nodeId}
-        editNode={editNode}
-        nodeClass={nodeClass}
-        handleNodeClass={handleNodeClass}
-        name={name}
-      >
-        {renderComponent()}
-      </RefreshParameterComponent>
-    ),
-    [templateData, disabled, nodeId, editNode, nodeClass, name, templateValue],
-  );
+  return renderComponent();
 }

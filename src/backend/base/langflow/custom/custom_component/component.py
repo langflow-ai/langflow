@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
-import uuid
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
@@ -1304,6 +1303,7 @@ class Component(CustomComponent):
         tools = []
         try:
             tools = await self._get_tools()
+            placeholder = "Loading actions..." if len(tools) == 0 else ""
         except (TimeoutError, asyncio.TimeoutError):
             placeholder = "Timeout loading actions"
         except (ConnectionError, OSError, ValueError):
@@ -1337,10 +1337,9 @@ class Component(CustomComponent):
 
         return ToolsInput(
             name=TOOLS_METADATA_INPUT_NAME,
-            placeholder=placeholder or "Loading actions...",
+            placeholder=placeholder,
             display_name="Actions",
             info=TOOLS_METADATA_INFO,
-            id=str(uuid.uuid4()),
             value=tool_data,
         )
 

@@ -329,7 +329,8 @@ export type FieldParserType =
   | "no_blank"
   | "valid_csv"
   | "space_case"
-  | "commands";
+  | "commands"
+  | "sanitize_mcp_name";
 
 export type TableOptionsTypeAPI = {
   block_add?: boolean;

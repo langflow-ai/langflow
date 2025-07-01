@@ -1,4 +1,5 @@
 import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";
+import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
@@ -14,14 +15,6 @@ type MarkdownFieldProps = {
   isAudioMessage?: boolean;
 };
 
-// Function to replace <think> tags with a placeholder before markdown processing
-const preprocessChatMessage = (text: string): string => {
-  // Replace <think> tags with `<span class="think-tag">think:</span>`
-  return text
-    .replace(/<think>/g, "`<think>`")
-    .replace(/<\/think>/g, "`</think>`");
-};
-
 export const MarkdownField = ({
   chat,
   isEmpty,
@@ -29,7 +22,7 @@ export const MarkdownField = ({
   editedFlag,
   isAudioMessage,
 }: MarkdownFieldProps) => {
-  // Process the chat message to handle <think> tags
+  // Process the chat message to handle <think> tags and clean up tables
   const processedChatMessage = preprocessChatMessage(chatMessage);
 
   return (

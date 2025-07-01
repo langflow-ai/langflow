@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-3Xb72",
+            "id": "ParserComponent-3Wxa2",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-HL6J1",
+            "id": "ChatOutput-811h1",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ParserComponent-3Xb72{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-3Xb72œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HL6J1{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HL6J1œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ParserComponent-3Wxa2{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-3Wxa2œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-811h1{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-811h1œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ParserComponent-3Xb72",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-3Xb72œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-HL6J1",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-HL6J1œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "ParserComponent-3Wxa2",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-3Wxa2œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-811h1",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-811h1œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -37,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-nObH7",
+            "id": "ChatInput-uZ7jn",
             "name": "message",
             "output_types": [
               "Message"
@@ -45,19 +45,19 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "AstraDB-8MbYw",
+            "id": "AstraDB-7gXip",
             "inputTypes": [
               "Message"
             ],
             "type": "query"
           }
         },
-        "id": "reactflow__edge-ChatInput-nObH7{œdataTypeœ:œChatInputœ,œidœ:œChatInput-nObH7œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-8MbYw{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-8MbYwœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "id": "reactflow__edge-ChatInput-uZ7jn{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uZ7jnœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-7gXip{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-7gXipœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
-        "source": "ChatInput-nObH7",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-nObH7œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-8MbYw",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-8MbYwœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "source": "ChatInput-uZ7jn",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-uZ7jnœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-7gXip",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-7gXipœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-8MbYw",
+            "id": "AstraDB-7gXip",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -73,7 +73,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-3Xb72",
+            "id": "ParserComponent-3Wxa2",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -81,12 +81,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraDB-8MbYw{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-8MbYwœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-3Xb72{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-3Xb72œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AstraDB-7gXip{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-7gXipœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-3Wxa2{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-3Wxa2œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AstraDB-8MbYw",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-8MbYwœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParserComponent-3Xb72",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-3Xb72œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "AstraDB-7gXip",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-7gXipœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ParserComponent-3Wxa2",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-3Wxa2œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -94,7 +94,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-CXvuM",
+            "id": "LanguageModelComponent-NEQ8S",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -102,19 +102,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-38AOi",
+            "id": "StructuredOutput-n8Y3t",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__LanguageModelComponent-CXvuM{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-CXvuMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-38AOi{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-38AOiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-NEQ8S{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-NEQ8Sœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-n8Y3t{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-n8Y3tœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-CXvuM",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-CXvuMœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-38AOi",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-38AOiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "LanguageModelComponent-NEQ8S",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-NEQ8Sœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "StructuredOutput-n8Y3t",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-n8Y3tœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -122,7 +122,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-38AOi",
+            "id": "StructuredOutput-n8Y3t",
             "name": "structured_output",
             "output_types": [
               "Data"
@@ -130,7 +130,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-MDCBV",
+            "id": "ParserComponent-Kb474",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -138,12 +138,12 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__StructuredOutput-38AOi{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-38AOiœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParserComponent-MDCBV{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-MDCBVœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-StructuredOutput-n8Y3t{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-n8Y3tœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParserComponent-Kb474{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-Kb474œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "StructuredOutput-38AOi",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-38AOiœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParserComponent-MDCBV",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-MDCBVœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "StructuredOutput-n8Y3t",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-n8Y3tœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParserComponent-Kb474",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-Kb474œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -151,7 +151,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-3anZE",
+            "id": "LanguageModelComponent-pB4iD",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -159,25 +159,25 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-38AOi",
+            "id": "StructuredOutput-n8Y3t",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__LanguageModelComponent-3anZE{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-3anZEœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-38AOi{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-38AOiœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-pB4iD{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-pB4iDœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-n8Y3t{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-n8Y3tœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LanguageModelComponent-3anZE",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-3anZEœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-38AOi",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-38AOiœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-pB4iD",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-pB4iDœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "StructuredOutput-n8Y3t",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-n8Y3tœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-nObH7",
+          "id": "ChatInput-uZ7jn",
           "node": {
             "base_classes": [
               "Message"
@@ -475,7 +475,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-nObH7",
+        "id": "ChatInput-uZ7jn",
         "measured": {
           "height": 48,
           "width": 192
@@ -489,7 +489,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-MDCBV",
+          "id": "ParserComponent-Kb474",
           "node": {
             "base_classes": [
               "Message"
@@ -648,9 +648,9 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-MDCBV",
+        "id": "ParserComponent-Kb474",
         "measured": {
-          "height": 328,
+          "height": 329,
           "width": 320
         },
         "position": {
@@ -662,7 +662,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-HL6J1",
+          "id": "ChatOutput-811h1",
           "node": {
             "base_classes": [
               "Message"
@@ -956,7 +956,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-HL6J1",
+        "id": "ChatOutput-811h1",
         "measured": {
           "height": 48,
           "width": 192
@@ -970,7 +970,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-3Xb72",
+          "id": "ParserComponent-3Wxa2",
           "node": {
             "base_classes": [
               "Message"
@@ -1129,7 +1129,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-3Xb72",
+        "id": "ParserComponent-3Wxa2",
         "measured": {
           "height": 246,
           "width": 320
@@ -1143,7 +1143,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-8MbYw",
+          "id": "AstraDB-7gXip",
           "node": {
             "base_classes": [
               "Data",
@@ -1263,7 +1263,7 @@
                 "info": "The API Endpoint for the Astra DB instance. Supercedes database selection.",
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_endpoint",
                 "placeholder": "",
                 "required": false,
@@ -1272,7 +1272,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "https://f3166ac4-3e2f-4b32-880c-231d1f9e3f3e-us-east-2.apps.astra.datastax.com"
+                "value": "ASTRA_DB_API_ENDPOINT"
               },
               "astradb_vectorstore_kwargs": {
                 "_input_type": "NestedDictInput",
@@ -1458,7 +1458,7 @@
                 "real_time_refresh": true,
                 "refresh_button": true,
                 "required": true,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
@@ -1580,7 +1580,18 @@
                 "load_from_db": false,
                 "name": "database_name",
                 "options": [],
-                "options_metadata": [],
+                "options_metadata": [
+                  {
+                    "api_endpoint": "https://5b8bb22c-4a38-4f0a-865c-a18ed7590bd1-us-east-2.apps.astra.datastax.com",
+                    "collections": 5,
+                    "keyspaces": [
+                      "default_keyspace",
+                      "samples_dataflow"
+                    ],
+                    "org_id": "260f986d-e65c-4f05-94a3-7cebfcb867a3",
+                    "status": null
+                  }
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
@@ -1933,9 +1944,9 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-8MbYw",
+        "id": "AstraDB-7gXip",
         "measured": {
-          "height": 603,
+          "height": 540,
           "width": 320
         },
         "position": {
@@ -1947,7 +1958,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-CXvuM",
+          "id": "LanguageModelComponent-NEQ8S",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1990,6 +2001,8 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2004,6 +2017,8 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -2217,13 +2232,14 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-CXvuM",
+        "id": "LanguageModelComponent-NEQ8S",
         "measured": {
-          "height": 450,
+          "height": 451,
           "width": 320
         },
         "position": {
@@ -2235,7 +2251,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-3anZE",
+          "id": "LanguageModelComponent-pB4iD",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2278,6 +2294,8 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2292,6 +2310,8 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -2510,9 +2530,9 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-3anZE",
+        "id": "LanguageModelComponent-pB4iD",
         "measured": {
-          "height": 450,
+          "height": 451,
           "width": 320
         },
         "position": {
@@ -2524,7 +2544,7 @@
       },
       {
         "data": {
-          "id": "StructuredOutput-38AOi",
+          "id": "StructuredOutput-n8Y3t",
           "node": {
             "base_classes": [
               "Data"
@@ -2775,9 +2795,9 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-38AOi",
+        "id": "StructuredOutput-n8Y3t",
         "measured": {
-          "height": 348,
+          "height": 349,
           "width": 320
         },
         "position": {
@@ -2786,17 +2806,43 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "note-AJ1HC",
+          "node": {
+            "description": "# Hybrid Search RAG\n\nHybrid search performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n* An [Astra DB Application Token](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html) for the Astra DB component.\n\n## Quickstart\n\n1. In the Astra DB component, add your Astra DB Application Token.\nThis connects Langflow to your Astra database.\n2. Select an Astra collection that is hybrid-enabled.\nFor more information, see the [Datastax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html).\nThe connection appears between the Parser component and the Astra DB component when a vector database is connected.\n3. Ensure the **Lexical Terms** and **Parsed Text** ports are connected.\n4. Add your OpenAI API key in the **Language Model** model component.\n5. Open the Playground and ask a question, like \"What are the features of my data?\"",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "blue"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "id": "note-AJ1HC",
+        "measured": {
+          "height": 601,
+          "width": 575
+        },
+        "position": {
+          "x": 816.3801044575429,
+          "y": -279.19595575780494
+        },
+        "selected": false,
+        "type": "noteNode"
       }
     ],
     "viewport": {
-      "x": 104.19697716143673,
-      "y": 93.92237895963603,
-      "zoom": 0.5685314513072638
+      "x": 28.84866644052977,
+      "y": 276.30129659855504,
+      "zoom": 0.5265349644912217
     }
   },
-  "description": "Uncover Business Opportunities with NLP.",
+  "description": "Explore Hybrid Search with a vector database.",
   "endpoint_name": null,
-  "id": "0e2f686f-3f13-4e45-bf2e-0da08d8239cc",
+  "id": "cd58d400-fe60-47c6-b2b5-4a7d3eada7b1",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Hybrid Search RAG",

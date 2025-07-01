@@ -2309,7 +2309,7 @@ name = "exceptiongroup"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/a65090624ecf468cdca03533906e7c69ed7588582240cfe7cc9e770b50eb/exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88", size = 29749, upload-time = "2025-05-10T17:42:51.123Z" }
 wheels = [
@@ -4980,6 +4980,7 @@ dev = [
     { name = "pandas-stubs" },
     { name = "pre-commit" },
     { name = "pydantic-ai" },
+    { name = "pyleak" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -5155,6 +5156,7 @@ dev = [
     { name = "pandas-stubs", specifier = ">=2.1.4.231227" },
     { name = "pre-commit", specifier = ">=3.7.0" },
     { name = "pydantic-ai", specifier = ">=0.0.19" },
+    { name = "pyleak", specifier = ">=0.1.12" },
     { name = "pytest", specifier = ">=8.2.0" },
     { name = "pytest-asyncio", specifier = ">=0.23.0" },
     { name = "pytest-cov", specifier = ">=5.0.0" },
@@ -8474,6 +8476,18 @@ name = "pylatexenc"
 version = "2.10"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/5d/ab/34ec41718af73c00119d0351b7a2531d2ebddb51833a36448fc7b862be60/pylatexenc-2.10.tar.gz", hash = "sha256:3dd8fd84eb46dc30bee1e23eaab8d8fb5a7f507347b23e5f38ad9675c84f40d3", size = 162597, upload-time = "2021-04-06T07:56:07.854Z" }
+
+[[package]]
+name = "pyleak"
+version = "0.1.12"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "exceptiongroup" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/14/55/bdc246baf6870185555d6ebcb35a7361f9bb95ba3fd0ff295d8fc4ff9e6e/pyleak-0.1.12.tar.gz", hash = "sha256:6af479b2dd5d4c71ff2b33ba5eeccda04b2d248f884801cf414fc84777a636de", size = 104742, upload-time = "2025-07-01T12:04:44.708Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4d/08/e8bc7e2f63deca307575bcf98d112fe75f80ecd716d3dcc69330ad096fff/pyleak-0.1.12-py3-none-any.whl", hash = "sha256:17a1c8b11d89fdcee79f0a479378bd6de23de323754a81efe8d8d9550ac12863", size = 23762, upload-time = "2025-07-01T12:04:43.494Z" },
+]
 
 [[package]]
 name = "pylint"

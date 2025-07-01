@@ -47,18 +47,17 @@ export default function ToolsComponent({
         disabled && "cursor-not-allowed",
       )}
     >
-      {value && (
-        <ToolsModal
-          open={isModalOpen}
-          setOpen={setIsModalOpen}
-          isAction={isAction}
-          description={description}
-          rows={value}
-          handleOnNewValue={handleOnNewValue}
-          title={title}
-          icon={icon}
-        />
-      )}
+      <ToolsModal
+        open={isModalOpen}
+        placeholder={placeholder || ""}
+        setOpen={setIsModalOpen}
+        isAction={isAction}
+        description={description}
+        rows={value || []}
+        handleOnNewValue={handleOnNewValue}
+        title={title}
+        icon={icon}
+      />
       <div
         className="relative flex w-full items-center gap-3"
         data-testid={"div-" + id}
