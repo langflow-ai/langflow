@@ -3,23 +3,61 @@ title: Flows
 slug: /concepts-flows
 ---
 
-Flows in Langflow are fully serializable and can be saved and loaded from the file system. In this guide, we'll explore how to import and export flows.
+import Icon from "@site/src/components/icon";
 
-## Import Flow
+<!-- TODO: Align/move flow information from other /concepts-* pages -->
 
-If you've already got a Langflow JSON file, import it into Langflow by clicking on the project name and choosing **Import Flow**.
+Flows in Langflow are fully serializable and can be saved and loaded from the file system. This page explains how to import and export flows.
 
-![Import Flow](../../static/img/flows/import.gif)
+## Export a flow
 
-Once imported, your flow is ready to use.
+You can export flows to transfer flows between Langflow instances or save backups of your flows.
 
-:::tip
-You can drag and drop Langflow JSON files directly from your file system into the Langflow window to import a flow, even into the initial Langflow splash screen.
+An exported flow is downloaded to your local machine as a JSON file named `FLOW_NAME.json`.
+
+There are three ways to export a flow:
+
+* From the **Projects** page, find the flow you want to export, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Export**.
+* When editing a flow, click **Share**, and then click **Export**.
+* Use the Langflow API [`/flows/download`](/api-flows#export-flows) endpoint.
+
+### Save with my API keys
+
+When exporting from the Langflow UI, you can select **Save with my API keys** to export the flow _and_ any defined API key variables.
+Non-API key variables are included in the export regardless of the **Save with my API keys** setting.
+
+:::warn
+If you directly entered the key value into a component's API key field, then **Save with my API keys** exports the literal key value.
+
+If your key is stored in a Langflow global variable, **Save with my API keys** exports only the variable name.
 :::
 
-## Export Flow
+When you or another user import the flow to another Langflow instance, that instance must have Langflow global variables with the same names and a valid values in order to run the flow successfully.
+If any variables are missing or invalid, those variables must be created or edited after importing the flow.
 
-The option to export a flow is available in the same menu as shown above. Once exported as JSON, you can import your flow into another Langflow instance.
+### Export all flows
+
+If you want to export all flows within a project, do either of the following:
+
+* Go to the **Projects** page, find the project you want to export, click <Icon name="Ellipsis" aria-hidden="true" /> **Options**, and then select **Download**.
+* Use the Langflow API [`/projects/download`](/api-projects#export-a-project) endpoint.
+
+The project's flows are downloaded as JSON files in a zip archive.
+
+## Import a flow
+
+You can import Langflow JSON files from your local machine in the following ways:
+
+* From the **Projects** page, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
+* Drag and drop Langflow JSON files from your file explorer into your Langflow window to import a flow from any Langflow page.
+* Use the Langflow API [`/flows/upload/`](/api-flows#import-flows) endpoint to upload one JSON file.
+* Use the Langflow API [`/projects/upload`](/api-projects#import-a-project) endpoint to upload a Langflow project zip file.
+
+### Run an imported flow
+
+Once imported, your flow is ready to use.
+If the flow contains any global variables, make sure your Langflow instance has global variables with the same names and valid values.
+For more information, see [Save with my API keys](/concepts-flows#save-with-my-api-keys).
 
 ## Langflow JSON file contents
 
@@ -29,11 +67,8 @@ For an example Langflow JSON file, examine the [Basic Prompting.json](https://gi
 
 ### Nodes
 
-**Nodes** represent the components that make up the flow.
-
-The `ChatInput` node is the entry point of the flow. It's the first node that will be executed.
-
-`ChatInput-jFwUm` is a unique identifier for the node.
+Nodes represent the components that make up the flow.
+For example, this object represents a **Chat Input** component:
 
 ```json
 {
@@ -73,9 +108,13 @@ The `ChatInput` node is the entry point of the flow. It's the first node that wi
 }
 ```
 
+Each node has a unique identifier in the format of `NODE_NAME-UUID`, such as `ChatInput-jFwUm`.
+
+Entrypoint nodes, such as the `ChatInput` node, are the first node executed when running a flow.
+
 ### Edges
 
-**Edges** represent the connections between nodes.
+Edges represent the connections between nodes.
 
 The connection between the `ChatInput` node and the `OpenAIModel` node is represented as an edge:
 
@@ -133,7 +172,7 @@ Additional information about the flow is stored in the root `data` object.
 }
 ```
 
-**Notes** are like comments to help you understand the flow within the workspace.
+* Notes are comments that help you understand the flow within the workspace.
 They may contain links, code snippets, and other information.
 Notes are written in Markdown and stored as `node` objects.
 ```json
@@ -144,4 +183,3 @@ Notes are written in Markdown and stored as `node` objects.
   }
 }
 ```
-
