@@ -27,9 +27,9 @@
         "id": "reactflow__edge-ChatOutput-vSJ6N{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-vSJ6Nœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SaveToFile-Jknwv{œfieldNameœ:œinputœ,œidœ:œSaveToFile-Jknwvœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ChatOutput-vSJ6N",
-        "sourceHandle": "{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-vSJ6Nœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatOutputœ, œidœ: œChatOutput-vSJ6Nœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "SaveToFile-Jknwv",
-        "targetHandle": "{œfieldNameœ:œinputœ,œidœ:œSaveToFile-Jknwvœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œSaveToFile-Jknwvœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-AgentQL-tQP4B{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-tQP4Bœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-9FjKL{œfieldNameœ:œtoolsœ,œidœ:œAgent-9FjKLœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AgentQL-tQP4B",
-        "sourceHandle": "{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-tQP4Bœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-tQP4Bœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-9FjKL",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-9FjKLœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-9FjKLœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-ChatInput-ltBH6{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ltBH6œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-9FjKL{œfieldNameœ:œinput_valueœ,œidœ:œAgent-9FjKLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-ltBH6",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ltBH6œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ltBH6œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-9FjKL",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-9FjKLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-9FjKLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-Agent-9FjKL{œdataTypeœ:œAgentœ,œidœ:œAgent-9FjKLœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-vSJ6N{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vSJ6Nœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-9FjKL",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-9FjKLœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-9FjKLœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-vSJ6N",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vSJ6Nœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-vSJ6Nœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [

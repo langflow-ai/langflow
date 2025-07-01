@@ -25,9 +25,9 @@
         "id": "reactflow__edge-SearchComponent-mY1Fv{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-mY1Fvœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-RTpIN{œfieldNameœ:œtoolsœ,œidœ:œAgent-RTpINœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SearchComponent-mY1Fv",
-        "sourceHandle": "{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-mY1Fvœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œSearchComponentœ, œidœ: œSearchComponent-mY1Fvœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-RTpIN",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-RTpINœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-RTpINœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-hRyEJ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-hRyEJœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-RTpIN{œfieldNameœ:œinput_valueœ,œidœ:œAgent-RTpINœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-hRyEJ",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-hRyEJœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-hRyEJœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-RTpIN",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-RTpINœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-RTpINœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-Agent-RTpIN{œdataTypeœ:œAgentœ,œidœ:œAgent-RTpINœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-9tDeE{œfieldNameœ:œinput_valueœ,œidœ:œAgent-9tDeEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-RTpIN",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-RTpINœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-RTpINœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-9tDeE",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-9tDeEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-9tDeEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "reactflow__edge-Agent-9tDeE{œdataTypeœ:œAgentœ,œidœ:œAgent-9tDeEœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-C8zRS{œfieldNameœ:œinput_valueœ,œidœ:œAgent-C8zRSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-9tDeE",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-9tDeEœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-9tDeEœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-C8zRS",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-C8zRSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-C8zRSœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -139,9 +139,9 @@
         "id": "reactflow__edge-Agent-C8zRS{œdataTypeœ:œAgentœ,œidœ:œAgent-C8zRSœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-TzFZY{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-TzFZYœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-C8zRS",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-C8zRSœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-C8zRSœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-TzFZY",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-TzFZYœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-TzFZYœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -167,9 +167,9 @@
         "id": "reactflow__edge-URL-zTFcy{œdataTypeœ:œURLœ,œidœ:œURL-zTFcyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-9tDeE{œfieldNameœ:œtoolsœ,œidœ:œAgent-9tDeEœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URL-zTFcy",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-zTFcyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-zTFcyœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-9tDeE",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-9tDeEœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-9tDeEœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -195,9 +195,9 @@
         "id": "reactflow__edge-CalculatorComponent-FyfwW{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-FyfwWœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-C8zRS{œfieldNameœ:œtoolsœ,œidœ:œAgent-C8zRSœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "CalculatorComponent-FyfwW",
-        "sourceHandle": "{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-FyfwWœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-FyfwWœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-C8zRS",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-C8zRSœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-C8zRSœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
