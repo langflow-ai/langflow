@@ -27,13 +27,6 @@ from langflow.schema.message import Message
 class ComposioBaseComponent(Component):
     """Base class for Composio components with common functionality."""
 
-    # TL;DR: ATTACHMENT FIELD OPTIMIZATION
-    # Problem: Composio doesn't specify which fields are file attachments in their schemas
-    # Solution: Map only actions that have file inputs -> their attachment field names
-    # Optimization: Most actions (98%) get O(1) rejection, only file-actions check fields
-    # Performance: ~50x faster than checking every field of every action
-
-    # Only actions that actually accept file inputs and their attachment field names
     ATTACHMENT_FIELDS = {
         "GMAIL_SEND_EMAIL": {"attachment"},
         "GMAIL_CREATE_DRAFT": {"attachment"},
@@ -43,7 +36,6 @@ class ComposioBaseComponent(Component):
         # because of its complex schema structure with 'file_uploadable' and 'anyOf'
     }
 
-    # Common inputs that all Composio components will need
     _base_inputs = [
         MessageTextInput(
             name="entity_id",
@@ -139,8 +131,7 @@ class ComposioBaseComponent(Component):
     def sanitize_action_name(self, action_name: str) -> str:
         """Convert action name to display name using lookup."""
         self._build_action_maps()
-        result = self._key_to_display_map.get(action_name, action_name)
-        return result
+        return self._key_to_display_map.get(action_name, action_name)
 
     def desanitize_action_name(self, action_name: str) -> str:
         """Convert display name to action key using lookup."""
@@ -196,11 +187,7 @@ class ComposioBaseComponent(Component):
                         build_config[field]["value"] = ""
 
     def _populate_actions_data(self):
-        """Fetch the list of actions for the app (once) and build helper maps.
-
-        This makes writing concrete app components trivial – they no longer need
-        to hard-code `_actions_data`, `_all_fields`, or `_bool_variables`.
-        """
+        """Fetch the list of actions for the app (once) and build helper maps."""
         # Already populated → nothing to do
         if self._actions_data:
             return
@@ -215,15 +202,12 @@ class ComposioBaseComponent(Component):
             # Fetch schemas for this toolkit using the new SDK
             toolkit_slug = self.app_name.lower()
 
-            raw_tools = composio.tools.get_raw_composio_tools(toolkits=[toolkit_slug]) or []
+            raw_tools = composio.tools.get_raw_composio_tools(toolkits=[toolkit_slug], limit=999) or []
 
             for raw_tool in raw_tools:
                 try:
                     # Convert raw_tool to dict-like structure
-                    if hasattr(raw_tool, "__dict__"):
-                        tool_dict = raw_tool.__dict__
-                    else:
-                        tool_dict = raw_tool
+                    tool_dict = raw_tool.__dict__ if hasattr(raw_tool, "__dict__") else raw_tool
 
                     if not tool_dict:
                         logger.warning(f"Tool is None or empty: {raw_tool}")
@@ -259,7 +243,6 @@ class ComposioBaseComponent(Component):
                     try:
                         # Special handling for unusual schema structures
                         if not isinstance(parameters_schema, dict):
-                            logger.warning(f"Parameters schema is not a dict for {action_key}, got: {type(parameters_schema)}")
                             # Try to convert if it's a model object
                             if hasattr(parameters_schema, "model_dump"):
                                 parameters_schema = parameters_schema.model_dump()
@@ -308,9 +291,7 @@ class ComposioBaseComponent(Component):
                                             field_schema["description"] = original_descriptions[base_field_name]
                                         elif field_name in original_descriptions:
                                             field_schema["description"] = original_descriptions[field_name]
-                        except Exception as flatten_error:
-                            logger.error(f"flatten_schema failed for {action_key}: {flatten_error}")
-                            # Still add the action but with empty fields so the UI doesn't break
+                        except (KeyError, TypeError, ValueError):
                             self._action_schemas[action_key] = tool_dict
                             self._actions_data[action_key] = {
                                 "display_name": display_name,
@@ -360,22 +341,23 @@ class ComposioBaseComponent(Component):
                             "action_fields": action_fields,
                         }
 
-                    except Exception as schema_error:
-                        logger.warning(f"Failed to process schema for action {action_key}: {schema_error}")
-                        # Still add the action but with empty fields so the UI doesn't break
+                    except (KeyError, TypeError, ValueError) as flatten_error:
+                        logger.error(f"flatten_schema failed for {action_key}: {flatten_error}")
                         self._action_schemas[action_key] = tool_dict
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": [],
                         }
-                except Exception as e:  # pragma: no cover – schema edge-cases
+                        continue
+
+                except ValueError as e:
                     logger.warning(f"Failed processing Composio tool for action {raw_tool}: {e}")
 
             # Helper look-ups used elsewhere
             self._all_fields = {f for d in self._actions_data.values() for f in d["action_fields"]}
             self._build_action_maps()
 
-        except Exception as e:  # noqa: BLE001
+        except ValueError as e:
             logger.debug(f"Could not populate Composio actions for {self.app_name}: {e}")
 
     # ---------------------------------------------------------------------
@@ -397,7 +379,9 @@ class ComposioBaseComponent(Component):
 
             # Check if parameters_schema has the expected structure
             if not isinstance(parameters_schema, dict):
-                logger.warning(f"Parameters schema is not a dict for action key: {action_key}, got: {type(parameters_schema)}")
+                logger.warning(
+                    f"Parameters schema is not a dict for action key: {action_key}, got: {type(parameters_schema)}"
+                )
                 return []
 
             # Validate parameters_schema has required structure before flattening
@@ -434,7 +418,7 @@ class ComposioBaseComponent(Component):
                                 field_schema["description"] = original_descriptions[base_field_name]
                             elif field_name in original_descriptions:
                                 field_schema["description"] = original_descriptions[field_name]
-            except Exception as flatten_error:
+            except (KeyError, TypeError, ValueError) as flatten_error:
                 logger.error(f"flatten_schema failed for {action_key}: {flatten_error}")
                 return []
 
@@ -561,9 +545,8 @@ class ComposioBaseComponent(Component):
                         processed_inputs.append(inp)
 
                 return processed_inputs
-
-            return result
-        except Exception as e:  # noqa: BLE001
+            return result  # noqa: TRY300
+        except ValueError as e:
             logger.warning(f"Error generating inputs for {action_key}: {e}")
             return []
 
@@ -612,20 +595,101 @@ class ComposioBaseComponent(Component):
         # Ensure _all_fields includes new ones
         self._all_fields.update({i.name for i in lf_inputs})
 
+    def _is_tool_mode_enabled(self) -> bool:
+        """Check if tool_mode is currently enabled."""
+        return getattr(self, "tool_mode", False)
+
+    def _set_action_visibility(self, build_config: dict, force_show: bool = None) -> None:
+        """Set action field visibility based on tool_mode state or forced value."""
+        if force_show is not None:
+            build_config["action"]["show"] = force_show
+        else:
+            # When tool_mode is enabled, hide action field
+            build_config["action"]["show"] = not self._is_tool_mode_enabled()
+
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Simplified build config updates."""
+        # BULLETPROOF tool_mode checking - check all possible places where tool_mode could be stored
+        instance_tool_mode = getattr(self, "tool_mode", False) if hasattr(self, "tool_mode") else False
+        
+        # Check build_config for tool_mode in multiple possible structures
+        build_config_tool_mode = False
+        if "tool_mode" in build_config:
+            tool_mode_config = build_config["tool_mode"]
+            if isinstance(tool_mode_config, dict):
+                build_config_tool_mode = tool_mode_config.get("value", False)
+            else:
+                build_config_tool_mode = bool(tool_mode_config)
+        
+        # If this is a tool_mode change, update BOTH instance variable AND build_config
+        if field_name == "tool_mode":
+            self.tool_mode = field_value
+            instance_tool_mode = field_value
+            # CRITICAL: Store tool_mode state in build_config so it persists
+            if "tool_mode" not in build_config:
+                build_config["tool_mode"] = {}
+            if isinstance(build_config["tool_mode"], dict):
+                build_config["tool_mode"]["value"] = field_value
+            build_config_tool_mode = field_value
+        
+        # Current tool_mode is True if ANY source indicates it's enabled
+        current_tool_mode = instance_tool_mode or build_config_tool_mode or (field_name == "tool_mode" and field_value)
+        
+        # Enhanced logging
+        logger.debug(f"update_build_config called: field_name={field_name}, field_value={field_value if field_name != 'tools_metadata' else '[tools_metadata_data]'}, current_tool_mode={current_tool_mode}, instance={instance_tool_mode}, build_config={build_config_tool_mode}")
+        
+        # CRITICAL: If tool_mode is enabled from ANY source, immediately hide action field and return
+        if current_tool_mode:
+            logger.debug(f"TOOL MODE ENABLED - Hiding action field immediately. Sources: instance={instance_tool_mode}, build_config={build_config_tool_mode}, field_change={field_name == 'tool_mode' and field_value}")
+            build_config["action"]["show"] = False
+            
+            # CRITICAL: Hide ALL action parameter fields when tool mode is enabled
+            logger.debug(f"Available fields in _all_fields: {list(self._all_fields)}")
+            logger.debug(f"Available fields in build_config: {list(build_config.keys())}")
+            
+            hidden_fields = []
+            for field in self._all_fields:
+                if field in build_config:
+                    build_config[field]["show"] = False
+                    hidden_fields.append(field)
+            
+            # Also hide any other action-related fields that might be in build_config
+            action_related_fields = []
+            for field_name_in_config in build_config.keys():
+                # Skip base fields like api_key, tool_mode, action, etc.
+                if field_name_in_config not in ["api_key", "tool_mode", "action", "auth_link", "entity_id"]:
+                    if isinstance(build_config[field_name_in_config], dict) and "show" in build_config[field_name_in_config]:
+                        build_config[field_name_in_config]["show"] = False
+                        action_related_fields.append(field_name_in_config)
+            
+            logger.debug(f"Hidden fields from _all_fields: {hidden_fields}")
+            logger.debug(f"Hidden action-related fields from build_config: {action_related_fields}")
+            
+            # ENSURE tool_mode state is preserved in build_config for future calls
+            if "tool_mode" not in build_config:
+                build_config["tool_mode"] = {"value": True}
+            elif isinstance(build_config["tool_mode"], dict):
+                build_config["tool_mode"]["value"] = True
+            # Don't proceed with any other logic that might override this
+            return build_config
+
         # Ensure dynamic action metadata is available whenever we have an API key
         if (field_name == "api_key" and field_value) or (self.api_key and not self._actions_data):
             self._populate_actions_data()
 
         if field_name == "tool_mode":
-            build_config["action"]["show"] = True
-            for field in self._all_fields:
-                build_config[field]["show"] = not field_value
+            logger.error(f"Tool mode changed: field_value={field_value}, field_name={field_name}")
+            if field_value is True:
+                build_config["action"]["show"] = False  # Hide action field when tool mode is enabled
+                for field in self._all_fields:
+                    build_config[field]["show"] = False  # Update show status for all fields based on tool mode
+            elif field_value is False:
+                build_config["action"]["show"] = True  # Show action field when tool mode is disabled
+                for field in self._all_fields:
+                    build_config[field]["show"] = True  # Update show status for all fields based on tool mode
             return build_config
 
         if field_name == "action":
-            # Dynamically inject parameter fields for the chosen action
             self._update_action_config(build_config, field_value)
             # Keep the existing show/hide behaviour
             self.show_hide_fields(build_config, field_value)
@@ -644,13 +708,21 @@ class ComposioBaseComponent(Component):
         if not hasattr(self, "api_key") or not self.api_key:
             return build_config
 
-        # Update action options
+        # CRITICAL: If tool_mode is enabled (check both instance and build_config), skip all connection logic
+        if current_tool_mode:
+            logger.debug(f"Tool mode is enabled (instance: {self._is_tool_mode_enabled()}, build_config: {build_config_tool_mode}) - skipping connection logic and ensuring action field is hidden")
+            build_config["action"]["show"] = False
+            return build_config
+
+        # Update action options only if tool_mode is disabled
         self._build_action_maps()
         build_config["action"]["options"] = [
             {"name": self.sanitize_action_name(action), "metadata": action}
             for action in self._actions_data
         ]
-        build_config["action"]["show"] = True
+        # Only set show=True if tool_mode is not enabled
+        if not current_tool_mode:
+            build_config["action"]["show"] = True
 
         try:
             toolset = self._build_wrapper()
@@ -659,7 +731,7 @@ class ComposioBaseComponent(Component):
             # Handle disconnection first (if user clicked disconnect)
             if field_name == "auth_link" and field_value == "disconnect":
                 try:
-                    connections = toolset.connected_accounts.list(user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug])
+                    connections = toolset.connected_accounts.list(user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug]) #noqa: E501
                     # Validate response structure before accessing items
                     if connections and hasattr(connections, "items") and connections.items:
                         if isinstance(connections.items, list) and len(connections.items) > 0:
@@ -678,14 +750,14 @@ class ComposioBaseComponent(Component):
                                 else:
                                     logger.warning(f"ACTIVE connection found but no ID available for {toolkit_slug}")
                             else:
-                                logger.warning(f"Found {len(connections.items)} connection(s) for {toolkit_slug}, but none are ACTIVE to disconnect")
+                                logger.warning(f"Found {len(connections.items)} connection(s) for {toolkit_slug}, but none are ACTIVE to disconnect") #noqa: E501
                         else:
                             logger.warning(f"No connections to disconnect for {toolkit_slug}")
                     else:
                         logger.warning(f"Invalid connection response structure for {toolkit_slug}")
 
                     # After disconnection, fall through to check connection status
-                except Exception as e:
+                except ValueError as e:
                     logger.error(f"Error disconnecting: {e}")
                     build_config["auth_link"]["value"] = "error"
                     build_config["auth_link"]["auth_tooltip"] = f"Disconnect failed: {e!s}"
@@ -693,7 +765,10 @@ class ComposioBaseComponent(Component):
 
             # Check current connection status and set appropriate auth_link value
             try:
-                connection_list = toolset.connected_accounts.list(user_ids=[self.entity_id], toolkit_slugs=[toolkit_slug])
+                connection_list = toolset.connected_accounts.list(
+                    user_ids=[self.entity_id],
+                    toolkit_slugs=[toolkit_slug]
+                )
 
                 # Validate response structure and check for valid connections
                 has_active_connections = False
@@ -709,9 +784,13 @@ class ComposioBaseComponent(Component):
 
                         if active_connections:
                             has_active_connections = True
-                            logger.debug(f"Found {len(active_connections)} ACTIVE connection(s) out of {len(connection_list.items)} total for {toolkit_slug}")
+                            logger.debug(
+                                f"Found {len(active_connections)} ACTIVE connection(s) out of {len(connection_list.items)} total for {toolkit_slug}" #noqa: E501
+                            )
                         else:
-                            logger.debug(f"Found {len(connection_list.items)} connection(s) for {toolkit_slug}, but none are ACTIVE")
+                            logger.debug(
+                                f"Found {len(connection_list.items)} connection(s) for {toolkit_slug}, but none are ACTIVE" #noqa: E501
+                            )
                     else:
                         logger.debug(f"No valid connections found for {toolkit_slug}: items is not a valid list")
                 else:
@@ -736,11 +815,13 @@ class ComposioBaseComponent(Component):
                             if hasattr(connection, "redirect_url"):
                                 redirect_url = connection.redirect_url
                             else:
-                                raise ValueError("No redirect URL received from Composio")
+                                error_message = "No redirect URL received from Composio"
+                                raise ValueError(error_message)
 
                         # Validate the URL format
                         if not redirect_url.startswith(("http://", "https://")):
-                            raise ValueError(f"Invalid redirect URL format: {redirect_url}")
+                            message = f"Invalid redirect URL format: {redirect_url}"
+                            raise ValueError(message)
 
                         # Log the URL for debugging and manual use if needed
                         logger.info(f"🔗 Composio OAuth URL for {toolkit_slug}: {redirect_url}")
@@ -750,14 +831,14 @@ class ComposioBaseComponent(Component):
                         build_config["auth_link"]["auth_tooltip"] = "Connect"
                         build_config["action"]["helper_text"] = "Please connect before selecting actions."
                         build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
-                    except Exception as e:
+                    except ValueError as e:
                         logger.error(f"Error creating OAuth connection: {e}")
                         build_config["auth_link"]["value"] = "connect"
                         build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
                         build_config["action"]["helper_text"] = "Please connect before selecting actions."
                         build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
 
-            except Exception as e:
+            except ValueError as e:
                 logger.error(f"Error checking connection status for {toolkit_slug}: {e}")
                 # Default to disconnected state on error
                 build_config["auth_link"]["value"] = "connect"
@@ -765,18 +846,24 @@ class ComposioBaseComponent(Component):
                 build_config["action"]["helper_text"] = "Please connect before selecting actions."
                 build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
 
-        except Exception as e:
+        except ValueError as e:
             build_config["auth_link"]["value"] = ""
             build_config["auth_link"]["auth_tooltip"] = "Please provide a valid Composio API Key."
             build_config["action"]["helper_text"] = "Please connect before selecting actions."
             build_config["action"]["helper_text_metadata"] = {"variant": "destructive"}
             logger.error(f"Error in auth flow: {e}")
 
+        # CRITICAL: Final check to ensure action field is hidden when tool_mode is enabled
+        # This overrides any other logic that might have set it to visible
+        if self._is_tool_mode_enabled():
+            build_config["action"]["show"] = False
+            logger.debug("Final check: Hiding action field because tool_mode is enabled")
+
         return build_config
 
     def configure_tools(self, composio: Composio) -> list[Tool]:
-        tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()])
-        logger.info(f"Tools: {tools}")
+        tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()], limit=999)
+        # logger.info(f"Tools: {tools}")
         configured_tools = []
         for tool in tools:
             # Set the sanitized name
@@ -809,10 +896,6 @@ class ComposioBaseComponent(Component):
             self._populate_actions_data()
 
         return list(self._actions_data.keys())
-
-    # ---------------------------------------------------------------------
-    # Generic execution logic – now shared by every Composio app component
-    # ---------------------------------------------------------------------
 
     def execute_action(self):
         """Execute the selected Composio action and return its raw `data` payload."""
@@ -869,7 +952,9 @@ class ComposioBaseComponent(Component):
 
                     # Skip fields that look like auto-generated UUIDs for optional fields
                     # This is a heuristic to avoid passing system-generated IDs
-                    if isinstance(value, str) and len(value) == 36 and value.count("-") == 4:
+                    uuid_length = 36
+                    uuid_dash_count = 4
+                    if isinstance(value, str) and len(value) == uuid_length and value.count("-") == uuid_dash_count:
                         continue
 
                 # Convert comma-separated to list for array parameters (heuristic)
@@ -889,9 +974,9 @@ class ComposioBaseComponent(Component):
                 user_id=self.entity_id,
             )
 
-            return {"response": result}
+            return {"response": result} #noqa: TRY300
 
-        except Exception as e:
+        except ValueError as e:
             logger.error(f"Failed to execute {action_key}: {e}")
             raise
 
