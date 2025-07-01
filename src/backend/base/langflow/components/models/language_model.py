@@ -38,6 +38,7 @@ class LanguageModelComponent(LCModelComponent):
             options=OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,
             value=OPENAI_CHAT_MODEL_NAMES[0],
             info="Select the model to use",
+            real_time_refresh=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -56,7 +57,7 @@ class LanguageModelComponent(LCModelComponent):
             name="system_message",
             display_name="System Message",
             info="A system message that helps set the behavior of the assistant",
-            advanced=True,
+            advanced=False,
         ),
         BoolInput(
             name="stream",
@@ -86,8 +87,8 @@ class LanguageModelComponent(LCModelComponent):
                 msg = "OpenAI API key is required when using OpenAI provider"
                 raise ValueError(msg)
 
-            if model_name.startswith("o1"):
-                # o1 models do not support temperature (yet)
+            if model_name in OPENAI_REASONING_MODEL_NAMES:
+                # reasoning models do not support temperature (yet)
                 temperature = None
 
             return ChatOpenAI(
@@ -120,7 +121,6 @@ class LanguageModelComponent(LCModelComponent):
         raise ValueError(msg)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-        print(f"field_name: {field_name}, field_value: {field_value}")
         if field_name == "provider":
             if field_value == "OpenAI":
                 build_config["model_name"]["options"] = OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES

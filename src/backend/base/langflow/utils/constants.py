@@ -1,10 +1,5 @@
 from typing import Any
 
-from langflow.base.models.openai_constants import (
-    OPENAI_CHAT_MODEL_NAMES,
-    OPENAI_REASONING_MODEL_NAMES,
-)
-
 OPENAI_MODELS = [
     "text-davinci-003",
     "text-davinci-002",
@@ -12,8 +7,27 @@ OPENAI_MODELS = [
     "text-babbage-001",
     "text-ada-001",
 ]
-CHAT_OPENAI_MODELS = OPENAI_CHAT_MODEL_NAMES
-REASONING_OPENAI_MODELS = OPENAI_REASONING_MODEL_NAMES
+CHAT_OPENAI_MODELS = [
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4-turbo-preview",
+    "gpt-4-0125-preview",
+    "gpt-4-1106-preview",
+    "gpt-4-vision-preview",
+    "gpt-3.5-turbo-0125",
+    "gpt-3.5-turbo-1106",
+]
+
+REASONING_OPENAI_MODELS = [
+    "o1",
+    "o1-mini",
+    "o1-pro",
+    "o3-mini",
+    "o3",
+    "o3-pro",
+    "o4-mini",
+    "o4-mini-high",
+]
 
 ANTHROPIC_MODELS = [
     # largest model, ideal for a wide range of more complex tasks.
