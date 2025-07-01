@@ -47,7 +47,7 @@ const JsonEditor = ({
   const [isFiltered, setIsFiltered] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  
+
   const { customizeMenu } = useMenuCustomization(setSuccessData, setErrorData);
 
   // Apply initial filter when component mounts
@@ -340,7 +340,7 @@ const JsonEditor = ({
     }
 
     let editorInstance: VanillaJsonEditor | null = null;
-    
+
     const editor = createJSONEditor({
       target: containerRef.current,
       props: {
@@ -361,7 +361,7 @@ const JsonEditor = ({
         },
       },
     });
-    
+
     // Set the editor instance immediately after creation
     editorInstance = editor;
 
