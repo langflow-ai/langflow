@@ -7,7 +7,6 @@ import copy
 import json
 import queue
 import threading
-import time
 import traceback
 import uuid
 from collections import defaultdict, deque
@@ -705,9 +704,6 @@ class Graph:
                 raise ValueError(msg)
             vertex.update_raw_params(inputs, overwrite=True)
 
-    def dummy_sleep(self):
-        time.sleep(1)
-
     async def _run(
         self,
         *,
@@ -774,9 +770,6 @@ class Graph:
             self._end_all_traces_async(error=exc)
             msg = f"Error running graph: {exc}"
             raise ValueError(msg) from exc
-
-        # a dummy sleep to show an exception raised by pyleak
-        self.dummy_sleep()
 
         self._end_all_traces_async()
         # Get the outputs
