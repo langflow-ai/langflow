@@ -37,7 +37,7 @@ To use all three columns from the **Batch Run** component, include them like thi
 record_number: {batch_index}, name: {text_input}, summary: {model_response}
 ```
 7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-hidden="True" /> **Run component**.
-8. To view your created DataFrame, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+8. To view your created DataFrame, in the **Parser** component, click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output**.
 9. Optionally, connect a **Chat Output** component, and open the **Playground** to see the output.
 
 <details>
@@ -100,7 +100,7 @@ Replace `YOUR_FLOW_ID` with your flow ID.
     ```
 
 3. In the **Data Operations** component, select the **Select Keys** operation to extract specific user information.
-To add additional keys, click <Icon name="Plus" aria-label="Add"/> **Add More**.
+To add additional keys, click <Icon name="Plus" aria-hidden="True" /> **Add more**.
 ![A webhook and data operations component](/img/component-data-operations-select-key.png)
 4. Filter by `name`, `username`, and `email` to select the values from the request.
     ```json
@@ -173,8 +173,8 @@ I want to explode the result column out into a Data object
 :::tip
 Avoid punctuation in the **Instructions** field, as it can cause errors.
 :::
-5. To run the flow, in the **Smart Filter** component, click <Icon name="Play" aria-label="Play icon" />.
-6. To inspect the filtered data, in the **Smart Filter** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+5. To run the flow, in the **Smart Filter** component, click <Icon name="Play" aria-hidden="true" /> **Run component**.
+6. To inspect the filtered data, in the **Smart Filter** component, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output**.
 The result is a structured DataFrame.
 ```text
 id | name             | company               | username        | email                              | address           | zip
@@ -330,8 +330,8 @@ For example, to present a table of employees in Markdown:
 - **ID:** {id}
 - **Email:** {email}
 ```
-7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-label="Play icon" />.
-8. To view your parsed text, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-hidden="true"/> **Run component**.
+8. To view your parsed text, in the **Parser** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
 9. Optionally, connect a **Chat Output** component, and open the **Playground** to see the output.
 
 For an additional example of using the **Parser** component to format a DataFrame from a **Structured Output** component, see the **Market Research** template flow.

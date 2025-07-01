@@ -9,9 +9,9 @@ This page explores the fundamental building blocks of Langflow, beginning with t
 
 ## What is a flow?
 
-A **flow** is an application. It receives input, processes it, and produces output.
+A _flow_ is a functional representation of an application. It receives input, processes it, and produces output.
 
-Flows are created in the **workspace** with components dragged from the components sidebar.
+Flows consist of [components](/concepts-components) that you configure and connect in the **Workspace**.
 
 ![Basic prompting flow within in the workspace](/img/workspace-basic-prompting.png)
 
@@ -37,7 +37,7 @@ The flow storage location can be customized with the [LANGFLOW_CONFIG_DIR](/envi
 
 If you're new to Langflow, it's OK to feel a bit lost at first. We’ll take you on a tour, so you can orient yourself and start creating applications quickly.
 
-Langflow has four distinct regions: the [workspace](#workspace) is the main area where you build your flows. The components sidebar is on the left, and lists the available [components](#components). The [playground](#playground) and [Share menu](#share-menu) are available in the upper right corner.
+Langflow has four distinct regions: the [workspace](#workspace) is the main area where you build your flows. The **Components** menu is on the left, and lists the available [components](#components). The [playground](#playground) and [publish pane](#publish-pane) are available in the upper right corner.
 
 ## Workspace
 
@@ -53,13 +53,8 @@ The **workspace** is where you create AI applications by connecting and running 
 
 ## Components
 
-A **component** is a single building block within a flow and consists of inputs, outputs, and parameters that define its functionality.
-
-To add a component to your flow, drag it from the sidebar onto the workspace.
-
-To connect components, drag a line from the output handle (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }}/>) of a component to the input handle of the same color (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5', fill: '#4f46e5' }}/>) of another.
-
-For example, to connect **Chat Input**, **Language Model**, and **Chat Output** components, connect the blue **Message** handles to each other:
+Components are the building blocks of your flows.
+For more information, see [Components overview](/concepts-components).
 
 ![Chat input and output connected to Language model component](/img/connect-component.png)
 
@@ -139,4 +134,4 @@ For more on managing your files, see [Manage files](/concepts-file-management).
 
 ## Settings
 
-Click <Icon name="Settings" aria-hidden="true"/> **Settings** to access **Global variables**, **MCP Servers**, **Langflow API keys**, **Shortcuts**, and **Messages**.
+In the Langflow header, click your profile icon, and then select **Settings** to access general Langflow settings, including global variables, Langflow API keys, keyboard shortcuts, and log messages.

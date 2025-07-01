@@ -380,7 +380,7 @@ This component uses web scraping and may be subject to rate limits. For producti
 
 This component fetches content from one or more URLs, processes the content, and returns it in various formats. It supports output in plain text or raw HTML.
 
-In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-label="Add"/>.
+In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-hidden="true"/> **Add URL**.
 
 1. To use this component in a flow, connect the **DataFrame** output to a component that accepts the input.
 For example, connect the **URL** component to a **Chat Output** component.

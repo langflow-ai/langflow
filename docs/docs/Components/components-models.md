@@ -107,5 +107,3 @@ For an example, see the [Smart function component](/components-processing#smart-
 | model | LanguageModel | An instance of Chat configured with the specified parameters. |
 
 </details>
-
-
