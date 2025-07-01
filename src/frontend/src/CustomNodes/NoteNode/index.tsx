@@ -84,8 +84,7 @@ function NoteNode({
       ),
     [data, bgColor, selected],
   );
-  console.log(nodeData);
-  console.log();
+
   return (
     <>
       <NodeResizer
