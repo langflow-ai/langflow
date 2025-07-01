@@ -43,7 +43,7 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service, session_scope
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
@@ -717,7 +717,12 @@ async def custom_component_update(
                 for field_name, field_dict in template.items()
                 if isinstance(field_dict, dict) and field_dict.get("load_from_db") and field_dict.get("value")
             ]
-            params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
+            
+            # Use a single database session for all load_from_db operations to prevent connection pool exhaustion
+            async with session_scope() as session:
+                params = await update_params_with_load_from_db_fields(
+                    cc_instance, params, load_from_db_fields, session=session
+                )
             cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
         await update_component_build_config(

@@ -82,10 +82,10 @@ class Settings(BaseSettings):
     `postgresql+psycopg` respectively)."""
     database_connection_retry: bool = False
     """If True, Langflow will retry to connect to the database if it fails."""
-    pool_size: int = 20
+    pool_size: int = 30
     """The number of connections to keep open in the connection pool.
     For high load scenarios, this should be increased based on expected concurrent users."""
-    max_overflow: int = 30
+    max_overflow: int = 50
     """The number of connections to allow that can be opened beyond the pool size.
     Should be 2x the pool_size for optimal performance under load."""
     db_connect_timeout: int = 30
@@ -104,8 +104,8 @@ class Settings(BaseSettings):
     """Database driver connection settings."""
 
     db_connection_settings: dict | None = {
-        "pool_size": 20,  # Match the pool_size above
-        "max_overflow": 30,  # Match the max_overflow above
+        "pool_size": 30,  # Match the pool_size above
+        "max_overflow": 50,  # Match the max_overflow above
         "pool_timeout": 30,  # Seconds to wait for a connection from pool
         "pool_pre_ping": True,  # Check connection validity before using
         "pool_recycle": 1800,  # Recycle connections after 30 minutes
