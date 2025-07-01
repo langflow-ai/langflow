@@ -56,13 +56,12 @@ test(
     });
 
     const disclosureTestIds = [
-      "disclosure-i/o",
+      "disclosure-input / output",
       "disclosure-data",
       "disclosure-models",
       "disclosure-helpers",
       "disclosure-vector stores",
       "disclosure-agents",
-      "disclosure-memories",
       "disclosure-logic",
       "disclosure-tools",
       "disclosure-bundles-langchain",
@@ -102,23 +101,15 @@ test(
     await page.getByTestId("sidebar-search-input").click();
 
     const visibleModelSpecsTestIds = [
-      "languagemodelsAIML",
-      "languagemodelsAnthropic",
-      "languagemodelsAzure OpenAI",
       "languagemodelsCohere",
-      "languagemodelsGoogle Generative AI",
       "languagemodelsGroq",
-      "languagemodelsHuggingFace",
       "languagemodelsLM Studio",
       "languagemodelsMaritalk",
       "languagemodelsMistralAI",
-      "languagemodelsNVIDIA",
-      "languagemodelsOllama",
-      "languagemodelsOpenAI",
       "languagemodelsPerplexity",
       "languagemodelsQianfan",
       "languagemodelsSambaNova",
-      "languagemodelsVertex AI",
+      "languagemodelsxAI",
     ];
 
     await Promise.all(
@@ -164,7 +155,6 @@ test(
 
     await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
     await expect(page.getByTestId("disclosure-agents")).toBeVisible();
-    await expect(page.getByTestId("disclosure-memories")).toBeVisible();
     await expect(page.getByTestId("disclosure-logic")).toBeVisible();
   },
 );

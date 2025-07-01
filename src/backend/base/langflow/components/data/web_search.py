@@ -23,7 +23,6 @@ class WebSearchComponent(Component):
             display_name="Search Query",
             info="Keywords to search for.",
             tool_mode=True,
-            input_types=[],
             required=True,
         ),
         IntInput(

@@ -1,6 +1,7 @@
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, Output
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
 
 class DataToDataFrameComponent(Component):
@@ -12,6 +13,7 @@ class DataToDataFrameComponent(Component):
     )
     icon = "table"
     name = "DataToDataFrame"
+    legacy = True
 
     inputs = [
         DataInput(

@@ -79,13 +79,15 @@ test(
     await zoomOut(page, 2);
 
     //connection 1
-    await page.getByTestId("handle-urlcomponent-shownode-data-right").click();
     await page
-      .getByTestId("handle-splittext-shownode-data or dataframe-left")
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .click();
+    await page.getByTestId("handle-splittext-shownode-input-left").click();
 
     //connection 2
-    await page.getByTestId("handle-textinput-shownode-message-right").click();
+    await page
+      .getByTestId("handle-textinput-shownode-output text-right")
+      .click();
     await page.getByTestId("handle-splittext-shownode-separator-left").click();
 
     //connection 3
@@ -94,7 +96,9 @@ test(
 
     //connection 4
     await page.getByTestId("handle-parsedata-shownode-message-right").click();
-    await page.getByTestId("handle-chatoutput-noshownode-text-target").click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
+      .click();
 
     await page.getByTestId("fit_view").click();
 

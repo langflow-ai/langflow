@@ -245,61 +245,15 @@ test(
       .getByTestId("input_outputChat Output")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 200, y: 200 },
       });
 
     await adjustScreenView(page);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("data to message");
-    await page
-      .getByTestId("processingData to Message")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 300, y: 400 },
-      });
-
-    let visibleElementHandle;
-
-    const elementsFile = await page
-      .getByTestId("handle-file-shownode-data-right")
-      .all();
-
-    for (const element of elementsFile) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
-    }
-
-    // Click and hold on the first element
-    await visibleElementHandle.hover();
-    await page.mouse.down();
-
-    // Move to the second element
-
-    const parseDataElement = await page
-      .getByTestId("handle-parsedata-shownode-data-left")
-      .all();
-
-    for (const element of parseDataElement) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
-    }
-
-    await visibleElementHandle.hover();
-
-    // Release the mouse
-    await page.mouse.up();
+    await page.getByTestId("handle-file-shownode-files-right").first().click();
 
     await page
-      .getByTestId("handle-parsedata-shownode-message-right")
-      .first()
-      .click();
-    await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .first()
       .click();
 
@@ -369,6 +323,17 @@ test(
         timeout: 1000,
       });
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
+
+      await page
+        .getByTestId("handle-file-shownode-raw content-right")
+        .first()
+        .click();
+
+      await page
+        .getByTestId("handle-chatoutput-noshownode-inputs-target")
+        .first()
+        .click();
+
       await page
         .getByRole("button", { name: "Playground", exact: true })
         .click();

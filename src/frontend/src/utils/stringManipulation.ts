@@ -78,6 +78,14 @@ export function parseString(
 ): string {
   let result = str;
 
+  if (result === "") {
+    return "";
+  }
+
+  if (parsers.includes("no_blank") && result.trim() === "") {
+    return "";
+  }
+
   let parsersArray: FieldParserType[] = [];
 
   if (typeof parsers === "string") {

@@ -113,8 +113,6 @@ const NodeToolbarComponent = memo(
       [data.node],
     );
 
-    // Check if any of the data.node.template fields have tool_mode as True
-    // if so we can show the tool mode button
     const hasToolMode = useMemo(
       () => checkHasToolMode(data.node?.template ?? {}) && !isGroup,
       [data.node?.template, isGroup],
@@ -309,6 +307,7 @@ const NodeToolbarComponent = memo(
             saveComponent();
             break;
           case "freezeAll":
+            takeSnapshot();
             FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
             break;
           case "code":
@@ -456,6 +455,7 @@ const NodeToolbarComponent = memo(
             <ToolbarButton
               icon="FreezeAll"
               label="Freeze"
+              dataTestId="freeze-all-button-modal"
               onClick={() => {
                 takeSnapshot();
                 FreezeAllVertices({
@@ -671,7 +671,10 @@ const NodeToolbarComponent = memo(
                   </SelectItem>
                 )}
                 {hasToolMode && (
-                  <SelectItem value="freezeAll">
+                  <SelectItem
+                    value="freezeAll"
+                    data-testid="freeze-all-button-modal"
+                  >
                     <ToolbarSelectItem
                       shortcut={
                         shortcuts.find((obj) =>
@@ -713,20 +716,6 @@ const NodeToolbarComponent = memo(
                     </span>
                   </div>
                 </SelectItem>
-                {hasToolMode && (
-                  <SelectItem value="toolMode">
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find((obj) => obj.name === "Tool Mode")
-                          ?.shortcut!
-                      }
-                      value={"Tool Mode"}
-                      icon={"Hammer"}
-                      dataTestId="tool-mode-button"
-                      style={`${toolMode ? "text-primary" : ""} transition-all`}
-                    />
-                  </SelectItem>
-                )}
               </SelectContentWithoutPortal>
             </Select>
           </div>

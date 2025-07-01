@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -55,7 +54,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("openai");
 
     await page
-      .getByTestId("languagemodelsOpenAI")
+      .getByTestId("openaiOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 200 },
       });
@@ -70,13 +69,15 @@ test(
     await page.getByTestId("fit_view").click();
 
     await page
-      .getByTestId("handle-chatinput-noshownode-message-source")
+      .getByTestId("handle-chatinput-noshownode-chat message-source")
       .click();
     await page.getByTestId("handle-openaimodel-shownode-input-left").click();
 
-    await page.getByTestId("handle-openaimodel-shownode-message-right").click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-openaimodel-shownode-model response-right")
+      .click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .last()
       .click();
 

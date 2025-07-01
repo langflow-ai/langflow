@@ -5,15 +5,18 @@ from langflow.base.agents.events import ExceptionWithMessageError
 from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
+    MODEL_PROVIDERS,
     MODEL_PROVIDERS_DICT,
     MODELS_METADATA,
 )
 from langflow.base.models.model_utils import get_model_name
-from langflow.components.helpers import CurrentDateComponent
+from langflow.components.helpers.current_date import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
-from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
+from langflow.field_typing import Tool
+from langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
 from langflow.logging import logger
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -22,6 +25,9 @@ from langflow.schema.message import Message
 def set_advanced_true(component_input):
     component_input.advanced = True
     return component_input
+
+
+MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "Groq", "OpenAI"]
 
 
 class AgentComponent(ToolCallingAgentComponent):
@@ -38,11 +44,11 @@ class AgentComponent(ToolCallingAgentComponent):
             name="agent_llm",
             display_name="Model Provider",
             info="The provider of the language model that the agent will use to generate responses.",
-            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
+            options=[*MODEL_PROVIDERS_LIST, "Custom"],
             value="OpenAI",
             real_time_refresh=True,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{"icon": "brain"}],
+            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
         ),
         *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
         MultilineInput(
@@ -52,8 +58,17 @@ class AgentComponent(ToolCallingAgentComponent):
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
             advanced=False,
         ),
+        IntInput(
+            name="n_messages",
+            display_name="Number of Chat History Messages",
+            value=100,
+            info="Number of chat history messages to retrieve.",
+            advanced=True,
+            show=True,
+        ),
         *LCToolsAgentComponent._base_inputs,
-        *memory_inputs,
+        # removed memory inputs from agent component
+        # *memory_inputs,
         BoolInput(
             name="add_current_date_tool",
             display_name="Current Date",
@@ -75,6 +90,8 @@ class AgentComponent(ToolCallingAgentComponent):
 
             # Get memory data
             self.chat_history = await self.get_memory_data()
+            if isinstance(self.chat_history, Message):
+                self.chat_history = [self.chat_history]
 
             # Add current date tool if enabled
             if self.add_current_date_tool:
@@ -85,16 +102,12 @@ class AgentComponent(ToolCallingAgentComponent):
                     msg = "CurrentDateComponent must be converted to a StructuredTool"
                     raise TypeError(msg)
                 self.tools.append(current_date_tool)
-
-            # Validate tools
-            if not self.tools:
-                msg = "Tools are required to run the agent. Please add at least one tool."
-                raise ValueError(msg)
+            # note the tools are not required to run the agent, hence the validation removed.
 
             # Set up and run agent
             self.set(
                 llm=llm_model,
-                tools=self.tools,
+                tools=self.tools or [],
                 chat_history=self.chat_history,
                 input_value=self.input_value,
                 system_prompt=self.system_prompt,
@@ -113,13 +126,11 @@ class AgentComponent(ToolCallingAgentComponent):
             raise
 
     async def get_memory_data(self):
-        memory_kwargs = {
-            component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
-        }
-        # filter out empty values
-        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v is not None}
-
-        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()
+        return (
+            await MemoryComponent(**self.get_base_args())
+            .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
+            .retrieve_messages()
+        )
 
     def get_llm(self):
         if not isinstance(self.agent_llm, str):
@@ -144,7 +155,10 @@ class AgentComponent(ToolCallingAgentComponent):
             raise ValueError(msg) from e
 
     def _build_llm_model(self, component, inputs, prefix=""):
-        model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
+        model_kwargs = {}
+        for input_ in inputs:
+            if hasattr(self, f"{prefix}{input_.name}"):
+                model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
         return component.set(**model_kwargs).build_model()
 
     def set_component_params(self, component):
@@ -220,7 +234,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 custom_component = DropdownInput(
                     name="agent_llm",
                     display_name="Language Model",
-                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
+                    options=[*sorted(MODEL_PROVIDERS), "Custom"],
                     value="Custom",
                     real_time_refresh=True,
                     input_types=["LanguageModel"],
@@ -268,3 +282,16 @@ class AgentComponent(ToolCallingAgentComponent):
                         component_class, build_config, field_value, "model_name"
                     )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
+
+    async def _get_tools(self) -> list[Tool]:
+        component_toolkit = _get_component_toolkit()
+        tools_names = self._build_tools_names()
+        agent_description = self.get_tool_description()
+        # TODO: Agent Description Depreciated Feature to be removed
+        description = f"{agent_description}{tools_names}"
+        tools = component_toolkit(component=self).get_tools(
+            tool_name="Call_Agent", tool_description=description, callbacks=self.get_langchain_callbacks()
+        )
+        if hasattr(self, "tools_metadata"):
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+        return tools

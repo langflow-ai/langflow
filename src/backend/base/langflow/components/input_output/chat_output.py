@@ -5,13 +5,13 @@ import orjson
 from fastapi.encoders import jsonable_encoder
 
 from langflow.base.io.chat import ChatComponent
-from langflow.inputs import BoolInput
-from langflow.inputs.inputs import HandleInput
-from langflow.io import DropdownInput, MessageTextInput, Output
+from langflow.helpers.data import safe_convert
+from langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.schema.properties import Source
+from langflow.template.field.base import Output
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
@@ -29,7 +29,7 @@ class ChatOutput(ChatComponent):
     inputs = [
         HandleInput(
             name="input_value",
-            display_name="Text",
+            display_name="Inputs",
             info="Message to be passed as output.",
             input_types=["Data", "DataFrame", "Message"],
             required=True,
@@ -97,7 +97,7 @@ class ChatOutput(ChatComponent):
     ]
     outputs = [
         Output(
-            display_name="Message",
+            display_name="Output Message",
             name="message",
             method="message_response",
         ),
@@ -157,6 +157,15 @@ class ChatOutput(ChatComponent):
         self.status = message
         return message
 
+    def _serialize_data(self, data: Data) -> str:
+        """Serialize Data object to JSON string."""
+        # Convert data.data to JSON-serializable format
+        serializable_data = jsonable_encoder(data.data)
+        # Serialize with orjson, enabling pretty printing with indentation
+        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
+        # Convert bytes to string and wrap in Markdown code blocks
+        return "```json\n" + json_bytes.decode("utf-8") + "\n```"
+
     def _validate_input(self) -> None:
         """Validate the input data and raise ValueError if invalid."""
         if self.input_value is None:
@@ -180,51 +189,11 @@ class ChatOutput(ChatComponent):
             msg = f"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}"
             raise TypeError(msg)
 
-    def _serialize_data(self, data: Data) -> str:
-        """Serialize Data object to JSON string."""
-        # Convert data.data to JSON-serializable format
-        serializable_data = jsonable_encoder(data.data)
-        # Serialize with orjson, enabling pretty printing with indentation
-        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)
-        # Convert bytes to string and wrap in Markdown code blocks
-        return "```json\n" + json_bytes.decode("utf-8") + "\n```"
-
-    def _safe_convert(self, data: Any) -> str:
-        """Safely convert input data to string."""
-        try:
-            if isinstance(data, str):
-                return data
-            if isinstance(data, Message):
-                return data.get_text()
-            if isinstance(data, Data):
-                return self._serialize_data(data)
-            if isinstance(data, DataFrame):
-                if self.clean_data:
-                    # Remove empty rows
-                    data = data.dropna(how="all")
-                    # Remove empty lines in each cell
-                    data = data.replace(r"^\s*$", "", regex=True)
-                    # Replace multiple newlines with a single newline
-                    data = data.replace(r"\n+", "\n", regex=True)
-
-                # Replace pipe characters to avoid markdown table issues
-                processed_data = data.replace(r"\|", r"\\|", regex=True)
-
-                processed_data = processed_data.map(
-                    lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x
-                )
-
-                return processed_data.to_markdown(index=False)
-            return str(data)
-        except (ValueError, TypeError, AttributeError) as e:
-            msg = f"Error converting data: {e!s}"
-            raise ValueError(msg) from e
-
     def convert_to_string(self) -> str | Generator[Any, None, None]:
         """Convert input data to string with proper error handling."""
         self._validate_input()
         if isinstance(self.input_value, list):
-            return "\n".join([self._safe_convert(item) for item in self.input_value])
+            return "\n".join([safe_convert(item, clean_data=self.clean_data) for item in self.input_value])
         if isinstance(self.input_value, Generator):
             return self.input_value
-        return self._safe_convert(self.input_value)
+        return safe_convert(self.input_value)
