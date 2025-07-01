@@ -17,7 +17,7 @@ from langflow.services.auth.utils import (
     get_password_hash,
 )
 from langflow.services.cache.service import AsyncBaseCacheService
-from langflow.services.database.models import Flow, MessageTable, User, Variable
+from langflow.services.database.models import Flow, User, Variable
 from langflow.services.database.utils import initialize_database
 from langflow.services.deps import get_cache_service, get_storage_service, session_scope
 from langflow.utils.util import update_settings
