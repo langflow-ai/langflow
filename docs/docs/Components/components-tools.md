@@ -23,8 +23,8 @@ The [simple agent starter project](/simple-agent) uses URL and Calculator tools 
 
 ![Simple agent starter flow](/img/starter-flow-simple-agent.png)
 
-To make a component into a tool that an agent can use, enable **Tool mode** in the component. Enabling **Tool mode** modifies a component input to accept calls from an agent.
-If the component you want to connect to an agent doesn't have a **Tool mode** option, you can modify the component's inputs to become a tool.
+To make a component into a tool that an agent can use, enable **Tool Mode** in the component. Enabling tool mode modifies a component input to accept calls from an agent.
+If the component you want to connect to an agent doesn't have a **Tool Mode** option, you can modify the component's inputs to become a tool.
 For an example, see [Make any component a tool](/agents-tools#make-any-component-a-tool).
 
 ## arXiv
