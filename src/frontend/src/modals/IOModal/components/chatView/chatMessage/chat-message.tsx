@@ -1,4 +1,3 @@
-import { ProfileIcon } from "@/components/core/appHeaderComponent/components/ProfileIcon";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
