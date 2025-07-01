@@ -96,8 +96,7 @@ class RunnableVerticesManager:
 
             # FIRST execution of a cycle vertex
             # Allow running **only** if it's a loop AND *all* pending predecessors are cycle vertices
-            return not (is_loop and pending_set <= self.cycle_vertices)
-
+            return is_loop and pending_set <= self.cycle_vertices
         return False
 
     def remove_from_predecessors(self, vertex_id: str) -> None:
