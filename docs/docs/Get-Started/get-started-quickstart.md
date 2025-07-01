@@ -13,14 +13,15 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
 - [A running Langflow instance](/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/api-keys)
-- [A Langflow API key](/configuration-api-keys)
 
-<details>
-<summary>Need help creating an API key?</summary>
 
-To generate a user-specific token to use with Langflow, do the following.
+## Create a Langflow API key
 
-1. Open the Langflow UI, click your user icon, and then select **Settings**.
+A [Langflow API key](/configuration-api-keys) is a user-specific token you can use with Langflow.
+
+To create a Langflow API key, do the following:
+
+1. In Langflow, click your user icon, and then select **Settings**.
 2. Click **Langflow API Keys**, and then click **Add New**.
 3. Name your key, and then click **Create API Key**.
 4. Copy the API key and store it in a secure location.
@@ -41,7 +42,7 @@ Set this variable in your terminal so you can copy and paste the commands.
     ```bash
     export LANGFLOW_API_KEY="sk..."
     ```
-</details>
+
 
 ## Run the Simple Agent template flow
 
