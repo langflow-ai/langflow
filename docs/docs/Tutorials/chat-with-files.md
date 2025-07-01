@@ -28,17 +28,20 @@ With the basic flow responding correctly, modify the **Prompt** component to acc
     File:
     {file}
     ```
-The **Prompt** component adds ports to accept new inputs for each value with curly braces, in this case, a chat input and a file.
-:::tip
-The port names are for illustrative purposes. You don't have to name them after the component they're connected to.
-:::
-5. Add a [File component](/components-data#file) to the flow, and connect the **Raw Content** output to the Prompt component's `file` input.
-You flow should look like this:
+    The **Prompt** component adds ports to accept new inputs for each value with curly braces, in this case, a chat input and a file.
 
-![File loader chat flow](/img/tutorial-chat-file-loader.png)
+    :::tip
+    The port names are for illustrative purposes. You don't have to name them after the component they're connected to.
+    :::
+
+5. Add a [File component](/components-data#file) to the flow, and connect the **Raw Content** output to the Prompt component's `file` input.
+
+    Your flow should look like this:
+
+    ![File loader chat flow](/img/tutorial-chat-file-loader.png)
 
     The flow is complete.
-    If you want, you can add files to the file loader and chat with it within the Langflow IDE.
+    If you'd like, add files to the File component and chat with it within the Langflow IDE.
     In the next section, you will load files and chat with your flow from a Python application.
 
 ## Send requests to your flow from a Python application
