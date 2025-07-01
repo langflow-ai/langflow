@@ -279,7 +279,7 @@ jobs:
         run: make test_frontend_ci
 
       - name: Publish Test Results
-        uses: mikepenz/action-junit-report@v5
+        uses: mikepenz/action-junit-report@v5.5.1
         if: always()
         with:
           report_paths: 'src/frontend/test-results/junit.xml'
