@@ -69,6 +69,13 @@ module.exports = {
     },
     {
       type: "category",
+      label: "Tutorials",
+      items: [
+        "Tutorials/chat-with-files",
+      ],
+    },
+    {
+      type: "category",
       label: "Model Context Protocol (MCP)",
       items: [
         "Concepts/mcp-server",
