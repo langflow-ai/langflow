@@ -140,6 +140,7 @@
     "eslint": "^9.5.0",
     "jest": "^30.0.3",
     "jest-environment-jsdom": "^30.0.2",
+    "jest-junit": "^16.0.0",
     "postcss": "^8.4.38",
     "prettier": "^3.3.2",
     "prettier-plugin-organize-imports": "^3.2.4",
