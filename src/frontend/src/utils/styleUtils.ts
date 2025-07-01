@@ -6,6 +6,7 @@ import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 
+
 const iconCache = new Map<string, any>();
 
 export const BG_NOISE =
@@ -230,6 +231,7 @@ export const SIDEBAR_CATEGORIES = [
 
 export const SIDEBAR_BUNDLES = [
   { display_name: "Outlook", name: "outlook", icon: "Outlook" },
+  { display_name: "Linear", name: "linear", icon: "Linear" },
   {
     display_name: "Language Models",
     name: "languagemodels",
@@ -237,6 +239,7 @@ export const SIDEBAR_BUNDLES = [
   },
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
+  { display_name: "Reddit", name: "reddit", icon: "Reddit" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   { display_name: "Outlook", name: "outlook", icon: "Outlook" },
@@ -246,6 +249,11 @@ export const SIDEBAR_BUNDLES = [
     name: "googlecalendar",
     icon: "Googlecalendar",
   },
+  { display_name: "GoogleTasks", name: "googletasks", icon: "GoogleTasks" },
+  { display_name: "Googlemaps", name: "googlemaps", icon: "Googlemaps" },
+  { display_name: "Todoist", name: "todoist", icon: "Todoist" },
+  { display_name: "Zoom", name: "zoom", icon: "Zoom" },
+  { display_name: "Googlemeet", name: "googlemeet", icon: "Googlemeet" },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
@@ -265,6 +273,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
   { display_name: "Google", name: "google", icon: "Google" },
+  { display_name: "Googlesheets", name: "googlesheets", icon: "Googlesheets" },
   { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
   { display_name: "NotDiamond", name: "notdiamond", icon: "NotDiamond" },
   { display_name: "Composio", name: "composio", icon: "Composio" },
@@ -344,6 +353,11 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatOutput: "MessagesSquare",
   //Integration Icons
   Outlook: "Outlook",
+  Linear: "Linear",
+  Reddit: "Reddit",
+  Googlemaps: "Googlemaps",
+  Todoist: "Todoist",
+  Zoom: "Zoom",
   AIML: "AI/ML",
   AgentQL: "AgentQL",
   LanguageModels: "BrainCircuit",
@@ -381,8 +395,11 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   FirecrawlScrapeApi: "Firecrawl",
   GitbookLoader: "GitBook",
   GoogleGenerativeAI: "GoogleGenerativeAI",
+  Googlesheets: "Googlesheets",
   GoogleSearchAPI: "Google",
   GoogleSearchAPIWrapper: "Google",
+  Googlemeet: "Googlemeet",
+  GoogleTasks: "GoogleTasks",
   GoogleSearchResults: "Google",
   GoogleSearchRun: "Google",
   GoogleSerperAPI: "Google",

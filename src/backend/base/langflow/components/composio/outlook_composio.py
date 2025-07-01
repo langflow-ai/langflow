@@ -1,4 +1,6 @@
 from langflow.base.composio.composio_base import ComposioBaseComponent
+
+
 class ComposioOutlookAPIComponent(ComposioBaseComponent):
     display_name: str = "Outlook"
     icon = "Outlook"
@@ -7,4 +9,3 @@ class ComposioOutlookAPIComponent(ComposioBaseComponent):
 
     def set_default_tools(self):
         """Set the default tools for Gmail component."""
-        pass
