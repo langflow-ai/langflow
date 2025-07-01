@@ -1397,6 +1397,9 @@
                 "group_outputs": false,
                 "method": "build_embeddings",
                 "name": "embeddings",
+                "required_inputs": [
+                  "openai_api_key"
+                ],
                 "selected": "Embeddings",
                 "tool_mode": true,
                 "types": [
@@ -1930,6 +1933,9 @@
                 "group_outputs": false,
                 "method": "build_embeddings",
                 "name": "embeddings",
+                "required_inputs": [
+                  "openai_api_key"
+                ],
                 "selected": "Embeddings",
                 "tool_mode": true,
                 "types": [
