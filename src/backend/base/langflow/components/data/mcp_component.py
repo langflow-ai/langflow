@@ -18,7 +18,6 @@ from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.services.auth.utils import create_user_longterm_token
-from langflow.services.cache.utils import CacheMiss
 
 # Import get_server from the backend API
 from langflow.services.database.models.user.crud import get_user_by_id
@@ -68,7 +67,7 @@ class MCPToolsComponent(ComponentWithCache):
     stdio_client: MCPStdioClient = MCPStdioClient()
     sse_client: MCPSseClient = MCPSseClient()
     tools: list = []
-    _load_actions: bool = False
+    _not_load_actions: bool = False
     _tool_cache: dict = {}
     default_keys: list[str] = [
         "code",
@@ -319,7 +318,7 @@ class MCPToolsComponent(ComponentWithCache):
                     build_config["tool"]["value"] = uuid.uuid4()
                 else:
                     # Keep the tool dropdown hidden if in tool_mode
-                    self._load_actions = False
+                    self._not_load_actions = True
                     build_config["tool"]["show"] = False
 
             elif field_name == "tool_mode":
@@ -328,14 +327,14 @@ class MCPToolsComponent(ComponentWithCache):
                 self.remove_non_default_keys(build_config)
                 self.tool = build_config["tool"]["value"]
                 if field_value:
-                    self._load_actions = False
+                    self._not_load_actions = True
                 else:
                     build_config["tool"]["value"] = uuid.uuid4()
                     build_config["tool"]["options"] = []
                     build_config["tool"]["show"] = True
                     build_config["tool"]["placeholder"] = "Loading tools..."
             elif field_name == "tools_metadata":
-                self._load_actions = True
+                self._not_load_actions = False
 
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
@@ -480,7 +479,7 @@ class MCPToolsComponent(ComponentWithCache):
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
         mcp_server = getattr(self, "mcp_server", None)
-        if self._load_actions:
+        if not self._not_load_actions:
             tools, _ = await self.update_tool_list(mcp_server)
             return tools
         return []
