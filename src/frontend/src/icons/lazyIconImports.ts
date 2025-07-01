@@ -156,7 +156,9 @@ export const lazyIconsMapping = {
   javascript: () =>
     import("@/icons/JSicon").then((mod) => ({ default: mod.JSIcon })),
   JigsawStack: () =>
-    import("@/icons/JigsawStack").then((mod) => ({ default: mod.JigsawStackIcon })),
+    import("@/icons/JigsawStack").then((mod) => ({
+      default: mod.JigsawStackIcon,
+    })),
   LangChain: () =>
     import("@/icons/LangChain").then((mod) => ({ default: mod.LangChainIcon })),
   Langwatch: () =>
