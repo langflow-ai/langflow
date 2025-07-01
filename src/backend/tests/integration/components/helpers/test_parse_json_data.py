@@ -3,7 +3,9 @@ from langflow.components.processing.parse_json_data import ParseJSONDataComponen
 from langflow.schema import Data
 
 from tests.integration.components.mock_components import TextToData
-from tests.integration.utils import ComponentInputHandle, run_single_component
+from tests.integration.utils import ComponentInputHandle, pyleak_marker, run_single_component
+
+pytestmark = pyleak_marker()
 
 
 async def test_from_data():

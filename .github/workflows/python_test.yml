@@ -84,6 +84,9 @@ jobs:
         run: uv sync
       - name: Run integration tests
         run: make integration_tests_no_api_keys
+        env:
+          PYLEAK_LOG_LEVEL: debug # enable pyleak logging
+          DO_NOT_TRACK: true # disable telemetry reporting
 
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
