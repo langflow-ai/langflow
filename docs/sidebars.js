@@ -72,6 +72,7 @@ module.exports = {
       label: "Tutorials",
       items: [
         "Tutorials/chat-with-files",
+        "Tutorials/chat-with-rag",
       ],
     },
     {
