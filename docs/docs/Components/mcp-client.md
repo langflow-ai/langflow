@@ -34,7 +34,7 @@ This component has two modes, depending on the type of server you want to access
     * In the **STDIO** pane, enter the MCP server's **Name**, **Command**, and any **Arguments** or **Environment Variables** the server uses, and then click **Add Server**.
     For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the **Command** is `uvx mcp-server-fetch`.
     * In the **SSE** pane, enter your Langflow MCP server's **Name**, **SSE URL**, and any **Headers** or **Environment Variables** the server uses, and then click **Add Server**.
-    The default **SSE URL** is `http://localhost:7860/api/v1/mcp/sse`. For more information, see [Use SSE mode](#use-sse-mode-mcp-sse-mode).
+    The default **SSE URL** is `http://localhost:7860/api/v1/mcp/sse`. For more information, see [Use SSE mode](#mcp-sse-mode).
 
     `uvx` is included with `uv` in the Langflow package.
     To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
@@ -54,7 +54,7 @@ This component has two modes, depending on the type of server you want to access
 
     At this point, the **MCP Tools** component is serving a tool, but nothing is using the tool. The next steps explain how to make the tool available to an [**Agent** component](/components-agents) so that the agent can use the tool in its responses.
 
-5. In the [component menu](/concepts-components#component-menu), enable **Tool mode** so you can use the component with an agent.
+5. In the [component menu](/concepts-components#component-menus), enable **Tool mode** so you can use the component with an agent.
 
 6. Connect the **MCP Tools** component's **Toolset** port to an **Agent** component's **Tools** port.
 
@@ -77,7 +77,7 @@ To leverage flows-as-tools, use the **MCP Tools** component in **Server-Sent Eve
 1. Add an **MCP Tools** component to your flow, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**, and then select **SSE** mode.
 2. In the **MCP SSE URL** field, modify the default address to point at your Langflow server's SSE endpoint. The default value for other Langflow installations is `http://localhost:7860/api/v1/mcp/sse`.
 In SSE mode, all flows available from the targeted server are treated as tools.
-3. In the [component menu](/concepts-components#component-menu), enable **Tool mode** so you can use the component with an agent.
+3. In the [component menu](/concepts-components#component-menus), enable **Tool mode** so you can use the component with an agent.
 4. Connect the **MCP Tools** component's **Toolset** port to an **Agent** component's **Tools** port. If not already present in your flow, make sure you also attach **Chat input** and **Chat output** components to the **Agent** component.
 ![MCP component with SSE mode enabled](/img/component-mcp-sse-mode.png)
 5. Test your flow to make sure the agent uses your flows to respond to queries: Click **Playground**, and then enter a prompt that uses a flow that you connected through the **MCP connection** component.

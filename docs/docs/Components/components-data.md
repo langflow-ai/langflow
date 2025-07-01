@@ -174,15 +174,6 @@ Archive formats (for bundling multiple files):
 - `.bz2` - Bzip2 compressed files
 - `.gz` - Gzip compressed files
 
-
-## MCP connection {#mcp-connection}
-
-The **MCP connection** component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server and exposes the MCP server's tools as tools for Langflow agents.
-
-In addition to being an MCP client that can leverage MCP servers, the **MCP connection** component's [SSE mode](/mcp-client#mcp-sse-mode) allows you to connect your flow to the Langflow MCP server at the `/api/v1/mcp/sse` API endpoint, exposing all flows within your [project](/concepts-overview#projects) as tools within a flow.
-
-For more information, see [MCP client](/mcp-client).
-
 ## News search
 
 This component searches Google News with RSS and returns clean article data. The `clean_html` method parses the HTML content with the BeautifulSoup library, and then removes HTML markup and strips whitespace so the output data is clean.

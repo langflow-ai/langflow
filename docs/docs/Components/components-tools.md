@@ -7,24 +7,20 @@ import Icon from "@site/src/components/icon";
 
 The **Tools** category in Langflow is removed as of Langflow 1.5.
 
-All components in the **Tools** category are now **Legacy**, except the following:
+Most components from the **Tools** category have been moved to other categories or bundles.
 
-* The [MCP Connection](/components-data#mcp-connection) component is available in **Data components**.
-* The [calculator](/components-helpers#calculator)  component is available in **Helpers**.
+* The [MCP Tools](/components-agents#mcp-connection) component is available in **Agent components**.
+* The [calculator](/components-helpers#calculator) component is available in **Helpers**.
 * The [Astra DB JSON](/components-tools#astra-db-tool) and [Astra DB CQL](#astra-db-cql-tool) tools are available in the **DataStax** bundle.
-* The Python REPL tool is available in **Processing** and re-named the [Python Interpreter](/components-processing#python-interpreter) component.
+* The [Python Interpreter](/components-processing#python-interpreter) component is available in **Processing**.
 
-The remaining tools are **Legacy**.
+The remaining tools listed below are moved to a **Bundle** or in **Legacy**.
 Legacy components are available for use but are no longer supported.
-
-To replace legacy search components like Bing Search and Google, use the [Web search component](/components-data#web-search) component.
-
-To replace legacy news aggregation components, use the [News search](/components-data#news-search) component.
 
 ## arXiv
 
 :::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
+As of Langflow 1.5, this component is available in the **Search** bundle.
 :::
 
 This component searches and retrieves papers from [arXiv.org](https://arXiv.org).
@@ -51,7 +47,7 @@ This component searches and retrieves papers from [arXiv.org](https://arXiv.org)
 ## Astra DB tool
 
 :::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
+As of Langflow 1.5, this component is available in the **DataStax** bundle.
 :::
 
 This component allows agents to query data from Astra DB collections.
@@ -133,7 +129,7 @@ The **Data** output is used when directly querying Astra DB, while the **Tool** 
 ## Astra DB CQL Tool
 
 :::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
+As of Langflow 1.5, this component is available in the **DataStax** bundle.
 :::
 
 The `Astra DB CQL Tool` allows agents to query data from CQL tables in Astra DB.
@@ -169,7 +165,7 @@ The `Astra DB CQL Tool` allows agents to query data from CQL tables in Astra DB.
 ## Bing Search API
 
 :::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
+As of Langflow 1.5, this component is available in the **Search** bundle.
 :::
 
 This component allows you to call the Bing Search API.
@@ -228,7 +224,7 @@ This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to
 ## DuckDuckGo search
 
 :::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
+As of Langflow 1.5, this component is available in the **Search** bundle.
 :::
 
 This component performs web searches using the [DuckDuckGo](https://www.duckduckgo.com) search engine with result-limiting capabilities.
@@ -256,7 +252,7 @@ This component performs web searches using the [DuckDuckGo](https://www.duckduck
 ## Exa Search
 
 :::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
+As of Langflow 1.5, this component is available in the **Search** bundle.
 :::
 
 This component provides an [Exa Search](https://exa.ai/) toolkit for search and content retrieval.
@@ -284,7 +280,7 @@ This component provides an [Exa Search](https://exa.ai/) toolkit for search and 
 ## Glean Search API
 
 :::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
+As of Langflow 1.5, this component is available in the **Search** bundle.
 :::
 
 This component allows you to call the Glean Search API.
@@ -311,10 +307,39 @@ This component allows you to call the Glean Search API.
 
 </details>
 
+### Google Search API
+
+:::important
+As of Langflow 1.5, this component is available in the **Search** bundle.
+:::
+
+This component allows you to call the Google Search API.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| google_api_key | SecretString | A Google API key for authentication. |
+| google_cse_id | SecretString | A Google Custom Search Engine ID. |
+| input_value | String | The search query input. |
+| k | Integer | The number of search results to return. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| results | List[Data] | A list of search results. |
+| tool | Tool | A Google Search tool for use in LangChain. |
+
+</details>
+
 ## Google Serper API
 
 :::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
+As of Langflow 1.5, this component is available in the **Search** bundle.
 :::
 
 This component allows you to call the Serper.dev Google Search API.
@@ -341,17 +366,80 @@ This component allows you to call the Serper.dev Google Search API.
 
 ## MCP connection
 
-The **MCP connection** component exposes Model Context Protocol (MCP) servers, including your other flows, as tools for Langflow agents. For information about this component, see [Use Langflow as an MCP client](/mcp-client).
+:::important
+As of Langflow 1.5, this component is called the **MCP Tools** component.
+:::
+
+The **MCP tools** component exposes Model Context Protocol (MCP) servers, including your other flows, as tools for Langflow agents. For information about this component, see [Use Langflow as an MCP client](/mcp-client).
 
 ### MCP Tools (deprecated)
 
 The **MCP Tools (stdio)** and **MCP Tools (SSE)** components are deprecated as of Langflow version 1.3.
-They are replaced by the [MCP connection component](/mcp-client).
+They are replaced by a single [MCP tools](/mcp-client) component.
+
+## Search API
+
+:::important
+As of Langflow 1.5, this component is available in the **Search** bundle.
+:::
+
+This component calls the `searchapi.io` API. It can be used to search the web for information.
+
+For more information, see the [SearchAPI documentation](https://www.searchapi.io/docs/google).
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| engine | String | The search engine to use. Default: `google`. |
+| api_key | SecretString | The API key for authenticating with SearchAPI. |
+| input_value | String | The search query or input for the API call. |
+| search_params | Dict | Additional parameters for customizing the search. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| data | List[Data] | A list of Data objects containing search results. |
+| tool | Tool | A Tool object for use in LangChain workflows. |
+
+</details>
+
+## SearXNG Search Tool
+
+:::important
+As of Langflow 1.5, this component is available in the **Search** bundle.
+:::
+
+This component creates a tool for searching using SearXNG, a metasearch engine.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| url | String | The URL of the SearXNG instance. |
+| max_results | Integer | The maximum number of results to return. |
+| categories | List[String] | The categories to search in. |
+| language | String | The language for the search results. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| result_tool | Tool | A SearXNG search tool for use in LangChain. |
+
+</details>
 
 ## Wikidata
 
 :::important
-This component is in **Legacy**, which means it is available for use but no longer in active development.
+As of Langflow 1.5, this component is available in the **Search** bundle.
 :::
 
 This component performs a search using the Wikidata API.
@@ -371,6 +459,36 @@ This component performs a search using the Wikidata API.
 |------|------|-------------|
 | data | List[Data] | The search results from Wikidata API as a list of Data objects. |
 | text | Message | The search results formatted as a text message. |
+
+</details>
+
+## Wikipedia API
+
+:::important
+As of Langflow 1.5, this component is available in the **Search** bundle.
+:::
+
+This component creates a tool for searching and retrieving information from Wikipedia.
+
+<details>
+<summary>Parameters</summary>
+
+**Inputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| input_value | String | The search query input. |
+| lang | String | The language code for Wikipedia. Default: `en`. |
+| k | Integer | The number of results to return. |
+| load_all_available_meta | Boolean | Whether to load all available metadata. |
+| doc_content_chars_max | Integer | The maximum number of characters for document content. |
+
+**Outputs**
+
+| Name | Type | Description |
+|------|------|-------------|
+| results | List[Data] | A list of Wikipedia search results. |
+| tool | Tool | A Wikipedia search tool for use in LangChain. |
 
 </details>
 
@@ -403,35 +521,11 @@ This component allows you to evaluate basic arithmetic expressions. It supports 
 
 </details>
 
-### Google Search API
-
-This component allows you to call the Google Search API.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| google_api_key | SecretString | A Google API key for authentication. |
-| google_cse_id | SecretString | A Google Custom Search Engine ID. |
-| input_value | String | The search query input. |
-| k | Integer | The number of search results to return. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| results | List[Data] | A list of search results. |
-| tool | Tool | A Google Search tool for use in LangChain. |
-
-</details>
-
 ### Python Code Structured Tool
 
 :::important
 This component is in **Legacy**, which means it is available for use but no longer in active development.
+Instead, use the [Python Interpreter](/components-processing#python-interpreter).
 :::
 
 This component creates a structured tool from Python code using a dataclass.
@@ -507,82 +601,5 @@ This component creates a tool for interacting with a retriever in LangChain.
 | Name | Type | Description |
 |------|------|-------------|
 | tool | Tool | A retriever tool for use in LangChain. |
-
-</details>
-
-### Search API
-
-This component calls the `searchapi.io` API. It can be used to search the web for information.
-
-For more information, see the [SearchAPI documentation](https://www.searchapi.io/docs/google).
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| engine | String | The search engine to use. Default: `google`. |
-| api_key | SecretString | The API key for authenticating with SearchAPI. |
-| input_value | String | The search query or input for the API call. |
-| search_params | Dict | Additional parameters for customizing the search. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| data | List[Data] | A list of Data objects containing search results. |
-| tool | Tool | A Tool object for use in LangChain workflows. |
-
-</details>
-
-### SearXNG Search Tool
-
-This component creates a tool for searching using SearXNG, a metasearch engine.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| url | String | The URL of the SearXNG instance. |
-| max_results | Integer | The maximum number of results to return. |
-| categories | List[String] | The categories to search in. |
-| language | String | The language for the search results. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| result_tool | Tool | A SearXNG search tool for use in LangChain. |
-
-</details>
-
-### Wikipedia API
-
-This component creates a tool for searching and retrieving information from Wikipedia.
-
-<details>
-<summary>Parameters</summary>
-
-**Inputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| input_value | String | The search query input. |
-| lang | String | The language code for Wikipedia. Default: `en`. |
-| k | Integer | The number of results to return. |
-| load_all_available_meta | Boolean | Whether to load all available metadata. |
-| doc_content_chars_max | Integer | The maximum number of characters for document content. |
-
-**Outputs**
-
-| Name | Type | Description |
-|------|------|-------------|
-| results | List[Data] | A list of Wikipedia search results. |
-| tool | Tool | A Wikipedia search tool for use in LangChain. |
 
 </details>
