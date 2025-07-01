@@ -517,5 +517,5 @@ payload = {
 
 ## Next steps
 
-* [Model Context Protocol (MCP) servers](/mcp-server)
+* [Use Langflow as a Model Context Protocol (MCP) server](/mcp-server)
 * [Langflow deployment overview](/deployment-overview)

@@ -5,9 +5,21 @@ module.exports = {
       type: "category",
       label: "Get started",
       items: [
-        "Get-Started/about-langflow",
-        "Get-Started/get-started-installation",
-        "Get-Started/get-started-quickstart",
+        {
+          type: "doc",
+          id: "Get-Started/about-langflow",
+          label: "About Langflow"
+        },
+        {
+          type: "doc",
+          id: "Get-Started/get-started-installation",
+          label: "Install Langflow"
+        },
+        {
+          type: "doc",
+          id: "Get-Started/get-started-quickstart",
+          label: "Quickstart"
+        },
       ],
     },
     {

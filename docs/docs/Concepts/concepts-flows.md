@@ -72,12 +72,12 @@ To create a project, click <Icon name="Plus" aria-hidden="true"/> **Create new p
 
 ![](/img/my-projects.png)
 
-From the **Projects** page, you can manage flows within each of your projects
-
+From the **Projects** page, you can manage flows within each of your projects:
 * **View flows in a project**: Select the project name in the **Projects** list.
 * **Create flows**: See [Create a flow](#create-a-flow).
 * **Edit a flow's name and description**: Locate the flow you want to edit, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Edit details**.
 * **Delete a flow**: Locate the flow you want to delete, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Delete**.
+* **Serve flows as MCP tools**: See [Use Langflow as an MCP server](/mcp-server).
 
 ## Flow storage
 

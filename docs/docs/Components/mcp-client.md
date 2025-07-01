@@ -20,7 +20,7 @@ The **MCP connection** component connects to a [Model Context Protocol (MCP)](ht
 This component has two modes, depending on the type of server you want to access:
 
 * To access tools provided by external, non-Langflow MCP servers, [use Stdio mode](#mcp-stdio-mode).
-* To use flows from your [Langflow projects](/concepts-overview#projects) as MCP tools, [use SSE mode](#mcp-sse-mode).
+* To use flows from your [Langflow projects](/concepts-flows#projects) as MCP tools, [use SSE mode](#mcp-sse-mode).
 
 ### Use Stdio mode {#mcp-stdio-mode}
 

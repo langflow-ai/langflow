@@ -23,7 +23,7 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 ## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
 
-Langflow runs a separate MCP server for every [project](/concepts-overview#projects).
+Langflow runs a separate MCP server for every [project](/concepts-flows#projects).
 The MCP server for each project exposes that project's flows as tools.
 
 All of the flows in a project are exposed by default.
