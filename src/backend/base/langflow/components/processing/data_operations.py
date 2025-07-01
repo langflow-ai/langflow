@@ -1,8 +1,9 @@
 import ast
 from typing import TYPE_CHECKING, Any
+from json_repair import repair_json
 
 from langflow.custom import Component
-from langflow.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput
+from langflow.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput, MultilineInput
 from langflow.io import DataInput, Output
 from langflow.logging import logger
 from langflow.schema import Data
@@ -20,6 +21,8 @@ ACTION_CONFIG = {
     "Append or Update": {"is_list": False, "log_msg": "setting Append or Update fields"},
     "Remove Keys": {"is_list": False, "log_msg": "setting remove keys fields"},
     "Rename Keys": {"is_list": False, "log_msg": "setting rename keys fields"},
+    "JSON Path": {"is_list": False, "log_msg": "setting mapped key extractor fields"},
+    "JSON Query": {"is_list": False, "log_msg": "setting parse json fields"},
 }
 OPERATORS = {
     "equals": lambda a, b: str(a) == str(b),
@@ -58,6 +61,9 @@ class DataOperationsComponent(Component):
             "data filtering",
             "data selection",
             "data combination",
+            "Parse JSON",
+            "JSON Query",
+            "JQ Query"
         ],
     }
     actions_data = {
@@ -68,10 +74,52 @@ class DataOperationsComponent(Component):
         "Append or Update": ["append_update_data", "operations"],
         "Remove Keys": ["remove_keys_input", "operations"],
         "Rename Keys": ["rename_keys_input", "operations"],
+        "JSON Path": ["mapped_json_display", "selected_key", "operations"],
+        "JSON Query": ["query", "operations"],
     }
 
+    @staticmethod
+    def extract_all_paths(obj, path=""):
+        paths = []
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                new_path = f"{path}.{k}" if path else f".{k}"
+                paths.append(new_path)
+                paths.extend(DataOperationsComponent.extract_all_paths(v, new_path))
+        elif isinstance(obj, list) and obj:
+                new_path = f"{path}[0]"
+                paths.append(new_path)
+                paths.extend(DataOperationsComponent.extract_all_paths(obj[0], new_path))
+        return paths
+
+    @staticmethod
+    def remove_keys_recursive(obj, keys_to_remove):
+        if isinstance(obj, dict):
+            return {k: DataOperationsComponent.remove_keys_recursive(v, keys_to_remove)
+                    for k, v in obj.items() if k not in keys_to_remove}
+        elif isinstance(obj, list):
+            return [DataOperationsComponent.remove_keys_recursive(item, keys_to_remove) for item in obj]
+        else:
+            return obj
+
+    @staticmethod
+    def rename_keys_recursive(obj, rename_map):
+        if isinstance(obj, dict):
+            return {rename_map.get(k, k): DataOperationsComponent.rename_keys_recursive(v, rename_map) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [DataOperationsComponent.rename_keys_recursive(item, rename_map) for item in obj]
+        else:
+            return obj
+
     inputs = [
-        DataInput(name="data", display_name="Data", info="Data object to filter.", required=True, is_list=True),
+        DataInput(
+            name="data", 
+            display_name="Data", 
+            info="Data object to filter.", 
+            required=True, 
+            is_list=True
+        ),
+        
         SortableListInput(
             name="operations",
             display_name="Operations",
@@ -85,6 +133,8 @@ class DataOperationsComponent(Component):
                 {"name": "Append or Update", "icon": "circle-plus"},
                 {"name": "Remove Keys", "icon": "eraser"},
                 {"name": "Rename Keys", "icon": "pencil-line"},
+                {"name": "JSON Path", "icon": "braces"},
+                {"name": "JSON Query", "icon": "braces"},
             ],
             real_time_refresh=True,
             limit=1,
@@ -93,7 +143,7 @@ class DataOperationsComponent(Component):
         MessageTextInput(
             name="select_keys_input",
             display_name="Select Keys",
-            info="List of keys to select from the data.",
+            info="List of keys to select from the data. Only top-level keys can be selected.",
             show=False,
             is_list=True,
         ),
@@ -101,7 +151,7 @@ class DataOperationsComponent(Component):
         MessageTextInput(
             name="filter_key",
             display_name="Filter Key",
-            info="Key to filter by.",
+            info="Name of the key containing the list to filter. It must be a top-level key in the JSON and its value must be a list.",
             is_list=True,
             show=False,
         ),
@@ -125,7 +175,7 @@ class DataOperationsComponent(Component):
         DictInput(
             name="append_update_data",
             display_name="Append or Update",
-            info="Data to Append or Updatethe existing data with.",
+            info="Data to append or update the existing data with. Only top-level keys are checked.",
             show=False,
             value={"key": "value"},
             is_list=True,
@@ -147,6 +197,32 @@ class DataOperationsComponent(Component):
             is_list=True,
             value={"old_key": "new_key"},
         ),
+        
+        MultilineInput(
+            name="mapped_json_display", 
+            display_name="Mapped JSON", 
+            info="Paste or preview your JSON here to explore its structure and select a path for extraction.",
+            required=False, 
+            refresh_button=True, 
+            real_time_refresh=True, 
+            show=False
+        ),
+        
+        DropdownInput(
+            name="selected_key", 
+            display_name="Select Key", 
+            options=[], 
+            required=False, 
+            dynamic=True, 
+            show=False
+        ),
+        
+        MessageTextInput(
+            name="query",
+            display_name="JSON Query",
+            info="JSON Query to filter the data. Used by Parse JSON operation.",
+            show=False,
+        ),
     ]
     outputs = [
         Output(display_name="Data", name="data_output", method="as_data"),
@@ -155,9 +231,36 @@ class DataOperationsComponent(Component):
     # Helper methods for data operations
     def get_data_dict(self) -> dict:
         """Extract data dictionary from Data object."""
-        # TODO: rasie error if it s list of data objects
         data = self.data[0] if isinstance(self.data, list) and len(self.data) == 1 else self.data
         return data.model_dump()
+
+    def json_query(self) -> Data:
+        import json
+        import jq
+        if not self.query or not self.query.strip():
+            raise ValueError("JSON Query is required and cannot be blank.")
+        raw_data = self.get_data_dict()
+        try:
+            input_str = json.dumps(raw_data)
+            repaired = repair_json(input_str)
+            data_json = json.loads(repaired)
+            if isinstance(data_json, dict) and 'data' in data_json:
+                jq_input = data_json['data']
+            else:
+                jq_input = data_json
+            results = jq.compile(self.query).input(jq_input).all()
+            if not results:
+                raise ValueError("No result from JSON query.")
+            result = results[0] if len(results) == 1 else results
+            if result is None or result == "None":
+                raise ValueError("JSON query returned null/None. Check if the path exists in your data.")
+            elif isinstance(result, dict):
+                return Data(data=result)
+            else:
+                return Data(data={"result": result})
+        except Exception as e:
+            logger.error(f"JSON Query failed: {e}")
+            raise ValueError(f"JSON Query error: {e}")
 
     def get_normalized_data(self) -> dict:
         """Get normalized data dictionary, handling the 'data' key if present."""
@@ -173,6 +276,10 @@ class DataOperationsComponent(Component):
         if self.data_is_list():
             msg = f"{operation} operation is not supported for multiple data objects."
             raise ValueError(msg)
+            
+    def operation_exception(self, operations: list[str]) -> None:
+        msg = f"{operations} operations are not supported in combination with each other."
+        raise ValueError(msg)
 
     def operation_exception(self, operations: list[str]) -> None:
         """Raise exception for incompatible operations."""
@@ -203,34 +310,22 @@ class DataOperationsComponent(Component):
         return Data(data=filtered)
 
     def remove_keys(self) -> Data:
-        """Remove specified keys from the data dictionary."""
+        """Remove specified keys from the data dictionary, recursively."""
         self.validate_single_data("Remove Keys")
         data_dict = self.get_normalized_data()
         remove_keys_input: list[str] = self.remove_keys_input
 
-        for key in remove_keys_input:
-            if key in data_dict:
-                data_dict.pop(key)
-            else:
-                logger.warning(f"Key '{key}' not found in data. Skipping removal.")
-
-        return Data(**data_dict)
+        filtered = DataOperationsComponent.remove_keys_recursive(data_dict, set(remove_keys_input))
+        return Data(data=filtered)
 
     def rename_keys(self) -> Data:
-        """Rename keys in the data dictionary."""
+        """Rename keys in the data dictionary, recursively."""
         self.validate_single_data("Rename Keys")
         data_dict = self.get_normalized_data()
         rename_keys_input: dict[str, str] = self.rename_keys_input
 
-        for old_key, new_key in rename_keys_input.items():
-            if old_key in data_dict:
-                data_dict[new_key] = data_dict[old_key]
-                data_dict.pop(old_key)
-            else:
-                msg = f"Key '{old_key}' not found in data. Skipping rename."
-                raise ValueError(msg)
-
-        return Data(**data_dict)
+        renamed = DataOperationsComponent.rename_keys_recursive(data_dict, rename_keys_input)
+        return Data(data=renamed)
 
     def recursive_eval(self, data: Any) -> Any:
         """Recursively evaluate string values in a dictionary or list.
@@ -326,6 +421,12 @@ class DataOperationsComponent(Component):
                 self.status = f"Warning: Some items don't have the key '{filter_key}' or are not dictionaries."
 
         return filtered_data
+        
+    def compare_values(self, item_value: Any, filter_value: str, operator: str) -> bool:
+        comparison_func = OPERATORS.get(operator)
+        if comparison_func:
+            return comparison_func(item_value, filter_value)
+        return False
 
     def multi_filter_data(self) -> Data:
         """Apply multiple filters to the data."""
@@ -365,57 +466,54 @@ class DataOperationsComponent(Component):
 
     # Configuration and execution methods
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-        """Update build configuration based on selected action."""
-        if field_name != "operations":
-            return build_config
+        if field_name == "operations":
+            build_config["operations"]["value"] = field_value
+            selected_actions = [action["name"] for action in field_value]
+            if len(selected_actions) == 1 and selected_actions[0] in ACTION_CONFIG:
+                action = selected_actions[0]
+                config = ACTION_CONFIG[action]
+                build_config["data"]["is_list"] = config["is_list"]
+                logger.info(config["log_msg"])
+                return set_current_fields(build_config, self.actions_data, action, ["operations", "data"], set_field_display)
 
-        build_config["operations"]["value"] = field_value
-        selected_actions = [action["name"] for action in field_value]
-
-        # Handle single action case
-        if len(selected_actions) == 1 and selected_actions[0] in ACTION_CONFIG:
-            action = selected_actions[0]
-            config = ACTION_CONFIG[action]
-
-            build_config["data"]["is_list"] = config["is_list"]
-            logger.info(config["log_msg"])
-
-            return set_current_fields(
-                build_config=build_config,
-                action_fields=self.actions_data,
-                selected_action=action,
-                default_fields=self.default_keys,
-                func=set_field_display,
-            )
-
-        # Handle no operations case
-        if not selected_actions:
-            logger.info("setting default fields")
-            return set_current_fields(
-                build_config=build_config,
-                action_fields=self.actions_data,
-                selected_action=None,
-                default_fields=self.default_keys,
-                func=set_field_display,
-            )
+        if field_name == "mapped_json_display":
+            try:
+                parsed_json = json.loads(field_value)
+                keys = DataOperationsComponent.extract_all_paths(parsed_json)
+                build_config["selected_key"]["options"] = keys
+                build_config["selected_key"]["show"] = True
+            except Exception as e:
+                logger.error(f"Error parsing mapped JSON: {e}")
+                build_config["selected_key"]["show"] = False
 
         return build_config
+        
+    def json_path(self) -> Data:
+        try:
+            if not self.data or not self.selected_key:
+                raise ValueError("Missing input data or selected key.")
+            input_payload = self.data[0].data if isinstance(self.data, list) else self.data.data
+            compiled = jq.compile(self.selected_key)
+            result = compiled.input(input_payload).first()
+            if isinstance(result, dict):
+                return Data(data=result)
+            else:
+                return Data(data={"result": result})
+        except Exception as e:
+            self.status = f"Error: {str(e)}"
+            self.log(self.status)
+            return Data(data={"error": str(e)})
+
 
     def as_data(self) -> Data:
-        """Execute the selected action on the data."""
         if not hasattr(self, "operations") or not self.operations:
             return Data(data={})
-
+    
         selected_actions = [action["name"] for action in self.operations]
         logger.info(f"selected_actions: {selected_actions}")
-
-        # Only handle single action case for now
         if len(selected_actions) != 1:
             return Data(data={})
-
-        action = selected_actions[0]
-
-        # Explicitly type the action_map
+    
         action_map: dict[str, Callable[[], Data]] = {
             "Select Keys": self.select_keys,
             "Literal Eval": self.evaluate_data,
@@ -424,14 +522,14 @@ class DataOperationsComponent(Component):
             "Append or Update": self.append_update,
             "Remove Keys": self.remove_keys,
             "Rename Keys": self.rename_keys,
+            "JSON Path": self.json_path,
+            "JSON Query": self.json_query,
         }
-
-        handler: Callable[[], Data] | None = action_map.get(action)
+        handler: Callable[[], Data] | None = action_map.get(selected_actions[0])
         if handler:
             try:
                 return handler()
             except Exception as e:
-                logger.error(f"Error executing {action}: {e!s}")
+                logger.error(f"Error executing {selected_actions[0]}: {e!s}")
                 raise
-
         return Data(data={})
