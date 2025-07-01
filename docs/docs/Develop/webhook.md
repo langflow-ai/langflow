@@ -47,7 +47,7 @@ Replace **FLOW_ID** with your flow's ID, which can be found on the [Publish pane
     }
     ```
 
-1. To view the data received from your request, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+1. To view the data received from your request, in the **Parser** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
 
 You should receive a string of parsed text, like `ID: 12345 - Name: alex - Email: alex@email.com`.
 

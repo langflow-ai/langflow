@@ -37,8 +37,8 @@ I want to explode the result column out into a Data object
 :::tip
 Avoid punctuation in the **Instructions** field, as it can cause errors.
 :::
-5. To run the flow, in the **Smart function** component, click <Icon name="Play" aria-label="Play icon" />.
-6. To inspect the filtered data, in the **Smart function** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+5. To run the flow, in the **Smart function** component, click <Icon name="Play" aria-hidden="true"/> **Run component**.
+6. To inspect the filtered data, in the **Smart function** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
 The result is a structured DataFrame.
 ```text
 id | name             | company               | username        | email                              | address           | zip
@@ -141,7 +141,7 @@ curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
 ```
 
 3. In the **Data Operations** component, select the **Select Keys** operation to extract specific user information.
-To add additional keys, click <Icon name="Plus" aria-label="Add"/> **Add More**.
+To add additional keys, click <Icon name="Plus" aria-hidden="true"/> **Add More**.
 ![A webhook and data operations component](/img/component-data-operations-select-key.png)
 4. Filter by `name`, `username`, and `email` to select the values from the request.
 ```json
@@ -343,8 +343,8 @@ For example, to present a table of employees in Markdown:
 - **ID:** {id}
 - **Email:** {email}
 ```
-7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-label="Play icon" />.
-8. To view your parsed text, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-hidden="true"/> **Run component**.
+8. To view your parsed text, in the **Parser** component, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
 9. Optionally, connect a **Chat Output** component, and open the **Playground** to see the output.
 
 For an additional example of using the **Parser** component to format a DataFrame from a **Structured Output** component, see the **Market Research** template flow.
