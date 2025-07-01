@@ -7,6 +7,8 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import ChatWidget from '@site/src/components/ChatWidget';
 
+<!-- TODO: Combine & redirect to /concepts-publish -->
+
 On the [Publish pane](/concepts-publish), the **Embed into site** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
 
 The chat widget is implemented as a web component called `langflow-chat` and is loaded from a CDN. For more information, see the [langflow-embedded-chat repository](https://github.com/langflow-ai/langflow-embedded-chat).

@@ -5,6 +5,8 @@ slug: /concepts-voice-mode
 
 import Icon from "@site/src/components/icon";
 
+<!-- TODO: Combine & redirect to /concepts-playground -->
+
 The Langflow **Playground** supports **voice mode** for interacting with your applications through a microphone.
 
 An [OpenAI API key](https://platform.openai.com/) is required to use **voice mode**. An [ElevenLabs](https://elevenlabs.io) API key enables more voices in the chat, but is optional.

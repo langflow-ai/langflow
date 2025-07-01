@@ -15,8 +15,8 @@ Generate a user-specific token to use with Langflow.
 
 ### Generate an API key with the Langflow UI
 
-1. Click your user icon, and then select **Settings**.
-2. Click **Langflow API**, and then click **Add New**.
+1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+2. Click **Langflow API Keys**, and then click **Add New**.
 3. Name your key, and then click **Create Secret Key**.
 4. Copy the API key and store it in a secure location.
 
@@ -78,10 +78,10 @@ For more information, see [Authentication](/configuration-authentication#langflo
 
 ## Revoke an API key
 
-To revoke an API key, delete it from the list of keys in the **Settings** menu.
+To revoke an API key, delete it from your Langflow settings:
 
-1. Click your user icon, and then select **Settings**.
-2. Click **Langflow API**.
+1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+2. Click **Langflow API Keys**.
 3. Select the keys you want to delete, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
 
 This action immediately invalidates the key and prevents it from being used again.
@@ -104,13 +104,18 @@ GOOGLE_API_KEY=...
 
 ### Add component API keys with the Langflow UI
 
-To add component API keys as **Global variables** with the Langflow UI:
+You can store API keys for Langflow components as [global variables](/configuration-global-variables) in Langflow:
 
-1. Click your user icon, and then select **Settings**.
-2. Click **Langflow API**.
-3. Add new API keys as **Credential** type variables.
-4. Apply them to specific component fields.
+1. In the Langflow UI header, click your profile icon, and then select **Settings**.
+2. Click **Global Variables**.
+3. Click **Add New**
+4. For **Type**, select **Credential**.
+5. For **Name**, enter a name for the variable that will store the API key.
+6. For **Value**, enter the API key that you want to store.
+7. For **Apply to fields**, you can select component fields to automatically populate with this variable.
 
-Component values set directly in a flow override values set in the UI **and** environment variables.
+    You can override automatically set variables by manually entering a different variable name or value when you add the affected component to a flow.
 
-For more information, see [Global variables](/configuration-global-variables).
+    Additionally, you can override all component settings by running a flow with tweaks, which are modifications to component settings that you make at run-time and apply to a single flow run only.
+
+8. Click **Save Variable**.

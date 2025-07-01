@@ -79,3 +79,8 @@ If you're using **Datastax Langflow**, you can share the URL with any users with
 The **Embed into site** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
 
 For more information, see [Embedded chat widget](/embedded-chat-widget).
+
+## See also
+
+* [Develop an application with Langflow](/develop-application)
+* [Langflow deployment overview](/deployment-overview)

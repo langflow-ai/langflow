@@ -36,18 +36,22 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Manage flows",
+          label: "Build flows",
           items: [
             {
               type: "doc",
               id: "Concepts/concepts-flows",
-              label: "Create flows"
+              label: "Create and manage flows"
             },
             {
               type: "doc",
               id: "Concepts/concepts-publish",
               label: "Publish flows"
-              //Combine and redirect Concepts/embedded-chat-widget
+            },
+            {
+              type: "doc",
+              id: "Concepts/embedded-chat-widget",
+              label: "Use the embedded chat widget"
             },
             {
               type: "doc",
@@ -59,8 +63,12 @@ module.exports = {
         {
           type: "doc",
           id: "Concepts/concepts-playground",
-          label: "Playground"
-          //Combine and redirect Concepts/concepts-voice-mode
+          label: "Use the Playground"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-voice-mode",
+          label: "Use voice mode"
         },
         {
           type: "doc",
