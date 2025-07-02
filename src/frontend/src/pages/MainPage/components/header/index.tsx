@@ -3,10 +3,6 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import {
-  DEFAULT_FOLDER,
-  DEFAULT_FOLDER_DEPRECATED,
-} from "@/constants/constants";
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
 import { ENABLE_MCP } from "@/customization/feature-flags";
@@ -15,7 +11,6 @@ import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 import { debounce } from "lodash";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 interface HeaderComponentProps {
   flowType: "flows" | "components" | "mcp";
@@ -113,7 +108,7 @@ const HeaderComponent = ({
             </SidebarTrigger>
           </div>
         </div>
-        {folderName === DEFAULT_FOLDER_DEPRECATED ? DEFAULT_FOLDER : folderName}
+        {folderName}
       </div>
       {!isEmptyFolder && (
         <>

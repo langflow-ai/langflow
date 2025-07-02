@@ -6,7 +6,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select-custom";
-import { DEFAULT_FOLDER_DEPRECATED } from "@/constants/constants";
+import { DEFAULT_FOLDER } from "@/constants/constants";
 import { FolderType } from "@/pages/MainPage/entities";
 import { cn } from "@/utils/utils";
 import { handleSelectChange } from "../helpers/handle-select-change";
@@ -57,7 +57,7 @@ export const SelectOptions = ({
           </SelectTrigger>
         </ShadTooltip>
         <SelectContent align="end" alignOffset={-16} position="popper">
-          {item.name !== DEFAULT_FOLDER_DEPRECATED && (
+          {item.name !== DEFAULT_FOLDER && (
             <SelectItem
               id="rename-button"
               value="rename"

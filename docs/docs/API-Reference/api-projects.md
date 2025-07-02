@@ -29,7 +29,7 @@ curl -X GET \
 ```json
 [
   {
-    "name": "My Projects",
+    "name": "Starter Project",
     "description": "Manage your own projects. Download and upload projects.",
     "id": "1415de42-8f01-4f36-bf34-539f23e47466",
     "parent_id": null
@@ -116,7 +116,7 @@ curl -X GET \
 ```json
 [
   {
-    "name": "My Projects",
+    "name": "Starter Project",
     "description": "Manage your own projects. Download and upload projects.",
     "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     "parent_id": null
