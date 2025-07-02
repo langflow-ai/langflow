@@ -23,8 +23,8 @@ The [simple agent starter project](/simple-agent) uses URL and Calculator tools 
 
 ![Simple agent starter flow](/img/starter-flow-simple-agent.png)
 
-To make a component into a tool that an agent can use, enable **Tool mode** in the component. Enabling **Tool mode** modifies a component input to accept calls from an agent.
-If the component you want to connect to an agent doesn't have a **Tool mode** option, you can modify the component's inputs to become a tool.
+To make a component into a tool that an agent can use, enable **Tool Mode** in the component. Enabling tool mode modifies a component input to accept calls from an agent.
+If the component you want to connect to an agent doesn't have a **Tool Mode** option, you can modify the component's inputs to become a tool.
 For an example, see [Make any component a tool](/agents-tools#make-any-component-a-tool).
 
 ## arXiv
@@ -77,7 +77,7 @@ The **Tool Parameters** configuration pane allows you to define parameters for [
 
 These filters become available as parameters that the LLM can use when calling the tool, with a better understanding of each parameter provided by the **Description** field.
 
-1. To define a parameter for your query, in the **Tool Parameters** pane, click <Icon name="Plus" aria-label="Add"/>.
+1. To define a parameter for your query, in the **Tool Parameters** pane, click <Icon name="Plus" aria-hidden="true"/> **Add a new row**.
 2. Complete the fields based on your data. For example, with this filter, the LLM can filter by unique `customer_id` values.
 
 * Name: `customer_id`

@@ -105,7 +105,7 @@ dependencies = [
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain>=0.1.29",
     "crewai==0.102.0",
-    "mcp>=0.9.1",
+    "mcp>=1.9.4",
     "uv>=0.5.7",
     "scipy>=1.14.1",
     "ag2>=0.1.0",
@@ -124,9 +124,8 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
+    "docling_core>=2.36.1",
     "filelock>=3.18.0",
-    "docling>=2.36.1",
-    "filelock>=3.18.0"
 ]
 
 [dependency-groups]
@@ -176,6 +175,7 @@ dev = [
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
     "pyyaml>=6.0.2",
+    "pyleak>=0.1.12",
 ]
 
 [tool.uv.sources]
@@ -193,6 +193,10 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
+docling = [
+    "docling>=2.36.1",
+]
+
 audio = [
     "webrtcvad>=2.0.10",
 ]
