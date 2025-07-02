@@ -267,8 +267,7 @@ class TracingService(Service):
             return
         trace_context = trace_context_var.get()
         if trace_context is None:
-            msg = "called end_tracers but no trace context found"
-            raise RuntimeError(msg)
+            return
         await self._stop(trace_context)
         self._end_all_tracers(trace_context, outputs, error)
 
