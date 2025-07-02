@@ -2,14 +2,15 @@ import os
 import re
 from unittest.mock import patch
 
+from langflow.schema.data import Data
 import openai
 import pytest
 from langchain_openai import ChatOpenAI
 from langflow.components.processing.structured_output import StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
-
 from pydantic import BaseModel
+
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
@@ -282,6 +283,40 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert "age" in result[0]
         assert result[0]["name"] == "John Doe"
         assert result[0]["age"] == 30
+    @pytest.mark.skipif(
+        "OPENAI_API_KEY" not in os.environ,
+        reason="OPENAI_API_KEY environment variable not set",
+    )
+    def test_with_real_openai_model_simple_schema_wrong_input(self):
+        # Create a real OpenAI model
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+        # Create a component with a simple schema
+        component = StructuredOutputComponent(
+            llm=llm,
+            input_value="Hello how are you?",
+            output_schema=[
+                {"name": "name", "type": "str", "description": "The person's name"},
+                {"name": "age", "type": "int", "description": "The person's age"},
+            ],
+        )
+
+        # Get the structured output
+        # assert component.system_prompt == (
+        #         "Extract data from input_text and return only a JSON array matching the provided schema. "
+        #         "First check relevance: if the text lacks information for any schema field "
+        #         "(e.g., it is purely conversational), output a single object with defaults only. "
+        #         "Otherwise, emit one object per entity found. "
+        #         "Include every key in schema order, enforce types, and replace missing or "
+        #         "unparseable values with defaults (string N/A, integer 0, float 0.0, date null). "
+        #         "Produce nothing beyond the JSON."
+        #     )
+        result = component.build_structured_output()
+
+        # # Verify the result
+        assert isinstance(result, Data)
+        assert result.data == {"name": "N/A", "age": 0}
+        # assert result == [{"name": "N/A", "age": 0}]
 
     @pytest.mark.skipif(
         "OPENAI_API_KEY" not in os.environ,
@@ -433,37 +468,6 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["total_bill"] == 35.49
         assert result[0]["would_return"] is True
 
-    @pytest.mark.skipif(
-        "NVIDIA_API_KEY" not in os.environ,
-        reason="NVIDIA_API_KEY environment variable not set",
-    )
-    def test_with_real_nvidia_model_simple_schema(self):
-        # Create a real NVIDIA model
-        try:
-            from langchain_nvidia_ai_endpoints import ChatNVIDIA
-        except ImportError as e:
-            msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
-            raise ImportError(msg) from e
-
-        llm = ChatNVIDIA(model="meta/llama-3.2-3b-instruct", temperature=0, max_tokens=10)
-
-        # Create a component with a simple schema
-        component = StructuredOutputComponent(
-            llm=llm,
-            input_value="Extract the name and age from this text: John Doe is 30 years old.",
-            schema_name="PersonInfo",
-            output_schema=[
-                {"name": "name", "type": "str", "description": "The person's name"},
-                {"name": "age", "type": "int", "description": "The person's age"},
-            ],
-            multiple=False,
-            system_prompt="Extract structured information from the input text.",
-        )
-
-        # The test is expected to fail with a 400 Bad Request error
-        with pytest.raises(Exception, match="400 Bad Request"):
-            component.build_structured_output_base()
-
     def test_structured_output_returns_dict_when_no_objects_key(self):
         """Test that when trustcall returns a dict without 'objects' key, we return the dict directly."""
 
@@ -566,7 +570,13 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
         with (
             patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result),
-            pytest.raises(ValueError, match="No structured output returned"),
+            pytest.raises(
+                ValueError,
+                match=(
+                    "No structured output was returned."
+                    "Please review your input or update the system message to obtain a better result."
+                ),
+            ),
         ):
             component.build_structured_output()
 

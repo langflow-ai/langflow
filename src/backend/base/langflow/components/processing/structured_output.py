@@ -41,11 +41,13 @@ class StructuredOutputComponent(Component):
             display_name="Format Instructions",
             info="The instructions to the language model for formatting the output.",
             value=(
-                "Extract data from input_text and output only a JSON array whose objects follow the given schema. "
-                "Fill each key with a correctly typed value; when absent,"
-                "use the defaults (string “N/A”, integer 0, float 0.0, date null). "
-                "Emit one object per occurrence; "
-                "if none are found, output a single object populated entirely with defaults."
+                "Extract data from input_text and return only a JSON array matching the provided schema. "
+                "First check relevance: if the text lacks information for any schema field "
+                "(e.g., it is purely conversational), output a single object with defaults only. "
+                "Otherwise, emit one object per entity found. "
+                "Include every key in schema order, enforce types, and replace missing or "
+                "unparseable values with defaults (string N/A, integer 0, float 0.0, date null). "
+                "Produce nothing beyond the JSON."
             ),
             required=True,
             advanced=True,
@@ -174,8 +176,10 @@ class StructuredOutputComponent(Component):
 
         if not isinstance(output, list) or not output:
             # handle empty or unexpected type case
-            msg = ("No structured output was returned."
-                   "Please review your input or update the system message to obtain a better result.")
+            msg = (
+                "No structured output was returned."
+                "Please review your input or update the system message to obtain a better result."
+            )
             raise ValueError(msg)
         if len(output) != 1:
             msg = "Multiple structured outputs returned"
