@@ -17,7 +17,7 @@ Once imported, your flow is ready to use.
 You can drag and drop Langflow JSON files directly from your file system into the Langflow window to import a flow, even into the initial Langflow splash screen.
 :::
 
-## Export flow
+## Export a flow
 
 You can export flows to transfer flows between Langflow instances or save backups of your flows.
 

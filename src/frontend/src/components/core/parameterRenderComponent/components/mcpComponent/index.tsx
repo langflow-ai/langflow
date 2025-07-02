@@ -26,7 +26,9 @@ export default function McpComponent({
         description:
           server.toolsCount === null
             ? server.error
-              ? "Error"
+              ? server.error.startsWith("Timeout")
+                ? "Timeout"
+                : "Error"
               : "Loading..."
             : !server.toolsCount
               ? "No actions found"

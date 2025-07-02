@@ -15,7 +15,7 @@ They may perform some processing or type checking, like converting raw HTML data
 
 Components like [News search](#news-search), [RSS reader](#rss-reader), and [Web search](#web-search) all fetch data into Langflow, and connect to Langflow in the same way. They can output the retrieved data in [DataFrame](/concepts-objects#dataframe-object) format, or can be connected to an **Agent** component to be used as tools.
 
-For example, to connect all three components to an Agent, do the following:
+For example, to connect all three components to an Agent component, do the following:
 
 1. Create the [Simple Agent starter flow](/simple-agent).
 2. In the **Agent** component, in the **OpenAI API Key** field, add your OpenAI API key.

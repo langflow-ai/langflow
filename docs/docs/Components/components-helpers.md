@@ -53,7 +53,7 @@ The Current Date component returns the current date and time in a selected timez
 Prior to Langflow 1.5, this component was two separate components called **Chat History** and **Message Store**.
 :::
 
-This component combines the **Chat History** and **Message Store** component into one component that can utilize Langflow's SQLite database, or connect to external memory, to store and retrieve chat messages.
+This component provides combined chat history and message store functionality. This component can use Langflow's SQLite database or external memory to store and retrieve chat messages.
 
 Chat memory is distinct from vector store memory, because it is built specifically for storing and retrieving chat messages from databases.
 
