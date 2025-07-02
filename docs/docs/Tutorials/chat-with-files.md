@@ -1,5 +1,5 @@
 ---
-title: Create a chatbot with your own files
+title: Create a chatbot that can ingest files
 slug: /chat-with-files
 ---
 
@@ -14,29 +14,38 @@ Create a chatbot application that chats with files loaded from your local machin
 - [A running Langflow instance](/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/api-keys)
 
-## Create a file loader chat flow
+    This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
 
+## Create a flow that accepts file input
+
+To ingest files, your flow must have a **File** component attached to a component that receives input, such as a **Prompt** or **Agent** component.
+
+The following steps modify the **Basic prompting** template to accept file input.
 1. In Langflow, click **New Flow**, and then select the **Basic prompting** template.
-2. Add your **OpenAI** API key to the **Language Model** component.
-3. To confirm that the chatbot responds as expected, open the <Icon name="Play" aria-hidden="true" /> **Playground** and then ask a question.
+2. In the **Language Model** component, enter your OpenAI API key.
+
+    If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+3. To verify that your API key is valid, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM a question.
 The LLM should respond as the **Prompt** component specifies.
-With the basic flow responding correctly, modify the **Prompt** component to accept additional inputs.
-4. In the **Prompt** component, open the **Template** field, and replace the current prompt with the following text:
+4. Modify the **Prompt** component to accept file input in addition to chat input.
+To do this, edit the **Template** field, and then replace the default prompt with the following text:
     ```text
     ChatInput:
     {chat-input}
     File:
     {file}
     ```
-    The **Prompt** component adds ports to accept new inputs for each value with curly braces, in this case, a chat input and a file.
+    The **Prompt** component gets a new input port for each value in curly braces. At this point, your **Prompt** component should have **chat-input** and **file** input ports.
 
     :::tip
-    The port names are for illustrative purposes. You don't have to name them after the component they're connected to.
+    Within the curly braces, you can use any port name you like. For this tutorial, the ports are named after the components that connect to them.
     :::
 
-5. Add a [File component](/components-data#file) to the flow, and connect the **Raw Content** output to the Prompt component's `file` input.
+5. Add a [File component](/components-data#file) to the flow, and then connect the **Raw Content** output to the Prompt component's **file** input.
 
-    Your flow should look like this:
+You can add files directly to the file component to pre-load input before running the flow, or you can load files at runtime. The next section of this tutorial covers runtime file uploads.
+
+    At this point your flow has five components. The Chat Input and File components are connected to the Prompt component's input ports. Then, the Prompt component's output port is connected to the Language Model component's input port. Finally, the Language Model component's output port is connected to the Chat Output component, which returns the final response to the user.
 
     ![File loader chat flow](/img/tutorial-chat-file-loader.png)
 
