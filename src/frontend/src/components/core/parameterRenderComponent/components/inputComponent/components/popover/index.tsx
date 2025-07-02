@@ -1,6 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandGroup,
@@ -129,13 +130,23 @@ const getInputClassName = (
   password: boolean,
   selectedOptions: string[],
   blockAddNewGlobalVariable: boolean = false,
+  isGlobalVariable: boolean = false,
 ) => {
+  console.log("logivv", {
+    isGlobalVariable,
+    password,
+    blockAddNewGlobalVariable,
+    selectedOptions,
+    editNode,
+    disabled,
+  });
   return cn(
     "popover-input nodrag w-full truncate px-1 pr-4",
     editNode && "pl-2 pr-6",
     editNode && disabled && "h-fit w-fit",
     disabled &&
       "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
+    isGlobalVariable && "text-clip !pr-[7.5rem]",
     password && "text-clip pr-14",
     blockAddNewGlobalVariable && "text-clip pr-8",
     selectedOptions?.length > 0 && "cursor-default",
@@ -187,7 +198,9 @@ const CustomInputPopover = ({
   commandWidth,
   blockAddNewGlobalVariable,
   hasRefreshButton,
+  name,
 }) => {
+  const isGlobalVariable = name === "api_key";
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
@@ -242,6 +255,21 @@ const CustomInputPopover = ({
                 />
               ))}
             </div>
+          ) : !disabled && selectedOption?.length > 0 && isGlobalVariable ? (
+            <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
+              <span>{selectedOption}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedOption("")}
+              >
+                <ForwardedIconComponent
+                  name="X"
+                  className="h-4 w-4 text-primary"
+                  aria-hidden="true"
+                />
+              </Button>
+            </div>
           ) : !disabled && selectedOption?.length > 0 ? (
             <ShadTooltip content={selectedOption} side="left">
               <div
@@ -286,6 +314,7 @@ const CustomInputPopover = ({
                 password,
                 selectedOptions,
                 blockAddNewGlobalVariable,
+                isGlobalVariable,
               )}
               placeholder={
                 !disabled && (selectedOptions?.length > 0 || selectedOption)
