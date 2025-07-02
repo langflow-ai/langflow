@@ -996,22 +996,31 @@ class ComposioBaseComponent(Component):
             )
             
             if isinstance(result, dict) and "successful" in result:
-                successful_value = result["successful"]
-                logger.debug(f"Successful field type: {type(successful_value)}, value: {successful_value}")
-                
                 if result["successful"]:
-                    # Return the data field if successful
-                    return result.get("data", result)
+                    raw_data = result.get("data", result)
+                    processed_data = self._apply_post_processor(action_key, raw_data)
+                    return processed_data
                 else:
-                    # Raise error if not successful
                     error_msg = result.get("error", "Tool execution failed")
                     raise ValueError(error_msg)
-            
-            return result
 
         except ValueError as e:
             logger.error(f"Failed to execute {action_key}: {e}")
             raise
+
+    def _apply_post_processor(self, action_key: str, raw_data: Any) -> Any:
+        """Apply post-processor for the given action if defined."""
+        if hasattr(self, 'post_processors') and isinstance(self.post_processors, dict):
+            processor_func = self.post_processors.get(action_key)
+            if processor_func and callable(processor_func):
+                try:
+                    processed_data = processor_func(raw_data)
+                    return processed_data
+                except Exception as e:
+                    logger.error(f"Error in post-processor for {action_key}: {e}")
+                    return raw_data
+        
+        return raw_data
 
     @abstractmethod
     def set_default_tools(self):
