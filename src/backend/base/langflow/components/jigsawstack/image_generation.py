@@ -180,6 +180,9 @@ class JigsawStackImageGenerationComponent(Component):
             if self.steps:
                 params["steps"] = self.steps
 
+            # Initialize advance_config if any advanced parameters are provided
+            if self.negative_prompt or self.seed or self.guidance:
+                params["advance_config"] = {}
             if self.negative_prompt:
                 params["advance_config"]["negative_prompt"] = self.negative_prompt
             if self.seed:

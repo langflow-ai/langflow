@@ -7,7 +7,7 @@ class JigsawStackObjectDetectionComponent(Component):
     display_name = "Object Detection"
     description = "Perform object detection on images using JigsawStack's Object Detection Model, \
         capable of image grounding, segmentation and computer use."
-    documentation = "https://jigsawstack.com/docs/api-reference/ai/vocr"
+    documentation = "https://jigsawstack.com/docs/api-reference/ai/object-detection"
     icon = "JigsawStack"
     name = "JigsawStackObjectDetection"
 

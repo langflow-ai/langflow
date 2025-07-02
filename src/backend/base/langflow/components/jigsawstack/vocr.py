@@ -92,7 +92,7 @@ class JigsawStackVOCRComponent(Component):
             if self.page_range_start and self.page_range_end:
                 params["page_range"] = [self.page_range_start, self.page_range_end]
 
-            # Call web scraping
+            # Call VOCR
             response = client.vision.vocr(params)
 
             if not response.get("success", False):

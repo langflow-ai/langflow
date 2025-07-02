@@ -36,7 +36,7 @@ class JigsawStackTextTranslateComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Translation Results", name="transaltion_results", method="translation"),
+        Output(display_name="Translation Results", name="translation_results", method="translation"),
     ]
 
     def translation(self) -> Data:
@@ -44,7 +44,7 @@ class JigsawStackTextTranslateComponent(Component):
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:
             jigsawstack_import_error = (
-                "JigsawStack package not found. Please install it using: pip install jigsawstack>=0.2.6"
+                "JigsawStack package not found. Please install it using: pip install jigsawstack>=0.2.7"
             )
             raise ImportError(jigsawstack_import_error) from e
 
