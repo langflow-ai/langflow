@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-bkCaM",
+            "id": "ChatInput-8bLHN",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "ArXivComponent-eOurd",
+            "id": "ArXivComponent-wpsLb",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-bkCaM{œdataTypeœ:œChatInputœ,œidœ:œChatInput-bkCaMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-eOurd{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-eOurdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-8bLHN{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8bLHNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-wpsLb{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-wpsLbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-bkCaM",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-bkCaMœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ArXivComponent-eOurd",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-eOurdœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-8bLHN",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8bLHNœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ArXivComponent-wpsLb",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-wpsLbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ArXivComponent",
-            "id": "ArXivComponent-eOurd",
+            "id": "ArXivComponent-wpsLb",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "LoopComponent-XiUI7",
+            "id": "LoopComponent-GV15E",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ArXivComponent-eOurd{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-eOurdœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-XiUI7{œfieldNameœ:œdataœ,œidœ:œLoopComponent-XiUI7œ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ArXivComponent-wpsLb{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-wpsLbœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-GV15E{œfieldNameœ:œdataœ,œidœ:œLoopComponent-GV15Eœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ArXivComponent-eOurd",
-        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-eOurdœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "LoopComponent-XiUI7",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-XiUI7œ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "ArXivComponent-wpsLb",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-wpsLbœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "LoopComponent-GV15E",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-GV15Eœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-XiUI7",
+            "id": "LoopComponent-GV15E",
             "name": "item",
             "output_types": [
               "Data"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-ct8x5",
+            "id": "ParserComponent-aKcLF",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -79,12 +79,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LoopComponent-XiUI7{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XiUI7œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-ct8x5{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-ct8x5œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LoopComponent-GV15E{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GV15Eœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-aKcLF{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-aKcLFœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LoopComponent-XiUI7",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-XiUI7œ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParserComponent-ct8x5",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-ct8x5œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "LoopComponent-GV15E",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GV15Eœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParserComponent-aKcLF",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-aKcLFœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -92,7 +92,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-ct8x5",
+            "id": "ParserComponent-aKcLF",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -100,34 +100,35 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-qGU2j",
+            "id": "LanguageModelComponent-ze4nq",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParserComponent-ct8x5{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-ct8x5œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-qGU2j{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-qGU2jœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParserComponent-aKcLF{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-aKcLFœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-ze4nq{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-ze4nqœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParserComponent-ct8x5",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-ct8x5œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-qGU2j",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-qGU2jœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ParserComponent-aKcLF",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-aKcLFœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-ze4nq",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-ze4nqœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "LoopComponent",
-            "id": "LoopComponent-XiUI7",
-            "name": "done",
+            "dataType": "LanguageModelComponent",
+            "id": "LanguageModelComponent-ze4nq",
+            "name": "text_output",
             "output_types": [
-              "DataFrame"
+              "Message"
             ]
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "TypeConverterComponent-BvlCD",
+            "id": "TypeConverterComponent-NClYY",
             "inputTypes": [
               "Message",
               "Data",
@@ -136,27 +137,56 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__LoopComponent-XiUI7{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XiUI7œ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-TypeConverterComponent-BvlCD{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-BvlCDœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-ze4nq{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-ze4nqœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-TypeConverterComponent-NClYY{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-NClYYœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LoopComponent-XiUI7",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-XiUI7œ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "TypeConverterComponent-BvlCD",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-BvlCDœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-ze4nq",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-ze4nqœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "TypeConverterComponent-NClYY",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-NClYYœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "TypeConverterComponent",
-            "id": "TypeConverterComponent-BvlCD",
-            "name": "message_output",
+            "id": "TypeConverterComponent-NClYY",
+            "name": "data_output",
             "output_types": [
-              "Message"
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-GV15E",
+            "name": "item",
+            "output_types": [
+              "Data"
+            ]
+          }
+        },
+        "id": "reactflow__edge-TypeConverterComponent-NClYY{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-NClYYœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}-LoopComponent-GV15E{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GV15Eœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "selected": false,
+        "source": "TypeConverterComponent-NClYY",
+        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-NClYYœ, œnameœ: œdata_outputœ, œoutput_typesœ: [œDataœ]}",
+        "target": "LoopComponent-GV15E",
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GV15Eœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-GV15E",
+            "name": "done",
+            "output_types": [
+              "DataFrame"
             ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-XcKDq",
+            "id": "ChatOutput-hmMTq",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -165,72 +195,18 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__TypeConverterComponent-BvlCD{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-BvlCDœ,œnameœ:œmessage_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XcKDq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XcKDqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LoopComponent-GV15E{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GV15Eœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-hmMTq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hmMTqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TypeConverterComponent-BvlCD",
-        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-BvlCDœ, œnameœ: œmessage_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-XcKDq",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XcKDqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-qGU2j",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_data",
-            "id": "TypeConverterComponent-iNluL",
-            "inputTypes": [
-              "Message",
-              "Data",
-              "DataFrame"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__LanguageModelComponent-qGU2j{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-qGU2jœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-TypeConverterComponent-iNluL{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-iNluLœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "LanguageModelComponent-qGU2j",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-qGU2jœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "TypeConverterComponent-iNluL",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-iNluLœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "TypeConverterComponent",
-            "id": "TypeConverterComponent-iNluL",
-            "name": "data_output",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "dataType": "LoopComponent",
-            "id": "LoopComponent-XiUI7",
-            "name": "item",
-            "output_types": [
-              "Data"
-            ]
-          }
-        },
-        "id": "xy-edge__TypeConverterComponent-iNluL{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-iNluLœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}-LoopComponent-XiUI7{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-XiUI7œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
-        "source": "TypeConverterComponent-iNluL",
-        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-iNluLœ, œnameœ: œdata_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "LoopComponent-XiUI7",
-        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-XiUI7œ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
+        "source": "LoopComponent-GV15E",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GV15Eœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ChatOutput-hmMTq",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-hmMTqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ArXivComponent-eOurd",
+          "id": "ArXivComponent-wpsLb",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -367,7 +343,7 @@
           "type": "ArXivComponent"
         },
         "dragging": false,
-        "id": "ArXivComponent-eOurd",
+        "id": "ArXivComponent-wpsLb",
         "measured": {
           "height": 369,
           "width": 320
@@ -381,7 +357,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-XcKDq",
+          "id": "ChatOutput-hmMTq",
           "node": {
             "base_classes": [
               "Message"
@@ -676,21 +652,21 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-XcKDq",
+        "id": "ChatOutput-hmMTq",
         "measured": {
           "height": 48,
           "width": 192
         },
         "position": {
-          "x": 1340.6435418555936,
-          "y": 570.8905972487661
+          "x": 1214.3761564586034,
+          "y": 511.8564949852382
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-bkCaM",
+          "id": "ChatInput-8bLHN",
           "node": {
             "base_classes": [
               "Message"
@@ -988,7 +964,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-bkCaM",
+        "id": "ChatInput-8bLHN",
         "measured": {
           "height": 204,
           "width": 320
@@ -1002,7 +978,7 @@
       },
       {
         "data": {
-          "id": "note-GIN2E",
+          "id": "note-1UowE",
           "node": {
             "description": "# **Langflow Loop Component Template - ArXiv search result Translator** \nThis template translates research paper summaries on ArXiv into Portuguese and summarizes them. \n Using **Langflow’s looping mechanism**, the template iterates through multiple research papers, translates them with the **OpenAI** model component, and outputs an aggregated version of all translated papers.  \n\n## Quickstart \n 1. Add your OpenAI API key to the **Language Model** component. \n2. In the **Playground**, enter a query related to a research topic (for example, “Quantum Computing Advancements”).  \n\n  The flow fetches a list of research papers from ArXiv matching the query. Each paper in the retrieved list is processed one-by-one using the Langflow **Loop component**. \n\n  The abstract of each paper is translated into Portuguese by the **OpenAI** model component. \n\n Once all papers are translated, the system aggregates them into a **single structured output**.",
             "display_name": "",
@@ -1013,7 +989,7 @@
         },
         "dragging": false,
         "height": 647,
-        "id": "note-GIN2E",
+        "id": "note-1UowE",
         "measured": {
           "height": 647,
           "width": 576
@@ -1029,7 +1005,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-ct8x5",
+          "id": "ParserComponent-aKcLF",
           "node": {
             "base_classes": [
               "Message"
@@ -1050,6 +1026,7 @@
             "frozen": false,
             "icon": "braces",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1188,7 +1165,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-ct8x5",
+        "id": "ParserComponent-aKcLF",
         "measured": {
           "height": 329,
           "width": 320
@@ -1202,7 +1179,7 @@
       },
       {
         "data": {
-          "id": "LoopComponent-XiUI7",
+          "id": "LoopComponent-GV15E",
           "node": {
             "base_classes": [
               "Data",
@@ -1303,7 +1280,7 @@
           "type": "LoopComponent"
         },
         "dragging": false,
-        "id": "LoopComponent-XiUI7",
+        "id": "LoopComponent-GV15E",
         "measured": {
           "height": 242,
           "width": 320
@@ -1317,7 +1294,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-qGU2j",
+          "id": "LanguageModelComponent-ze4nq",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1342,6 +1319,7 @@
             "frozen": false,
             "icon": "brain-circuit",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {
               "keywords": [
                 "model",
@@ -1591,11 +1569,12 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-qGU2j",
+        "id": "LanguageModelComponent-ze4nq",
         "measured": {
           "height": 534,
           "width": 320
@@ -1604,139 +1583,12 @@
           "x": 1472.0991866325971,
           "y": -182.4108205734875
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "TypeConverterComponent-BvlCD",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "category": "processing",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Convert between different types (Message, Data, DataFrame)",
-            "display_name": "Type Convert",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_data",
-              "output_type"
-            ],
-            "frozen": false,
-            "icon": "repeat",
-            "key": "TypeConverterComponent",
-            "legacy": false,
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Message Output",
-                "group_outputs": false,
-                "method": "convert_to_message",
-                "name": "message_output",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.007568328950209746,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any\n\nfrom langflow.custom import Component\nfrom langflow.io import HandleInput, Output, TabInput\nfrom langflow.schema import Data, DataFrame, Message\n\n\ndef convert_to_message(v) -> Message:\n    \"\"\"Convert input to Message type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Message: Converted Message object\n    \"\"\"\n    return v if isinstance(v, Message) else v.to_message()\n\n\ndef convert_to_data(v: DataFrame | Data | Message | dict) -> Data:\n    \"\"\"Convert input to Data type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Data: Converted Data object\n    \"\"\"\n    if isinstance(v, dict):\n        return Data(v)\n    if isinstance(v, Message):\n        return v.to_data()\n    return v if isinstance(v, Data) else v.to_data()\n\n\ndef convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:\n    \"\"\"Convert input to DataFrame type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        DataFrame: Converted DataFrame object\n    \"\"\"\n    if isinstance(v, dict):\n        return DataFrame([v])\n    return v if isinstance(v, DataFrame) else v.to_dataframe()\n\n\nclass TypeConverterComponent(Component):\n    display_name = \"Type Convert\"\n    description = \"Convert between different types (Message, Data, DataFrame)\"\n    icon = \"repeat\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Input\",\n            input_types=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Accept Message, Data or DataFrame as input\",\n            required=True,\n        ),\n        TabInput(\n            name=\"output_type\",\n            display_name=\"Output Type\",\n            options=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Select the desired output data type\",\n            real_time_refresh=True,\n            value=\"Message\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message Output\",\n            name=\"message_output\",\n            method=\"convert_to_message\",\n        )\n    ]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"Dynamically show only the relevant output based on the selected output type.\"\"\"\n        if field_name == \"output_type\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n\n            # Add only the selected output type\n            if field_value == \"Message\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Message Output\",\n                        name=\"message_output\",\n                        method=\"convert_to_message\",\n                    ).to_dict()\n                )\n            elif field_value == \"Data\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Data Output\",\n                        name=\"data_output\",\n                        method=\"convert_to_data\",\n                    ).to_dict()\n                )\n            elif field_value == \"DataFrame\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"DataFrame Output\",\n                        name=\"dataframe_output\",\n                        method=\"convert_to_dataframe\",\n                    ).to_dict()\n                )\n\n        return frontend_node\n\n    def convert_to_message(self) -> Message:\n        \"\"\"Convert input to Message type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_message(input_value)\n        self.status = result\n        return result\n\n    def convert_to_data(self) -> Data:\n        \"\"\"Convert input to Data type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_data(input_value)\n        self.status = result\n        return result\n\n    def convert_to_dataframe(self) -> DataFrame:\n        \"\"\"Convert input to DataFrame type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_dataframe(input_value)\n        self.status = result\n        return result\n"
-              },
-              "input_data": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "Accept Message, Data or DataFrame as input",
-                "input_types": [
-                  "Message",
-                  "Data",
-                  "DataFrame"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "input_data",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "output_type": {
-                "_input_type": "TabInput",
-                "advanced": false,
-                "display_name": "Output Type",
-                "dynamic": false,
-                "info": "Select the desired output data type",
-                "name": "output_type",
-                "options": [
-                  "Message",
-                  "Data",
-                  "DataFrame"
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tab",
-                "value": "Message"
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "TypeConverterComponent"
-        },
-        "dragging": false,
-        "id": "TypeConverterComponent-BvlCD",
-        "measured": {
-          "height": 262,
-          "width": 320
-        },
-        "position": {
-          "x": 938.846489461745,
-          "y": 314.502249191009
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "TypeConverterComponent-iNluL",
+          "id": "TypeConverterComponent-NClYY",
           "node": {
             "base_classes": [
               "Message"
@@ -1852,7 +1704,7 @@
           "type": "TypeConverterComponent"
         },
         "dragging": false,
-        "id": "TypeConverterComponent-iNluL",
+        "id": "TypeConverterComponent-NClYY",
         "measured": {
           "height": 262,
           "width": 320
@@ -1866,14 +1718,14 @@
       }
     ],
     "viewport": {
-      "x": 226.87971409725378,
-      "y": 250.2250613965159,
-      "zoom": 0.4730488859338093
+      "x": 238.7929189073834,
+      "y": 429.665322362372,
+      "zoom": 0.5549571588412672
     }
   },
   "description": "This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",
   "endpoint_name": null,
-  "id": "241c634f-8775-4cdd-af60-1110fb4977f2",
+  "id": "73f89c62-43bb-4c5e-80f3-9bec6cb898d2",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Research Translation Loop",

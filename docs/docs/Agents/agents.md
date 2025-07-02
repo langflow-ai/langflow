@@ -39,7 +39,7 @@ To allow agents to use tools from MCP servers, use the [**MCP connection** compo
 
 When you attach a component as a tool, you must configure the component as a tool by enabling **Tool Mode**.
 
-For more information, see [Configure tools for agents](/)
+For more information, see [Configure tools for agents](/agents-tools)
 
 ## Use the Agent component in a flow
 
