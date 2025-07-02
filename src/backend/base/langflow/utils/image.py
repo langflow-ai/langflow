@@ -23,6 +23,17 @@ def convert_image_to_base64(image_path: str | Path) -> str:
 
     image_path = Path(image_path)
 
+    if not image_path.exists() and not image_path.is_absolute():
+        try:
+            from langflow.services.deps import get_storage_service
+            storage_service = get_storage_service()
+            base_dir = Path(str(storage_service.data_dir))
+            resolved_path = base_dir / image_path
+            if resolved_path.exists():
+                image_path = resolved_path
+        except Exception:
+            pass
+
     if not image_path.exists():
         msg = f"Image file not found: {image_path}"
         raise FileNotFoundError(msg)
