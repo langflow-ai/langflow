@@ -16,6 +16,7 @@ frontend-tests:
 frontend:
   - "src/frontend/**"
   - "**/typescript_test.yml"
+  - "**/jest_test.yml"
 docs:
   - "docs/**"
 
