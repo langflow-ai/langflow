@@ -56,11 +56,16 @@ The response content depends on your flow. Make sure the endpoint returns a succ
 </TabItem>
 </Tabs>
 
-### Temporary overrides
+### Temporary overrides (tweaks)
 
-The **Temporary overrides** tab displays the available parameters for your flow.
-Modifying the parameters changes the code parameters across all windows.
-For example, changing the **Chat Input** component's `input_value` changes that value across all API calls to the `/run` endpoint of this flow.
+The **Temporary overrides** tab displays flow parameters that you can modify at runtime.
+
+Modifying these parameters changes those values across all code snippets.
+However, these changes don't persist into the visual editor, and they aren't saved.
+
+For example, changing the **Chat Input** component's `input_value` changes that value across all API `/run` code snipepts.
+
+For more information, see the tweaks example in the [Langflow quickstart](/get-started-quickstart#use-tweaks-to-apply-temporary-overrides-to-a-flow-run).
 
 ### Send files to your flow with the API
 

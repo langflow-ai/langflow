@@ -8,13 +8,17 @@ import TabItem from '@theme/TabItem';
 
 Langflow can be installed in multiple ways:
 
-* **Langflow Desktop (Recommended)**: Download and install the [standalone desktop application](#install-and-run-langflow-desktop) for the easiest setup experience.
+* [**Langflow Desktop (Recommended)**](#install-and-run-langflow-desktop): Download and install the standalone desktop application for the least complicated setup experience.
+This option includes dependency and version management.
 
-* **Docker**: Pull and run the [Docker image](#install-and-run-langflow-docker) to start a Langflow container.
+* [**Docker**](#install-and-run-langflow-docker): Pull and run the Langflow Docker image to start a Langflow container and run Langflow in isolation.
 
-* **Python package**: Install the [Langflow OSS Python package](#install-and-run-the-langflow-oss-python-package).
+* [**Python package**](#install-and-run-the-langflow-oss-python-package): Install and run the Langflow OSS Python package.
+This option offers more control over the environment, dependencies, and versioning.
 
-## Install and run Langflow Desktop
+* [**Install from source**](/contributing-how-to-contribute#install-langflow-from-source): Use this option if you want to contribute to the Langflow project's code or documentation.
+
+## Install Langflow Desktop
 
 **Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [version management](#manage-your-version-of-langflow-desktop) feature for managing your Langflow version. Langflow Desktop is currently available for macOS.
 
@@ -22,8 +26,7 @@ Langflow can be installed in multiple ways:
   2. Click **Download Langflow**, enter your contact information, and then click **Download**.
   3. Mount and install the Langflow application.
   4. When the installation completes, open the Langflow application.
-
-  After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
+  5. Create your first flow with the [Quickstart](/get-started-quickstart).
 
 ### Manage your version of Langflow Desktop
 
@@ -41,10 +44,11 @@ To manage your version of Langflow Desktop, follow these steps:
 
 ## Install and run Langflow with Docker {#install-and-run-langflow-docker}
 
-You can use the [Langflow Docker image](https://hub.docker.com/r/langflowai/langflow) to run Langflow in an isolated environment.
-Running applications in [Docker](https://docs.docker.com/) containers ensures consistent behavior across different systems and eliminates dependency conflicts.
+You can use the Langflow Docker image to start a Langflow container.
+For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
 1. Install and start [Docker](https://docs.docker.com/).
+
 2. Pull the latest [Langflow Docker image](https://hub.docker.com/r/langflowai/langflow) and start it:
 
   ```bash
@@ -53,17 +57,21 @@ Running applications in [Docker](https://docs.docker.com/) containers ensures co
 
 3. To access Langflow, navigate to `http://localhost:7860/`.
 
-For more information, see [Deploy Langflow on Docker](/deployment-docker).
+4. Create your first flow with the [Quickstart](/get-started-quickstart).
 
 ## Install and run the Langflow OSS Python package
 
-To install and run Langflow OSS, you need the following:
+1. Make sure you have the required dependencies and infrastructure:
 
-- [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/) for macOS/Linux, and Python 3.10 to 3.12 for Windows
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- At minimum, a dual-core CPU and 2 GB RAM, but a multi-core CPU and at least 4 GB RAM are recommended
+    - [Python](https://www.python.org/downloads/release/python-3100/)
+       - macOS and Linux: Version 3.10 to 3.13
+       - Windows: Version 3.10 to 3.12
+    - [uv](https://docs.astral.sh/uv/getting-started/installation/)
+    - Sufficient infrastructure:
+       - Minimum: Dual-core CPU and 2 GB RAM
+       - Recommended: Multi-core CPU and at least 4 GB RAM
 
-1. Create a virtual environment with [uv](https://docs.astral.sh/uv/pip/environments).
+2. Create a virtual environment with [uv](https://docs.astral.sh/uv/pip/environments).
 
 <details>
 <summary>Need help with virtual environments?</summary>
@@ -112,26 +120,23 @@ To delete the virtual environment, type `Remove-Item VENV_NAME`.
 
 </details>
 
-2. To install Langflow, run the following command.
+3. In your virtual environment, install Langflow:
 
     ```bash
     uv pip install langflow
     ```
 
-3. After installation, start Langflow:
+4. Start Langflow:
 
     ```bash
     uv run langflow run
     ```
 
-4. To confirm that a local Langflow instance is running, navigate to the default Langflow URL `http://127.0.0.1:7860`.
-It can take a few minutes for Langflow to start.
+    It can take a few minutes for Langflow to start.
 
-After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
+5. To confirm that a local Langflow instance is running, navigate to the default Langflow URL `http://127.0.0.1:7860`.
 
-### Install Langflow from source
-
-To install Langflow from source, see [Install Langflow from source](/contributing-how-to-contribute#install-langflow-from-source).
+6. Create your first flow with the [Quickstart](/get-started-quickstart).
 
 ### Manage Langflow OSS versions
 
@@ -153,10 +158,8 @@ To manage your Langflow OSS version, use the following commands:
 Langflow OSS provides optional dependency groups and support for custom dependencies to extend Langflow functionality.
 For more information, see [Install custom dependencies](/install-custom-dependencies).
 
-## Troubleshoot Langflow installation and startup issues
-
-If you encounter an issue when installing or running Langflow, see [Troubleshoot Langflow](/troubleshoot).
-
 ## Next steps
 
-After installing Langflow, build and run a flow with the [quickstart](/get-started-quickstart).
+* [Quickstart](/get-started-quickstart): Build and run your first flow in minutes.
+* [Create and manage flows](/concept-flows): Learn about building flows.
+* [Troubleshoot Langflow](/troubleshoot): Get help with common Langflow install and startup issues.

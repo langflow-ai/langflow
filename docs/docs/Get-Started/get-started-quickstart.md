@@ -42,25 +42,22 @@ For this request, the agent selects the URL tool's `fetch_content` action, and t
 
 6. When you are done testing the flow, click <Icon name="X" aria-hidden="true"/>**Close**.
 
+:::tip Next steps
 Now that you've run your first flow, try these next steps:
 
-- Edit your **Simple Agent** flow by attaching different tools or adding more components to the flow.
-- Build your own flows from scratch or by modifying other template flows.
+- Edit your **Simple Agent** flow by attaching different tools or adding more [components](/concepts-components) to the flow.
+- [Build your own flows](/concepts-flows) from scratch or by modifying other template flows.
 - Integrate flows into your applications, as explained in [Run your flows from external applications](#run-your-flows-from-external-applications).
-
-Optionally, stop here if you just want to create more flows within Langflow.
-
-If you want to learn how Langflow integrates into external applications, read on.
+:::
 
 ## Run your flows from external applications
 
-Langflow is an IDE, but it's also a runtime you can call through an API with Python, JavaScript, or HTTP.
+Langflow is an IDE, but it's also a runtime you can call through the [Langflow API](/api-reference-api-examples) with Python, JavaScript, or HTTP.
 
 When you start Langflow locally, you can send requests to the local Langflow server.
-For production applications, you need to deploy a stable Langflow instance to handle API calls.
-For more information, see [Langflow deployment overview](/deployment-overview).
+For production applications, you need to [deploy a stable Langflow instance](/deployment-overview) to handle API calls.
 
-For example, you can use `POST /run` to run a flow and get the result.
+For example, you can use the `/run` endpoint to run a flow and get the result.
 
 Langflow provides code snippets to help you get started with the Langflow API.
 
@@ -518,4 +515,7 @@ payload = {
 ## Next steps
 
 * [Use Langflow as a Model Context Protocol (MCP) server](/mcp-server)
-* [Langflow deployment overview](/deployment-overview)
+* [Application development with Langflow](/develop-application)
+* [Deploy a Langflow server](/deployment-overview)
+* [File management](/concepts-file-management)
+* [Credential management](/configuration-api-keys)
