@@ -26,9 +26,9 @@
         "id": "reactflow__edge-StructuredOutput-rwiX4{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-rwiX4œ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-tptWK{œfieldNameœ:œinput_dataœ,œidœ:œparser-tptWKœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-rwiX4",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-rwiX4œ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-rwiX4œ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "parser-tptWK",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-tptWKœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-tptWKœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -54,9 +54,9 @@
         "id": "reactflow__edge-File-dfMwA{œdataTypeœ:œFileœ,œidœ:œFile-dfMwAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-rwiX4{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-rwiX4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "File-dfMwA",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-dfMwAœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-dfMwAœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-rwiX4",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-rwiX4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-rwiX4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "xy-edge__LanguageModelComponent-HrqxT{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-HrqxTœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-rwiX4{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-rwiX4œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-HrqxT",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-HrqxTœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-HrqxTœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-rwiX4",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-rwiX4œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-rwiX4œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -108,9 +108,9 @@
         "id": "xy-edge__parser-tptWK{œdataTypeœ:œparserœ,œidœ:œparser-tptWKœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-QdlJs{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-QdlJsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-tptWK",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-tptWKœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-tptWKœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-QdlJs",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-QdlJsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-QdlJsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -135,9 +135,9 @@
         "id": "xy-edge__TextInput-zN7nF{œdataTypeœ:œTextInputœ,œidœ:œTextInput-zN7nFœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-QdlJs{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-QdlJsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "TextInput-zN7nF",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-zN7nFœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-zN7nFœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-QdlJs",
-        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-QdlJsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-QdlJsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "data": {
@@ -162,9 +162,9 @@
         },
         "id": "xy-edge__LanguageModelComponent-QdlJs{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-QdlJsœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-X6ReB{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-X6ReBœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "source": "LanguageModelComponent-QdlJs",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-QdlJsœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-QdlJsœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-X6ReB",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-X6ReBœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-X6ReBœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
