@@ -32,9 +32,8 @@ class Concatenate(Component):
 def test_cycle_in_graph():
     chat_input = ChatInput(_id="chat_input")
     router = ConditionalRouterComponent(_id="router", default_route="true_result")
-    # Use router's true_result output instead of message
+    # Use router's true case message output instead of message
     chat_input.set(input_value=router.true_case_message)
-    chat_input.set(input_value=router.false_case_message)
     concat_component = Concatenate(_id="concatenate")
     concat_component.set(text=chat_input.message_response)
     router.set(
@@ -94,7 +93,6 @@ def test_cycle_in_graph_max_iterations():
         input_text=text_input.text_response,
         match_text="testtesttesttest",
         operator="equals",
-        true_case_message=concat_component.concatenate,
         false_case_message=concat_component.concatenate,
     )
     text_output = TextOutputComponent(_id="text_output")
