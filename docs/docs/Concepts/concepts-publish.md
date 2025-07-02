@@ -46,7 +46,7 @@ You can then **Import** the downloaded flow into another Langflow instance.
 
 ## MCP server
 
-**MCP server** exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use use to take actions.
+**MCP server** exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use to take actions.
 
 For more information, see [MCP server](/mcp-server).
 
