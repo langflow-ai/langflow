@@ -55,32 +55,19 @@ This procedure also assumes that you're using the default Langflow listening add
 
     Your Langflow server is now publicly available at this domain.
 
-## Deploy your MCP server externally
+    With your Langflow server public, you can serve your flows as MCP or API endpoints, or share your playground as a public website.
+
+    Langflow's code snippets automatically adapt to your new `LANGFLOW_SERVER_ADDRESS`.
+
+### Deploy your MCP server externally
 
 To deploy your Langflow MCP server with ngrok, do the following:
 
-1. Select the Langflow project that contains the flows you want to serve as tools, and then click the **MCP Server** tab.
+Complete the steps in [Connect clients to Langflow's MCP server](/mcp-server#connect-clients-to-use-the-servers-actions) using the ngrok forwarding address.
 
-    Note that the code template now contains your ngrok forwarding address instead of the localhost address.
-    ```json
-    {
-      "mcpServers": {
-        "PROJECT_NAME": {
-          "command": "uvx",
-          "args": [
-            "mcp-proxy",
-            "https://3f7c-73-64-93-151.ngrok-free.app/api/v1/mcp/project/d764c4b8-5cec-4c0f-9de0-4b419b11901a/sse"
-          ]
-        }
-      }
-    }
-    ```
+For more information, see [MCP server](/mcp-server).
 
-2. Complete the steps in [Connect clients to Langflow's MCP server](/mcp-server#connect-clients-to-use-the-servers-actions) using the ngrok forwarding address.
-
-    For more information, see [MCP server](/mcp-server).
-
-## Serve API requests
+### Serve API requests
 
 Your public Langflow server can serve [Langflow API](/api-reference-api-examples) requests.
 
@@ -133,7 +120,7 @@ For example, when used in a script, the following code snippet calls an ngrok do
 
 For a demo of the Langflow API in a script, see the [Quickstart](/get-started-quickstart).
 
-## Share your playground externally
+### Share your playground externally
 
 The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/{flow-id}` endpoint.
 This allows you to share a public URL with another user that displays only your flow's Playground chat window.
