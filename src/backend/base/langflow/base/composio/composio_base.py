@@ -27,15 +27,6 @@ from langflow.schema.message import Message
 class ComposioBaseComponent(Component):
     """Base class for Composio components with common functionality."""
 
-    ATTACHMENT_FIELDS = {
-        "GMAIL_SEND_EMAIL": {"attachment"},
-        "GMAIL_CREATE_DRAFT": {"attachment"},
-        "GOOGLEDRIVE_UPLOAD_FILE": {"file_to_upload"},
-        "OUTLOOK_OUTLOOK_CREATE_DRAFT": {"attachment"},  # ✅ This one works!
-        # Note: OUTLOOK_OUTLOOK_SEND_EMAIL attachment field gets dropped by flatten_schema
-        # because of its complex schema structure with 'file_uploadable' and 'anyOf'
-    }
-
     _base_inputs = [
         MessageTextInput(
             name="entity_id",
@@ -71,21 +62,17 @@ class ComposioBaseComponent(Component):
         ),
     ]
 
-    # Remove class-level variables to prevent shared state between components
-    # These will be initialized as instance variables in __init__
     _name_sanitizer = re.compile(r"[^a-zA-Z0-9_-]")
 
     outputs = [
         Output(name="dataFrame", display_name="DataFrame", method="as_dataframe"),
     ]
 
-    # Ensure every Composio component automatically exposes the common inputs
     inputs = list(_base_inputs)
 
     def __init__(self, **kwargs):
         """Initialize instance variables to prevent shared state between components."""
         super().__init__(**kwargs)
-        # Initialize instance variables (previously class variables)
         self._all_fields: set[str] = set()
         self._bool_variables: set[str] = set()
         self._actions_data: dict[str, dict[str, Any]] = {}
@@ -103,19 +90,13 @@ class ComposioBaseComponent(Component):
 
     def as_dataframe(self) -> DataFrame:
         result = self.execute_action()
-        if result is None:
-            # Return an empty DataFrame when there's no result
-            return DataFrame([])
-        # If the result is a dict, pandas will raise ValueError: If using all scalar values, you must pass an index
-        # So we need to make sure the result is a list of dicts
+
         if isinstance(result, dict):
             result = [result]
         return DataFrame(result)
 
     def as_data(self) -> Data:
         result = self.execute_action()
-        if result is None:
-            return Data(results={})
         return Data(results=result)
 
     def _build_action_maps(self):
@@ -143,6 +124,8 @@ class ComposioBaseComponent(Component):
         if action_key is None:
             return set()
         return set(self._actions_data[action_key]["action_fields"]) if action_key in self._actions_data else set()
+
+
 
     def _build_wrapper(self) -> Composio:
         """Build the Composio wrapper."""
@@ -187,22 +170,23 @@ class ComposioBaseComponent(Component):
                         build_config[field]["value"] = ""
 
     def _populate_actions_data(self):
-        """Fetch the list of actions for the app (once) and build helper maps."""
-        # Already populated → nothing to do
+        """Fetch the list of actions for the toolkit and build helper maps."""
         if self._actions_data:
             return
 
-        # We need a valid API key before calling the SDK
         if not getattr(self, "api_key", None):
             logger.warning("API key is missing. Cannot populate actions data.")
             return
 
         try:
             composio = self._build_wrapper()
-            # Fetch schemas for this toolkit using the new SDK
             toolkit_slug = self.app_name.lower()
 
-            raw_tools = composio.tools.get_raw_composio_tools(toolkits=[toolkit_slug], limit=999) or []
+            raw_tools = composio.tools.get_raw_composio_tools(toolkits=[toolkit_slug])
+            
+            if not raw_tools:
+                msg = f"Toolkit '{toolkit_slug}' not found or has no available tools"
+                raise ValueError(msg)
 
             for raw_tool in raw_tools:
                 try:
@@ -237,6 +221,7 @@ class ComposioBaseComponent(Component):
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": [],
+                            "file_upload_fields": set(),
                         }
                         continue
 
@@ -254,6 +239,7 @@ class ComposioBaseComponent(Component):
                                 self._actions_data[action_key] = {
                                     "display_name": display_name,
                                     "action_fields": [],
+                                    "file_upload_fields": set(),
                                 }
                                 continue
 
@@ -296,6 +282,7 @@ class ComposioBaseComponent(Component):
                             self._actions_data[action_key] = {
                                 "display_name": display_name,
                                 "action_fields": [],
+                                "file_upload_fields": set(),
                             }
                             continue
 
@@ -306,13 +293,32 @@ class ComposioBaseComponent(Component):
                             self._actions_data[action_key] = {
                                 "display_name": display_name,
                                 "action_fields": [],
+                                "file_upload_fields": set(),
                             }
                             continue
 
-                        # Extract field names and clean them up (remove [0] suffixes)
+                        # Extract field names and detect file upload fields during parsing
                         raw_action_fields = list(flat_schema.get("properties", {}).keys())
                         action_fields = []
                         attachment_related_found = False
+                        file_upload_fields = set()
+
+                        # Check original schema properties for file_uploadable fields
+                        original_props = parameters_schema.get("properties", {})
+                        for field_name, field_schema in original_props.items():
+                            if isinstance(field_schema, dict):
+                                clean_field_name = field_name.replace("[0]", "")
+                                # Check direct file_uploadable attribute
+                                if field_schema.get("file_uploadable") is True:
+                                    file_upload_fields.add(clean_field_name)
+                                    logger.debug(f"Found file upload field: {clean_field_name} in {action_key}")
+                                
+                                # Check anyOf structures (like OUTLOOK_OUTLOOK_SEND_EMAIL)
+                                if "anyOf" in field_schema:
+                                    for any_of_item in field_schema["anyOf"]:
+                                        if isinstance(any_of_item, dict) and any_of_item.get("file_uploadable") is True:
+                                            file_upload_fields.add(clean_field_name)
+                                            logger.debug(f"Found file upload field in anyOf: {clean_field_name} in {action_key}")
 
                         for field in raw_action_fields:
                             clean_field = field.replace("[0]", "")
@@ -320,11 +326,18 @@ class ComposioBaseComponent(Component):
                             if clean_field.lower().startswith("attachment."):
                                 attachment_related_found = True
                                 continue  # Skip individual attachment fields
+                            
+                            # Handle conflicting field names - rename user_id to avoid conflicts with entity_id
+                            if clean_field == "user_id":
+                                clean_field = f"{self.app_name}_user_id"
+                                logger.debug(f"Renamed user_id to {clean_field} to avoid conflict with entity_id")
+                            
                             action_fields.append(clean_field)
 
                         # Add consolidated attachment field if we found attachment-related fields
                         if attachment_related_found:
                             action_fields.append("attachment")
+                            file_upload_fields.add("attachment")  # Attachment fields are also file upload fields
 
                         # Track boolean parameters so we can coerce them later
                         properties = flat_schema.get("properties", {})
@@ -339,6 +352,7 @@ class ComposioBaseComponent(Component):
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": action_fields,
+                            "file_upload_fields": file_upload_fields,
                         }
 
                     except (KeyError, TypeError, ValueError) as flatten_error:
@@ -347,6 +361,7 @@ class ComposioBaseComponent(Component):
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": [],
+                            "file_upload_fields": set(),
                         }
                         continue
 
@@ -360,10 +375,7 @@ class ComposioBaseComponent(Component):
         except ValueError as e:
             logger.debug(f"Could not populate Composio actions for {self.app_name}: {e}")
 
-    # ---------------------------------------------------------------------
-    # Dynamic UI helpers (borrowed from MCPToolsComponent)
-    # ---------------------------------------------------------------------
-
+    
     def _validate_schema_inputs(self, action_key: str) -> list[InputTypes]:
         """Convert the JSON schema for *action_key* into Langflow input objects."""
         schema_dict = self._action_schemas.get(action_key)
@@ -454,6 +466,14 @@ class ComposioBaseComponent(Component):
                     # Don't add individual attachment sub-fields to the schema
                     continue
 
+                # Handle conflicting field names - rename user_id to avoid conflicts with entity_id
+                if clean_field_name == "user_id":
+                    clean_field_name = f"{self.app_name}_user_id"
+                    # Update the field schema description to reflect the name change
+                    if isinstance(field_schema, dict) and "description" in field_schema:
+                        field_schema = field_schema.copy()
+                        field_schema["description"] = f"User ID for {self.app_name.title()}: " + field_schema["description"]
+
                 # Preserve the full schema information, not just the type
                 cleaned_properties[clean_field_name] = field_schema
 
@@ -496,22 +516,24 @@ class ComposioBaseComponent(Component):
                 processed_inputs = []
                 required_fields_set = set(flat_schema.get("required", []))
 
-                # Get attachment fields for this action (if any) - now includes our consolidated "attachment" field
-                attachment_fields = self.ATTACHMENT_FIELDS.get(action_key, set())
+                # Get file upload fields from stored action data
+                file_upload_fields = self._actions_data.get(action_key, {}).get("file_upload_fields", set())
                 if attachment_related_fields:  # If we consolidated attachment fields
-                    attachment_fields = attachment_fields | {"attachment"}
+                    file_upload_fields = file_upload_fields | {"attachment"}
+                
+                logger.debug(f"File upload fields for {action_key}: {file_upload_fields}")
 
                 for inp in result:
                     if hasattr(inp, "name"):
-                        # Check if this specific field is an attachment field
-                        if inp.name.lower() in attachment_fields or inp.name.lower() == "attachment":
-                            # Replace with FileInput for attachment fields
+                        # Check if this specific field is a file upload field
+                        if inp.name.lower() in file_upload_fields or inp.name.lower() == "attachment":
+                            # Replace with FileInput for file upload fields
                             file_input = FileInput(
                                 name=inp.name,
                                 display_name=getattr(inp, "display_name", inp.name.replace("_", " ").title()),
                                 required=inp.name in required_fields_set,
                                 advanced=inp.name not in required_fields_set,
-                                info=getattr(inp, "info", "Upload file attachment"),
+                                info=getattr(inp, "info", "Upload file for this field"),
                                 show=True,
                                 file_types=[
                                     "csv", "txt", "doc", "docx", "xls", "xlsx", "pdf",
@@ -536,9 +558,13 @@ class ComposioBaseComponent(Component):
                                 # Fallback: create a basic description from the field name if no description exists
                                 inp.info = f"{inp.name.replace('_', ' ').title()} field"
 
-                            # Set advanced status for non-attachment fields
+                            # Set advanced status for non-file-upload fields
                             if inp.name not in required_fields_set:
                                 inp.advanced = True
+
+                            # Skip entity_id being mapped to user_id parameter
+                            if inp.name == "user_id" and getattr(self, "entity_id", None) == getattr(inp, "value", None):
+                                continue
 
                             processed_inputs.append(inp)
                     else:
@@ -862,7 +888,8 @@ class ComposioBaseComponent(Component):
         return build_config
 
     def configure_tools(self, composio: Composio) -> list[Tool]:
-        tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()], limit=999)
+        # tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()], limit=20)
+        tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()])
         # logger.info(f"Tools: {tools}")
         configured_tools = []
         for tool in tools:
@@ -898,13 +925,11 @@ class ComposioBaseComponent(Component):
         return list(self._actions_data.keys())
 
     def execute_action(self):
-        """Execute the selected Composio action and return its raw `data` payload."""
-        # Build composio & make sure schemas are present
+        """Execute the selected Composio tool"""
         composio = self._build_wrapper()
         self._populate_actions_data()
         self._build_action_maps()
 
-        # Resolve the action key from the UI-selected display name
         display_name = (
             self.action[0]["name"] if isinstance(getattr(self, "action", None), list) and self.action else self.action
         )
@@ -915,14 +940,9 @@ class ComposioBaseComponent(Component):
             raise ValueError(msg)
 
         try:
-            # No more enums - use action slug directly
-            action_slug = action_key
-
-            # Gather parameters from component inputs
             arguments: dict[str, Any] = {}
             param_fields = self._actions_data.get(action_key, {}).get("action_fields", [])
 
-            # Get the schema for this action to check for defaults
             schema_dict = self._action_schemas.get(action_key, {})
             parameters_schema = schema_dict.get("input_parameters", {})
             schema_properties = parameters_schema.get("properties", {}) if parameters_schema else {}
@@ -949,13 +969,8 @@ class ComposioBaseComponent(Component):
                     # Skip if the current value matches the schema default
                     if value == schema_default:
                         continue
-
-                    # Skip fields that look like auto-generated UUIDs for optional fields
-                    # This is a heuristic to avoid passing system-generated IDs
-                    uuid_length = 36
-                    uuid_dash_count = 4
-                    if isinstance(value, str) and len(value) == uuid_length and value.count("-") == uuid_dash_count:
-                        continue
+                    
+                    logger.debug(f"Field: {field}, Value: {value}, Schema Default: {schema_default}")
 
                 # Convert comma-separated to list for array parameters (heuristic)
                 prop_schema = schema_properties.get(field, {})
@@ -965,20 +980,21 @@ class ComposioBaseComponent(Component):
                 if field in self._bool_variables:
                     value = bool(value)
 
-                arguments[field] = value
+                # Handle renamed fields - map back to original names for API execution
+                final_field_name = field
+                if field.endswith("_user_id") and field.startswith(self.app_name):
+                    final_field_name = "user_id"
+                    logger.debug(f"Mapping {field} back to user_id for API execution")
+
+                arguments[final_field_name] = value
 
             # Execute using new SDK
             result = composio.tools.execute(
-                slug=action_slug,
+                slug=action_key,
                 arguments=arguments,
                 user_id=self.entity_id,
             )
             
-            # Log the result and its type for debugging
-            logger.debug(f"Execute result type: {type(result)}")
-            logger.debug(f"Execute result: {result}")
-            
-            # Check if the result has successful field
             if isinstance(result, dict) and "successful" in result:
                 successful_value = result["successful"]
                 logger.debug(f"Successful field type: {type(successful_value)}, value: {successful_value}")
@@ -991,7 +1007,6 @@ class ComposioBaseComponent(Component):
                     error_msg = result.get("error", "Tool execution failed")
                     raise ValueError(error_msg)
             
-            # Fallback for results without successful field
             return result
 
         except ValueError as e:
