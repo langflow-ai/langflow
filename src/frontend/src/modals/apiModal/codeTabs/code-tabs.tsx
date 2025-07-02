@@ -149,7 +149,7 @@ export default function APITabsComponent() {
               size="icon"
               onClick={copyToClipboard}
               data-testid="btn-copy-code"
-              className="!hover:bg-foreground group absolute right-2 top-2"
+              className="!hover:bg-foreground group absolute right-4 top-2"
             >
               {isCopied ? (
                 <IconComponent
