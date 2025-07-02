@@ -8,7 +8,7 @@ from tests.base import ComponentTestBaseWithClient
 class TestArXivComponent(ComponentTestBaseWithClient):
     def test_component_versions(self, default_kwargs, file_names_mapping):
         """Test component compatibility across versions."""
-        from langflow.components.search.arxiv import ArXivComponent
+        from langflow.components.arxiv.arxiv import ArXivComponent
 
         # Test current version
         component = ArXivComponent(**default_kwargs)
