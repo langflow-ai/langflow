@@ -359,9 +359,9 @@ class TestExecuteCommand:
 
                 # Check that required fields have correct types
                 if "result" in output_data:
-                    assert output_data["result"] is not None or case["args"][-1] == str(
-                        temp_python_script
-                    ), f"Unexpected None result: {output_data}"
+                    assert output_data["result"] is not None or case["args"][-1] == str(temp_python_script), (
+                        f"Unexpected None result: {output_data}"
+                    )
 
                 if "type" in output_data:
                     assert isinstance(output_data["type"], str), f"Type should be string: {output_data}"
