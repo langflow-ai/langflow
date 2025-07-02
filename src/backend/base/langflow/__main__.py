@@ -8,6 +8,7 @@ import sys
 import time
 import warnings
 from contextlib import suppress
+from io import StringIO
 from ipaddress import ip_address
 from pathlib import Path
 
@@ -25,8 +26,16 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.api.v1.schemas import InputValueRequest
 from langflow.cli.progress import create_langflow_progress
+from langflow.cli.script_loader import (
+    extract_structured_result,
+    extract_text_from_result,
+    find_graph_variable,
+    load_graph_from_script,
+)
 from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.load import load_flow_from_json
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.database.utils import session_getter
@@ -294,12 +303,12 @@ def run(
                 settings_service.auth_settings.set(arg, values[arg])
             logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
-        # Get final values from settings
-        host = settings_service.settings.host
-        port = settings_service.settings.port
+        # Get final values from settings and ensure proper types
+        host = settings_service.settings.host or "127.0.0.1"
+        port = int(settings_service.settings.port or 7860)
         workers = settings_service.settings.workers
         worker_timeout = settings_service.settings.worker_timeout
-        log_level = settings_service.settings.log_level
+        log_level = settings_service.settings.log_level or "info"
         frontend_path = settings_service.settings.frontend_path
         backend_only = settings_service.settings.backend_only
         ssl_cert_file_path = (
@@ -774,6 +783,141 @@ def api_key(
     # Create a banner to display the API key and tell the user it won't be shown again
     if unmasked_api_key:
         api_key_banner(unmasked_api_key)
+
+
+@app.command()
+def execute(
+    script_path: Path = typer.Argument(  # noqa: B008
+        ..., help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
+    ),
+    input_value: str | None = typer.Argument(None, help="Input value to pass to the graph"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),  # noqa: FBT001, FBT003
+    output_format: str = typer.Option("json", "--format", "-f", help="Output format: json, text, message, or result"),
+) -> None:
+    """Execute a Langflow graph script or JSON flow and return the result.
+
+    This command analyzes and executes either a Python script containing a Langflow graph
+    or a JSON flow file, returning the result in the specified format. By default, output
+    is minimal for use in containers and serverless environments.
+
+    Args:
+        script_path: Path to the Python script (.py) or JSON flow (.json) containing a graph
+        input_value: Input value to pass to the graph
+        verbose: Show diagnostic output and execution details
+        output_format: Format for output (json, text, message, or result)
+    """
+    import json
+    import sys
+
+    def verbose_print(message: str) -> None:
+        """Print diagnostic messages to stderr only in verbose mode."""
+        if verbose:
+            typer.echo(message, file=sys.stderr)
+
+    if not script_path.exists():
+        verbose_print(f"Error: File '{script_path}' does not exist.")
+        raise typer.Exit(1)
+
+    if not script_path.is_file():
+        verbose_print(f"Error: '{script_path}' is not a file.")
+        raise typer.Exit(1)
+
+    # Check file extension and validate
+    file_extension = script_path.suffix.lower()
+    if file_extension not in [".py", ".json"]:
+        verbose_print(f"Error: '{script_path}' must be a .py or .json file.")
+        raise typer.Exit(1)
+
+    file_type = "Python script" if file_extension == ".py" else "JSON flow"
+    verbose_print(f"Analyzing {file_type}: {script_path}")
+
+    try:
+        if file_extension == ".py":
+            # Handle Python script
+            graph_info = find_graph_variable(script_path)
+
+            if not graph_info:
+                verbose_print("✗ No 'graph' variable found in the script.")
+                verbose_print("  Expected to find an assignment like: graph = Graph(...)")
+                raise typer.Exit(1)
+
+            verbose_print(f"✓ Found 'graph' variable at line {graph_info['line_number']}")
+            verbose_print(f"  Type: {graph_info['type']}")
+            verbose_print(f"  Source: {graph_info['source_line']}")
+            verbose_print("\nLoading and executing script...")
+
+            graph = load_graph_from_script(script_path)
+
+        elif file_extension == ".json":
+            # Handle JSON flow
+            verbose_print("✓ Valid JSON flow file detected")
+            verbose_print("\nLoading and executing JSON flow...")
+
+            # Use load_flow_from_json to load the graph
+            graph = load_flow_from_json(script_path, disable_logs=not verbose)
+
+    except Exception as e:
+        verbose_print(f"✗ Failed to load graph: {e}")
+        raise typer.Exit(1) from e
+
+    # From here, the logic is the same regardless of input type
+    inputs = InputValueRequest(input_value=input_value) if input_value else None
+
+    # Prepare the graph before execution
+    verbose_print("Preparing graph for execution...")
+
+    try:
+        graph.prepare()
+    except Exception as e:
+        verbose_print(f"✗ Failed to prepare graph: {e}")
+        raise typer.Exit(1) from e
+
+    # Capture all output during execution
+    captured_stdout = StringIO()
+    captured_stderr = StringIO()
+
+    # Redirect stdout and stderr during graph execution
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+
+    try:
+        sys.stdout = captured_stdout
+        sys.stderr = captured_stderr
+        results = list(graph.start(inputs))
+    finally:
+        # Restore original stdout/stderr
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
+    # Get captured logs
+    captured_logs = captured_stdout.getvalue() + captured_stderr.getvalue()
+
+    # Format output based on the requested format
+    if output_format == "json":
+        result_data = extract_structured_result(results)
+        result_data["logs"] = captured_logs
+
+        # In quiet mode (default), use compact JSON without indentation
+        indent = 2 if verbose else None
+        typer.echo(json.dumps(result_data, indent=indent))
+
+    elif output_format in {"text", "message"}:
+        result_data = extract_structured_result(results)
+        # Access the result field, fall back to text field for backwards compatibility
+        output_text = result_data.get("result", result_data.get("text", ""))
+        typer.echo(str(output_text))
+
+    elif output_format == "result":
+        typer.echo(extract_text_from_result(results))
+
+    else:
+        # Default to structured JSON output
+        result_data = extract_structured_result(results)
+        result_data["logs"] = captured_logs
+
+        # In quiet mode (default), use compact JSON without indentation
+        indent = 2 if verbose else None
+        typer.echo(json.dumps(result_data, indent=indent))
 
 
 def show_version(*, value: bool):
