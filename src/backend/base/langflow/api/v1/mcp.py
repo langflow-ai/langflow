@@ -287,17 +287,22 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                     # Process all outputs and messages
                     for run_output in result.outputs:
                         for component_output in run_output.outputs:
-                            # Handle messages
-                            for msg in component_output.messages or []:
-                                text_content = types.TextContent(type="text", text=msg.message)
-                                collected_results.append(text_content)
-                            # Handle results
-                            for value in (component_output.results or {}).values():
-                                if isinstance(value, Message):
-                                    text_content = types.TextContent(type="text", text=value.get_text())
+                            # Prioritize results over messages to avoid duplicates
+                            has_results = bool(component_output.results)
+
+                            if has_results:
+                                # Handle results
+                                for value in component_output.results.values():
+                                    if isinstance(value, Message):
+                                        text_content = types.TextContent(type="text", text=value.get_text())
+                                        collected_results.append(text_content)
+                                    else:
+                                        collected_results.append(types.TextContent(type="text", text=str(value)))
+                            else:
+                                # Only handle messages if no results exist
+                                for msg in component_output.messages or []:
+                                    text_content = types.TextContent(type="text", text=msg.message)
                                     collected_results.append(text_content)
-                                else:
-                                    collected_results.append(types.TextContent(type="text", text=str(value)))
                 except Exception as e:  # noqa: BLE001
                     error_msg = f"Error Executing the {flow.name} tool. Error: {e!s}"
                     collected_results.append(types.TextContent(type="text", text=error_msg))
