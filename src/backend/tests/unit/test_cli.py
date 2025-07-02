@@ -2,6 +2,7 @@ import json
 import socket
 import threading
 import time
+from textwrap import dedent
 
 import pytest
 from langflow.__main__ import app
@@ -31,6 +32,18 @@ chat_output.set(input_value=chat_input.message_response)
 
 graph = Graph(chat_input, chat_output)
 '''
+    script_path = tmp_path / "test_script.py"
+    script_path.write_text(script_content)
+    return script_path
+
+
+@pytest.fixture
+def test_basic_prompting(tmp_path):
+    """Use the existing test JSON flow from pytest configuration."""
+    script_content = dedent("""
+from langflow.initial_setup.starter_projects.basic_prompting import basic_prompting_graph
+graph = basic_prompting_graph()
+""").strip()
     script_path = tmp_path / "test_script.py"
     script_path.write_text(script_content)
     return script_path
@@ -143,6 +156,13 @@ class TestExecuteCommand:
         else:
             # Command failed, but that's expected in some test environments
             assert result.exit_code in [0, 1]
+
+    def test_execute_basic_prompting(self, runner, test_basic_prompting):
+        """Test executeing a basic prompting graph."""
+        result = runner.invoke(app, ["execute", str(test_basic_prompting), "Hello World"])
+        assert result.exit_code == 0, result.output
+        json_output = json.loads(result.output)
+        assert len(json_output["result"]) > 0, json_output
 
     def test_execute_python_script_verbose_mode(self, runner, temp_python_script):
         """Test executeing a Python script with verbose mode."""
