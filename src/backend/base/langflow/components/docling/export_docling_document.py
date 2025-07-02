@@ -1,4 +1,5 @@
 from typing import Any
+
 from docling_core.types.doc import ImageRefMode
 
 from langflow.base.data.docling_utils import extract_docling_documents

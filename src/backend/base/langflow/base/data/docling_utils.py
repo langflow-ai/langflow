@@ -1,5 +1,4 @@
 from docling_core.types.doc import DoclingDocument
-from docling.document_converter import DocumentConverter
 
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
