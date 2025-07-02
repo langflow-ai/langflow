@@ -2,13 +2,13 @@ import os
 import re
 from unittest.mock import patch
 
-from langflow.schema.data import Data
 import openai
 import pytest
 from langchain_openai import ChatOpenAI
 from langflow.components.processing.structured_output import StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
+from langflow.schema.data import Data
 from pydantic import BaseModel
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -283,6 +283,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert "age" in result[0]
         assert result[0]["name"] == "John Doe"
         assert result[0]["age"] == 30
+
     @pytest.mark.skipif(
         "OPENAI_API_KEY" not in os.environ,
         reason="OPENAI_API_KEY environment variable not set",
