@@ -6,7 +6,7 @@ description: Build a question-and-answer chatbot with document analysis capabili
 
 import Icon from "@site/src/components/icon";
 
-Build a question-and-answer chatbot with document analysis capabilities using a document loaded from local memory.
+This flow demonstrates adding a file to the [File](/components-data#file) component to load a document from your local machine.
 
 ## Prerequisites
 

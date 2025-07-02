@@ -5,7 +5,7 @@ slug: /simple-agent
 
 import Icon from "@site/src/components/icon";
 
-Build a **Simple Agent** flow for an agentic application using the [Agent](/components-agents) component.
+This flow demonstrats a **Simple Agent** flow for an agentic application using an [Agent](/agents).
 
 An **agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
 
@@ -19,26 +19,26 @@ The agent selects the [Calculator](/components-helpers#calculator) tool for simp
 
 ## Open Langflow and start a new flow
 
-1. From the Langflow dashboard, click **New Flow**.
+1. From the Langflow dashboard, click **New Flow**.
 
-2. Select **Simple Agent**.
+2. Select **Simple Agent**.
 
-The **Simple Agent** flow is created.
+The **Simple Agent** flow is created.
 
-![Simple agent starter flow](/img/starter-flow-simple-agent.png)
+![Simple agent starter flow](/img/quickstart-simple-agent-flow.png)
 
 ## Run the simple agent flow
 
 1. Add your **OpenAI API key** to the **Agent** component.
 
-	Optionally, create a [global variable](/configuration-global-variables) for the **OpenAI API key**.
+	Optionally, create a [global variable](/configuration-global-variables) for the **OpenAI API key**.
 
-	1. In the **OpenAI API Key** field, click <Icon name="Globe" aria-hidden="True" /> **Globe**, and then click **Add New Variable**.
-	2. In the **Variable Name** field, enter `openai_api_key`.
-	3. In the **Value** field, paste your OpenAI API Key (`sk-...`).
-	4. Click **Save Variable**.
+    1. In the **OpenAI API Key** field, click <Icon name="Globe" aria-hidden="True" /> **Globe**, and then click **Add New Variable**.
+    2. In the **Variable Name** field, enter `openai_api_key`.
+    3. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+    4. Click **Save Variable**.
 
-2. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
+2. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 3. To confirm the tools are connected, ask the agent, `What tools are available to you?`
 The response is similar to the following:
 ```text

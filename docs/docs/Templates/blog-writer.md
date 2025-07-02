@@ -5,11 +5,9 @@ slug: /blog-writer
 
 import Icon from "@site/src/components/icon";
 
-Build a Blog Writer flow for a one-shot application using OpenAI.
+This flow demonstrates adding an additional `{references}` input to the [Prompt](/components-prompts) component to capture input from the [URL](/components-data#url) and [Parser](/components-processing#parser) components.
 
-This flow extends the Basic Prompting flow with the [URL](/components-data#url) and [Parser](/components-processing#parser) components that fetch content from multiple URLs and convert the loaded data into plain text.
-
-The [Language model](/components-models) component uses this loaded data to generate a blog post, as instructed by the [Text input](/components-io#text-input) and [Prompt](components-prompts) components.
+The [Language model](/components-models) component uses this input to generate a blog post according to the `{instructions}` received by the [Prompt](/components-prompts) component.
 
 ## Prerequisites
 
