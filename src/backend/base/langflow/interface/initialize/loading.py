@@ -107,13 +107,31 @@ def convert_kwargs(params):
     return params
 
 
+def load_from_env_vars(params, load_from_db_fields):
+    for field in load_from_db_fields:
+        if field not in params or not params[field]:
+            continue
+        key = os.getenv(params[field])
+        if key:
+            logger.info(f"Using environment variable {params[field]} for {field}")
+        else:
+            logger.error(f"Environment variable {params[field]} is not set.")
+        params[field] = key if key is not None else None
+        if key is None:
+            logger.warning(f"Could not get value for {field}. Setting it to None.")
+    return params
+
+
 async def update_params_with_load_from_db_fields(
-    custom_component: CustomComponent,
+    custom_component: Component,
     params,
     load_from_db_fields,
     *,
     fallback_to_env_vars=False,
 ):
+    if not custom_component._is_database_available():
+        logger.warning("Loading variables from environment variables because database is not available.")
+        return load_from_env_vars(params, load_from_db_fields)
     async with session_scope() as session:
         for field in load_from_db_fields:
             if field not in params or not params[field]:
