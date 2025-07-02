@@ -1,3 +1,4 @@
+import useFlowStore from "@/stores/flowStore";
 import {
   APIClassType,
   ResponseErrorDetailAPI,
@@ -26,6 +27,7 @@ export const usePostTemplateValue: useMutationFunctionType<
   ResponseErrorDetailAPI
 > = ({ parameterId, nodeId, node }, options?) => {
   const { mutate } = UseRequestProcessor();
+  const getNode = useFlowStore((state) => state.getNode);
 
   const postTemplateValueFn = async (
     payload: IPostTemplateValue,
@@ -43,8 +45,18 @@ export const usePostTemplateValue: useMutationFunctionType<
         tool_mode: payload.tool_mode,
       },
     );
+    const newTemplate = response.data;
+    const newNode = getNode(nodeId)?.data?.node as APIClassType | undefined;
 
-    return response.data;
+    if (
+      !newNode?.last_updated ||
+      !newTemplate.last_updated ||
+      Date.parse(newNode.last_updated) < Date.parse(newTemplate.last_updated)
+    ) {
+      return newTemplate;
+    }
+
+    return undefined;
   };
 
   const mutation: UseMutationResult<
