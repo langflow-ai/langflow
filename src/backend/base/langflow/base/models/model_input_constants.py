@@ -5,10 +5,10 @@ from langflow.components.amazon.amazon_bedrock_model import AmazonBedrockCompone
 from langflow.components.anthropic.anthropic import AnthropicModelComponent
 from langflow.components.azure.azure_openai import AzureChatOpenAIComponent
 from langflow.components.google.google_generative_ai import GoogleGenerativeAIComponent
-from langflow.components.languagemodels.groq import GroqModel
-from langflow.components.languagemodels.sambanova import SambaNovaComponent
+from langflow.components.groq.groq import GroqModel
 from langflow.components.nvidia.nvidia import NVIDIAModelComponent
 from langflow.components.openai.openai_chat_model import OpenAIModelComponent
+from langflow.components.sambanova.sambanova import SambaNovaComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
 
