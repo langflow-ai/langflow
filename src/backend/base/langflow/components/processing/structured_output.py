@@ -174,8 +174,10 @@ class StructuredOutputComponent(Component):
 
         if not isinstance(output, list) or not output:
             # handle empty or unexpected type case
-            msg = ("No structured output was returned."
-                   "Please review your input or update the system message to obtain a better result.")
+            msg = (
+                "No structured output was returned."
+                "Please review your input or update the system message to obtain a better result."
+            )
             raise ValueError(msg)
         if len(output) != 1:
             msg = "Multiple structured outputs returned"
