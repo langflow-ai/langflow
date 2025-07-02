@@ -1,3 +1,4 @@
+from typing import Any
 from docling_core.types.doc import ImageRefMode
 
 from langflow.base.data.docling_utils import extract_docling_documents
@@ -27,6 +28,7 @@ class ExportDoclingDocumentComponent(Component):
             options=["Markdown", "HTML", "Plaintext", "DocTags"],
             info="Select the export format to convert the input.",
             value="Markdown",
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="image_mode",
@@ -65,6 +67,22 @@ class ExportDoclingDocumentComponent(Component):
         Output(display_name="Exported data", name="data", method="export_document"),
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
+
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        if field_name == "export_format" and field_value == "Markdown":
+            build_config["md_image_placeholder"]["show"] = True
+            build_config["md_page_break_placeholder"]["show"] = True
+            build_config["image_mode"]["show"] = True
+        elif field_name == "export_format" and field_value == "HTML":
+            build_config["md_image_placeholder"]["show"] = False
+            build_config["md_page_break_placeholder"]["show"] = False
+            build_config["image_mode"]["show"] = True
+        elif field_name == "export_format" and (field_value == "Plaintext" or field_value == "DocTags"):
+            build_config["md_image_placeholder"]["show"] = False
+            build_config["md_page_break_placeholder"]["show"] = False
+            build_config["image_mode"]["show"] = False
+
+        return build_config
 
     def export_document(self) -> list[Data]:
         documents = extract_docling_documents(self.data_inputs, self.doc_key)

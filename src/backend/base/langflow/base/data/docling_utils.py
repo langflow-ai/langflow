@@ -1,4 +1,5 @@
 from docling_core.types.doc import DoclingDocument
+from docling.document_converter import DocumentConverter
 
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
@@ -26,7 +27,7 @@ def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_ke
 
         if isinstance(data_inputs, Data):
             if doc_key not in data_inputs.data:
-                msg = f"{doc_key} field not available in the input Data"
+                msg = f"'{doc_key}' field not available in the input Data. Check that your input is a DoclingDocument. You can use the Docling component to convert your input to a DoclingDocument."
                 raise TypeError(msg)
             documents = [data_inputs.data[doc_key]]
         else:
