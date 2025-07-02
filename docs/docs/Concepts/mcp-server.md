@@ -157,7 +157,7 @@ Replace `KEY` and `VALUE` with the environment variable name and value you want 
 {/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
 ### Deploy your MCP server externally {#deploy-your-server-externally}
 
-To deploy your MCP server externally with ngrok, see [Deploy your Langflow server externally](/deployment-public-server#share-your-mcp-server-externally).
+To deploy your MCP server externally with ngrok, see [Deploy a public Langflow server](/deployment-public-server#share-your-mcp-server-externally).
 
 ## Name and describe your flows for agentic use {#name-and-describe-your-flows}
 
