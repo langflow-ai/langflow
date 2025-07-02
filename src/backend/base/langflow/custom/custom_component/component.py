@@ -24,6 +24,7 @@ from langflow.base.tools.constants import (
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
+
 # Lazy import to avoid circular dependency
 # from langflow.graph.state.model import create_state_model
 # Lazy import to avoid circular dependency
@@ -302,6 +303,7 @@ class Component(CustomComponent):
             fields[output.name] = getattr(self, output.method)
         # Lazy import to avoid circular dependency
         from langflow.graph.state.model import create_state_model
+
         self._state_model = create_state_model(model_name=model_name, **fields)
         return self._state_model
 
@@ -1377,6 +1379,7 @@ class Component(CustomComponent):
     def is_connected_to_chat_output(self) -> bool:
         # Lazy import to avoid circular dependency
         from langflow.graph.utils import has_chat_output
+
         return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
 
     def _should_skip_message(self, message: Message) -> bool:
