@@ -102,8 +102,9 @@ async def files_client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
-            from langflow.services.manager import service_manager
+            from langflow.services.manager import get_service_manager
 
+            service_manager = get_service_manager()
             service_manager.factories.clear()
             service_manager.services.clear()  # Clear the services cache
             app = create_app()

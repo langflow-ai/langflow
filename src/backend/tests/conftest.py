@@ -390,8 +390,9 @@ async def client_fixture(
                 monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
                 monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
             # Clear the services cache
-            from langflow.services.manager import service_manager
+            from langflow.services.manager import get_service_manager
 
+            service_manager = get_service_manager()
             service_manager.factories.clear()
             service_manager.services.clear()  # Clear the services cache
             app = create_app()
