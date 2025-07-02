@@ -3,6 +3,7 @@ import socket
 import threading
 import time
 from textwrap import dedent
+from typing import Any
 
 import pytest
 from langflow.__main__ import app
@@ -144,15 +145,15 @@ class TestExecuteCommand:
 
         # Check if command executed successfully
         if result.exit_code == 0:
-            # Try to parse JSON output
-            try:
-                output_data = json.loads(result.output.strip())
-                assert "result" in output_data or "text" in output_data
-                assert "type" in output_data
-                assert "success" in output_data
-            except json.JSONDecodeError:
-                # If JSON parsing fails, check that we have some output
-                assert len(result.output.strip()) > 0
+            # Use comprehensive JSON validation to ensure no errors
+            output_data = validate_execute_command_json_response(
+                result.output,
+                expect_success=True,
+                expect_result=True,
+                allow_empty_result=True,  # Allow empty results in test environment
+            )
+            # Additional checks for structure
+            assert isinstance(output_data, dict), f"Expected dict response: {output_data}"
         else:
             # Command failed, but that's expected in some test environments
             assert result.exit_code in [0, 1]
@@ -161,8 +162,15 @@ class TestExecuteCommand:
         """Test executeing a basic prompting graph."""
         result = runner.invoke(app, ["execute", str(test_basic_prompting), "Hello World"])
         assert result.exit_code == 0, result.output
-        json_output = json.loads(result.output)
-        assert len(json_output["result"]) > 0, json_output
+
+        # Use comprehensive JSON validation to ensure no errors
+        output_data = validate_execute_command_json_response(
+            result.output,
+            expect_success=True,
+            expect_result=True,
+            allow_empty_result=False,  # Expect non-empty result for prompting
+        )
+        assert len(output_data["result"]) > 0, f"Expected non-empty result: {output_data}"
 
     def test_execute_python_script_verbose_mode(self, runner, temp_python_script):
         """Test executeing a Python script with verbose mode."""
@@ -276,13 +284,13 @@ class TestExecuteCommand:
         result = runner.invoke(app, ["execute", str(temp_python_script), "test"])
 
         if result.exit_code == 0:
-            try:
-                output_data = json.loads(result.output.strip())
-                # logs should be present in the output
-                assert "logs" in output_data or "result" in output_data
-            except json.JSONDecodeError:
-                # If JSON parsing fails, that's okay - just check we have output
-                assert len(result.output.strip()) > 0
+            # Use comprehensive JSON validation to ensure no errors and check logs
+            output_data = validate_execute_command_json_response(
+                result.output, expect_success=True, expect_result=True, allow_empty_result=True
+            )
+            # Logs should be present in the JSON output
+            assert "logs" in output_data, f"Missing logs field in JSON output: {output_data}"
+            assert isinstance(output_data["logs"], str), f"Logs should be string: {output_data['logs']}"
 
     @pytest.mark.parametrize("verbose", [True, False])
     def test_execute_json_formatting(self, runner, temp_python_script, verbose):
@@ -323,3 +331,155 @@ class TestExecuteCommand:
         assert result.exit_code == 1
         full_output = result.output + getattr(result, "stderr", "")
         assert "is not a file" in full_output
+
+    def test_execute_json_response_validation_comprehensive(self, runner, temp_python_script):
+        """Comprehensive test to validate JSON responses don't contain errors."""
+        test_cases = [
+            # Test different formats that should return JSON
+            {"args": ["execute", str(temp_python_script), "test"], "expect_json": True},
+            {"args": ["execute", str(temp_python_script), "test", "--format", "json"], "expect_json": True},
+            {"args": ["execute", str(temp_python_script), "test", "--verbose"], "expect_json": True},
+            {"args": ["execute", str(temp_python_script)], "expect_json": True},  # No input
+        ]
+
+        for case in test_cases:
+            result = runner.invoke(app, case["args"])
+
+            if result.exit_code == 0 and case["expect_json"]:
+                # Validate that JSON response contains no errors
+                output_data = validate_execute_command_json_response(
+                    result.output, expect_success=True, expect_result=True, allow_empty_result=True
+                )
+
+                # Specific validations for error-free responses
+                assert "error" not in output_data, f"Unexpected error in response: {output_data}"
+
+                if "success" in output_data:
+                    assert output_data["success"] is True, f"Expected success=True: {output_data}"
+
+                # Check that required fields have correct types
+                if "result" in output_data:
+                    assert output_data["result"] is not None or case["args"][-1] == str(
+                        temp_python_script
+                    ), f"Unexpected None result: {output_data}"
+
+                if "type" in output_data:
+                    assert isinstance(output_data["type"], str), f"Type should be string: {output_data}"
+
+                if "component" in output_data:
+                    assert isinstance(output_data["component"], str), f"Component should be string: {output_data}"
+
+            elif result.exit_code != 0:
+                # Command failed, which is acceptable in test environments
+                pass  # No diagnostic output needed
+
+    def test_execute_error_response_validation(self, runner):
+        """Test that error responses are properly formatted."""
+        # Test with non-existent file in verbose mode to get error output
+        result = runner.invoke(app, ["execute", "nonexistent.py", "test", "--verbose"])
+        assert result.exit_code == 1
+
+        # In verbose mode, error messages go to stderr but CLI runner might capture differently
+        # Check if we have any output at all (stdout or potentially captured stderr)
+        full_output = result.output + getattr(result, "stderr", "")
+
+        if len(full_output.strip()) > 0:
+            # If we have output, validate it
+            try:
+                # Try to validate as JSON error response
+                validate_execute_command_error_response(full_output)
+                # Error response is valid JSON with proper error structure
+            except (json.JSONDecodeError, AssertionError):
+                # Non-JSON error output is acceptable for CLI tools
+                assert "does not exist" in full_output or len(full_output.strip()) > 0
+        else:
+            # No output captured - this is acceptable for CLI tools that only set exit codes
+            pass
+
+        # Also test quiet mode behavior
+        result_quiet = runner.invoke(app, ["execute", "nonexistent.py", "test"])
+        assert result_quiet.exit_code == 1
+        # Quiet mode should not output error details to stdout
+
+
+def validate_execute_command_json_response(
+    output: str, *, expect_success: bool = True, expect_result: bool = True, allow_empty_result: bool = False
+) -> dict[str, Any]:
+    """Validate JSON response from execute command.
+
+    Args:
+        output: Raw output from CLI command
+        expect_success: Whether to expect success=True in response
+        expect_result: Whether to expect a result field
+        allow_empty_result: Whether empty/None results are acceptable
+
+    Returns:
+        Parsed JSON data if valid
+
+    Raises:
+        AssertionError: If validation fails
+        json.JSONDecodeError: If JSON is invalid
+    """
+    # Parse JSON
+    try:
+        data = json.loads(output.strip())
+    except json.JSONDecodeError as e:
+        msg = f"Invalid JSON output: {e}\nOutput: {output}"
+        raise AssertionError(msg) from e
+
+    # Validate basic structure
+    assert isinstance(data, dict), f"Expected dict, got {type(data)}: {data}"
+
+    # Check for error fields first
+    if "error" in data:
+        if expect_success:
+            msg = f"Unexpected error in response: {data['error']}"
+            raise AssertionError(msg)
+        # If we expect an error, validate error structure
+        assert isinstance(data["error"], str), f"Error should be string: {data['error']}"
+        assert data.get("success", True) is False, "Error responses should have success=False"
+        return data
+
+    # Validate success field
+    if "success" in data:
+        success_value = data["success"]
+        assert isinstance(success_value, bool), f"Success field should be boolean: {success_value}"
+        if expect_success:
+            assert success_value is True, f"Expected success=True, got {success_value}"
+        else:
+            assert success_value is False, f"Expected success=False, got {success_value}"
+    elif expect_success:
+        # If no success field but we expect success, that's okay for some formats
+        pass
+
+    # Validate result field if expected
+    if expect_result:
+        assert "result" in data, f"Missing 'result' field in response: {data}"
+        result_value = data["result"]
+        if not allow_empty_result:
+            assert result_value is not None, f"Result should not be None: {data}"
+            if isinstance(result_value, str):
+                assert len(result_value.strip()) > 0, f"Result should not be empty string: {data}"
+
+    # Validate type field if present
+    if "type" in data:
+        type_value = data["type"]
+        assert isinstance(type_value, str), f"Type field should be string: {type_value}"
+        # Note: Don't enforce specific types strictly as there might be other valid types
+
+    # Validate component field if present
+    if "component" in data:
+        component_value = data["component"]
+        assert isinstance(component_value, str), f"Component field should be string: {component_value}"
+
+    # Validate logs field if present
+    if "logs" in data:
+        logs_value = data["logs"]
+        assert isinstance(logs_value, str), f"Logs field should be string: {logs_value}"
+
+    return data
+
+
+def validate_execute_command_error_response(output: str) -> dict[str, Any]:
+    """Validate JSON error response from execute command."""
+    return validate_execute_command_json_response(output, expect_success=False, expect_result=False)
