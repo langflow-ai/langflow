@@ -31,6 +31,11 @@ The following updates are included in this version:
     The option to install with a JSON configuration file is available for macOS, Windows, and WSL.
     For more information, see [MCP server](/mcp-server).
 
+- MCP server management
+
+    Add, remove, and edit your MCP servers in the **MCP Tools** and **Settings** page.
+    For more information, see [MCP client](/mcp-client).
+
 - Input schema replaces temporary overrides
 
     The **Input schema** pane replaces the need to manage tweak values in the **API access** pane. When you enable a parameter in the **Input schema** pane, the parameter is automatically added to your flow’s code snippets, providing ready-to-use templates for making requests in your preferred programming language.
