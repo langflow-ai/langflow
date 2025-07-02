@@ -6,32 +6,30 @@ slug: /deployment-public-server
 By default, your Langflow server at `http://localhost:7860` isn't exposed to the public internet.
 However, you can forward Langflow server traffic with a forwarding platform like [ngrok](https://ngrok.com/docs/getting-started/) or [zrok](https://docs.zrok.io/docs/getting-started) to make your server public.
 
-This allows you to [deploy your MCP server externally](#deploy-your-mcp-server-externally), [serve API requests](#serve-api-requests), and [share your playground externally](#share-your-playground-externally).
-
-The following procedure uses ngrok, but you can use any similar reverse proxy or forwarding platform.
-This procedure also assumes that you're using the default Langflow listening address `http://localhost:7860`.
+When your Langflow server is public, you can do things like [deploy your Langflow MCP server externally](#deploy-your-mcp-server-externally), [serve API requests](#serve-api-requests), and [share your playground externally](#share-your-playground-externally).
 
 ## Prerequisites
 
 - [Install Langflow](/get-started-installation)
-- [Install ngrok](https://ngrok.com/docs/getting-started/#1-install-ngrok)
-- [Create an ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken)
 
+- Install a reverse proxy or forwarding service.
+
+    This guide uses ngrok, but you can use any similar reverse proxy or forwarding platform.
+
+    If you want to follow along with this guide, [install ngrok](https://ngrok.com/docs/getting-started/#1-install-ngrok) and [create an ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken).
 ## Expose your Langflow server with ngrok
 
-1. Start Langflow.
+1. Start Langflow:
 
     ```bash
     uv run langflow run
     ```
 
-2. In another terminal window, copy your [ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) and use it to authenticate your local ngrok server:
+2. In another terminal window, use your ngrok authtoken to authenticate your local ngrok server:
 
     ```bash
-    ngrok config add-authtoken NGROK_TOKEN
+    ngrok config add-authtoken NGROK_AUTHTOKEN
     ```
-
-    Replace `NGROK_TOKEN` with your ngrok authtoken.
 
 3. Use ngrok to expose your Langflow server to the public internet:
 
@@ -39,9 +37,10 @@ This procedure also assumes that you're using the default Langflow listening add
     ngrok http http://localhost:7860
     ```
 
+    This example assumes that you use the default Langflow listening address at `http://localhost:7860`. If you have a different listening address, you must modify this command accordingly.
+
     The ngrok session starts in your terminal and deploys an ephemeral domain with no authentication.
     To add authentication or deploy a static domain, see the [ngrok documentation](https://ngrok.com/docs/).
-
 
     The `Forwarding` line prints the forwarding address for your Langflow server:
 
@@ -49,29 +48,22 @@ This procedure also assumes that you're using the default Langflow listening add
     Forwarding https://94b1-76-64-171-14.ngrok-free.app -> http://localhost:7860
     ```
 
-    The forwarding address is acting as a reverse proxy for your Langflow server.
+    The forwarding address acts as a reverse proxy for your Langflow server, and ngrok forwards your local traffic to this domain.
 
-4. Open the URL where ngrok is forwarding your local traffic, such as `https://94b1-76-64-171-14.ngrok-free.app`.
+4. To verify that your Langflow server is publicly available, navigate to the forwarding address URL, such as `https://94b1-76-64-171-14.ngrok-free.app`.
 
-    Your Langflow server is now publicly available at this domain.
+## Use a public Langflow server
 
-    With your Langflow server public, you can serve your flows as MCP or API endpoints, or share your playground as a public website.
-
-    Langflow's code snippets automatically adapt to your new `LANGFLOW_SERVER_ADDRESS`.
+When your Langflow server is public, you can do things like [deploy your Langflow MCP server externally](#deploy-your-mcp-server-externally), [serve API requests](#serve-api-requests), and [share a Playground as a public website](#share-your-playground-externally).
 
 ### Deploy your MCP server externally
 
-To deploy your Langflow MCP server with ngrok, do the following:
+After you deploy a public Langflow server, you can also access your Langflow projects' MCP servers publicly.
 
-Complete the steps in [Connect clients to Langflow's MCP server](/mcp-server#connect-clients-to-use-the-servers-actions) using the ngrok forwarding address.
-
-For more information, see [MCP server](/mcp-server).
-
+To do this, use your server's forwarding address when you [connect a client to a Langflow MCP server](/mcp-server#connect-clients-to-use-the-servers-actions).
 ### Serve API requests
 
-Your public Langflow server can serve [Langflow API](/api-reference-api-examples) requests.
-
-To send requests to a public Langflow server's Langflow API endpoints, use the server's domain as the [base URL](/api-reference-api-examples#base-url) for your API requests.
+To send requests to a public Langflow server's [Langflow API](/api-reference-api-examples) endpoints, use the server's domain as the [base URL](/api-reference-api-examples#base-url) for your API requests.
 For example:
 
 ```bash
@@ -82,9 +74,12 @@ curl -X POST \
   -d '{"data": "example-data"}'
 ```
 
-When you create flows in your public Langflow server, the code snippets in the [**API access** pane](/concepts-publish) automatically use your public server's domain.
+:::tip
+For flows created on public Langflow servers, the code snippets generated in the [**API access** pane](/concepts-publish) automatically use your public server's domain.
+:::
 
-For example, when used in a script, the following code snippet calls an ngrok domain to trigger the specified flow (`d764c4b8...`):
+You also use your public domain when making Langflow API calls in scripts, including the code snippets that are automatically generated by Langflow.
+For example, the following code snippet calls an ngrok domain to trigger the specified flow (`d764c4b8...`):
 
     ```python
     import requests
@@ -122,13 +117,22 @@ For a demo of the Langflow API in a script, see the [Quickstart](/get-started-qu
 
 ### Share your playground externally
 
-The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/{flow-id}` endpoint.
-This allows you to share a public URL with another user that displays only your flow's Playground chat window.
-They can interact with your flow's chat input and output and view the results without requiring a Langflow installation or API keys of their own.
+The **Shareable playground** option exposes the **Playground** for a single flow at the `/public_flow/{flow-id}` endpoint.
 
-To share your flow's **Playground** with another user, do the following:
+This allows you to share a public URL with another user that displays only the **Playground** chat window for the specified flow.
 
-1. From the **Workspace**, click **Share**, and then enable **Shareable Playground**.
-2. Click **Shareable Playground** again to open the Playground in a new window.
-This window's URL, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`, is the address to share your Playground.
-3. Share the URL with another user, and they can interact with your flow's Playground.
+The user can interact with the flow's chat input and output and view the results without requiring a Langflow installation or API keys of their own.
+
+:::important
+The **Sharable Playground** is for testing purposes only. 
+
+The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see [About developing and configuring Langflow applications](/develop-overview) and [Publish flows](/concepts-publish).
+:::
+
+To share a flow's **Playground** with another user, do the following:
+
+1. In Langflow, open the flow you want share.
+2. From the **Workspace**, click **Share**, and then enable **Shareable Playground**.
+3. Click **Shareable Playground** again to open the **Playground** window.
+This window's URL is the flow's **Sharable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
+4. Send the URL to another user to give them access to the flow's **Playground**.
