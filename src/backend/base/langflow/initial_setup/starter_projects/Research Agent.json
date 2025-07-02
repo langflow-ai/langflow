@@ -26,9 +26,15 @@
         "id": "reactflow__edge-ChatInput-iYW45{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iYW45œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-aHVYv{œfieldNameœ:œinput_valueœ,œidœ:œPrompt-aHVYvœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-iYW45",
+<<<<<<< HEAD
         "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-iYW45œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-aHVYv",
         "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œPrompt-aHVYvœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+=======
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iYW45œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-aHVYv",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œPrompt-aHVYvœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+>>>>>>> 224826520c (refactor: Update template notes (#8816))
       },
       {
         "animated": false,
@@ -55,9 +61,15 @@
         "id": "reactflow__edge-LanguageModelComponent-TZiUW{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-TZiUWœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-rQ5Up{œfieldNameœ:œprevious_responseœ,œidœ:œPrompt-rQ5Upœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-TZiUW",
+<<<<<<< HEAD
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-TZiUWœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-rQ5Up",
         "targetHandle": "{œfieldNameœ: œprevious_responseœ, œidœ: œPrompt-rQ5Upœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+=======
+        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-TZiUWœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-rQ5Up",
+        "targetHandle": "{œfieldNameœ:œprevious_responseœ,œidœ:œPrompt-rQ5Upœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+>>>>>>> 224826520c (refactor: Update template notes (#8816))
       },
       {
         "animated": false,
@@ -83,9 +95,15 @@
         "id": "reactflow__edge-Prompt-F8cZX{œdataTypeœ:œPromptœ,œidœ:œPrompt-F8cZXœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-TZiUW{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-TZiUWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-F8cZX",
+<<<<<<< HEAD
         "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-F8cZXœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-TZiUW",
         "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-TZiUWœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+=======
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-F8cZXœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LanguageModelComponent-TZiUW",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-TZiUWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+>>>>>>> 224826520c (refactor: Update template notes (#8816))
       },
       {
         "animated": false,
@@ -111,9 +129,15 @@
         "id": "reactflow__edge-ChatInput-iYW45{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iYW45œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-TZiUW{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-TZiUWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-iYW45",
+<<<<<<< HEAD
         "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-iYW45œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-TZiUW",
         "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-TZiUWœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+=======
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iYW45œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LanguageModelComponent-TZiUW",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-TZiUWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+>>>>>>> 224826520c (refactor: Update template notes (#8816))
       },
       {
         "animated": false,
@@ -139,9 +163,15 @@
         "id": "reactflow__edge-Prompt-TbFFl{œdataTypeœ:œPromptœ,œidœ:œPrompt-TbFFlœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-80mt4{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-80mt4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-TbFFl",
+<<<<<<< HEAD
         "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-TbFFlœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-80mt4",
         "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-80mt4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+=======
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-TbFFlœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LanguageModelComponent-80mt4",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-80mt4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+>>>>>>> 224826520c (refactor: Update template notes (#8816))
       },
       {
         "animated": false,
@@ -167,9 +197,15 @@
         "id": "reactflow__edge-Prompt-aHVYv{œdataTypeœ:œPromptœ,œidœ:œPrompt-aHVYvœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-80mt4{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-80mt4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-aHVYv",
+<<<<<<< HEAD
         "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-aHVYvœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-80mt4",
         "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-80mt4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+=======
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-aHVYvœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LanguageModelComponent-80mt4",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-80mt4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+>>>>>>> 224826520c (refactor: Update template notes (#8816))
       },
       {
         "animated": false,
@@ -197,9 +233,15 @@
         "id": "reactflow__edge-LanguageModelComponent-80mt4{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-80mt4œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-gZuRk{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-gZuRkœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-80mt4",
+<<<<<<< HEAD
         "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-80mt4œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-gZuRk",
         "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-gZuRkœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+=======
+        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-80mt4œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-gZuRk",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-gZuRkœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+>>>>>>> 224826520c (refactor: Update template notes (#8816))
       },
       {
         "animated": false,
@@ -225,9 +267,15 @@
         "id": "reactflow__edge-Prompt-rQ5Up{œdataTypeœ:œPromptœ,œidœ:œPrompt-rQ5Upœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-mIgZ5{œfieldNameœ:œinput_valueœ,œidœ:œAgent-mIgZ5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-rQ5Up",
+<<<<<<< HEAD
         "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-rQ5Upœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-mIgZ5",
         "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-mIgZ5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+=======
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-rQ5Upœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-mIgZ5",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-mIgZ5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+>>>>>>> 224826520c (refactor: Update template notes (#8816))
       },
       {
         "animated": false,
@@ -253,9 +301,15 @@
         "id": "reactflow__edge-TavilySearchComponent-bJRoU{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-bJRoUœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-mIgZ5{œfieldNameœ:œtoolsœ,œidœ:œAgent-mIgZ5œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TavilySearchComponent-bJRoU",
+<<<<<<< HEAD
         "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-bJRoUœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-mIgZ5",
         "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-mIgZ5œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+=======
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-bJRoUœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-mIgZ5",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-mIgZ5œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+>>>>>>> 224826520c (refactor: Update template notes (#8816))
       },
       {
         "animated": false,
@@ -282,9 +336,15 @@
         "id": "reactflow__edge-Agent-mIgZ5{œdataTypeœ:œAgentœ,œidœ:œAgent-mIgZ5œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-aHVYv{œfieldNameœ:œsearch_resultsœ,œidœ:œPrompt-aHVYvœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-mIgZ5",
+<<<<<<< HEAD
         "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-mIgZ5œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-aHVYv",
         "targetHandle": "{œfieldNameœ: œsearch_resultsœ, œidœ: œPrompt-aHVYvœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+=======
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-mIgZ5œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-aHVYv",
+        "targetHandle": "{œfieldNameœ:œsearch_resultsœ,œidœ:œPrompt-aHVYvœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+>>>>>>> 224826520c (refactor: Update template notes (#8816))
       }
     ],
     "nodes": [
