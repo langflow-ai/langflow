@@ -23,11 +23,6 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 ## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
 
-:::tip
-As of Langflow 1.5, you can install Langflow MCP servers with a single click, instead of manually editing the client's JSON configuration file.
-For more information, see [Auto-install Langflow MCP servers](#auto-install).
-:::
-
 Langflow runs a separate MCP server for every [project](/concepts-overview#projects).
 The MCP server for each project exposes that project's flows as tools.
 
@@ -35,9 +30,9 @@ All of the flows in a project are exposed by default.
 To expose only specific flows and optionally rename them for agentic use, follow these steps:
 
 1. From the Langflow dashboard, select the project that contains the flows you want to serve as tools, and then click the **MCP Server** tab.
-Alternatively, you can quickly access the **MCP Server** tab from within any flow by selecting **Publish > MCP Server**.
+Alternatively, you can quickly access the **MCP Server** tab from within any flow by selecting **Share > MCP Server**.
 
-    The **MCP Server** tab displays a code template that you can use to connect MCP clients to the the project's MCP server.
+    The **Auto install** and **JSON** tabs display options for connecting MCP clients to the the project's MCP server.
 
     The **Flows/Actions** section lists the flows that are currently being served as tools.
 
@@ -68,14 +63,26 @@ Alternatively, you can quickly access the **MCP Server** tab from within any flo
 The following procedure describes how to connect [Cursor](https://www.cursor.com/) to your Langflow project's MCP server to consume your flows as tools.
 However, you can connect any [MCP-compatible client](https://modelcontextprotocol.io/clients) following similar steps.
 
-1. Install [Cursor](https://docs.cursor.com/get-started/installation).
+<Tabs>
+  <TabItem value="Auto install" label="Auto install" default>
 
+1. Install [Cursor](https://docs.cursor.com/get-started/installation).
+2. In the Langflow dashboard, select the project that contains the flows you want to serve, and then click the **MCP Server** tab.
+3. To auto install your current Langflow project as an MCP server, click <Icon name="Plus" aria-hidden="True"/> **Add**.
+    The installation adds the server's configuration file to Cursor's `mcp.json` configuration file.
+
+    :::important
+    Auto installation only works if your HTTP client and Langflow server are on the same local machine.
+    In this is not the case, configure the client with the code in the **JSON** tab.
+    :::
+  </TabItem>
+  <TabItem value="JSON" label="JSON">
+
+1. Install [Cursor](https://docs.cursor.com/get-started/installation).
 2. In Cursor, go to **Cursor Settings > MCP**, and then click **Add New Global MCP Server**.
 This opens Cursor's global MCP configuration file, `mcp.json`.
-
 3. In the Langflow dashboard, select the project that contains the flows you want to serve, and then click the **MCP Server** tab.
-
-4. Copy the code template from the **MCP Server** tab, and then paste it into `mcp.json` in Cursor.
+4. Copy the code template from the **JSON** tab, and then paste it into `mcp.json` in Cursor.
 For example:
 
     ```json
@@ -93,12 +100,7 @@ For example:
     ```
 
     The **MCP Server** tab automatically includes the correct `PROJECT_NAME`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` values.
-    The default Langflow server address is `http://localhost:7860` (`http://localhost:7868` if using Langflow for Desktop).
-
-    :::important
-    If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
-    For more information, see [MCP server authentication and environment variables](#authentication).
-    :::
+    The default Langflow server address is `http://localhost:7860`.
 
 5. Save and close the `mcp.json` file in Cursor.
 The newly added MCP server will appear in the **MCP Servers** section.
@@ -107,6 +109,9 @@ Cursor is now connected to your project's MCP server and your flows are register
 Cursor determines when to use tools based on your queries, and requests permissions when necessary.
 
 For more information, see the [Cursor's MCP documentation](https://docs.cursor.com/context/model-context-protocol).
+
+  </TabItem>
+</Tabs>
 
 ### MCP server authentication and environment variables {#authentication}
 
@@ -354,16 +359,6 @@ To find your NPX path, run `which npx`.
 ```
   </TabItem>
 </Tabs>
-
-## Auto-install Langflow MCP servers {#auto-install}
-
-In the **MCP server** tab, an **Auto install** option is available for multiple MCP clients.
-
-To auto install your current Langflow project as an MCP server, click <Icon name="Plus" aria-hidden="True"/> **Add**.
-The installation adds the server's configuration file to the selected client's configuration file.
-
-Auto installation only works if your HTTP client and Langflow server are on the same local machine.
-In this is not the case, configure the client with the code in the **JSON** tab.
 
 ## See also
 
