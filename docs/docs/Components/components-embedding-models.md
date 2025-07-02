@@ -9,18 +9,17 @@ import Icon from "@site/src/components/icon";
 In [Langflow version 1.5](/release-notes), the singular **Embedding model** component replaces many provider-specific embedding models components. Any provider-specific embedding model components that weren't incorporated into the singular component were moved to [**Bundles**](/components-bundle-components).
 :::
 
-Embedding model components in Langflow generate text embeddings using the selected Large Language Model (LLM). The core **Embedding model** component supports many LLM providers, models, and use cases. For additional providers and models not supported by the core **Embedding model** component, see [**Bundles**](/components-bundle-components).
+Embedding model components in Langflow generate text embeddings using the selected Large Language Model (LLM). The core **Embedding model** component supports many LLM providers, models, and use cases. For additional providers and models not supported by the core **Embedding model** component, see [Bundles](/components-bundle-components).
 
-Most use cases can be performed with the **Language Model** and **Embedding Model** components.
+The core **Language Model** and **Embedding Model** components are adequate for most use cases.
 
-If you want to try additional providers not supported by the new components, the single-provider LLM components of both the **Language Model** and **Embedding Model** types are now found in **Bundles**, and are still available for use.
 
 ## Use an Embedding Model component in a flow
 
 Create a semantic search system with the **Embedding model** component.
 
 1. Add the **Embedding model** component to your flow.
-   The default model is OpenAI's `text-embedding-3-small`. Based on [OpenAI's recommendations](https://platform.openai.com/docs/guides/embeddings#embedding-models), this model is a good balance of performance and cost.
+   The default model is OpenAI's `text-embedding-3-small`, which is a balanced model, based on [OpenAI's recommendations](https://platform.openai.com/docs/guides/embeddings#embedding-models).
 2. In the **OpenAI API Key** field, enter your OpenAI API key.
 3. Add a [Split text](/components-processing#split-text) component to your flow.
    This component splits your input text into smaller chunks to be processed into embeddings.
