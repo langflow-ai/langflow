@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import threading
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -128,14 +129,33 @@ class ServiceManager:
         return factories
 
 
-service_manager = ServiceManager()
+# Global variables for lazy initialization
+_service_manager: ServiceManager | None = None
+_service_manager_lock = threading.Lock()
+
+
+def get_service_manager() -> ServiceManager:
+    """Get or create the service manager instance using lazy initialization.
+
+    This function ensures thread-safe lazy initialization of the service manager,
+    preventing automatic service creation during module import.
+
+    Returns:
+        ServiceManager: The singleton service manager instance.
+    """
+    global _service_manager  # noqa: PLW0603
+    if _service_manager is None:
+        with _service_manager_lock:
+            if _service_manager is None:
+                _service_manager = ServiceManager()
+    return _service_manager
 
 
 def initialize_settings_service() -> None:
     """Initialize the settings manager."""
     from langflow.services.settings import factory as settings_factory
 
-    service_manager.register_factory(settings_factory.SettingsServiceFactory())
+    get_service_manager().register_factory(settings_factory.SettingsServiceFactory())
 
 
 def initialize_session_service() -> None:
@@ -145,6 +165,6 @@ def initialize_session_service() -> None:
 
     initialize_settings_service()
 
-    service_manager.register_factory(cache_factory.CacheServiceFactory())
+    get_service_manager().register_factory(cache_factory.CacheServiceFactory())
 
-    service_manager.register_factory(session_service_factory.SessionServiceFactory())
+    get_service_manager().register_factory(session_service_factory.SessionServiceFactory())
