@@ -891,9 +891,6 @@ class Graph:
 
     def reset_inactivated_vertices(self) -> None:
         """Resets the inactivated vertices in the graph."""
-        for vertex_id in self.inactivated_vertices.copy():
-            self.mark_vertex(vertex_id, "ACTIVE")
-        self.inactivated_vertices = set()
         self.inactivated_vertices = set()
 
     def mark_all_vertices(self, state: str) -> None:
