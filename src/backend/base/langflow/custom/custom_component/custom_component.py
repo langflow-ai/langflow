@@ -402,9 +402,9 @@ class CustomComponent(BaseComponent):
 
     def variables(self, name: str, field: str):
         """DEPRECATED - This is kept for backward compatibility. Use get_variables instead."""
-        return run_until_complete(self.get_variables(name, field))
+        return run_until_complete(self.get_variable(name, field))
 
-    async def get_variables(self, name: str, field: str, session=None):
+    async def get_variable(self, name: str, field: str, session):
         """Returns the variable for the current user with the specified name.
 
         Raises:
@@ -425,13 +425,7 @@ class CustomComponent(BaseComponent):
         else:
             msg = f"Invalid user id: {self.user_id}"
             raise TypeError(msg)
-
-        if session is not None:
-            # Use the provided session instead of creating a new one
-            return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
-        # Fallback to creating a new session (for backward compatibility)
-        async with session_scope() as session:
-            return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
+        return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
     async def list_key_names(self):
         """Lists the names of the variables for the current user.

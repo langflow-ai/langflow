@@ -22,7 +22,7 @@ class LMStudioEmbeddingsComponent(LCEmbeddingsModel):
             base_url_load_from_db = base_url_dict.get("load_from_db", False)
             base_url_value = base_url_dict.get("value")
             if base_url_load_from_db:
-                base_url_value = await self.get_variables(base_url_value, field_name)
+                base_url_value = await self.get_variable(base_url_value, field_name)
             elif not base_url_value:
                 base_url_value = "http://localhost:1234/v1"
             build_config["model"]["options"] = await self.get_model(base_url_value)

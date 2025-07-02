@@ -223,7 +223,7 @@ class ChatOllamaComponent(LCModelComponent):
 
         if field_name in {"base_url", "model_name"}:
             if build_config["base_url"].get("load_from_db", False):
-                base_url_value = await self.get_variables(build_config["base_url"].get("value", ""), "base_url")
+                base_url_value = await self.get_variable(build_config["base_url"].get("value", ""), "base_url")
             else:
                 base_url_value = build_config["base_url"].get("value", "")
 
