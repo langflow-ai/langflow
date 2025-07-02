@@ -8,7 +8,6 @@ import sys
 import time
 import warnings
 from contextlib import suppress
-from io import StringIO
 from ipaddress import ip_address
 from pathlib import Path
 
@@ -26,16 +25,12 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
-from langflow.api.v1.schemas import InputValueRequest
+from langflow.cli.commands import deploy_command
 from langflow.cli.progress import create_langflow_progress
 from langflow.cli.script_loader import (
-    extract_structured_result,
     extract_text_from_result,
-    find_graph_variable,
-    load_graph_from_script,
 )
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.load import load_flow_from_json
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.database.utils import session_getter
@@ -807,102 +802,40 @@ def execute(
         output_format: Format for output (json, text, message, or result)
     """
     import json
-    import sys
 
-    def verbose_print(message: str) -> None:
-        """Print diagnostic messages to stderr only in verbose mode."""
-        if verbose:
-            typer.echo(message, file=sys.stderr)
+    from langflow.cli.common import (
+        create_verbose_printer,
+        execute_graph_with_capture,
+        extract_result_data,
+        load_graph_from_path,
+        prepare_graph,
+        validate_script_path,
+    )
 
-    if not script_path.exists():
-        verbose_print(f"Error: File '{script_path}' does not exist.")
-        raise typer.Exit(1)
+    verbose_print = create_verbose_printer(verbose=verbose)
 
-    if not script_path.is_file():
-        verbose_print(f"Error: '{script_path}' is not a file.")
-        raise typer.Exit(1)
+    # Validate input file and get extension
+    file_extension = validate_script_path(script_path, verbose_print)
 
-    # Check file extension and validate
-    file_extension = script_path.suffix.lower()
-    if file_extension not in [".py", ".json"]:
-        verbose_print(f"Error: '{script_path}' must be a .py or .json file.")
-        raise typer.Exit(1)
+    # Load the graph
+    graph = load_graph_from_path(script_path, file_extension, verbose_print, verbose=verbose)
 
-    file_type = "Python script" if file_extension == ".py" else "JSON flow"
-    verbose_print(f"Analyzing {file_type}: {script_path}")
+    # Prepare the graph
+    prepare_graph(graph, verbose_print)
 
-    try:
-        if file_extension == ".py":
-            # Handle Python script
-            graph_info = find_graph_variable(script_path)
-
-            if not graph_info:
-                verbose_print("✗ No 'graph' variable found in the script.")
-                verbose_print("  Expected to find an assignment like: graph = Graph(...)")
-                raise typer.Exit(1)
-
-            verbose_print(f"✓ Found 'graph' variable at line {graph_info['line_number']}")
-            verbose_print(f"  Type: {graph_info['type']}")
-            verbose_print(f"  Source: {graph_info['source_line']}")
-            verbose_print("\nLoading and executing script...")
-
-            graph = load_graph_from_script(script_path)
-
-        elif file_extension == ".json":
-            # Handle JSON flow
-            verbose_print("✓ Valid JSON flow file detected")
-            verbose_print("\nLoading and executing JSON flow...")
-
-            # Use load_flow_from_json to load the graph
-            graph = load_flow_from_json(script_path, disable_logs=not verbose)
-
-    except Exception as e:
-        verbose_print(f"✗ Failed to load graph: {e}")
-        raise typer.Exit(1) from e
-
-    # From here, the logic is the same regardless of input type
-    inputs = InputValueRequest(input_value=input_value) if input_value else None
-
-    # Prepare the graph before execution
-    verbose_print("Preparing graph for execution...")
-
-    try:
-        graph.prepare()
-    except Exception as e:
-        verbose_print(f"✗ Failed to prepare graph: {e}")
-        raise typer.Exit(1) from e
-
-    # Capture all output during execution
-    captured_stdout = StringIO()
-    captured_stderr = StringIO()
-
-    # Redirect stdout and stderr during graph execution
-    original_stdout = sys.stdout
-    original_stderr = sys.stderr
-
-    try:
-        sys.stdout = captured_stdout
-        sys.stderr = captured_stderr
-        results = list(graph.start(inputs))
-    finally:
-        # Restore original stdout/stderr
-        sys.stdout = original_stdout
-        sys.stderr = original_stderr
-
-    # Get captured logs
-    captured_logs = captured_stdout.getvalue() + captured_stderr.getvalue()
+    # Execute graph and capture output
+    results, captured_logs = execute_graph_with_capture(graph, input_value)
 
     # Format output based on the requested format
     if output_format == "json":
-        result_data = extract_structured_result(results)
-        result_data["logs"] = captured_logs
+        result_data = extract_result_data(results, captured_logs)
 
         # In quiet mode (default), use compact JSON without indentation
         indent = 2 if verbose else None
         typer.echo(json.dumps(result_data, indent=indent))
 
     elif output_format in {"text", "message"}:
-        result_data = extract_structured_result(results)
+        result_data = extract_result_data(results, captured_logs)
         # Access the result field, fall back to text field for backwards compatibility
         output_text = result_data.get("result", result_data.get("text", ""))
         typer.echo(str(output_text))
@@ -912,12 +845,15 @@ def execute(
 
     else:
         # Default to structured JSON output
-        result_data = extract_structured_result(results)
-        result_data["logs"] = captured_logs
+        result_data = extract_result_data(results, captured_logs)
 
         # In quiet mode (default), use compact JSON without indentation
         indent = 2 if verbose else None
         typer.echo(json.dumps(result_data, indent=indent))
+
+
+# Register the deploy command
+app.command(name="deploy")(deploy_command)
 
 
 def show_version(*, value: bool):
