@@ -61,8 +61,9 @@ class Vertex:
         self.id: str = data["id"]
         self.base_name = self.id.split("-")[0]
         self.is_state = False
-        self.is_input = any(input_component_name in self.id for input_component_name in INPUT_COMPONENTS)
-        self.is_output = any(output_component_name in self.id for output_component_name in OUTPUT_COMPONENTS)
+        type_strings = [self.id.split("-")[0], data["data"]["type"]]
+        self.is_input = any(input_component_name in type_strings for input_component_name in INPUT_COMPONENTS)
+        self.is_output = any(output_component_name in type_strings for output_component_name in OUTPUT_COMPONENTS)
         self._is_loop = None
         self.has_session_id = None
         self.custom_component = None
