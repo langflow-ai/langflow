@@ -31,7 +31,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def component_class(self):
-        from langflow.components.search.arxiv import ArXivComponent
+        from langflow.components.arxiv.arxiv import ArXivComponent
 
         return ArXivComponent
 
