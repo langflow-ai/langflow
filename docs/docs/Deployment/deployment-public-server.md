@@ -1,5 +1,5 @@
 ---
-title: Deploy your Langflow server using ngrok
+title: Deploy a public Langflow server
 slug: /deployment-public-server
 ---
 
@@ -124,7 +124,7 @@ This allows you to share a public URL with another user that displays only the *
 The user can interact with the flow's chat input and output and view the results without requiring a Langflow installation or API keys of their own.
 
 :::important
-The **Sharable Playground** is for testing purposes only. 
+The **Sharable Playground** is for testing purposes only.
 
 The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see [About developing and configuring Langflow applications](/develop-overview) and [Publish flows](/concepts-publish).
 :::

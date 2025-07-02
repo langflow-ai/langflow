@@ -154,6 +154,11 @@ To include environment variables with your MCP server command, include them like
 
 Replace `KEY` and `VALUE` with the environment variable name and value you want to include.
 
+{/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
+### Deploy your MCP server externally {#deploy-your-server-externally}
+
+To deploy your MCP server externally with ngrok, see [Deploy your Langflow server externally](/deployment-public-server#share-your-mcp-server-externally).
+
 ## Name and describe your flows for agentic use {#name-and-describe-your-flows}
 
 MCP clients like [Cursor](https://www.cursor.com/) "see" your Langflow project as a single MCP server, with _all_ of your enabled flows listed as tools.
@@ -227,11 +232,6 @@ The default address is `http://localhost:6274`.
     From this tab, you can monitor how your flows are being registered as tools by MCP, as well as test the tools with custom input values.
 
 5. To quit MCP Inspector, press <kbd>Control+C</kbd> in the same terminal window where you started it.
-
-{/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
-## Deploy your MCP server externally {#deploy-your-server-externally}
-
-To deploy your MCP server externally with ngrok, see [Deploy your Langflow server using ngrok](/deployment-public-server#share-your-mcp-server-externally).
 
 ## Troubleshooting MCP server
 
