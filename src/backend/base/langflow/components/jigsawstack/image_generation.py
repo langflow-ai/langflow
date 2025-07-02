@@ -129,10 +129,9 @@ class JigsawStackImageGenerationComponent(Component):
             client = JigsawStack(api_key=self.api_key)
 
             if not self.prompt or len(self.prompt) < min_character_length or len(self.prompt) > max_character_length:
-                invalid_prompt_error = f"Prompt must be between \
+                invalid_prompt_error = f"Prompts must be between \
                     {min_character_length}-{max_character_length} characters."
                 raise ValueError(invalid_prompt_error)
-            self.prompt = self.prompt.strip()
 
             if self.aspect_ratio and self.aspect_ratio not in [
                 "1:1",

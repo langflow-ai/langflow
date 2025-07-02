@@ -107,6 +107,7 @@ class JigsawStackFileReadComponent(Component):
             # Try to decode as text
             try:
                 content.decode("utf-8")
+                return ".txt"  # noqa: TRY300
             except UnicodeDecodeError:
                 return ".bin"  # Binary file
         else:
