@@ -25,7 +25,9 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.api.v1.schemas import InputValueRequest
 from langflow.cli.progress import create_langflow_progress
+from langflow.cli.script_loader import extract_message_from_result, find_graph_variable, load_graph_from_script
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
@@ -774,6 +776,63 @@ def api_key(
     # Create a banner to display the API key and tell the user it won't be shown again
     if unmasked_api_key:
         api_key_banner(unmasked_api_key)
+
+
+@app.command()
+def call(
+    script_path: Path = typer.Argument(..., help="Path to the Python script containing a 'graph' variable"),  # noqa: B008
+    input_value: str | None = typer.Argument(None, help="Input value to pass to the graph"),
+) -> None:
+    """Find and display information about the 'graph' variable in a Python script.
+
+    This command analyzes a Python script to locate assignments to a variable named 'graph',
+    loads the script, and verifies that the graph variable is an instance of the Langflow Graph class.
+
+    Args:
+        script_path: Path to the Python script containing a 'graph' variable
+        input_value: Input value to pass to the graph
+    """
+    if not script_path.exists():
+        typer.echo(f"Error: File '{script_path}' does not exist.")
+        raise typer.Exit(1)
+
+    if not script_path.is_file():
+        typer.echo(f"Error: '{script_path}' is not a file.")
+        raise typer.Exit(1)
+
+    if script_path.suffix != ".py":
+        typer.echo(f"Warning: '{script_path}' does not have a .py extension.")
+
+    typer.echo(f"Analyzing script: {script_path}")
+
+    # First, find the graph variable using AST parsing
+    graph_info = find_graph_variable(script_path)
+
+    if not graph_info:
+        typer.echo("✗ No 'graph' variable found in the script.")
+        typer.echo("  Expected to find an assignment like: graph = Graph(...)")
+        raise typer.Exit(1)
+
+    typer.echo(f"✓ Found 'graph' variable at line {graph_info['line_number']}")
+    typer.echo(f"  Type: {graph_info['type']}")
+
+    if graph_info["type"] == "function_call":
+        typer.echo(f"  Function: {graph_info['function']}")
+        typer.echo(f"  Arguments: {graph_info['arg_count']}")
+
+    typer.echo(f"  Source: {graph_info['source_line']}")
+
+    # Now load and execute the script to get the actual graph object
+    typer.echo("\nLoading and executing script...")
+    try:
+        graph = load_graph_from_script(script_path)
+    except Exception as e:
+        typer.echo(f"✗ Failed to load graph: {e}")
+        raise typer.Exit(1) from e
+    inputs = InputValueRequest(input_value=input_value) if input_value else None
+    results = list(graph.start(inputs))
+
+    typer.echo(extract_message_from_result(results))
 
 
 def show_version(*, value: bool):
