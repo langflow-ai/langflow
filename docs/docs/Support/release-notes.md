@@ -22,7 +22,7 @@ The following updates are included in this version:
 - New Language Model and Embedding Model components
 
     The **Language Model** and **Embedding Model** components have been promoted to be the main components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment without swapping out single-provider components.
-    The single-provider components are still available for your flows in the components sidebar under [Bundles](/components-bundles).
+    The single-provider components are still available for your flows in the components sidebar under [Bundles](/components-bundle-components).
     For more information, see the [Language model](/components-models) and [Embedding model](/components-embedding-models) components.
 
 - MCP one-click installation
@@ -37,7 +37,7 @@ The following updates are included in this version:
 
 - Tools category is now legacy
 
-    All components in the **Tools** category are now **Legacy** or have moved to [Bundles](/components-bundles).
+    All components in the **Tools** category are now **Legacy** or have moved to [Bundles](/components-bundle-components).
 
     The [MCP Tools](/mcp-client) component is available in the components sidebar under **Agents**.
 
