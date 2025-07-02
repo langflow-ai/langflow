@@ -15,6 +15,7 @@ export default function ToolsComponent({
   id = "",
   handleOnNewValue,
   isAction = false,
+  placeholder,
   button_description,
   title,
   icon,
@@ -46,18 +47,17 @@ export default function ToolsComponent({
         disabled && "cursor-not-allowed",
       )}
     >
-      {value && (
-        <ToolsModal
-          open={isModalOpen}
-          setOpen={setIsModalOpen}
-          isAction={isAction}
-          description={description}
-          rows={value}
-          handleOnNewValue={handleOnNewValue}
-          title={title}
-          icon={icon}
-        />
-      )}
+      <ToolsModal
+        open={isModalOpen}
+        placeholder={placeholder || ""}
+        setOpen={setIsModalOpen}
+        isAction={isAction}
+        description={description}
+        rows={value || []}
+        handleOnNewValue={handleOnNewValue}
+        title={title}
+        icon={icon}
+      />
       <div
         className="relative flex w-full items-center gap-3"
         data-testid={"div-" + id}
@@ -133,7 +133,10 @@ export default function ToolsComponent({
             onClick={() => setIsModalOpen(true)}
           >
             <span>
-              {value.length === 0 ? "No actions available" : "Select actions"}
+              {placeholder ||
+                (value.length === 0
+                  ? "No actions available"
+                  : "Select actions")}
             </span>
           </Button>
         )}
