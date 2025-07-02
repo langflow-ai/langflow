@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
@@ -701,7 +700,6 @@ async def custom_component_update(
             user_id=user.id,
         )
 
-        time_updated = datetime.now(timezone.utc).isoformat()
         component_node["tool_mode"] = code_request.tool_mode
 
         if hasattr(cc_instance, "set_attributes"):
@@ -736,7 +734,6 @@ async def custom_component_update(
                 field_name=code_request.field,
                 field_value=code_request.field_value,
             )
-        component_node["last_updated"] = time_updated
 
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

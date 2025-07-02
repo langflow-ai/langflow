@@ -35,6 +35,7 @@ export const usePostTemplateValue: useMutationFunctionType<
     const template = node.template;
 
     if (!template) return;
+    const lastUpdated = new Date().toISOString();
     const response = await api.post<APIClassType>(
       getURL("CUSTOM_COMPONENT", { update: "update" }),
       {
@@ -46,6 +47,7 @@ export const usePostTemplateValue: useMutationFunctionType<
       },
     );
     const newTemplate = response.data;
+    newTemplate.last_updated = lastUpdated;
     const newNode = getNode(nodeId)?.data?.node as APIClassType | undefined;
 
     if (
