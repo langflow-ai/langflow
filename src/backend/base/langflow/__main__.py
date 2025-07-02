@@ -303,7 +303,7 @@ def run(
                 settings_service.auth_settings.set(arg, values[arg])
             logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
-        # Get final values from settings
+        # Get final values from settings and ensure proper types
         host = settings_service.settings.host or "127.0.0.1"
         port = int(settings_service.settings.port or 7860)
         workers = settings_service.settings.workers
@@ -806,26 +806,30 @@ def call(
         verbose: Show diagnostic output and execution details
         output_format: Format for output (json, text, message, or result)
     """
-    if not script_path.exists():
+    import json
+    import sys
+
+    def verbose_print(message: str) -> None:
+        """Print diagnostic messages to stderr only in verbose mode."""
         if verbose:
-            typer.echo(f"Error: File '{script_path}' does not exist.")
+            typer.echo(message, file=sys.stderr)
+
+    if not script_path.exists():
+        verbose_print(f"Error: File '{script_path}' does not exist.")
         raise typer.Exit(1)
 
     if not script_path.is_file():
-        if verbose:
-            typer.echo(f"Error: '{script_path}' is not a file.")
+        verbose_print(f"Error: '{script_path}' is not a file.")
         raise typer.Exit(1)
 
     # Check file extension and validate
     file_extension = script_path.suffix.lower()
     if file_extension not in [".py", ".json"]:
-        if verbose:
-            typer.echo(f"Error: '{script_path}' must be a .py or .json file.")
+        verbose_print(f"Error: '{script_path}' must be a .py or .json file.")
         raise typer.Exit(1)
 
-    if verbose:
-        file_type = "Python script" if file_extension == ".py" else "JSON flow"
-        typer.echo(f"Analyzing {file_type}: {script_path}")
+    file_type = "Python script" if file_extension == ".py" else "JSON flow"
+    verbose_print(f"Analyzing {file_type}: {script_path}")
 
     try:
         if file_extension == ".py":
@@ -833,78 +837,83 @@ def call(
             graph_info = find_graph_variable(script_path)
 
             if not graph_info:
-                if verbose:
-                    typer.echo("✗ No 'graph' variable found in the script.")
-                    typer.echo("  Expected to find an assignment like: graph = Graph(...)")
+                verbose_print("✗ No 'graph' variable found in the script.")
+                verbose_print("  Expected to find an assignment like: graph = Graph(...)")
                 raise typer.Exit(1)
 
-            if verbose:
-                typer.echo(f"✓ Found 'graph' variable at line {graph_info['line_number']}")
-                typer.echo(f"  Type: {graph_info['type']}")
-                typer.echo(f"  Source: {graph_info['source_line']}")
-                typer.echo("\nLoading and executing script...")
+            verbose_print(f"✓ Found 'graph' variable at line {graph_info['line_number']}")
+            verbose_print(f"  Type: {graph_info['type']}")
+            verbose_print(f"  Source: {graph_info['source_line']}")
+            verbose_print("\nLoading and executing script...")
 
             graph = load_graph_from_script(script_path)
 
         elif file_extension == ".json":
             # Handle JSON flow
-            if verbose:
-                typer.echo("✓ Valid JSON flow file detected")
-                typer.echo("\nLoading and executing JSON flow...")
+            verbose_print("✓ Valid JSON flow file detected")
+            verbose_print("\nLoading and executing JSON flow...")
 
             # Use load_flow_from_json to load the graph
             graph = load_flow_from_json(script_path, disable_logs=not verbose)
-            graph.prepare()
 
     except Exception as e:
-        if verbose:
-            typer.echo(f"✗ Failed to load graph: {e}")
+        verbose_print(f"✗ Failed to load graph: {e}")
         raise typer.Exit(1) from e
 
     # From here, the logic is the same regardless of input type
     inputs = InputValueRequest(input_value=input_value) if input_value else None
 
     # Prepare the graph before execution
-    if verbose:
-        typer.echo("Preparing graph for execution...")
+    verbose_print("Preparing graph for execution...")
 
     try:
         graph.prepare()
     except Exception as e:
-        if verbose:
-            typer.echo(f"✗ Failed to prepare graph: {e}")
+        verbose_print(f"✗ Failed to prepare graph: {e}")
         raise typer.Exit(1) from e
 
-    # Execute the graph (logs will be automatically captured)
-    # Use a buffer here to capture the logs
-    buffer = StringIO()
-    sys.stdout = buffer
+    # Capture all output during execution
+    captured_stdout = StringIO()
+    captured_stderr = StringIO()
+
+    # Redirect stdout and stderr during graph execution
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+
     try:
+        sys.stdout = captured_stdout
+        sys.stderr = captured_stderr
         results = list(graph.start(inputs))
     finally:
-        sys.stdout = sys.__stdout__
-        captured_logs = buffer.getvalue()
+        # Restore original stdout/stderr
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
+    # Get captured logs
+    captured_logs = captured_stdout.getvalue() + captured_stderr.getvalue()
 
     # Format output based on the requested format
     if output_format == "json":
         result_data = extract_structured_result(results)
-        import json
+        result_data["logs"] = captured_logs
 
         # In quiet mode (default), use compact JSON without indentation
         indent = 2 if verbose else None
-        result_data["logs"] = captured_logs
         typer.echo(json.dumps(result_data, indent=indent))
 
     elif output_format in {"text", "message"}:
         result_data = extract_structured_result(results)
-        result_data["logs"] = captured_logs
-        typer.echo(result_data["text"])
+        # Access the result field, fall back to text field for backwards compatibility
+        output_text = result_data.get("result", result_data.get("text", ""))
+        typer.echo(str(output_text))
+
     elif output_format == "result":
         typer.echo(extract_text_from_result(results))
+
     else:
         # Default to structured JSON output
         result_data = extract_structured_result(results)
-        import json
+        result_data["logs"] = captured_logs
 
         # In quiet mode (default), use compact JSON without indentation
         indent = 2 if verbose else None
