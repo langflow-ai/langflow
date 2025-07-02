@@ -5,6 +5,10 @@ from langflow.schema import Data
 from tests.integration.components.mock_components import TextToData
 from tests.integration.utils import ComponentInputHandle, run_single_component
 
+# TODO: Fix pyleak issue
+# https://github.com/langflow-ai/langflow/actions/runs/16013103799/job/45208685212
+# pytestmark = pyleak_marker()
+
 
 async def test_from_data():
     outputs = await run_single_component(
