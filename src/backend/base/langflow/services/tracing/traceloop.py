@@ -186,7 +186,7 @@ class TraceloopTracer(BaseTracer):
 
         # Map trace types to OpenTelemetry span kinds
         if trace_type == "prompt":
-            child_span.set_attribute("span.kind", SpanKind.INTERNAL)
+            child_span.set_attribute("span.kind", SpanKind.INTERNAL.name.lower())
         else:
             otel_span_kind = trace_type_mapping.get(trace_type, SpanKind.INTERNAL)
             child_span.set_attribute("span.kind", otel_span_kind.name.lower())
@@ -200,8 +200,10 @@ class TraceloopTracer(BaseTracer):
         processed_metadata = self._convert_to_traceloop_types(metadata) if metadata else {}
         if processed_metadata:
             for key, value in processed_metadata.items():
-                # Use custom metadata attributes
-                child_span.set_attribute(f"metadata.{key}", value)
+                if isinstance(value, dict):
+                    child_span.set_attribute(f"metadata.{key}", json.dumps(value))
+                else:
+                    child_span.set_attribute(f"metadata.{key}", str(value))
 
     @override
     def end_trace(
@@ -253,7 +255,10 @@ class TraceloopTracer(BaseTracer):
             processed_metadata = self._convert_to_traceloop_types(metadata) if metadata else {}
             if processed_metadata:
                 for key, value in processed_metadata.items():
-                    self.root_span.set_attribute(f"metadata.{key}", value)
+                    if isinstance(value, dict):
+                        self.root_span.set_attribute(f"metadata.{key}", json.dumps(value))
+                    else:
+                        self.root_span.set_attribute(f"metadata.{key}", str(value))
 
             self._set_span_status(self.root_span, error)
             self.root_span.end()
