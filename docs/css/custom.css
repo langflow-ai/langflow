@@ -4,8 +4,7 @@
  * work well for content-centric websites.
  */
 :root {
-  --ifm-background-color: var(--token-primary-bg-c);
-  --ifm-color-primary: hsla(330, 81%, 60%, 1);
+  --ifm-color-primary: hsla(329, 86%, 70%, 1);
   --ifm-navbar-link-hover-color: initial;
   --ifm-navbar-padding-vertical: 0;
   --ifm-navbar-item-padding-vertical: 0;
@@ -13,6 +12,18 @@
     Arial, sans-serif, "Apple Color Emoji", "Segoe UI emoji";
   --ifm-font-family-monospace: "SFMono-Regular", "Roboto Mono", Consolas,
     "Liberation Mono", Menlo, Courier, monospace;
+}
+
+/* Light theme - Pure white background */
+html[data-theme="light"] {
+  --ifm-background-color: var(--ifm-color-white);
+  --ifm-background-surface-color: var(--ifm-color-white);
+}
+
+/* Dark theme - Pure black background */  
+html[data-theme="dark"] {
+  --ifm-background-color: var(--ifm-color-black);
+  --ifm-background-surface-color: var(--ifm-color-black);
 }
 
 .theme-doc-sidebar-item-category.menu__list-item:not(:first-child) {
@@ -99,6 +110,7 @@ h3 {
 
 body {
   font-size: 16px;
+  padding-top: 56px; /* Account for fixed navbar height */
 }
 
 .docsearch-logo {
@@ -279,8 +291,9 @@ body {
 
 /* Footer Styles */
 .footer {
-  padding: 8px 0;
-  background-color: var(--ifm-navbar-background-color);
+  padding: 1rem 0 0;
+  background-color: var(--ifm-background-color);
+  border-top: 1px solid var(--ifm-color-emphasis-200);
 }
 
 [data-theme="light"] .footer {
@@ -317,11 +330,16 @@ body {
 }
 
 .footer .container {
-  padding: 0 5rem;
+  padding: 0 1.25rem;
   display: flex;
-  justify-content: space-between;
+  justify-content: left;
   align-items: center;
   flex-direction: row-reverse;
+  max-width: 100%;
+}
+
+.footer__title {
+  margin-bottom: 0;
 }
 
 /* Sidebar Styles */
@@ -341,6 +359,7 @@ body {
 
 /* Sidebar Ad Styles */
 .sidebar-ad {
+  display: none !important;
   margin-left: -0.5rem;
   margin-right: -0.5rem;
   margin-top: 1rem;
@@ -414,5 +433,202 @@ body {
 .markdown details [class^="collapsibleContent"] {
   border-top: none !important;
   padding: 0;
+}
+
+/* Custom Navbar Styles */
+.lf-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+  height: 56px;
+  padding: 0 1.25rem;
+  background: var(--ifm-color-content-inverse);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  z-index: 1000;
+}
+
+.lf-navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.lf-navbar-logo img {
+  height: 24px;
+  transition: opacity 0.2s ease;
+}
+
+.lf-navbar-logo:hover {
+  text-decoration: none;
+}
+
+.lf-navbar-logo:hover img {
+  opacity: 0.8;
+}
+
+.lf-navbar-search {
+  display: flex;
+  justify-content: center;
+  max-width: 500px;
+  margin: 0 2rem;
+}
+
+.lf-navbar-search .navbar__search {
+  width: 100%;
+  min-width: 300px;
+  max-width: 500px;
+}
+
+.lf-navbar-search .navbar__search input {
+  width: 100% !important;
+  min-width: 500px !important;
+}
+
+.lf-navbar-search .DocSearch-Button {
+  width: 100% !important;
+  min-width: 300px !important;
+  max-width: 500px !important;
+}
+
+.lf-navbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+
+
+/* Download Button */
+.lf-navbar-download-btn {
+  display: flex;
+  padding: 4px 10px;
+  align-items: center;
+  gap: 6px;
+  border-radius: 6px;
+  background: var(--ifm-font-color-base);
+  color: var(--ifm-color-content-inverse);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.lf-navbar-download-btn:hover,
+.lf-navbar-download-btn:active {
+  color: var(--ifm-color-content-inverse);
+  text-decoration: none;
+}
+
+.lf-navbar-download-btn:hover {
+  background: var(--ifm-color-emphasis-700);
+}
+
+.lf-navbar-download-btn:active {
+  background: var(--ifm-color-emphasis-700);
+  border-color: var(--ifm-color-emphasis-700);
+}
+
+/* Social Icons & Theme Toggle - Shared Styles */
+.lf-navbar-social-icons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lf-navbar-social-icon,
+.lf-navbar-theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--ifm-navbar-link-color);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.lf-navbar-social-icon:hover,
+.lf-navbar-theme-toggle:hover {
+  background: var(--ifm-color-emphasis-200);
+  color: var(--ifm-navbar-link-color);
+  text-decoration: none;
+}
+
+.lf-navbar-theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.lf-navbar-social-icon svg,
+.lf-navbar-theme-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+
+
+/* Responsive Design */
+@media (max-width: 996px) {
+  .lf-navbar {
+    padding: 0 1rem;
+  }
+  
+  .lf-navbar-search {
+    margin: 0 1rem;
+    max-width: 500px;
+  }
+  
+  .lf-navbar-actions {
+    gap: 0.5rem;
+  }
+  
+  .lf-navbar-download-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Hide default Docusaurus navbar logo on desktop since custom navbar handles it */
+@media (min-width: 769px) {
+
+  .sidebarLogo_isFc {
+    opacity: 0 !important;
+  }
+}
+
+/* Mobile handling is done in JavaScript - no CSS media queries needed for navbar visibility */
+@media (max-width: 768px) {
+  /* Reset body padding on mobile since default navbar handles it */
+  body {
+    padding-top: 0;
+  }
+}
+
+/* DocSearch Input Styling - Simple border override */
+.DocSearch-Button {
+  border: 1px solid var(--ifm-color-emphasis-300) !important;
+  border-radius: 6px !important;
+  background: var(--ifm-color-content-inverse) !important;
+  color: var(--ifm-color-emphasis-500) !important;
+}
+
+.DocSearch-Button:hover,
+.DocSearch-Button:focus {
+  border-color: var(--ifm-color-primary) !important;
+  box-shadow: 0 0 0 1px var(--ifm-color-primary) !important;
+}
+
+.DocSearch-Search-Icon {
+  color: var(--ifm-color-emphasis-500) !important;
+  size: 16px !important;
 }
 
