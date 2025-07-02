@@ -64,7 +64,7 @@ export default function APITabsComponent() {
     endpointName: endpointName || "",
     streaming: streaming,
     flowId: flowId || "",
-    isAuthenticated: !autologin || false,
+    isAuthenticated: autologin || false,
     processedPayload: processedPayload,
   };
   const tabsList: tabsArrayType = [
