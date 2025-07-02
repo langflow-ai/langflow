@@ -41,13 +41,11 @@ class StructuredOutputComponent(Component):
             display_name="Format Instructions",
             info="The instructions to the language model for formatting the output.",
             value=(
-                "You are an AI that extracts one structured JSON object from unstructured text. "
-                "Use a predefined schema with expected types (str, int, float, bool, dict). "
-                "If multiple structures exist, extract only the first most complete one. "
-                "Fill missing or ambiguous values with defaults: null for missing values. "
-                "Ignore duplicates and partial repeats. "
-                "Always return one valid JSON, never throw errors or return multiple objects."
-                "Output: A single well-formed JSON object, and nothing else."
+                "Extract data from input_text and output only a JSON array whose objects follow the given schema. "
+                "Fill each key with a correctly typed value; when absent,"
+                "use the defaults (string “N/A”, integer 0, float 0.0, date null). "
+                "Emit one object per occurrence; "
+                "if none are found, output a single object populated entirely with defaults."
             ),
             required=True,
             advanced=True,
@@ -173,9 +171,11 @@ class StructuredOutputComponent(Component):
 
     def build_structured_output(self) -> Data:
         output = self.build_structured_output_base()
+
         if not isinstance(output, list) or not output:
             # handle empty or unexpected type case
-            msg = "No structured output returned"
+            msg = ("No structured output was returned."
+                   "Please review your input or update the system message to obtain a better result.")
             raise ValueError(msg)
         if len(output) != 1:
             msg = "Multiple structured outputs returned"
