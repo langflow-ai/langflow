@@ -790,7 +790,7 @@ def api_key(
 
 
 @app.command()
-def call(
+def execute(
     script_path: Path = typer.Argument(  # noqa: B008
         ..., help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
     ),

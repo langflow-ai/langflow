@@ -19,7 +19,7 @@ def default_settings():
 @pytest.fixture
 def temp_python_script(tmp_path):
     """Create a temporary Python script for testing."""
-    script_content = '''"""Test script for call command."""
+    script_content = '''"""Test script for execute command."""'
 from langflow.components.input_output.chat import ChatInput
 from langflow.components.input_output.chat_output import ChatOutput
 from langflow.graph.graph.base import Graph
@@ -119,15 +119,15 @@ def test_superuser(runner):
     assert "Superuser created successfully." in result.stdout
 
 
-# Enhanced Call Command Tests
+# Enhanced Execute Command Tests
 
 
-class TestCallCommand:
-    """Test suite for the enhanced call command."""
+class TestExecuteCommand:
+    """Test suite for the enhanced execute command."""
 
-    def test_call_python_script_default_json_output(self, runner, temp_python_script):
-        """Test calling a Python script with default JSON output format."""
-        result = runner.invoke(app, ["call", str(temp_python_script), "Hello World"])
+    def test_execute_python_script_default_json_output(self, runner, temp_python_script):
+        """Test executeing a Python script with default JSON output format."""
+        result = runner.invoke(app, ["execute", str(temp_python_script), "Hello World"])
 
         # Check if command executed successfully
         if result.exit_code == 0:
@@ -144,9 +144,9 @@ class TestCallCommand:
             # Command failed, but that's expected in some test environments
             assert result.exit_code in [0, 1]
 
-    def test_call_python_script_verbose_mode(self, runner, temp_python_script):
-        """Test calling a Python script with verbose mode."""
-        result = runner.invoke(app, ["call", str(temp_python_script), "Hello World", "--verbose"])
+    def test_execute_python_script_verbose_mode(self, runner, temp_python_script):
+        """Test executeing a Python script with verbose mode."""
+        result = runner.invoke(app, ["execute", str(temp_python_script), "Hello World", "--verbose"])
 
         # Verbose mode should show diagnostic output in stderr or mixed output
         # Check that some form of diagnostic information is present
@@ -155,80 +155,80 @@ class TestCallCommand:
             full_output = result.output + getattr(result, "stderr", "")
             assert "graph" in full_output.lower() or len(result.output) > 0
 
-    def test_call_python_script_text_format(self, runner, temp_python_script):
-        """Test calling a Python script with text output format."""
-        result = runner.invoke(app, ["call", str(temp_python_script), "Hello World", "--format", "text"])
+    def test_execute_python_script_text_format(self, runner, temp_python_script):
+        """Test executeing a Python script with text output format."""
+        result = runner.invoke(app, ["execute", str(temp_python_script), "Hello World", "--format", "text"])
 
         # Should have some text output if successful
         if result.exit_code == 0:
             assert len(result.output.strip()) > 0
 
-    def test_call_python_script_result_format(self, runner, temp_python_script):
-        """Test calling a Python script with result output format."""
-        result = runner.invoke(app, ["call", str(temp_python_script), "Hello World", "--format", "result"])
+    def test_execute_python_script_result_format(self, runner, temp_python_script):
+        """Test executeing a Python script with result output format."""
+        result = runner.invoke(app, ["execute", str(temp_python_script), "Hello World", "--format", "result"])
 
         # Should have some output if successful
         if result.exit_code == 0:
             assert len(result.output.strip()) >= 0  # Can be empty string for result format
 
-    def test_call_json_flow_default_output(self, runner, test_json_flow):
-        """Test calling a JSON flow with default output format."""
+    def test_execute_json_flow_default_output(self, runner, test_json_flow):
+        """Test executeing a JSON flow with default output format."""
         if not test_json_flow.exists():
             pytest.skip("Test JSON flow file not found")
 
-        result = runner.invoke(app, ["call", str(test_json_flow), "Hello JSON"])
+        result = runner.invoke(app, ["execute", str(test_json_flow), "Hello JSON"])
         # Note: This might fail due to tracing issues, but we test the command structure
         assert result.exit_code in [0, 1], f"Unexpected exit code: {result.exit_code}"
 
-    def test_call_json_flow_verbose_mode(self, runner, test_json_flow):
-        """Test calling a JSON flow with verbose mode."""
+    def test_execute_json_flow_verbose_mode(self, runner, test_json_flow):
+        """Test executeing a JSON flow with verbose mode."""
         if not test_json_flow.exists():
             pytest.skip("Test JSON flow file not found")
 
-        result = runner.invoke(app, ["call", str(test_json_flow), "Hello JSON", "--verbose"])
+        result = runner.invoke(app, ["execute", str(test_json_flow), "Hello JSON", "--verbose"])
 
         # Should show diagnostic output even if execution fails
         assert "JSON flow" in result.output or result.exit_code == 1
 
-    def test_call_nonexistent_file(self, runner):
+    def test_execute_nonexistent_file(self, runner):
         """Test error handling for nonexistent files."""
-        result = runner.invoke(app, ["call", "nonexistent.py", "test"])
+        result = runner.invoke(app, ["execute", "nonexistent.py", "test"])
         assert result.exit_code == 1
 
-    def test_call_nonexistent_file_verbose(self, runner):
+    def test_execute_nonexistent_file_verbose(self, runner):
         """Test error handling for nonexistent files in verbose mode."""
-        result = runner.invoke(app, ["call", "nonexistent.py", "test", "--verbose"])
+        result = runner.invoke(app, ["execute", "nonexistent.py", "test", "--verbose"])
         assert result.exit_code == 1
         # Check stderr or combined output for error message
         full_output = result.output + getattr(result, "stderr", "")
         assert "does not exist" in full_output
 
-    def test_call_invalid_file_extension(self, runner, tmp_path):
+    def test_execute_invalid_file_extension(self, runner, tmp_path):
         """Test error handling for unsupported file extensions."""
         invalid_file = tmp_path / "test.txt"
         invalid_file.write_text("not a script")
 
-        result = runner.invoke(app, ["call", str(invalid_file), "test", "--verbose"])
+        result = runner.invoke(app, ["execute", str(invalid_file), "test", "--verbose"])
         assert result.exit_code == 1
         full_output = result.output + getattr(result, "stderr", "")
         assert "must be a .py or .json file" in full_output
 
-    def test_call_invalid_python_script(self, runner, invalid_python_script):
+    def test_execute_invalid_python_script(self, runner, invalid_python_script):
         """Test error handling for Python scripts without graph variable."""
-        result = runner.invoke(app, ["call", str(invalid_python_script), "test", "--verbose"])
+        result = runner.invoke(app, ["execute", str(invalid_python_script), "test", "--verbose"])
         assert result.exit_code == 1
         full_output = result.output + getattr(result, "stderr", "")
         assert "No 'graph' variable found" in full_output
 
-    def test_call_syntax_error_script(self, runner, syntax_error_script):
+    def test_execute_syntax_error_script(self, runner, syntax_error_script):
         """Test error handling for Python scripts with syntax errors."""
-        result = runner.invoke(app, ["call", str(syntax_error_script), "test", "--verbose"])
+        result = runner.invoke(app, ["execute", str(syntax_error_script), "test", "--verbose"])
         assert result.exit_code == 1
         # Should handle syntax errors gracefully
 
-    def test_call_without_input_value(self, runner, temp_python_script):
-        """Test calling without providing input value."""
-        result = runner.invoke(app, ["call", str(temp_python_script)])
+    def test_execute_without_input_value(self, runner, temp_python_script):
+        """Test executeing without providing input value."""
+        result = runner.invoke(app, ["execute", str(temp_python_script)])
 
         # Should still execute with None input if successful
         if result.exit_code == 0:
@@ -240,20 +240,20 @@ class TestCallCommand:
                 # If JSON parsing fails, check that we have some output
                 assert len(result.output.strip()) >= 0
 
-    def test_call_all_output_formats(self, runner, temp_python_script):
+    def test_execute_all_output_formats(self, runner, temp_python_script):
         """Test all supported output formats."""
         formats = ["json", "text", "message", "result"]
 
         for format_type in formats:
-            result = runner.invoke(app, ["call", str(temp_python_script), "test", "--format", format_type])
+            result = runner.invoke(app, ["execute", str(temp_python_script), "test", "--format", format_type])
             # Should either succeed or fail gracefully
             if result.exit_code == 0:
                 # Should have some output for all formats
                 assert len(result.output.strip()) >= 0, f"No output for format {format_type}"
 
-    def test_call_log_capture_in_json(self, runner, temp_python_script):
+    def test_execute_log_capture_in_json(self, runner, temp_python_script):
         """Test that logs are captured and included in JSON output."""
-        result = runner.invoke(app, ["call", str(temp_python_script), "test"])
+        result = runner.invoke(app, ["execute", str(temp_python_script), "test"])
 
         if result.exit_code == 0:
             try:
@@ -265,9 +265,9 @@ class TestCallCommand:
                 assert len(result.output.strip()) > 0
 
     @pytest.mark.parametrize("verbose", [True, False])
-    def test_call_json_formatting(self, runner, temp_python_script, verbose):
+    def test_execute_json_formatting(self, runner, temp_python_script, verbose):
         """Test JSON formatting in verbose vs quiet mode."""
-        args = ["call", str(temp_python_script), "test"]
+        args = ["execute", str(temp_python_script), "test"]
         if verbose:
             args.append("--verbose")
 
@@ -289,17 +289,17 @@ class TestCallCommand:
             # Either we found JSON or we have some output
             assert json_found or len(result.output.strip()) > 0
 
-    def test_call_help_output(self, runner):
-        """Test the help output for the call command."""
-        result = runner.invoke(app, ["call", "--help"])
+    def test_execute_help_output(self, runner):
+        """Test the help output for the execute command."""
+        result = runner.invoke(app, ["execute", "--help"])
         assert result.exit_code == 0
         assert "Execute a Langflow graph script or JSON flow" in result.output
         assert "--verbose" in result.output
         assert "--format" in result.output
 
-    def test_call_directory_instead_of_file(self, runner, tmp_path):
+    def test_execute_directory_instead_of_file(self, runner, tmp_path):
         """Test error handling when providing directory instead of file."""
-        result = runner.invoke(app, ["call", str(tmp_path), "test", "--verbose"])
+        result = runner.invoke(app, ["execute", str(tmp_path), "test", "--verbose"])
         assert result.exit_code == 1
         full_output = result.output + getattr(result, "stderr", "")
         assert "is not a file" in full_output
