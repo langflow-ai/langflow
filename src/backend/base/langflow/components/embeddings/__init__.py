@@ -1,13 +1,11 @@
-from .cloudflare import CloudflareWorkersAIEmbeddingsComponent
-from .lmstudioembeddings import LMStudioEmbeddingsComponent
-from .mistral import MistralAIEmbeddingsComponent
+from ..cloudflare.cloudflare import CloudflareWorkersAIEmbeddingsComponent
+from ..mistral.mistral_embeddings import MistralAIEmbeddingsComponent
 from .similarity import EmbeddingSimilarityComponent
 from .text_embedder import TextEmbedderComponent
 
 __all__ = [
     "CloudflareWorkersAIEmbeddingsComponent",
     "EmbeddingSimilarityComponent",
-    "LMStudioEmbeddingsComponent",
     "MistralAIEmbeddingsComponent",
     "TextEmbedderComponent",
 ]

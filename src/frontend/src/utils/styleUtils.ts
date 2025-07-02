@@ -229,9 +229,69 @@ export const SIDEBAR_CATEGORIES = [
 
 export const SIDEBAR_BUNDLES = [
   {
-    display_name: "Language Models",
-    name: "languagemodels",
-    icon: "BrainCircuit",
+    display_name: "xAI",
+    name: "xai",
+    icon: "xAI",
+  },
+  {
+    display_name: "MistralAI",
+    name: "mistral",
+    icon: "MistralAI",
+  },
+  {
+    display_name: "Cloudflare",
+    name: "cloudflare",
+    icon: "Cloudflare",
+  },
+  {
+    display_name: "OpenRouter",
+    name: "openrouter",
+    icon: "OpenRouter",
+  },
+  {
+    display_name: "Novita",
+    name: "novita",
+    icon: "Novita",
+  },
+  {
+    display_name: "LMStudio",
+    name: "lmstudio",
+    icon: "LMStudio",
+  },
+  {
+    display_name: "MariTalk",
+    name: "maritalk",
+    icon: "MariTalk",
+  },
+  {
+    display_name: "DeepSeek",
+    name: "deepseek",
+    icon: "DeepSeek",
+  },
+  {
+    display_name: "Perplexity",
+    name: "perplexity",
+    icon: "Perplexity",
+  },
+  {
+    display_name: "SambaNova",
+    name: "sambanova",
+    icon: "SambaNova",
+  },
+  {
+    display_name: "Mistral",
+    name: "mistral",
+    icon: "Mistral",
+  },
+  {
+    display_name: "Baidu",
+    name: "baidu",
+    icon: "BaiduQianfan",
+  },
+  {
+    display_name: "Groq",
+    name: "groq",
+    icon: "Groq",
   },
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
