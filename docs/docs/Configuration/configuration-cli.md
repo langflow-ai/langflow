@@ -49,14 +49,14 @@ python -m langflow api-key [OPTIONS]
 | <Link id="show-completion"/>`--show-completion` | *Not applicable* | *Not applicable* | Show the location of the auto-completion config file (if installed). |
 | <Link id="help"/>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
-### langflow call
+### langflow execute
 
 Execute a Langflow graph directly from the command line, either from a Python script or JSON flow file. This command is designed for container and serverless environments.
 
 ```bash
-langflow call <script_path> [input_value] [OPTIONS]
+langflow execute <script_path> [input_value] [OPTIONS]
 # or
-python -m langflow call <script_path> [input_value] [OPTIONS]
+python -m langflow execute <script_path> [input_value] [OPTIONS]
 ```
 
 #### Arguments
@@ -70,9 +70,9 @@ python -m langflow call <script_path> [input_value] [OPTIONS]
 
 | Option | Default | Values | Description |
 |--------|---------|--------|-------------|
-| <Link id="call-verbose"/>`--verbose` | `false` | Boolean | Show diagnostic output and execution details |
-| <Link id="call-format"/>`--format` | `json` | `json`<br/>`text`<br/>`message`<br/>`result` | Output format for the execution result |
-| <Link id="call-help"/>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments |
+| <Link id="execute-verbose"/>`--verbose` | `false` | Boolean | Show diagnostic output and execution details |
+| <Link id="execute-format"/>`--format` | `json` | `json`<br/>`text`<br/>`message`<br/>`result` | Output format for the execution result |
+| <Link id="execute-help"/>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments |
 
 #### Usage
 
@@ -80,14 +80,14 @@ For Python scripts, the file must contain a variable named `graph` with a valid 
 
 **Example with Python script:**
 ```bash
-langflow call my_flow.py "Hello, World!"
-langflow call my_flow.py "Hello, World!" --format text --verbose
+langflow execute my_flow.py "Hello, World!"
+langflow execute my_flow.py "Hello, World!" --format text --verbose
 ```
 
 **Example with JSON flow:**
 ```bash
-langflow call my_flow.json "Hello, World!"
-langflow call my_flow.json "Hello, World!" --format json
+langflow execute my_flow.json "Hello, World!"
+langflow execute my_flow.json "Hello, World!" --format json
 ```
 
 #### Output Formats
