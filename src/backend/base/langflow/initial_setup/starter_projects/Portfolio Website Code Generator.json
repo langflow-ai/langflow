@@ -1617,7 +1617,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "Anthropic API Key"
+                "value": "ANTHROPIC_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1907,7 +1907,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "Anthropic API Key"
+                "value": "ANTHROPIC_API_KEY"
               },
               "code": {
                 "advanced": true,
