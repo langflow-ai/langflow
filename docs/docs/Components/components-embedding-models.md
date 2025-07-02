@@ -33,12 +33,12 @@ Your flow looks like this:
 
 ![Embedding to vector store](/img/component-embedding-models.png)
 
-To query the your vector store, include [Chat Input](/components-io#chat-input) and [Chat Output](/components-io#chat-output) components.
+To query the vector store, include [Chat Input](/components-io#chat-input) and [Chat Output](/components-io#chat-output) components.
 
 7. Connect a [Chat Input](/components-io#chat-input) component to the **Search Query** input of the Chroma DB vector store.
 8. Connect a [Chat Output](/components-io#chat-output) component to the **Search Results** port of the Chroma DB vector store.
 
-Your flow looks like this:
+Your flow looks like the following:
 ![A simple semantic search flow using Embedding model](/img/component-embedding-models-add-chat.png)
 
 9. Open the **Playground** and enter a search query.
