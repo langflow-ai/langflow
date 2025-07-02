@@ -19,18 +19,29 @@ You can drag and drop Langflow JSON files directly from your file system into th
 
 ## Export flow
 
-To **Export** your flow, in the **Playground**, click **Share**, and then click **Export**.
+You can export flows to transfer flows between Langflow instances or save backups of your flows.
 
-Select **Save with my API keys** to save the flow with any **Global variables** included.
+An exported flow is downloaded to your local machine as a JSON file named `FLOW_NAME.json`.
 
-:::important
-If your key is saved as a **Global variable**, only the global variable you created to contain the value is saved.
-If your key value is manually entered into a component field, the actual key value is saved in the JSON file.
+There are three ways to export a flow:
+
+* From the **Projects** page, find the flow you want to export, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Export**.
+* When editing a flow, click **Share**, and then click **Export**.
+* Use the Langflow API [`/flows/download`](/api-flows#export-flows) endpoint.
+
+When exporting from the Langflow UI, you can select **Save with my API keys** to export the flow _and_ any defined API key variables.
+
+:::warning
+If you directly entered the key value into a component's API key field, then **Save with my API keys** exports the literal key value.
+
+If your key is stored in a Langflow global variable, **Save with my API keys** exports only the variable name.
 :::
 
-When you share your flow file with another user who has the same global variables populated, the flow runs without requiring keys to be added again.
+Non-API key variables are included in the export regardless of the **Save with my API keys** setting.
 
-The `FLOW_NAME.json` file is downloaded to your local machine.
+When you or another user import the flow to another Langflow instance, that instance must have Langflow global variables with the same names and a valid values in order to run the flow successfully.
+If any variables are missing or invalid, those variables must be created or edited after importing the flow.
+
 
 ## Langflow JSON file contents
 
