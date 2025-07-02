@@ -4,7 +4,9 @@ slug: /
 hide_table_of_contents: true
 ---
 
-Langflow empowers developers to rapidly prototype and build AI applications with a user-friendly visual interface and powerful features. Whether you're a seasoned AI developer or just starting out, Langflow provides the tools you need to bring your AI ideas to life.
+Langflow empowers developers to rapidly prototype and build AI applications with a user-friendly visual interface and support for important AI functionality like agents and MCP.
+
+Whether you're a seasoned AI developer or just starting out, Langflow provides the tools you need to bring your AI ideas to life.
 
 ![Langflow in action](/img/playground-response.png)
 
