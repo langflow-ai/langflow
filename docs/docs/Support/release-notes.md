@@ -15,33 +15,41 @@ The following updates are included in this version:
 
 - Authentication changes
 
-    All API endpoints now require a Langflow API key to function, even when **AUTO_LOGIN** is enabled. This change enhances security by ensuring that automatic login features are properly authenticated.
+    All API endpoints now require a Langflow API key to function, even when [LANGFLOW_AUTO_LOGIN](/environment-variables#LANGFLOW_AUTO_LOGIN) is enabled. This change enhances security by ensuring that automatic login features are properly authenticated.
+    The only exceptions are for the MCP endpoints at `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which will not require API keys.
     For more information, see [API keys](/configuration-api-keys).
 
 - New Language Model and Embedding Model components
 
-    We moved **Model** and **Embedding Model** components to **Bundles** in the Langflow sidebar. The **Language Model** and **Embedding Model** components are satisfactory for most use cases, and the single-provider components are still available for your flows.
+    The **Language Model** and **Embedding Model** components have been promoted to be the main components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment without swapping out single-provider components.
+    The single-provider components are still available for your flows in the components sidebar under [Bundles](/components-bundles).
     For more information, see the [Language model](/components-models) and [Embedding model](/components-embedding-models) components.
 
 - MCP one-click installation
 
-    In the **MCP server** page, click **Auto install** to install your Langflow MCP server to Claude or Cursor clients with just one click.
+    In the **MCP server** page, click **Auto install** to install your Langflow MCP server to MCP clients with just one click.
+    The option to install with a JSON configuration file is available for macOS, Windows, and WSL.
     For more information, see [MCP server](/mcp-server).
 
 - Input schema replaces temporary overrides
 
-    Instead of managing the tweaks values in the **API access** pane, the **Input schema** pane adds the default values to the code snippets for this flow. This provides a template for sending the request in your language of choice, with a default value for you to modify to suit your application's needs.
+    The **Input schema** pane replaces the need to manage tweak values in the **API access** pane. When you enable a parameter in the **Input schema** pane, the parameter is automatically added to your flow’s code snippets, providing ready-to-use templates for making requests in your preferred programming language.
 
 - Tools category is now legacy
 
-    All components in the **Tools** category are now **Legacy** or have moved.
+    All components in the **Tools** category are now **Legacy** or have moved to [Bundles](/components-bundles).
 
-    The [MCP Connection](/mcp-client) component is available in **Data components**.
+    The [MCP Tools](/mcp-client) component is available in the components sidebar under **Agents**.
 
-    Many of the components performed the same functions, like web search and API requests, so we combined this functionality into single components:
+    Many of the **Tools** components performed the same functions, like web search and API requests, so we combined this functionality into single components:
 
-    * To replace legacy search components like Bing Search and Google, use the [Web search](/components-data#web-search) component.
+    * To replace legacy search components, use the [Web search](/components-data#web-search) component.
     * To replace legacy news aggregation components, use the [News search](/components-data#news-search) component.
+
+- Stability improvements
+
+    General stability improvements and bug fixes for enhanced reliability.
+    See an issue? [Raise it on GitHub](https://github.com/langflow-ai/langflow/issues).
 
 ### New integrations and bundles
 

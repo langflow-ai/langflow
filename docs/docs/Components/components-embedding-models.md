@@ -29,10 +29,9 @@ Create a semantic search system with the **Embedding model** component.
 5. Connect the **Text Splitter** component's **Chunks** output to the **Chroma DB** component's **Ingest Data** input.
 6. Connect the **Embedding model** component's **Embeddings** output to the **Chroma DB** component's **Embeddings** input.
 
-This flow embeds the split text into the local Chroma vector store using the `text-embedding-3-small` model.
-Your flow looks like this:
+This flow loads a file from the File loader, splits the text, and embeds the split text into the local Chroma vector store using the `text-embedding-3-small` model.
 
-![Embedding to vector store](/img/component-embedding-models.png)
+![Embeddings connected to Chroma DB vector store with a file loader and a split text component](/img/component-embedding-models.png)
 
 To query the your vector store, include [Chat Input](/components-io#chat-input) and [Chat Output](/components-io#chat-output) components.
 
