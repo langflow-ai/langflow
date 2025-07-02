@@ -1,6 +1,5 @@
 import json
 import re
-from typing import Any
 
 from langchain_core.tools import StructuredTool
 
@@ -46,8 +45,9 @@ class AgentComponent(ToolCallingAgentComponent):
 
     # Filter out json_mode from OpenAI inputs since we handle structured output differently
     openai_inputs_filtered = [
-        input_field for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"] 
-        if not (hasattr(input_field, 'name') and input_field.name == 'json_mode')
+        input_field
+        for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"]
+        if not (hasattr(input_field, "name") and input_field.name == "json_mode")
     ]
 
     inputs = [
@@ -101,7 +101,6 @@ class AgentComponent(ToolCallingAgentComponent):
                 msg = "No language model selected. Please choose a model to proceed."
                 raise ValueError(msg)
             self.model_name = get_model_name(llm_model, display_name=display_name)
-            
 
             # Get memory data
             self.chat_history = await self.get_memory_data()
@@ -129,7 +128,7 @@ class AgentComponent(ToolCallingAgentComponent):
             )
             agent = self.create_agent_runnable()
             result = await self.run_agent(agent)
-            
+
             # Store result for potential JSON output
             self._agent_result = result
             return result
@@ -147,33 +146,33 @@ class AgentComponent(ToolCallingAgentComponent):
     async def json_response(self) -> Data:
         """Convert agent response to structured JSON Data output."""
         # Run the regular message response first to get the result
-        if not hasattr(self, '_agent_result'):
+        if not hasattr(self, "_agent_result"):
             await self.message_response()
-        
+
         result = self._agent_result
-        
+
         # Extract content from result
-        if hasattr(result, 'content'):
+        if hasattr(result, "content"):
             content = result.content
-        elif hasattr(result, 'text'):
+        elif hasattr(result, "text"):
             content = result.text
         else:
             content = str(result)
-        
+
         # Try to parse as JSON
         try:
             json_data = json.loads(content)
             return Data(data=json_data)
         except json.JSONDecodeError:
             # If it's not valid JSON, try to extract JSON from the content
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
+            json_match = re.search(r"\{.*\}", content, re.DOTALL)
             if json_match:
                 try:
                     json_data = json.loads(json_match.group())
                     return Data(data=json_data)
                 except json.JSONDecodeError:
                     pass
-            
+
             # If we can't extract JSON, return the raw content as data
             return Data(data={"content": content, "error": "Could not parse as JSON"})
 
