@@ -260,11 +260,11 @@ class MCPToolsComponent(ComponentWithCache):
                         return build_config
                     tool_obj = None
                     for tool in self.tools:
-                        if tool.name == self.tool:
+                        if tool.name == field_value:
                             tool_obj = tool
                             break
                     if tool_obj is None:
-                        msg = f"Tool {self.tool} not found in available tools: {self.tools}"
+                        msg = f"Tool {field_value} not found in available tools: {self.tools}"
                         logger.warning(msg)
                         return build_config
                     await self._update_tool_config(build_config, field_value)
