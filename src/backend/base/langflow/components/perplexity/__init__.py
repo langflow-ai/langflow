@@ -1,3 +1,3 @@
-from .perplexity import PerplexityModelComponent
+from .perplexity import PerplexityComponent
 
-__all__ = ["PerplexityModelComponent"]
+__all__ = ["PerplexityComponent"]

@@ -1,3 +1,3 @@
-from .sambanova import SambaNovaModelComponent
+from .sambanova import SambaNovaComponent
 
-__all__ = ["SambaNovaModelComponent"]
+__all__ = ["SambaNovaComponent"]

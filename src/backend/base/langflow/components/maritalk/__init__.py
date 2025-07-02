@@ -1,3 +1,3 @@
-from .maritalk import MariTalkModel
+from .maritalk import MaritalkModelComponent
 
-__all__ = ["MariTalkModel"]
+__all__ = ["MaritalkModelComponent"]
