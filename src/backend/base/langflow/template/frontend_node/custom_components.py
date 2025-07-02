@@ -67,6 +67,7 @@ class CustomComponentFrontendNode(FrontendNode):
     )
     description: str | None = None
     base_classes: list[str] = []
+    last_updated: str | None = None
 
 
 class ComponentFrontendNode(FrontendNode):

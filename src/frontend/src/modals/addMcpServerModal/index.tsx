@@ -69,11 +69,11 @@ export default function AddMcpServerModal({
     setStdioName("");
     setStdioCommand("");
     setStdioArgs([""]);
-    setStdioEnv([{ "": "" }]);
+    setStdioEnv([]);
     setSseName("");
     setSseUrl("");
-    setSseEnv([{ "": "" }]);
-    setSseHeaders([{ "": "" }]);
+    setSseEnv([]);
+    setSseHeaders([]);
   };
 
   // STDIO state
@@ -82,17 +82,13 @@ export default function AddMcpServerModal({
   const [stdioArgs, setStdioArgs] = useState<string[]>(
     initialData?.args || [""],
   );
-  const [stdioEnv, setStdioEnv] = useState<any>(
-    initialData?.env || [{ "": "" }],
-  );
+  const [stdioEnv, setStdioEnv] = useState<any>(initialData?.env || []);
 
   // SSE state
   const [sseName, setSseName] = useState(initialData?.name || "");
   const [sseUrl, setSseUrl] = useState(initialData?.url || "");
-  const [sseEnv, setSseEnv] = useState<any>(initialData?.env || [{ "": "" }]);
-  const [sseHeaders, setSseHeaders] = useState<any>(
-    initialData?.headers || [{ "": "" }],
-  );
+  const [sseEnv, setSseEnv] = useState<any>(initialData?.env || []);
+  const [sseHeaders, setSseHeaders] = useState<any>(initialData?.headers || []);
 
   useEffect(() => {
     if (open) {
@@ -102,11 +98,11 @@ export default function AddMcpServerModal({
       setStdioName(initialData?.name || "");
       setStdioCommand(initialData?.command || "");
       setStdioArgs(initialData?.args || [""]);
-      setStdioEnv(initialData?.env || [{ "": "" }]);
+      setStdioEnv(initialData?.env || []);
       setSseName(initialData?.name || "");
       setSseUrl(initialData?.url || "");
-      setSseEnv(initialData?.env || [{ "": "" }]);
-      setSseHeaders(initialData?.headers || [{ "": "" }]);
+      setSseEnv(initialData?.env || []);
+      setSseHeaders(initialData?.headers || []);
     }
   }, [open]);
 
@@ -153,7 +149,7 @@ export default function AddMcpServerModal({
         setStdioName("");
         setStdioCommand("");
         setStdioArgs([""]);
-        setStdioEnv([{ "": "" }]);
+        setStdioEnv([]);
         setError(null);
       } catch (err: any) {
         setError(err?.message || "Failed to add MCP server.");
@@ -186,8 +182,8 @@ export default function AddMcpServerModal({
         setOpen(false);
         setSseName("");
         setSseUrl("");
-        setSseEnv([{ "": "" }]);
-        setSseHeaders([{ "": "" }]);
+        setSseEnv([]);
+        setSseHeaders([]);
         setError(null);
       } catch (err: any) {
         setError(err?.message || "Failed to add MCP server.");

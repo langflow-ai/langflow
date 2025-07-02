@@ -21,7 +21,7 @@ from langflow.api.utils import CurrentActiveMCPUser
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
-from langflow.base.mcp.util import get_flow_snake_case
+from langflow.base.mcp.util import get_flow_snake_case, sanitize_mcp_name
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
 from langflow.services.database.models.flow.model import Flow
@@ -186,7 +186,7 @@ async def handle_list_tools():
                 if flow.user_id is None:
                     continue
 
-                base_name = "_".join(flow.name.lower().split())
+                base_name = sanitize_mcp_name(flow.name)
                 name = base_name[:MAX_MCP_TOOL_NAME_LENGTH]
                 if name in existing_names:
                     i = 1
