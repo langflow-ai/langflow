@@ -16,7 +16,7 @@ To run flows in your apps, see [Flow trigger endpoints](/api-flows-run).
 
 The `/build` endpoints support Langflow's frontend code for building flows in the Langflow Workspace.
 You can use these endpoints to build vertices and flows, as well as execute flows with streaming event responses.
-You might need to use or understand these endpoints when contributing to the Langflow project's core codebase.
+You might need to use or understand these endpoints when contributing to the Langflow codebase.
 
 ## Build flow and stream events
 

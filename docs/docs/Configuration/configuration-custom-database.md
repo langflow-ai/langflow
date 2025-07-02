@@ -33,7 +33,7 @@ LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
 ```
 
 :::tip
-The Langflow project includes a [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file to help you get started.
+The Langflow repository has a [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file to help you get started.
 You can copy the contents of this file into your own `.env` file and replace the example values with your own preferred settings.
 Replace the value for `LANGFLOW_DATABASE_URL` with your PostgreSQL connection string.
 :::
@@ -49,7 +49,7 @@ New tables and traffic are created.
 
 ## Example Langflow and PostgreSQL docker-compose.yml
 
-The Langflow project includes a [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file for quick deployment with PostgreSQL.
+The Langflow repository has a [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file for quick deployment with PostgreSQL.
 
 This configuration launches Langflow and PostgreSQL containers in the same Docker network, ensuring proper connectivity between services. It also sets up persistent volumes for both Langflow and PostgreSQL data.
 

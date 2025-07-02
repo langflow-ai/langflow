@@ -16,9 +16,9 @@ This option includes dependency and version management.
 * [**Python package**](#install-and-run-the-langflow-oss-python-package): Install and run the Langflow OSS Python package.
 This option offers more control over the environment, dependencies, and versioning.
 
-* [**Install from source**](/contributing-how-to-contribute#install-langflow-from-source): Use this option if you want to contribute to the Langflow project's code or documentation.
+* [**Install from source**](/contributing-how-to-contribute#install-langflow-from-source): Use this option if you want to contribute to the Langflow codebase or documentation.
 
-## Install Langflow Desktop
+## Install and run Langflow Desktop
 
 **Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [version management](#manage-your-version-of-langflow-desktop) feature for managing your Langflow version. Langflow Desktop is currently available for macOS.
 
@@ -161,5 +161,5 @@ For more information, see [Install custom dependencies](/install-custom-dependen
 ## Next steps
 
 * [Quickstart](/get-started-quickstart): Build and run your first flow in minutes.
-* [Create and manage flows](/concept-flows): Learn about building flows.
+* [Create and manage flows](/concepts-flows): Learn about building flows.
 * [Troubleshoot Langflow](/troubleshoot): Get help with common Langflow install and startup issues.

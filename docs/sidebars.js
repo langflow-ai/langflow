@@ -58,12 +58,7 @@ module.exports = {
             {
               type: "doc",
               id: "Concepts/concepts-publish",
-              label: "Publish flows"
-            },
-            {
-              type: "doc",
-              id: "Concepts/embedded-chat-widget",
-              label: "Use the embedded chat widget"
+              label: "Share and embed flows"
             },
             {
               type: "doc",

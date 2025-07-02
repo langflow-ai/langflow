@@ -186,4 +186,4 @@ Notes are written in Markdown and stored as `node` objects.
 ## See also
 
 * [Create flows](/concepts-flows)
-* [Publish flows](/concepts-publish)
+* [Share and embed flows](/concepts-publish)

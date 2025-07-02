@@ -65,8 +65,8 @@ The **Share** menu provides the following options for integrating your flow into
 * [**API access**](/concepts-publish#api-access): Integrate your flow into your applications with automatically-generated Python, JavaScript, and curl code snippets.
 * [**Export**](/concepts-flows-import#export-a-flow): Export your flow to your local machine as a JSON file.
 * [**MCP Server**](/mcp-server): Expose your flow as a tool for MCP-compatible clients.
-* [**Embed into site**](/embedded-chat-widget): Embed your flow in HTML, React, or Angular applications.
-<!-- * [**Shareable playground**](/concepts-publish#shareable-playground): Share your **Playground** interface with another user. This is specifically for sharing the **Playground** experience; it isn't for running a flow in a production application. -->
+* [**Embed into site**](/concepts-publish#embedded-chat-widget): Embed your flow in HTML, React, or Angular applications.
+<!--TODO_Expose_For_1.5 * [**Shareable playground**](/concepts-publish#shareable-playground): Share your **Playground** interface with another user. This is specifically for sharing the **Playground** experience; it isn't for running a flow in a production application. -->
 
 ## See also
 

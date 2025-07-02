@@ -3,7 +3,7 @@ title: Join the Langflow community
 slug: /contributing-community
 ---
 
-There are several ways you can interact with the Langflow community and learn more about the Langflow project.
+There are several ways you can interact with the Langflow community and learn more about the Langflow codebase.
 
 ## Join the Langflow Discord server
 

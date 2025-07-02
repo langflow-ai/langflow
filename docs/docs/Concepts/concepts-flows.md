@@ -108,5 +108,5 @@ The flow storage location can be customized with the [`LANGFLOW_CONFIG_DIR`](/en
 
 ## See also
 
-* [Publish flows](/concepts-publish)
+* [Share and embed flows](/concepts-publish)
 * [Import and export flows](/concepts-flows-import)

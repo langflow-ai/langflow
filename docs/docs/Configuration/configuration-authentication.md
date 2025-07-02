@@ -19,7 +19,7 @@ For more information, see [Start a secure Langflow server with authentication](#
 
 The section describes the available authentication configuration variables.
 
-The Langflow project includes a [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file to help you get started.
+The Langflow repository has a [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file to help you get started.
 You can copy the contents of this file into your own `.env` file and replace the example values with your own preferred settings.
 
 ### LANGFLOW_AUTO_LOGIN

@@ -92,7 +92,7 @@ If it detects a supported environment variable, then it automatically adopts the
     ```
 
     :::tip
-    The Langflow project includes a [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file to help you get started.
+    The Langflow repository has a [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file to help you get started.
     You can copy the contents of this file into your own `.env` file and replace the example values with your own preferred settings.
     :::
 

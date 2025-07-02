@@ -54,9 +54,9 @@ If you're working within a cloned Langflow repository, add dependencies with `uv
 uv add langflow matplotlib
 ```
 
-## Add dependencies to the Langflow project
+## Add dependencies to the Langflow codebase
 
-When contributing to Langflow itself, add dependencies to the project's configuration.
+When contributing to the Langflow codebase, add dependencies to the project's configuration.
 
 Langflow uses a workspace with two packages:
 

@@ -42,7 +42,7 @@ For more extensive projects, you can build Langflow as a dependency or deploy a 
 
 For more information, see the following:
 
-* [Publish flows](/concepts-publish)
+* [Share and embed flows](/concepts-publish)
 * [Get started with the Langflow API](/api-reference-api-examples)
 * [Develop an application with Langflow](/develop-application)
 * [Langflow deployment overview](/deployment-overview)
