@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SearchComponent",
-            "id": "SearchComponent-vbaqY",
+            "id": "SearchComponent-mY1Fv",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-c2dqD",
+            "id": "Agent-RTpIN",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-SearchComponent-vbaqY{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-vbaqYœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-c2dqD{œfieldNameœ:œtoolsœ,œidœ:œAgent-c2dqDœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-SearchComponent-mY1Fv{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-mY1Fvœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-RTpIN{œfieldNameœ:œtoolsœ,œidœ:œAgent-RTpINœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "SearchComponent-vbaqY",
-        "sourceHandle": "{œdataTypeœ: œSearchComponentœ, œidœ: œSearchComponent-vbaqYœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-c2dqD",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-c2dqDœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "SearchComponent-mY1Fv",
+        "sourceHandle": "{œdataTypeœ: œSearchComponentœ, œidœ: œSearchComponent-mY1Fvœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-RTpIN",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-RTpINœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-rc4oD",
+            "id": "ChatInput-hRyEJ",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-c2dqD",
+            "id": "Agent-RTpIN",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-rc4oD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-rc4oDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-c2dqD{œfieldNameœ:œinput_valueœ,œidœ:œAgent-c2dqDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-hRyEJ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-hRyEJœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-RTpIN{œfieldNameœ:œinput_valueœ,œidœ:œAgent-RTpINœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-rc4oD",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-rc4oDœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-c2dqD",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-c2dqDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-hRyEJ",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-hRyEJœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-RTpIN",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-RTpINœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-c2dqD",
+            "id": "Agent-RTpIN",
             "name": "response",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-kfSsu",
+            "id": "Agent-9tDeE",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-c2dqD{œdataTypeœ:œAgentœ,œidœ:œAgent-c2dqDœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-kfSsu{œfieldNameœ:œinput_valueœ,œidœ:œAgent-kfSsuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-RTpIN{œdataTypeœ:œAgentœ,œidœ:œAgent-RTpINœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-9tDeE{œfieldNameœ:œinput_valueœ,œidœ:œAgent-9tDeEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-c2dqD",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-c2dqDœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-kfSsu",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-kfSsuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-RTpIN",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-RTpINœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-9tDeE",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-9tDeEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-kfSsu",
+            "id": "Agent-9tDeE",
             "name": "response",
             "output_types": [
               "Message"
@@ -99,19 +99,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-fMEDP",
+            "id": "Agent-C8zRS",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-kfSsu{œdataTypeœ:œAgentœ,œidœ:œAgent-kfSsuœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-fMEDP{œfieldNameœ:œinput_valueœ,œidœ:œAgent-fMEDPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-9tDeE{œdataTypeœ:œAgentœ,œidœ:œAgent-9tDeEœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-C8zRS{œfieldNameœ:œinput_valueœ,œidœ:œAgent-C8zRSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-kfSsu",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-kfSsuœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-fMEDP",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-fMEDPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-9tDeE",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-9tDeEœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-C8zRS",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-C8zRSœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -119,7 +119,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-fMEDP",
+            "id": "Agent-C8zRS",
             "name": "response",
             "output_types": [
               "Message"
@@ -127,7 +127,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-HiCTg",
+            "id": "ChatOutput-TzFZY",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -136,12 +136,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-fMEDP{œdataTypeœ:œAgentœ,œidœ:œAgent-fMEDPœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HiCTg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HiCTgœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-C8zRS{œdataTypeœ:œAgentœ,œidœ:œAgent-C8zRSœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-TzFZY{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-TzFZYœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-fMEDP",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-fMEDPœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-HiCTg",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-HiCTgœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-C8zRS",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-C8zRSœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-TzFZY",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-TzFZYœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -149,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-sFiMQ",
+            "id": "URL-zTFcy",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -157,19 +157,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-kfSsu",
+            "id": "Agent-9tDeE",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-sFiMQ{œdataTypeœ:œURLœ,œidœ:œURL-sFiMQœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-kfSsu{œfieldNameœ:œtoolsœ,œidœ:œAgent-kfSsuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URL-zTFcy{œdataTypeœ:œURLœ,œidœ:œURL-zTFcyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-9tDeE{œfieldNameœ:œtoolsœ,œidœ:œAgent-9tDeEœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URL-sFiMQ",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-sFiMQœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-kfSsu",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-kfSsuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "URL-zTFcy",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-zTFcyœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-9tDeE",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-9tDeEœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -177,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-oWut2",
+            "id": "CalculatorComponent-FyfwW",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -185,25 +185,25 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-fMEDP",
+            "id": "Agent-C8zRS",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CalculatorComponent-oWut2{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-oWut2œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-fMEDP{œfieldNameœ:œtoolsœ,œidœ:œAgent-fMEDPœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-CalculatorComponent-FyfwW{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-FyfwWœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-C8zRS{œfieldNameœ:œtoolsœ,œidœ:œAgent-C8zRSœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "CalculatorComponent-oWut2",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-oWut2œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-fMEDP",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-fMEDPœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "CalculatorComponent-FyfwW",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-FyfwWœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-C8zRS",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-C8zRSœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-rc4oD",
+          "id": "ChatInput-hRyEJ",
           "node": {
             "base_classes": [
               "Message"
@@ -477,7 +477,7 @@
         },
         "dragging": false,
         "height": 262,
-        "id": "ChatInput-rc4oD",
+        "id": "ChatInput-hRyEJ",
         "measured": {
           "height": 262,
           "width": 360
@@ -498,7 +498,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-HiCTg",
+          "id": "ChatOutput-TzFZY",
           "node": {
             "base_classes": [
               "Message"
@@ -781,7 +781,7 @@
         },
         "dragging": false,
         "height": 262,
-        "id": "ChatOutput-HiCTg",
+        "id": "ChatOutput-TzFZY",
         "measured": {
           "height": 262,
           "width": 360
@@ -800,9 +800,9 @@
       },
       {
         "data": {
-          "id": "note-RAam9",
+          "id": "note-j1Nu2",
           "node": {
-            "description": "# Travel Planning Agents \n\nThe travel planning system is a smart setup that uses several specialized \"agents\" to help plan incredible trips. Imagine each agent as a travel expert focusing on a part of your journey. Here's how it works:\n\n- **User-Friendly Start:** You start by telling the system about your travel needs—where you want to go and what you love to do.\n\n- **Data Collection:** The agents uses its tools to gather current info about various destinations, like the best travel times, weather, and costs.\n\n- **Three Key Agents:**\n  - **City Selection Agent:** Picks the best places to visit based on your likes and current data.\n  - **Local Expert Agent:** Gathers interesting details about what to do and see in the chosen city.\n  - **Travel Concierge Agent:** Builds a day-by-day plan that includes where to stay, eat, and explore!\n\n- **Tools and Data:** Each agent uses tools to find and organize the latest information so you get recommendations that are both accurate and exciting.\n\n- **Final Plan:** Once everything is put together, you receive a complete, easy-to-follow travel itinerary, perfect for your adventure!\n",
+            "description": "# 📖 README\n\nThe travel planning system is a smart setup that uses several specialized \"agents\" to help plan incredible trips. Imagine each agent as a travel expert focusing on a part of your journey. Here's how it works:\n\n## Quickstart\n1. Add your **OpenAI API Key** to each Agent.\n2. Add your **Search API** key to the Search API component.\n2. Run the flow in the **Playground**.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -810,15 +810,15 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 603,
-        "id": "note-RAam9",
+        "height": 453,
+        "id": "note-j1Nu2",
         "measured": {
-          "height": 603,
-          "width": 324
+          "height": 453,
+          "width": 371
         },
         "position": {
-          "x": 1319.2860379588103,
-          "y": 326.7874015110789
+          "x": 1708.5674196681368,
+          "y": 75.74701473340798
         },
         "positionAbsolute": {
           "x": 1076.3710803600266,
@@ -831,157 +831,13 @@
           "width": 324
         },
         "type": "noteNode",
-        "width": 324
-      },
-      {
-        "data": {
-          "id": "note-tG6rx",
-          "node": {
-            "description": "# **City Selection Agent**\n   - **Purpose:** This agent evaluates potential travel destinations based on user input and external data sources.\n   - **Core Functions:** Analyzes factors such as weather, local events, and travel costs to recommend optimal cities.\n   - **Tools Utilized:** Employs APIs and data-fetching tools to gather real-time information for decision-making.\n",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "blue"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 334,
-        "id": "note-tG6rx",
-        "measured": {
-          "height": 334,
-          "width": 324
-        },
-        "position": {
-          "x": 2112.2352264274264,
-          "y": 406.33101833475234
-        },
-        "positionAbsolute": {
-          "x": 2122.4146132377227,
-          "y": 485.2212661145467
-        },
-        "resizing": false,
-        "selected": false,
-        "style": {
-          "height": 362,
-          "width": 331
-        },
-        "type": "noteNode",
-        "width": 324
-      },
-      {
-        "data": {
-          "id": "note-j2Sf7",
-          "node": {
-            "description": "# **Local Expert Agent**\n   - **Purpose:** Focused on gathering and providing an in-depth guide to the selected city.\n   - **Core Functions:** Compiles insights into cultural attractions, local customs, and unique experiences.\n   - **Tools Utilized:** Uses web content fetchers and data APIs to collect detailed local insights and enhance the user understanding with hidden gems.\n",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "blue"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 342,
-        "id": "note-j2Sf7",
-        "measured": {
-          "height": 342,
-          "width": 324
-        },
-        "position": {
-          "x": 2827.660803823376,
-          "y": 488.6092281195304
-        },
-        "positionAbsolute": {
-          "x": 2827.660803823376,
-          "y": 488.6092281195304
-        },
-        "resizing": false,
-        "selected": false,
-        "style": {
-          "height": 366,
-          "width": 351
-        },
-        "type": "noteNode",
-        "width": 324
-      },
-      {
-        "data": {
-          "id": "note-0VHF3",
-          "node": {
-            "description": "# **Travel Concierge Agent**\n   - **Purpose:** Crafts detailed travel itineraries that are customized to the traveler's interests and needs.\n   - **Core Functions:** Offers a comprehensive daily schedule, including accommodations, dining spots, and activities.\n   - **Tools Utilized:** Integrates calculators and data tools for accurate budget planning and itinerary logistics.",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "blue"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 336,
-        "id": "note-0VHF3",
-        "measured": {
-          "height": 336,
-          "width": 324
-        },
-        "position": {
-          "x": 3536.084279543714,
-          "y": 496.3155992003396
-        },
-        "positionAbsolute": {
-          "x": 3536.084279543714,
-          "y": 496.3155992003396
-        },
-        "resizing": false,
-        "selected": false,
-        "style": {
-          "height": 344,
-          "width": 344
-        },
-        "type": "noteNode",
-        "width": 324
-      },
-      {
-        "data": {
-          "id": "note-OYU7j",
-          "node": {
-            "description": "## Configure the agent by obtaining your OpenAI API key from [platform.openai.com](https://platform.openai.com). Under \"Model Provider\", choose:\n- OpenAI: Default, requires only API key\n- Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect model and input API key before running the flow.",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "rose"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-OYU7j",
-        "measured": {
-          "height": 324,
-          "width": 324
-        },
-        "position": {
-          "x": 2463.3881993480218,
-          "y": 42.83594355441298
-        },
-        "positionAbsolute": {
-          "x": 2463.3881993480218,
-          "y": 42.83594355441298
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 324
+        "width": 371
       },
       {
         "data": {
           "description": "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
           "display_name": "URL",
-          "id": "URL-sFiMQ",
+          "id": "URL-zTFcy",
           "node": {
             "base_classes": [
               "Data",
@@ -1378,7 +1234,7 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-sFiMQ",
+        "id": "URL-zTFcy",
         "measured": {
           "height": 290,
           "width": 320
@@ -1392,7 +1248,7 @@
       },
       {
         "data": {
-          "id": "CalculatorComponent-oWut2",
+          "id": "CalculatorComponent-FyfwW",
           "node": {
             "base_classes": [
               "Data"
@@ -1526,7 +1382,7 @@
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-oWut2",
+        "id": "CalculatorComponent-FyfwW",
         "measured": {
           "height": 218,
           "width": 320
@@ -1542,7 +1398,7 @@
         "data": {
           "description": "Call the searchapi.io API with result limiting",
           "display_name": "Search API",
-          "id": "SearchComponent-vbaqY",
+          "id": "SearchComponent-mY1Fv",
           "node": {
             "base_classes": [
               "Data",
@@ -1600,7 +1456,7 @@
                 "dynamic": false,
                 "info": "",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1608,7 +1464,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "SEARCHAPI_API_KEY"
+                "value": null
               },
               "code": {
                 "advanced": true,
@@ -1778,7 +1634,7 @@
           "type": "SearchComponent"
         },
         "dragging": false,
-        "id": "SearchComponent-vbaqY",
+        "id": "SearchComponent-mY1Fv",
         "measured": {
           "height": 367,
           "width": 320
@@ -1792,7 +1648,7 @@
       },
       {
         "data": {
-          "id": "Agent-c2dqD",
+          "id": "Agent-RTpIN",
           "node": {
             "base_classes": [
               "Message"
@@ -2322,7 +2178,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-c2dqD",
+        "id": "Agent-RTpIN",
         "measured": {
           "height": 594,
           "width": 320
@@ -2336,7 +2192,7 @@
       },
       {
         "data": {
-          "id": "Agent-kfSsu",
+          "id": "Agent-9tDeE",
           "node": {
             "base_classes": [
               "Message"
@@ -2866,7 +2722,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-kfSsu",
+        "id": "Agent-9tDeE",
         "measured": {
           "height": 594,
           "width": 320
@@ -2880,7 +2736,7 @@
       },
       {
         "data": {
-          "id": "Agent-fMEDP",
+          "id": "Agent-C8zRS",
           "node": {
             "base_classes": [
               "Message"
@@ -3410,7 +3266,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-fMEDP",
+        "id": "Agent-C8zRS",
         "measured": {
           "height": 594,
           "width": 320
@@ -3419,19 +3275,19 @@
           "x": 3936.123532016018,
           "y": 356.3534774464019
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -2326.466810721881,
-      "y": -65.11181133103509,
-      "zoom": 0.7857888154223331
+      "x": -700.2707036326251,
+      "y": 138.91846301898352,
+      "zoom": 0.4425927036021963
     }
   },
   "description": "Create a travel planning chatbot that uses specialized agents to craft personalized trip itineraries.",
   "endpoint_name": null,
-  "id": "fe4a9ae2-3097-4f93-8c2a-beb63009178b",
+  "id": "240131dc-390a-4d6a-9ef4-39b810e4165d",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Travel Planning Agents",

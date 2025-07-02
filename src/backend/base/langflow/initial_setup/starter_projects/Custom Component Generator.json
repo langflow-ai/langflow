@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-jaF7s",
+            "id": "ChatInput-u8rae",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "USER_INPUT",
-            "id": "Prompt-AyXTF",
+            "id": "Prompt-7Jzfo",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-jaF7s{œdataTypeœ:œChatInputœ,œidœ:œChatInput-jaF7sœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-AyXTF{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-AyXTFœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-u8rae{œdataTypeœ:œChatInputœ,œidœ:œChatInput-u8raeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-7Jzfo{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-7Jzfoœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-jaF7s",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-jaF7sœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AyXTF",
-        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-AyXTFœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-u8rae",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-u8raeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-7Jzfo",
+        "targetHandle": "{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-7Jzfoœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-JEHyT",
+            "id": "Memory-U33nr",
             "name": "messages_text",
             "output_types": [
               "Message"
@@ -44,7 +44,7 @@
           },
           "targetHandle": {
             "fieldName": "CHAT_HISTORY",
-            "id": "Prompt-AyXTF",
+            "id": "Prompt-7Jzfo",
             "inputTypes": [
               "Message",
               "Text"
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Memory-JEHyT{œdataTypeœ:œMemoryœ,œidœ:œMemory-JEHyTœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-AyXTF{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-AyXTFœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Memory-U33nr{œdataTypeœ:œMemoryœ,œidœ:œMemory-U33nrœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-7Jzfo{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-7Jzfoœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Memory-JEHyT",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-JEHyTœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AyXTF",
-        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-AyXTFœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "Memory-U33nr",
+        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-U33nrœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-7Jzfo",
+        "targetHandle": "{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-7Jzfoœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-ml2P3",
+            "id": "URL-LiTXv",
             "name": "raw_results",
             "output_types": [
               "Message"
@@ -73,7 +73,7 @@
           },
           "targetHandle": {
             "fieldName": "EXAMPLE_COMPONENTS",
-            "id": "Prompt-AyXTF",
+            "id": "Prompt-7Jzfo",
             "inputTypes": [
               "Message",
               "Text"
@@ -81,12 +81,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-ml2P3{œdataTypeœ:œURLœ,œidœ:œURL-ml2P3œ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-AyXTF{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-AyXTFœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-URL-LiTXv{œdataTypeœ:œURLœ,œidœ:œURL-LiTXvœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-7Jzfo{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-7Jzfoœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "URL-ml2P3",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-ml2P3œ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AyXTF",
-        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-AyXTFœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "URL-LiTXv",
+        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-LiTXvœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-7Jzfo",
+        "targetHandle": "{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-7Jzfoœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -94,7 +94,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-zmpPz",
+            "id": "URL-E6QCv",
             "name": "raw_results",
             "output_types": [
               "Message"
@@ -102,7 +102,7 @@
           },
           "targetHandle": {
             "fieldName": "CUSTOM_COMPONENT_CODE",
-            "id": "Prompt-AyXTF",
+            "id": "Prompt-7Jzfo",
             "inputTypes": [
               "Message",
               "Text"
@@ -110,12 +110,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-zmpPz{œdataTypeœ:œURLœ,œidœ:œURL-zmpPzœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-AyXTF{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-AyXTFœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-URL-E6QCv{œdataTypeœ:œURLœ,œidœ:œURL-E6QCvœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-7Jzfo{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-7Jzfoœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "URL-zmpPz",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-zmpPzœ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AyXTF",
-        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-AyXTFœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "URL-E6QCv",
+        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-E6QCvœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-7Jzfo",
+        "targetHandle": "{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-7Jzfoœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -123,7 +123,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-AyXTF",
+            "id": "Prompt-7Jzfo",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -131,19 +131,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-KACT4",
+            "id": "LanguageModelComponent-muTzI",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-AyXTF{œdataTypeœ:œPromptœ,œidœ:œPrompt-AyXTFœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-KACT4{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-KACT4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-7Jzfo{œdataTypeœ:œPromptœ,œidœ:œPrompt-7Jzfoœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-muTzI{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-muTzIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-AyXTF",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-AyXTFœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-KACT4",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-KACT4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-7Jzfo",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-7Jzfoœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LanguageModelComponent-muTzI",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-muTzIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -151,7 +151,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-KACT4",
+            "id": "LanguageModelComponent-muTzI",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -159,7 +159,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-vteLS",
+            "id": "ChatOutput-qF9Bn",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -168,12 +168,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-KACT4{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-KACT4œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-vteLS{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vteLSœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-muTzI{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-muTzIœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-qF9Bn{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-qF9Bnœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LanguageModelComponent-KACT4",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-KACT4œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-vteLS",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-vteLSœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-muTzI",
+        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-muTzIœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-qF9Bn",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-qF9Bnœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -181,7 +181,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-MwIlU",
+            "id": "URL-Gj8oh",
             "name": "raw_results",
             "output_types": [
               "Message"
@@ -189,7 +189,7 @@
           },
           "targetHandle": {
             "fieldName": "BASE_COMPONENT_CODE",
-            "id": "Prompt-AyXTF",
+            "id": "Prompt-7Jzfo",
             "inputTypes": [
               "Message",
               "Text"
@@ -197,12 +197,12 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__URL-MwIlU{œdataTypeœ:œURLœ,œidœ:œURL-MwIlUœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-AyXTF{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-AyXTFœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-URL-Gj8oh{œdataTypeœ:œURLœ,œidœ:œURL-Gj8ohœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-7Jzfo{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-7Jzfoœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "URL-MwIlU",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-MwIlUœ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-AyXTF",
-        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-AyXTFœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "URL-Gj8oh",
+        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-Gj8ohœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-7Jzfo",
+        "targetHandle": "{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-7Jzfoœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
@@ -210,7 +210,7 @@
         "data": {
           "description": "Retrieves stored chat messages from Langflow tables or an external memory.",
           "display_name": "Chat Memory",
-          "id": "Memory-JEHyT",
+          "id": "Memory-U33nr",
           "node": {
             "base_classes": [
               "Data",
@@ -511,7 +511,7 @@
         },
         "dragging": false,
         "height": 262,
-        "id": "Memory-JEHyT",
+        "id": "Memory-U33nr",
         "measured": {
           "height": 262,
           "width": 320
@@ -532,7 +532,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-AyXTF",
+          "id": "Prompt-7Jzfo",
           "node": {
             "base_classes": [
               "Message"
@@ -761,7 +761,7 @@
         },
         "dragging": false,
         "height": 685,
-        "id": "Prompt-AyXTF",
+        "id": "Prompt-7Jzfo",
         "measured": {
           "height": 685,
           "width": 320
@@ -780,9 +780,9 @@
       },
       {
         "data": {
-          "id": "note-Qj3LB",
+          "id": "note-x5NN0",
           "node": {
-            "description": "# Fetch Components code \n\nUsing the URL component we are extracting from Github, the code from a few classes to provide as example to the LLM. \n\nThis ensures we are always up to date with recent information from the codebase.",
+            "description": "# 🛠️ Custom Component Generator 🚀\n\nHi! I'm here to help you create custom components for Langflow. Think of me as your technical partner who can help turn your ideas into working components! \n\n## 🎯 How to Work With Me\n\n1. Add your **Anthropic API Key** to the **Language Model** Component\n\n2. 💭 Tell Me What You Want to Build.\nSimply describe what you want your component to do in plain English. For example:\n- \"I need a component that sends Slack messages\"\n- \"I want to create a tool that can process CSV files\"\n- \"I need something that can translate text\"\n\n\nReady to build something awesome? 🚀 Let's get started!",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -790,45 +790,15 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 324,
-        "id": "note-Qj3LB",
+        "height": 605,
+        "id": "note-x5NN0",
         "measured": {
-          "height": 324,
-          "width": 325
+          "height": 605,
+          "width": 626
         },
         "position": {
-          "x": 1304.6540689919455,
-          "y": -30.860153388108785
-        },
-        "positionAbsolute": {
-          "x": 1430.2014058924922,
-          "y": -19.30392196909918
-        },
-        "selected": false,
-        "type": "noteNode",
-        "width": 324
-      },
-      {
-        "data": {
-          "id": "note-5Lp7H",
-          "node": {
-            "description": "# 🛠️ Custom Component Generator 🚀\n\nHi! I'm here to help you create custom components for Langflow. Think of me as your technical partner who can help turn your ideas into working components! \n\n## 🎯 How to Work With Me\n\n### 1. 💭 Tell Me What You Want to Build\nSimply describe what you want your component to do in plain English. For example:\n- \"I need a component that sends Slack messages\"\n- \"I want to create a tool that can process CSV files\"\n- \"I need something that can translate text\"\n\n### 2. 📚 Share Any Relevant Information\nIf you're working with a specific:\n- 🔑 API or service (just share the documentation link or main endpoints)\n- 📄 File format\n- 🔄 Data structure\n- 🔧 Existing component you want to modify\n\n### 3. 🎨 Let Me Help Design It\nI'll help by:\n- 📊 Breaking down complex requirements into manageable pieces\n- 💡 Suggesting the best way to structure inputs and outputs\n- ⚙️ Creating the component code\n- 📝 Explaining how to use it\n\n### 4. 🔄 Iterative Refinement\nWe can then:\n- ✅ Test and refine the component\n- ⭐ Add features\n- 🔧 Modify behavior\n- 🛡️ Improve error handling\n- 📖 Add documentation\n\n## 🚀 What I Can Help With\n\nI can help create components that:\n- 📊 Process different file types (CSV, JSON, Excel, etc.)\n- 🔌 Integrate with external APIs\n- 🔄 Transform data\n- 🔀 Route messages\n- 🌐 Handle web requests\n- 🎯 Parse structured data\n- ✨ And much more!\n\n## 💡 Tips for Best Results\n\n1. **Be Specific** 🎯: The more details you provide about what you want to accomplish, the better I can help.\n\n2. **Share Examples** 📋: If you have example data or specific use cases, share them.\n\n3. **Ask Questions** ❓: Don't hesitate to ask for clarification or modifications.\n\nJust start by telling me what kind of component you'd like to create, and I'll guide you through the process! \n\nReady to build something awesome? 🚀 Let's get started!",
-            "display_name": "",
-            "documentation": "",
-            "template": {}
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 573,
-        "id": "note-5Lp7H",
-        "measured": {
-          "height": 573,
-          "width": 620
-        },
-        "position": {
-          "x": 1094.8391593062215,
-          "y": 494.4111150277846
+          "x": 730.5474183114914,
+          "y": 395.14430009157354
         },
         "positionAbsolute": {
           "x": 807.6293964045135,
@@ -841,11 +811,11 @@
           "width": 324
         },
         "type": "noteNode",
-        "width": 619
+        "width": 626
       },
       {
         "data": {
-          "id": "URL-MwIlU",
+          "id": "URL-Gj8oh",
           "node": {
             "base_classes": [
               "Data",
@@ -1182,7 +1152,7 @@
         },
         "dragging": false,
         "height": 365,
-        "id": "URL-MwIlU",
+        "id": "URL-Gj8oh",
         "measured": {
           "height": 365,
           "width": 320
@@ -1201,7 +1171,7 @@
       },
       {
         "data": {
-          "id": "URL-ml2P3",
+          "id": "URL-LiTXv",
           "node": {
             "base_classes": [
               "Data",
@@ -1544,7 +1514,7 @@
         },
         "dragging": false,
         "height": 661,
-        "id": "URL-ml2P3",
+        "id": "URL-LiTXv",
         "measured": {
           "height": 661,
           "width": 320
@@ -1563,7 +1533,7 @@
       },
       {
         "data": {
-          "id": "URL-zmpPz",
+          "id": "URL-E6QCv",
           "node": {
             "base_classes": [
               "Data",
@@ -1900,7 +1870,7 @@
         },
         "dragging": false,
         "height": 365,
-        "id": "URL-zmpPz",
+        "id": "URL-E6QCv",
         "measured": {
           "height": 365,
           "width": 320
@@ -1919,7 +1889,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-jaF7s",
+          "id": "ChatInput-u8rae",
           "node": {
             "base_classes": [
               "Message"
@@ -2219,7 +2189,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-jaF7s",
+        "id": "ChatInput-u8rae",
         "measured": {
           "height": 48,
           "width": 192
@@ -2233,7 +2203,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-vteLS",
+          "id": "ChatOutput-qF9Bn",
           "node": {
             "base_classes": [
               "Message"
@@ -2529,9 +2499,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-vteLS",
+        "id": "ChatOutput-qF9Bn",
         "measured": {
-          "height": 166,
+          "height": 165,
           "width": 320
         },
         "position": {
@@ -2543,7 +2513,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-KACT4",
+          "id": "LanguageModelComponent-muTzI",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2817,13 +2787,14 @@
             },
             "tool_mode": false
           },
+          "selected_output": "text_output",
           "showNode": true,
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-KACT4",
+        "id": "LanguageModelComponent-muTzI",
         "measured": {
-          "height": 451,
+          "height": 449,
           "width": 320
         },
         "position": {
@@ -2835,14 +2806,14 @@
       }
     ],
     "viewport": {
-      "x": -1401.7054041935717,
-      "y": 26.674212146193952,
-      "zoom": 0.8482246183839485
+      "x": -169.88117007333017,
+      "y": -14.61264877721112,
+      "zoom": 0.7334501147704762
     }
   },
   "description": "Generates well-structured code for custom components following Langflow's specifications.",
   "endpoint_name": null,
-  "id": "c6e1a733-8f51-454f-a247-43c50bd0ce84",
+  "id": "81b54c06-58c5-4e91-a228-b5aaf7ffa66d",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Custom Component Generator",
