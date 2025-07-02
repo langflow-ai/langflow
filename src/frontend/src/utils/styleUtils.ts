@@ -299,7 +299,6 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "VertexAI", name: "vertexai", icon: "VertexAI" },
-  { display_name: "Wikidata", name: "wikidata", icon: "Wikidata" },
   { display_name: "Wikipedia", name: "wikipedia", icon: "Wikipedia" },
   {
     display_name: "WolframAlpha",
