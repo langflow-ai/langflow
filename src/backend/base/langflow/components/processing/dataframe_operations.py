@@ -167,17 +167,17 @@ class DataFrameOperationsComponent(Component):
             # Handle SortableListInput format
             if isinstance(field_value, list):
                 if len(field_value) > 0:
-                    operation_name = field_value[0].get('name', '')
+                    operation_name = field_value[0].get("name", "")
                 else:
                     # Handle empty selection (user deselected)
-                    operation_name = ''
+                    operation_name = ""
             else:
-                operation_name = field_value or ''
-                
+                operation_name = field_value or ""
+
             # If no operation selected, all dynamic fields stay hidden (already set to False above)
             if not operation_name:
                 return build_config
-                
+
             if operation_name == "Filter":
                 build_config["column_name"]["show"] = True
                 build_config["filter_value"]["show"] = True
@@ -208,14 +208,14 @@ class DataFrameOperationsComponent(Component):
 
     def perform_operation(self) -> DataFrame:
         df_copy = self.df.copy()
-        
+
         # Handle SortableListInput format for operation
-        operation_input = getattr(self, 'operation', [])
+        operation_input = getattr(self, "operation", [])
         if isinstance(operation_input, list) and len(operation_input) > 0:
-            op = operation_input[0].get('name', '')
+            op = operation_input[0].get("name", "")
         else:
-            op = ''
-            
+            op = ""
+
         # If no operation selected, return original DataFrame
         if not op:
             return df_copy
@@ -247,10 +247,10 @@ class DataFrameOperationsComponent(Component):
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
         column = df[self.column_name]
         filter_value = self.filter_value
-        
+
         # Handle regular DropdownInput format (just a string value)
-        operator = getattr(self, 'filter_operator', 'equals')  # Default to equals for backward compatibility
-        
+        operator = getattr(self, "filter_operator", "equals")  # Default to equals for backward compatibility
+
         if operator == "equals":
             mask = column == filter_value
         elif operator == "not equals":
@@ -279,7 +279,7 @@ class DataFrameOperationsComponent(Component):
                 mask = column.astype(str) < str(filter_value)
         else:
             mask = column == filter_value  # Fallback to equals
-            
+
         return DataFrame(df[mask])
 
     def sort_by_column(self, df: DataFrame) -> DataFrame:
