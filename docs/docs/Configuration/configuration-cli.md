@@ -49,6 +49,53 @@ python -m langflow api-key [OPTIONS]
 | <Link id="show-completion"/>`--show-completion` | *Not applicable* | *Not applicable* | Show the location of the auto-completion config file (if installed). |
 | <Link id="help"/>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
+### langflow call
+
+Execute a Langflow graph directly from the command line, either from a Python script or JSON flow file. This command is designed for container and serverless environments.
+
+```bash
+langflow call <script_path> [input_value] [OPTIONS]
+# or
+python -m langflow call <script_path> [input_value] [OPTIONS]
+```
+
+#### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `script_path` | Path to a Python script (.py) or JSON flow (.json) containing a Langflow graph |
+| `input_value` | Optional input value to pass to the graph |
+
+#### Options
+
+| Option | Default | Values | Description |
+|--------|---------|--------|-------------|
+| <Link id="call-verbose"/>`--verbose` | `false` | Boolean | Show diagnostic output and execution details |
+| <Link id="call-format"/>`--format` | `json` | `json`<br/>`text`<br/>`message`<br/>`result` | Output format for the execution result |
+| <Link id="call-help"/>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments |
+
+#### Usage
+
+For Python scripts, the file must contain a variable named `graph` with a valid Langflow Graph that includes both ChatInput and ChatOutput components.
+
+**Example with Python script:**
+```bash
+langflow call my_flow.py "Hello, World!"
+langflow call my_flow.py "Hello, World!" --format text --verbose
+```
+
+**Example with JSON flow:**
+```bash
+langflow call my_flow.json "Hello, World!"
+langflow call my_flow.json "Hello, World!" --format json
+```
+
+#### Output Formats
+
+- **`json`** (default): Structured JSON output with result, logs, and metadata
+- **`text`** or **`message`**: Plain text output from the result
+- **`result`**: Raw result text only
+
 ### langflow copy-db
 
 Copy the database files to the current directory.
