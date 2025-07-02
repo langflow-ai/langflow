@@ -417,7 +417,7 @@ class MCPSessionManager:
         from mcp.client.stdio import stdio_client
 
         # Create a future to get the session
-        session_future = asyncio.Future()
+        session_future: asyncio.Future[ClientSession] = asyncio.Future()
 
         async def session_task():
             """Background task that keeps the session alive."""
@@ -463,7 +463,7 @@ class MCPSessionManager:
         from mcp.client.sse import sse_client
 
         # Create a future to get the session
-        session_future = asyncio.Future()
+        session_future: asyncio.Future[ClientSession] = asyncio.Future()
 
         async def session_task():
             """Background task that keeps the session alive."""

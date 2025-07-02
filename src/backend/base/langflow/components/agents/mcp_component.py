@@ -3,6 +3,8 @@ import re
 import uuid
 from typing import Any
 
+from langchain_core.tools import StructuredTool
+
 from langflow.api.v2.mcp import get_server
 from langflow.base.mcp.util import (
     MCPSseClient,
@@ -64,7 +66,7 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
 
 class MCPToolsComponent(ComponentWithCache):
     schema_inputs: list = []
-    tools: list = []
+    tools: list[StructuredTool] = []
     _not_load_actions: bool = False
     _tool_cache: dict = {}
     _last_selected_server: str | None = None  # Cache for the last selected server
