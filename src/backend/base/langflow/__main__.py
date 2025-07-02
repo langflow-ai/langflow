@@ -35,6 +35,7 @@ from langflow.cli.script_loader import (
     load_graph_from_script,
 )
 from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.load import load_flow_from_json
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.database.utils import session_getter
@@ -790,19 +791,21 @@ def api_key(
 
 @app.command()
 def call(
-    script_path: Path = typer.Argument(..., help="Path to the Python script containing a 'graph' variable"),  # noqa: B008
+    script_path: Path = typer.Argument(  # noqa: B008
+        ..., help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
+    ),
     input_value: str | None = typer.Argument(None, help="Input value to pass to the graph"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),  # noqa: FBT001, FBT003
     output_format: str = typer.Option("json", "--format", "-f", help="Output format: json, text, message, or result"),
 ) -> None:
-    """Execute a Langflow graph script and return the result.
+    """Execute a Langflow graph script or JSON flow and return the result.
 
-    This command analyzes and executes a Python script containing a Langflow graph,
-    returning the result in the specified format. By default, output is minimal
-    for use in containers and serverless environments.
+    This command analyzes and executes either a Python script containing a Langflow graph
+    or a JSON flow file, returning the result in the specified format. By default, output
+    is minimal for use in containers and serverless environments.
 
     Args:
-        script_path: Path to the Python script containing a 'graph' variable
+        script_path: Path to the Python script (.py) or JSON flow (.json) containing a graph
         input_value: Input value to pass to the graph
         verbose: Show diagnostic output and execution details
         output_format: Format for output (json, text, message, or result)
@@ -817,39 +820,64 @@ def call(
             typer.echo(f"Error: '{script_path}' is not a file.")
         raise typer.Exit(1)
 
-    if script_path.suffix != ".py":
-        typer.echo(f"Warning: '{script_path}' does not have a .py extension.")
-        raise typer.Exit(1)
-
-    if verbose:
-        typer.echo(f"Analyzing script: {script_path}")
-
-    # First, find the graph variable using AST parsing
-    graph_info = find_graph_variable(script_path)
-
-    if not graph_info:
+    # Check file extension and validate
+    file_extension = script_path.suffix.lower()
+    if file_extension not in [".py", ".json"]:
         if verbose:
-            typer.echo("✗ No 'graph' variable found in the script.")
-            typer.echo("  Expected to find an assignment like: graph = Graph(...)")
+            typer.echo(f"Error: '{script_path}' must be a .py or .json file.")
         raise typer.Exit(1)
 
     if verbose:
-        typer.echo(f"✓ Found 'graph' variable at line {graph_info['line_number']}")
-        typer.echo(f"  Type: {graph_info['type']}")
-
-        typer.echo(f"  Source: {graph_info['source_line']}")
-
-        # Now load and execute the script to get the actual graph object
-        typer.echo("\nLoading and executing script...")
+        file_type = "Python script" if file_extension == ".py" else "JSON flow"
+        typer.echo(f"Analyzing {file_type}: {script_path}")
 
     try:
-        graph = load_graph_from_script(script_path)
+        if file_extension == ".py":
+            # Handle Python script
+            graph_info = find_graph_variable(script_path)
+
+            if not graph_info:
+                if verbose:
+                    typer.echo("✗ No 'graph' variable found in the script.")
+                    typer.echo("  Expected to find an assignment like: graph = Graph(...)")
+                raise typer.Exit(1)
+
+            if verbose:
+                typer.echo(f"✓ Found 'graph' variable at line {graph_info['line_number']}")
+                typer.echo(f"  Type: {graph_info['type']}")
+                typer.echo(f"  Source: {graph_info['source_line']}")
+                typer.echo("\nLoading and executing script...")
+
+            graph = load_graph_from_script(script_path)
+
+        elif file_extension == ".json":
+            # Handle JSON flow
+            if verbose:
+                typer.echo("✓ Valid JSON flow file detected")
+                typer.echo("\nLoading and executing JSON flow...")
+
+            # Use load_flow_from_json to load the graph
+            graph = load_flow_from_json(script_path, disable_logs=not verbose)
+            graph.prepare()
+
     except Exception as e:
         if verbose:
             typer.echo(f"✗ Failed to load graph: {e}")
         raise typer.Exit(1) from e
 
+    # From here, the logic is the same regardless of input type
     inputs = InputValueRequest(input_value=input_value) if input_value else None
+
+    # Prepare the graph before execution
+    if verbose:
+        typer.echo("Preparing graph for execution...")
+
+    try:
+        graph.prepare()
+    except Exception as e:
+        if verbose:
+            typer.echo(f"✗ Failed to prepare graph: {e}")
+        raise typer.Exit(1) from e
 
     # Execute the graph (logs will be automatically captured)
     # Use a buffer here to capture the logs
