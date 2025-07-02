@@ -112,7 +112,9 @@ export default function MCPServersPage() {
                       >
                         {server.toolsCount === null
                           ? server.error
-                            ? "Error"
+                            ? server.error.startsWith("Timeout")
+                              ? "Timeout"
+                              : "Error"
                             : "Loading..."
                           : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`}
                       </span>

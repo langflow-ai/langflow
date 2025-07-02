@@ -32,7 +32,7 @@ from langflow.api.v1.mcp import (
 )
 from langflow.api.v1.schemas import MCPInstallRequest, MCPSettings, SimplifiedAPIRequest
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH, MAX_MCP_TOOL_NAME_LENGTH
-from langflow.base.mcp.util import get_flow_snake_case, get_unique_name
+from langflow.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
 from langflow.services.database.models import Flow, Folder
@@ -96,10 +96,10 @@ async def list_project_tools(
                     continue
 
                 # Format the flow name according to MCP conventions (snake_case)
-                flow_name = "_".join(flow.name.lower().split())
+                flow_name = sanitize_mcp_name(flow.name)
 
                 # Use action_name and action_description if available, otherwise use defaults
-                name = flow.action_name or flow_name
+                name = sanitize_mcp_name(flow.action_name) if flow.action_name else flow_name
                 description = flow.action_description or (
                     flow.description if flow.description else f"Tool generated from flow: {flow_name}"
                 )
@@ -395,14 +395,14 @@ async def install_mcp_config(
         # Create the MCP configuration
         mcp_config = {
             "mcpServers": {
-                f"lf-{name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": {
+                f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": {
                     "command": command,
                     "args": args,
                 }
             }
         }
 
-        server_name = f"lf-{name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+        server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
         logger.debug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
 
         # Determine the config file path based on the client and OS
@@ -518,7 +518,7 @@ async def check_installed_mcp_servers(
         # Project server name pattern (must match the logic in install function)
         name = project.name
         name = NEW_FOLDER_NAME if name == DEFAULT_FOLDER_NAME else name
-        project_server_name = f"lf-{name.lower().replace(' ', '_')[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+        project_server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
 
         logger.debug(
             "Checking for installed MCP servers for project: %s (server name: %s)", project.name, project_server_name
@@ -670,7 +670,9 @@ class ProjectMCPServer:
                             continue
 
                         # Use action_name if available, otherwise construct from flow name
-                        base_name = flow.action_name or "_".join(flow.name.lower().split())
+                        base_name = (
+                            sanitize_mcp_name(flow.action_name) if flow.action_name else sanitize_mcp_name(flow.name)
+                        )
                         name = get_unique_name(base_name, MAX_MCP_TOOL_NAME_LENGTH, existing_names)
 
                         # Use action_description if available, otherwise use defaults
