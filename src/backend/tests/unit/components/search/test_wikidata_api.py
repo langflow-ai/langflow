@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 from langchain_core.tools import ToolException
-from langflow.components.search import WikidataComponent
+from langflow.components.wikipedia import WikidataComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
 

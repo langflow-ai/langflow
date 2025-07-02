@@ -14,6 +14,7 @@ class TextEmbedderComponent(Component):
     display_name: str = "Text Embedder"
     description: str = "Generate embeddings for a given message using the specified embedding model."
     icon = "binary"
+    legacy: bool = True
     inputs = [
         HandleInput(
             name="embedding_model",

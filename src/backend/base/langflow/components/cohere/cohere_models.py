@@ -8,7 +8,7 @@ from langflow.io import SecretStrInput, SliderInput
 
 
 class CohereComponent(LCModelComponent):
-    display_name = "Cohere"
+    display_name = "Cohere Language Models"
     description = "Generate text using Cohere LLMs."
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/cohere"
     icon = "Cohere"

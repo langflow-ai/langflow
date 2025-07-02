@@ -75,7 +75,7 @@ test(
       "vectorstoresAstra DB",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
-      "memoriesMem0 Chat Memory",
+      "mem0Mem0 Chat Memory",
       "logicCondition",
       "langchain_utilitiesSelf Query Retriever",
       "langchain_utilitiesCharacterTextSplitter",
@@ -101,15 +101,15 @@ test(
     await page.getByTestId("sidebar-search-input").click();
 
     const visibleModelSpecsTestIds = [
-      "languagemodelsCohere",
-      "languagemodelsGroq",
-      "languagemodelsLM Studio",
-      "languagemodelsMaritalk",
-      "languagemodelsMistralAI",
-      "languagemodelsPerplexity",
-      "languagemodelsQianfan",
-      "languagemodelsSambaNova",
-      "languagemodelsxAI",
+      "cohereCohere Language Models",
+      "groqGroq",
+      "lmstudioLM Studio",
+      "maritalkMaritalk",
+      "mistralMistralAI",
+      "perplexityPerplexity",
+      "baiduQianfan",
+      "sambanovaSambaNova",
+      "xaixAI",
     ];
 
     await Promise.all(
