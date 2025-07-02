@@ -141,10 +141,12 @@ For help with constructing file upload requests for Python, JavaScript, and curl
     The second request sends a chat message to the Langflow flow at the `/v1/run/` endpoint.
     The `tweaks` parameter includes the path to the uploaded file as the variable `uploaded_path`.
 
-3. Run the script to send the request.
+3. Run the script to send the requests and test the flow.
 
-    <details open>
+    <details>
     <summary>Response</summary>
+
+    The following is an example of a response returned from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
 
     ```
     {"id":"793ba3d8-5e7a-4499-8b89-d9a7b6325fee","name":"fake-resume (1)","path":"02791d46-812f-4988-ab1c-7c430214f8d5/fake-resume.txt","size":1779,"provider":null}
@@ -174,7 +176,7 @@ For help with constructing file upload requests for Python, JavaScript, and curl
 
     </details>
 
-    The initial output contains the JSON response object from the file upload endpoint, with the internal path where Langflow stores the file.
+    The initial output contains the JSON response object from the file upload endpoint, including the internal path where Langflow stores the file.
 
     The LLM then retrieves this file and correctly evaluates its content, in this case the suitability of the resume for a job position.
 
