@@ -8,6 +8,7 @@ import sys
 import time
 import warnings
 from contextlib import suppress
+from io import StringIO
 from ipaddress import ip_address
 from pathlib import Path
 
@@ -27,7 +28,12 @@ from sqlmodel import select
 
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.cli.progress import create_langflow_progress
-from langflow.cli.script_loader import extract_message_from_result, find_graph_variable, load_graph_from_script
+from langflow.cli.script_loader import (
+    extract_structured_result,
+    extract_text_from_result,
+    find_graph_variable,
+    load_graph_from_script,
+)
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
@@ -301,11 +307,11 @@ def run(
             logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
         # Get final values from settings
-        host = settings_service.settings.host
-        port = settings_service.settings.port
+        host = settings_service.settings.host or "127.0.0.1"
+        port = int(settings_service.settings.port or 7860)
         workers = settings_service.settings.workers
         worker_timeout = settings_service.settings.worker_timeout
-        log_level = settings_service.settings.log_level
+        log_level = settings_service.settings.log_level or "info"
         frontend_path = settings_service.settings.frontend_path
         backend_only = settings_service.settings.backend_only
         ssl_cert_file_path = (
@@ -786,57 +792,99 @@ def api_key(
 def call(
     script_path: Path = typer.Argument(..., help="Path to the Python script containing a 'graph' variable"),  # noqa: B008
     input_value: str | None = typer.Argument(None, help="Input value to pass to the graph"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),  # noqa: FBT001, FBT003
+    output_format: str = typer.Option("json", "--format", "-f", help="Output format: json, text, message, or result"),
 ) -> None:
-    """Find and display information about the 'graph' variable in a Python script.
+    """Execute a Langflow graph script and return the result.
 
-    This command analyzes a Python script to locate assignments to a variable named 'graph',
-    loads the script, and verifies that the graph variable is an instance of the Langflow Graph class.
+    This command analyzes and executes a Python script containing a Langflow graph,
+    returning the result in the specified format. By default, output is minimal
+    for use in containers and serverless environments.
 
     Args:
         script_path: Path to the Python script containing a 'graph' variable
         input_value: Input value to pass to the graph
+        verbose: Show diagnostic output and execution details
+        output_format: Format for output (json, text, message, or result)
     """
     if not script_path.exists():
-        typer.echo(f"Error: File '{script_path}' does not exist.")
+        if verbose:
+            typer.echo(f"Error: File '{script_path}' does not exist.")
         raise typer.Exit(1)
 
     if not script_path.is_file():
-        typer.echo(f"Error: '{script_path}' is not a file.")
+        if verbose:
+            typer.echo(f"Error: '{script_path}' is not a file.")
         raise typer.Exit(1)
 
     if script_path.suffix != ".py":
         typer.echo(f"Warning: '{script_path}' does not have a .py extension.")
+        raise typer.Exit(1)
 
-    typer.echo(f"Analyzing script: {script_path}")
+    if verbose:
+        typer.echo(f"Analyzing script: {script_path}")
 
     # First, find the graph variable using AST parsing
     graph_info = find_graph_variable(script_path)
 
     if not graph_info:
-        typer.echo("✗ No 'graph' variable found in the script.")
-        typer.echo("  Expected to find an assignment like: graph = Graph(...)")
+        if verbose:
+            typer.echo("✗ No 'graph' variable found in the script.")
+            typer.echo("  Expected to find an assignment like: graph = Graph(...)")
         raise typer.Exit(1)
 
-    typer.echo(f"✓ Found 'graph' variable at line {graph_info['line_number']}")
-    typer.echo(f"  Type: {graph_info['type']}")
+    if verbose:
+        typer.echo(f"✓ Found 'graph' variable at line {graph_info['line_number']}")
+        typer.echo(f"  Type: {graph_info['type']}")
 
-    if graph_info["type"] == "function_call":
-        typer.echo(f"  Function: {graph_info['function']}")
-        typer.echo(f"  Arguments: {graph_info['arg_count']}")
+        typer.echo(f"  Source: {graph_info['source_line']}")
 
-    typer.echo(f"  Source: {graph_info['source_line']}")
+        # Now load and execute the script to get the actual graph object
+        typer.echo("\nLoading and executing script...")
 
-    # Now load and execute the script to get the actual graph object
-    typer.echo("\nLoading and executing script...")
     try:
         graph = load_graph_from_script(script_path)
     except Exception as e:
-        typer.echo(f"✗ Failed to load graph: {e}")
+        if verbose:
+            typer.echo(f"✗ Failed to load graph: {e}")
         raise typer.Exit(1) from e
-    inputs = InputValueRequest(input_value=input_value) if input_value else None
-    results = list(graph.start(inputs))
 
-    typer.echo(extract_message_from_result(results))
+    inputs = InputValueRequest(input_value=input_value) if input_value else None
+
+    # Execute the graph (logs will be automatically captured)
+    # Use a buffer here to capture the logs
+    buffer = StringIO()
+    sys.stdout = buffer
+    try:
+        results = list(graph.start(inputs))
+    finally:
+        sys.stdout = sys.__stdout__
+        captured_logs = buffer.getvalue()
+
+    # Format output based on the requested format
+    if output_format == "json":
+        result_data = extract_structured_result(results)
+        import json
+
+        # In quiet mode (default), use compact JSON without indentation
+        indent = 2 if verbose else None
+        result_data["logs"] = captured_logs
+        typer.echo(json.dumps(result_data, indent=indent))
+
+    elif output_format in {"text", "message"}:
+        result_data = extract_structured_result(results)
+        result_data["logs"] = captured_logs
+        typer.echo(result_data["text"])
+    elif output_format == "result":
+        typer.echo(extract_text_from_result(results))
+    else:
+        # Default to structured JSON output
+        result_data = extract_structured_result(results)
+        import json
+
+        # In quiet mode (default), use compact JSON without indentation
+        indent = 2 if verbose else None
+        typer.echo(json.dumps(result_data, indent=indent))
 
 
 def show_version(*, value: bool):
