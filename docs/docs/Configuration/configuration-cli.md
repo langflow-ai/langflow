@@ -35,11 +35,41 @@ python -m langflow [OPTIONS]
 
 To create API keys with the Langflow CLI, `AUTO_LOGIN` must be set to `FALSE` and you must be logged in as a superuser.
 
-```bash
-langflow api-key [OPTIONS]
-# or
-python -m langflow api-key [OPTIONS]
-```
+1. To confirm your superuser status, call [`GET /users/whoami`](/api-users#get-current-user), and then check that the response contains `"is_superuser": true`:
+
+    ```bash
+    curl -X GET \
+      "$LANGFLOW_URL/api/v1/users/whoami" \
+      -H "accept: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY"
+    ```
+
+    <details closed>
+    <summary>Result</summary>
+
+    ```json
+    {
+      "id": "07e5b864-e367-4f52-b647-a48035ae7e5e",
+      "username": "langflow",
+      "profile_image": null,
+      "store_api_key": null,
+      "is_active": true,
+      "is_superuser": true,
+      "create_at": "2025-05-08T17:59:07.855965",
+      "updated_at": "2025-05-29T15:06:56.157860",
+      "last_login_at": "2025-05-29T15:06:56.157016",
+    }
+    ```
+
+    </details>
+
+2. Create the API key:
+
+    ```bash
+    langflow api-key [OPTIONS]
+    # or
+    uv langflow api-key [OPTIONS]
+    ```
 
 #### Options
 
