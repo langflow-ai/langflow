@@ -1,12 +1,34 @@
-from collections.abc import Callable
-from typing import Annotated, Any
+from __future__ import annotations
 
-from fastapi import Depends, FastAPI, HTTPException
+from typing import TYPE_CHECKING, Annotated, Any
+
+from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from langflow.cli.commands import verify_api_key
 from langflow.cli.common import execute_graph_with_capture, extract_result_data
-from langflow.graph import Graph
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from langflow.graph import Graph
+
+"""FastAPI application factory for deploying **multiple** Langflow graphs at once.
+
+This module is used by the CLI *deploy* command when the provided path is a
+folder containing multiple ``*.json`` flow files.  Each flow is exposed under
+its own router prefix::
+
+    /flows/{flow_id}/run  - POST - execute the flow
+    /flows/{flow_id}/info - GET  - metadata
+
+A global ``/flows`` endpoint lists all available flows and returns a JSON array
+of metadata objects, allowing API consumers to discover IDs without guessing.
+
+Authentication behaves exactly like the single-flow deployment: all execution
+endpoints require the ``x-api-key`` header (or query parameter) validated by
+:func:`langflow.cli.commands.verify_api_key`.
+"""
 
 
 def _analyze_graph_structure(graph: Graph) -> dict[str, Any]:
@@ -86,58 +108,6 @@ def _analyze_graph_structure(graph: Graph) -> dict[str, Any]:
     return analysis
 
 
-def _generate_dynamic_description(graph: Graph, script_path: str, resolved_path) -> str:
-    """Generate dynamic description based on graph analysis.
-
-    Args:
-        graph: The Langflow graph
-        script_path: Original script path or URL
-        resolved_path: Resolved path object
-
-    Returns:
-        str: Dynamic description for the FastAPI app
-    """
-    analysis = _analyze_graph_structure(graph)
-    max_components_to_show = 5
-
-    description_parts = [
-        f"# Langflow Graph Deployment: {resolved_path.name}",
-        "",
-        f"**Source**: {script_path if script_path != str(resolved_path) else 'Local file'}",
-        f"**Components**: {analysis['node_count']} nodes, {analysis['edge_count']} connections",
-        "",
-        "## Graph Structure",
-        f"- **Entry Points**: {len(analysis['entry_points'])} components",
-        f"- **Exit Points**: {len(analysis['exit_points'])} components",
-        f"- **Input Types**: {', '.join(analysis['input_types']) if analysis['input_types'] else 'text'}",
-        f"- **Output Types**: {', '.join(analysis['output_types']) if analysis['output_types'] else 'text'}",
-        "",
-        "## Components",
-    ]
-
-    # Add component details (limit to first 5 for readability)
-    for _i, comp in enumerate(analysis["components"][:max_components_to_show]):
-        description_parts.append(f"- **{comp['name']}** ({comp['type']})")
-        if comp.get("description"):
-            description_parts.append(f"  - {comp['description']}")
-
-    if len(analysis["components"]) > max_components_to_show:
-        description_parts.append(f"- ... and {len(analysis['components']) - max_components_to_show} more components")
-
-    description_parts.extend(
-        [
-            "",
-            "## Authentication",
-            "All endpoints except `/` and `/health` require authentication via `x-api-key` header or query parameter.",
-            "",
-            "## Usage",
-            "Send your input to the `/run` endpoint and receive the processed result from the graph execution.",
-        ]
-    )
-
-    return "\n".join(description_parts)
-
-
 def _generate_dynamic_run_description(graph: Graph) -> str:
     """Generate dynamic description for the /run endpoint based on graph analysis.
 
@@ -212,208 +182,148 @@ def _generate_dynamic_run_description(graph: Graph) -> str:
     return "\n".join(description_parts)
 
 
+class FlowMeta(BaseModel):
+    """Metadata returned by the ``/flows`` endpoint."""
+
+    id: str = Field(..., description="Deterministic flow identifier (UUIDv5)")
+    relative_path: str = Field(..., description="Path of the flow JSON relative to the deployed folder")
+    title: str = Field(..., description="Human-readable title (filename stem if unknown)")
+    description: str | None = Field(None, description="Optional flow description")
+
+
 class RunRequest(BaseModel):
-    """Request model for executing a Langflow graph.
+    """Request model for executing a Langflow flow."""
 
-    This model defines the input structure for the /run endpoint.
-    """
-
-    input_value: str = Field(
-        ...,
-        description="Input value to pass to the graph. This will be used as the starting point for graph execution.",
-    )
+    input_value: str = Field(..., description="Input value passed to the flow")
 
 
 class RunResponse(BaseModel):
-    """Response model for graph execution results.
+    """Response model mirroring the single-flow deployment."""
 
-    This model defines the output structure returned by the /run endpoint.
-    """
-
-    result: str = Field(
-        ..., description="The output result from the graph execution. Contains the final processed data or response."
-    )
-    success: bool = Field(
-        ..., description="Whether the execution was successful. True if the graph completed without errors."
-    )
-    logs: str = Field(
-        default="", description="Captured logs from execution. Contains debug information and execution traces."
-    )
-    type: str = Field(
-        default="message", description="Type of the result. Common values include 'message', 'text', 'data', etc."
-    )
-    component: str = Field(
-        default="",
-        description="Component that generated the result. Identifies the final component in the graph execution.",
-    )
+    result: str = Field(..., description="The output result from the flow execution")
+    success: bool = Field(..., description="Whether execution was successful")
+    logs: str = Field("", description="Captured logs from execution")
+    type: str = Field("message", description="Type of result")
+    component: str = Field("", description="Component that generated the result")
 
 
 class ErrorResponse(BaseModel):
-    """Error response model for failed requests.
-
-    This model defines the error structure returned when graph execution fails.
-    """
-
-    error: str = Field(..., description="Error message describing what went wrong during execution.")
-    success: bool = Field(default=False, description="Always false for error responses, indicating execution failure.")
+    error: str = Field(..., description="Error message")
+    success: bool = Field(default=False, description="Always false for errors")
 
 
-def create_deploy_app(
-    graph: Graph,
-    script_path: str,
-    resolved_path,
+# -----------------------------------------------------------------------------
+# Application factory
+# -----------------------------------------------------------------------------
+
+
+def create_multi_deploy_app(
+    *,
+    root_dir: Path,  # noqa: ARG001
+    graphs: dict[str, Graph],
+    metas: dict[str, FlowMeta],
     verbose_print: Callable[[str], None],
 ) -> FastAPI:
-    """Create and configure the FastAPI app for deployment.
+    """Create a FastAPI app exposing multiple Langflow flows.
 
-    This function creates a FastAPI application with endpoints for running Langflow graphs.
-    The app includes authentication via API key and provides endpoints for execution,
-    health checks, and basic information.
-
-    Args:
-        graph: The compiled Langflow graph to be deployed
-        script_path: Original path or URL of the script (for display purposes)
-        resolved_path: Resolved path object containing the actual script location
-        verbose_print: Function for logging verbose output during execution
-
-    Returns:
-        FastAPI: Configured FastAPI application with deployment endpoints
-
-    Example:
-        ```python
-        app = create_deploy_app(
-            graph=my_graph,
-            script_path="https://example.com/script.py",
-            resolved_path=Path("/tmp/script.py"),
-            verbose_print=print
-        )
-        ```
+    Parameters
+    ----------
+    root_dir
+        Folder originally supplied to the deploy command.  All *relative_path*
+        values are relative to this directory.
+    graphs
+        Mapping ``flow_id -> Graph`` containing prepared graph objects.
+    metas
+        Mapping ``flow_id -> FlowMeta`` containing metadata for each flow.
+    verbose_print
+        Diagnostic printer inherited from the CLI.
     """
-    # Generate dynamic descriptions
-    dynamic_description = _generate_dynamic_description(graph, script_path, resolved_path)
-    dynamic_run_description = _generate_dynamic_run_description(graph)
-    graph_analysis = _analyze_graph_structure(graph)
+    # Import here to avoid circular import
+    from langflow.cli.commands import verify_api_key
+
+    if set(graphs) != set(metas):  # pragma: no cover - sanity check
+        msg = "graphs and metas must contain the same keys"
+        raise ValueError(msg)
 
     app = FastAPI(
-        title=f"Langflow Graph: {resolved_path.name}",
-        description=dynamic_description,
+        title=f"Langflow Multi-Flow Deployment ({len(graphs)})",
+        description=(
+            "This deployment hosts multiple Langflow graphs under the `/flows/{id}` prefix. "
+            "Use `/flows` to list available IDs then POST your input to `/flows/{id}/run`."
+        ),
         version="1.0.0",
-        openapi_tags=[
-            {"name": "execution", "description": "Graph execution endpoints"},
-            {"name": "info", "description": "Deployment information and health checks"},
-        ],
     )
 
-    @app.post(
-        "/run",
-        response_model=RunResponse,
-        responses={500: {"model": ErrorResponse}},
-        summary=f"Execute {resolved_path.name} graph",
-        description=dynamic_run_description,
-        tags=["execution"],
-    )
-    async def run_graph_endpoint(request: RunRequest, _api_key: Annotated[str, Depends(verify_api_key)]):
-        """Execute the deployed graph with the provided input.
+    # ------------------------------------------------------------------
+    # Global endpoints
+    # ------------------------------------------------------------------
 
-        This endpoint processes the input through the entire graph pipeline and returns
-        the final result. All intermediate steps and logs are captured for debugging.
+    @app.get("/flows", response_model=list[FlowMeta], tags=["info"], summary="List available flows")
+    async def list_flows():
+        """Return metadata for all flows hosted in this deployment."""
+        return list(metas.values())
 
-        Args:
-            request: The RunRequest containing the input value to process
-            _api_key: API key for authentication (injected by FastAPI)
+    @app.get("/health", tags=["info"], summary="Global health check")
+    async def global_health():
+        return {"status": "healthy", "flow_count": len(graphs)}
 
-        Returns:
-            RunResponse: The execution result with metadata
+    # ------------------------------------------------------------------
+    # Per-flow routers
+    # ------------------------------------------------------------------
 
-        Raises:
-            HTTPException: If graph execution fails (500 status code)
-        """
-        try:
-            results, captured_logs = execute_graph_with_capture(graph, request.input_value)
-            result_data = extract_result_data(results, captured_logs)
-            return RunResponse(
-                result=result_data.get("result", result_data.get("text", "")),
-                success=result_data.get("success", True),
-                logs=captured_logs,
-                type=result_data.get("type", "message"),
-                component=result_data.get("component", ""),
-            )
-        except Exception as e:
-            verbose_print(f"Error running graph: {e}")
-            raise HTTPException(status_code=500, detail=str(e)) from e
+    def create_flow_router(flow_id: str, graph: Graph, meta: FlowMeta) -> APIRouter:
+        """Create a router for a specific flow to avoid loop variable binding issues."""
+        analysis = _analyze_graph_structure(graph)
+        run_description = _generate_dynamic_run_description(graph)
 
-    @app.get(
-        "/",
-        summary=f"Get {resolved_path.name} deployment information",
-        description=f"""
-        Get detailed information about the deployed graph '{resolved_path.name}' and available endpoints.
+        router = APIRouter(
+            prefix=f"/flows/{flow_id}",
+            tags=[meta.title or flow_id],
+            dependencies=[Depends(verify_api_key)],  # Auth for all routes inside
+        )
 
-        This endpoint provides comprehensive metadata about the deployment including:
-        - Graph structure analysis
-        - Component details
-        - Available endpoints
-        - Authentication requirements
+        @router.post(
+            "/run",
+            response_model=RunResponse,
+            responses={500: {"model": ErrorResponse}},
+            summary="Execute flow",
+            description=run_description,
+        )
+        async def run_flow(
+            request: RunRequest,
+            _api_key: Annotated[str, Depends(verify_api_key)],
+        ) -> RunResponse:
+            try:
+                results, logs = execute_graph_with_capture(graph, request.input_value)
+                result_data = extract_result_data(results, logs)
+                return RunResponse(
+                    result=result_data.get("result", result_data.get("text", "")),
+                    success=result_data.get("success", True),
+                    logs=logs,
+                    type=result_data.get("type", "message"),
+                    component=result_data.get("component", ""),
+                )
+            except Exception as exc:
+                verbose_print(f"Error running flow {flow_id}: {exc}")
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-        **No Authentication Required**
+        @router.get("/info", summary="Flow metadata", response_model=FlowMeta)
+        async def flow_info():
+            """Return metadata and basic analysis for this flow."""
+            # Enrich meta with analysis data for convenience
+            return {
+                **meta.dict(),
+                "components": analysis["node_count"],
+                "connections": analysis["edge_count"],
+                "input_types": analysis["input_types"],
+                "output_types": analysis["output_types"],
+            }
 
-        **Graph Analysis**:
-        - Components: {graph_analysis["node_count"]} nodes, {graph_analysis["edge_count"]} connections
-        - Entry Points: {len(graph_analysis["entry_points"])}
-        - Exit Points: {len(graph_analysis["exit_points"])}
-        - Input Types: {", ".join(graph_analysis["input_types"]) if graph_analysis["input_types"] else "text"}
-        - Output Types: {", ".join(graph_analysis["output_types"]) if graph_analysis["output_types"] else "text"}
-        """,
-        tags=["info"],
-    )
-    async def root():
-        """Get deployment information and endpoint details.
+        return router
 
-        Returns:
-            dict: Information about the deployment including endpoints and authentication
-        """
-        return {
-            "message": f"Langflow Graph Deployment API: {resolved_path.name}",
-            "graph_file": str(resolved_path.name),
-            "graph_source": script_path if script_path != str(resolved_path) else "local file",
-            "graph_analysis": {
-                "components": graph_analysis["node_count"],
-                "connections": graph_analysis["edge_count"],
-                "entry_points": len(graph_analysis["entry_points"]),
-                "exit_points": len(graph_analysis["exit_points"]),
-                "input_types": graph_analysis["input_types"],
-                "output_types": graph_analysis["output_types"],
-            },
-            "endpoints": {"run": "/run (POST)", "health": "/health (GET)"},
-            "authentication": "x-api-key header or query parameter required",
-        }
-
-    @app.get(
-        "/health",
-        summary="Health check endpoint",
-        description="""
-        Check the health status of the deployed graph.
-
-        This endpoint verifies that the graph is ready to process requests.
-        Useful for load balancers and monitoring systems.
-
-        **No Authentication Required**
-
-        **Example Response**:
-        ```json
-        {
-            "status": "healthy",
-            "graph_ready": true
-        }
-        ```
-        """,
-        tags=["info"],
-    )
-    async def health_check():
-        """Health check endpoint for monitoring and load balancers.
-
-        Returns:
-            dict: Health status indicating if the graph is ready
-        """
-        return {"status": "healthy", "graph_ready": True}
+    for flow_id, graph in graphs.items():
+        meta = metas[flow_id]
+        router = create_flow_router(flow_id, graph, meta)
+        app.include_router(router)
 
     return app

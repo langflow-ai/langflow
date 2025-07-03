@@ -1,7 +1,11 @@
 """CLI commands for Langflow."""
 
+# Import moved to avoid circular import issues
+from __future__ import annotations
+
+import sys
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 import uvicorn
@@ -13,17 +17,23 @@ from rich.panel import Panel
 
 from langflow.cli.common import (
     create_verbose_printer,
+    download_and_extract_repo,
     ensure_dependencies_installed,
     extract_script_dependencies,
+    flow_id_from_path,
     get_api_key,
     get_best_access_host,
     get_free_port,
     is_port_in_use,
+    is_url,
     load_graph_from_path,
     validate_script_path,
 )
-from langflow.cli.deploy_app import create_deploy_app
+from langflow.cli.deploy_app import FlowMeta, create_multi_deploy_app
 from langflow.logging.logger import configure
+
+if TYPE_CHECKING:
+    from langflow.graph import Graph
 
 # Initialize console
 console = Console()
@@ -58,7 +68,11 @@ def verify_api_key(
 
 def deploy_command(
     script_path: str = typer.Argument(
-        ..., help="Path to the Python script (.py) or JSON flow (.json) containing a graph, or URL to a Python script"
+        ...,
+        help=(
+            "Path to Python script (.py), JSON flow (.json), folder with flows, "
+            "GitHub repo URL, or URL to a Python script"
+        ),
     ),
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind the server to"),
     port: int = typer.Option(8000, "--port", "-p", help="Port to bind the server to"),
@@ -79,17 +93,28 @@ def deploy_command(
         help="Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)",
     ),
 ) -> None:
-    """Deploy a Langflow graph as a web API endpoint with API key authentication.
+    """Deploy Langflow graphs as web API endpoints with API key authentication.
 
-    This command loads a Python script or JSON flow containing a Langflow graph
-    and starts a FastAPI server that exposes the graph via a POST endpoint.
-    The server will accept input values and return the graph's output.
+    This command supports multiple deployment modes:
+
+    1. **Single Flow**: Deploy a Python script (.py) or JSON flow (.json)
+    2. **Folder**: Deploy all *.json flows in a directory under /flows/{id} endpoints
+    3. **GitHub Repository**: Deploy flows from a GitHub repo (supports private repos with GITHUB_TOKEN)
+    4. **Remote Script**: Deploy a Python script from a URL
+
+    All deployments use a unified API structure with /flows/{id} endpoints:
+    - Single flows: Use the single flow ID under /flows/{id}/run
+    - Multi-flows: Use /flows/{id}/run endpoints for each flow
+    - Discovery: /flows endpoint lists all available flows
 
     IMPORTANT: You must set the LANGFLOW_API_KEY environment variable before
     deploying. This key will be required for all API requests.
 
+    For GitHub private repositories, set the GITHUB_TOKEN environment variable.
+
     Args:
-        script_path: Path to the Python script (.py) or JSON flow (.json) containing a graph, or URL to a Python script
+        script_path: Path to Python script (.py), JSON flow (.json), folder with flows,
+            GitHub repo URL, or URL to a Python script
         host: Host to bind the server to
         port: Port to bind the server to
         verbose: Show diagnostic output and execution details
@@ -98,22 +123,33 @@ def deploy_command(
         install_deps: Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)
 
     Example usage:
+        # Single flow deployment
         export LANGFLOW_API_KEY="your-secret-key-here"
         langflow deploy my_flow.py --host 0.0.0.0 --port 8080
         langflow deploy my_flow.json --verbose --log-level info
-        langflow deploy my_flow.py --env-file .env --log-level debug
+
+        # Folder deployment (multiple flows)
+        langflow deploy ./my_flows_folder --verbose
+
+        # GitHub repository deployment
+        export GITHUB_TOKEN="ghp_your_token_here"  # For private repos
+        langflow deploy https://github.com/user/repo --verbose
+        langflow deploy https://github.com/user/repo/tree/main --verbose
+
+        # Remote script deployment
         langflow deploy https://example.com/my_flow.py --verbose
 
-    Once deployed, you can send POST requests to:
-        POST http://host:port/run
+    API Endpoints:
+        GET  http://host:port/flows                  # List all flows
+        POST http://host:port/flows/{id}/run         # Execute specific flow
+        GET  http://host:port/flows/{id}/info        # Flow metadata
+        GET  http://host:port/health                 # Health check
 
-        Headers:
-        x-api-key: your-secret-key-here
+    Authentication (all POST endpoints):
+        Headers: x-api-key: your-secret-key-here
+        OR Query: ?x-api-key=your-secret-key-here
 
-        OR Query parameter:
-        POST http://host:port/run?x-api-key=your-secret-key-here
-
-        With JSON body:
+    Request body:
         {"input_value": "Your input message"}
     """
     verbose_print = create_verbose_printer(verbose=verbose)
@@ -146,6 +182,121 @@ def deploy_command(
     verbose_print(f"Configuring logging with level: {log_level}")
     configure(log_level=log_level)
 
+    # ------------------------------------------------------------------
+    # Single-file vs directory detection
+    # ------------------------------------------------------------------
+
+    # 1) Remote repository / ZIP URL deployment ---------------------------------
+    if isinstance(script_path, str) and is_url(script_path) and not script_path.lower().endswith(".py"):
+        try:
+            folder_path = download_and_extract_repo(script_path, verbose_print)
+        except Exception as exc:
+            verbose_print(f"Error downloading repository: {exc}")
+            raise typer.Exit(1) from exc
+
+        # Treat extracted folder as local directory (re-use logic below)
+        script_path_obj = folder_path
+    else:
+        script_path_obj = Path(script_path)
+
+    if script_path_obj.exists() and script_path_obj.is_dir():
+        # --------------------------------------------------------------
+        # Folder deployment - expose all *.json flows under /flows/{id}
+        # --------------------------------------------------------------
+        folder_path = script_path_obj.resolve()
+
+        if str(folder_path) not in sys.path:
+            sys.path.insert(0, str(folder_path))
+
+        json_files: list[Path] = [p for p in folder_path.rglob("*.json") if p.is_file()]
+        if not json_files:
+            verbose_print("Error: No .json flow files found in the provided folder.")
+            raise typer.Exit(1)
+
+        graphs: dict[str, Graph] = {}
+        metas: dict[str, FlowMeta] = {}
+
+        for json_file in json_files:
+            try:
+                graph = load_graph_from_path(json_file, ".json", verbose_print, verbose=verbose)
+                flow_id = flow_id_from_path(json_file, folder_path)
+                graph.flow_id = flow_id  # annotate graph for reference
+                graph.prepare()
+
+                title = json_file.stem
+                metas[flow_id] = FlowMeta(
+                    id=flow_id,
+                    relative_path=str(json_file.relative_to(folder_path)),
+                    title=title,
+                    description=None,
+                )
+                graphs[flow_id] = graph
+                verbose_print(f"✓ Prepared flow '{title}' (id={flow_id})")
+            except Exception as exc:
+                verbose_print(f"✗ Failed loading flow '{json_file}': {exc}")
+                raise typer.Exit(1) from exc
+
+        # Check port availability
+        if is_port_in_use(port, host):
+            available_port = get_free_port(port)
+            if verbose:
+                verbose_print(f"Port {port} is in use, using port {available_port} instead")
+            port = available_port
+
+        # Create FastAPI app
+        deploy_app = create_multi_deploy_app(
+            root_dir=folder_path,
+            graphs=graphs,
+            metas=metas,
+            verbose_print=verbose_print,
+        )
+
+        verbose_print("🚀 Starting multi-flow deployment server...")
+
+        protocol = "http"
+        access_host = get_best_access_host(host)
+
+        masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
+
+        console.print()
+        console.print(
+            Panel.fit(
+                f"[bold green]🎯 Folder Deployed Successfully![/bold green]\n\n"
+                f"[bold]Folder:[/bold] {folder_path}\n"
+                f"[bold]Flows Detected:[/bold] {len(graphs)}\n"
+                f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
+                f"[bold]API Key:[/bold] {masked_key}\n\n"
+                f"[dim]Discover flows:\n"
+                f"  GET {protocol}://{access_host}:{port}/flows\n"
+                f"Run a flow:\n"
+                f"  POST {protocol}://{access_host}:{port}/flows/{{flow_id}}/run[/dim]",
+                border_style="green",
+                title="🚀 Deployment Ready",
+            )
+        )
+        console.print()
+
+        try:
+            uvicorn.run(
+                deploy_app,
+                host=host,
+                port=port,
+                log_level=log_level.lower(),
+                access_log=verbose,
+            )
+        except KeyboardInterrupt:
+            verbose_print("\n👋 Deployment server stopped")
+            raise typer.Exit(0) from None
+        except Exception as e:
+            verbose_print(f"✗ Failed to start server: {e}")
+            raise typer.Exit(1) from e
+
+        return  # successfully finished
+
+    # ------------------------------------------------------------------
+    # Original single-file / URL behaviour
+    # ------------------------------------------------------------------
+
     # Validate input file/URL and get extension and resolved path
     file_extension, resolved_path = validate_script_path(script_path, verbose_print)
 
@@ -176,33 +327,55 @@ def deploy_command(
             verbose_print(f"Port {port} is in use, using port {available_port} instead")
         port = available_port
 
-    # Create FastAPI app
-    deploy_app = create_deploy_app(graph, script_path, resolved_path, verbose_print)
+    # Create single-flow metadata
+    flow_id = flow_id_from_path(resolved_path, resolved_path.parent)
+    graph.flow_id = flow_id  # annotate graph for reference
 
-    # Print deployment information
-    verbose_print("🚀 Starting deployment server...")
+    title = resolved_path.stem
+    metas = {
+        flow_id: FlowMeta(
+            id=flow_id,
+            relative_path=str(resolved_path.name),
+            title=title,
+            description=None,
+        )
+    }
+    graphs = {flow_id: graph}
+
+    verbose_print(f"✓ Prepared single flow '{title}' (id={flow_id})")
+
+    # Create FastAPI app using multi-deploy (handles single flow too)
+    deploy_app = create_multi_deploy_app(
+        root_dir=resolved_path.parent,
+        graphs=graphs,
+        metas=metas,
+        verbose_print=verbose_print,
+    )
+
+    verbose_print("🚀 Starting single-flow deployment server...")
 
     protocol = "http"
     access_host = get_best_access_host(host)
 
-    # Mask the API key for display
     masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
 
     console.print()
     console.print(
         Panel.fit(
-            f"[bold green]🎯 Graph Deployed Successfully![/bold green]\n\n"
-            f"[bold]Graph:[/bold] {resolved_path.name}\n"
-            f"[bold]Source:[/bold] {script_path if script_path != str(resolved_path) else 'local file'}\n"
+            f"[bold green]🎯 Single Flow Deployed Successfully![/bold green]\n\n"
+            f"[bold]File:[/bold] {resolved_path}\n"
             f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
-            f"[bold]API Endpoint:[/bold] POST {protocol}://{access_host}:{port}/run\n"
             f"[bold]API Key:[/bold] {masked_key}\n\n"
-            f"[dim]Send POST requests with:\n"
-            f"  Header: x-api-key: <your-api-key>\n"
-            f"  OR Query: ?x-api-key=<your-api-key>\n"
-            f"  Body: {{'input_value': 'your message'}}[/dim]",
-            border_style="green",
-            title="🚀 Deployment Ready",
+            f"[dim]Send POST requests to:[/dim]\n"
+            f"[blue]{protocol}://{access_host}:{port}/flows/{flow_id}/run[/blue]\n\n"
+            f"[dim]With headers:[/dim]\n"
+            f"[blue]x-api-key: {masked_key}[/blue]\n\n"
+            f"[dim]Or query parameter:[/dim]\n"
+            f"[blue]?x-api-key={masked_key}[/blue]\n\n"
+            f"[dim]Request body:[/dim]\n"
+            f"[blue]{{'input_value': 'Your input message'}}[/blue]",
+            title="[bold blue]Langflow Deployment[/bold blue]",
+            border_style="blue",
         )
     )
     console.print()
@@ -213,8 +386,7 @@ def deploy_command(
             deploy_app,
             host=host,
             port=port,
-            log_level=log_level.lower(),
-            access_log=verbose,
+            log_level=log_level,
         )
     except KeyboardInterrupt:
         verbose_print("\n👋 Deployment server stopped")

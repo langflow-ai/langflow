@@ -1,16 +1,22 @@
 """Common utilities for CLI commands."""
 
+from __future__ import annotations
+
 import contextlib
 import importlib.metadata as importlib_metadata
+import io
 import os
+import re
 import socket
 import subprocess
 import sys
 import tempfile
+import uuid
+import zipfile
 from io import StringIO
 from pathlib import Path
 from shutil import which
-from types import ModuleType
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import httpx
@@ -24,6 +30,9 @@ from langflow.cli.script_loader import (
 )
 from langflow.load import load_flow_from_json
 
+if TYPE_CHECKING:
+    from types import ModuleType
+
 # Attempt to import tomllib (3.11+) else fall back to tomli
 _toml_parser: ModuleType | None = None
 try:
@@ -35,6 +44,12 @@ except ModuleNotFoundError:
         _toml_parser = toml_parser
 
 MAX_PORT_NUMBER = 65535
+
+# Fixed namespace constant for deterministic UUID5 generation across runs
+_LANGFLOW_NAMESPACE_UUID = uuid.UUID("3c091057-e799-4e32-8ebc-27bc31e1108c")
+
+# Environment variable for GitHub token
+_GITHUB_TOKEN_ENV = "GITHUB_TOKEN"  # noqa: S105
 
 
 def create_verbose_printer(*, verbose: bool):
@@ -465,3 +480,123 @@ def ensure_dependencies_installed(dependencies: list[str], verbose_print) -> Non
     except subprocess.CalledProcessError as exc:  # pragma: no cover
         verbose_print(f"✗ Failed installing dependencies: {exc}")
         raise typer.Exit(1) from exc
+
+
+def flow_id_from_path(file_path: Path, root_dir: Path) -> str:
+    """Generate a deterministic UUID-5 based flow id from *file_path*.
+
+    The function uses a fixed namespace UUID and the POSIX-style relative path
+    (relative to *root_dir*) as the *name* when calling :pyfunc:`uuid.uuid5`.
+    This guarantees:
+
+    1.  The same folder deployed again produces identical flow IDs.
+    2.  IDs remain stable even if the absolute location of the folder changes
+        (only the relative path is hashed).
+    3.  Practically collision-free identifiers without maintaining external
+        state.
+
+    Args:
+        file_path: Path of the JSON flow file.
+        root_dir: Root directory from which *file_path* should be considered
+            relative.  Typically the folder passed to the deploy command.
+
+    Returns:
+    -------
+    str
+        Canonical UUID string (36 chars, including hyphens).
+    """
+    relative = file_path.relative_to(root_dir).as_posix()
+    return str(uuid.uuid5(_LANGFLOW_NAMESPACE_UUID, relative))
+
+
+# ---------------------------------------------------------------------------
+# GitHub / ZIP repository helpers (synchronous equivalents of initial_setup)
+# ---------------------------------------------------------------------------
+
+_GITHUB_RE_REPO = re.compile(r"https?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)(?:\.git)?/?$")
+_GITHUB_RE_TREE = re.compile(r"https?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)/tree/([\w\/-]+)")
+_GITHUB_RE_RELEASE = re.compile(r"https?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)/releases/tag/([\w\/-]+)")
+_GITHUB_RE_COMMIT = re.compile(r"https?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)/commit/(\w+)(?:/)?$")
+
+
+def _github_headers() -> dict[str, str]:
+    token = os.getenv(_GITHUB_TOKEN_ENV)
+    if token:
+        return {"Authorization": f"token {token}"}
+    return {}
+
+
+def detect_github_url_sync(url: str, *, timeout: float = 15.0) -> str:
+    """Convert various GitHub URLs into a direct `.zip` download link (sync).
+
+    Mirrors the async implementation in *initial_setup.setup.detect_github_url*.
+    """
+    if match := _GITHUB_RE_REPO.match(url):
+        owner, repo = match.groups()
+        # Determine default branch via GitHub API
+        with httpx.Client(timeout=timeout, follow_redirects=True, headers=_github_headers()) as client:
+            resp = client.get(f"https://api.github.com/repos/{owner}/{repo}")
+            resp.raise_for_status()
+            default_branch = resp.json().get("default_branch", "main")
+        return f"https://github.com/{owner}/{repo}/archive/refs/heads/{default_branch}.zip"
+
+    if match := _GITHUB_RE_TREE.match(url):
+        owner, repo, branch = match.groups()
+        branch = branch.rstrip("/")
+        return f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
+
+    if match := _GITHUB_RE_RELEASE.match(url):
+        owner, repo, tag = match.groups()
+        tag = tag.rstrip("/")
+        return f"https://github.com/{owner}/{repo}/archive/refs/tags/{tag}.zip"
+
+    if match := _GITHUB_RE_COMMIT.match(url):
+        owner, repo, commit = match.groups()
+        return f"https://github.com/{owner}/{repo}/archive/{commit}.zip"
+
+    # Not a recognized GitHub URL; assume it's already a direct link
+    return url
+
+
+def download_and_extract_repo(url: str, verbose_print, *, timeout: float = 60.0) -> Path:
+    """Download a ZIP archive from *url* and extract into a temp directory.
+
+    Returns the **root directory** containing the extracted files.
+    """
+    verbose_print(f"Downloading repository/ZIP from {url}")
+
+    zip_url = detect_github_url_sync(url)
+
+    try:
+        with httpx.Client(timeout=timeout, follow_redirects=True, headers=_github_headers()) as client:
+            resp = client.get(zip_url)
+            resp.raise_for_status()
+
+        tmp_dir = tempfile.TemporaryDirectory()
+        with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+            zf.extractall(tmp_dir.name)
+
+        verbose_print(f"✓ Repository extracted to {tmp_dir.name}")
+
+        # Most GitHub archives have a single top-level folder; use it if present
+        root_path = Path(tmp_dir.name)
+        sub_entries = list(root_path.iterdir())
+        if len(sub_entries) == 1 and sub_entries[0].is_dir():
+            root_path = sub_entries[0]
+
+        # Ensure root on sys.path for custom components
+        if str(root_path) not in sys.path:
+            sys.path.insert(0, str(root_path))
+
+        # Attach TemporaryDirectory to path object so caller can keep reference
+        # and prevent premature cleanup. We set attribute _tmp_dir.
+        root_path._tmp_dir = tmp_dir  # type: ignore[attr-defined]
+
+    except httpx.HTTPStatusError as e:
+        verbose_print(f"✗ HTTP error downloading ZIP: {e.response.status_code}")
+        raise
+    except Exception as exc:
+        verbose_print(f"✗ Failed downloading or extracting repo: {exc}")
+        raise
+    else:
+        return root_path
