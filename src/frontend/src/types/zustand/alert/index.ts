@@ -15,4 +15,6 @@ export type AlertStoreType = {
   removeFromTempNotificationList: (index: string) => void;
   clearNotificationList: () => void;
   removeFromNotificationList: (index: string) => void;
+  addNotificationToHistory: (notification: Omit<AlertItemType, "id">) => void;
+  addNotificationToTempList: (notification: Omit<AlertItemType, "id">) => void;
 };

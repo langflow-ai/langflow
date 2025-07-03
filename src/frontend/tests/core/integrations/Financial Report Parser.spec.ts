@@ -34,6 +34,8 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
+    await page.getByTestId("tab_1_stringify").click();
+
     await page.getByTestId("playground-btn-flow-io").click();
 
     await page.waitForSelector('[data-testid="button-send"]', {

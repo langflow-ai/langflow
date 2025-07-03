@@ -9,7 +9,8 @@ from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cache
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.inputs.inputs import MultilineInput
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, TabInput
-from langflow.schema import Data, DataFrame
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.template.field.base import Output
 
 
@@ -35,6 +36,7 @@ class LocalDBComponent(LCVectorStoreComponent):
             name="collection_name",
             display_name="Collection Name",
             value="langflow",
+            required=True,
         ),
         MessageTextInput(
             name="persist_directory",
@@ -54,7 +56,7 @@ class LocalDBComponent(LCVectorStoreComponent):
             show=False,
             combobox=True,
         ),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(name="embedding", display_name="Embedding", required=True, input_types=["Embeddings"]),
         BoolInput(
             name="allow_duplicates",
             display_name="Allow Duplicates",
@@ -98,7 +100,7 @@ class LocalDBComponent(LCVectorStoreComponent):
         ),
     ]
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="DataFrame", name="dataframe", method="perform_search"),
     ]
 
     def get_vector_store_directory(self, base_dir: str | Path) -> Path:
@@ -253,3 +255,6 @@ class LocalDBComponent(LCVectorStoreComponent):
             vector_store.add_documents(documents)
         else:
             self.log("No documents to add to the Vector Store.")
+
+    def perform_search(self) -> DataFrame:
+        return DataFrame(self.search_documents())

@@ -1,6 +1,6 @@
 import re
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageInput, MessageTextInput, Output
 from langflow.schema.message import Message
 
@@ -22,30 +22,49 @@ class ConditionalRouterComponent(Component):
             info="The primary text input for the operation.",
             required=True,
         ),
+        DropdownInput(
+            name="operator",
+            display_name="Operator",
+            options=[
+                "equals",
+                "not equals",
+                "contains",
+                "starts with",
+                "ends with",
+                "regex",
+                "less than",
+                "less than or equal",
+                "greater than",
+                "greater than or equal",
+            ],
+            info="The operator to apply for comparing the texts.",
+            value="equals",
+            real_time_refresh=True,
+        ),
         MessageTextInput(
             name="match_text",
             display_name="Match Text",
             info="The text input to compare against.",
             required=True,
         ),
-        DropdownInput(
-            name="operator",
-            display_name="Operator",
-            options=["equals", "not equals", "contains", "starts with", "ends with", "regex"],
-            info="The operator to apply for comparing the texts.",
-            value="equals",
-            real_time_refresh=True,
-        ),
         BoolInput(
             name="case_sensitive",
             display_name="Case Sensitive",
             info="If true, the comparison will be case sensitive.",
-            value=False,
+            value=True,
+            advanced=True,
         ),
         MessageInput(
-            name="message",
-            display_name="Message",
-            info="The message to pass through either route.",
+            name="true_case_message",
+            display_name="Case True",
+            info="The message to pass if the condition is True.",
+            advanced=True,
+        ),
+        MessageInput(
+            name="false_case_message",
+            display_name="Case False",
+            info="The message to pass if the condition is False.",
+            advanced=True,
         ),
         IntInput(
             name="max_iterations",
@@ -65,8 +84,8 @@ class ConditionalRouterComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="True", name="true_result", method="true_response"),
-        Output(display_name="False", name="false_result", method="false_response"),
+        Output(display_name="True", name="true_result", method="true_response", group_outputs=True),
+        Output(display_name="False", name="false_result", method="false_response", group_outputs=True),
     ]
 
     def _pre_run_setup(self):
@@ -92,6 +111,20 @@ class ConditionalRouterComponent(Component):
                 return bool(re.match(match_text, input_text))
             except re.error:
                 return False  # Return False if the regex is invalid
+        if operator in ["less than", "less than or equal", "greater than", "greater than or equal"]:
+            try:
+                input_num = float(input_text)
+                match_num = float(match_text)
+                if operator == "less than":
+                    return input_num < match_num
+                if operator == "less than or equal":
+                    return input_num <= match_num
+                if operator == "greater than":
+                    return input_num > match_num
+                if operator == "greater than or equal":
+                    return input_num >= match_num
+            except ValueError:
+                return False  # Invalid number format for comparison
         return False
 
     def iterate_and_stop_once(self, route_to_stop: str):
@@ -107,9 +140,9 @@ class ConditionalRouterComponent(Component):
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
         if result:
-            self.status = self.message
+            self.status = self.true_case_message
             self.iterate_and_stop_once("false_result")
-            return self.message
+            return self.true_case_message
         self.iterate_and_stop_once("true_result")
         return Message(content="")
 
@@ -118,9 +151,9 @@ class ConditionalRouterComponent(Component):
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
         if not result:
-            self.status = self.message
+            self.status = self.false_case_message
             self.iterate_and_stop_once("true_result")
-            return self.message
+            return self.false_case_message
         self.iterate_and_stop_once("false_result")
         return Message(content="")
 
@@ -128,8 +161,6 @@ class ConditionalRouterComponent(Component):
         if field_name == "operator":
             if field_value == "regex":
                 build_config.pop("case_sensitive", None)
-
-            # Ensure case_sensitive is present for all other operators
             elif "case_sensitive" not in build_config:
                 case_sensitive_input = next(
                     (input_field for input_field in self.inputs if input_field.name == "case_sensitive"), None

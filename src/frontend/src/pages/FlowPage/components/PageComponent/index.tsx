@@ -23,6 +23,7 @@ import {
   reconnectEdge,
   SelectionDragHandler,
 } from "@xyflow/react";
+import { AnimatePresence } from "framer-motion";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -33,6 +34,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
   INVALID_SELECTION_ERROR_ALERT,
@@ -59,9 +61,11 @@ import {
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
+import FlowBuildingComponent from "../flowBuildingComponent";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
+  MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
@@ -121,6 +125,10 @@ export default function Page({
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
   const edgeUpdateSuccessful = useRef(true);
 
+  const isLocked = useFlowStore(
+    useShallow((state) => state.currentFlow?.locked),
+  );
+
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
@@ -141,11 +149,12 @@ export default function Page({
   const shadowBoxHeight = NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1);
   const shadowBoxBackgroundColor = COLOR_OPTIONS[Object.keys(COLOR_OPTIONS)[0]];
 
-  function handleGroupNode() {
+  const handleGroupNode = useCallback(() => {
     takeSnapshot();
-    if (validateSelection(lastSelection!, edges).length === 0) {
-      const clonedNodes = cloneDeep(nodes);
-      const clonedEdges = cloneDeep(edges);
+    const edgesState = useFlowStore.getState().edges;
+    if (validateSelection(lastSelection!, edgesState).length === 0) {
+      const clonedNodes = cloneDeep(useFlowStore.getState().nodes);
+      const clonedEdges = cloneDeep(edgesState);
       const clonedSelection = cloneDeep(lastSelection);
       updateIds({ nodes: clonedNodes, edges: clonedEdges }, clonedSelection!);
       const { newFlow } = generateFlow(
@@ -169,10 +178,10 @@ export default function Page({
     } else {
       setErrorData({
         title: INVALID_SELECTION_ERROR_ALERT,
-        list: validateSelection(lastSelection!, edges),
+        list: validateSelection(lastSelection!, edgesState),
       });
     }
-  }
+  }, [lastSelection, setNodes, setErrorData, takeSnapshot]);
 
   useEffect(() => {
     const handleMouseMove = (event) => {
@@ -517,6 +526,11 @@ export default function Page({
   );
 
   const handleEdgeClick = (event, edge) => {
+    if (isLocked) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     const color =
       nodeColorsName[edge?.data?.sourceHandle?.output_types[0]] || "cyan";
 
@@ -556,18 +570,37 @@ export default function Page({
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
         <div id="react-flow-id" className="h-full w-full bg-canvas">
+          {!view && (
+            <>
+              <MemoizedLogCanvasControls />
+              <MemoizedCanvasControls
+                setIsAddingNote={setIsAddingNote}
+                position={position.current}
+                shadowBoxWidth={shadowBoxWidth}
+                shadowBoxHeight={shadowBoxHeight}
+              />
+              <FlowToolbar />
+            </>
+          )}
+          <MemoizedSidebarTrigger />
+          <SelectionMenu
+            lastSelection={lastSelection}
+            isVisible={selectionMenuVisible}
+            nodes={lastSelection?.nodes}
+            onClick={handleGroupNode}
+          />
           <ReactFlow<AllNodeType, EdgeType>
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            onConnect={onConnectMod}
+            onConnect={isLocked ? undefined : onConnectMod}
             disableKeyboardA11y={true}
             onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
-            onReconnect={onEdgeUpdate}
-            onReconnectStart={onEdgeUpdateStart}
-            onReconnectEnd={onEdgeUpdateEnd}
+            onReconnect={isLocked ? undefined : onEdgeUpdate}
+            onReconnectStart={isLocked ? undefined : onEdgeUpdateStart}
+            onReconnectEnd={isLocked ? undefined : onEdgeUpdateEnd}
             onNodeDragStart={onNodeDragStart}
             onSelectionDragStart={onSelectionDragStart}
             elevateEdgesOnSelect={true}
@@ -594,30 +627,9 @@ export default function Page({
             onPaneClick={onPaneClick}
             onEdgeClick={handleEdgeClick}
           >
+            <FlowBuildingComponent />
+            <UpdateAllComponents />
             <MemoizedBackground />
-            {!view && (
-              <>
-                <MemoizedCanvasControls
-                  setIsAddingNote={setIsAddingNote}
-                  position={position.current}
-                  shadowBoxWidth={shadowBoxWidth}
-                  shadowBoxHeight={shadowBoxHeight}
-                />
-                <FlowToolbar />
-              </>
-            )}
-            <MemoizedSidebarTrigger />
-            <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
-              <UpdateAllComponents />
-            </div>
-            <SelectionMenu
-              lastSelection={lastSelection}
-              isVisible={selectionMenuVisible}
-              nodes={lastSelection?.nodes}
-              onClick={() => {
-                handleGroupNode();
-              }}
-            />
           </ReactFlow>
           <div
             id="shadow-box"

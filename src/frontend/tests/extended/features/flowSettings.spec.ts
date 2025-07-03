@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "flowSettings",
@@ -11,53 +12,50 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="input-flow-name"]', {
-      timeout: 3000,
-    });
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details").first().click();
+    await page.getByTestId("flow_name").isVisible({ timeout: 3000 });
+    await page.getByTestId("flow_name").click();
+    await page.waitForTimeout(500);
+
+    await page.getByTestId("input-flow-name").click();
+
     await page
-      .getByPlaceholder("Flow name")
+      .getByTestId("input-flow-name")
       .fill(
         "Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test",
       );
 
     await page.getByText("Character limit reached").isVisible();
 
-    await page.getByPlaceholder("Flow name").click();
+    await page.getByTestId("input-flow-name").click();
     const randomName = Math.random().toString(36).substring(2);
-    await page.getByPlaceholder("Flow name").fill(randomName);
-    await page.getByPlaceholder("Flow name").click();
+    await page.getByTestId("input-flow-name").fill(randomName);
     await page
-      .getByPlaceholder("Flow description")
+      .getByTestId("input-flow-description")
       .fill(
         "Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test",
       );
 
+    await page.getByTestId("save-flow-settings").isEnabled({ timeout: 3000 });
     await page.getByTestId("save-flow-settings").click();
 
-    await page.getByText("Changes saved successfully").isVisible();
+    await page
+      .getByText("Changes saved successfully")
+      .last()
+      .isVisible({ timeout: 3000 });
+    await page.getByText("Changes saved successfully").last().click();
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details").first().click();
+    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+      timeout: 30000,
+    });
 
-    const flowName = await page.getByPlaceholder("Flow name").inputValue();
-    const flowDescription = await page
-      .getByPlaceholder("Flow description")
-      .inputValue();
+    const { flowName, flowDescription } = await renameFlow(page);
 
-    if (flowName != randomName) {
-      expect(false).toBeTruthy();
-    }
+    expect(flowName == randomName).toBeTruthy();
 
-    if (
-      flowDescription !=
-      "Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test"
-    ) {
-      expect(false).toBeTruthy();
-    }
-    await page.getByText("Saved").first().isVisible();
-    await page.getByTestId("icon-CheckCircle2").first().isVisible();
+    expect(
+      flowDescription ==
+        "Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name Test Flow Name ",
+    ).toBeTruthy();
   },
 );

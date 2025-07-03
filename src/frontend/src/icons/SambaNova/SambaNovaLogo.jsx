@@ -5,8 +5,6 @@ const SvgSambaNovaLogo = ({ ...props }) => (
     role="img"
     fill="none"
     viewBox="0 0 37 37"
-    width="48"
-    height="48"
     className="fill-foreground"
     {...props}
   >

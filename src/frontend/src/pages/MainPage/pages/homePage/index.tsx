@@ -4,7 +4,11 @@ import { IS_MAC } from "@/constants/constants";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { CustomMcpServerTab } from "@/customization/components/custom-McpServerTab";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_MCP,
+} from "@/customization/feature-flags";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { FlowType } from "@/types/flow";
@@ -27,6 +31,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
+  const navigate = useCustomNavigate();
 
   const [flowType, setFlowType] = useState<"flows" | "components" | "mcp">(
     type,
@@ -38,6 +43,18 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     folders[0]?.name ??
     "";
   const flows = useFlowsManagerStore((state) => state.flows);
+
+  useEffect(() => {
+    // Only check if we have a folderId and folders have loaded
+    if (folderId && folders && folders.length > 0) {
+      const folderExists = folders.find((folder) => folder.id === folderId);
+      if (!folderExists) {
+        // Folder doesn't exist for this user, redirect to /all
+        console.error("Invalid folderId, redirecting to /all");
+        navigate("/all");
+      }
+    }
+  }, [folderId, folders, navigate]);
 
   const { data: folderData, isLoading } = useGetFolderQuery({
     id: folderId ?? myCollectionId!,
@@ -77,8 +94,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   }, []);
 
   const isEmptyFolder =
-    flows?.find((flow) => flow.folder_id === (folderId ?? myCollectionId)) ===
-    undefined;
+    flows?.find(
+      (flow) =>
+        flow.folder_id === (folderId ?? myCollectionId) &&
+        (ENABLE_MCP ? flow.is_component === false : true),
+    ) === undefined;
 
   const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
 
@@ -104,6 +124,16 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Only track these keys when we're in list/selection mode and not when a modal is open
+      // or when an input field is focused
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
+      ) {
+        return;
+      }
+
       if (e.key === "Shift") {
         setIsShiftPressed(true);
       } else if ((!IS_MAC && e.key === "Control") || e.key === "Meta") {
@@ -112,6 +142,14 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
+      ) {
+        return;
+      }
+
       if (e.key === "Shift") {
         setIsShiftPressed(false);
       } else if ((!IS_MAC && e.key === "Control") || e.key === "Meta") {
@@ -125,9 +163,12 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       setIsCtrlPressed(false);
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("blur", handleBlur);
+    // Only add listeners if we're in flows or components mode, not MCP mode
+    if (flowType === "flows" || flowType === "components") {
+      document.addEventListener("keydown", handleKeyDown);
+      document.addEventListener("keyup", handleKeyUp);
+      window.addEventListener("blur", handleBlur);
+    }
 
     // Clean up event listeners when component unmounts
     return () => {
@@ -139,7 +180,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       setIsShiftPressed(false);
       setIsCtrlPressed(false);
     };
-  }, []);
+  }, [flowType]);
 
   const setSelectedFlow = useCallback(
     (selected: boolean, flowId: string, index: number) => {
@@ -193,7 +234,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
 
   return (
     <CardsWrapComponent
-      onFileDrop={handleFileDrop}
+      onFileDrop={flowType === "mcp" ? undefined : handleFileDrop}
       dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
     >
       <div
@@ -218,7 +259,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
               {isEmptyFolder ? (
                 <EmptyFolder setOpenModal={setNewProjectModal} />
               ) : (
-                <div className="">
+                <div className="flex h-full flex-col">
                   {isLoading ? (
                     view === "grid" ? (
                       <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
@@ -266,7 +307,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       </div>
                     )
                   ) : flowType === "flows" ? (
-                    <div className="pt-2 text-center text-sm text-secondary-foreground">
+                    <div className="pt-24 text-center text-sm text-secondary-foreground">
                       No flows in this project.{" "}
                       <a
                         onClick={() => setNewProjectModal(true)}
@@ -277,7 +318,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       , or browse the store.
                     </div>
                   ) : (
-                    <div className="pt-2 text-center text-sm text-secondary-foreground">
+                    <div className="pt-24 text-center text-sm text-secondary-foreground">
                       No saved or custom components. Learn more about{" "}
                       <a
                         href="https://docs.langflow.org/components-custom-components"

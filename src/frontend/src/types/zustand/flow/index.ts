@@ -156,6 +156,20 @@ export type FlowStoreType = {
   unselectAll: () => void;
   playgroundPage: boolean;
   setPlaygroundPage: (playgroundPage: boolean) => void;
+  buildInfo: { error?: string[]; success?: boolean } | null;
+  setBuildInfo: (
+    buildInfo: { error?: string[]; success?: boolean } | null,
+  ) => void;
+  pastBuildFlowParams: {
+    startNodeId?: string;
+    stopNodeId?: string;
+    input_value?: string;
+    files?: string[];
+    silent?: boolean;
+    session?: string;
+    stream?: boolean;
+    eventDelivery?: EventDeliveryType;
+  } | null;
   buildFlow: ({
     startNodeId,
     stopNodeId,
@@ -163,6 +177,7 @@ export type FlowStoreType = {
     files,
     silent,
     session,
+    stream,
     eventDelivery,
   }: {
     startNodeId?: string;
@@ -171,6 +186,7 @@ export type FlowStoreType = {
     files?: string[];
     silent?: boolean;
     session?: string;
+    stream?: boolean;
     eventDelivery?: EventDeliveryType;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };
@@ -190,10 +206,13 @@ export type FlowStoreType = {
     runId?: string;
     verticesToRun: string[];
   } | null;
-  updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
+  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: {
-    [key: string]: { status: BuildStatus; timestamp?: string };
+    [key: string]: {
+      status: BuildStatus;
+      timestamp?: string;
+    };
   };
   updateFlowPool: (
     nodeId: string,
@@ -266,4 +285,6 @@ export type FlowStoreType = {
   setCurrentBuildingNodeId: (nodeIds: string[] | undefined) => void;
   clearEdgesRunningByNodes: () => Promise<void>;
   updateToolMode: (nodeId: string, toolMode: boolean) => void;
+  newChatOnPlayground: boolean;
+  setNewChatOnPlayground: (newChat: boolean) => void;
 };

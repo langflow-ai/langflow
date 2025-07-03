@@ -15,7 +15,7 @@ They may perform some processing or type checking, like converting raw HTML data
 
 The **URL** data component loads content from a list of URLs.
 
-In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-label="Add"/>.
+In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-hidden="true"/> **Add URL**.
 
 Alternatively, connect a component that outputs the `Message` type, like the **Chat Input** component, to supply your URLs from a component.
 
@@ -197,7 +197,7 @@ This component executes SQL queries on a specified database.
 
 This component fetches content from one or more URLs, processes the content, and returns it in various formats. It supports output in plain text or raw HTML.
 
-In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-label="Add"/>.
+In the component's **URLs** field, enter the URL you want to load. To add multiple URL fields, click <Icon name="Plus" aria-hidden="true"/> **Add URL**.
 
 1. To use this component in a flow, connect the **DataFrame** output to a component that accepts the input.
 For example, connect the **URL** component to a **Chat Output** component.
@@ -268,7 +268,7 @@ When a **Webhook** component is added to the workspace, a new **Webhook cURL** t
 
 ```bash
 curl -X POST \
-  "http://127.0.0.1:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
+  "http://localhost:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
   -H 'Content-Type: application/json'\
   -d '{"any": "data"}'
   ```

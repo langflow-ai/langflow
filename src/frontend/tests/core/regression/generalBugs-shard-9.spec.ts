@@ -5,8 +5,8 @@ import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 test(
-  "memory should work as expect",
-  { tag: ["@release"] },
+  "user should be able to use chat memory as expected",
+  { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -90,22 +90,16 @@ AI:
     await page.getByTestId("fit_view").click();
 
     //connection 1
-    const elementChatMemoryOutput = await page
+    await page
       .getByTestId("handle-memory-shownode-message-right")
-      .first();
-    await elementChatMemoryOutput.hover();
-    await page.mouse.down();
+      .first()
+      .click();
 
-    const promptInput = await page.getByTestId(
-      "handle-prompt-shownode-context-left",
-    );
-
-    await promptInput.hover();
-    await page.mouse.up();
+    await page.getByTestId("handle-prompt-shownode-context-left").click();
 
     await page.locator('//*[@id="react-flow-id"]').hover();
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,

@@ -72,11 +72,65 @@ function validCommands(str: string): string {
     .join(", ");
 }
 
+function sanitizeMcpName(str: string, maxLength: number = 46): string {
+  if (!str || !str.trim()) {
+    return "";
+  }
+
+  let name = str;
+
+  // Remove emojis using standard regex patterns (without unicode flags)
+  // This covers most common emoji ranges using surrogate pairs
+  name = name.replace(/[\uD83C-\uDBFF][\uDC00-\uDFFF]/g, ""); // Most emojis
+  name = name.replace(/[\u2600-\u27BF]/g, ""); // Misc symbols and dingbats
+  name = name.replace(/[\uFE00-\uFE0F]/g, ""); // Variation selectors
+  name = name.replace(/\u200D/g, ""); // Zero width joiner
+
+  // Normalize unicode characters to remove diacritics
+  name = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  // Replace spaces and special characters with underscores
+  name = name.replace(/[^\w\s-]/g, ""); // Keep only word chars, spaces, and hyphens
+  name = name.replace(/[-\s]+/g, "_"); // Replace spaces and hyphens with underscores
+  name = name.replace(/_+/g, "_"); // Collapse multiple underscores
+
+  // Remove leading/trailing underscores
+  name = name.replace(/^_+|_+$/g, "");
+
+  // Ensure it starts with a letter or underscore (not a number)
+  if (name && /^\d/.test(name)) {
+    name = `_${name}`;
+  }
+
+  // Convert to lowercase
+  name = name.toLowerCase();
+
+  // Truncate to max length
+  if (name.length > maxLength) {
+    name = name.substring(0, maxLength).replace(/_+$/, "");
+  }
+
+  // If empty after sanitization, provide a default
+  if (!name) {
+    name = "unnamed";
+  }
+
+  return name;
+}
+
 export function parseString(
   str: string,
   parsers: FieldParserType[] | FieldParserType,
 ): string {
   let result = str;
+
+  if (result === "") {
+    return "";
+  }
+
+  if (parsers.includes("no_blank") && result.trim() === "") {
+    return "";
+  }
 
   let parsersArray: FieldParserType[] = [];
 
@@ -118,6 +172,9 @@ export function parseString(
           break;
         case "commands":
           result = validCommands(result);
+          break;
+        case "sanitize_mcp_name":
+          result = sanitizeMcpName(result);
           break;
       }
     } catch (error) {
@@ -168,3 +225,5 @@ export const convertStringToHTML = (htmlString: string): JSX.Element => {
 export const sanitizeHTML = (htmlString: string): string => {
   return DOMPurify.sanitize(htmlString);
 };
+
+export { sanitizeMcpName };

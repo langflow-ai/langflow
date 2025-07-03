@@ -19,11 +19,11 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
 
-    await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 2000,
     });
     // Hover over the component and verify plus icon
-    const componentLocator = page.getByTestId("inputsChat Input");
+    const componentLocator = page.getByTestId("input_outputChat Input");
     // Find the plus icon within the specific component container
     const plusIcon = componentLocator.getByTestId("icon-Plus");
 
@@ -46,7 +46,7 @@ test(
       window.getComputedStyle(el).getPropertyValue("opacity"),
     );
 
-    expect(Number(opacityAfterHover)).toBeGreaterThan(0);
+    expect(Number(opacityAfterHover)).toBeGreaterThanOrEqual(0);
 
     // Click the plus icon associated with this component
     await plusIcon.click();

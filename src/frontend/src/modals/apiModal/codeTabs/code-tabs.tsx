@@ -14,6 +14,7 @@ import {
 } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { useShallow } from "zustand/react/shallow";
 import { useDarkStore } from "../../../stores/darkStore";
+import { formatPayloadTweaks } from "../utils/filter-tweaks";
 import { getNewCurlCode } from "../utils/get-curl-code";
 import { getNewJsApiCode } from "../utils/get-js-api-code";
 import { getNewPythonApiCode } from "../utils/get-python-api-code";
@@ -41,18 +42,30 @@ export default function APITabsComponent() {
   }
   const streaming = hasStreaming(nodes);
   const tweaks = useTweaksStore((state) => state.tweaks);
+  const activeTweaks = Object.values(tweaks).some(
+    (tweak) => Object.keys(tweak).length > 0,
+  );
+
+  const includeTopLevelInputValue = formatPayloadTweaks(tweaks);
+  const processedPayload: any = {
+    output_type: hasChatOutput ? "chat" : "text",
+    input_type: hasChatInput ? "chat" : "text",
+  };
+
+  if (includeTopLevelInputValue) {
+    processedPayload.input_value = input_value;
+  }
+
+  if (activeTweaks && tweaks && Object.keys(tweaks).length > 0) {
+    processedPayload.tweaks = tweaks;
+  }
+
   const codeOptions = {
     endpointName: endpointName || "",
     streaming: streaming,
     flowId: flowId || "",
-    isAuthenticated: !autologin || false,
-    input_value: input_value,
-    input_type: hasChatInput ? "chat" : "text",
-    output_type: hasChatOutput ? "chat" : "text",
-    tweaksObject: tweaks,
-    activeTweaks: Object.values(tweaks).some(
-      (tweak) => Object.keys(tweak).length > 0,
-    ),
+    isAuthenticated: autologin || false,
+    processedPayload: processedPayload,
   };
   const tabsList: tabsArrayType = [
     {
@@ -136,7 +149,7 @@ export default function APITabsComponent() {
               size="icon"
               onClick={copyToClipboard}
               data-testid="btn-copy-code"
-              className="!hover:bg-foreground group absolute right-2 top-2"
+              className="!hover:bg-foreground group absolute right-4 top-2"
             >
               {isCopied ? (
                 <IconComponent

@@ -20,7 +20,6 @@ class RSSReaderComponent(Component):
             display_name="RSS Feed URL",
             info="URL of the RSS feed to parse.",
             tool_mode=True,
-            input_types=[],
             required=True,
         ),
         IntInput(

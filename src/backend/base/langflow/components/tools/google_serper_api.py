@@ -6,14 +6,14 @@ from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.inputs import (
+from langflow.inputs.inputs import (
     DictInput,
     DropdownInput,
     IntInput,
     MultilineInput,
     SecretStrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class QuerySchema(BaseModel):

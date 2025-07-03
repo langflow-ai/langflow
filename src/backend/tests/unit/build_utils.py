@@ -32,7 +32,7 @@ async def get_build_events(client: AsyncClient, job_id: str, headers: dict[str, 
     return await client.get(f"api/v1/build/{job_id}/events", headers=headers_with_accept)
 
 
-async def consume_and_assert_stream(response, job_id, timeout=10.0):
+async def consume_and_assert_stream(response, job_id, timeout=30.0):
     """Consume the event stream and assert the expected event structure.
 
     Args:
@@ -72,15 +72,21 @@ async def consume_and_assert_stream(response, job_id, timeout=10.0):
                         "Invalid first event. Expected 'vertices_sorted'. Full event stream:\n" + "\n".join(lines)
                     )
                     ids = parsed["data"]["ids"]
-                    ids.sort()
-                    assert ids == ["ChatInput-CIGht"], "Invalid ids in first event. Full event stream:\n" + "\n".join(
+
+                    assert ids == ["ChatInput-vsgM1"], "Invalid ids in first event. Full event stream:\n" + "\n".join(
                         lines
                     )
 
                     to_run = parsed["data"]["to_run"]
-                    to_run.sort()
-                    assert to_run == ["ChatInput-CIGht", "ChatOutput-QA7ej", "Memory-amN4Z", "Prompt-iWbCC"], (
-                        "Invalid to_run list in first event. Full event stream:\n" + "\n".join(lines)
+                    expected_to_run = [
+                        "ChatInput-vsgM1",
+                        "Prompt-VSSGR",
+                        "TypeConverterComponent-koSIz",
+                        "Memory-8X8Cq",
+                        "ChatOutput-NAw0P",
+                    ]
+                    assert set(to_run) == set(expected_to_run), (
+                        "Invalid to_run list in the first event. Full event stream:\n" + "\n".join(lines)
                     )
                     first_event_seen = True
                 # Last event should be end

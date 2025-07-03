@@ -8,6 +8,7 @@ class RunnableVerticesManager:
         self.vertices_to_run: set[str] = set()  # Set of vertices that are ready to run
         self.vertices_being_run: set[str] = set()  # Set of vertices that are currently running
         self.cycle_vertices: set[str] = set()  # Set of vertices that are in a cycle
+        self.ran_at_least_once: set[str] = set()  # Set of vertices that have been run at least once
 
     def to_dict(self) -> dict:
         return {
@@ -15,6 +16,7 @@ class RunnableVerticesManager:
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
             "vertices_being_run": self.vertices_being_run,
+            "ran_at_least_once": self.ran_at_least_once,
         }
 
     @classmethod
@@ -24,6 +26,7 @@ class RunnableVerticesManager:
         instance.run_predecessors = data["run_predecessors"]
         instance.vertices_to_run = data["vertices_to_run"]
         instance.vertices_being_run = data["vertices_being_run"]
+        instance.ran_at_least_once = data.get("ran_at_least_once", set())
         return instance
 
     def __getstate__(self) -> object:
@@ -32,6 +35,7 @@ class RunnableVerticesManager:
             "run_predecessors": self.run_predecessors,
             "vertices_to_run": self.vertices_to_run,
             "vertices_being_run": self.vertices_being_run,
+            "ran_at_least_once": self.ran_at_least_once,
         }
 
     def __setstate__(self, state: dict) -> None:
@@ -39,6 +43,7 @@ class RunnableVerticesManager:
         self.run_predecessors = state["run_predecessors"]
         self.vertices_to_run = state["vertices_to_run"]
         self.vertices_being_run = state["vertices_being_run"]
+        self.ran_at_least_once = state["ran_at_least_once"]
 
     def all_predecessors_are_fulfilled(self) -> bool:
         return all(not value for value in self.run_predecessors.values())
@@ -81,8 +86,17 @@ class RunnableVerticesManager:
         # For cycle vertices, check if any pending predecessors are also in cycle
         # Using set intersection is faster than iteration
         if vertex_id in self.cycle_vertices:
-            return is_loop or not bool(set(pending) & self.cycle_vertices)
+            pending_set = set(pending)
+            running_predecessors = pending_set & self.vertices_being_run
 
+            # If this vertex has already run at least once, be strict: wait until NOTHING is pending or running
+            if vertex_id in self.ran_at_least_once:
+                # Wait if there are still pending or running predecessors; otherwise allow.
+                return not (pending_set or running_predecessors)
+
+            # FIRST execution of a cycle vertex
+            # Allow running **only** if it's a loop AND *all* pending predecessors are cycle vertices
+            return is_loop and pending_set <= self.cycle_vertices
         return False
 
     def remove_from_predecessors(self, vertex_id: str) -> None:
