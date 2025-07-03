@@ -184,7 +184,7 @@ class StructuredOutputComponent(Component):
             raise ValueError(msg)
         if len(output) == 1:
             return Data(data=output[0])
-        elif len(output) > 1:
+        if len(output) > 1:
             # Multiple outputs - wrap them in a results container
             return Data(data={"results": output})
 
@@ -200,5 +200,5 @@ class StructuredOutputComponent(Component):
         else:
             # Multiple outputs - create list of Data objects
             data_list = [Data(data=item) for item in output]
-        
+
         return DataFrame(data_list)

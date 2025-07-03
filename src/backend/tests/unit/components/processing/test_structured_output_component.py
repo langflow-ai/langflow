@@ -749,7 +749,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert len(result) == 1
             assert result.iloc[0]["field"] == "value2"
             assert result.iloc[0]["number"] == 24
-            
+
             # Test conversion back to Data list
             data_list = result.to_data_list()
             assert len(data_list) == 1
@@ -761,11 +761,13 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
-                    return {"objects": [
-                        {"name": "John", "age": 30},
-                        {"name": "Jane", "age": 25},
-                        {"name": "Bob", "age": 35}
-                    ]}
+                    return {
+                        "objects": [
+                            {"name": "John", "age": 30},
+                            {"name": "Jane", "age": 25},
+                            {"name": "Bob", "age": 35},
+                        ]
+                    }
 
             return {
                 "messages": ["mock_message"],
@@ -800,7 +802,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert result.iloc[1]["age"] == 25
             assert result.iloc[2]["name"] == "Bob"
             assert result.iloc[2]["age"] == 35
-            
+
             # Test conversion back to Data list
             data_list = result.to_data_list()
             assert len(data_list) == 3
