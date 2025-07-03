@@ -1,11 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "the system must delete the handles from advanced fields when the code is updated",
-  { tag: ["@release"] },
+  { tag: ["@release", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
@@ -29,8 +28,7 @@ test(
 
     await page.getByTestId("edit-button-modal").click();
 
-    await page.getByTestId("showmessage").click();
-
+    await page.getByTestId("showtrue_case_message").click();
     await page.getByText("Close").last().click();
 
     await page.getByTestId("sidebar-search-input").click();
@@ -49,7 +47,7 @@ test(
       .click();
 
     await page
-      .getByTestId("handle-conditionalrouter-shownode-alternative output-left")
+      .getByTestId("handle-conditionalrouter-shownode-case true-left")
       .click();
 
     await page.getByTestId("title-If-Else").click();
