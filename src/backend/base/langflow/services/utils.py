@@ -134,9 +134,9 @@ async def teardown_services() -> None:
     async with get_db_service().with_session() as session:
         await teardown_superuser(get_settings_service(), session)
 
-    from langflow.services.manager import service_manager
+    from langflow.services.manager import get_service_manager
 
-    await service_manager.teardown()
+    await get_service_manager().teardown()
 
 
 def initialize_settings_service() -> None:
