@@ -63,7 +63,7 @@ Send a `POST /run` request to your Langflow server with the file you want to upl
 The result includes the outcome of the flow run and the LLM's response.
 
 This example uses a local Langflow instance, and it asks the LLM to evaluate a sample resume.
-If you don't have a resume on hand, use [fake-resume.txt](./fake-resume.txt).
+If you don't have a resume on hand, use [fake-resume.txt](/files/fake-resume.txt).
 
 :::tip
 For help with constructing file upload requests for Python, JavaScript, and curl, see the [Langflow File Upload Utility](https://langflow-file-upload-examples.onrender.com).
