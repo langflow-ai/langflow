@@ -265,14 +265,15 @@ This component defines a webhook trigger that runs a flow when it receives an HT
 If the input is not valid JSON, the component wraps it in a `payload` object so that it can be processed and still trigger the flow. The component does not require an API key.
 
 When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
+Replace `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` with the values from your Langflow deployment.
 
 ```bash
 curl -X POST \
-  "http://localhost:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
+  "http://LANGFLOW_SERVER_ADDRESS/api/v1/webhook/FLOW_ID" \
   -H 'Content-Type: application/json' \
   -H 'x-api-key: LANGFLOW_API_KEY' \
   -d '{"any": "data"}'
-  ```
+```
 
 To test the webhook component:
 
