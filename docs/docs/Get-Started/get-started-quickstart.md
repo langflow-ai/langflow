@@ -119,7 +119,7 @@ Langflow provides code snippets to help you get started with the Langflow API.
     # Request headers
     headers = {
         "Content-Type": "application/json",
-        "x-api-key": "LANGFLOW_API_KEY"
+        "x-api-key": "$LANGFLOW_API_KEY"
     }
 
     try:

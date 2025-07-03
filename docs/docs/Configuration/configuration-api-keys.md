@@ -90,7 +90,6 @@ To create an API key for a user from the CLI, do the following:
     ```shell
     uv run langflow api-key
     ```
-
   </TabItem>
 </Tabs>
 
