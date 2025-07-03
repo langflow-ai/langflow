@@ -1,5 +1,5 @@
 from langflow.base.composio.composio_base import ComposioBaseComponent
-from loguru import logger
+
 
 class ComposioGmailAPIComponent(ComposioBaseComponent):
     display_name: str = "Gmail"
@@ -18,7 +18,7 @@ class ComposioGmailAPIComponent(ComposioBaseComponent):
         """Post-processor for GMAIL_SEND_EMAIL action."""
         if isinstance(raw_data, dict):
             response_data = raw_data.get("response_data", raw_data)
-            
+
             return {
                 "message_id": response_data.get("id"),
                 "thread_id": response_data.get("threadId"),

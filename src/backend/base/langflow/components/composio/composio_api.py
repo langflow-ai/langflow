@@ -88,21 +88,21 @@ class ComposioAPIComponent(LCToolComponent):
         build_config["actions"]["helper_text"] = ""
         build_config["actions"]["helper_text_metadata"] = {"icon": "Check", "variant": "success"}
 
-        
+
         try:
             composio = self._build_wrapper()
             current_tool = tool_name or getattr(self, "tool_name", None)
             if not current_tool:
                 self.log("No tool name available for validate_tool")
                 return build_config
-                
+
             toolkit_slug = current_tool.lower()
-            
+
             tools = composio.tools.get(user_id=self.entity_id, toolkits=[toolkit_slug])
-            
+
             authenticated_actions = []
             for tool in tools:
-                if hasattr(tool, 'name'):
+                if hasattr(tool, "name"):
                     action_name = tool.name
                     display_name = action_name.replace("_", " ").title()
                     authenticated_actions.append({
@@ -154,18 +154,18 @@ class ComposioAPIComponent(LCToolComponent):
 
         if field_name == "tool_name" and field_value:
             composio = self._build_wrapper()
-            
-            current_tool_name = (field_value if isinstance(field_value, str) 
+
+            current_tool_name = (field_value if isinstance(field_value, str)
                                 else field_value.get("validate") if isinstance(field_value, dict) and "validate" in field_value
                                 else getattr(self, "tool_name", None))
-            
+
             if not current_tool_name:
                 self.log("No tool name available for connection check")
                 return build_config
 
             try:
                 toolkit_slug = current_tool_name.lower()
-                              
+
                 connection_list = composio.connected_accounts.list(
                     user_ids=[self.entity_id],
                     toolkit_slugs=[toolkit_slug]
@@ -182,7 +182,7 @@ class ComposioAPIComponent(LCToolComponent):
 
                 # Get the index of the selected tool in the list of options
                 selected_tool_index = next(
-                    (ind for ind, tool in enumerate(build_config["tool_name"]["options"]) 
+                    (ind for ind, tool in enumerate(build_config["tool_name"]["options"])
                      if tool["name"] == current_tool_name.title()),
                     None,
                 )
@@ -191,14 +191,10 @@ class ComposioAPIComponent(LCToolComponent):
                     # User has active connection
                     if selected_tool_index is not None:
                         build_config["tool_name"]["options"][selected_tool_index]["link"] = "validated"
-                    
+
                     # If it's a validation request, validate the tool
-                    if isinstance(field_value, dict) and "validate" in field_value:
-                        connected_app_names = [getattr(app, "appName", "").lower() for app in connection_list.items 
-                                             if hasattr(app, "appName") and getattr(app, "status", None) == "ACTIVE"]
-                        return self.validate_tool(build_config, field_value, connected_app_names, current_tool_name)
-                    elif isinstance(field_value, str):
-                        connected_app_names = [getattr(app, "appName", "").lower() for app in connection_list.items 
+                    if (isinstance(field_value, dict) and "validate" in field_value) or isinstance(field_value, str):
+                        connected_app_names = [getattr(app, "appName", "").lower() for app in connection_list.items
                                              if hasattr(app, "appName") and getattr(app, "status", None) == "ACTIVE"]
                         return self.validate_tool(build_config, field_value, connected_app_names, current_tool_name)
                 else:
@@ -206,13 +202,12 @@ class ComposioAPIComponent(LCToolComponent):
                     try:
                         connection = composio.toolkits.authorize(user_id=self.entity_id, toolkit=toolkit_slug)
                         redirect_url = getattr(connection, "redirect_url", None)
-                        
+
                         if redirect_url and redirect_url.startswith(("http://", "https://")):
                             if selected_tool_index is not None:
                                 build_config["tool_name"]["options"][selected_tool_index]["link"] = redirect_url
-                        else:
-                            if selected_tool_index is not None:
-                                build_config["tool_name"]["options"][selected_tool_index]["link"] = "error"
+                        elif selected_tool_index is not None:
+                            build_config["tool_name"]["options"][selected_tool_index]["link"] = "error"
                     except Exception as e:
                         self.log(f"Error creating OAuth connection: {e}")
                         if selected_tool_index is not None:
@@ -231,29 +226,29 @@ class ComposioAPIComponent(LCToolComponent):
         """
         composio = self._build_wrapper()
         action_names = [action["name"] for action in self.actions]
-        
+
         # Get toolkits from action names
         toolkits = set()
         for action_name in action_names:
             if "_" in action_name:
                 toolkit = action_name.split("_")[0].lower()
                 toolkits.add(toolkit)
-        
+
         if not toolkits:
             return []
-            
+
         # Get all tools for the relevant toolkits
         all_tools = composio.tools.get(
             user_id=self.entity_id,
             toolkits=list(toolkits)
         )
-        
+
         # Filter to only the specific actions we want
         filtered_tools = []
         for tool in all_tools:
-            if hasattr(tool, 'name') and tool.name in action_names:
+            if hasattr(tool, "name") and tool.name in action_names:
                 filtered_tools.append(tool)
-        
+
         return filtered_tools
 
     def _build_wrapper(self) -> Composio:

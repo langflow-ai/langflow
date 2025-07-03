@@ -3,7 +3,6 @@ from .github_composio import ComposioGitHubAPIComponent
 from .gmail_composio import ComposioGmailAPIComponent
 from .googlecalendar_composio import ComposioGoogleCalendarAPIComponent
 from .googlemeet_composio import ComposioGooglemeetAPIComponent
-from .googlesheets_composio import ComposioGooglesheetsAPIComponent
 from .googletasks_composio import ComposioGoogleTasksAPIComponent
 from .linear_composio import ComposioLinearAPIComponent
 from .outlook_composio import ComposioOutlookAPIComponent
@@ -21,7 +20,6 @@ __all__ = [
     "ComposioGoogleCalendarAPIComponent",
     "ComposioGoogleTasksAPIComponent",
     "ComposioGooglemeetAPIComponent",
-    "ComposioGooglesheetsAPIComponent",
     "ComposioLinearAPIComponent",
     "ComposioOutlookAPIComponent",
     "ComposioRedditAPIComponent",

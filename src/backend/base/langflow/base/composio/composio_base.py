@@ -182,8 +182,8 @@ class ComposioBaseComponent(Component):
             composio = self._build_wrapper()
             toolkit_slug = self.app_name.lower()
 
-            raw_tools = composio.tools.get_raw_composio_tools(toolkits=[toolkit_slug])
-            
+            raw_tools = composio.tools.get_raw_composio_tools(toolkits=[toolkit_slug], limit=999)
+
             if not raw_tools:
                 msg = f"Toolkit '{toolkit_slug}' not found or has no available tools"
                 raise ValueError(msg)
@@ -312,7 +312,7 @@ class ComposioBaseComponent(Component):
                                 if field_schema.get("file_uploadable") is True:
                                     file_upload_fields.add(clean_field_name)
                                     logger.debug(f"Found file upload field: {clean_field_name} in {action_key}")
-                                
+
                                 # Check anyOf structures (like OUTLOOK_OUTLOOK_SEND_EMAIL)
                                 if "anyOf" in field_schema:
                                     for any_of_item in field_schema["anyOf"]:
@@ -326,12 +326,12 @@ class ComposioBaseComponent(Component):
                             if clean_field.lower().startswith("attachment."):
                                 attachment_related_found = True
                                 continue  # Skip individual attachment fields
-                            
+
                             # Handle conflicting field names - rename user_id to avoid conflicts with entity_id
                             if clean_field == "user_id":
                                 clean_field = f"{self.app_name}_user_id"
                                 logger.debug(f"Renamed user_id to {clean_field} to avoid conflict with entity_id")
-                            
+
                             action_fields.append(clean_field)
 
                         # Add consolidated attachment field if we found attachment-related fields
@@ -375,7 +375,7 @@ class ComposioBaseComponent(Component):
         except ValueError as e:
             logger.debug(f"Could not populate Composio actions for {self.app_name}: {e}")
 
-    
+
     def _validate_schema_inputs(self, action_key: str) -> list[InputTypes]:
         """Convert the JSON schema for *action_key* into Langflow input objects."""
         schema_dict = self._action_schemas.get(action_key)
@@ -520,8 +520,6 @@ class ComposioBaseComponent(Component):
                 file_upload_fields = self._actions_data.get(action_key, {}).get("file_upload_fields", set())
                 if attachment_related_fields:  # If we consolidated attachment fields
                     file_upload_fields = file_upload_fields | {"attachment"}
-                
-                logger.debug(f"File upload fields for {action_key}: {file_upload_fields}")
 
                 for inp in result:
                     if hasattr(inp, "name"):
@@ -637,7 +635,7 @@ class ComposioBaseComponent(Component):
         """Simplified build config updates."""
         # BULLETPROOF tool_mode checking - check all possible places where tool_mode could be stored
         instance_tool_mode = getattr(self, "tool_mode", False) if hasattr(self, "tool_mode") else False
-        
+
         # Check build_config for tool_mode in multiple possible structures
         build_config_tool_mode = False
         if "tool_mode" in build_config:
@@ -646,7 +644,7 @@ class ComposioBaseComponent(Component):
                 build_config_tool_mode = tool_mode_config.get("value", False)
             else:
                 build_config_tool_mode = bool(tool_mode_config)
-        
+
         # If this is a tool_mode change, update BOTH instance variable AND build_config
         if field_name == "tool_mode":
             self.tool_mode = field_value
@@ -657,40 +655,40 @@ class ComposioBaseComponent(Component):
             if isinstance(build_config["tool_mode"], dict):
                 build_config["tool_mode"]["value"] = field_value
             build_config_tool_mode = field_value
-        
+
         # Current tool_mode is True if ANY source indicates it's enabled
         current_tool_mode = instance_tool_mode or build_config_tool_mode or (field_name == "tool_mode" and field_value)
-        
+
         # Enhanced logging
         logger.debug(f"update_build_config called: field_name={field_name}, field_value={field_value if field_name != 'tools_metadata' else '[tools_metadata_data]'}, current_tool_mode={current_tool_mode}, instance={instance_tool_mode}, build_config={build_config_tool_mode}")
-        
+
         # CRITICAL: If tool_mode is enabled from ANY source, immediately hide action field and return
         if current_tool_mode:
             logger.debug(f"TOOL MODE ENABLED - Hiding action field immediately. Sources: instance={instance_tool_mode}, build_config={build_config_tool_mode}, field_change={field_name == 'tool_mode' and field_value}")
             build_config["action"]["show"] = False
-            
+
             # CRITICAL: Hide ALL action parameter fields when tool mode is enabled
             logger.debug(f"Available fields in _all_fields: {list(self._all_fields)}")
             logger.debug(f"Available fields in build_config: {list(build_config.keys())}")
-            
+
             hidden_fields = []
             for field in self._all_fields:
                 if field in build_config:
                     build_config[field]["show"] = False
                     hidden_fields.append(field)
-            
+
             # Also hide any other action-related fields that might be in build_config
             action_related_fields = []
-            for field_name_in_config in build_config.keys():
+            for field_name_in_config in build_config:
                 # Skip base fields like api_key, tool_mode, action, etc.
                 if field_name_in_config not in ["api_key", "tool_mode", "action", "auth_link", "entity_id"]:
                     if isinstance(build_config[field_name_in_config], dict) and "show" in build_config[field_name_in_config]:
                         build_config[field_name_in_config]["show"] = False
                         action_related_fields.append(field_name_in_config)
-            
+
             logger.debug(f"Hidden fields from _all_fields: {hidden_fields}")
             logger.debug(f"Hidden action-related fields from build_config: {action_related_fields}")
-            
+
             # ENSURE tool_mode state is preserved in build_config for future calls
             if "tool_mode" not in build_config:
                 build_config["tool_mode"] = {"value": True}
@@ -888,8 +886,8 @@ class ComposioBaseComponent(Component):
         return build_config
 
     def configure_tools(self, composio: Composio) -> list[Tool]:
-        # tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()], limit=20)
-        tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()])
+        tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()], limit=999)
+        # tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()])
         # logger.info(f"Tools: {tools}")
         configured_tools = []
         for tool in tools:
@@ -969,7 +967,7 @@ class ComposioBaseComponent(Component):
                     # Skip if the current value matches the schema default
                     if value == schema_default:
                         continue
-                    
+
                     logger.debug(f"Field: {field}, Value: {value}, Schema Default: {schema_default}")
 
                 # Convert comma-separated to list for array parameters (heuristic)
@@ -994,15 +992,14 @@ class ComposioBaseComponent(Component):
                 arguments=arguments,
                 user_id=self.entity_id,
             )
-            
+
             if isinstance(result, dict) and "successful" in result:
                 if result["successful"]:
                     raw_data = result.get("data", result)
                     processed_data = self._apply_post_processor(action_key, raw_data)
                     return processed_data
-                else:
-                    error_msg = result.get("error", "Tool execution failed")
-                    raise ValueError(error_msg)
+                error_msg = result.get("error", "Tool execution failed")
+                raise ValueError(error_msg)
 
         except ValueError as e:
             logger.error(f"Failed to execute {action_key}: {e}")
@@ -1010,7 +1007,7 @@ class ComposioBaseComponent(Component):
 
     def _apply_post_processor(self, action_key: str, raw_data: Any) -> Any:
         """Apply post-processor for the given action if defined."""
-        if hasattr(self, 'post_processors') and isinstance(self.post_processors, dict):
+        if hasattr(self, "post_processors") and isinstance(self.post_processors, dict):
             processor_func = self.post_processors.get(action_key)
             if processor_func and callable(processor_func):
                 try:
@@ -1019,7 +1016,7 @@ class ComposioBaseComponent(Component):
                 except Exception as e:
                     logger.error(f"Error in post-processor for {action_key}: {e}")
                     return raw_data
-        
+
         return raw_data
 
     @abstractmethod
