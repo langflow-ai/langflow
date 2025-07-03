@@ -33,6 +33,7 @@ OPERATORS = {
 class DataOperationsComponent(Component):
     display_name = "Data Operations"
     description = "Perform various operations on a Data object."
+    documentation: str = "https://docs.langflow.org/components-processing#data-operations"
     icon = "file-json"
     name = "DataOperations"
     default_keys = ["operations", "data"]

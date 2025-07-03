@@ -7,6 +7,7 @@ from langflow.schema.data import Data
 
 class WebhookComponent(Component):
     display_name = "Webhook"
+    documentation: str = "https://docs.langflow.org/components-data#webhook"
     name = "Webhook"
     icon = "webhook"
 

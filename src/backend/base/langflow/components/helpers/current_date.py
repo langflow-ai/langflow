@@ -11,6 +11,7 @@ from langflow.schema.message import Message
 class CurrentDateComponent(Component):
     display_name = "Current Date"
     description = "Returns the current date and time in the selected timezone."
+    documentation: str = "https://docs.langflow.org/components-helpers#current-date"
     icon = "clock"
     name = "CurrentDate"
 
