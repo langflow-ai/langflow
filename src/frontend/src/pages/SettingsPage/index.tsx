@@ -39,7 +39,7 @@ export default function SettingsPage(): JSX.Element {
 
   sidebarNavItems.push(
     {
-      title: "MCP Connections",
+      title: "MCP Servers",
       href: "/settings/mcp-servers",
       icon: (
         <ForwardedIconComponent
