@@ -86,8 +86,8 @@ class LoopComponent(Component):
 
     def update_dependency(self):
         item_dependency_id = self.get_incoming_edge_by_target_param("item")
-
-        self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)
+        if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:
+            self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)
 
     def done_output(self) -> DataFrame:
         """Trigger the done output when iteration is complete."""
