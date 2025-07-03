@@ -186,6 +186,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         assert model.model_name == "gpt-4.1-nano"
         assert model.openai_api_base == "https://api.openai.com/v1"
 
+    @pytest.mark.skipif(os.getenv("OPENAI_API_KEY") is None, reason="OPENAI_API_KEY is not set")
     def test_build_model_integration_reasoning(self):
         component = OpenAIModelComponent()
         component.api_key = os.getenv("OPENAI_API_KEY")
