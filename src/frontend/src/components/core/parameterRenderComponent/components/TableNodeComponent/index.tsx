@@ -160,21 +160,32 @@ export default function TableNodeComponent({
     );
 
   function parseTSVorMarkdownTable(clipboard: string, columns: any[]) {
+    if (!clipboard.trim()) return [];
+
     // Try TSV (Excel/Sheets)
     if (clipboard.includes("\t")) {
       const lines = clipboard.trim().split(/\r?\n/);
-      // If first line looks like headers, skip it
-      const hasHeader = lines[0].split("\t").length === columns.length;
+      // More robust header detection - check if first line contains column names
+      const firstLineCells = lines[0].split("\t");
+      const hasHeader = firstLineCells.some((cell) =>
+        columns.some((col) => col.name === cell.trim()),
+      );
       const dataLines = hasHeader ? lines.slice(1) : lines;
+
       return dataLines.map((line) => {
         const cells = line.split("\t");
+        if (cells.length > columns.length) {
+          // Truncate extra cells
+          cells.length = columns.length;
+        }
         const row = {};
         columns.forEach((col, i) => {
-          row[col.name] = cells[i] ?? null;
+          row[col.name] = cells[i]?.trim() ?? null;
         });
         return row;
       });
     }
+
     // Try markdown table
     if (isMarkdownTable(clipboard)) {
       const lines = clipboard
@@ -182,6 +193,24 @@ export default function TableNodeComponent({
         .split(/\r?\n/)
         .filter((l) => l.includes("|"));
       if (lines.length < 2) return [];
+
+      // Validate that second line is a separator (contains dashes)
+      if (lines.length > 1 && !lines[1].includes("-")) {
+        // No separator found, treat all lines as data
+        const dataLines = lines;
+        return dataLines.map((line) => {
+          const cells = line
+            .split("|")
+            .slice(1, -1)
+            .map((c) => c.trim());
+          const row = {};
+          columns.forEach((col, i) => {
+            row[col.name] = cells[i] ?? null;
+          });
+          return row;
+        });
+      }
+
       // Assume first line is header, second is separator
       const dataLines = lines.slice(2);
       return dataLines.map((line) => {
@@ -206,11 +235,22 @@ export default function TableNodeComponent({
       }
       onPaste={(e) => {
         if (!isModalOpen) return;
-        const clipboard = e.clipboardData.getData("text");
-        const rows = parseTSVorMarkdownTable(clipboard, componentColumns);
-        if (rows.length > 0) {
-          setTempValue((prev) => [...prev, ...rows]);
-          e.preventDefault();
+        try {
+          const clipboard = e.clipboardData.getData("text");
+          const rows = parseTSVorMarkdownTable(clipboard, componentColumns);
+          if (rows.length > 0) {
+            setTempValue((prev) => [...prev, ...rows]);
+            e.preventDefault();
+            // Consider adding a toast notification here:
+            // toast.success(`Imported ${rows.length} rows successfully`);
+          } else {
+            // Consider adding a toast notification for failed parsing:
+            // toast.error("Could not parse clipboard data as table format");
+          }
+        } catch (error) {
+          console.error("Error parsing clipboard data:", error);
+          // Consider adding a toast notification for errors:
+          // toast.error("Error importing clipboard data");
         }
       }}
     >
