@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 
-from langflow.graph.edge.schema import EdgeData, SourceHandle, TargetHandle, TargetHandleDict
+from langflow.graph.edge.schema import EdgeData, LoopTargetHandleDict, SourceHandle, TargetHandle, TargetHandleDict
 from langflow.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:
@@ -27,7 +27,9 @@ class Edge:
             if isinstance(self._target_handle, dict):
                 try:
                     if "name" in self._target_handle:
-                        self.target_handle: TargetHandle = TargetHandle.from_loop_target_handle(self._target_handle)
+                        self.target_handle: TargetHandle = TargetHandle.from_loop_target_handle(
+                            cast(LoopTargetHandleDict, self._target_handle)
+                        )
                     else:
                         self.target_handle = TargetHandle(**self._target_handle)
                 except Exception as e:
