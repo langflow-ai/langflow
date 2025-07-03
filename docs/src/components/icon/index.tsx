@@ -1,5 +1,5 @@
 import React from "react";
-import * as LucideIcons from "lucide-react";
+import CustomIcon from "../CustomIcon";
 
 /*
 How to use this component:
@@ -11,9 +11,9 @@ import Icon from "@site/src/components/icon";
 
 type IconProps = {
   name: string;
+  [key: string]: any; // Allow any other props to be passed through
 };
 
 export default function Icon({ name, ...props }: IconProps) {
-  const Icon = LucideIcons[name];
-  return Icon ? <Icon {...props} /> : null;
-}
+  return <CustomIcon name={name} {...props} />;
+} 
