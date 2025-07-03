@@ -1,14 +1,7 @@
 import React from "react";
 import Layout from "@theme/Layout";
 import Link from "@docusaurus/Link";
-import {
-  Play,
-  Bot,
-  Layers,
-  Link as LinkIcon,
-  Github,
-  MessageCircle,
-} from "lucide-react";
+import { CirclePlay, Server, ArrowRight, MonitorDown, AppWindow, HardDriveUpload, Code, Star, LifeBuoy } from "lucide-react";
 import CustomIcon from "../components/CustomIcon";
 import styles from "./index.module.css";
 
@@ -43,31 +36,32 @@ export default function Home() {
         <div className={styles.quickLinksSection}>
           <Link to="/get-started-quickstart" className={styles.quickLinkCard}>
             <div className={styles.quickLinkIcon}>
-              <Play size={24} />
+              <CirclePlay size={32} strokeWidth={1.25} />
             </div>
             <h2 className={styles.quickLinkTitle}>Quickstart</h2>
             <p className={styles.quickLinkDescription}>
-              Run your first flow in minutes.
+              Build agentic flows with your favorite models, custom
+              instructions, and tools.
             </p>
           </Link>
           <Link to="/agents" className={styles.quickLinkCard}>
             <div className={styles.quickLinkIcon}>
-              <CustomIcon name="agents" size={24} />
+              <CustomIcon name="agents" size={32} />
             </div>
             <h2 className={styles.quickLinkTitle}>Agents</h2>
             <p className={styles.quickLinkDescription}>
-              Langflow's Agent component provides everything you need to create
+              Langflow's Agent component provides everything to create
               an agent, including support for multiple LLM providers, custom
               instructions, and tools.
             </p>
           </Link>
           <Link to="/mcp-server" className={styles.quickLinkCard}>
             <div className={styles.quickLinkIcon}>
-              <Layers size={24} />
+              <Server size={32} strokeWidth={1.25} />
             </div>
             <h2 className={styles.quickLinkTitle}>MCP</h2>
             <p className={styles.quickLinkDescription}>
-              You can use Langflow as both an MCP server and an MCP client.
+              Use Langflow as both an MCP server and an MCP client.
             </p>
           </Link>
         </div>
@@ -76,25 +70,79 @@ export default function Home() {
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>Use cases</h3>
           <div className={styles.cardsGrid}>
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className={styles.card}>
-                <div className={styles.cardIcon}>
-                  <LinkIcon size={16} />
-                </div>
-                <div className={styles.cardContent}>
-                  <div className={styles.cardTitle}>
-                    Basic Prompting (Hello, World)
-                  </div>
-                  <div className={styles.cardDescription}>
-                    A chatbot that helps developers ide...
-                  </div>
-                </div>
+            <Link to="/get-started-installation" className={styles.card}>
+              <div className={styles.cardIcon}>
+                <MonitorDown size={16} strokeWidth={1.25} />
               </div>
-            ))}
+              <div className={styles.cardContent}>
+                <div className={styles.cardTitle}>Install Langflow</div>
+              </div>
+              <div className={styles.cardArrow}>
+                <ArrowRight size={20} strokeWidth={1.25} />
+              </div>
+            </Link>
+            <Link to="/develop-application" className={styles.card}>
+              <div className={styles.cardIcon}>
+                <AppWindow size={16} strokeWidth={1.25} />
+              </div>
+              <div className={styles.cardContent}>
+                <div className={styles.cardTitle}>Develop applications</div>
+              </div>
+              <div className={styles.cardArrow}>
+                <ArrowRight size={20} strokeWidth={1.25} />
+              </div>
+            </Link>
+            <Link to="/deployment-overview" className={styles.card}>
+              <div className={styles.cardIcon}>
+                <HardDriveUpload size={16} strokeWidth={1.25} />
+              </div>
+              <div className={styles.cardContent}>
+                <div className={styles.cardTitle}>Deploy servers</div>
+              </div>
+              <div className={styles.cardArrow}>
+                <ArrowRight size={20} strokeWidth={1.25} />
+              </div>
+            </Link>
+            <Link to="/api-reference-api-examples" className={styles.card}>
+              <div className={styles.cardIcon}>
+                <Code size={16} strokeWidth={1.25} />
+              </div>
+              <div className={styles.cardContent}>
+                <div className={styles.cardTitle}>API reference</div>
+              </div>
+              <div className={styles.cardArrow}>
+                <ArrowRight size={20} strokeWidth={1.25} />
+              </div>
+            </Link>
+            <a 
+              href="https://github.com/langflow-ai/langflow/releases/latest"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.card}
+            >
+              <div className={styles.cardIcon}>
+                <Star size={16} strokeWidth={1.25} />
+              </div>
+              <div className={styles.cardContent}>
+                <div className={styles.cardTitle}>Release notes</div>
+              </div>
+              <div className={styles.cardArrow}>
+                <ArrowRight size={20} strokeWidth={1.25} />
+              </div>
+            </a>
+            <Link to="/troubleshoot" className={styles.card}>
+              <div className={styles.cardIcon}>
+                <LifeBuoy size={16} strokeWidth={1.25} />
+              </div>
+              <div className={styles.cardContent}>
+                <div className={styles.cardTitle}>Support</div>
+              </div>
+              <div className={styles.cardArrow}>
+                <ArrowRight size={20} strokeWidth={1.25} />
+              </div>
+            </Link>
           </div>
         </section>
-
-
 
         {/* Community Section */}
         <section className={styles.section}>
@@ -107,7 +155,7 @@ export default function Home() {
               className={styles.communityCard}
             >
               <div className={styles.communityIcon}>
-                <Github size={32} />
+                <CustomIcon name="github" size={32} />
               </div>
               <div className={styles.communityTitle}>Star the repo</div>
               <div className={styles.communityDescription}>
@@ -121,7 +169,7 @@ export default function Home() {
               className={styles.communityCard}
             >
               <div className={styles.communityIcon}>
-                <MessageCircle size={32} />
+                <CustomIcon name="discord" size={32} />
               </div>
               <div className={styles.communityTitle}>Join the Discord</div>
               <div className={styles.communityDescription}>
