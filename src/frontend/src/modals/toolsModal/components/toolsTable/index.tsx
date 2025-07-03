@@ -300,7 +300,7 @@ export default function ToolsTable({
                     className="text-mmd font-medium"
                     htmlFor="sidebar-name-input"
                   >
-                    Name
+                    {isAction ? "Tool name" : "Name"}
                   </label>
 
                   <Input
@@ -322,7 +322,7 @@ export default function ToolsTable({
                     className="text-mmd font-medium"
                     htmlFor="sidebar-desc-input"
                   >
-                    Description
+                    {isAction ? "Tool description" : "Description"}
                   </label>
 
                   <Textarea
@@ -335,7 +335,7 @@ export default function ToolsTable({
                   />
                   <div className="text-xs text-muted-foreground">
                     {isAction
-                      ? "This is the description for the tool exposed to the clients."
+                      ? "This is the description for the tool exposed to a client."
                       : "This is the description for the tool exposed to the agents."}
                   </div>
                 </div>
