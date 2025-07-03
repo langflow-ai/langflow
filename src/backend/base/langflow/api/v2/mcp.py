@@ -1,3 +1,4 @@
+import contextlib
 import json
 from io import BytesIO
 
@@ -53,12 +54,10 @@ async def get_server_list(
             return_content=True,
         )
     except (FileNotFoundError, HTTPException):
-        # Storage file missing – DB entry may be stale. Remove it and recreate.
+        # Storage file missing - DB entry may be stale. Remove it and recreate.
         if server_config_file:
-            try:
+            with contextlib.suppress(Exception):
                 await delete_file(server_config_file.id, current_user, session, storage_service)
-            except Exception:
-                pass  # ignore any failure deleting stale record
 
         # Create a fresh empty config
         await upload_server_config(
@@ -72,7 +71,7 @@ async def get_server_list(
         # Fetch and download again
         server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
         if not server_config_file:
-            raise HTTPException(status_code=500, detail="Failed to create _mcp_servers.json")
+            raise HTTPException(status_code=500, detail="Failed to create _mcp_servers.json") from None
 
         server_config_bytes = await download_file(
             server_config_file.id,
