@@ -7,7 +7,11 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Create a chatbot application that chats with files loaded from your local machine.
+This tutorial shows you how to build a chatbot that can read and answer questions about files you upload, such as meeting notes or job applications.
+
+For example, you could upload a contract and ask, “What are the termination clauses in this agreement?” Or upload a resume and ask, “Does this candidate have experience with marketing analytics?”
+
+The main focus of this tutorial is to show you how to provide files as input to a Langflow flow, so your chatbot can use the content of those files in its responses.
 
 ## Prerequisites
 
@@ -20,7 +24,7 @@ Create a chatbot application that chats with files loaded from your local machin
 
 To ingest files, your flow must have a **File** component attached to a component that receives input, such as a **Prompt** or **Agent** component.
 
-The following steps modify the **Basic prompting** template to accept file input.
+The following steps modify the [**Basic prompting**](/basic-prompting) template to accept file input.
 1. In Langflow, click **New Flow**, and then select the **Basic prompting** template.
 2. In the **Language Model** component, enter your OpenAI API key.
 
@@ -69,7 +73,7 @@ For help with constructing file upload requests for Python, JavaScript, and curl
 1. To construct the request, gather the following values from Langflow.
 
     * `LANGFLOW_SERVER_ADDRESS`: The default value is `127.0.0.1:7860`.
-    * `FLOW_ID`: The UUID of your flow, or the endpoint name you've chosen.
+    * `FLOW_ID`: The UUID of your flow, or the endpoint name you've chosen in the **Input schema** pane.
     * File Component name: To find the ID of your file component, in the File component, click **Controls**. For this example, the component name is `File-KZP68`.
     * Input value: This is the message you want to send to the Chat Input of your flow, such as `Evaluate this resume for a job opening in my Marketing department.`
     * File path: The path to the local file you want to load with your request. This example is loading `fake-resume.txt` from the same directory as the script.
