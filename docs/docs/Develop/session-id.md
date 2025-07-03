@@ -21,7 +21,7 @@ Replace `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` with the va
 curl --request POST \
   --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
   --header "Content-Type: application/json" \
-  --header "x-api-key: LANGFLOW_API_KEY" \
+  --header "x-api-key: $LANGFLOW_API_KEY" \
   --data '{
   "input_value": "Hello",
   "output_type": "chat",

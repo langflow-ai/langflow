@@ -32,9 +32,9 @@ To connect the **Webhook** to a **Parser** component to view and parse your data
 This example uses `id`, `name`, and `email` strings.
 Replace **FLOW_ID** with your flow's ID, which can be found on the [Publish pane](/concepts-publish) or in the flow's URL.
     ```bash
-    curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
-        -H 'Content-Type: application/json' \
-        -H 'x-api-key: LANGFLOW_API_KEY' \
+    curl -X POST "http://localhost:7860/api/v1/webhook/$FLOW_ID" \
+        -H "Content-Type: application/json" \
+        -H "x-api-key: $LANGFLOW_API_KEY" \
         -d '{"id": "12345", "name": "alex", "email": "alex@email.com"}'
     ```
 

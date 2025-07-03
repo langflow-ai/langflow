@@ -57,7 +57,7 @@ To create an API key for a user from the CLI, do the following:
     LANGFLOW_SUPERUSER_PASSWORD=securepassword
     ```
 
-2. To confirm your superuser status, check that `is_superuser` is `true` in the response from the [users/whoami](/api-users#get-current-user) endpoint.
+2. To confirm your superuser status, call [`GET /users/whoami`](/api-users#get-current-user), and then check that the response contains `"is_superuser": true`:
 
     ```bash
     curl -X GET \
@@ -90,7 +90,6 @@ To create an API key for a user from the CLI, do the following:
     ```shell
     uv run langflow api-key
     ```
-
   </TabItem>
 </Tabs>
 
