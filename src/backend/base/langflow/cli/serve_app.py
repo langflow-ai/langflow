@@ -13,9 +13,9 @@ if TYPE_CHECKING:
 
     from langflow.graph import Graph
 
-"""FastAPI application factory for deploying **multiple** Langflow graphs at once.
+"""FastAPI application factory for serving **multiple** Langflow graphs at once.
 
-This module is used by the CLI *deploy* command when the provided path is a
+This module is used by the CLI *serve* command when the provided path is a
 folder containing multiple ``*.json`` flow files.  Each flow is exposed under
 its own router prefix::
 
@@ -25,7 +25,7 @@ its own router prefix::
 A global ``/flows`` endpoint lists all available flows and returns a JSON array
 of metadata objects, allowing API consumers to discover IDs without guessing.
 
-Authentication behaves exactly like the single-flow deployment: all execution
+Authentication behaves exactly like the single-flow serving: all execution
 endpoints require the ``x-api-key`` header (or query parameter) validated by
 :func:`langflow.cli.commands.verify_api_key`.
 """
@@ -198,7 +198,7 @@ class RunRequest(BaseModel):
 
 
 class RunResponse(BaseModel):
-    """Response model mirroring the single-flow deployment."""
+    """Response model mirroring the single-flow server."""
 
     result: str = Field(..., description="The output result from the flow execution")
     success: bool = Field(..., description="Whether execution was successful")
@@ -217,7 +217,7 @@ class ErrorResponse(BaseModel):
 # -----------------------------------------------------------------------------
 
 
-def create_multi_deploy_app(
+def create_multi_serve_app(
     *,
     root_dir: Path,  # noqa: ARG001
     graphs: dict[str, Graph],
@@ -229,7 +229,7 @@ def create_multi_deploy_app(
     Parameters
     ----------
     root_dir
-        Folder originally supplied to the deploy command.  All *relative_path*
+        Folder originally supplied to the serve command.  All *relative_path*
         values are relative to this directory.
     graphs
         Mapping ``flow_id -> Graph`` containing prepared graph objects.
@@ -246,9 +246,9 @@ def create_multi_deploy_app(
         raise ValueError(msg)
 
     app = FastAPI(
-        title=f"Langflow Multi-Flow Deployment ({len(graphs)})",
+        title=f"Langflow Multi-Flow Server ({len(graphs)})",
         description=(
-            "This deployment hosts multiple Langflow graphs under the `/flows/{id}` prefix. "
+            "This server hosts multiple Langflow graphs under the `/flows/{id}` prefix. "
             "Use `/flows` to list available IDs then POST your input to `/flows/{id}/run`."
         ),
         version="1.0.0",
@@ -260,7 +260,7 @@ def create_multi_deploy_app(
 
     @app.get("/flows", response_model=list[FlowMeta], tags=["info"], summary="List available flows")
     async def list_flows():
-        """Return metadata for all flows hosted in this deployment."""
+        """Return metadata for all flows hosted in this server."""
         return list(metas.values())
 
     @app.get("/health", tags=["info"], summary="Global health check")

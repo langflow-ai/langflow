@@ -253,7 +253,7 @@ class TestExecuteCommand:
         result = runner.invoke(app, ["execute", str(invalid_python_script), "test", "--verbose"])
         assert result.exit_code == 1
         full_output = result.output + getattr(result, "stderr", "")
-        assert "No 'graph' variable found" in full_output
+        assert "No 'graph' variable found in script" in full_output
 
     def test_execute_syntax_error_script(self, runner, syntax_error_script):
         """Test error handling for Python scripts with syntax errors."""
@@ -580,115 +580,106 @@ def validate_execute_command_error_response(output: str) -> dict[str, Any]:
     return validate_execute_command_json_response(output, expect_success=False, expect_result=False)
 
 
-# Deploy Command Tests
+# Serve Command Tests
 
 
-class TestDeployCommand:
-    """Test suite for the deploy command."""
+class TestServeCommand:
+    """Test suite for the serve command."""
 
     @pytest.fixture(autouse=True)
     def _set_dummy_api_key(self, monkeypatch, request):
         # Only skip for tests that explicitly test missing API key
-        if not request.node.name.startswith("test_deploy_missing_api_key"):
+        if not request.node.name.startswith("test_serve_missing_api_key"):
             monkeypatch.setenv("LANGFLOW_API_KEY", "dummy-test-key")
 
-    def test_deploy_help_output(self, runner):
-        """Test the help output for the deploy command."""
-        result = runner.invoke(app, ["deploy", "--help"])
-        assert result.exit_code == 0, result
-        assert "Deploy a Langflow graph as a web API endpoint" in result.output
-        assert "--host" in result.output
-        assert "--port" in result.output
-        assert "--verbose" in result.output
+    def test_serve_help_output(self, runner):
+        """Test serve command help output."""
+        result = runner.invoke(app, ["serve", "--help"])
+        assert result.exit_code == 0
+        assert "Serve Langflow graphs as web API endpoints" in result.output
 
-    def test_deploy_nonexistent_file(self, runner):
+    def test_serve_nonexistent_file(self, runner):
         """Test error handling for nonexistent files."""
-        result = runner.invoke(app, ["deploy", "nonexistent.py", "--verbose"])
+        result = runner.invoke(app, ["serve", "nonexistent.py", "--verbose"])
         assert result.exit_code == 1
         # Check stderr or combined output for error message
         full_output = result.output + getattr(result, "stderr", "")
         assert "does not exist" in full_output
 
-    def test_deploy_invalid_file_extension(self, runner, tmp_path):
+    def test_serve_invalid_file_extension(self, runner, tmp_path):
         """Test error handling for unsupported file extensions."""
         invalid_file = tmp_path / "test.txt"
         invalid_file.write_text("not a script")
 
-        result = runner.invoke(app, ["deploy", str(invalid_file), "--verbose"])
+        result = runner.invoke(app, ["serve", str(invalid_file), "--verbose"])
         assert result.exit_code == 1
         full_output = result.output + getattr(result, "stderr", "")
         assert "must be a .py or .json file" in full_output
 
-    def test_deploy_invalid_python_script(self, runner, invalid_python_script):
+    def test_serve_invalid_python_script(self, runner, invalid_python_script):
         """Test error handling for Python scripts without graph variable."""
-        result = runner.invoke(app, ["deploy", str(invalid_python_script), "--verbose"])
+        result = runner.invoke(app, ["serve", str(invalid_python_script), "--verbose"])
         assert result.exit_code == 1
         full_output = result.output + getattr(result, "stderr", "")
-        assert "No 'graph' variable found" in full_output
+        assert "No 'graph' variable found in script" in full_output
 
-    def test_deploy_syntax_error_script(self, runner, syntax_error_script):
+    def test_serve_syntax_error_script(self, runner, syntax_error_script):
         """Test error handling for Python scripts with syntax errors."""
-        result = runner.invoke(app, ["deploy", str(syntax_error_script), "--verbose"])
+        result = runner.invoke(app, ["serve", str(syntax_error_script), "--verbose"])
         assert result.exit_code == 1
         # Should handle syntax errors gracefully
 
-    def test_deploy_directory_instead_of_file(self, runner, tmp_path):
-        """Test error handling when providing directory instead of file."""
-        result = runner.invoke(app, ["deploy", str(tmp_path), "--verbose"])
-        assert result.exit_code == 1
-        full_output = result.output + getattr(result, "stderr", "")
-        assert "is not a file" in full_output
-
-    @pytest.mark.skip_blockbuster
-    def test_deploy_valid_python_script_startup(self, runner, temp_python_script):
-        """Test that deploy command can successfully analyze and prepare a valid Python script.
-
-        Note: This test only checks the startup validation, not the actual server startup.
-        """
+    def test_serve_directory_instead_of_file(self, runner, tmp_path):
+        """Test serve command with directory instead of file."""
         from unittest.mock import patch
 
-        # We'll mock uvicorn.run to prevent the actual server from starting
-        with patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn:
-            # Make uvicorn.run do nothing instead of raising KeyboardInterrupt
-            # since the CLI runner can't handle interrupts the same way
-            mock_uvicorn.return_value = None
+        # Create an empty directory
+        empty_dir = tmp_path / "empty_dir"
+        empty_dir.mkdir()
 
-            result = runner.invoke(app, ["deploy", str(temp_python_script), "--verbose"])
-
-            # Should exit with 0 since we're not actually starting the server
-            assert result.exit_code == 0, result
-
-            # Check that it got through the validation steps
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
+            result = runner.invoke(app, ["serve", str(empty_dir), "--verbose"])
+            assert result.exit_code == 1
             full_output = result.output + getattr(result, "stderr", "")
-            assert "Found 'graph' variable" in full_output
-            assert "Graph prepared successfully" in full_output
-            assert "Starting deployment server" in full_output
-
-            # Verify uvicorn.run was called
-            assert mock_uvicorn.called
+            assert "No .json flow files found" in full_output
 
     @pytest.mark.skip_blockbuster
-    def test_deploy_basic_prompting_startup(self, runner, test_basic_prompting):
-        """Test that deploy command can successfully analyze and prepare basic prompting graph."""
-        from unittest.mock import patch
+    @pytest.mark.parametrize(
+        "script_fixture",
+        [
+            "temp_python_script",
+            "test_basic_prompting",
+        ],
+    )
+    def test_serve_script_startup(self, runner, script_fixture, request):
+        """Test deploy command with a valid Python script."""
+        from unittest.mock import MagicMock, patch
 
-        # We'll mock uvicorn.run to prevent the actual server from starting
-        with patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn:
-            # Make uvicorn.run do nothing instead of raising KeyboardInterrupt
+        script_path = request.getfixturevalue(script_fixture)
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
             mock_uvicorn.return_value = None
+            mock_graph = MagicMock()
+            mock_load_graph.return_value = mock_graph
 
-            result = runner.invoke(app, ["deploy", str(test_basic_prompting), "--verbose"])
+            result = runner.invoke(app, ["deploy", str(script_path), "--verbose"])
+            assert result.exit_code == 0, result.output
 
-            # Should exit with 0 since we're not actually starting the server
-            assert result.exit_code == 0, result
+            # Verify the multi-deploy app was created
+            mock_uvicorn.assert_called_once()
+            call_args = mock_uvicorn.call_args
+            assert call_args[0][0].title == "Langflow Multi-Flow Deployment (1)"
 
-            # Check that it got through the validation steps
-            full_output = result.output + getattr(result, "stderr", "")
-            assert "Found 'graph' variable" in full_output
-            assert "Graph prepared successfully" in full_output
-            assert "Starting deployment server" in full_output
+            # Verify the output shows single flow deployment
+            assert "Single Flow Deployed Successfully!" in result.output
+            assert "/flows/" in result.output
 
-    def test_deploy_port_validation(self, runner, temp_python_script):
+    def test_serve_port_validation(self, runner, temp_python_script):
         """Test deploy command with custom port configuration."""
         from unittest.mock import patch
 
@@ -713,7 +704,7 @@ class TestDeployCommand:
             call_args = mock_uvicorn.call_args
             assert call_args[1]["port"] == 9000
 
-    def test_deploy_host_validation(self, runner, temp_python_script):
+    def test_serve_host_validation(self, runner, temp_python_script):
         """Test deploy command with custom host configuration."""
         from unittest.mock import patch
 
@@ -732,29 +723,28 @@ class TestDeployCommand:
             call_args = mock_uvicorn.call_args
             assert call_args[1]["host"] == "0.0.0.0"  # noqa: S104
 
-    def test_deploy_verbose_output(self, runner, temp_python_script):
-        """Test deploy command verbose output contains expected information."""
-        from unittest.mock import patch
+    def test_serve_verbose_output(self, runner, temp_python_script):
+        """Test deploy command with verbose output."""
+        from unittest.mock import MagicMock, patch
 
-        with patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn:
-            # Make uvicorn.run do nothing instead of raising KeyboardInterrupt
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
             mock_uvicorn.return_value = None
+            mock_graph = MagicMock()
+            mock_load_graph.return_value = mock_graph
 
             result = runner.invoke(app, ["deploy", str(temp_python_script), "--verbose"])
+            assert result.exit_code == 0, result.output
 
-            # Should exit with 0 since we're not actually starting the server
-            assert result.exit_code == 0, result
-
-            # Check for expected verbose output
             full_output = result.output + getattr(result, "stderr", "")
-            assert "Analyzing Python script" in full_output
-            assert "Found 'graph' variable" in full_output
-            assert "Loading graph" in full_output
-            assert "Preparing graph for deployment" in full_output
-            assert "Graph prepared successfully" in full_output
-            assert "Starting deployment server" in full_output
+            assert "Starting single-flow deployment server" in full_output
+            assert "Single Flow Deployed Successfully!" in full_output
 
-    def test_deploy_quiet_mode(self, runner, temp_python_script):
+    def test_serve_quiet_mode(self, runner, temp_python_script):
         """Test deploy command in quiet mode (no verbose flag)."""
         from unittest.mock import patch
 
@@ -775,7 +765,7 @@ class TestDeployCommand:
 
     # API Key Authentication Tests
 
-    def test_deploy_missing_api_key(self, runner, temp_python_script):
+    def test_serve_missing_api_key(self, runner, temp_python_script):
         """Test deploy command fails when LANGFLOW_API_KEY is not set."""
         from unittest.mock import patch
 
@@ -787,69 +777,59 @@ class TestDeployCommand:
             assert "LANGFLOW_API_KEY environment variable is required" in full_output
             assert "Set the LANGFLOW_API_KEY environment variable" in full_output
 
-    def test_deploy_with_api_key(self, runner, temp_python_script):
-        """Test deploy command succeeds when LANGFLOW_API_KEY is set."""
-        from unittest.mock import patch
+    def test_serve_with_api_key(self, runner, temp_python_script):
+        """Test deploy command with API key."""
+        from unittest.mock import MagicMock, patch
 
-        # Set API key in environment
         with (
-            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-api-key-123"}),
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-api-key"}),
             patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
         ):
             mock_uvicorn.return_value = None
+            mock_graph = MagicMock()
+            mock_load_graph.return_value = mock_graph
 
             result = runner.invoke(app, ["deploy", str(temp_python_script), "--verbose"])
-            assert result.exit_code == 0, result
+            assert result.exit_code == 0, result.output
 
             full_output = result.output + getattr(result, "stderr", "")
-            assert "LANGFLOW_API_KEY is configured" in full_output
-            assert "Graph Deployed Successfully" in full_output
-            # Verify API key is masked in output
-            assert "test-api..." in full_output
-            # Verify actual API key is NOT exposed in instructions
-            assert "test-api-key-123" not in full_output
-            assert "<your-api-key>" in full_output
+            assert "Single Flow Deployed Successfully!" in full_output
+            assert "test-api..." in full_output  # Check for masked version
 
-    def test_deploy_api_key_verification_functions(self):
-        """Test the API key verification helper functions."""
+    def test_serve_api_key_verification_functions(self):
+        """Test API key verification functions."""
         from unittest.mock import patch
 
         from fastapi import HTTPException
-        from langflow.cli.commands import get_api_key, verify_api_key
 
-        # Test get_api_key with missing environment variable
+        # Test verify_api_key function
+        from langflow.cli.commands import verify_api_key
+
+        # Test with no API key
+        with pytest.raises(HTTPException) as exc_info:
+            verify_api_key(None, None)
+        assert exc_info.value.status_code == 401
+        assert "API key required" in str(exc_info.value.detail)
+
+        # Test with invalid API key
         with (
-            patch.dict("os.environ", {}, clear=True),
-            pytest.raises(ValueError, match="LANGFLOW_API_KEY environment variable is required"),
+            patch("langflow.cli.commands.get_api_key", return_value="correct-key"),
+            pytest.raises(HTTPException) as exc_info,
         ):
-            get_api_key()
+            verify_api_key("wrong-key", None)
+        assert exc_info.value.status_code == 401
+        assert "Invalid API key" in str(exc_info.value.detail)
 
-        # Test get_api_key with environment variable set
-        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
-            assert get_api_key() == "test-key"
-
-        # Test verify_api_key with missing API key
-        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
-            with pytest.raises(HTTPException) as exc_info:
-                verify_api_key(None, None)
-            assert exc_info.value.status_code == 401
-            assert "API key is required" in str(exc_info.value.detail)
-
-        # Test verify_api_key with incorrect API key
-        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "correct-key"}):
-            with pytest.raises(HTTPException) as exc_info:
-                verify_api_key("wrong-key", None)
-            assert exc_info.value.status_code == 401
-            assert "Invalid API key" in str(exc_info.value.detail)
-
-        # Test verify_api_key with correct API key (header)
-        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "correct-key"}):
-            result = verify_api_key(None, "correct-key")
+        # Test with valid API key
+        with patch("langflow.cli.commands.get_api_key", return_value="correct-key"):
+            result = verify_api_key("correct-key", None)
             assert result == "correct-key"
 
-        # Test verify_api_key with correct API key (query param)
-        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "correct-key"}):
-            result = verify_api_key("correct-key", None)
+        # Test with API key in header
+        with patch("langflow.cli.commands.get_api_key", return_value="correct-key"):
+            result = verify_api_key(None, "correct-key")
             assert result == "correct-key"
 
     # PEP 723 Dependency Installation Tests
@@ -910,7 +890,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         deps = extract_script_dependencies(pep723_script_no_deps, mock_verbose_print)
         assert deps == []
 
-    def test_deploy_install_deps_flag(self, runner, pep723_script_with_deps):
+    def test_serve_install_deps_flag(self, runner, pep723_script_with_deps):
         """Test --install-deps and --no-install-deps flags."""
         from unittest.mock import patch
 
@@ -953,7 +933,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             # Verify dependency installation was NOT called
             mock_install.assert_not_called()
 
-    def test_deploy_script_without_deps_flag_handling(self, runner, pep723_script_no_deps):
+    def test_serve_script_without_deps_flag_handling(self, runner, pep723_script_no_deps):
         """Test behavior when script has no dependencies but --install-deps is used."""
         from unittest.mock import patch
 
@@ -977,7 +957,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             # Verify dependency installation was NOT called (no deps to install)
             mock_install.assert_not_called()
 
-    def test_deploy_json_file_ignores_install_deps(self, runner, test_json_flow):
+    def test_serve_json_file_ignores_install_deps(self, runner, test_json_flow):
         """Test that --install-deps is ignored for JSON files."""
         from unittest.mock import patch
 
@@ -1067,7 +1047,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             assert "Loading environment variables from:" in full_output
             assert "LANGFLOW_API_KEY is configured" in full_output
 
-    def test_deploy_log_level_validation(self, runner, temp_python_script):
+    def test_serve_log_level_validation(self, runner, temp_python_script):
         """Test log level validation in deploy command."""
         from unittest.mock import patch
 
@@ -1094,109 +1074,149 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
 
     # URL Testing
 
-    def test_deploy_url_script_success(self, runner, temp_python_script):
-        """Test deploy command with a URL pointing to a Python script."""
-        from unittest.mock import patch
+    def test_serve_url_script_success(self, runner):
+        """Test deploy command with URL script."""
+        import tempfile
+        from unittest.mock import MagicMock, patch
 
-        # Mock the URL download functionality
         with (
             patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
-            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.common.is_url", return_value=True),
             patch("langflow.cli.common.download_script_from_url") as mock_download,
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
         ):
             mock_uvicorn.return_value = None
-            # Mock the download to return our test script
-            mock_download.return_value = temp_python_script
+            with tempfile.TemporaryDirectory() as tmpdir:
+                test_file = Path(tmpdir) / "test.py"
+                test_file.write_text("print('hello')")
+                mock_download.return_value = test_file
+                mock_graph = MagicMock()
+                mock_load_graph.return_value = mock_graph
 
-            result = runner.invoke(app, ["deploy", "http://example.com/test_script.py", "--verbose"])
-            assert result.exit_code == 0, result
+                result = runner.invoke(app, ["deploy", "https://example.com/script.py", "--verbose"])
+                assert result.exit_code == 0, result.output
 
-            # Verify download was called with the correct URL
-            mock_download.assert_called_once()
-            call_args = mock_download.call_args
-            assert call_args[0][0] == "http://example.com/test_script.py"  # URL
-            assert callable(call_args[0][1])  # verbose_print function
+                # Verify the multi-deploy app was created
+                mock_uvicorn.assert_called_once()
+                call_args = mock_uvicorn.call_args
+                assert call_args[0][0].title == "Langflow Multi-Flow Deployment (1)"
 
-            # Check that it got through the validation steps and shows URL source
-            full_output = result.output + getattr(result, "stderr", "")
-            assert "Found 'graph' variable" in full_output
-            assert "Graph prepared successfully" in full_output
-            assert "Starting deployment server" in full_output
-            # Check that the deployment banner shows the URL source
-            assert "Source: http://example.com/test_script.py" in full_output
+                # Verify the output shows single flow deployment
+                assert "Single Flow Deployed Successfully!" in result.output
+                assert "/flows/" in result.output
 
-    def test_deploy_url_script_download_failure(self, runner):
+    def test_serve_url_script_root_endpoint_info(self, runner):
+        """Test that URL deploy creates proper app with root endpoint info."""
+        import tempfile
+        from unittest.mock import MagicMock, patch
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.common.is_url", return_value=True),
+            patch("langflow.cli.common.download_script_from_url") as mock_download,
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
+            mock_uvicorn.return_value = None
+            with tempfile.TemporaryDirectory() as tmpdir:
+                test_file = Path(tmpdir) / "test.py"
+                test_file.write_text("print('hello')")
+                mock_download.return_value = test_file
+                mock_graph = MagicMock()
+                mock_load_graph.return_value = mock_graph
+
+                result = runner.invoke(app, ["deploy", "http://example.com/test_script.py", "--verbose"])
+                assert result.exit_code == 0, result.output
+
+                # Verify the multi-deploy app was created
+                mock_uvicorn.assert_called_once()
+                call_args = mock_uvicorn.call_args
+                app_instance = call_args[0][0]
+                assert app_instance.title == "Langflow Multi-Flow Deployment (1)"
+
+                # Verify the output shows single flow deployment
+                assert "Single Flow Deployed Successfully!" in result.output
+                assert "/flows/" in result.output
+
+    def test_serve_url_script_download_failure(self, runner):
         """Test deploy command with a URL that fails to download."""
         from unittest.mock import patch
 
-        import httpx
+        import typer
+
+        def mock_download_with_http_error(url, verbose_print):
+            verbose_print(f"Downloading script from URL: {url}")
+            verbose_print("✗ HTTP error downloading script: 404 - Not Found")
+            raise typer.Exit(1)
 
         with (
             patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
-            patch("langflow.cli.common.download_script_from_url") as mock_download,
+            patch("langflow.cli.common.is_url", return_value=True),
+            patch("langflow.cli.common.download_script_from_url", side_effect=mock_download_with_http_error),
         ):
-            # Mock download to raise an HTTP error
-            mock_download.side_effect = httpx.HTTPStatusError(
-                "404 Not Found", request=None, response=httpx.Response(404, text="Not Found")
-            )
-
             result = runner.invoke(app, ["deploy", "http://example.com/nonexistent.py", "--verbose"])
             assert result.exit_code == 1
 
             full_output = result.output + getattr(result, "stderr", "")
             assert "Downloading script from URL" in full_output
-            assert "HTTP error downloading script" in full_output
+            assert "HTTP error" in full_output
 
-    def test_deploy_url_script_network_error(self, runner):
+    def test_serve_url_script_network_error(self, runner):
         """Test deploy command with a URL that has network connectivity issues."""
         from unittest.mock import patch
 
-        import httpx
+        import typer
+
+        def mock_download_with_error(url, verbose_print):
+            verbose_print(f"Downloading script from URL: {url}")
+            verbose_print("✗ Network error downloading script: Connection failed")
+            raise typer.Exit(1)
 
         with (
             patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
-            patch("langflow.cli.common.download_script_from_url") as mock_download,
+            patch("langflow.cli.common.is_url", return_value=True),
+            patch("langflow.cli.common.download_script_from_url", side_effect=mock_download_with_error),
         ):
-            # Mock download to raise a network error
-            mock_download.side_effect = httpx.RequestError("Connection failed")
-
             result = runner.invoke(app, ["deploy", "http://example.com/test_script.py", "--verbose"])
             assert result.exit_code == 1
 
             full_output = result.output + getattr(result, "stderr", "")
             assert "Downloading script from URL" in full_output
-            assert "Network error downloading script" in full_output
+            assert "Network error" in full_output
 
-    def test_deploy_url_script_invalid_extension(self, runner):
+    def test_serve_url_script_invalid_extension(self, runner):
         """Test deploy command with a URL that returns a non-Python file."""
         import tempfile
-        from pathlib import Path
         from unittest.mock import patch
+
+        import typer
+
+        # Test a .py URL that downloads a file with wrong extension
+        def mock_download_with_invalid_extension(url, verbose_print):
+            verbose_print(f"Downloading script from URL: {url}")
+            # Create a temp file with .txt extension but URL ends with .py
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+                f.write("This is not a Python script")
+            verbose_print("Error: URL must point to a Python script (.py file), got: .txt")
+            raise typer.Exit(1)
 
         with (
             patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
-            patch("langflow.cli.common.download_script_from_url") as mock_download,
+            patch("langflow.cli.common.is_url", return_value=True),
+            patch("langflow.cli.common.download_script_from_url", side_effect=mock_download_with_invalid_extension),
         ):
-            # Create a temporary file with .txt extension
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-                f.write("This is not a Python script")
-                temp_file = Path(f.name)
+            # Use a .py URL so it goes through the script download path
+            result = runner.invoke(app, ["deploy", "http://example.com/script.py", "--verbose"])
+            assert result.exit_code == 1
 
-            try:
-                # Mock download to return a non-Python file
-                mock_download.return_value = temp_file
+            full_output = result.output + getattr(result, "stderr", "")
+            assert "Downloading script from URL" in full_output
+            assert "URL must point to a Python script (.py file)" in full_output
 
-                result = runner.invoke(app, ["deploy", "http://example.com/script.txt", "--verbose"])
-                assert result.exit_code == 1
-
-                full_output = result.output + getattr(result, "stderr", "")
-                assert "Downloading script from URL" in full_output
-                assert "URL must point to a Python script (.py file)" in full_output
-            finally:
-                # Clean up the temporary file
-                temp_file.unlink(missing_ok=True)
-
-    def test_deploy_url_script_with_dependencies(self, runner, pep723_script_with_deps):
+    def test_serve_url_script_with_dependencies(self, runner, pep723_script_with_deps):
         """Test deploy command with a URL script that has PEP 723 dependencies."""
         from unittest.mock import patch
 
@@ -1221,33 +1241,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             # Verify dependency installation was called
             mock_install.assert_called_once()
 
-    def test_deploy_url_script_root_endpoint_info(self, runner, temp_python_script):
-        """Test that the root endpoint correctly shows URL source information."""
-        from unittest.mock import patch
-
-        with (
-            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
-            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
-            patch("langflow.cli.common.download_script_from_url") as mock_download,
-        ):
-            mock_uvicorn.return_value = None
-            mock_download.return_value = temp_python_script
-
-            # Mock the create_deploy_app function to capture the app creation
-            with patch("langflow.cli.commands.create_deploy_app") as mock_create_app:
-                mock_app = mock_uvicorn.return_value
-                mock_create_app.return_value = mock_app
-
-                result = runner.invoke(app, ["deploy", "http://example.com/test_script.py", "--verbose"])
-                assert result.exit_code == 0, result
-
-                # Verify create_deploy_app was called with the correct parameters
-                mock_create_app.assert_called_once()
-                call_args = mock_create_app.call_args
-                assert call_args[0][1] == "http://example.com/test_script.py"  # script_path
-                assert call_args[0][2] == temp_python_script  # resolved_path
-
-    def test_deploy_url_script_validation(self, runner):
+    def test_serve_url_script_validation(self, runner):
         """Test URL validation in the deploy command."""
         import tempfile
         from unittest.mock import patch
@@ -1258,14 +1252,21 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             patch("langflow.cli.common.is_url", return_value=True),
             patch("langflow.cli.common.download_script_from_url") as mock_download,
             patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
         ):
+            from unittest.mock import MagicMock
+
             mock_uvicorn.return_value = None
+            mock_graph = MagicMock()
+            mock_load_graph.return_value = mock_graph
             with tempfile.TemporaryDirectory() as tmpdir:
                 test_file = Path(tmpdir) / "test.py"
                 test_file.write_text("print('hello')")
                 mock_download.return_value = test_file
                 result = runner.invoke(app, ["deploy", "https://example.com/script.py", "--verbose"])
-                assert result.exit_code == 0, result
+                assert result.exit_code == 0, result.output
+
         # Test with invalid URL (not actually a URL)
         with (
             patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
@@ -1275,3 +1276,172 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             assert result.exit_code == 1
             full_output = result.output + getattr(result, "stderr", "")
             assert "does not exist" in full_output or "is not a file" in full_output
+
+    # Folder Deploy Tests
+
+    def test_serve_folder_success(self, runner, tmp_path):
+        """Test deploy command with a folder containing JSON flows."""
+        from unittest.mock import MagicMock, patch
+
+        # Create a test folder with JSON flows
+        flows_folder = tmp_path / "test_flows"
+        flows_folder.mkdir()
+
+        # Create test JSON flow files
+        flow1 = flows_folder / "basic_flow.json"
+        flow1.write_text('{"data": {"nodes": [], "edges": []}}')
+
+        flow2 = flows_folder / "advanced_flow.json"
+        flow2.write_text('{"data": {"nodes": [], "edges": []}}')
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
+            mock_uvicorn.return_value = None
+
+            # Mock graph objects
+            mock_graph1 = MagicMock()
+            mock_graph2 = MagicMock()
+            mock_load_graph.side_effect = [mock_graph1, mock_graph2]
+
+            result = runner.invoke(app, ["deploy", str(flows_folder), "--verbose"])
+            assert result.exit_code == 0, result.output
+
+            # Verify folder deployment message
+            assert "Folder Deployed Successfully!" in result.output
+            assert "Flows Detected: 2" in result.output
+            assert "Discover flows:" in result.output
+            assert "/flows" in result.output
+
+    def test_serve_folder_no_json_files(self, runner, tmp_path):
+        """Test deploy command with folder containing no JSON files."""
+        from unittest.mock import patch
+
+        empty_folder = tmp_path / "empty_flows"
+        empty_folder.mkdir()
+
+        # Add some non-JSON files
+        (empty_folder / "readme.txt").write_text("This is not a flow")
+        (empty_folder / "script.py").write_text("print('hello')")
+
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
+            result = runner.invoke(app, ["deploy", str(empty_folder), "--verbose"])
+            assert result.exit_code == 1
+            assert "No .json flow files found" in result.output
+
+    def test_serve_folder_invalid_json(self, runner, tmp_path):
+        """Test deploy command with folder containing invalid JSON files."""
+        from unittest.mock import patch
+
+        flows_folder = tmp_path / "invalid_flows"
+        flows_folder.mkdir()
+
+        # Create invalid JSON file
+        invalid_flow = flows_folder / "invalid.json"
+        invalid_flow.write_text('{"invalid": json}')  # Invalid JSON
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+        ):
+            mock_load_graph.side_effect = Exception("Invalid JSON format")
+
+            result = runner.invoke(app, ["deploy", str(flows_folder), "--verbose"])
+            assert result.exit_code == 1
+            assert "Failed loading flow" in result.output
+
+    def test_serve_github_repo_success(self, runner):
+        """Test deploy command with GitHub repository URL."""
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import MagicMock, patch
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.download_and_extract_repo") as mock_download,
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
+            mock_uvicorn.return_value = None
+
+            # Create a temporary directory structure
+            with tempfile.TemporaryDirectory() as tmpdir:
+                repo_path = Path(tmpdir)
+                flows_dir = repo_path / "flows"
+                flows_dir.mkdir()
+
+                # Create test flow
+                flow_file = flows_dir / "test_flow.json"
+                flow_file.write_text('{"data": {"nodes": [], "edges": []}}')
+
+                mock_download.return_value = repo_path
+                mock_graph = MagicMock()
+                mock_load_graph.return_value = mock_graph
+
+                result = runner.invoke(app, ["deploy", "https://github.com/user/repo", "--verbose"])
+                assert result.exit_code == 0, result.output
+
+                # Verify download was called
+                mock_download.assert_called_once()
+                assert "https://github.com/user/repo" in mock_download.call_args[0]
+
+    def test_serve_github_repo_download_failure(self, runner):
+        """Test deploy command with GitHub repo that fails to download."""
+        from unittest.mock import patch
+
+        import httpx
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.download_and_extract_repo") as mock_download,
+        ):
+            mock_download.side_effect = httpx.HTTPStatusError(
+                "404 Not Found", request=None, response=httpx.Response(404)
+            )
+
+            result = runner.invoke(app, ["deploy", "https://github.com/nonexistent/repo", "--verbose"])
+            assert result.exit_code == 1
+            assert "Error downloading repository" in result.output
+
+    def test_serve_github_token_authentication(self, runner):
+        """Test that GITHUB_TOKEN environment variable is used for authentication."""
+        import tempfile
+        from unittest.mock import MagicMock, patch
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key", "GITHUB_TOKEN": "gh_token_123"}),
+            patch("langflow.cli.common.httpx.Client") as mock_client_class,
+            patch("langflow.cli.commands.download_and_extract_repo") as mock_download,
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
+            mock_client = MagicMock()
+            mock_client_class.return_value.__enter__.return_value = mock_client
+            mock_uvicorn.return_value = None
+
+            # Mock successful response
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"default_branch": "main"}
+            mock_client.get.return_value = mock_response
+
+            # Create a temp directory that looks like an extracted repo
+            with tempfile.TemporaryDirectory() as tmpdir:
+                repo_path = Path(tmpdir)
+                # Create a fake JSON flow file
+                flow_file = repo_path / "test_flow.json"
+                flow_file.write_text('{"data": {"nodes": [], "edges": []}}')
+
+                mock_download.return_value = repo_path
+                mock_graph = MagicMock()
+                mock_load_graph.return_value = mock_graph
+
+                result = runner.invoke(app, ["deploy", "https://github.com/user/repo", "--verbose"])
+                assert result.exit_code == 0, result.output
+
+                # Verify that the download function was called
+                mock_download.assert_called_once()

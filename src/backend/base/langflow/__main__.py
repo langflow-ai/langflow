@@ -25,7 +25,7 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
-from langflow.cli.commands import deploy_command
+from langflow.cli.commands import serve_command
 from langflow.cli.progress import create_langflow_progress
 from langflow.cli.script_loader import (
     extract_text_from_result,
@@ -852,8 +852,8 @@ def execute(
         typer.echo(json.dumps(result_data, indent=indent))
 
 
-# Register the deploy command
-app.command(name="deploy")(deploy_command)
+# Register the serve command
+app.command(name="serve")(serve_command)
 
 
 def show_version(*, value: bool):

@@ -29,7 +29,7 @@ from langflow.cli.common import (
     load_graph_from_path,
     validate_script_path,
 )
-from langflow.cli.deploy_app import FlowMeta, create_multi_deploy_app
+from langflow.cli.serve_app import FlowMeta, create_multi_serve_app
 from langflow.logging.logger import configure
 
 if TYPE_CHECKING:
@@ -66,7 +66,7 @@ def verify_api_key(
     return provided_key
 
 
-def deploy_command(
+def serve_command(
     script_path: str = typer.Argument(
         ...,
         help=(
@@ -93,22 +93,22 @@ def deploy_command(
         help="Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)",
     ),
 ) -> None:
-    """Deploy Langflow graphs as web API endpoints with API key authentication.
+    """Serve Langflow graphs as web API endpoints with API key authentication.
 
-    This command supports multiple deployment modes:
+    This command supports multiple serving modes:
 
-    1. **Single Flow**: Deploy a Python script (.py) or JSON flow (.json)
-    2. **Folder**: Deploy all *.json flows in a directory under /flows/{id} endpoints
-    3. **GitHub Repository**: Deploy flows from a GitHub repo (supports private repos with GITHUB_TOKEN)
-    4. **Remote Script**: Deploy a Python script from a URL
+    1. **Single Flow**: Serve a Python script (.py) or JSON flow (.json)
+    2. **Folder**: Serve all *.json flows in a directory under /flows/{id} endpoints
+    3. **GitHub Repository**: Serve flows from a GitHub repo (supports private repos with GITHUB_TOKEN)
+    4. **Remote Script**: Serve a Python script from a URL
 
-    All deployments use a unified API structure with /flows/{id} endpoints:
+    All served flows use a unified API structure with /flows/{id} endpoints:
     - Single flows: Use the single flow ID under /flows/{id}/run
     - Multi-flows: Use /flows/{id}/run endpoints for each flow
     - Discovery: /flows endpoint lists all available flows
 
     IMPORTANT: You must set the LANGFLOW_API_KEY environment variable before
-    deploying. This key will be required for all API requests.
+    serving. This key will be required for all API requests.
 
     For GitHub private repositories, set the GITHUB_TOKEN environment variable.
 
@@ -123,21 +123,21 @@ def deploy_command(
         install_deps: Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)
 
     Example usage:
-        # Single flow deployment
+        # Single flow serving
         export LANGFLOW_API_KEY="your-secret-key-here"
-        langflow deploy my_flow.py --host 0.0.0.0 --port 8080
-        langflow deploy my_flow.json --verbose --log-level info
+        langflow serve my_flow.py --host 0.0.0.0 --port 8080
+        langflow serve my_flow.json --verbose --log-level info
 
-        # Folder deployment (multiple flows)
-        langflow deploy ./my_flows_folder --verbose
+        # Folder serving (multiple flows)
+        langflow serve ./my_flows_folder --verbose
 
-        # GitHub repository deployment
+        # GitHub repository serving
         export GITHUB_TOKEN="ghp_your_token_here"  # For private repos
-        langflow deploy https://github.com/user/repo --verbose
-        langflow deploy https://github.com/user/repo/tree/main --verbose
+        langflow serve https://github.com/user/repo --verbose
+        langflow serve https://github.com/user/repo/tree/main --verbose
 
-        # Remote script deployment
-        langflow deploy https://example.com/my_flow.py --verbose
+        # Remote script serving
+        langflow serve https://example.com/my_flow.py --verbose
 
     API Endpoints:
         GET  http://host:port/flows                  # List all flows
@@ -169,7 +169,7 @@ def deploy_command(
         verbose_print("✓ LANGFLOW_API_KEY is configured")
     except ValueError as e:
         verbose_print(f"✗ {e}")
-        verbose_print("Set the LANGFLOW_API_KEY environment variable before deploying.")
+        verbose_print("Set the LANGFLOW_API_KEY environment variable before serving.")
         raise typer.Exit(1) from e
 
     # Validate log level
@@ -244,14 +244,14 @@ def deploy_command(
             port = available_port
 
         # Create FastAPI app
-        deploy_app = create_multi_deploy_app(
+        serve_app = create_multi_serve_app(
             root_dir=folder_path,
             graphs=graphs,
             metas=metas,
             verbose_print=verbose_print,
         )
 
-        verbose_print("🚀 Starting multi-flow deployment server...")
+        verbose_print("🚀 Starting multi-flow server...")
 
         protocol = "http"
         access_host = get_best_access_host(host)
@@ -261,7 +261,7 @@ def deploy_command(
         console.print()
         console.print(
             Panel.fit(
-                f"[bold green]🎯 Folder Deployed Successfully![/bold green]\n\n"
+                f"[bold green]🎯 Folder Served Successfully![/bold green]\n\n"
                 f"[bold]Folder:[/bold] {folder_path}\n"
                 f"[bold]Flows Detected:[/bold] {len(graphs)}\n"
                 f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
@@ -271,21 +271,21 @@ def deploy_command(
                 f"Run a flow:\n"
                 f"  POST {protocol}://{access_host}:{port}/flows/{{flow_id}}/run[/dim]",
                 border_style="green",
-                title="🚀 Deployment Ready",
+                title="🚀 Server Ready",
             )
         )
         console.print()
 
         try:
             uvicorn.run(
-                deploy_app,
+                serve_app,
                 host=host,
                 port=port,
                 log_level=log_level.lower(),
                 access_log=verbose,
             )
         except KeyboardInterrupt:
-            verbose_print("\n👋 Deployment server stopped")
+            verbose_print("\n👋 Server stopped")
             raise typer.Exit(0) from None
         except Exception as e:
             verbose_print(f"✗ Failed to start server: {e}")
@@ -312,7 +312,7 @@ def deploy_command(
     graph = load_graph_from_path(resolved_path, file_extension, verbose_print, verbose=verbose)
 
     # Prepare the graph
-    verbose_print("Preparing graph for deployment...")
+    verbose_print("Preparing graph for serving...")
     try:
         graph.prepare()
         verbose_print("✓ Graph prepared successfully")
@@ -344,15 +344,15 @@ def deploy_command(
 
     verbose_print(f"✓ Prepared single flow '{title}' (id={flow_id})")
 
-    # Create FastAPI app using multi-deploy (handles single flow too)
-    deploy_app = create_multi_deploy_app(
+    # Create FastAPI app using multi-serve (handles single flow too)
+    serve_app = create_multi_serve_app(
         root_dir=resolved_path.parent,
         graphs=graphs,
         metas=metas,
         verbose_print=verbose_print,
     )
 
-    verbose_print("🚀 Starting single-flow deployment server...")
+    verbose_print("🚀 Starting single-flow server...")
 
     protocol = "http"
     access_host = get_best_access_host(host)
@@ -362,7 +362,7 @@ def deploy_command(
     console.print()
     console.print(
         Panel.fit(
-            f"[bold green]🎯 Single Flow Deployed Successfully![/bold green]\n\n"
+            f"[bold green]🎯 Single Flow Served Successfully![/bold green]\n\n"
             f"[bold]File:[/bold] {resolved_path}\n"
             f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
             f"[bold]API Key:[/bold] {masked_key}\n\n"
@@ -374,7 +374,7 @@ def deploy_command(
             f"[blue]?x-api-key={masked_key}[/blue]\n\n"
             f"[dim]Request body:[/dim]\n"
             f"[blue]{{'input_value': 'Your input message'}}[/blue]",
-            title="[bold blue]Langflow Deployment[/bold blue]",
+            title="[bold blue]Langflow Server[/bold blue]",
             border_style="blue",
         )
     )
@@ -383,13 +383,13 @@ def deploy_command(
     # Start the server
     try:
         uvicorn.run(
-            deploy_app,
+            serve_app,
             host=host,
             port=port,
             log_level=log_level,
         )
     except KeyboardInterrupt:
-        verbose_print("\n👋 Deployment server stopped")
+        verbose_print("\n👋 Server stopped")
         raise typer.Exit(0) from None
     except Exception as e:
         verbose_print(f"✗ Failed to start server: {e}")
