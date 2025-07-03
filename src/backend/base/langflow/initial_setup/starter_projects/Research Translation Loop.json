@@ -25,9 +25,9 @@
         "id": "reactflow__edge-ChatInput-8bLHN{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8bLHNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-wpsLb{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-wpsLbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-8bLHN",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8bLHNœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8bLHNœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ArXivComponent-wpsLb",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-wpsLbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-wpsLbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ArXivComponent-wpsLb{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-wpsLbœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-GV15E{œfieldNameœ:œdataœ,œidœ:œLoopComponent-GV15Eœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ArXivComponent-wpsLb",
-        "sourceHandle": "{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-wpsLbœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-wpsLbœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "LoopComponent-GV15E",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-GV15Eœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-GV15Eœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -82,9 +82,9 @@
         "id": "reactflow__edge-LoopComponent-GV15E{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GV15Eœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-aKcLF{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-aKcLFœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-GV15E",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GV15Eœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GV15Eœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParserComponent-aKcLF",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-aKcLFœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-aKcLFœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -110,9 +110,9 @@
         "id": "reactflow__edge-ParserComponent-aKcLF{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-aKcLFœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-ze4nq{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-ze4nqœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParserComponent-aKcLF",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-aKcLFœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-aKcLFœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-ze4nq",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-ze4nqœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-ze4nqœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -140,9 +140,9 @@
         "id": "reactflow__edge-LanguageModelComponent-ze4nq{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-ze4nqœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-TypeConverterComponent-NClYY{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-NClYYœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-ze4nq",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-ze4nqœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-ze4nqœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "TypeConverterComponent-NClYY",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-NClYYœ,œinputTypesœ:[œMessageœ,œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-NClYYœ, œinputTypesœ: [œMessageœ, œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -168,9 +168,9 @@
         "id": "reactflow__edge-TypeConverterComponent-NClYY{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-NClYYœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}-LoopComponent-GV15E{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GV15Eœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
         "selected": false,
         "source": "TypeConverterComponent-NClYY",
-        "sourceHandle": "{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-NClYYœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-NClYYœ, œnameœ: œdata_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "LoopComponent-GV15E",
-        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GV15Eœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}"
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GV15Eœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
       },
       {
         "animated": false,
@@ -198,9 +198,9 @@
         "id": "reactflow__edge-LoopComponent-GV15E{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GV15Eœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-hmMTq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hmMTqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LoopComponent-GV15E",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GV15Eœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-GV15Eœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ChatOutput-hmMTq",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hmMTqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-hmMTqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1251,7 +1251,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom.custom_component.component import Component\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.template.field.base import Output\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.\"\n    )\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(\n            name=\"data\",\n            display_name=\"Inputs\",\n            info=\"The initial list of Data objects or DataFrame to iterate over.\",\n            input_types=[\"DataFrame\"],\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Item\", name=\"item\", method=\"item_output\", allows_loop=True, group_outputs=True),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\", group_outputs=True),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects.\"\"\"\n        if isinstance(data, DataFrame):\n            return data.to_data_list()\n        if isinstance(data, Data):\n            return [data]\n        if isinstance(data, list) and all(isinstance(item, Data) for item in data):\n            return data\n        msg = \"The 'data' input must be a DataFrame, a list of Data objects, or a single Data object.\"\n        raise TypeError(msg)\n\n    def evaluate_stop_loop(self) -> bool:\n        \"\"\"Evaluate whether to stop item or done output.\"\"\"\n        current_index = self.ctx.get(f\"{self._id}_index\", 0)\n        data_length = len(self.ctx.get(f\"{self._id}_data\", []))\n        return current_index > data_length\n\n    def item_output(self) -> Data:\n        \"\"\"Output the next item in the list or stop if done.\"\"\"\n        self.initialize_data()\n        current_item = Data(text=\"\")\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n        else:\n            # Get data list and current index\n            data_list, current_index = self.loop_variables()\n            if current_index < len(data_list):\n                # Output current item and increment index\n                try:\n                    current_item = data_list[current_index]\n                except IndexError:\n                    current_item = Data(text=\"\")\n            self.aggregated_output()\n            self.update_ctx({f\"{self._id}_index\": current_index + 1})\n\n        # Now we need to update the dependencies for the next run\n        self.update_dependency()\n        return current_item\n\n    def update_dependency(self):\n        item_dependency_id = self.get_incoming_edge_by_target_param(\"item\")\n\n        self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)\n\n    def done_output(self) -> DataFrame:\n        \"\"\"Trigger the done output when iteration is complete.\"\"\"\n        self.initialize_data()\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            self.start(\"done\")\n\n            aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n\n            return DataFrame(aggregated)\n        self.stop(\"done\")\n        return DataFrame([])\n\n    def loop_variables(self):\n        \"\"\"Retrieve loop variables from context.\"\"\"\n        return (\n            self.ctx.get(f\"{self._id}_data\", []),\n            self.ctx.get(f\"{self._id}_index\", 0),\n        )\n\n    def aggregated_output(self) -> list[Data]:\n        \"\"\"Return the aggregated list once all items are processed.\"\"\"\n        self.initialize_data()\n\n        # Get data list and aggregated list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n        aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n        loop_input = self.item\n        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):\n            aggregated.append(loop_input)\n            self.update_ctx({f\"{self._id}_aggregated\": aggregated})\n        return aggregated\n"
+                "value": "from langflow.custom.custom_component.component import Component\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.template.field.base import Output\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.\"\n    )\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(\n            name=\"data\",\n            display_name=\"Inputs\",\n            info=\"The initial list of Data objects or DataFrame to iterate over.\",\n            input_types=[\"DataFrame\"],\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Item\", name=\"item\", method=\"item_output\", allows_loop=True, group_outputs=True),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\", group_outputs=True),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects.\"\"\"\n        if isinstance(data, DataFrame):\n            return data.to_data_list()\n        if isinstance(data, Data):\n            return [data]\n        if isinstance(data, list) and all(isinstance(item, Data) for item in data):\n            return data\n        msg = \"The 'data' input must be a DataFrame, a list of Data objects, or a single Data object.\"\n        raise TypeError(msg)\n\n    def evaluate_stop_loop(self) -> bool:\n        \"\"\"Evaluate whether to stop item or done output.\"\"\"\n        current_index = self.ctx.get(f\"{self._id}_index\", 0)\n        data_length = len(self.ctx.get(f\"{self._id}_data\", []))\n        return current_index > data_length\n\n    def item_output(self) -> Data:\n        \"\"\"Output the next item in the list or stop if done.\"\"\"\n        self.initialize_data()\n        current_item = Data(text=\"\")\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n        else:\n            # Get data list and current index\n            data_list, current_index = self.loop_variables()\n            if current_index < len(data_list):\n                # Output current item and increment index\n                try:\n                    current_item = data_list[current_index]\n                except IndexError:\n                    current_item = Data(text=\"\")\n            self.aggregated_output()\n            self.update_ctx({f\"{self._id}_index\": current_index + 1})\n\n        # Now we need to update the dependencies for the next run\n        self.update_dependency()\n        return current_item\n\n    def update_dependency(self):\n        item_dependency_id = self.get_incoming_edge_by_target_param(\"item\")\n        if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:\n            self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)\n\n    def done_output(self) -> DataFrame:\n        \"\"\"Trigger the done output when iteration is complete.\"\"\"\n        self.initialize_data()\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            self.start(\"done\")\n\n            aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n\n            return DataFrame(aggregated)\n        self.stop(\"done\")\n        return DataFrame([])\n\n    def loop_variables(self):\n        \"\"\"Retrieve loop variables from context.\"\"\"\n        return (\n            self.ctx.get(f\"{self._id}_data\", []),\n            self.ctx.get(f\"{self._id}_index\", 0),\n        )\n\n    def aggregated_output(self) -> list[Data]:\n        \"\"\"Return the aggregated list once all items are processed.\"\"\"\n        self.initialize_data()\n\n        # Get data list and aggregated list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n        aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n        loop_input = self.item\n        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):\n            aggregated.append(loop_input)\n            self.update_ctx({f\"{self._id}_aggregated\": aggregated})\n        return aggregated\n"
               },
               "data": {
                 "_input_type": "HandleInput",

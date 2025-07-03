@@ -31,8 +31,8 @@ export default function McpComponent({
                 : "Error"
               : "Loading..."
             : !server.toolsCount
-              ? "No actions found"
-              : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`,
+              ? "No tools found"
+              : `${server.toolsCount} tool${server.toolsCount === 1 ? "" : "s"}`,
       })),
     [mcpServers],
   );
