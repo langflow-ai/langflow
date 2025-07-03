@@ -22,15 +22,15 @@
 }
 
 .heroTitle {
-  font-size: 2.5rem;
-  font-weight: 700;
+  font-size: 2rem !important;
+  font-weight: 600;
   color: var(--ifm-font-color-base);
   margin-bottom: 1rem;
   font-family: var(--ifm-font-family-base);
 }
 
 .heroDescription {
-  font-size: 1.125rem;
+  font-size: 1rem;
   color: var(--ifm-color-emphasis-700);
   max-width: 600px;
   line-height: 1.6;
@@ -65,44 +65,43 @@
 
 .quickLinkCard {
   background-color: var(--ifm-background-surface-color);
-  border: 1px solid var(--ifm-color-emphasis-300);
+  border: 1px solid var(--ifm-color-emphasis-200);
   border-radius: var(--ifm-global-radius);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  transition: all 0.2s ease;
+  gap: 1rem;
+  transition: all 0.3s ease;
   text-decoration: none;
   color: inherit;
+  position: relative;
+  overflow: hidden;
 }
 
 .quickLinkCard:hover {
-  border-color: var(--ifm-color-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--ifm-color-emphasis-800);
+  transform: translateY(-2px);
   text-decoration: none;
   color: inherit;
-}
-
-[data-theme="dark"] .quickLinkCard:hover {
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
 }
 
 .quickLinkIcon {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--ifm-color-primary);
+  justify-content: flex-start;
+  color: var(--ifm-color-emphasis-600);
 }
 
 .quickLinkTitle {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--ifm-font-color-base);
+  line-height: 1.3;
   margin: 0;
 }
 
 .quickLinkDescription {
-  font-size: 0.875rem;
+  font-size: .875rem;
   color: var(--ifm-color-emphasis-700);
   line-height: 1.5;
   margin: 0;
@@ -116,7 +115,7 @@
 }
 
 .sectionTitle {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--ifm-font-color-base);
   margin-bottom: 1.5rem;
@@ -125,13 +124,11 @@
 /* Cards Grid */
 .cardsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
 }
 
 .card {
-  background-color: var(--ifm-background-surface-color);
-  border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: var(--ifm-global-radius);
   padding: 1rem;
   display: flex;
@@ -141,14 +138,21 @@
 }
 
 .card:hover {
-  border-color: var(--ifm-color-emphasis-500);
   background-color: var(--ifm-color-emphasis-100);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.card:hover .cardArrow {
+  color: var(--ifm-font-color-base);
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .cardIcon {
   background-color: var(--ifm-color-primary);
   color: white;
-  border-radius: 50%;
+  border-radius: calc(var(--ifm-global-radius) / 2);
   padding: 0.5rem;
   min-width: 2rem;
   height: 2rem;
@@ -175,58 +179,66 @@
   line-height: 1.4;
 }
 
+.cardArrow {
+  color: var(--ifm-color-emphasis-600);
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Community Section */
 .communityGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
 }
 
 .communityCard {
   background-color: var(--ifm-background-surface-color);
-  border: 1px solid var(--ifm-color-emphasis-300);
+  border: 1px solid var(--ifm-color-emphasis-200);
   border-radius: var(--ifm-global-radius);
   padding: 2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   text-decoration: none;
   color: inherit;
+  position: relative;
+  overflow: hidden;
 }
 
 .communityCard:hover {
-  border-color: var(--ifm-color-primary);
+  border-color: var(--ifm-color-emphasis-800);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   text-decoration: none;
   color: inherit;
-}
-
-[data-theme="dark"] .communityCard:hover {
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
 }
 
 .communityIcon {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ifm-color-primary);
-  margin-bottom: 1rem;
+  color: var(--ifm-color-emphasis-600);
+  margin-bottom: 1.5rem;
 }
 
 .communityTitle {
   font-weight: 600;
   color: var(--ifm-font-color-base);
-  margin-bottom: 0.5rem;
-  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.25rem;
+  line-height: 1.3;
 }
 
 .communityDescription {
   color: var(--ifm-color-emphasis-700);
-  font-size: 0.875rem;
-  line-height: 1.5;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 /* Responsive Design */
@@ -249,11 +261,32 @@
   }
   
   .cardsGrid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
   
   .communityGrid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .cardsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .communityGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .communityCard {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .cardsGrid {
+    grid-template-columns: 1fr;
   }
 }
 

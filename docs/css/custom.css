@@ -4,9 +4,9 @@
  * work well for content-centric websites.
  */
 :root {
-  --ifm-color-primary: hsla(329, 86%, 70%, 1);
   --ifm-navbar-link-hover-color: initial;
   --ifm-navbar-padding-vertical: 0;
+  --ifm-global-radius: 16px;
   --ifm-navbar-item-padding-vertical: 0;
   --ifm-font-family-base: Inter, -apple-system, BlinkMacSystemFont, Helvetica,
     Arial, sans-serif, "Apple Color Emoji", "Segoe UI emoji";
@@ -16,12 +16,14 @@
 
 /* Light theme - Pure white background */
 html[data-theme="light"] {
+  --ifm-color-primary: hsla(333, 71%, 51%, 1); /* Slightly darker pink for light theme */
   --ifm-background-color: var(--ifm-color-white);
   --ifm-background-surface-color: var(--ifm-color-white);
 }
 
 /* Dark theme - Pure black background */  
 html[data-theme="dark"] {
+  --ifm-color-primary: hsla(329, 86%, 70%, 1); /* Lighter pink for dark theme */
   --ifm-background-color: var(--ifm-color-black);
   --ifm-background-surface-color: var(--ifm-color-black);
 }
