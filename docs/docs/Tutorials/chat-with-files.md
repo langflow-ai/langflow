@@ -53,9 +53,6 @@ You can add files directly to the file component to pre-load input before runnin
 
     ![File loader chat flow](/img/tutorial-chat-file-loader.png)
 
-    The flow is complete.
-    If you'd like, add files to the File component and chat with it within the Langflow IDE.
-    In the next section, you will load files and chat with your flow from a Python application.
 
 ## Send requests to your flow from a Python application
 
