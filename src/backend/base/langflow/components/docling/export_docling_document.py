@@ -78,7 +78,7 @@ class ExportDoclingDocumentComponent(Component):
             build_config["md_image_placeholder"]["show"] = False
             build_config["md_page_break_placeholder"]["show"] = False
             build_config["image_mode"]["show"] = True
-        elif field_name == "export_format" and (field_value == "Plaintext" or field_value == "DocTags"):
+        elif field_name == "export_format" and field_value in {"Plaintext", "DocTags"}:
             build_config["md_image_placeholder"]["show"] = False
             build_config["md_page_break_placeholder"]["show"] = False
             build_config["image_mode"]["show"] = False
