@@ -100,6 +100,13 @@ class TraceloopTracer(BaseTracer):
         return self._ready
 
     def setup_traceloop(self) -> bool:
+        instana_baseurl = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        instana_headers = os.getenv("OTEL_EXPORTER_OTLP_HEADERS")
+        traceloop_api_key = os.getenv("TRACELOOP_API_KEY")
+
+        if not (instana_baseurl or traceloop_api_key):
+            return False
+
         try:
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
                 OTLPSpanExporter as _GRPCSpanExporter,
@@ -121,7 +128,6 @@ class TraceloopTracer(BaseTracer):
             tracer_provider = TracerProvider(resource=resource)
 
             # Traceloop
-            traceloop_api_key = os.getenv("TRACELOOP_API_KEY")
             if traceloop_api_key:
                 traceloop_endpoint = "https://api.traceloop.com/v1/traces"
                 traceloop_headers = {
@@ -132,8 +138,6 @@ class TraceloopTracer(BaseTracer):
                 )
 
             # Instana
-            instana_baseurl = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-            instana_headers = os.getenv("OTEL_EXPORTER_OTLP_HEADERS")
             if instana_baseurl and instana_headers:
                 tracer_provider.add_span_processor(
                     SimpleSpanProcessor(_GRPCSpanExporter(endpoint=instana_baseurl, headers=instana_headers))
