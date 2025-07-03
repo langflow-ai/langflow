@@ -69,20 +69,6 @@ class ComposioAPIComponent(LCToolComponent):
         Output(name="tools", display_name="Tools", method="build_tool"),
     ]
 
-    def sanitize_action_name(self, action_name: str) -> str:
-        # TODO: Maybe restore
-        return action_name
-
-        # We want to use title case, and replace underscores with spaces
-        sanitized_name = action_name.replace("_", " ").title()
-
-        # Now we want to remove everything from and including the first dot
-        return sanitized_name.replace(self.tool_name.title() + " ", "")
-
-    def desanitize_action_name(self, action_name: str) -> str:
-        # TODO: Maybe restore
-        return action_name
-
     def validate_tool(self, build_config: dict, field_value: Any, connected_app_names: list, tool_name: str = None) -> dict:
         # Get the index of the selected tool in the list of options
         selected_tool_index = next(
@@ -129,7 +115,7 @@ class ComposioAPIComponent(LCToolComponent):
 
         build_config["actions"]["options"] = [
             {
-                "name": self.sanitize_action_name(action["name"]),
+                "name": action["name"],
             }
             for action in authenticated_actions
         ]
@@ -244,7 +230,7 @@ class ComposioAPIComponent(LCToolComponent):
             Sequence[Tool]: List of configured Composio tools.
         """
         composio = self._build_wrapper()
-        action_names = [self.desanitize_action_name(action["name"]) for action in self.actions]
+        action_names = [action["name"] for action in self.actions]
         
         # Get toolkits from action names
         toolkits = set()
