@@ -22,6 +22,7 @@ import IOKeyPairInput from "@/modals/IOModal/components/IOFieldView/components/k
 import { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
+import { cn } from "@/utils/utils";
 import {
   useIsFetching,
   usePrefetchQuery,
@@ -52,7 +53,9 @@ export default function AddMcpServerModal({
     initialData ? (initialData.command ? "STDIO" : "SSE") : "JSON",
   );
   const [jsonValue, setJsonValue] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    "Error downloading file: File _mcp_servers.json not found in flow 7e93e2c5-b979-49c0-b01b-4f4111d9230d",
+  );
   const { mutateAsync: addMCPServer, isPending: isAddPending } =
     useAddMCPServer();
   const { mutateAsync: patchMCPServer, isPending: isPatchPending } =
@@ -297,7 +300,12 @@ export default function AddMcpServerModal({
               >
                 {error && (
                   <ShadTooltip content={error}>
-                    <div className="absolute right-4 top-3 w-3/5 truncate text-xs font-medium text-red-500">
+                    <div
+                      className={cn(
+                        "absolute right-4 top-3 truncate text-xs font-medium text-red-500",
+                        type === "JSON" ? "w-3/5" : "w-4/5",
+                      )}
+                    >
                       {error}
                     </div>
                   </ShadTooltip>
