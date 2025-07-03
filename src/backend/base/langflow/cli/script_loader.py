@@ -14,8 +14,6 @@ from typing import TYPE_CHECKING, Any
 
 import typer
 
-from langflow.graph.graph.base import Graph
-
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
     from langflow.schema.message import Message
