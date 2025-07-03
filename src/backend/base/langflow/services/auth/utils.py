@@ -60,11 +60,10 @@ async def api_key_security(
                     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
                     logger.warning(AUTO_LOGIN_WARNING)
                     return UserRead.model_validate(result, from_attributes=True)
-                else:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=AUTO_LOGIN_ERROR,
-                    )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=AUTO_LOGIN_ERROR,
+                )
             result = await check_key(db, query_param or header_param)
 
         elif not query_param and not header_param:
