@@ -815,10 +815,10 @@ def execute(
     verbose_print = create_verbose_printer(verbose=verbose)
 
     # Validate input file and get extension
-    file_extension = validate_script_path(script_path, verbose_print)
+    file_extension, resolved_path = validate_script_path(script_path, verbose_print)
 
     # Load the graph
-    graph = load_graph_from_path(script_path, file_extension, verbose_print, verbose=verbose)
+    graph = load_graph_from_path(resolved_path, file_extension, verbose_print, verbose=verbose)
 
     # Prepare the graph
     prepare_graph(graph, verbose_print)
