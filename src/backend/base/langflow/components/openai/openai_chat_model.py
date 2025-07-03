@@ -115,8 +115,10 @@ class OpenAIModelComponent(LCModelComponent):
             parameters["temperature"] = self.temperature if self.temperature is not None else 0.1
             parameters["seed"] = self.seed
         else:
+            params_str = ", ".join(unsupported_params_for_reasoning_models)
             logger.debug(
-                f"{self.model_name} is a reasoning model, {', '.join(unsupported_params_for_reasoning_models)} are not configurable. Ignoring."
+                f"{self.model_name} is a reasoning model, "
+                f"{params_str} are not configurable. Ignoring."
             )
 
         output = ChatOpenAI(**parameters)
