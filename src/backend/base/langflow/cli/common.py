@@ -2,13 +2,18 @@
 
 import contextlib
 import importlib.metadata as importlib_metadata
+import os
+import socket
 import subprocess
 import sys
+import tempfile
 from io import StringIO
 from pathlib import Path
 from shutil import which
 from types import ModuleType
+from urllib.parse import urlparse
 
+import httpx
 import typer
 
 from langflow.api.v1.schemas import InputValueRequest
@@ -29,6 +34,8 @@ except ModuleNotFoundError:
 
         _toml_parser = toml_parser
 
+MAX_PORT_NUMBER = 65535
+
 
 def create_verbose_printer(*, verbose: bool):
     """Create a verbose printer function that only prints in verbose mode.
@@ -48,19 +55,142 @@ def create_verbose_printer(*, verbose: bool):
     return verbose_print
 
 
-def validate_script_path(script_path: Path, verbose_print) -> str:
-    """Validate script path and return file extension.
+def is_port_in_use(port: int, host: str = "localhost") -> bool:
+    """Check if a port is already in use."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind((host, port))
+        except OSError:
+            return True
+        else:
+            return False
+
+
+def get_free_port(starting_port: int = 8000) -> int:
+    """Get a free port starting from the given port."""
+    port = starting_port
+    while port < MAX_PORT_NUMBER:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("", port))
+            except OSError:
+                port += 1
+            else:
+                return port
+    msg = "No free ports available"
+    raise RuntimeError(msg)
+
+
+def get_best_access_host(host: str) -> str:
+    """Get the best host address for external access."""
+    # Note: 0.0.0.0 and :: are intentionally checked as they bind to all interfaces
+    if host in ("0.0.0.0", "::"):  # noqa: S104
+        return "localhost"
+    return host
+
+
+def get_api_key() -> str:
+    """Get the API key from environment variable."""
+    api_key = os.getenv("LANGFLOW_API_KEY")
+    if not api_key:
+        msg = "LANGFLOW_API_KEY environment variable is required"
+        raise ValueError(msg)
+    return api_key
+
+
+def is_url(path_or_url: str) -> bool:
+    """Check if the given string is a URL.
 
     Args:
-        script_path: Path to the script file
+        path_or_url: String to check
+
+    Returns:
+        True if it's a URL, False otherwise
+    """
+    try:
+        result = urlparse(path_or_url)
+        return all([result.scheme, result.netloc])
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def download_script_from_url(url: str, verbose_print) -> Path:
+    """Download a Python script from a URL and save it to a temporary file.
+
+    Args:
+        url: URL to download the script from
         verbose_print: Function to print verbose messages
 
     Returns:
-        File extension (.py or .json)
+        Path to the temporary file containing the downloaded script
+
+    Raises:
+        typer.Exit: If download fails
+    """
+    verbose_print(f"Downloading script from URL: {url}")
+
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            response = client.get(url)
+            response.raise_for_status()
+
+            # Check if the response is a Python script
+            content_type = response.headers.get("content-type", "").lower()
+            valid_types = {"application/x-python", "application/octet-stream"}
+            if not (content_type.startswith("text/") or content_type in valid_types):
+                verbose_print(f"Warning: Unexpected content type: {content_type}")
+
+            # Create a temporary file with .py extension
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as temp_file:
+                temp_path = Path(temp_file.name)
+
+                # Write the content to the temporary file
+                script_content = response.text
+                temp_file.write(script_content)
+
+            verbose_print(f"✓ Script downloaded successfully to temporary file: {temp_path}")
+            return temp_path
+
+    except httpx.HTTPStatusError as e:
+        msg = f"✗ HTTP error downloading script: {e.response.status_code} - {e.response.text}"
+        verbose_print(msg)
+        raise typer.Exit(1) from e
+    except httpx.RequestError as e:
+        msg = f"✗ Network error downloading script: {e}"
+        verbose_print(msg)
+        raise typer.Exit(1) from e
+    except Exception as e:
+        msg = f"✗ Unexpected error downloading script: {e}"
+        verbose_print(msg)
+        raise typer.Exit(1) from e
+
+
+def validate_script_path(script_path: Path | str, verbose_print) -> tuple[str, Path]:
+    """Validate script path or URL and return file extension and resolved path.
+
+    Args:
+        script_path: Path to the script file or URL
+        verbose_print: Function to print verbose messages
+
+    Returns:
+        Tuple of (file_extension, resolved_path)
 
     Raises:
         typer.Exit: If validation fails
     """
+    # Handle URL case
+    if isinstance(script_path, str) and is_url(script_path):
+        resolved_path = download_script_from_url(script_path, verbose_print)
+        file_extension = resolved_path.suffix.lower()
+        if file_extension != ".py":
+            verbose_print(f"Error: URL must point to a Python script (.py file), got: {file_extension}")
+            raise typer.Exit(1)
+        return file_extension, resolved_path
+
+    # Handle local file case
+    if isinstance(script_path, str):
+        script_path = Path(script_path)
+
     if not script_path.exists():
         verbose_print(f"Error: File '{script_path}' does not exist.")
         raise typer.Exit(1)
@@ -75,7 +205,7 @@ def validate_script_path(script_path: Path, verbose_print) -> str:
         verbose_print(f"Error: '{script_path}' must be a .py or .json file.")
         raise typer.Exit(1)
 
-    return file_extension
+    return file_extension, script_path
 
 
 def load_graph_from_path(script_path: Path, file_extension: str, verbose_print, *, verbose: bool = False):
