@@ -1,35 +1,34 @@
 """CLI commands for Langflow."""
 
-import os
 from pathlib import Path
 from typing import Annotated
 
 import typer
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Security
+from fastapi import HTTPException, Security
 from fastapi.security import APIKeyHeader, APIKeyQuery
-from pydantic import BaseModel, Field
 from rich.console import Console
 from rich.panel import Panel
 
 from langflow.cli.common import (
     create_verbose_printer,
     ensure_dependencies_installed,
-    execute_graph_with_capture,
-    extract_result_data,
     extract_script_dependencies,
+    get_api_key,
+    get_best_access_host,
+    get_free_port,
+    is_port_in_use,
     load_graph_from_path,
     validate_script_path,
 )
+from langflow.cli.deploy_app import create_deploy_app
 from langflow.logging.logger import configure
 
 # Initialize console
 console = Console()
 
 # Constants
-MAX_PORT_NUMBER = 65535
-NO_FREE_PORTS_MSG = "No free ports available"
 API_KEY_MASK_LENGTH = 8
 
 # Security - use the same pattern as Langflow main API
@@ -38,85 +37,28 @@ api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
 
-def is_port_in_use(port: int, host: str = "localhost") -> bool:
-    """Check if a port is already in use."""
-    import socket
-
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        try:
-            s.bind((host, port))
-        except OSError:
-            return True
-        else:
-            return False
-
-
-def get_free_port(starting_port: int = 8000) -> int:
-    """Get a free port starting from the given port."""
-    import socket
-
-    port = starting_port
-    while port < MAX_PORT_NUMBER:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(("", port))
-            except OSError:
-                port += 1
-            else:
-                return port
-
-    raise RuntimeError(NO_FREE_PORTS_MSG)
-
-
-def get_best_access_host(host: str) -> str:
-    """Get the best host address for external access."""
-    # Note: 0.0.0.0 and :: are intentionally checked as they bind to all interfaces
-    if host in ("0.0.0.0", "::"):  # noqa: S104
-        return "localhost"
-    return host
-
-
-def get_api_key() -> str:
-    """Get the API key from environment variable."""
-    api_key = os.getenv("LANGFLOW_API_KEY")
-    if not api_key:
-        msg = "LANGFLOW_API_KEY environment variable is required"
-        raise ValueError(msg)
-    return api_key
-
-
 def verify_api_key(
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
 ) -> str:
-    """Verify the provided API key matches the configured one."""
+    """Verify API key from query parameter or header."""
+    provided_key = query_param or header_param
+    if not provided_key:
+        raise HTTPException(status_code=401, detail="API key required")
+
     try:
         expected_key = get_api_key()
-        provided_key = query_param or header_param
-
-        if not provided_key:
-            raise HTTPException(
-                status_code=401,
-                detail="API key is required. Provide x-api-key in header or query parameter.",
-            )
-
         if provided_key != expected_key:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid API key",
-            )
+            raise HTTPException(status_code=401, detail="Invalid API key")
     except ValueError as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Server configuration error: {e}",
-        ) from e
-    else:
-        return provided_key
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return provided_key
 
 
 def deploy_command(
-    script_path: Path = typer.Argument(  # noqa: B008
-        ..., help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
+    script_path: str = typer.Argument(
+        ..., help="Path to the Python script (.py) or JSON flow (.json) containing a graph, or URL to a Python script"
     ),
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind the server to"),
     port: int = typer.Option(8000, "--port", "-p", help="Port to bind the server to"),
@@ -147,7 +89,7 @@ def deploy_command(
     deploying. This key will be required for all API requests.
 
     Args:
-        script_path: Path to the Python script (.py) or JSON flow (.json) containing a graph
+        script_path: Path to the Python script (.py) or JSON flow (.json) containing a graph, or URL to a Python script
         host: Host to bind the server to
         port: Port to bind the server to
         verbose: Show diagnostic output and execution details
@@ -160,6 +102,7 @@ def deploy_command(
         langflow deploy my_flow.py --host 0.0.0.0 --port 8080
         langflow deploy my_flow.json --verbose --log-level info
         langflow deploy my_flow.py --env-file .env --log-level debug
+        langflow deploy https://example.com/my_flow.py --verbose
 
     Once deployed, you can send POST requests to:
         POST http://host:port/run
@@ -203,19 +146,19 @@ def deploy_command(
     verbose_print(f"Configuring logging with level: {log_level}")
     configure(log_level=log_level)
 
-    # Validate input file and get extension
-    file_extension = validate_script_path(script_path, verbose_print)
+    # Validate input file/URL and get extension and resolved path
+    file_extension, resolved_path = validate_script_path(script_path, verbose_print)
 
     # Install dependencies declared in the script if requested
     if install_deps and file_extension == ".py":
-        deps = extract_script_dependencies(script_path, verbose_print)
+        deps = extract_script_dependencies(resolved_path, verbose_print)
         if deps:
             ensure_dependencies_installed(deps, verbose_print)
         else:
             verbose_print("No inline dependencies declared - skipping installation")
 
     # Load the graph
-    graph = load_graph_from_path(script_path, file_extension, verbose_print, verbose=verbose)
+    graph = load_graph_from_path(resolved_path, file_extension, verbose_print, verbose=verbose)
 
     # Prepare the graph
     verbose_print("Preparing graph for deployment...")
@@ -234,63 +177,7 @@ def deploy_command(
         port = available_port
 
     # Create FastAPI app
-    deploy_app = FastAPI(
-        title="Langflow Graph Deployment",
-        description=f"Authenticated API for the deployed graph from {script_path.name}",
-        version="1.0.0",
-    )
-
-    # Define request/response models
-    class RunRequest(BaseModel):
-        input_value: str = Field(..., description="Input value to pass to the graph")
-
-    class RunResponse(BaseModel):
-        result: str = Field(..., description="The output result from the graph")
-        success: bool = Field(..., description="Whether the execution was successful")
-        logs: str = Field(default="", description="Captured logs from execution")
-        type: str = Field(default="message", description="Type of the result")
-        component: str = Field(default="", description="Component that generated the result")
-
-    class ErrorResponse(BaseModel):
-        error: str = Field(..., description="Error message")
-        success: bool = Field(default=False, description="Whether the execution was successful")
-
-    @deploy_app.post("/run", response_model=RunResponse, responses={500: {"model": ErrorResponse}})
-    async def run_graph_endpoint(request: RunRequest, _api_key: Annotated[str, Depends(verify_api_key)]):
-        """Run the deployed graph with the provided input (requires x-api-key authentication)."""
-        try:
-            # Execute graph and capture output
-            results, captured_logs = execute_graph_with_capture(graph, request.input_value)
-
-            # Extract structured result
-            result_data = extract_result_data(results, captured_logs)
-
-            return RunResponse(
-                result=result_data.get("result", result_data.get("text", "")),
-                success=result_data.get("success", True),
-                logs=captured_logs,
-                type=result_data.get("type", "message"),
-                component=result_data.get("component", ""),
-            )
-
-        except Exception as e:
-            verbose_print(f"Error running graph: {e}")
-            raise HTTPException(status_code=500, detail=str(e)) from e
-
-    @deploy_app.get("/")
-    async def root():
-        """Root endpoint with deployment information."""
-        return {
-            "message": "Langflow Graph Deployment API",
-            "graph_file": str(script_path.name),
-            "endpoints": {"run": "/run (POST)", "health": "/health (GET)"},
-            "authentication": "x-api-key header or query parameter required",
-        }
-
-    @deploy_app.get("/health")
-    async def health_check():
-        """Health check endpoint (no authentication required)."""
-        return {"status": "healthy", "graph_ready": True}
+    deploy_app = create_deploy_app(graph, script_path, resolved_path, verbose_print)
 
     # Print deployment information
     verbose_print("🚀 Starting deployment server...")
@@ -305,7 +192,8 @@ def deploy_command(
     console.print(
         Panel.fit(
             f"[bold green]🎯 Graph Deployed Successfully![/bold green]\n\n"
-            f"[bold]Graph:[/bold] {script_path.name}\n"
+            f"[bold]Graph:[/bold] {resolved_path.name}\n"
+            f"[bold]Source:[/bold] {script_path if script_path != str(resolved_path) else 'local file'}\n"
             f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
             f"[bold]API Endpoint:[/bold] POST {protocol}://{access_host}:{port}/run\n"
             f"[bold]API Key:[/bold] {masked_key}\n\n"
