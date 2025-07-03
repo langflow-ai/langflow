@@ -23,8 +23,8 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema.data import Data
-from langflow.utils.version import get_version_info
 from langflow.serialization import serialize
+from langflow.utils.version import get_version_info
 
 
 @vector_store_connection
@@ -1167,8 +1167,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 raise TypeError(msg)
 
         documents = [
-            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True))
-            for doc in documents
+            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents
         ]
 
         if documents and self.deletion_field:
