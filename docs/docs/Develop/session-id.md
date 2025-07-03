@@ -21,7 +21,7 @@ If you set a custom session ID in a payload, all downstream components use the u
 curl --request POST \
   --url "http://localhost:7860/api/v1/run/$FLOW_ID" \
   --header "Content-Type: application/json" \
-  --header "x-api-key: LANGFLOW_API_KEY" \
+  --header "x-api-key: $LANGFLOW_API_KEY" \
   --data '{
   "input_value": "Hello",
   "output_type": "chat",
