@@ -1,6 +1,5 @@
 ---
 title: Welcome to Langflow
-slug: /
 hide_table_of_contents: true
 ---
 
