@@ -16,6 +16,7 @@ The main focus of this tutorial is to show you how to provide files as input to 
 ## Prerequisites
 
 - [A running Langflow instance](/get-started-installation)
+- [A Langflow API key](/configuration-api-keys)
 - [An OpenAI API key](https://platform.openai.com/api-keys)
 
     This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
@@ -69,17 +70,16 @@ For help with constructing file upload requests for Python, JavaScript, and curl
 :::
 
 1. To construct the request, gather the following values from Langflow.
+You can find the values for `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` in the auto-generated code snippets provided in the [API pane](/concepts-publish#api-pane).
 
     * `LANGFLOW_SERVER_ADDRESS`: The default value is `127.0.0.1:7860`.
     * `FLOW_ID`: The UUID of your flow, or the endpoint name you've chosen in the **Input schema** pane.
     * File Component name: To find the ID of your file component, in the File component, click **Controls**. For this example, the component name is `File-KZP68`.
     * Input value: This is the message you want to send to the Chat Input of your flow, such as `Evaluate this resume for a job opening in my Marketing department.`
     * File path: The path to the local file you want to load with your request. This example is loading `fake-resume.txt` from the same directory as the script.
-    * Session ID: Optional. For more information, see [session ID](/session-id).
-    * Langflow API key: Required. To create an API key, see [API keys](/configuration-api-keys).
+    * Langflow API key: To create an API key, see [API keys](/configuration-api-keys).
 
 2. Replace the values in the script below.
-
 
     ```python
     # Python example using requests
@@ -141,7 +141,7 @@ For help with constructing file upload requests for Python, JavaScript, and curl
     The first request uploads `fake-resume.txt` to your Langflow server at the `/v2/files` endpoint, which returns a file path that can be referenced in subsequent Langflow requests: `02791d46-812f-4988-ab1c-7c430214f8d5/fake-resume.txt`
 
     The second request sends a chat message to the Langflow flow at the `/v1/run/` endpoint.
-    The `tweaks` parameter includes the path to the uploaded file as the variable `uploaded_path`.
+    The `tweaks` parameter includes the path to the uploaded file as the variable `uploaded_path`, and sends this file directly to the File component.
 
 3. Run the script to send the requests and test the flow.
 
@@ -184,5 +184,6 @@ For help with constructing file upload requests for Python, JavaScript, and curl
 
 ## Next steps
 
-* [Model Context Protocol (MCP) servers](/mcp-server)
-* [Langflow deployment overview](/deployment-overview)
+To process multiple files in a single flow run, add a separate File component for each file you want to ingest. Each file must be uploaded and the component referenced individually in your API request.
+
+To upload files from another machine that is not your local environment, your Langflow server must first be accessible over the internet. Authenticated users can upload files directly to the `/v2/files/` endpoint as shown in the tutorial. For more information, see [Langflow deployment overview](/deployment-overview).
