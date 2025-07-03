@@ -69,7 +69,7 @@ class ComposioAPIComponent(LCToolComponent):
         Output(name="tools", display_name="Tools", method="build_tool"),
     ]
 
-    def validate_tool(self, build_config: dict, field_value: Any, connected_app_names: list, tool_name: str = None) -> dict:
+    def validate_tool(self, build_config: dict, field_value: Any, tool_name: str | None = None) -> dict:
         # Get the index of the selected tool in the list of options
         selected_tool_index = next(
             (
@@ -109,7 +109,7 @@ class ComposioAPIComponent(LCToolComponent):
                         "name": action_name,
                         "display_name": display_name
                     })
-        except Exception as e:
+        except (ValueError, ConnectionError, AttributeError) as e:
             self.log(f"Error getting actions for {current_tool or 'unknown tool'}: {e}")
             authenticated_actions = []
 
@@ -155,9 +155,11 @@ class ComposioAPIComponent(LCToolComponent):
         if field_name == "tool_name" and field_value:
             composio = self._build_wrapper()
 
-            current_tool_name = (field_value if isinstance(field_value, str)
-                                else field_value.get("validate") if isinstance(field_value, dict) and "validate" in field_value
-                                else getattr(self, "tool_name", None))
+            current_tool_name = (
+                field_value if isinstance(field_value, str)
+                else field_value.get("validate") if isinstance(field_value, dict) and "validate" in field_value
+                else getattr(self, "tool_name", None)
+            )
 
             if not current_tool_name:
                 self.log("No tool name available for connection check")
@@ -173,8 +175,8 @@ class ComposioAPIComponent(LCToolComponent):
 
                 # Check for active connections
                 has_active_connections = False
-                if connection_list and hasattr(connection_list, "items") and connection_list.items:
-                    if isinstance(connection_list.items, list) and len(connection_list.items) > 0:
+                if (connection_list and hasattr(connection_list, "items") and connection_list.items and
+                    isinstance(connection_list.items, list) and len(connection_list.items) > 0):
                         for connection in connection_list.items:
                             if getattr(connection, "status", None) == "ACTIVE":
                                 has_active_connections = True
@@ -194,9 +196,7 @@ class ComposioAPIComponent(LCToolComponent):
 
                     # If it's a validation request, validate the tool
                     if (isinstance(field_value, dict) and "validate" in field_value) or isinstance(field_value, str):
-                        connected_app_names = [getattr(app, "appName", "").lower() for app in connection_list.items
-                                             if hasattr(app, "appName") and getattr(app, "status", None) == "ACTIVE"]
-                        return self.validate_tool(build_config, field_value, connected_app_names, current_tool_name)
+                        return self.validate_tool(build_config, field_value, current_tool_name)
                 else:
                     # No active connection - create OAuth connection
                     try:
@@ -208,12 +208,12 @@ class ComposioAPIComponent(LCToolComponent):
                                 build_config["tool_name"]["options"][selected_tool_index]["link"] = redirect_url
                         elif selected_tool_index is not None:
                             build_config["tool_name"]["options"][selected_tool_index]["link"] = "error"
-                    except Exception as e:
+                    except (ValueError, ConnectionError, AttributeError) as e:
                         self.log(f"Error creating OAuth connection: {e}")
                         if selected_tool_index is not None:
                             build_config["tool_name"]["options"][selected_tool_index]["link"] = "error"
 
-            except Exception as e:
+            except (ValueError, ConnectionError, AttributeError) as e:
                 self.log(f"Error checking connection status: {e}")
 
         return build_config
@@ -243,13 +243,8 @@ class ComposioAPIComponent(LCToolComponent):
             toolkits=list(toolkits)
         )
 
-        # Filter to only the specific actions we want
-        filtered_tools = []
-        for tool in all_tools:
-            if hasattr(tool, "name") and tool.name in action_names:
-                filtered_tools.append(tool)
-
-        return filtered_tools
+        # Filter to only the specific actions we want using list comprehension
+        return [tool for tool in all_tools if hasattr(tool, "name") and tool.name in action_names]
 
     def _build_wrapper(self) -> Composio:
         """Build the Composio wrapper using new SDK.
