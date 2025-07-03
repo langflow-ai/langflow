@@ -332,7 +332,7 @@ class MCPToolsComponent(ComponentWithCache):
 
             elif field_name == "tool_mode":
                 build_config["tool"]["placeholder"] = ""
-                build_config["tool"]["show"] = not field_value and build_config["mcp_server"]
+                build_config["tool"]["show"] = not bool(field_value) and bool(build_config["mcp_server"])
                 self.remove_non_default_keys(build_config)
                 self.tool = build_config["tool"]["value"]
                 if field_value:
