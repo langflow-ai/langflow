@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING, Any
 
 import typer
 
+from langflow.graph.graph.base import Graph
+
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
     from langflow.schema.message import Message
@@ -47,7 +49,7 @@ def _load_module_from_script(script_path: Path) -> Any:
     return module
 
 
-def _validate_graph_instance(graph_obj: "Graph"):
+def _validate_graph_instance(graph_obj: Any) -> "Graph":
     """Extract information from a graph object."""
     from langflow.graph.graph.base import Graph
 
@@ -56,7 +58,10 @@ def _validate_graph_instance(graph_obj: "Graph"):
         raise TypeError(msg)
 
     # Find ChatInput and ChatOutput components
-    display_names = {vertex.custom_component.display_name for vertex in graph_obj.vertices}
+    display_names: set[str] = set()
+    for vertex in graph_obj.vertices:
+        if vertex.custom_component is not None:
+            display_names.add(vertex.custom_component.display_name)
 
     if "Chat Input" not in display_names:
         msg = f"Graph does not contain any ChatInput component. Vertices: {display_names}"
@@ -84,7 +89,8 @@ def load_graph_from_script(script_path: Path) -> "Graph":
 
         # Check if 'graph' variable exists
         if not hasattr(module, "graph"):
-            return {"success": False, "error": "No 'graph' variable found in the executed script"}
+            msg = "No 'graph' variable found in the executed script"
+            raise ValueError(msg)
 
         # Extract graph information
         graph_obj = module.graph
@@ -98,7 +104,11 @@ def load_graph_from_script(script_path: Path) -> "Graph":
 def extract_message_from_result(results: list) -> str:
     """Extract the message from the results."""
     for result in results:
-        if hasattr(result, "vertex") and result.vertex.custom_component.display_name == "Chat Output":
+        if (
+            hasattr(result, "vertex")
+            and result.vertex.custom_component
+            and result.vertex.custom_component.display_name == "Chat Output"
+        ):
             message: Message = result.result_dict.results["message"]
             try:
                 # Parse the JSON to get just the text content
@@ -112,11 +122,16 @@ def extract_message_from_result(results: list) -> str:
 def extract_text_from_result(results: list) -> str:
     """Extract just the text content from the results."""
     for result in results:
-        if hasattr(result, "vertex") and result.vertex.custom_component.display_name == "Chat Output":
+        if (
+            hasattr(result, "vertex")
+            and result.vertex.custom_component
+            and result.vertex.custom_component.display_name == "Chat Output"
+        ):
             message: Message = result.result_dict.results["message"]
             try:
                 # Return just the text content
-                return message.text if hasattr(message, "text") else str(message)
+                text_content = message.text if hasattr(message, "text") else str(message)
+                return str(text_content)
             except AttributeError:
                 # Fallback to string representation
                 return str(message)
@@ -126,7 +141,11 @@ def extract_text_from_result(results: list) -> str:
 def extract_structured_result(results: list, *, extract_text: bool = True) -> dict:
     """Extract structured result data from the results."""
     for result in results:
-        if hasattr(result, "vertex") and result.vertex.custom_component.display_name == "Chat Output":
+        if (
+            hasattr(result, "vertex")
+            and result.vertex.custom_component
+            and result.vertex.custom_component.display_name == "Chat Output"
+        ):
             message: Message = result.result_dict.results["message"]
             try:
                 result_message = message.text if extract_text and hasattr(message, "text") else message

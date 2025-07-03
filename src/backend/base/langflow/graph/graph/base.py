@@ -332,7 +332,7 @@ class Graph:
 
     async def async_start(
         self,
-        inputs: list[dict] | None = None,
+        inputs: InputValueRequest | list[dict] | None = None,
         max_iterations: int | None = None,
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
@@ -1303,7 +1303,7 @@ class Graph:
 
     async def astep(
         self,
-        inputs: InputValueRequest | None = None,
+        inputs: InputValueRequest | list[dict] | None = None,
         files: list[str] | None = None,
         user_id: str | None = None,
         event_manager: EventManager | None = None,
@@ -1319,7 +1319,7 @@ class Graph:
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
             user_id=user_id,
-            inputs_dict=inputs.model_dump() if inputs else {},
+            inputs_dict=inputs.model_dump() if inputs and hasattr(inputs, "model_dump") else None,
             files=files,
             get_cache=chat_service.get_cache,
             set_cache=chat_service.set_cache,
