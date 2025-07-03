@@ -382,6 +382,7 @@ def add_options_to_field(value: dict[str, Any], class_name: str | None, key: str
     options_map = {
         "OpenAI": constants.OPENAI_MODELS,
         "ChatOpenAI": constants.CHAT_OPENAI_MODELS,
+        "ReasoningOpenAI": constants.REASONING_OPENAI_MODELS,
         "Anthropic": constants.ANTHROPIC_MODELS,
         "ChatAnthropic": constants.ANTHROPIC_MODELS,
     }
