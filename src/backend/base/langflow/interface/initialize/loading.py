@@ -12,7 +12,7 @@ from pydantic import PydanticDeprecatedSince20
 from langflow.custom.eval import eval_custom_component_code
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
-from langflow.services.deps import get_tracing_service
+from langflow.services.deps import get_tracing_service, session_scope
 
 if TYPE_CHECKING:
     from langflow.custom.custom_component.component import Component
@@ -59,7 +59,10 @@ async def get_instance_results(
     base_type: str = "component",
 ):
     custom_params = await update_params_with_load_from_db_fields(
-        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars=fallback_to_env_vars
+        custom_component,
+        custom_params,
+        vertex.load_from_db_fields,
+        fallback_to_env_vars=fallback_to_env_vars,
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -130,30 +133,31 @@ async def update_params_with_load_from_db_fields(
         logger.warning("Loading variables from environment variables because database is not available.")
         return load_from_env_vars(params, load_from_db_fields)
 
-    for field in load_from_db_fields:
-        if field not in params or not params[field]:
-            continue
+    async with session_scope() as session:
+        for field in load_from_db_fields:
+            if field not in params or not params[field]:
+                continue
 
-        try:
-            key = await custom_component.get_variables(params[field], field)
-        except ValueError as e:
-            if any(reason in str(e) for reason in ["User id is not set", "variable not found."]):
-                raise
-            logger.debug(str(e))
-            key = None
+            try:
+                key = await custom_component.get_variable(name=params[field], field=field, session=session)
+            except ValueError as e:
+                if any(reason in str(e) for reason in ["User id is not set", "variable not found."]):
+                    raise
+                logger.debug(str(e))
+                key = None
 
-        if fallback_to_env_vars and key is None:
-            key = os.getenv(params[field])
-            if key:
-                logger.info(f"Using environment variable {params[field]} for {field}")
-            else:
-                logger.error(f"Environment variable {params[field]} is not set.")
+            if fallback_to_env_vars and key is None:
+                key = os.getenv(params[field])
+                if key:
+                    logger.info(f"Using environment variable {params[field]} for {field}")
+                else:
+                    logger.error(f"Environment variable {params[field]} is not set.")
 
-        params[field] = key if key is not None else None
-        if key is None:
-            logger.warning(f"Could not get value for {field}. Setting it to None.")
+            params[field] = key if key is not None else None
+            if key is None:
+                logger.warning(f"Could not get value for {field}. Setting it to None.")
 
-    return params
+        return params
 
 
 async def build_component(

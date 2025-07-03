@@ -36,7 +36,6 @@ from langflow.base.mcp.util import get_flow_snake_case, get_unique_name, sanitiz
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
 from langflow.services.database.models import Flow, Folder
-from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME, NEW_FOLDER_NAME
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.services.storage.utils import build_content_type_from_extension
 
@@ -390,7 +389,6 @@ async def install_mcp_config(
             logger.debug("Windows detected, using cmd command")
 
         name = project.name
-        name = NEW_FOLDER_NAME if name == DEFAULT_FOLDER_NAME else name
 
         # Create the MCP configuration
         mcp_config = {
@@ -517,7 +515,6 @@ async def check_installed_mcp_servers(
 
         # Project server name pattern (must match the logic in install function)
         name = project.name
-        name = NEW_FOLDER_NAME if name == DEFAULT_FOLDER_NAME else name
         project_server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
 
         logger.debug(
