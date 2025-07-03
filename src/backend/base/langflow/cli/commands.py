@@ -1,11 +1,14 @@
 """CLI commands for Langflow."""
 
+import os
 from pathlib import Path
+from typing import Annotated
 
 import typer
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Security
+from fastapi.security import APIKeyHeader, APIKeyQuery
 from pydantic import BaseModel, Field
 from rich.console import Console
 from rich.panel import Panel
@@ -27,6 +30,12 @@ console = Console()
 # Constants
 MAX_PORT_NUMBER = 65535
 NO_FREE_PORTS_MSG = "No free ports available"
+API_KEY_MASK_LENGTH = 8
+
+# Security - use the same pattern as Langflow main API
+API_KEY_NAME = "x-api-key"
+api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
+api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
 
 def is_port_in_use(port: int, host: str = "localhost") -> bool:
@@ -67,6 +76,44 @@ def get_best_access_host(host: str) -> str:
     return host
 
 
+def get_api_key() -> str:
+    """Get the API key from environment variable."""
+    api_key = os.getenv("LANGFLOW_API_KEY")
+    if not api_key:
+        msg = "LANGFLOW_API_KEY environment variable is required"
+        raise ValueError(msg)
+    return api_key
+
+
+def verify_api_key(
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+) -> str:
+    """Verify the provided API key matches the configured one."""
+    try:
+        expected_key = get_api_key()
+        provided_key = query_param or header_param
+
+        if not provided_key:
+            raise HTTPException(
+                status_code=401,
+                detail="API key is required. Provide x-api-key in header or query parameter.",
+            )
+
+        if provided_key != expected_key:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid API key",
+            )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server configuration error: {e}",
+        ) from e
+    else:
+        return provided_key
+
+
 def deploy_command(
     script_path: Path = typer.Argument(  # noqa: B008
         ..., help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
@@ -90,11 +137,14 @@ def deploy_command(
         help="Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)",
     ),
 ) -> None:
-    """Deploy a Langflow graph as a web API endpoint.
+    """Deploy a Langflow graph as a web API endpoint with API key authentication.
 
     This command loads a Python script or JSON flow containing a Langflow graph
     and starts a FastAPI server that exposes the graph via a POST endpoint.
     The server will accept input values and return the graph's output.
+
+    IMPORTANT: You must set the LANGFLOW_API_KEY environment variable before
+    deploying. This key will be required for all API requests.
 
     Args:
         script_path: Path to the Python script (.py) or JSON flow (.json) containing a graph
@@ -106,12 +156,19 @@ def deploy_command(
         install_deps: Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)
 
     Example usage:
+        export LANGFLOW_API_KEY="your-secret-key-here"
         langflow deploy my_flow.py --host 0.0.0.0 --port 8080
         langflow deploy my_flow.json --verbose --log-level info
         langflow deploy my_flow.py --env-file .env --log-level debug
 
     Once deployed, you can send POST requests to:
         POST http://host:port/run
+
+        Headers:
+        x-api-key: your-secret-key-here
+
+        OR Query parameter:
+        POST http://host:port/run?x-api-key=your-secret-key-here
 
         With JSON body:
         {"input_value": "Your input message"}
@@ -126,6 +183,15 @@ def deploy_command(
 
         verbose_print(f"Loading environment variables from: {env_file}")
         load_dotenv(env_file)
+
+    # Validate API key is set
+    try:
+        api_key = get_api_key()
+        verbose_print("✓ LANGFLOW_API_KEY is configured")
+    except ValueError as e:
+        verbose_print(f"✗ {e}")
+        verbose_print("Set the LANGFLOW_API_KEY environment variable before deploying.")
+        raise typer.Exit(1) from e
 
     # Validate log level
     valid_log_levels = {"debug", "info", "warning", "error", "critical"}
@@ -170,7 +236,7 @@ def deploy_command(
     # Create FastAPI app
     deploy_app = FastAPI(
         title="Langflow Graph Deployment",
-        description=f"API for the deployed graph from {script_path.name}",
+        description=f"Authenticated API for the deployed graph from {script_path.name}",
         version="1.0.0",
     )
 
@@ -190,8 +256,8 @@ def deploy_command(
         success: bool = Field(default=False, description="Whether the execution was successful")
 
     @deploy_app.post("/run", response_model=RunResponse, responses={500: {"model": ErrorResponse}})
-    async def run_graph_endpoint(request: RunRequest):
-        """Run the deployed graph with the provided input."""
+    async def run_graph_endpoint(request: RunRequest, _api_key: Annotated[str, Depends(verify_api_key)]):
+        """Run the deployed graph with the provided input (requires x-api-key authentication)."""
         try:
             # Execute graph and capture output
             results, captured_logs = execute_graph_with_capture(graph, request.input_value)
@@ -218,11 +284,12 @@ def deploy_command(
             "message": "Langflow Graph Deployment API",
             "graph_file": str(script_path.name),
             "endpoints": {"run": "/run (POST)", "health": "/health (GET)"},
+            "authentication": "x-api-key header or query parameter required",
         }
 
     @deploy_app.get("/health")
     async def health_check():
-        """Health check endpoint."""
+        """Health check endpoint (no authentication required)."""
         return {"status": "healthy", "graph_ready": True}
 
     # Print deployment information
@@ -231,14 +298,21 @@ def deploy_command(
     protocol = "http"
     access_host = get_best_access_host(host)
 
+    # Mask the API key for display
+    masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
+
     console.print()
     console.print(
         Panel.fit(
             f"[bold green]🎯 Graph Deployed Successfully![/bold green]\n\n"
             f"[bold]Graph:[/bold] {script_path.name}\n"
             f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
-            f"[bold]API Endpoint:[/bold] POST {protocol}://{access_host}:{port}/run\n\n"
-            f"[dim]Send POST requests with JSON body: {{'input_value': 'your message'}}[/dim]",
+            f"[bold]API Endpoint:[/bold] POST {protocol}://{access_host}:{port}/run\n"
+            f"[bold]API Key:[/bold] {masked_key}\n\n"
+            f"[dim]Send POST requests with:\n"
+            f"  Header: x-api-key: <your-api-key>\n"
+            f"  OR Query: ?x-api-key=<your-api-key>\n"
+            f"  Body: {{'input_value': 'your message'}}[/dim]",
             border_style="green",
             title="🚀 Deployment Ready",
         )
