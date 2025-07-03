@@ -2,7 +2,6 @@ from typing import Any
 from urllib.parse import urljoin
 
 import httpx
-from typing_extensions import override
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
@@ -15,14 +14,13 @@ class LMStudioEmbeddingsComponent(LCEmbeddingsModel):
     description: str = "Generate embeddings using LM Studio."
     icon = "LMStudio"
 
-    @override
-    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):  # noqa: ARG002
         if field_name == "model":
             base_url_dict = build_config.get("base_url", {})
             base_url_load_from_db = base_url_dict.get("load_from_db", False)
             base_url_value = base_url_dict.get("value")
             if base_url_load_from_db:
-                base_url_value = await self.get_variable(base_url_value, field_name)
+                base_url_value = await self.get_variables(base_url_value, field_name)
             elif not base_url_value:
                 base_url_value = "http://localhost:1234/v1"
             build_config["model"]["options"] = await self.get_model(base_url_value)
