@@ -280,6 +280,7 @@ class MCPToolsComponent(ComponentWithCache):
                     build_config["tool"]["options"] = []
                     build_config["tool"]["value"] = ""
                     build_config["tool"]["placeholder"] = ""
+                    build_config["tool_placeholder"]["tool_mode"] = False
                     self.remove_non_default_keys(build_config)
                     return build_config
 
