@@ -10,6 +10,7 @@ import {
   PORT,
   PROXY_TARGET,
 } from "./src/customization/config-constants";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -54,7 +55,7 @@ export default defineConfig(({ mode }) => {
         envLangflow.LANGFLOW_AUTO_LOGIN ?? true,
       ),
     },
-    plugins: [react(), svgr(), tsconfigPaths()],
+    plugins: [react(), svgr(), tsconfigPaths(), tailwindcss()],
     server: {
       port: port,
       proxy: {
