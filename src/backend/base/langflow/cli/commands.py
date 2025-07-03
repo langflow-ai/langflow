@@ -12,8 +12,10 @@ from rich.panel import Panel
 
 from langflow.cli.common import (
     create_verbose_printer,
+    ensure_dependencies_installed,
     execute_graph_with_capture,
     extract_result_data,
+    extract_script_dependencies,
     load_graph_from_path,
     validate_script_path,
 )
@@ -82,6 +84,11 @@ def deploy_command(
         "--log-level",
         help="Logging level. One of: debug, info, warning, error, critical",
     ),
+    install_deps: bool = typer.Option(  # noqa: FBT001
+        True,  # noqa: FBT003
+        "--install-deps/--no-install-deps",
+        help="Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)",
+    ),
 ) -> None:
     """Deploy a Langflow graph as a web API endpoint.
 
@@ -96,6 +103,7 @@ def deploy_command(
         verbose: Show diagnostic output and execution details
         env_file: Path to the .env file containing environment variables
         log_level: Logging level for the server
+        install_deps: Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)
 
     Example usage:
         langflow deploy my_flow.py --host 0.0.0.0 --port 8080
@@ -131,6 +139,14 @@ def deploy_command(
 
     # Validate input file and get extension
     file_extension = validate_script_path(script_path, verbose_print)
+
+    # Install dependencies declared in the script if requested
+    if install_deps and file_extension == ".py":
+        deps = extract_script_dependencies(script_path, verbose_print)
+        if deps:
+            ensure_dependencies_installed(deps, verbose_print)
+        else:
+            verbose_print("No inline dependencies declared - skipping installation")
 
     # Load the graph
     graph = load_graph_from_path(script_path, file_extension, verbose_print, verbose=verbose)
