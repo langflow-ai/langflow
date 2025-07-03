@@ -5,12 +5,16 @@ slug: /basic-prompting
 
 import Icon from "@site/src/components/icon";
 
+This flow is a starting point for understanding Langflow.
+The flow demonstrates how to chat with an LLM, and how modifying the prompt can affect your outcomes.
+
+Build a **Basic prompting** flow with [Language model](/components-models), [Prompt](/components-prompts), and [Chat I/O](/components-io) components.
+
 Prompts serve as the inputs to a large language model (LLM), acting as the interface between human instructions and computational tasks.
 
 By submitting natural language requests in a prompt to an LLM, you can obtain answers, generate text, and solve problems.
 
 This article demonstrates how to use Langflow's prompt tools to issue basic prompts to an LLM, and how various prompting strategies can affect your outcomes.
-
 
 ## Prerequisites
 
@@ -25,9 +29,7 @@ This article demonstrates how to use Langflow's prompt tools to issue basic prom
 
 3. The **Basic Prompting** flow is created.
 
-
-![](/img/starter-flow-basic-prompting.png)
-
+![Basic prompting flow](/img/starter-flow-basic-prompting.png)
 
 This flow allows you to chat with the **OpenAI model** component.
 The model will respond according to the prompt constructed in the **Prompt** component.

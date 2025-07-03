@@ -3,12 +3,9 @@ title: Travel planning agent
 slug: /travel-planning-agent
 ---
 
-Build a **Travel Planning Agent** flow for an agentic application using the multiple Tool-calling agents.
-
-An **agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
-
-In this flow, multiple **Tool-calling agents** reason using an **Open AI** LLM to plan a travel journey. Each agent is given a different responsibility defined by its **System Prompt** field.
-
+This flow demonstrates using multiple [Agent](/agents) components in a single flow.
+In this flow, multiple **Agents** plan a travel journey.
+Each agent is given a different responsibility defined by its **System Prompt** field.
 The **Chat input** defines where the user wants to go, and passes the result to the **City Selection** agent. The **Local Expert** agent then adds information based on the selected cities, and the **Travel Concierge** assembles a seven day travel plan in Markdown.
 
 All agents have access to the **Search API** and **URL Content Fetcher** components, while only the Travel Concierge can use the **Calculator** for computing the trip costs.
