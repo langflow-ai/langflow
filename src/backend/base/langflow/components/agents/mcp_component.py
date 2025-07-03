@@ -121,7 +121,7 @@ class MCPToolsComponent(ComponentWithCache):
             info="Placeholder for the tool",
             value="",
             show=False,
-            tool_mode=True,
+            tool_mode=False,
         ),
     ]
 
@@ -281,8 +281,11 @@ class MCPToolsComponent(ComponentWithCache):
                     build_config["tool"]["options"] = []
                     build_config["tool"]["value"] = ""
                     build_config["tool"]["placeholder"] = ""
+                    build_config["tool_placeholder"]["tool_mode"] = False
                     self.remove_non_default_keys(build_config)
                     return build_config
+
+                build_config["tool_placeholder"]["tool_mode"] = True
 
                 current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
                 _last_selected_server = self._shared_component_cache.get("last_selected_server") or ""
@@ -330,7 +333,7 @@ class MCPToolsComponent(ComponentWithCache):
 
             elif field_name == "tool_mode":
                 build_config["tool"]["placeholder"] = ""
-                build_config["tool"]["show"] = not field_value
+                build_config["tool"]["show"] = not bool(field_value) and bool(build_config["mcp_server"])
                 self.remove_non_default_keys(build_config)
                 self.tool = build_config["tool"]["value"]
                 if field_value:
