@@ -16,6 +16,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, 
 class MemoryComponent(Component):
     display_name = "Message History"
     description = "Stores or retrieves stored chat messages from Langflow tables or an external memory."
+    documentation: str = "https://docs.langflow.org/components-helpers#message-history"
     icon = "message-square-more"
     name = "Memory"
     default_keys = ["mode", "memory"]
