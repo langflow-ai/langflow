@@ -21,7 +21,6 @@ dependencies = [
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
     "uvicorn>=0.30.0,<1.0.0",
-    "gunicorn>=22.0.0,<24.0.0",
     "langchain~=0.3.21",
     "langchain-community~=0.3.20",
     "langchain-core~=0.3.45",

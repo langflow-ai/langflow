@@ -134,14 +134,14 @@ def display_results(results) -> None:
 def set_var_for_macos_issue() -> None:
     # OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
     # we need to set this var is we are running on MacOS
-    # otherwise we get an error when running gunicorn
+    # otherwise we get an error when running multi-worker servers
 
     if platform.system() == "Darwin":
         import os
 
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
         # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
-        os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
+        os.environ["no_proxy"] = "*"  # to avoid error with multi-worker servers
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
@@ -354,21 +354,25 @@ def run(
         )
     else:
         with progress.step(6):
-            # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
-            from langflow.server import LangflowApplication
+            # Use uvicorn with multi-worker support for non-Windows systems
+            import uvicorn
 
-            options = {
-                "bind": f"{host}:{port}",
-                "workers": get_number_of_workers(workers),
-                "timeout": worker_timeout,
-                "certfile": ssl_cert_file_path,
-                "keyfile": ssl_key_file_path,
-                "log_level": log_level.lower(),
-            }
-            server = LangflowApplication(app, options)
+            def run_server():
+                # Configure uvicorn to use our custom logging setup
+                uvicorn.run(
+                    app,
+                    host=host,
+                    port=port,
+                    workers=get_number_of_workers(workers),
+                    log_level=log_level.lower(),
+                    ssl_certfile=ssl_cert_file_path,
+                    ssl_keyfile=ssl_key_file_path,
+                    loop="asyncio",
+                    access_log=False,  # Disable uvicorn's default access logging to use our interceptor
+                )
 
             # Start the webapp process
-            process_manager.webapp_process = Process(target=server.run)
+            process_manager.webapp_process = Process(target=run_server)
             process_manager.webapp_process.start()
 
             wait_for_server_ready(host, port, protocol)

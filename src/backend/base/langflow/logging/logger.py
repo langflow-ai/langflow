@@ -268,7 +268,6 @@ def configure(
     logger.debug(f"Logger set up with log level: {log_level}")
 
     setup_uvicorn_logger()
-    setup_gunicorn_logger()
 
 
 def setup_uvicorn_logger() -> None:
@@ -278,9 +277,6 @@ def setup_uvicorn_logger() -> None:
     logging.getLogger("uvicorn").handlers = [InterceptHandler()]
 
 
-def setup_gunicorn_logger() -> None:
-    logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
-    logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
 
 
 class InterceptHandler(logging.Handler):
