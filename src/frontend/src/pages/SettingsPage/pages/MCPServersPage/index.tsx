@@ -116,7 +116,9 @@ export default function MCPServersPage() {
                               ? "Timeout"
                               : "Error"
                             : "Loading..."
-                          : `${server.toolsCount} tool${server.toolsCount === 1 ? "" : "s"}`}
+                          : !server.toolsCount
+                            ? "No tools found"
+                            : `${server.toolsCount} tool${server.toolsCount === 1 ? "" : "s"}`}
                       </span>
                     </ShadTooltip>
                   </div>
