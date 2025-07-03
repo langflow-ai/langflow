@@ -252,7 +252,7 @@ export default function AddMcpServerModal({
               {initialData ? "Update MCP Server" : "Add MCP Server"}
             </div>
             <span className="text-mmd font-normal text-muted-foreground">
-              Save MCP Servers. Manage added connections in{" "}
+              Save MCP Servers. Manage added servers in{" "}
               <CustomLink className="underline" to="/settings/mcp-servers">
                 settings
               </CustomLink>
