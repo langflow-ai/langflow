@@ -11,7 +11,8 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from sqlmodel import String, cast, col, select
+from loguru import logger
+from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -127,7 +128,7 @@ async def upload_user_file(
                 await delete_file(existing_mcp_file.id, current_user, session, storage_service)
         else:
             # For normal files, ensure unique name by appending a count if necessary
-            stmt = select(UserFile).where(cast(UserFile.name, String).like(f"{root_filename}%"))
+            stmt = select(UserFile).where(col(UserFile.name).like(f"{root_filename}%"))
             existing_files = await session.exec(stmt)
             files = existing_files.all()  # Fetch all matching records
 
@@ -475,14 +476,14 @@ async def delete_file(
         await session.delete(file_to_delete)
         await session.flush()  # Ensures delete is staged
 
-        return {"detail": f"File {file_to_delete.name} deleted successfully"}
     except HTTPException:
         # Re-raise HTTPException to avoid being caught by the generic exception handler
         raise
     except Exception as e:
         # Log and return a generic server error
-        logger.error(f"Error deleting file {file_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error deleting file: {e}")
+        logger.error("Error deleting file %s: %s", file_id, e)
+        raise HTTPException(status_code=500, detail=f"Error deleting file: {e}") from e
+    return {"detail": f"File {file_to_delete.name} deleted successfully"}
 
 
 @router.delete("")
