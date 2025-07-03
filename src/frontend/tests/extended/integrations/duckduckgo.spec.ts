@@ -11,12 +11,15 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("duck");
 
-    await page.waitForSelector('[data-testid="searchDuckDuckGo Search"]', {
-      timeout: 3000,
-    });
+    await page.waitForSelector(
+      '[data-testid="disclosure-bundles-duckduckgo"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page
-      .getByTestId("searchDuckDuckGo Search")
+      .getByTestId("duckduckgoDuckDuckGo Search")
       .hover()
       .then(async () => {
         await page

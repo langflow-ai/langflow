@@ -220,12 +220,12 @@ jobs:
 
           echo "Total tests to run: $TEST_COUNT"
 
-          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 25
+          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 40
           SHARD_COUNT=$(( (TEST_COUNT + 4) / 5 ))
           if [ $SHARD_COUNT -lt 1 ]; then
             SHARD_COUNT=1
-          elif [ $SHARD_COUNT -gt 25 ]; then
-            SHARD_COUNT=25
+          elif [ $SHARD_COUNT -gt 40 ]; then
+            SHARD_COUNT=40
           fi
 
           # Create the matrix combinations string
@@ -271,7 +271,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
           cache-dependency-path: ./src/frontend/package-lock.json
-
       - name: Install Frontend Dependencies
         run: npm ci
         working-directory: ./src/frontend
@@ -301,7 +300,7 @@ jobs:
           prune-cache: false
 
       - name: Install Python Dependencies
-        run: uv sync
+        run: uv sync --extra audio
 
       - name: Configure Environment Variables
         run: |

@@ -12,6 +12,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs-button";
 import { Textarea } from "@/components/ui/textarea";
+import { MAX_MCP_SERVER_NAME_LENGTH } from "@/constants/constants";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-server";
 import { CustomLink } from "@/customization/components/custom-link";
@@ -68,11 +69,11 @@ export default function AddMcpServerModal({
     setStdioName("");
     setStdioCommand("");
     setStdioArgs([""]);
-    setStdioEnv([{ "": "" }]);
+    setStdioEnv([]);
     setSseName("");
     setSseUrl("");
-    setSseEnv([{ "": "" }]);
-    setSseHeaders([{ "": "" }]);
+    setSseEnv([]);
+    setSseHeaders([]);
   };
 
   // STDIO state
@@ -81,17 +82,13 @@ export default function AddMcpServerModal({
   const [stdioArgs, setStdioArgs] = useState<string[]>(
     initialData?.args || [""],
   );
-  const [stdioEnv, setStdioEnv] = useState<any>(
-    initialData?.env || [{ "": "" }],
-  );
+  const [stdioEnv, setStdioEnv] = useState<any>(initialData?.env || []);
 
   // SSE state
   const [sseName, setSseName] = useState(initialData?.name || "");
   const [sseUrl, setSseUrl] = useState(initialData?.url || "");
-  const [sseEnv, setSseEnv] = useState<any>(initialData?.env || [{ "": "" }]);
-  const [sseHeaders, setSseHeaders] = useState<any>(
-    initialData?.headers || [{ "": "" }],
-  );
+  const [sseEnv, setSseEnv] = useState<any>(initialData?.env || []);
+  const [sseHeaders, setSseHeaders] = useState<any>(initialData?.headers || []);
 
   useEffect(() => {
     if (open) {
@@ -101,11 +98,11 @@ export default function AddMcpServerModal({
       setStdioName(initialData?.name || "");
       setStdioCommand(initialData?.command || "");
       setStdioArgs(initialData?.args || [""]);
-      setStdioEnv(initialData?.env || [{ "": "" }]);
+      setStdioEnv(initialData?.env || []);
       setSseName(initialData?.name || "");
       setSseUrl(initialData?.url || "");
-      setSseEnv(initialData?.env || [{ "": "" }]);
-      setSseHeaders(initialData?.headers || [{ "": "" }]);
+      setSseEnv(initialData?.env || []);
+      setSseHeaders(initialData?.headers || []);
     }
   }, [open]);
 
@@ -134,7 +131,7 @@ export default function AddMcpServerModal({
         "snake_case",
         "no_blank",
         "lowercase",
-      ]).slice(0, 20);
+      ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
       try {
         await modifyMCPServer({
           name,
@@ -152,7 +149,7 @@ export default function AddMcpServerModal({
         setStdioName("");
         setStdioCommand("");
         setStdioArgs([""]);
-        setStdioEnv([{ "": "" }]);
+        setStdioEnv([]);
         setError(null);
       } catch (err: any) {
         setError(err?.message || "Failed to add MCP server.");
@@ -168,7 +165,7 @@ export default function AddMcpServerModal({
         "snake_case",
         "no_blank",
         "lowercase",
-      ]).slice(0, 20);
+      ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
       try {
         await modifyMCPServer({
           name,
@@ -185,8 +182,8 @@ export default function AddMcpServerModal({
         setOpen(false);
         setSseName("");
         setSseUrl("");
-        setSseEnv([{ "": "" }]);
-        setSseHeaders([{ "": "" }]);
+        setSseEnv([]);
+        setSseHeaders([]);
         setError(null);
       } catch (err: any) {
         setError(err?.message || "Failed to add MCP server.");
@@ -202,7 +199,7 @@ export default function AddMcpServerModal({
           "snake_case",
           "no_blank",
           "lowercase",
-        ]).slice(0, 20),
+        ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH),
       }));
     } catch (e: any) {
       setError(e.message || "Invalid input");

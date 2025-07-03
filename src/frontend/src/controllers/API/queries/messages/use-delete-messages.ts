@@ -12,7 +12,7 @@ export const useDeleteMessages: useMutationFunctionType<
   undefined,
   DeleteMessagesParams
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const deleteMessage = async ({ ids }: DeleteMessagesParams): Promise<any> => {
     const response = await api.delete(`${getURL("MESSAGES")}`, {
@@ -26,7 +26,15 @@ export const useDeleteMessages: useMutationFunctionType<
     DeleteMessagesParams,
     any,
     DeleteMessagesParams
-  > = mutate(["useDeleteMessages"], deleteMessage, options);
+  > = mutate(["useDeleteMessages"], deleteMessage, {
+    ...options,
+    onSettled: (data, error, variables, context) => {
+      queryClient.invalidateQueries({
+        queryKey: ["useGetSessionsFromFlowQuery"],
+      });
+      options?.onSettled?.(data, error, variables, context);
+    },
+  });
 
   return mutation;
 };

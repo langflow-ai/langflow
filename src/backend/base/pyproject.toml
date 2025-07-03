@@ -77,14 +77,13 @@ dependencies = [
     "validators>=0.34.0",
     "networkx>=3.4.2",
     "json-repair>=0.30.3",
-    "mcp>=1.6.0",
+    "mcp~=1.10.1",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
     "jsonquerylang>=1.1.1",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
     'elevenlabs==1.58.1; python_version == "3.12"',
     'elevenlabs>=1.52.0; python_version != "3.12"',
-    "webrtcvad>=2.0.10",
     "scipy>=1.15.2",
     "ibm-watsonx-ai>=1.3.1",
     "langchain-ibm>=0.3.8",
@@ -232,12 +231,15 @@ Documentation = "https://docs.langflow.org"
 
 # Optional dependencies for uv
 [project.optional-dependencies]
+audio = [
+    "webrtcvad>=2.0.10",
+]
 
 postgresql = [
-  "sqlalchemy[postgresql_psycopg2binary]",
-    "sqlalchemy[postgresql_psycopg]",
-
+    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
+    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
 ]
+
 local = [
     "llama-cpp-python>=0.2.0",
     "sentence-transformers>=2.0.0",

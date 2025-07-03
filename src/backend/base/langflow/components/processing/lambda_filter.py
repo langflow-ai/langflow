@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, Output
 from langflow.schema.data import Data
-from langflow.schema.dataframe import DataFrame
 from langflow.utils.data_structure import get_data_structure
 
 if TYPE_CHECKING:
@@ -17,9 +16,8 @@ if TYPE_CHECKING:
 class LambdaFilterComponent(Component):
     display_name = "Smart Function"
     description = "Uses an LLM to generate a function for filtering or transforming structured data."
-    icon = "test-tube-diagonal"
+    icon = "square-function"
     name = "Smart Function"
-    beta = True
 
     inputs = [
         DataInput(
@@ -67,11 +65,6 @@ class LambdaFilterComponent(Component):
             display_name="Filtered Data",
             name="filtered_data",
             method="filter_data",
-        ),
-        Output(
-            display_name="DataFrame",
-            name="dataframe",
-            method="as_dataframe",
         ),
     ]
 
@@ -158,8 +151,3 @@ class LambdaFilterComponent(Component):
             return [Data(**item) if isinstance(item, dict) else Data(text=str(item)) for item in processed_data]
         # If it's anything else, convert to string and wrap in a Data object
         return [Data(text=str(processed_data))]
-
-    async def as_dataframe(self) -> DataFrame:
-        """Return filtered data as a DataFrame."""
-        filtered_data = await self.filter_data()
-        return DataFrame(filtered_data)

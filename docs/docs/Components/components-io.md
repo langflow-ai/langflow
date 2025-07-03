@@ -34,7 +34,7 @@ It can optionally store the message in a chat history.
 |should_store_message|Store Messages|Store the message in the history.|
 |sender|Sender Type|The type of sender.|
 |sender_name|Sender Name|The name of the sender.|
-|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter is used.|
+|session_id|Session ID|The unique identifier for the chat session. If empty, the current session ID parameter is used.|
 |files|Files|The files to be sent with the message.|
 |background_color|Background Color|The background color of the icon.|
 |chat_icon|Icon|The icon of the message.|
@@ -111,7 +111,7 @@ The component accepts the following input types.
 |should_store_message|Store Messages|The flag to store the message in the history.|
 |sender|Sender Type|The type of sender.|
 |sender_name|Sender Name|The name of the sender.|
-|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter is used.|
+|session_id|Session ID|The unique identifier for the chat session. If empty, the current session ID parameter is used.|
 |data_template|Data Template|The template to convert Data to Text. If the option is left empty, it is dynamically set to the Data's text key.|
 |background_color|Background Color|The background color of the icon.|
 |chat_icon|Icon|The icon of the message.|
@@ -198,7 +198,7 @@ Click **Outputs** to view the sent message:
 ```
 
 :::tip
-Optionally, to view the outputs of each component in the flow, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+Optionally, to view the outputs of each component in the flow, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
 :::
 
 ### Send chat messages with the API
@@ -211,7 +211,7 @@ To send the same example messages programmatically to your Langflow server, do t
 It looks similar to this:
 ```text
 curl --request POST \
-  --url 'http://127.0.0.1:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
+  --url 'http://localhost:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
   --header 'Content-Type: application/json' \
   --data '{
   "input_value": "What's the recommended way to install Docker on Mac M1?",
@@ -226,7 +226,7 @@ Note the `output_type` and `input_type` parameters that are passed with the mess
 4. Add a custom `session_id` to the message's `data` object.
 ```text
 curl --request POST \
-  --url 'http://127.0.0.1:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
+  --url 'http://localhost:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
   --header 'Content-Type: application/json' \
   --data '{
   "input_value": "Whats the recommended way to install Docker on Mac M1",
@@ -246,7 +246,7 @@ A new chat session called `docker-question-on-m1` has appeared, using your uniqu
 For example, disabling storing messages from the **Chat Input** component adds a **Tweak** to your command:
 ```text
 curl --request POST \
-  --url 'http://127.0.0.1:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
+  --url 'http://localhost:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
   --header 'Content-Type: application/json' \
   --data '{
   "input_value": "Text to input to the flow",
@@ -262,3 +262,7 @@ curl --request POST \
 
 To confirm your command is using the tweak, navigate to the **Logs** pane and view the request from the **Chat Input** component.
 The value for `should_store_message` is `false`.
+
+## See also
+
+- [Session ID](/session-id)

@@ -84,6 +84,9 @@ jobs:
         run: uv sync
       - name: Run integration tests
         run: make integration_tests_no_api_keys
+        env:
+          PYLEAK_LOG_LEVEL: debug # enable pyleak logging
+          DO_NOT_TRACK: true # disable telemetry reporting
 
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
@@ -138,10 +141,10 @@ jobs:
         if: steps.check-version.outputs.skipped == 'false'
         run: |
           source new-venv/bin/activate
-          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          timeout 120 bash -c 'until curl -f http://localhost:7860/api/v1/auto_login; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
           sleep 20 # give the server some time to terminate
