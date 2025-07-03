@@ -98,9 +98,9 @@ In SSE mode, all flows available from the targeted server are treated as tools.
 |------|------|-------------|
 | tools | List[Tool] | A list of tools exposed by the MCP server. |
 
-## Manage MCP connections
+## Manage connected MCP servers
 
-The **Settings > MCP Connections** page manages the MCP servers connected to the Langflow client.
+The **Settings > MCP Servers** page manages the MCP servers connected to the Langflow client.
 
 To add a new MCP server, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server** to open the configuration pane, and follow the steps in [Use the MCP Tools component](#use-the-mcp-tools-component).
 

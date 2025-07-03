@@ -34,28 +34,28 @@ Alternatively, you can quickly access the **MCP Server** tab from within any flo
 
     The **Auto install** and **JSON** tabs display options for connecting MCP clients to the the project's MCP server.
 
-    The **Flows/Actions** section lists the flows that are currently being served as tools.
+    The **Flows/Tools** section lists the flows that are currently being served as tools.
 
     ![MCP server projects page](/img/mcp-server.png)
 
-2. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Actions**.
+2. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Tools**.
 
-3. In the **MCP Server Actions** window, select the flows that you want exposed as tools.
+3. In the **MCP Server Tools** window, select the flows that you want exposed as tools.
 
-    ![MCP server actions](/img/mcp-server-actions.png)
+    ![MCP server tools](/img/mcp-server-tools.png)
 
 4. Optional: Edit the **Flow Name** and **Flow Description**.
 
-    - **Flow Name**: Enter a name thats makes it clear what the flow does.
+    - **Tool Name**: Enter a name that makes it clear what the flow does.
 
-    - **Flow Description**: Enter a description that accurately describes the specific action(s) the flow performs.
+    - **Tool Description**: Enter a description that accurately describes the specific action(s) the flow performs.
 
    :::important
    MCP clients use the **Flow Name** and **Flow Description** to determine which action to use.
    For more information about naming and describing your flows, see [Name and describe your flows for agentic use](#name-and-describe-your-flows).
    :::
 
-5. Close the **MCP Server Actions** window to save your changes.
+5. Close the **MCP Server Tools** window to save your changes.
 
 {/* The anchor on this section (connect-clients-to-use-the-servers-actions) is currently a link target in the Langflow UI. Do not change. */}
 ## Connect clients to Langflow's MCP server {#connect-clients-to-use-the-servers-actions}
@@ -172,9 +172,9 @@ It's helpful to think of the names and descriptions as function names and code c
 
 For example, let's say you have a [Document Q&A](/document-qa) flow that loads a sample resume for an LLM to chat with, and that you've given it the following name and description:
 
- - **Flow Name**: `document_qa_for_resume`
+ - **Tool Name**: `document_qa_for_resume`
 
- - **Flow Description**: `A flow for analyzing Emily's resume.`
+ - **Tool Description**: `A flow for analyzing Emily's resume.`
 
 If you ask Cursor a question specifically about the resume, such as `What job experience does Emily have?`, the agent asks to call the MCP tool `document_qa_for_resume`.
 That's because your name and description provided the agent with a clear purpose for the tool.
