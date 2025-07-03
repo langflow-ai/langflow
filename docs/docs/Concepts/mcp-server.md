@@ -21,7 +21,7 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 * Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer to use MCP Inspector to [test and debug flows](#test-and-debug-flows).
 
-* [ngrok installed](https://ngrok.com/docs/getting-started/#1-install-ngrok) and an [ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) if you want to [deploy your MCP server externally](/deployment-public-server).
+* [ngrok installed](https://ngrok.com/docs/getting-started/#1-install-ngrok) and an [ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) if you want to [deploy a public Langflow server](/deployment-public-server).
 
 ## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
 
@@ -91,7 +91,7 @@ For example:
 
     The **MCP Server** tab automatically includes the correct `PROJECT_NAME`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` values.
     The default Langflow server address is `http://localhost:7860`.
-    If you have [deployed your MCP server externally](/deployment-public-server), the address is automatically included.
+    If you have [deployed a public Langflow server](/deployment-public-server), the address is automatically included.
 
     :::important
     If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
@@ -157,7 +157,7 @@ Replace `KEY` and `VALUE` with the environment variable name and value you want 
 {/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
 ### Deploy your MCP server externally {#deploy-your-server-externally}
 
-To deploy your MCP server externally with ngrok, see [Deploy a public Langflow server](/deployment-public-server#share-your-mcp-server-externally).
+To deploy your MCP server externally with ngrok, see [Deploy a public Langflow server](/deployment-public-server).
 
 ## Name and describe your flows for agentic use {#name-and-describe-your-flows}
 

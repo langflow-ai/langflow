@@ -157,7 +157,7 @@ module.exports = {
         {
           type: "doc",
           id: "Deployment/deployment-public-server",
-          label: "Deploy your Langflow server using ngrok"
+          label: "Deploy a public Langflow server"
         },
         {
           type: "doc",

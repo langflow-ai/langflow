@@ -10,13 +10,14 @@ When your Langflow server is public, you can do things like [deploy your Langflo
 
 ## Prerequisites
 
-- [Install Langflow](/get-started-installation)
+- [Install Langflow.](/get-started-installation)
 
 - Install a reverse proxy or forwarding service.
 
     This guide uses ngrok, but you can use any similar reverse proxy or forwarding platform.
 
     If you want to follow along with this guide, [install ngrok](https://ngrok.com/docs/getting-started/#1-install-ngrok) and [create an ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken).
+
 ## Expose your Langflow server with ngrok
 
 1. Start Langflow:
