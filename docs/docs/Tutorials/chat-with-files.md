@@ -47,7 +47,7 @@ To do this, edit the **Template** field, and then replace the default prompt wit
 
 5. Add a [File component](/components-data#file) to the flow, and then connect the **Raw Content** output to the Prompt component's **file** input.
 
-You can add files directly to the file component to pre-load input before running the flow, or you can load files at runtime. The next section of this tutorial covers runtime file uploads.
+    You can add files directly to the file component to pre-load input before running the flow, or you can load files at runtime. The next section of this tutorial covers runtime file uploads.
 
     At this point your flow has five components. The Chat Input and File components are connected to the Prompt component's input ports. Then, the Prompt component's output port is connected to the Language Model component's input port. Finally, the Language Model component's output port is connected to the Chat Output component, which returns the final response to the user.
 
@@ -62,6 +62,7 @@ Send a `POST /run` request to your Langflow server with the file you want to upl
 The result includes the outcome of the flow run and the LLM's response.
 
 This example uses a local Langflow instance, and it asks the LLM to evaluate a sample resume.
+If you don't have a resume on hand, use [fake-resume.txt](./fake-resume.txt).
 
 :::tip
 For help with constructing file upload requests for Python, JavaScript, and curl, see the [Langflow File Upload Utility](https://langflow-file-upload-examples.onrender.com).
