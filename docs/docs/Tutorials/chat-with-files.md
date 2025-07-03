@@ -30,7 +30,7 @@ The following steps modify the [**Basic prompting**](/basic-prompting) template 
 
     If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
 3. To verify that your API key is valid, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM a question.
-The LLM should respond as the **Prompt** component specifies.
+The LLM should respond as the **Prompt** component's **Template** field specifies.
 4. Modify the **Prompt** component to accept file input in addition to chat input.
 To do this, edit the **Template** field, and then replace the default prompt with the following text:
     ```text
