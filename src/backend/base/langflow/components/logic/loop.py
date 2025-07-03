@@ -1,23 +1,58 @@
 from langflow.custom.custom_component.component import Component
-from langflow.inputs.inputs import HandleInput
+from langflow.inputs.inputs import HandleInput, TabInput
+from langflow.io import IntInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
 from langflow.template.field.base import Output
+from langflow.utils.component_utils import set_current_fields, set_field_advanced
+
+# Define fields for each mode
+MODE_FIELDS = {
+    "For-Each": ["dataframe_input"],
+    "Counted": ["data_input", "iterations"],
+}
+
+# Fields that should always be visible
+DEFAULT_FIELDS = ["mode"]
 
 
 class LoopComponent(Component):
     display_name = "Loop"
     description = (
-        "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs."
+        "Iterates over items with two modes: For-Each (iterate over DataFrame) or Counted (repeat N times)."
     )
     icon = "infinity"
 
     inputs = [
+        TabInput(
+            name="mode",
+            display_name="Mode",
+            options=["For-Each", "Counted"],
+            value="For-Each",
+            info="Choose iteration mode: For-Each iterates over DataFrame/list, Counted repeats N times.",
+            real_time_refresh=True,
+        ),
         HandleInput(
-            name="data",
-            display_name="Inputs",
-            info="The initial list of Data objects or DataFrame to iterate over.",
+            name="dataframe_input",
+            display_name="Input",
+            info="The DataFrame input to iterate over the rows.",
             input_types=["DataFrame"],
+            advanced=False,
+        ),
+        HandleInput(
+            name="data_input",
+            display_name="Input",
+            info="The Data or Message to repeat N times.",
+            input_types=["Data", "Message"],
+            advanced=False,
+        ),
+        IntInput(
+            name="iterations",
+            display_name="Iterations",
+            info="Number of times to repeat the data.",
+            value=1,
+            advanced=False,
         ),
     ]
 
@@ -31,8 +66,11 @@ class LoopComponent(Component):
         if self.ctx.get(f"{self._id}_initialized", False):
             return
 
-        # Ensure data is a list of Data objects
-        data_list = self._validate_data(self.data)
+        # Get data based on selected mode
+        if self.mode == "Counted":
+            data_list = self._validate_data_counted(self.data_input, self.iterations)
+        else:
+            data_list = self._validate_data_foreach(self.dataframe_input)
 
         # Store the initial data and context variables
         self.update_ctx(
@@ -44,8 +82,8 @@ class LoopComponent(Component):
             }
         )
 
-    def _validate_data(self, data):
-        """Validate and return a list of Data objects."""
+    def _validate_data_foreach(self, data):
+        """Validate and return a list of Data objects for For-Each mode."""
         if isinstance(data, DataFrame):
             return data.to_data_list()
         if isinstance(data, Data):
@@ -54,6 +92,28 @@ class LoopComponent(Component):
             return data
         msg = "The 'data' input must be a DataFrame, a list of Data objects, or a single Data object."
         raise TypeError(msg)
+
+    def _validate_data_counted(self, data, iterations):
+        """Validate and return a list of Data objects for Counted mode."""
+        if isinstance(data, Message):
+            data = Data(text=data.text)
+        elif not isinstance(data, Data):
+            data = Data(text=str(data))
+        return [data] * iterations
+
+    def update_build_config(self, build_config, field_value, field_name=None):
+        """Update the build config based on the selected mode."""
+        if field_name != "mode":
+            return build_config
+
+        return set_current_fields(
+            build_config=build_config,
+            action_fields=MODE_FIELDS,
+            selected_action=field_value,
+            default_fields=DEFAULT_FIELDS,
+            func=set_field_advanced,
+            default_value=True,
+        )
 
     def evaluate_stop_loop(self) -> bool:
         """Evaluate whether to stop item or done output."""
