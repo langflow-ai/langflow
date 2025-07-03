@@ -47,7 +47,7 @@ async def get_server_list(
     # Attempt to download the configuration file content
     try:
         server_config_bytes = await download_file(
-            server_config_file.id,
+            server_config_file.id if server_config_file else None,
             current_user,
             session,
             storage_service=storage_service,
