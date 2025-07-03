@@ -13,36 +13,14 @@ Langflow provides several ways to publish and integrate your flows into external
 The **API access** pane presents code templates for integrating your flow into external applications.
 
 As of Langflow version 1.5, all API requests require authentication with a Langflow API key, even if `AUTO_LOGIN` is set to `True`.
-
-<details>
-<summary>Need help creating an API key?</summary>
-
-To generate an API key to use with Langflow, do the following.
-
-1. Open the Langflow UI, click your user icon, and then select **Settings**.
-2. Click **Langflow API Keys**, and then click **Add New**.
-3. Name your key, and then click **Create API Key**.
-4. Copy the API key and store it in a secure location.
-5. Use your Langflow API key in your API requests. For example:
-    ```text
-    curl --request POST \
-     --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
-     --header "Content-Type: application/json" \
-     --header "x-api-key: LANGFLOW_API_KEY" \
-     --data '{
-       "output_type": "chat",
-       "input_type": "chat",
-       "input_value": "Hello"
-     }'
-    ```
+For more information, see [API keys](/configuration-api-keys).
 Alternatively, the API pane's code snippets include a script to detect your local `LANGFLOW_API_KEY`.
 To set this variable in your terminal:
 ```bash
 export LANGFLOW_API_KEY="sk..."
 ```
-</details>
 
-![](/img/api-pane.png)
+![API pane](/img/api-pane.png)
 
 <Tabs>
 

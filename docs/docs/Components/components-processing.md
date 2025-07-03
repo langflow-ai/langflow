@@ -110,9 +110,9 @@ This component performs operations on [Data](/concepts-objects#data-object) obje
 All operations in the component require at least one [Data](/concepts-objects#data-object) input.
 2. In the **Operations** field, select the operation you want to perform.
 For example, send this request to the **Webhook** component.
-Replace `YOUR_FLOW_ID` with your flow ID.
+Replace `FLOW_ID` and `LANGFLOW_API_KEY` with the values from your deployment.
 ```bash
-curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://localhost:7860/api/v1/webhook/FLOW_ID" \
 -H 'Content-Type: application/json' \
 -H 'x-api-key: LANGFLOW_API_KEY' \
 -d '{
@@ -203,10 +203,9 @@ This example connects a **Webhook** component to convert `text` and `data` into 
 ![A webhook and data to dataframe](/img/component-data-to-dataframe.png)
 
 3. Send a POST request to the **Webhook** containing your JSON data.
-Replace `YOUR_FLOW_ID` with your flow ID.
-This example uses the default Langflow server address.
+Replace `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` with the values from your Langflow deployment.
 ```text
-curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://LANGFLOW_SERVER_ADDRESS/api/v1/webhook/FLOW_ID" \
 -H 'Content-Type: application/json' \
 -H 'x-api-key: LANGFLOW_API_KEY' \
 -d '{
@@ -229,7 +228,7 @@ The **Data to DataFrame** component converts the webhook request into a `DataFra
 
 5. Send another employee data object.
 ```text
-curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
+curl -X POST "http://LANGFLOW_SERVER_ADDRESS/api/v1/webhook/FLOW_ID" \
 -H 'Content-Type: application/json' \
 -H 'x-api-key: LANGFLOW_API_KEY' \
 -d '{

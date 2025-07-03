@@ -50,8 +50,11 @@ The Langflow port number is set in the `LANGFLOW_PORT` [environment variable](/e
 
 <details closed>
 <summary>Auto-login and API key authentication</summary>
-
 Prior to Langflow v1.5, when `AUTO_LOGIN` was enabled with `AUTO_LOGIN=true`, Langflow automatically logged users in as a superuser without requiring authentication, and API requests could be made without a Langflow API key.
+
+If you set `SKIP_AUTH_AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key, regardless of the `AUTO_LOGIN` setting.
+
+</details>
 
 As of Langflow v1.5, all API requests require a Langflow API key, even when `AUTO_LOGIN` is enabled.
 
@@ -59,9 +62,8 @@ The only exceptions are the MCP endpoints at `/v1/mcp`, `/v1/mcp-projects`, and 
 The MCP-related endpoints will continue to require no authentication when `AUTO_LOGIN=true`.
 
 For more information, see [Authentication](/configuration-authentication).
-</details>
 
-You must provide a valid Langflow API key in either an `x-api-key` header or query parameter.
+You must provide a valid Langflow API key in either an `x-api-key` header or a query parameter.
 For more information, see [API keys](/configuration-api-keys).
 
 ### Methods, paths, and parameters
@@ -105,8 +107,6 @@ export LANGFLOW_API_KEY="sk-..."
 
 Once you have your Langflow server URL, try calling these endpoints that return Langflow metadata.
 
-If authentication is required, include an `x-api-key` header or query parameter with a valid [Langflow API key](/configuration-api-keys), such as `-H "x-api-key: $API_KEY"`.
-
 ### Get version
 
 Returns the current Langflow API version:
@@ -114,7 +114,8 @@ Returns the current Langflow API version:
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/version" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 <details>
@@ -135,7 +136,8 @@ Returns configuration details for your Langflow deployment:
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/config" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 <details>

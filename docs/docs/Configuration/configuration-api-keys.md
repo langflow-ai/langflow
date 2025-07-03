@@ -9,26 +9,27 @@ import Icon from "@site/src/components/icon";
 
 You can use Langflow API keys to interact with Langflow programmatically.
 
-The API key has the same permissions and access as you do when logged in through the web interface. This means your API key can only access your own flows, components, and data, and cannot access other users' resources.
+The API key has the same permissions and access as you do when you launch Langflow. This means your API key can only access your own flows, components, and data. You cannot access other users' resources with your own Langflow API keys.
 The API key represents the user who created them. If you create your key as a superuser, you will have superuser privileges and can manage other users, but will do so with your API key.
 
-<details open>
+<details closed>
 <summary>Auto-login and API key authentication</summary>
-
 Prior to Langflow v1.5, when `AUTO_LOGIN` was enabled with `AUTO_LOGIN=true`, Langflow automatically logged users in as a superuser without requiring authentication, and API requests could be made without a Langflow API key.
+
+If you set `SKIP_AUTH_AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key, regardless of the `AUTO_LOGIN` setting.
+
+</details>
 
 As of Langflow v1.5, all API requests require a Langflow API key, even when `AUTO_LOGIN` is enabled.
 
 The only exceptions are the MCP endpoints at `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`.
 The MCP-related endpoints will continue to require no authentication when `AUTO_LOGIN=true`.
 
-</details>
-
 ## Generate a Langflow API key
 
-You can generate a Langflow API key with the UI, or the CLI.
+You can generate a Langflow API key with the UI or the CLI.
 
-The UI-generated key is appropriate for most cases. The CLI key is needed when your Langflow server is running in `--backend-only` mode.
+The UI-generated key is appropriate for most cases. The CLI-generated key is needed when your Langflow server is running in `--backend-only` mode.
 
 <Tabs>
   <TabItem value="Langflow UI" label="Langflow UI" default>
@@ -42,7 +43,7 @@ The UI-generated key is appropriate for most cases. The CLI key is needed when y
 
   <TabItem value="Langflow CLI" label="Langflow CLI">
 
-    If you're serving your flow with `--backend-only=true`, you don't have a way to create an API key within the UI.
+    If you're serving your flow with `--backend-only=true`, you can't create API keys in the UI.
 
 To create API keys with the Langflow CLI, `AUTO_LOGIN` must be set to `FALSE` and you must be logged in as a superuser.
 
