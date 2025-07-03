@@ -116,10 +116,7 @@ class OpenAIModelComponent(LCModelComponent):
             parameters["seed"] = self.seed
         else:
             params_str = ", ".join(unsupported_params_for_reasoning_models)
-            logger.debug(
-                f"{self.model_name} is a reasoning model, "
-                f"{params_str} are not configurable. Ignoring."
-            )
+            logger.debug(f"{self.model_name} is a reasoning model, {params_str} are not configurable. Ignoring.")
 
         output = ChatOpenAI(**parameters)
         if self.json_mode:
