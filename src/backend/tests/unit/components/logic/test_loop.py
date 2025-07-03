@@ -129,7 +129,7 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert len(data["outputs"][-1]["outputs"]) > 0
 
 
-@pytest.mark.skipif(os.getenv("OPENAI_API_KEY") is None, reason="OPENAI_API_KEY is not set")
+@pytest.mark.skipif(os.getenv("OPENAI_API_KEY") in {None, "dummy"}, reason="OPENAI_API_KEY is not set")
 def loop_flow():
     """Complete loop flow that processes multiple URLs through a loop."""
     # Create URL component to fetch content from multiple sources
