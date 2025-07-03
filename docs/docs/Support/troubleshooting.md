@@ -135,6 +135,22 @@ The cache folder location depends on your OS:
 - **WSL2 on Windows**: `home/<username>/.cache/langflow/`
 - **macOS**: `/Users/<username>/Library/Caches/langflow/`
 
+## Langflow uninstall issues
+
+The following issues can occur when uninstalling Langflow.
+
+### Uninstalling Langflow Desktop on macOS
+
+On macOS, uninstalling Langflow Desktop involves removing the `.app` file. However, this process does **not** delete the files generated during usage, which remain stored in the `/Users/<username>/.langflow` directory. These files include data and settings from the previous installation.
+
+If you want to fully remove Langflow and start fresh with a future installation, you must manually delete this folder:
+
+```bash
+rm -rf /Users/<your-username>/.langflow
+```
+
+Otherwise, when Langflow Desktop is reinstalled, it will pick up right where it left off, using the existing data.
+
 ## MCP server issues
 
 - [Use MCP Inspector to test and debug flows](/mcp-server#test-and-debug-flows)
