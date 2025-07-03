@@ -302,7 +302,7 @@ export default function AddMcpServerModal({
                   <ShadTooltip content={error}>
                     <div
                       className={cn(
-                        "absolute right-4 top-3 truncate text-xs font-medium text-red-500",
+                        "absolute right-4 top-4 truncate text-xs font-medium text-red-500",
                         type === "JSON" ? "w-3/5" : "w-4/5",
                       )}
                     >
