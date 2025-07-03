@@ -402,7 +402,7 @@ class CustomComponent(BaseComponent):
 
     def variables(self, name: str, field: str):
         """DEPRECATED - This is kept for backward compatibility. Use get_variables instead."""
-        return run_until_complete(self.get_variable(name, field))
+        return run_until_complete(self.get_variables(name, field))
 
     async def get_variables(self, name: str, field: str):
         """DEPRECATED - This is kept for backward compatibility. Use get_variable instead."""
