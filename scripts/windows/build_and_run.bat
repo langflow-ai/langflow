@@ -2,7 +2,7 @@
 echo Starting Langflow build and run process...
 
 echo.
-echo Step 1: Building frontend...
+echo Step 1: Installing frontend dependencies...
 cd ..\..\src\frontend
 if errorlevel 1 (
     echo Error: Could not navigate to src\frontend directory
@@ -10,6 +10,16 @@ if errorlevel 1 (
     exit /b 1
 )
 
+echo Running npm install...
+call npm install
+if errorlevel 1 (
+    echo Error: npm install failed
+    pause
+    exit /b 1
+)
+
+echo.
+echo Step 2: Building frontend...
 echo Running npm run build...
 call npm run build
 if errorlevel 1 (
@@ -19,7 +29,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo Step 2: Copying build files to backend...
+echo Step 3: Copying build files to backend...
 cd ..\..
 
 REM Check if build directory exists
@@ -58,7 +68,7 @@ if errorlevel 1 (
 echo Build files copied successfully!
 
 echo.
-echo Step 3: Running Langflow...
+echo Step 4: Running Langflow...
 uv run langflow run
 if errorlevel 1 (
     echo Error: Failed to run langflow

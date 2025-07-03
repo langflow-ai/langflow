@@ -2,10 +2,24 @@
 
 Write-Host "Starting Langflow build and run process..." -ForegroundColor Green
 
-# Step 1: Build frontend
-Write-Host "`nStep 1: Building frontend..." -ForegroundColor Yellow
+# Step 1: Install frontend dependencies
+Write-Host "`nStep 1: Installing frontend dependencies..." -ForegroundColor Yellow
 try {
     Set-Location "..\..\src\frontend"
+    Write-Host "Running npm install..."
+    npm install
+    if ($LASTEXITCODE -ne 0) {
+        throw "npm install failed"
+    }
+} catch {
+    Write-Host "Error in frontend dependency installation: $_" -ForegroundColor Red
+    Read-Host "Press Enter to exit"
+    exit 1
+}
+
+# Step 2: Build frontend
+Write-Host "`nStep 2: Building frontend..." -ForegroundColor Yellow
+try {
     Write-Host "Running npm run build..."
     npm run build
     if ($LASTEXITCODE -ne 0) {
@@ -17,8 +31,8 @@ try {
     exit 1
 }
 
-# Step 2: Copy build files
-Write-Host "`nStep 2: Copying build files to backend..." -ForegroundColor Yellow
+# Step 3: Copy build files
+Write-Host "`nStep 3: Copying build files to backend..." -ForegroundColor Yellow
 try {
     Set-Location "..\.."
     
@@ -55,8 +69,8 @@ try {
     exit 1
 }
 
-# Step 3: Run Langflow
-Write-Host "`nStep 3: Running Langflow..." -ForegroundColor Yellow
+# Step 4: Run Langflow
+Write-Host "`nStep 4: Running Langflow..." -ForegroundColor Yellow
 try {
     uv run langflow run
 } catch {
