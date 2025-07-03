@@ -3,7 +3,6 @@
   "version": "1.4.3",
   "private": true,
   "dependencies": {
-    "@scrydon.com/ui": "file:../ui",
     "@chakra-ui/number-input": "^2.1.2",
     "@headlessui/react": "^2.0.4",
     "@radix-ui/react-accordion": "^1.2.11",
