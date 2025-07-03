@@ -277,8 +277,6 @@ def setup_uvicorn_logger() -> None:
     logging.getLogger("uvicorn").handlers = [InterceptHandler()]
 
 
-
-
 class InterceptHandler(logging.Handler):
     """Default handler from examples in loguru documentation.
 
