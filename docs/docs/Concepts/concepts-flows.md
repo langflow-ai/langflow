@@ -1,5 +1,5 @@
 ---
-title: Create and manage flows
+title: Build flows
 slug: /concepts-flows
 ---
 

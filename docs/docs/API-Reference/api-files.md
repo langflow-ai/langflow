@@ -84,8 +84,7 @@ The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<
 }
 ```
 
-<!-- TODO: What link goes here? -->
-2. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
+1. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
    Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
    Component `id` values can be found in [Langflow JSON files](/concepts-flows-import#langflow-json-file-contents).
 
@@ -97,11 +96,12 @@ curl -X POST \
     "output_type": "chat",
     "input_type": "chat",
     "tweaks": {
-  "ChatInput-b67sL": {
-    "files": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png",
-    "input_value": "what do you see?"
-  }
-}}'
+      "ChatInput-b67sL": {
+        "files": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png",
+        "input_value": "what do you see?"
+      }
+    }
+  }'
 ```
 
 Your chatbot describes the image file you sent.

@@ -6,6 +6,7 @@ slug: /concepts-playground
 import Icon from "@site/src/components/icon";
 
 <!-- TODO: Align and minimize duplications of playground content on the /concepts-overview, /about-langflow, and other pages -->
+<!-- TODO: Consider bringing Shared Playground from /concepts-publish to here. Replace w/ `See also` on /concepts-publish, and retitle /concepts-publish. -->
 
 The **Playground** is a dynamic interface designed for real-time interaction with LLMs, allowing users to chat, access memories, and monitor inputs and outputs. Here, users can directly prototype their models, making adjustments and observing different outcomes.
 

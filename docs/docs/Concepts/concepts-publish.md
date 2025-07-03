@@ -6,62 +6,59 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import ChatWidget from '@site/src/components/ChatWidget';
 
-Langflow provides several ways to share and integrate your flows into external applications.
-For example, you can to the following:
+Langflow provides several ways to share and integrate your flows into external applications:
 
 * [Trigger flows with the Langflow API](#api-access)
 * [Add an embedded chat widget to a website](#embedded-chat-widget)
 * [Access a Langflow MCP server](#access-a-langflow-mcp-server)
 * [Share a public flow Playground](#share-a-flows-playground)
 
-This guide introduces the options available for accessing flows from outside a local Langflow UI.
-
-Although you can use these options with a local Langflow instance, these options are more valuable when you have deployed a Langflow server or packaged Langflow as a dependency of an application.
+Although you can use these options with an isolated, local Langflow instance, they are typically more valuable when you have deployed a Langflow server or packaged Langflow as a dependency of an application.
 For more information, see [Deployment overview](/deployment-overview) and [Application development overview](/develop-application).
 
 ## Use the Langflow API to run flows {#api-access}
 
-<!-- tODO: revise this section -->
-Langflow provides Python, JavaScript, and curl code snippets to help you get started with the Langflow API.
+The [Langflow API](/api-reference-api-examples) is the primary way to access your flows and Langflow servers programmatically.
 
-These code snippets are available on each flow's **API access** pane.
-To access the **API access** pane, open a flow in Langflow, click **Share**, and then click **API access**.
+:::tip Try it`
+For a demo of the Langflow API in application code, see the [Quickstart](/get-started-quickstart).
+:::
 
-![API access pane](/img/api-pane.png)
+### Generate API code snippets
 
-You can run the snippet as is, or use the snippet as a basis for a larger script.
+To help you embed Langflow API requests in your scripts, Langflow automatically generates Python, JavaScript, and curl code snippets for your flows.
+To get these code snippets, do the following:
 
-For more information and examples, see [Run your flows from external applications](/get-started-quickstart#run-your-flows-from-external-applications) and [Get started with the Langflow API](/api-reference-api-examples).
+1. In Langflow, open the flow that you want to embed in your application.
+2. Click **Share**, and then click **API access**.
+3. Copy the snippet for the language that you want to use, and then run the snippet, or use the snippet in the context of a larger script.
+
+   ![API access pane](/img/api-pane.png)
+
+The code snippets automatically populate necessary values, like the Langflow server URL, flow ID, headers, and request parameters.
 
 ### Authentication
 
-<!-- TODO Link to api key page -->
+If your snippet doesn't include an authentication header, you must add one to ensure that your script can authenticate to the Langflow API.
+For more information, see [Form Langflow API requests](/api-reference-api-examples#form-langflow-api-requests)
 
-### Input schema and tweaks
+### Input Schema (tweaks) {#input-schema}
 
-<!-- TODO: Revise this section and combine w/ temp overrides section -->
+Tweaks are one-time overrides that modify component parameters for at runtime, rather than permanently modifying the flow itself.
+For an example of tweaks in a script, see the [Quickstart](/get-started-quickstart).
 
-Tweaks are added to the `payload` of requests to Langflow's `/run` endpoint to temporarily change component parameters within your flow.
-They don't modify the underlying flow configuration or persist between runs.
+:::tip
+Tweaks make your flows more dynamic and reusable.
 
-To assist with formatting, you can define tweaks in Langflow's **Input Schema** pane before copying the code snippet.
+You can create one flow and use it for multiple applications by passing application-specific tweaks in each application's Langflow API requests.
+:::
 
-For more information, see [Use tweaks to apply temporary overrides to a flow run](/get-started-quickstart#use-tweaks-to-apply-temporary-overrides-to-a-flow-run).
+In the **API access** pane, click **Input Schema** to add `tweaks` to the request payload in a flow's code snippets.
 
-### Temporary overrides and tweaks
+Changes to a flow's **Input Schema** are saved exclusively as tweaks for that flow's **API access** code snippets.
+These tweaks don't change the flow parameters set in the **Workspace**, and they don't apply to other flows.
 
-The **Temporary overrides** tab displays flow parameters that you can modify at runtime.
-
-Modifying these parameters changes those values across all code snippets.
-However, these changes don't persist into the visual editor, and they aren't saved.
-
-For example, changing the **Chat Input** component's `input_value` changes that value across all API `/run` code snipepts.
-
-For more information, see the tweaks example in the [Langflow quickstart](/get-started-quickstart#use-tweaks-to-apply-temporary-overrides-to-a-flow-run).
-
-### Send files to your flow with the API
-
-For information on sending files to the Langflow API, see [Files endpoint](/api-files).
+Adding tweaks with **Input Schema** is a good way to troubleshoot formatting issues with tweaks that you manually added to Langflow API requests.
 
 ## Embed a flow into a website {#embedded-chat-widget}
 
@@ -500,3 +497,4 @@ This window's URL is the flow's **Sharable Playground** address, such as `https:
 * [Develop an application with Langflow](/develop-application)
 * [Langflow deployment overview](/deployment-overview)
 * [Import and export flows](/concepts-flows-import)
+* [Files endpoints](/api-files)

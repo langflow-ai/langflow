@@ -25,7 +25,7 @@ The following tables are stored in `langflow.db`:
 
 • **User** - Stores user account information including credentials, permissions, and profiles. For more information, see [Authentication](/configuration-authentication).
 
-• **Flow** - Contains flow configurations. For more information, see [Create and manage flows](/concepts-flows).
+• **Flow** - Contains flow configurations. For more information, see [Build flows](/concepts-flows).
 
 • **Message** - Stores chat messages and interactions that occur between components. For more information, see [Message objects](/concepts-objects#message-object).
 

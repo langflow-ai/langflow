@@ -47,25 +47,19 @@ module.exports = {
           label: "Use the visual editor"
         },
         {
-          type: "category",
-          label: "Build flows",
-          items: [
-            {
-              type: "doc",
-              id: "Concepts/concepts-flows",
-              label: "Create and manage flows"
-            },
-            {
-              type: "doc",
-              id: "Concepts/concepts-publish",
-              label: "Share and embed flows"
-            },
-            {
-              type: "doc",
-              id: "Concepts/concepts-flows-import",
-              label: "Import and export flows"
-            },
-          ]
+          type: "doc",
+          id: "Concepts/concepts-flows",
+          label: "Build flows"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-publish",
+          label: "Share and embed flows"
+        },
+        {
+          type: "doc",
+          id: "Concepts/concepts-flows-import",
+          label: "Import and export flows"
         },
         {
           type: "doc",

@@ -161,5 +161,5 @@ For more information, see [Install custom dependencies](/install-custom-dependen
 ## Next steps
 
 * [Quickstart](/get-started-quickstart): Build and run your first flow in minutes.
-* [Create and manage flows](/concepts-flows): Learn about building flows.
+* [Build flows](/concepts-flows): Learn about building flows.
 * [Troubleshoot Langflow](/troubleshoot): Get help with common Langflow install and startup issues.
