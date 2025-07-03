@@ -25,8 +25,7 @@ You can copy the contents of this file into your own `.env` file and replace the
 ### LANGFLOW_AUTO_LOGIN
 
 <details closed>
-<summary>Auto-login and API key authentication</summary>
-
+<summary>Auto-login and API key authentication in earlier Langflow versions</summary>
 Prior to Langflow v1.5, when `AUTO_LOGIN` was enabled with `AUTO_LOGIN=true`, Langflow automatically logged users in as a superuser without requiring authentication, and API requests could be made without a Langflow API key.
 
 If you set `SKIP_AUTH_AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key, regardless of the `AUTO_LOGIN` setting.

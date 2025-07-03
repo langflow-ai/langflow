@@ -13,7 +13,7 @@ The API key has the same permissions and access as you do when you launch Langfl
 The API key represents the user who created them. If you create your key as a superuser, you will have superuser privileges and can manage other users, but will do so with your API key.
 
 <details closed>
-<summary>Auto-login and API key authentication</summary>
+<summary>Auto-login and API key authentication in earlier Langflow versions</summary>
 Prior to Langflow v1.5, when `AUTO_LOGIN` was enabled with `AUTO_LOGIN=true`, Langflow automatically logged users in as a superuser without requiring authentication, and API requests could be made without a Langflow API key.
 
 If you set `SKIP_AUTH_AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key, regardless of the `AUTO_LOGIN` setting.
@@ -66,7 +66,9 @@ To create an API key for a user from the CLI, do the following:
       -H "x-api-key: $LANGFLOW_API_KEY"
     ```
 
-    Result:
+    <details closed>
+    <summary>Result</summary>
+
     ```json
     {
       "id": "07e5b864-e367-4f52-b647-a48035ae7e5e",
@@ -81,12 +83,13 @@ To create an API key for a user from the CLI, do the following:
     }
     ```
 
-2. To create an API key, run:
+    </details>
+
+2. Create an API key:
 
     ```shell
     uv run langflow api-key
     ```
-
 
   </TabItem>
 </Tabs>
