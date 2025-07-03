@@ -44,9 +44,12 @@ The UI-generated key is appropriate for most cases. The CLI-generated key is nee
 
   <TabItem value="Langflow CLI" label="Langflow CLI">
 
-    If you're serving your flow with `--backend-only=true`, you can't create API keys in the UI.
+If you're serving your flow with `--backend-only=true`, you can't create API keys in the UI, because the frontend is not running.
 
-To create API keys with the Langflow CLI, `AUTO_LOGIN` must be set to `FALSE` and you must be logged in as a superuser.
+Depending on your authentication settings, note the following requirements for creating API keys with the Langflow CLI:
+
+* If `AUTO_LOGIN` is `FALSE`, you must be logged in as a superuser.
+* If `AUTO LOGIN` is `TRUE`, you're already logged in as superuser.
 
 To create an API key for a user from the CLI, do the following:
 
