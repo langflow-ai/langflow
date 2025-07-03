@@ -92,7 +92,7 @@ export default function MCPServersPage() {
               </div>
             ) : (
               <div className="text-sm font-medium text-muted-foreground">
-                Servers
+                Added MCP Servers
               </div>
             )}
             <div className="flex flex-col gap-1">
