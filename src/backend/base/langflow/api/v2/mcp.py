@@ -128,10 +128,14 @@ async def get_servers(
             # Configuration validation errors, invalid URLs, etc.
             logger.error(f"Configuration error for server {server_name}: {e}")
             server_info["error"] = f"Configuration error: {e}"
-        except (ConnectionError, TimeoutError) as e:
+        except ConnectionError as e:
             # Network connection and timeout issues
             logger.error(f"Connection error for server {server_name}: {e}")
             server_info["error"] = f"Connection failed: {e}"
+        except (TimeoutError, asyncio.TimeoutError) as e:
+            # Timeout errors
+            logger.error(f"Timeout error for server {server_name}: {e}")
+            server_info["error"] = "Timeout when checking server tools"
         except OSError as e:
             # System-level errors (process execution, file access)
             logger.error(f"System error for server {server_name}: {e}")
@@ -149,24 +153,21 @@ async def get_servers(
             if hasattr(e, "exceptions") and e.exceptions:
                 # Extract the first underlying exception for a more meaningful error message
                 underlying_error = e.exceptions[0]
-                logger.exception(f"Error checking server {server_name}: {underlying_error}")
+                if hasattr(underlying_error, "exceptions"):
+                    logger.error(
+                        f"Error checking server {server_name}: {underlying_error}, {underlying_error.exceptions}"
+                    )
+                    underlying_error = underlying_error.exceptions[0]
+                else:
+                    logger.exception(f"Error checking server {server_name}: {underlying_error}")
                 server_info["error"] = f"Error loading server: {underlying_error}"
             else:
                 logger.exception(f"Error checking server {server_name}: {e}")
                 server_info["error"] = f"Error loading server: {e}"
         return server_info
 
-    async def check_server_with_timeout(server_name: str) -> dict:
-        try:
-            return await asyncio.wait_for(
-                check_server(server_name), timeout=get_settings_service().settings.mcp_server_timeout
-            )
-        except asyncio.TimeoutError:
-            logger.error(f"Timeout checking server {server_name}")
-            return {"name": server_name, "mode": None, "toolsCount": None, "error": "Server check timed out."}
-
     # Run all server checks concurrently
-    tasks = [check_server_with_timeout(server) for server in server_list["mcpServers"]]
+    tasks = [check_server(server) for server in server_list["mcpServers"]]
     return await asyncio.gather(*tasks, return_exceptions=True)
 
 
