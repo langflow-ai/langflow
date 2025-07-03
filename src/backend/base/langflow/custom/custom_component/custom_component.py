@@ -404,6 +404,11 @@ class CustomComponent(BaseComponent):
         """DEPRECATED - This is kept for backward compatibility. Use get_variables instead."""
         return run_until_complete(self.get_variable(name, field))
 
+    async def get_variables(self, name: str, field: str):
+        """DEPRECATED - This is kept for backward compatibility. Use get_variable instead."""
+        async with session_scope() as session:
+            return await self.get_variable(name, field, session)
+
     async def get_variable(self, name: str, field: str, session):
         """Returns the variable for the current user with the specified name.
 
