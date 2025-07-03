@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { InputProps, TableComponentType } from "../../types";
+import { isMarkdownTable } from "@/utils/markdownUtils";
 
 export default function TableNodeComponent({
   tableTitle,
@@ -158,11 +159,54 @@ export default function TableNodeComponent({
         columns?.find((c) => c.name === col.field)?.disable_edit !== true,
     );
 
+  function parseTSVorMarkdownTable(clipboard: string, columns: any[]) {
+    // Try TSV (Excel/Sheets)
+    if (clipboard.includes("\t")) {
+      const lines = clipboard.trim().split(/\r?\n/);
+      // If first line looks like headers, skip it
+      const hasHeader = lines[0].split("\t").length === columns.length;
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+      return dataLines.map(line => {
+        const cells = line.split("\t");
+        const row = {};
+        columns.forEach((col, i) => {
+          row[col.name] = cells[i] ?? null;
+        });
+        return row;
+      });
+    }
+    // Try markdown table
+    if (isMarkdownTable(clipboard)) {
+      const lines = clipboard.trim().split(/\r?\n/).filter(l => l.includes("|"));
+      if (lines.length < 2) return [];
+      // Assume first line is header, second is separator
+      const dataLines = lines.slice(2);
+      return dataLines.map(line => {
+        const cells = line.split("|").slice(1, -1).map(c => c.trim());
+        const row = {};
+        columns.forEach((col, i) => {
+          row[col.name] = cells[i] ?? null;
+        });
+        return row;
+      });
+    }
+    return [];
+  }
+
   return (
     <div
       className={
         "flex w-full items-center" + (disabled ? " cursor-not-allowed" : "")
       }
+      onPaste={e => {
+        if (!isModalOpen) return;
+        const clipboard = e.clipboardData.getData("text");
+        const rows = parseTSVorMarkdownTable(clipboard, componentColumns);
+        if (rows.length > 0) {
+          setTempValue(prev => [...prev, ...rows]);
+          e.preventDefault();
+        }
+      }}
     >
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
         <TableModal
