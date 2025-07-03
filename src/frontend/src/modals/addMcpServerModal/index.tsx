@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -295,9 +296,11 @@ export default function AddMcpServerModal({
                 id="global-variable-modal-inputs"
               >
                 {error && (
-                  <div className="absolute right-4 top-2.5 text-xs font-medium text-red-500">
-                    {error}
-                  </div>
+                  <ShadTooltip content={error}>
+                    <div className="absolute right-4 top-3 w-3/5 truncate text-xs font-medium text-red-500">
+                      {error}
+                    </div>
+                  </ShadTooltip>
                 )}
                 <TabsContent value="JSON">
                   <div className="flex flex-col gap-2">
