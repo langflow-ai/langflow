@@ -186,4 +186,23 @@ You can find the values for `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` in the auto-
 
 To process multiple files in a single flow run, add a separate File component for each file you want to ingest. Each file must be uploaded and the component referenced individually in your API request.
 
+For example, modify the `tweaks` to accept multiple file components.
+This is just an example, and not working code.
+
+```python
+## set multiple file paths
+file_paths = {
+    FILE_COMPONENT_1: uploaded_path_1,
+    FILE_COMPONENT_2: uploaded_path_2
+}
+
+def chat_with_flow(input_message, file_paths):
+    """Send a chat message to the flow with multiple files"""
+    run_url = f"{LANGFLOW_SERVER_ADDRESS}/api/v1/run/{FLOW_ID}"
+    # Prepare tweaks with both file paths
+    tweaks = {}
+    for component_id, file_path in file_paths.items():
+        tweaks[component_id] = {"path": file_path}
+```
+
 To upload files from another machine that is not your local environment, your Langflow server must first be accessible over the internet. Authenticated users can upload files directly to the `/v2/files/` endpoint as shown in the tutorial. For more information, see [Langflow deployment overview](/deployment-overview).
