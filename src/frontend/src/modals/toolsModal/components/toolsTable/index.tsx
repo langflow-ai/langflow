@@ -162,7 +162,7 @@ export default function ToolsTable({
     },
     {
       field: "name",
-      headerName: isAction ? "Action" : "Slug",
+      headerName: isAction ? "Tool" : "Slug",
       flex: 1,
       resizable: false,
       valueGetter: (params) =>
@@ -263,7 +263,7 @@ export default function ToolsTable({
         <div className="flex-none px-4">
           <Input
             icon="Search"
-            placeholder="Search actions..."
+            placeholder="Search tools..."
             inputClassName="h-8"
             value={searchQuery}
             onChange={handleSearchChange}
@@ -335,7 +335,7 @@ export default function ToolsTable({
                   />
                   <div className="text-xs text-muted-foreground">
                     {isAction
-                      ? "This is the description for the action exposed to the clients."
+                      ? "This is the description for the tool exposed to the clients."
                       : "This is the description for the tool exposed to the agents."}
                   </div>
                 </div>
@@ -370,7 +370,7 @@ export default function ToolsTable({
                           Parameters
                         </h3>
                         <p className="text-mmd text-muted-foreground">
-                          Manage inputs for this action
+                          Manage inputs for this tool
                         </p>
                       </div>
                     )}

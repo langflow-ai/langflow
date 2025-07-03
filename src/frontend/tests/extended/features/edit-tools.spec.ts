@@ -40,7 +40,7 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=actions", { timeout: 30000 });
+    await page.waitForSelector("text=tools", { timeout: 30000 });
 
     await page.getByTestId("button_open_actions").click();
 
