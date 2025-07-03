@@ -12,6 +12,7 @@ from langflow.io import (
     TableInput,
 )
 from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.table import EditMode
 
 
@@ -43,7 +44,6 @@ class StructuredOutputComponent(Component):
             value=(
                 "You are an AI that extracts one structured JSON object from unstructured text. "
                 "Use a predefined schema with expected types (str, int, float, bool, dict). "
-                "If multiple structures exist, extract only the first most complete one. "
                 "Fill missing or ambiguous values with defaults: null for missing values. "
                 "Ignore duplicates and partial repeats. "
                 "Always return one valid JSON, never throw errors or return multiple objects."
@@ -116,6 +116,11 @@ class StructuredOutputComponent(Component):
             display_name="Structured Output",
             method="build_structured_output",
         ),
+        Output(
+            name="dataframe_output",
+            display_name="Structured Output",
+            method="build_structured_dataframe",
+        ),
     ]
 
     def build_structured_output_base(self):
@@ -177,7 +182,23 @@ class StructuredOutputComponent(Component):
             # handle empty or unexpected type case
             msg = "No structured output returned"
             raise ValueError(msg)
-        if len(output) != 1:
-            msg = "Multiple structured outputs returned"
+        if len(output) == 1:
+            return Data(data=output[0])
+        elif len(output) > 1:
+            # Multiple outputs - wrap them in a results container
+            return Data(data={"results": output})
+
+    def build_structured_dataframe(self) -> DataFrame:
+        output = self.build_structured_output_base()
+        if not isinstance(output, list) or not output:
+            # handle empty or unexpected type case
+            msg = "No structured output returned"
             raise ValueError(msg)
-        return Data(data=output[0])
+        if len(output) == 1:
+            # Single output - create list with one Data object
+            data_list = [Data(data=output[0])]
+        else:
+            # Multiple outputs - create list of Data objects
+            data_list = [Data(data=item) for item in output]
+        
+        return DataFrame(data_list)

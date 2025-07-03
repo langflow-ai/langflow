@@ -711,3 +711,155 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 # Data object should be able to represent itself as text
                 text_repr = result.get_text()
                 assert isinstance(text_repr, str)
+
+    def test_build_structured_dataframe_returns_dataframe_with_single_data(self):
+        """Test that build_structured_dataframe() returns DataFrame object with single Data item."""
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [{"field": "value2", "number": 24}]}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[
+                {"name": "field", "type": "str", "description": "A test field"},
+                {"name": "number", "type": "int", "description": "A test number"},
+            ],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_dataframe()
+
+            # Check that result is a DataFrame object
+            from langflow.schema.dataframe import DataFrame
+
+            assert isinstance(result, DataFrame)
+            assert len(result) == 1
+            assert result.iloc[0]["field"] == "value2"
+            assert result.iloc[0]["number"] == 24
+            
+            # Test conversion back to Data list
+            data_list = result.to_data_list()
+            assert len(data_list) == 1
+            assert data_list[0].data == {"field": "value2", "number": 24}
+
+    def test_build_structured_dataframe_returns_dataframe_with_multiple_data(self):
+        """Test that build_structured_dataframe() returns DataFrame object with multiple Data items."""
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [
+                        {"name": "John", "age": 30},
+                        {"name": "Jane", "age": 25},
+                        {"name": "Bob", "age": 35}
+                    ]}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input with multiple people",
+            schema_name="PersonSchema",
+            output_schema=[
+                {"name": "name", "type": "str", "description": "Person's name"},
+                {"name": "age", "type": "int", "description": "Person's age"},
+            ],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_dataframe()
+
+            # Check that result is a DataFrame object
+            from langflow.schema.dataframe import DataFrame
+
+            assert isinstance(result, DataFrame)
+            assert len(result) == 3
+            assert result.iloc[0]["name"] == "John"
+            assert result.iloc[0]["age"] == 30
+            assert result.iloc[1]["name"] == "Jane"
+            assert result.iloc[1]["age"] == 25
+            assert result.iloc[2]["name"] == "Bob"
+            assert result.iloc[2]["age"] == 35
+            
+            # Test conversion back to Data list
+            data_list = result.to_data_list()
+            assert len(data_list) == 3
+            assert data_list[0].data == {"name": "John", "age": 30}
+            assert data_list[1].data == {"name": "Jane", "age": 25}
+            assert data_list[2].data == {"name": "Bob", "age": 35}
+
+    def test_build_structured_dataframe_fails_when_base_returns_non_list(self):
+        """Test that build_structured_dataframe() fails when base method returns non-list."""
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            return {
+                "messages": ["mock_message"],
+                "responses": [{"single_item": "value"}],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with (
+            patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result),
+            pytest.raises(ValueError, match="No structured output returned"),
+        ):
+            component.build_structured_dataframe()
+
+    def test_build_structured_dataframe_fails_when_empty_output(self):
+        """Test that build_structured_dataframe() fails when base method returns empty list."""
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": []}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Test input",
+            schema_name="TestSchema",
+            output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
+            multiple=False,
+            system_prompt="Test system prompt",
+        )
+
+        with (
+            patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result),
+            pytest.raises(ValueError, match="No structured output returned"),
+        ):
+            component.build_structured_dataframe()
