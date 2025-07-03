@@ -328,7 +328,7 @@ class TestExecuteCommand:
     def test_execute_help_output(self, runner):
         """Test the help output for the execute command."""
         result = runner.invoke(app, ["execute", "--help"])
-        assert result.exit_code == 0
+        assert result.exit_code == 0, result
         assert "Execute a Langflow graph script or JSON flow" in result.output
         assert "--verbose" in result.output
         assert "--format" in result.output
@@ -585,10 +585,16 @@ def validate_execute_command_error_response(output: str) -> dict[str, Any]:
 class TestDeployCommand:
     """Test suite for the deploy command."""
 
+    @pytest.fixture(autouse=True)
+    def _set_dummy_api_key(self, monkeypatch, request):
+        # Only skip for tests that explicitly test missing API key
+        if not request.node.name.startswith("test_deploy_missing_api_key"):
+            monkeypatch.setenv("LANGFLOW_API_KEY", "dummy-test-key")
+
     def test_deploy_help_output(self, runner):
         """Test the help output for the deploy command."""
         result = runner.invoke(app, ["deploy", "--help"])
-        assert result.exit_code == 0
+        assert result.exit_code == 0, result
         assert "Deploy a Langflow graph as a web API endpoint" in result.output
         assert "--host" in result.output
         assert "--port" in result.output
@@ -649,7 +655,7 @@ class TestDeployCommand:
             result = runner.invoke(app, ["deploy", str(temp_python_script), "--verbose"])
 
             # Should exit with 0 since we're not actually starting the server
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             # Check that it got through the validation steps
             full_output = result.output + getattr(result, "stderr", "")
@@ -673,7 +679,7 @@ class TestDeployCommand:
             result = runner.invoke(app, ["deploy", str(test_basic_prompting), "--verbose"])
 
             # Should exit with 0 since we're not actually starting the server
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             # Check that it got through the validation steps
             full_output = result.output + getattr(result, "stderr", "")
@@ -696,7 +702,7 @@ class TestDeployCommand:
             result = runner.invoke(app, ["deploy", str(temp_python_script), "--port", "9000", "--verbose"])
 
             # Should exit with 0 since we're not actually starting the server
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             # Verify port checking was called
             mock_port_check.assert_called_with(9000, "127.0.0.1")
@@ -718,7 +724,7 @@ class TestDeployCommand:
             result = runner.invoke(app, ["deploy", str(temp_python_script), "--host", "0.0.0.0", "--verbose"])  # noqa: S104
 
             # Should exit with 0 since we're not actually starting the server
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             # Verify uvicorn was called with the correct host
             mock_uvicorn.assert_called_once()
@@ -736,7 +742,7 @@ class TestDeployCommand:
             result = runner.invoke(app, ["deploy", str(temp_python_script), "--verbose"])
 
             # Should exit with 0 since we're not actually starting the server
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             # Check for expected verbose output
             full_output = result.output + getattr(result, "stderr", "")
@@ -758,7 +764,7 @@ class TestDeployCommand:
             result = runner.invoke(app, ["deploy", str(temp_python_script)])
 
             # Should exit with 0 since we're not actually starting the server
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             # In quiet mode, should not have verbose diagnostic messages
             full_output = result.output + getattr(result, "stderr", "")
@@ -792,7 +798,7 @@ class TestDeployCommand:
             mock_uvicorn.return_value = None
 
             result = runner.invoke(app, ["deploy", str(temp_python_script), "--verbose"])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             full_output = result.output + getattr(result, "stderr", "")
             assert "LANGFLOW_API_KEY is configured" in full_output
@@ -918,7 +924,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             mock_extract.return_value = ["requests>=2.25.0", "rich>=12.0.0"]
 
             result = runner.invoke(app, ["deploy", str(pep723_script_with_deps), "--install-deps", "--verbose"])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             # Verify dependency extraction was called
             mock_extract.assert_called_once()
@@ -939,7 +945,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             mock_extract.return_value = ["requests>=2.25.0", "rich>=12.0.0"]
 
             result = runner.invoke(app, ["deploy", str(pep723_script_with_deps), "--no-install-deps", "--verbose"])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             # Verify dependency extraction was NOT called when --no-install-deps
             mock_extract.assert_not_called()
@@ -960,7 +966,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             mock_extract.return_value = []  # No dependencies
 
             result = runner.invoke(app, ["deploy", str(pep723_script_no_deps), "--install-deps", "--verbose"])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             full_output = result.output + getattr(result, "stderr", "")
             assert "No inline dependencies declared - skipping installation" in full_output
@@ -982,7 +988,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             mock_uvicorn.return_value = None
 
             result = runner.invoke(app, ["deploy", str(test_json_flow), "--install-deps", "--verbose"])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             # Verify dependency extraction was NOT called for JSON files
             mock_extract.assert_not_called()
@@ -1054,7 +1060,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             mock_uvicorn.return_value = None
 
             result = runner.invoke(app, ["deploy", str(temp_python_script), "--env-file", str(env_file), "--verbose"])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             full_output = result.output + getattr(result, "stderr", "")
             assert "Loading environment variables from:" in full_output
@@ -1072,7 +1078,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             mock_uvicorn.return_value = None
 
             result = runner.invoke(app, ["deploy", str(temp_python_script), "--log-level", "debug", "--verbose"])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result
 
             full_output = result.output + getattr(result, "stderr", "")
             assert "Configuring logging with level: debug" in full_output
