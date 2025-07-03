@@ -69,6 +69,9 @@ echo Build files copied successfully!
 
 echo.
 echo Step 4: Running Langflow...
+echo.
+echo Attention: Wait until uvicorn is running before opening the browser
+echo.
 uv run langflow run
 if errorlevel 1 (
     echo Error: Failed to run langflow

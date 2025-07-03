@@ -71,6 +71,7 @@ try {
 
 # Step 4: Run Langflow
 Write-Host "`nStep 4: Running Langflow..." -ForegroundColor Yellow
+Write-Host "`nAttention: Wait until uvicorn is running before opening the browser" -ForegroundColor Red
 try {
     uv run langflow run
 } catch {
