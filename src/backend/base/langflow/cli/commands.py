@@ -92,8 +92,23 @@ def serve_command(
         "--install-deps/--no-install-deps",
         help="Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)",
     ),
+    mcp: bool = typer.Option(  # noqa: FBT001
+        False,  # noqa: FBT003
+        "--mcp/--no-mcp",
+        help="Enable MCP (Model Context Protocol) server mode",
+    ),
+    mcp_transport: str = typer.Option(
+        "stdio",
+        "--mcp-transport",
+        help="MCP transport type. One of: stdio, sse, websocket",
+    ),
+    mcp_name: str = typer.Option(
+        "Langflow MCP Server",
+        "--mcp-name",
+        help="Name for the MCP server",
+    ),
 ) -> None:
-    """Serve Langflow graphs as web API endpoints with API key authentication.
+    """Serve Langflow graphs as web API endpoints or MCP (Model Context Protocol) server.
 
     This command supports multiple serving modes:
 
@@ -102,6 +117,7 @@ def serve_command(
     3. **GitHub Repository**: Serve flows from a GitHub repo (supports private repos with GITHUB_TOKEN)
     4. **Remote Script**: Serve a Python script from a URL
 
+    ## REST API Mode (default):
     All served flows use a unified API structure with /flows/{id} endpoints:
     - Single flows: Use the single flow ID under /flows/{id}/run
     - Multi-flows: Use /flows/{id}/run endpoints for each flow
@@ -109,6 +125,12 @@ def serve_command(
 
     IMPORTANT: You must set the LANGFLOW_API_KEY environment variable before
     serving. This key will be required for all API requests.
+
+    ## MCP Mode (--mcp):
+    Exposes flows as MCP tools, resources, and prompts for direct LLM integration:
+    - **Tools**: Each flow becomes an executable MCP tool
+    - **Resources**: Flow metadata and schemas available as MCP resources
+    - **Prompts**: Help and troubleshooting guidance via MCP prompts
 
     For GitHub private repositories, set the GITHUB_TOKEN environment variable.
 
@@ -121,12 +143,24 @@ def serve_command(
         env_file: Path to the .env file containing environment variables
         log_level: Logging level for the server
         install_deps: Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)
+        mcp: Enable MCP (Model Context Protocol) server mode
+        mcp_transport: MCP transport type (stdio, sse, websocket)
+        mcp_name: Name for the MCP server
 
     Example usage:
-        # Single flow serving
+        # REST API mode (default)
         export LANGFLOW_API_KEY="your-secret-key-here"
         langflow serve my_flow.py --host 0.0.0.0 --port 8080
         langflow serve my_flow.json --verbose --log-level info
+
+        # MCP mode with stdio transport (for local LLM tools)
+        langflow serve my_flow.py --mcp --mcp-transport stdio
+        
+        # MCP mode with SSE transport (for web-based LLM clients)
+        langflow serve ./my_flows_folder --mcp --mcp-transport sse --port 8000
+        
+        # MCP mode with custom server name
+        langflow serve my_flow.py --mcp --mcp-name "My Custom AI Tools"
 
         # Folder serving (multiple flows)
         langflow serve ./my_flows_folder --verbose
@@ -134,22 +168,26 @@ def serve_command(
         # GitHub repository serving
         export GITHUB_TOKEN="ghp_your_token_here"  # For private repos
         langflow serve https://github.com/user/repo --verbose
-        langflow serve https://github.com/user/repo/tree/main --verbose
 
-        # Remote script serving
-        langflow serve https://example.com/my_flow.py --verbose
-
-    API Endpoints:
+    REST API Endpoints:
         GET  http://host:port/flows                  # List all flows
         POST http://host:port/flows/{id}/run         # Execute specific flow
         GET  http://host:port/flows/{id}/info        # Flow metadata
         GET  http://host:port/health                 # Health check
 
-    Authentication (all POST endpoints):
+    MCP Resources:
+        flow://flows                                 # List all flows
+        flow://flows/{id}/info                       # Flow metadata
+        flow://flows/{id}/schema                     # Flow input/output schema
+
+    MCP Tools:
+        execute_{flow_name}                          # Execute specific flow
+
+    Authentication (REST API only):
         Headers: x-api-key: your-secret-key-here
         OR Query: ?x-api-key=your-secret-key-here
 
-    Request body:
+    Request body (REST API):
         {"input_value": "Your input message"}
     """
     verbose_print = create_verbose_printer(verbose=verbose)
@@ -163,14 +201,22 @@ def serve_command(
         verbose_print(f"Loading environment variables from: {env_file}")
         load_dotenv(env_file)
 
-    # Validate API key is set
-    try:
-        api_key = get_api_key()
-        verbose_print("✓ LANGFLOW_API_KEY is configured")
-    except ValueError as e:
-        verbose_print(f"✗ {e}")
-        verbose_print("Set the LANGFLOW_API_KEY environment variable before serving.")
-        raise typer.Exit(1) from e
+    # Validate MCP options
+    if mcp:
+        valid_mcp_transports = {"stdio", "sse", "websocket"}
+        if mcp_transport.lower() not in valid_mcp_transports:
+            verbose_print(f"Error: Invalid MCP transport '{mcp_transport}'. Must be one of: {', '.join(sorted(valid_mcp_transports))}")
+            raise typer.Exit(1)
+        verbose_print(f"✓ MCP mode enabled with {mcp_transport} transport")
+    else:
+        # Validate API key only for REST API mode
+        try:
+            api_key = get_api_key()
+            verbose_print("✓ LANGFLOW_API_KEY is configured")
+        except ValueError as e:
+            verbose_print(f"✗ {e}")
+            verbose_print("Set the LANGFLOW_API_KEY environment variable before serving.")
+            raise typer.Exit(1) from e
 
     # Validate log level
     valid_log_levels = {"debug", "info", "warning", "error", "critical"}
@@ -243,53 +289,103 @@ def serve_command(
                 verbose_print(f"Port {port} is in use, using port {available_port} instead")
             port = available_port
 
-        # Create FastAPI app
-        serve_app = create_multi_serve_app(
-            root_dir=folder_path,
-            graphs=graphs,
-            metas=metas,
-            verbose_print=verbose_print,
-        )
-
-        verbose_print("🚀 Starting multi-flow server...")
-
-        protocol = "http"
-        access_host = get_best_access_host(host)
-
-        masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
-
-        console.print()
-        console.print(
-            Panel.fit(
-                f"[bold green]🎯 Folder Served Successfully![/bold green]\n\n"
-                f"[bold]Folder:[/bold] {folder_path}\n"
-                f"[bold]Flows Detected:[/bold] {len(graphs)}\n"
-                f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
-                f"[bold]API Key:[/bold] {masked_key}\n\n"
-                f"[dim]Discover flows:\n"
-                f"  GET {protocol}://{access_host}:{port}/flows\n"
-                f"Run a flow:\n"
-                f"  POST {protocol}://{access_host}:{port}/flows/{{flow_id}}/run[/dim]",
-                border_style="green",
-                title="🚀 Server Ready",
+        # Start server in appropriate mode
+        if mcp:
+            # MCP mode - create and run MCP server
+            verbose_print("🔧 Creating MCP server...")
+            try:
+                from langflow.cli.mcp_server import create_mcp_server, run_mcp_server
+                
+                mcp_server = create_mcp_server(
+                    graphs=graphs,
+                    metas=metas,
+                    server_name=mcp_name,
+                    root_dir=folder_path,
+                )
+                
+                verbose_print(f"🚀 Starting MCP server with {mcp_transport} transport...")
+                
+                console.print()
+                console.print(
+                    Panel.fit(
+                        f"[bold green]🎯 MCP Server Started![/bold green]\n\n"
+                        f"[bold]Mode:[/bold] MCP ({mcp_transport})\n"
+                        f"[bold]Folder:[/bold] {folder_path}\n"
+                        f"[bold]Flows Detected:[/bold] {len(graphs)}\n"
+                        f"[bold]Server Name:[/bold] {mcp_name}\n"
+                        f"[bold]Transport:[/bold] {mcp_transport}\n\n"
+                        f"[dim]Available MCP Resources:\n"
+                        f"  flow://flows - List all flows\n"
+                        f"  flow://flows/{{flow_id}}/info - Flow details\n"
+                        f"  flow://flows/{{flow_id}}/schema - Flow schema\n\n"
+                        f"MCP Tools: execute_{{flow_name}} for each flow[/dim]",
+                        border_style="blue",
+                        title="🔧 MCP Server Ready",
+                    )
+                )
+                console.print()
+                
+                run_mcp_server(
+                    mcp_server=mcp_server,
+                    transport=mcp_transport,
+                    host=host,
+                    port=port,
+                )
+                
+            except KeyboardInterrupt:
+                verbose_print("\n👋 MCP server stopped")
+                raise typer.Exit(0) from None
+            except Exception as e:
+                verbose_print(f"✗ Failed to start MCP server: {e}")
+                raise typer.Exit(1) from e
+        else:
+            # REST API mode - create FastAPI app
+            serve_app = create_multi_serve_app(
+                root_dir=folder_path,
+                graphs=graphs,
+                metas=metas,
+                verbose_print=verbose_print,
             )
-        )
-        console.print()
 
-        try:
-            uvicorn.run(
-                serve_app,
-                host=host,
-                port=port,
-                log_level=log_level.lower(),
-                access_log=verbose,
+            verbose_print("🚀 Starting multi-flow server...")
+
+            protocol = "http"
+            access_host = get_best_access_host(host)
+
+            masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
+
+            console.print()
+            console.print(
+                Panel.fit(
+                    f"[bold green]🎯 Folder Served Successfully![/bold green]\n\n"
+                    f"[bold]Folder:[/bold] {folder_path}\n"
+                    f"[bold]Flows Detected:[/bold] {len(graphs)}\n"
+                    f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
+                    f"[bold]API Key:[/bold] {masked_key}\n\n"
+                    f"[dim]Discover flows:\n"
+                    f"  GET {protocol}://{access_host}:{port}/flows\n"
+                    f"Run a flow:\n"
+                    f"  POST {protocol}://{access_host}:{port}/flows/{{flow_id}}/run[/dim]",
+                    border_style="green",
+                    title="🚀 Server Ready",
+                )
             )
-        except KeyboardInterrupt:
-            verbose_print("\n👋 Server stopped")
-            raise typer.Exit(0) from None
-        except Exception as e:
-            verbose_print(f"✗ Failed to start server: {e}")
-            raise typer.Exit(1) from e
+            console.print()
+
+            try:
+                uvicorn.run(
+                    serve_app,
+                    host=host,
+                    port=port,
+                    log_level=log_level.lower(),
+                    access_log=verbose,
+                )
+            except KeyboardInterrupt:
+                verbose_print("\n👋 Server stopped")
+                raise typer.Exit(0) from None
+            except Exception as e:
+                verbose_print(f"✗ Failed to start server: {e}")
+                raise typer.Exit(1) from e
 
         return  # successfully finished
 

@@ -106,6 +106,7 @@ dependencies = [
     "openinference-instrumentation-langchain>=0.1.29",
     "crewai==0.102.0",
     "mcp>=1.10.1",
+    "fastmcp>=2.10.1",
     "uv>=0.5.7",
     "scipy>=1.14.1",
     "ag2>=0.1.0",
