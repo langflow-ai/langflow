@@ -4,10 +4,12 @@ import os
 import re
 import warnings
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
+from uuid import uuid4
 
 import anyio
 import httpx
@@ -52,6 +54,9 @@ warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
+
+request_id_contextvar = ContextVar[str]("request_id", default="")
+correlation_id_contextvar = ContextVar[str | None]("x_correlation_id", default=None)
 
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
@@ -388,6 +393,27 @@ def create_app():
     FastAPIInstrumentor.instrument_app(app)
 
     add_pagination(app)
+
+    @app.middleware("http")
+    async def add_request_id(request: Request, call_next):
+        # Generate a unique request ID for each request
+        request_id = str(uuid4())
+
+        # Get the correlation ID from the request headers, if it exists
+        # This allows clients to pass a correlation ID for tracing requests across services
+        correlation_id = request.headers.get("x-correlation-id", None)
+
+        # Store request_id and correlation_id in request context
+        request_id_token = request_id_contextvar.set(request_id)
+        correlation_id_token = correlation_id_contextvar.set(correlation_id)
+
+        try:
+            with logger.contextualize(request_id=request_id, correlation_id=correlation_id):
+                return await call_next(request)
+        finally:
+            # Reset the context variables to avoid leaking request-specific data
+            request_id_contextvar.reset(request_id_token)
+            correlation_id_contextvar.reset(correlation_id_token)
 
     return app
 

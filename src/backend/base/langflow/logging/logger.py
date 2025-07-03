@@ -23,6 +23,7 @@ VALID_LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 # Human-readable
 DEFAULT_LOG_FORMAT = (
     "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level: <8}</level> - {module} - <level>{message}</level>"
+    " - <magenta>request_id={extra[request_id]}</magenta> - <magenta>correlation_id={extra[correlation_id]}</magenta>"
 )
 
 
@@ -221,6 +222,8 @@ def configure(
 
     logger.remove()  # Remove default handlers
     logger.patch(patching)
+    default_extra = {"request_id": None, "correlation_id": None}  # These will be set in the request context
+    logger.configure(extra=default_extra)
     if log_env.lower() == "container" or log_env.lower() == "container_json":
         logger.add(sys.stdout, format="{message}", serialize=True)
     elif log_env.lower() == "container_csv":
