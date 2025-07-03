@@ -765,3 +765,322 @@ class TestDeployCommand:
             # Should not have verbose diagnostic output but may have the deployment banner
             assert "Analyzing Python script" not in full_output
             assert "Found 'graph' variable" not in full_output
+
+    # API Key Authentication Tests
+
+    def test_deploy_missing_api_key(self, runner, temp_python_script):
+        """Test deploy command fails when LANGFLOW_API_KEY is not set."""
+        from unittest.mock import patch
+
+        # Ensure LANGFLOW_API_KEY is not set
+        with patch.dict("os.environ", {}, clear=True):
+            result = runner.invoke(app, ["deploy", str(temp_python_script), "--verbose"])
+            assert result.exit_code == 1
+            full_output = result.output + getattr(result, "stderr", "")
+            assert "LANGFLOW_API_KEY environment variable is required" in full_output
+            assert "Set the LANGFLOW_API_KEY environment variable" in full_output
+
+    def test_deploy_with_api_key(self, runner, temp_python_script):
+        """Test deploy command succeeds when LANGFLOW_API_KEY is set."""
+        from unittest.mock import patch
+
+        # Set API key in environment
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-api-key-123"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+        ):
+            mock_uvicorn.return_value = None
+
+            result = runner.invoke(app, ["deploy", str(temp_python_script), "--verbose"])
+            assert result.exit_code == 0
+
+            full_output = result.output + getattr(result, "stderr", "")
+            assert "LANGFLOW_API_KEY is configured" in full_output
+            assert "Graph Deployed Successfully" in full_output
+            # Verify API key is masked in output
+            assert "test-api..." in full_output
+            # Verify actual API key is NOT exposed in instructions
+            assert "test-api-key-123" not in full_output
+            assert "<your-api-key>" in full_output
+
+    def test_deploy_api_key_verification_functions(self):
+        """Test the API key verification helper functions."""
+        from unittest.mock import patch
+
+        from fastapi import HTTPException
+        from langflow.cli.commands import get_api_key, verify_api_key
+
+        # Test get_api_key with missing environment variable
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            pytest.raises(ValueError, match="LANGFLOW_API_KEY environment variable is required"),
+        ):
+            get_api_key()
+
+        # Test get_api_key with environment variable set
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
+            assert get_api_key() == "test-key"
+
+        # Test verify_api_key with missing API key
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
+            with pytest.raises(HTTPException) as exc_info:
+                verify_api_key(None, None)
+            assert exc_info.value.status_code == 401
+            assert "API key is required" in str(exc_info.value.detail)
+
+        # Test verify_api_key with incorrect API key
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "correct-key"}):
+            with pytest.raises(HTTPException) as exc_info:
+                verify_api_key("wrong-key", None)
+            assert exc_info.value.status_code == 401
+            assert "Invalid API key" in str(exc_info.value.detail)
+
+        # Test verify_api_key with correct API key (header)
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "correct-key"}):
+            result = verify_api_key(None, "correct-key")
+            assert result == "correct-key"
+
+        # Test verify_api_key with correct API key (query param)
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "correct-key"}):
+            result = verify_api_key("correct-key", None)
+            assert result == "correct-key"
+
+    # PEP 723 Dependency Installation Tests
+
+    @pytest.fixture
+    def pep723_script_with_deps(self, tmp_path):
+        """Create a test script with PEP 723 dependencies."""
+        script_content = """# /// script
+# dependencies = [
+#   "requests>=2.25.0",
+#   "rich>=12.0.0",
+# ]
+# ///
+
+from pathlib import Path
+from langflow.components.input_output import ChatInput, ChatOutput
+from langflow.graph import Graph
+from langflow.logging.logger import LogConfig
+
+log_config = LogConfig(log_level="INFO", log_file=Path("test.log"))
+chat_input = ChatInput()
+chat_output = ChatOutput().set(input_value=chat_input.message_response)
+graph = Graph(chat_input, chat_output, log_config=log_config)
+"""
+        script_file = tmp_path / "test_with_deps.py"
+        script_file.write_text(script_content)
+        return script_file
+
+    @pytest.fixture
+    def pep723_script_no_deps(self, tmp_path):
+        """Create a test script without PEP 723 dependencies."""
+        script_content = """from pathlib import Path
+from langflow.components.input_output import ChatInput, ChatOutput
+from langflow.graph import Graph
+from langflow.logging.logger import LogConfig
+
+log_config = LogConfig(log_level="INFO", log_file=Path("test.log"))
+chat_input = ChatInput()
+chat_output = ChatOutput().set(input_value=chat_input.message_response)
+graph = Graph(chat_input, chat_output, log_config=log_config)
+"""
+        script_file = tmp_path / "test_no_deps.py"
+        script_file.write_text(script_content)
+        return script_file
+
+    def test_pep723_dependency_extraction(self, pep723_script_with_deps, pep723_script_no_deps):
+        """Test extraction of PEP 723 dependencies from scripts."""
+        from langflow.cli.common import extract_script_dependencies
+
+        def mock_verbose_print(msg):
+            pass
+
+        # Test script with dependencies
+        deps = extract_script_dependencies(pep723_script_with_deps, mock_verbose_print)
+        assert deps == ["requests>=2.25.0", "rich>=12.0.0"]
+
+        # Test script without dependencies
+        deps = extract_script_dependencies(pep723_script_no_deps, mock_verbose_print)
+        assert deps == []
+
+    def test_deploy_install_deps_flag(self, runner, pep723_script_with_deps):
+        """Test --install-deps and --no-install-deps flags."""
+        from unittest.mock import patch
+
+        # Test with --install-deps (default behavior)
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.extract_script_dependencies") as mock_extract,
+            patch("langflow.cli.commands.ensure_dependencies_installed") as mock_install,
+        ):
+            mock_uvicorn.return_value = None
+            mock_extract.return_value = ["requests>=2.25.0", "rich>=12.0.0"]
+
+            result = runner.invoke(app, ["deploy", str(pep723_script_with_deps), "--install-deps", "--verbose"])
+            assert result.exit_code == 0
+
+            # Verify dependency extraction was called
+            mock_extract.assert_called_once()
+            # Verify dependency installation was called
+            mock_install.assert_called_once()
+            deps_arg = mock_install.call_args[0][0]
+            assert "requests>=2.25.0" in deps_arg
+            assert "rich>=12.0.0" in deps_arg
+
+        # Test with --no-install-deps
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.extract_script_dependencies") as mock_extract,
+            patch("langflow.cli.commands.ensure_dependencies_installed") as mock_install,
+        ):
+            mock_uvicorn.return_value = None
+            mock_extract.return_value = ["requests>=2.25.0", "rich>=12.0.0"]
+
+            result = runner.invoke(app, ["deploy", str(pep723_script_with_deps), "--no-install-deps", "--verbose"])
+            assert result.exit_code == 0
+
+            # Verify dependency extraction was NOT called when --no-install-deps
+            mock_extract.assert_not_called()
+            # Verify dependency installation was NOT called
+            mock_install.assert_not_called()
+
+    def test_deploy_script_without_deps_flag_handling(self, runner, pep723_script_no_deps):
+        """Test behavior when script has no dependencies but --install-deps is used."""
+        from unittest.mock import patch
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.extract_script_dependencies") as mock_extract,
+            patch("langflow.cli.commands.ensure_dependencies_installed") as mock_install,
+        ):
+            mock_uvicorn.return_value = None
+            mock_extract.return_value = []  # No dependencies
+
+            result = runner.invoke(app, ["deploy", str(pep723_script_no_deps), "--install-deps", "--verbose"])
+            assert result.exit_code == 0
+
+            full_output = result.output + getattr(result, "stderr", "")
+            assert "No inline dependencies declared - skipping installation" in full_output
+
+            # Verify dependency extraction was called
+            mock_extract.assert_called_once()
+            # Verify dependency installation was NOT called (no deps to install)
+            mock_install.assert_not_called()
+
+    def test_deploy_json_file_ignores_install_deps(self, runner, test_json_flow):
+        """Test that --install-deps is ignored for JSON files."""
+        from unittest.mock import patch
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.common.extract_script_dependencies") as mock_extract,
+        ):
+            mock_uvicorn.return_value = None
+
+            result = runner.invoke(app, ["deploy", str(test_json_flow), "--install-deps", "--verbose"])
+            assert result.exit_code == 0
+
+            # Verify dependency extraction was NOT called for JSON files
+            mock_extract.assert_not_called()
+
+    def test_dependency_installation_function(self):
+        """Test the dependency installation helper function."""
+        import importlib.metadata
+        from unittest.mock import MagicMock, patch
+
+        from langflow.cli.common import _needs_install, ensure_dependencies_installed
+
+        def mock_verbose_print(msg):
+            pass
+
+        # Test with no dependencies
+        ensure_dependencies_installed([], mock_verbose_print)  # Should not raise
+
+        # Test _needs_install function with package not found
+        with patch(
+            "langflow.cli.common.importlib_metadata.version",
+            side_effect=importlib.metadata.PackageNotFoundError("Package not found"),
+        ):
+            assert _needs_install("nonexistent-package") is True
+
+        # Test with mock subprocess for successful installation
+        with (
+            patch("langflow.cli.common._needs_install", return_value=True),
+            patch("langflow.cli.common.which", return_value="/usr/bin/uv"),
+            patch("langflow.cli.common.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock()
+
+            ensure_dependencies_installed(["test-package"], mock_verbose_print)
+
+            # Verify subprocess was called with uv
+            mock_run.assert_called_once()
+            cmd_args = mock_run.call_args[0][0]
+            assert cmd_args[0] == "uv"
+            assert "test-package" in cmd_args
+
+        # Test fallback to pip when uv is not available
+        with (
+            patch("langflow.cli.common._needs_install", return_value=True),
+            patch("langflow.cli.common.which", return_value=None),
+            patch("langflow.cli.common.subprocess.run") as mock_run,
+            patch("sys.executable", "/usr/bin/python"),
+        ):
+            mock_run.return_value = MagicMock()
+
+            ensure_dependencies_installed(["test-package"], mock_verbose_print)
+
+            # Verify subprocess was called with pip
+            mock_run.assert_called_once()
+            cmd_args = mock_run.call_args[0][0]
+            assert "/usr/bin/python" in cmd_args
+            assert "-m" in cmd_args
+            assert "pip" in cmd_args
+            assert "test-package" in cmd_args
+
+    def test_env_file_loading_with_api_key(self, runner, temp_python_script, tmp_path):
+        """Test loading API key from .env file."""
+        from unittest.mock import patch
+
+        # Create .env file with API key
+        env_file = tmp_path / ".env"
+        env_file.write_text("LANGFLOW_API_KEY=env-file-api-key\n")
+
+        with patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn:
+            mock_uvicorn.return_value = None
+
+            result = runner.invoke(app, ["deploy", str(temp_python_script), "--env-file", str(env_file), "--verbose"])
+            assert result.exit_code == 0
+
+            full_output = result.output + getattr(result, "stderr", "")
+            assert "Loading environment variables from:" in full_output
+            assert "LANGFLOW_API_KEY is configured" in full_output
+
+    def test_deploy_log_level_validation(self, runner, temp_python_script):
+        """Test log level validation in deploy command."""
+        from unittest.mock import patch
+
+        # Test valid log level
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+        ):
+            mock_uvicorn.return_value = None
+
+            result = runner.invoke(app, ["deploy", str(temp_python_script), "--log-level", "debug", "--verbose"])
+            assert result.exit_code == 0
+
+            full_output = result.output + getattr(result, "stderr", "")
+            assert "Configuring logging with level: debug" in full_output
+
+        # Test invalid log level
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
+            result = runner.invoke(app, ["deploy", str(temp_python_script), "--log-level", "invalid", "--verbose"])
+            assert result.exit_code == 1
+
+            full_output = result.output + getattr(result, "stderr", "")
+            assert "Invalid log level 'invalid'" in full_output
