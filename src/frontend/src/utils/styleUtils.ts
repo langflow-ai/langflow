@@ -316,7 +316,6 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "YahooSearch", name: "yahoosearch", icon: "trending-up" },
   { display_name: "Youtube", name: "youtube", icon: "YouTube" },
   { display_name: "Zep", name: "zep", icon: "ZepMemory" },
-
 ];
 
 export const categoryIcons: Record<string, string> = {
