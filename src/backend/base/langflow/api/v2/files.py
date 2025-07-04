@@ -11,7 +11,8 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from sqlmodel import String, cast, col, select
+from loguru import logger
+from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -112,35 +113,36 @@ async def upload_user_file(
 
     # Create a new database record for the uploaded file.
     try:
-        # Enforce unique constraint on name
-        # Name it as filename (1), (2), etc.
-        # Check if the file name already exists
+        # Enforce unique constraint on name, except for the special _mcp_servers file
         new_filename = file.filename
         try:
             root_filename, _ = new_filename.rsplit(".", 1)
         except ValueError:
             root_filename, _ = new_filename, ""
 
-        # Check if there are files with the same name
-        stmt = select(UserFile).where(cast(UserFile.name, String).like(f"{root_filename}%"))
-        existing_files = await session.exec(stmt)
-        files = existing_files.all()  # Fetch all matching records
+        # Special handling for the MCP servers config file: always keep the same root filename
+        if root_filename == MCP_SERVERS_FILE:
+            # Check if an existing record exists; if so, delete it to replace with the new one
+            existing_mcp_file = await get_file_by_name(root_filename, current_user, session)
+            if existing_mcp_file:
+                await delete_file(existing_mcp_file.id, current_user, session, storage_service)
+        else:
+            # For normal files, ensure unique name by appending a count if necessary
+            stmt = select(UserFile).where(col(UserFile.name).like(f"{root_filename}%"))
+            existing_files = await session.exec(stmt)
+            files = existing_files.all()  # Fetch all matching records
 
-        # If there are files with the same name, append a count to the filename
-        if files:
-            counts = []
+            if files:
+                counts = []
 
-            # Extract the count from the filename
-            for my_file in files:
-                match = re.search(r"\((\d+)\)(?=\.\w+$|$)", my_file.name)  # Match (number) before extension or at end
-                if match:
-                    counts.append(int(match.group(1)))
+                # Extract the count from the filename
+                for my_file in files:
+                    match = re.search(r"\((\d+)\)(?=\.\w+$|$)", my_file.name)
+                    if match:
+                        counts.append(int(match.group(1)))
 
-            # Get the max count and increment by 1
-            count = max(counts) if counts else 0  # Default to 0 if no matches found
-
-            # Split the extension from the filename
-            root_filename = f"{root_filename} ({count + 1})"
+                count = max(counts) if counts else 0
+                root_filename = f"{root_filename} ({count + 1})"
 
         # Compute the file size based on the path
         file_size = await storage_service.get_file_size(
@@ -462,24 +464,26 @@ async def delete_file(
 ):
     """Delete a file by its ID."""
     try:
-        # Fetch the file from the DB
-        file = await fetch_file_object(file_id, current_user, session)
-        if not file:
+        # Fetch the file object
+        file_to_delete = await fetch_file_object(file_id, current_user, session)
+        if not file_to_delete:
             raise HTTPException(status_code=404, detail="File not found")
 
         # Delete the file from the storage service
-        await storage_service.delete_file(flow_id=str(current_user.id), file_name=file.path)
+        await storage_service.delete_file(flow_id=str(current_user.id), file_name=file_to_delete.path)
 
         # Delete from the database
-        await session.delete(file)
+        await session.delete(file_to_delete)
         await session.flush()  # Ensures delete is staged
-        await session.commit()  # Commit deletion
 
+    except HTTPException:
+        # Re-raise HTTPException to avoid being caught by the generic exception handler
+        raise
     except Exception as e:
-        await session.rollback()  # Rollback on failure
+        # Log and return a generic server error
+        logger.error("Error deleting file %s: %s", file_id, e)
         raise HTTPException(status_code=500, detail=f"Error deleting file: {e}") from e
-
-    return {"message": "File deleted successfully"}
+    return {"detail": f"File {file_to_delete.name} deleted successfully"}
 
 
 @router.delete("")
