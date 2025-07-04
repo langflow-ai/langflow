@@ -277,3 +277,7 @@ src/frontend/temp
 
 .dspy_cache/
 *.db
+
+# Claude Code
+CLAUDE.md
+.claude/

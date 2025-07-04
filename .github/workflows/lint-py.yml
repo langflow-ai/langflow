@@ -29,6 +29,7 @@ jobs:
         with:
           ref: ${{ inputs.branch || github.ref }}
           persist-credentials: true
+          fetch-depth: 1
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:

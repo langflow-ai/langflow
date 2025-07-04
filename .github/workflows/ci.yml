@@ -149,6 +149,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || github.ref }}
+          fetch-depth: 1
       - name: Filter Paths
         id: filter
         uses: dorny/paths-filter@v3

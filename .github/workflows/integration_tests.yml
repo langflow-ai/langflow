@@ -43,6 +43,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 1
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
