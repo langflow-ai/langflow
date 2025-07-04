@@ -13,15 +13,13 @@ async def run_mcp_server(
     transport: str = "sse",
     host: str = "localhost",
     port: int = 3000,
-    **kwargs: Any,
 ) -> None:
     """Run the MCP server using Langflow's existing MCP infrastructure.
-    
+
     Args:
         transport: Transport type (only 'sse' supported currently)
         host: Host to bind to
-        port: Port to bind to 
-        **kwargs: Additional keyword arguments
+        port: Port to bind to
     """
     if transport != "sse":
         msg = f"Transport '{transport}' not supported. Only 'sse' is currently supported."

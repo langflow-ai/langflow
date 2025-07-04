@@ -102,11 +102,7 @@ def serve_command(
         "--mcp-transport",
         help="MCP transport type. Currently only 'sse' is supported",
     ),
-    mcp_name: str = typer.Option(
-        "Langflow MCP Server",
-        "--mcp-name",
-        help="Name for the MCP server",
-    ),
+
 ) -> None:
     """Serve Langflow graphs as web API endpoints or MCP (Model Context Protocol) server.
 
@@ -145,7 +141,6 @@ def serve_command(
         install_deps: Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)
         mcp: Enable MCP (Model Context Protocol) server mode
         mcp_transport: MCP transport type (currently only 'sse' is supported)
-        mcp_name: Name for the MCP server
 
     Example usage:
         # REST API mode (default)
@@ -155,12 +150,9 @@ def serve_command(
 
         # MCP mode with SSE transport (for LLM clients)
         langflow serve my_flow.py --mcp --mcp-transport sse
-        
+
         # MCP mode with custom port
         langflow serve ./my_flows_folder --mcp --port 8000
-        
-        # MCP mode with custom server name
-        langflow serve my_flow.py --mcp --mcp-name "My Custom AI Tools"
 
         # Folder serving (multiple flows)
         langflow serve ./my_flows_folder --verbose
@@ -204,7 +196,10 @@ def serve_command(
     # Validate MCP options
     if mcp:
         if mcp_transport.lower() != "sse":
-            verbose_print(f"Warning: Only SSE transport is currently supported. Using 'sse' instead of '{mcp_transport}'")
+            verbose_print(
+                f"Warning: Only SSE transport is currently supported. "
+                f"Using 'sse' instead of '{mcp_transport}'"
+            )
             mcp_transport = "sse"
         verbose_print(f"✓ MCP mode enabled with {mcp_transport} transport")
     else:

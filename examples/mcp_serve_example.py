@@ -4,7 +4,7 @@
 This script creates a simple echo flow that can be served using the MCP protocol.
 
 Usage examples:
-# Serve via MCP with SSE transport (for LLM clients) 
+# Serve via MCP with SSE transport (for LLM clients)
 langflow serve examples/mcp_serve_example.py --mcp --mcp-transport sse
 
 # Serve via MCP with custom port
@@ -71,22 +71,7 @@ def create_echo_flow():
 
 # Main entry point
 if __name__ == "__main__":
-    # Create and display information about the flow
-    flow = create_echo_flow()
+    # Create the flow (this defines the graph variable that Langflow expects)
+    graph = create_echo_flow()  # noqa: F841
 
-    print("Echo Flow MCP Example")
-    print("=" * 50)
-    print("This script creates a simple echo flow that can be served via MCP.")
-    print()
-    print("To serve this flow via MCP, use:")
-    print("  langflow serve examples/mcp_serve_example.py --mcp")
-    print()
-    print("Available MCP transport:")
-    print("  --mcp-transport sse       # For LLM clients (default)")
-    print()
-    print("Example commands:")
-    print("  langflow serve examples/mcp_serve_example.py --mcp --mcp-transport sse")
-    print("  langflow serve examples/mcp_serve_example.py --mcp --port 8000")
-    print()
-    print("Once running, the MCP server will expose this echo flow as a tool")
-    print("that LLM clients can discover and execute.")
+    # The graph variable is now available for Langflow to discover and serve
