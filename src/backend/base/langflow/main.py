@@ -277,6 +277,9 @@ def create_app():
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
+    settings = get_settings_service().settings
+    root_path = settings.root_path
+
     configure()
     lifespan = get_lifespan(version=__version__)
     app = FastAPI(
