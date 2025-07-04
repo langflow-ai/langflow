@@ -3,6 +3,7 @@
 # Import moved to avoid circular import issues
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
@@ -103,83 +104,9 @@ def serve_command(
         help="MCP transport type. Currently only 'sse' is supported",
     ),
 ) -> None:
-    """Serve Langflow graphs as web API endpoints or MCP (Model Context Protocol) server.
+    """Serve Langflow flows as a web API or MCP server.
 
-    This command supports multiple serving modes:
-
-    1. **Single Flow**: Serve a Python script (.py) or JSON flow (.json)
-    2. **Folder**: Serve all *.json flows in a directory under /flows/{id} endpoints
-    3. **GitHub Repository**: Serve flows from a GitHub repo (supports private repos with GITHUB_TOKEN)
-    4. **Remote Script**: Serve a Python script from a URL
-
-    ## REST API Mode (default):
-    All served flows use a unified API structure with /flows/{id} endpoints:
-    - Single flows: Use the single flow ID under /flows/{id}/run
-    - Multi-flows: Use /flows/{id}/run endpoints for each flow
-    - Discovery: /flows endpoint lists all available flows
-
-    IMPORTANT: You must set the LANGFLOW_API_KEY environment variable before
-    serving. This key will be required for all API requests.
-
-    ## MCP Mode (--mcp):
-    Exposes flows as MCP tools, resources, and prompts for direct LLM integration:
-    - **Tools**: Each flow becomes an executable MCP tool
-    - **Resources**: Flow metadata and schemas available as MCP resources
-    - **Prompts**: Help and troubleshooting guidance via MCP prompts
-
-    For GitHub private repositories, set the GITHUB_TOKEN environment variable.
-
-    Args:
-        script_path: Path to Python script (.py), JSON flow (.json), folder with flows,
-            GitHub repo URL, or URL to a Python script
-        host: Host to bind the server to
-        port: Port to bind the server to
-        verbose: Show diagnostic output and execution details
-        env_file: Path to the .env file containing environment variables
-        log_level: Logging level for the server
-        install_deps: Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)
-        mcp: Enable MCP (Model Context Protocol) server mode
-        mcp_transport: MCP transport type (currently only 'sse' is supported)
-
-    Example usage:
-        # REST API mode (default)
-        export LANGFLOW_API_KEY="your-secret-key-here"
-        langflow serve my_flow.py --host 0.0.0.0 --port 8080
-        langflow serve my_flow.json --verbose --log-level info
-
-        # MCP mode with SSE transport (for LLM clients)
-        langflow serve my_flow.py --mcp --mcp-transport sse
-
-        # MCP mode with custom port
-        langflow serve ./my_flows_folder --mcp --port 8000
-
-        # Folder serving (multiple flows)
-        langflow serve ./my_flows_folder --verbose
-
-        # GitHub repository serving
-        export GITHUB_TOKEN="ghp_your_token_here"  # For private repos
-        langflow serve https://github.com/user/repo --verbose
-
-    REST API Endpoints:
-        GET  http://host:port/flows                  # List all flows
-        POST http://host:port/flows/{id}/run         # Execute specific flow
-        GET  http://host:port/flows/{id}/info        # Flow metadata
-        GET  http://host:port/health                 # Health check
-
-    MCP Resources:
-        flow://flows                                 # List all flows
-        flow://flows/{id}/info                       # Flow metadata
-        flow://flows/{id}/schema                     # Flow input/output schema
-
-    MCP Tools:
-        execute_{flow_name}                          # Execute specific flow
-
-    Authentication (REST API only):
-        Headers: x-api-key: your-secret-key-here
-        OR Query: ?x-api-key=your-secret-key-here
-
-    Request body (REST API):
-        {"input_value": "Your input message"}
+    Supports single files, folders, and GitHub repositories.
     """
     verbose_print = create_verbose_printer(verbose=verbose)
 
@@ -217,6 +144,8 @@ def serve_command(
         raise typer.Exit(1)
 
     # Configure logging with the specified level
+    # Disable pretty logs for serve command to avoid ANSI codes in API responses
+    os.environ["LANGFLOW_PRETTY_LOGS"] = "false"
     verbose_print(f"Configuring logging with level: {log_level}")
     configure(log_level=log_level)
 
