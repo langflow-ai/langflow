@@ -10,6 +10,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.services.auth.clerk_utils import process_new_user_with_clerk
 from langflow.services.auth.utils import (
     get_current_active_superuser,
     get_password_hash,
@@ -30,6 +31,7 @@ async def add_user(
     """Add a new user to the database."""
     new_user = User.model_validate(user, from_attributes=True)
     try:
+        await process_new_user_with_clerk(user, new_user)
         new_user.password = get_password_hash(user.password)
         new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)

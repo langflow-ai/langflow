@@ -14,6 +14,7 @@ from loguru import logger
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
 
+from langflow.services.auth.clerk_utils import get_user_from_clerk_payload
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
@@ -161,6 +162,9 @@ async def get_current_user_by_jwt(
 
     if isinstance(token, Coroutine):
         token = await token
+
+    if settings_service.auth_settings.CLERK_AUTH_ENABLED:
+        return await get_user_from_clerk_payload(token, db)
 
     secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
     if secret_key is None:
