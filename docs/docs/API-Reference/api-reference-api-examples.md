@@ -47,6 +47,14 @@ curl --request POST \
 
 ### Base URL
 
+<!-- For 1.5
+By default, local deployments serve the Langflow API at `http://localhost:7860/api`.
+
+Remotely hosted Langflow deployments are available at the domain set by the hosting service, such as `http://IP_OR_DNS/api` or `http://IP_OR_DNS:LANGFLOW_PORT/api`.
+
+You can configure the Langflow port number in the `LANGFLOW_PORT` [environment variable](/environment-variables).
+-->
+
 Local deployments serve the Langflow API at `http://localhost:LANGFLOW_PORT/api`.
 The default port is 7868 or 7860:
 
