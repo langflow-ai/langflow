@@ -19,6 +19,7 @@ from langflow.cli.serve_app import (
     _generate_dynamic_run_description,
     create_multi_serve_app,
 )
+from pydantic import ValidationError
 
 
 class TestDataModels:
@@ -30,7 +31,7 @@ class TestDataModels:
             id="test-flow-123",
             relative_path="flows/test_flow.json",
             title="Test Flow",
-            description="A test flow for unit testing"
+            description="A test flow for unit testing",
         )
 
         assert meta.id == "test-flow-123"
@@ -39,7 +40,7 @@ class TestDataModels:
         assert meta.description == "A test flow for unit testing"
 
         # Test required fields
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             FlowMeta()
 
     def test_run_request_model(self):
@@ -48,7 +49,7 @@ class TestDataModels:
         assert request.input_value == "Hello, world!"
 
         # Test required field
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             RunRequest()
 
     def test_run_response_model(self):
@@ -58,7 +59,7 @@ class TestDataModels:
             success=True,
             logs="Execution completed",
             type="message",
-            component="TestComponent"
+            component="TestComponent",
         )
 
         assert response.result == "Processed successfully"
@@ -85,9 +86,7 @@ class TestGraphAnalysis:
             "node1": Mock(data={"type": "TextInput", "display_name": "Input", "description": "Text input"}),
             "node2": Mock(data={"type": "TextOutput", "display_name": "Output", "description": "Text output"}),
         }
-        mock_graph.edges = [
-            Mock(source="node1", target="node2")
-        ]
+        mock_graph.edges = [Mock(source="node1", target="node2")]
 
         analysis = _analyze_graph_structure(mock_graph)
 
@@ -118,14 +117,8 @@ class TestGraphAnalysis:
         """Test dynamic description generation."""
         mock_graph = Mock()
         mock_graph.nodes = {
-            "input": Mock(data={
-                "type": "TextInput",
-                "template": {"text_input": {"type": "str"}}
-            }),
-            "output": Mock(data={
-                "type": "TextOutput",
-                "template": {"text_output": {"type": "str"}}
-            })
+            "input": Mock(data={"type": "TextInput", "template": {"text_input": {"type": "str"}}}),
+            "output": Mock(data={"type": "TextOutput", "template": {"text_output": {"type": "str"}}}),
         }
         mock_graph.edges = [Mock(source="input", target="output")]
 
@@ -140,10 +133,10 @@ class TestGraphAnalysis:
 class TestCommonFunctions:
     """Test common utility functions."""
 
-    def test_flow_id_from_path(self):
+    def test_flow_id_from_path(self, tmp_path):
         """Test flow ID generation from path."""
-        test_path = Path("/tmp/test_flow.json")
-        root_dir = Path("/tmp")
+        test_path = tmp_path / "test_flow.json"
+        root_dir = tmp_path
         flow_id = flow_id_from_path(test_path, root_dir)
 
         # Should be a deterministic UUID5
@@ -205,7 +198,7 @@ def create_mock_graph():
     mock_graph = Mock()
     mock_graph.nodes = {
         "input": Mock(data={"type": "TextInput", "display_name": "Input", "template": {}}),
-        "output": Mock(data={"type": "TextOutput", "display_name": "Output", "template": {}})
+        "output": Mock(data={"type": "TextOutput", "display_name": "Output", "template": {}}),
     }
     mock_graph.edges = [Mock(source="input", target="output")]
     return mock_graph
@@ -214,67 +207,49 @@ def create_mock_graph():
 class TestFastAPIAppCreation:
     """Test FastAPI application creation."""
 
-    def test_create_multi_serve_app_basic(self):
+    def test_create_multi_serve_app_basic(self, tmp_path):
         """Test basic multi-serve app creation."""
-        root_dir = Path("/tmp")
+        root_dir = tmp_path
         graphs = {"test-flow": create_mock_graph()}
-        metas = {"test-flow": FlowMeta(
-            id="test-flow",
-            relative_path="test.json",
-            title="Test Flow"
-        )}
+        metas = {"test-flow": FlowMeta(id="test-flow", relative_path="test.json", title="Test Flow")}
         verbose_print = Mock()
 
         with patch("langflow.cli.commands.verify_api_key"):
-            app = create_multi_serve_app(
-                root_dir=root_dir,
-                graphs=graphs,
-                metas=metas,
-                verbose_print=verbose_print
-            )
+            app = create_multi_serve_app(root_dir=root_dir, graphs=graphs, metas=metas, verbose_print=verbose_print)
 
             assert app.title.startswith("Langflow Multi-Flow Server")
             assert "1" in app.title  # Should show count
 
-    def test_create_multi_serve_app_mismatched_keys(self):
+    def test_create_multi_serve_app_mismatched_keys(self, tmp_path):
         """Test app creation with mismatched graph/meta keys."""
-        root_dir = Path("/tmp")
+        root_dir = tmp_path
         graphs = {"flow1": create_mock_graph()}
         metas = {"flow2": FlowMeta(id="flow2", relative_path="test.json", title="Test")}
         verbose_print = Mock()
 
         with pytest.raises(ValueError, match="graphs and metas must contain the same keys"):
-            create_multi_serve_app(
-                root_dir=root_dir,
-                graphs=graphs,
-                metas=metas,
-                verbose_print=verbose_print
-            )
+            create_multi_serve_app(root_dir=root_dir, graphs=graphs, metas=metas, verbose_print=verbose_print)
 
 
 class TestFastAPIEndpoints:
     """Test FastAPI endpoints using TestClient."""
 
-    def setup_method(self):
+    def setup_method(self, tmp_path):
         """Set up test client with mock data."""
-        self.root_dir = Path("/tmp")
+        self.root_dir = tmp_path
         self.mock_graph = create_mock_graph()
         self.graphs = {"test-flow": self.mock_graph}
-        self.metas = {"test-flow": FlowMeta(
-            id="test-flow",
-            relative_path="test.json",
-            title="Test Flow",
-            description="A test flow"
-        )}
+        self.metas = {
+            "test-flow": FlowMeta(
+                id="test-flow", relative_path="test.json", title="Test Flow", description="A test flow"
+            )
+        }
         self.verbose_print = Mock()
 
         # Create the app first
         with patch("langflow.cli.commands.verify_api_key"):
             self.app = create_multi_serve_app(
-                root_dir=self.root_dir,
-                graphs=self.graphs,
-                metas=self.metas,
-                verbose_print=self.verbose_print
+                root_dir=self.root_dir, graphs=self.graphs, metas=self.metas, verbose_print=self.verbose_print
             )
 
         # Override the dependency for testing
@@ -283,6 +258,7 @@ class TestFastAPIEndpoints:
 
         # Import here to avoid circular import issues
         from langflow.cli.commands import verify_api_key
+
         self.app.dependency_overrides[verify_api_key] = mock_verify_key
         self.client = TestClient(self.app)
 
@@ -314,7 +290,7 @@ class TestFastAPIEndpoints:
             "result": "Processed successfully",
             "success": True,
             "type": "message",
-            "component": "TestComponent"
+            "component": "TestComponent",
         }
 
         # Test that the execute and extract functions would be called properly
@@ -343,13 +319,11 @@ class TestFastAPIEndpoints:
         """Test flow execution without authentication."""
         # Clear the dependency override to test auth failure
         from langflow.cli.commands import verify_api_key
+
         if verify_api_key in self.app.dependency_overrides:
             del self.app.dependency_overrides[verify_api_key]
 
-        response = self.client.post(
-            "/flows/test-flow/run",
-            json={"input_value": "test input"}
-        )
+        response = self.client.post("/flows/test-flow/run", json={"input_value": "test input"})
 
         # Should fail due to missing auth (exact status depends on verify_api_key implementation)
         assert response.status_code in [401, 403, 422]
@@ -368,11 +342,7 @@ class TestMCPServer:
             # Test the settings configuration part (before the infinite loop)
             try:
                 with patch("langflow.cli.mcp_server.asyncio.sleep", side_effect=KeyboardInterrupt):
-                    await run_mcp_server(
-                        transport="sse",
-                        host="localhost",
-                        port=8000
-                    )
+                    await run_mcp_server(transport="sse", host="localhost", port=8000)
             except KeyboardInterrupt:
                 # This is expected and means the test worked
                 pass
@@ -391,40 +361,38 @@ class TestMCPServer:
 class TestErrorHandling:
     """Test error handling in various components."""
 
-    def test_invalid_json_in_request(self):
+    def test_invalid_json_in_request(self, tmp_path):
         """Test handling of invalid JSON in requests."""
         with patch("langflow.cli.commands.verify_api_key", return_value="test-key"):
             app = create_multi_serve_app(
-                root_dir=Path("/tmp"),
+                root_dir=tmp_path,
                 graphs={"test": create_mock_graph()},
                 metas={"test": FlowMeta(id="test", relative_path="test.json", title="Test")},
-                verbose_print=Mock()
+                verbose_print=Mock(),
             )
             client = TestClient(app)
 
             response = client.post(
                 "/flows/test/run",
                 data="invalid json",
-                headers={"x-api-key": "test-key", "Content-Type": "application/json"}
+                headers={"x-api-key": "test-key", "Content-Type": "application/json"},
             )
 
             assert response.status_code == 422  # Validation error
 
-    def test_missing_flow_id(self):
+    def test_missing_flow_id(self, tmp_path):
         """Test accessing non-existent flow."""
         with patch("langflow.cli.commands.verify_api_key", return_value="test-key"):
             app = create_multi_serve_app(
-                root_dir=Path("/tmp"),
+                root_dir=tmp_path,
                 graphs={"test": create_mock_graph()},
                 metas={"test": FlowMeta(id="test", relative_path="test.json", title="Test")},
-                verbose_print=Mock()
+                verbose_print=Mock(),
             )
             client = TestClient(app)
 
             response = client.post(
-                "/flows/nonexistent/run",
-                json={"input_value": "test"},
-                headers={"x-api-key": "test-key"}
+                "/flows/nonexistent/run", json={"input_value": "test"}, headers={"x-api-key": "test-key"}
             )
 
             assert response.status_code == 404
@@ -458,10 +426,7 @@ class TestIntegration:
 
             # Test metadata creation
             meta = FlowMeta(
-                id=flow_id,
-                relative_path=flow_path.name,
-                title=flow_path.stem,
-                description="Integration test flow"
+                id=flow_id, relative_path=flow_path.name, title=flow_path.stem, description="Integration test flow"
             )
 
             # Test app creation
@@ -470,7 +435,7 @@ class TestIntegration:
                     root_dir=flow_path.parent,
                     graphs={flow_id: loaded_graph},
                     metas={flow_id: meta},
-                    verbose_print=mock_verbose_print
+                    verbose_print=mock_verbose_print,
                 )
 
                 client = TestClient(app)

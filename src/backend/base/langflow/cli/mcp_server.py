@@ -1,7 +1,5 @@
 """MCP Server implementation for Langflow CLI using existing MCP infrastructure."""
 
-import asyncio
-
 from loguru import logger
 
 from langflow.api.v1.mcp import server as mcp_server
@@ -40,8 +38,11 @@ async def run_mcp_server(
         logger.info("MCP server will be available when the main FastAPI server starts")
 
         # Keep the process alive - in practice this would be integrated with FastAPI
-        while True:
-            await asyncio.sleep(1)
+        # Using anyio.Event instead of while True with sleep to avoid ASYNC110
+        import anyio
+
+        event = anyio.Event()
+        await event.wait()
 
     except KeyboardInterrupt:
         logger.info("MCP server shutdown requested")

@@ -102,7 +102,6 @@ def serve_command(
         "--mcp-transport",
         help="MCP transport type. Currently only 'sse' is supported",
     ),
-
 ) -> None:
     """Serve Langflow graphs as web API endpoints or MCP (Model Context Protocol) server.
 
@@ -197,8 +196,7 @@ def serve_command(
     if mcp:
         if mcp_transport.lower() != "sse":
             verbose_print(
-                f"Warning: Only SSE transport is currently supported. "
-                f"Using 'sse' instead of '{mcp_transport}'"
+                f"Warning: Only SSE transport is currently supported. Using 'sse' instead of '{mcp_transport}'"
             )
             mcp_transport = "sse"
         verbose_print(f"✓ MCP mode enabled with {mcp_transport} transport")
