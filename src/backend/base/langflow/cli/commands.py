@@ -291,12 +291,12 @@ def serve_command(
         # Start server in appropriate mode
         if mcp:
             # For MCP mode, we start the regular FastAPI server which includes MCP endpoints
-            verbose_print(f"🔧 Starting Langflow with MCP server enabled...")
-            
+            verbose_print("🔧 Starting Langflow with MCP server enabled...")
+
             if mcp_transport != "sse":
-                verbose_print(f"Note: Currently only SSE transport is supported for MCP. Using SSE transport.")
+                verbose_print("Note: Currently only SSE transport is supported for MCP. Using SSE transport.")
                 mcp_transport = "sse"
-            
+
             # Create the FastAPI app which includes MCP functionality
             serve_app = create_multi_serve_app(
                 root_dir=folder_path,
@@ -304,10 +304,10 @@ def serve_command(
                 metas=metas,
                 verbose_print=verbose_print,
             )
-            
+
             protocol = "http"
             access_host = get_best_access_host(host)
-            
+
             console.print()
             console.print(
                 Panel.fit(
@@ -328,7 +328,7 @@ def serve_command(
                 )
             )
             console.print()
-            
+
             try:
                 uvicorn.run(
                     serve_app,
@@ -448,12 +448,12 @@ def serve_command(
     # Start server in appropriate mode
     if mcp:
         # For MCP mode, we start the regular FastAPI server which includes MCP endpoints
-        verbose_print(f"🔧 Starting Langflow with MCP server enabled...")
-        
+        verbose_print("🔧 Starting Langflow with MCP server enabled...")
+
         if mcp_transport != "sse":
-            verbose_print(f"Note: Currently only SSE transport is supported for MCP. Using SSE transport.")
+            verbose_print("Note: Currently only SSE transport is supported for MCP. Using SSE transport.")
             mcp_transport = "sse"
-        
+
         # Create the FastAPI app which includes MCP functionality
         serve_app = create_multi_serve_app(
             root_dir=resolved_path.parent,
@@ -461,10 +461,10 @@ def serve_command(
             metas=metas,
             verbose_print=verbose_print,
         )
-        
+
         protocol = "http"
         access_host = get_best_access_host(host)
-        
+
         console.print()
         console.print(
             Panel.fit(
@@ -483,7 +483,7 @@ def serve_command(
             )
         )
         console.print()
-        
+
         try:
             uvicorn.run(
                 serve_app,

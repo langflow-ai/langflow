@@ -1,11 +1,8 @@
 """Tests for the MCP server implementation in Langflow CLI."""
 
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import ValidationError
-
 from langflow.cli.mcp_server import (
     FlowInfo,
     FlowInput,
@@ -13,6 +10,7 @@ from langflow.cli.mcp_server import (
     create_mcp_server,
     run_mcp_server,
 )
+from pydantic import ValidationError
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
@@ -249,10 +247,10 @@ class TestMCPServerIntegration:
                 mock_settings_instance.settings.host = "localhost"
                 mock_settings_instance.settings.port = 8000
                 mock_settings.return_value = mock_settings_instance
-                
+
                 with pytest.raises(KeyboardInterrupt):
                     await run_mcp_server(transport="sse", host="localhost", port=8000)
-                
+
                 # Verify settings were updated
                 assert mock_settings_instance.settings.host == "localhost"
                 assert mock_settings_instance.settings.port == 8000
@@ -282,7 +280,7 @@ class TestMCPServerIntegration:
             with pytest.raises(Exception, match="Test error"):
                 await run_mcp_server(transport="sse")
 
-    @pytest.mark.asyncio 
+    @pytest.mark.asyncio
     async def test_run_mcp_server_logging(self):
         """Test that proper logging occurs."""
         with patch("langflow.cli.mcp_server.get_settings_service") as mock_settings:
@@ -290,10 +288,10 @@ class TestMCPServerIntegration:
                 with patch("langflow.cli.mcp_server.asyncio.sleep", side_effect=KeyboardInterrupt):
                     mock_settings_instance = MagicMock()
                     mock_settings.return_value = mock_settings_instance
-                    
+
                     with pytest.raises(KeyboardInterrupt):
                         await run_mcp_server(transport="sse", host="test-host", port=9000)
-                    
+
                     # Verify logging calls
                     mock_logger.info.assert_any_call("Starting Langflow MCP server on test-host:9000 using sse transport")
                     mock_logger.info.assert_any_call("MCP server shutdown requested")
@@ -305,10 +303,10 @@ class TestMCPServerIntegration:
             with patch("langflow.cli.mcp_server.asyncio.sleep", side_effect=KeyboardInterrupt):
                 mock_settings_instance = MagicMock()
                 mock_settings.return_value = mock_settings_instance
-                
+
                 with pytest.raises(KeyboardInterrupt):
                     await run_mcp_server(transport="sse", host="custom-host", port=7000)
-                
+
                 # Verify settings were updated with custom values
                 assert mock_settings_instance.settings.host == "custom-host"
                 assert mock_settings_instance.settings.port == 7000
@@ -359,7 +357,7 @@ class TestMCPServerErrorHandling:
         """Test MCP server creation with graphs missing expected attributes."""
         mock_graph = MagicMock()
         mock_graph.run.side_effect = AttributeError("Graph has no run method")
-        
+
         mock_mcp_instance = MagicMock()
         mock_fastmcp.return_value = mock_mcp_instance
 

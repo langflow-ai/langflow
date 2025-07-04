@@ -434,7 +434,7 @@ class TestMCPServeCommand:
         """Test validation of MCP transport options."""
         # Test invalid transport
         result = runner.invoke(app, [
-            "serve", str(temp_python_script), 
+            "serve", str(temp_python_script),
             "--mcp", "--mcp-transport", "invalid"
         ])
         assert result.exit_code == 1
@@ -444,19 +444,19 @@ class TestMCPServeCommand:
     def test_mcp_valid_transports(self, runner, temp_python_script):
         """Test that valid MCP transports are accepted."""
         valid_transports = ["stdio", "sse", "websocket"]
-        
+
         for transport in valid_transports:
             # We just test that the validation passes and the command would start
             # We'll use a timeout or patch to avoid actually starting the server
             with patch("langflow.cli.commands.run_mcp_server") as mock_run_mcp:
                 mock_run_mcp.side_effect = KeyboardInterrupt("Test interrupt")
-                
+
                 result = runner.invoke(app, [
                     "serve", str(temp_python_script),
                     "--mcp", "--mcp-transport", transport,
                     "--verbose"
                 ])
-                
+
                 # Should either exit cleanly (0) or with KeyboardInterrupt handling
                 assert result.exit_code in [0, 1]
                 # Should show MCP mode is enabled
@@ -470,7 +470,7 @@ class TestMCPServeCommand:
                 "serve", str(temp_python_script),
                 "--mcp", "--verbose"
             ])
-            
+
             # Should not fail due to missing API key
             # The validation message should show MCP is enabled
             assert "MCP mode enabled" in result.output or result.exit_code in [0, 1]
@@ -485,7 +485,7 @@ class TestMCPServeCommand:
                 "serve", str(temp_python_script),
                 "--no-mcp", "--verbose"
             ])
-            
+
             # Should fail due to missing API key
             assert result.exit_code == 1
             assert "LANGFLOW_API_KEY" in result.output
@@ -498,19 +498,19 @@ class TestMCPServeCommand:
         mock_app = MagicMock()
         mock_create_app.return_value = mock_app
         mock_uvicorn_run.side_effect = KeyboardInterrupt("Test interrupt")
-        
+
         result = runner.invoke(app, [
             "serve", str(temp_python_script),
             "--mcp", "--mcp-name", "Test MCP Server",
             "--verbose"
         ])
-        
+
         # Verify FastAPI app was created
         mock_create_app.assert_called_once()
         call_args = mock_create_app.call_args
         assert "graphs" in call_args[1]
         assert "metas" in call_args[1]
-        
+
         # Verify uvicorn was run with correct parameters
         mock_uvicorn_run.assert_called_once()
         run_args = mock_uvicorn_run.call_args
@@ -525,7 +525,7 @@ class TestMCPServeCommand:
         # Create test JSON files
         flow1 = tmp_path / "flow1.json"
         flow2 = tmp_path / "flow2.json"
-        
+
         # Create minimal valid JSON flow structure
         flow_content = {
             "data": {
@@ -533,34 +533,34 @@ class TestMCPServeCommand:
                 "edges": []
             }
         }
-        
+
         flow1.write_text(json.dumps(flow_content))
         flow2.write_text(json.dumps(flow_content))
-        
+
         # Mock the graph loading to avoid complex flow parsing
         with patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph:
             mock_graph = MagicMock()
             mock_graph.flow_id = "test_flow"
             mock_load_graph.return_value = mock_graph
-            
+
             # Mock FastAPI app creation
             mock_app = MagicMock()
             mock_create_app.return_value = mock_app
             mock_uvicorn_run.side_effect = KeyboardInterrupt("Test interrupt")
-            
+
             result = runner.invoke(app, [
                 "serve", str(tmp_path),
                 "--mcp", "--mcp-transport", "sse",
                 "--port", "8001",
                 "--verbose"
             ])
-            
+
             # Should find both JSON files and try to load them
             assert mock_load_graph.call_count == 2
-            
+
             # Verify FastAPI app was created
             mock_create_app.assert_called_once()
-            
+
             # Verify uvicorn was run with correct parameters
             mock_uvicorn_run.assert_called_once()
             run_args = mock_uvicorn_run.call_args
@@ -570,26 +570,26 @@ class TestMCPServeCommand:
     def test_mcp_server_with_transport_warnings(self, runner, temp_python_script):
         """Test MCP server with different transport types (showing warnings for unsupported ones)."""
         transports = ["stdio", "websocket", "sse"]
-        
+
         for transport in transports:
             with patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn_run:
                 with patch("langflow.cli.commands.create_multi_serve_app") as mock_create_app:
                     mock_app = MagicMock()
                     mock_create_app.return_value = mock_app
                     mock_uvicorn_run.side_effect = KeyboardInterrupt("Test interrupt")
-                    
+
                     result = runner.invoke(app, [
                         "serve", str(temp_python_script),
                         "--mcp", "--mcp-transport", transport,
                         "--verbose"
                     ])
-                    
+
                     assert result.exit_code == 0
-                    
+
                     if transport != "sse":
                         # Should show warning for non-SSE transports
                         assert "Only SSE transport is currently supported" in result.output
-                    
+
                     # Should always call uvicorn (defaults to SSE)
                     mock_uvicorn_run.assert_called_once()
 
@@ -598,12 +598,12 @@ class TestMCPServeCommand:
         with patch("langflow.cli.commands.create_multi_serve_app") as mock_create_app:
             # Mock an error during FastAPI app creation
             mock_create_app.side_effect = Exception("App creation failed")
-            
+
             result = runner.invoke(app, [
                 "serve", str(temp_python_script),
                 "--mcp", "--verbose"
             ])
-            
+
             assert result.exit_code == 1
             assert "Failed to start MCP server" in result.output
 
@@ -612,12 +612,12 @@ class TestMCPServeCommand:
         with patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn_run:
             with patch("langflow.cli.commands.create_multi_serve_app"):
                 mock_uvicorn_run.side_effect = KeyboardInterrupt("User interrupt")
-                
+
                 result = runner.invoke(app, [
                     "serve", str(temp_python_script),
                     "--mcp", "--verbose"
                 ])
-                
+
                 assert result.exit_code == 0
                 assert "MCP server stopped" in result.output
 
@@ -626,14 +626,14 @@ class TestMCPServeCommand:
         with patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn_run:
             with patch("langflow.cli.commands.create_multi_serve_app"):
                 mock_uvicorn_run.side_effect = KeyboardInterrupt("Test interrupt")
-                
+
                 result = runner.invoke(app, [
                     "serve", str(temp_python_script),
                     "--mcp", "--mcp-transport", "sse",
                     "--mcp-name", "Custom MCP Server",
                     "--verbose"
                 ])
-                
+
                 # Check for MCP-specific output
                 assert "MCP Server Started!" in result.output
                 assert "MCP (SSE)" in result.output  # Updated to match actual output
@@ -648,14 +648,14 @@ class TestMCPServeCommand:
             with patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn_run:
                 with patch("langflow.cli.commands.create_multi_serve_app"):
                     mock_uvicorn_run.side_effect = KeyboardInterrupt("Test interrupt")
-                    
+
                     # MCP mode should work without API key
                     result_mcp = runner.invoke(app, [
                         "serve", str(temp_python_script),
                         "--mcp", "--verbose"
                     ])
                     assert "MCP mode enabled" in result_mcp.output
-                    
+
                     # REST API mode should fail without API key
                     result_rest = runner.invoke(app, [
                         "serve", str(temp_python_script),
@@ -668,12 +668,12 @@ class TestMCPServeCommand:
         """Test MCP mode with folder containing no JSON files."""
         # Create a folder with no JSON files
         (tmp_path / "not_a_flow.txt").write_text("This is not a flow")
-        
+
         result = runner.invoke(app, [
             "serve", str(tmp_path),
             "--mcp", "--verbose"
         ])
-        
+
         assert result.exit_code == 1
         assert "No .json flow files found" in result.output
 
@@ -683,15 +683,15 @@ class TestMCPServeCommand:
         # Create a JSON file
         flow_file = tmp_path / "invalid_flow.json"
         flow_file.write_text('{"invalid": "flow"}')
-        
+
         # Mock graph loading to raise an error
         mock_load_graph.side_effect = ValueError("Invalid flow structure")
-        
+
         result = runner.invoke(app, [
             "serve", str(tmp_path),
             "--mcp", "--verbose"
         ])
-        
+
         assert result.exit_code == 1
         assert "Failed loading flow" in result.output
 
@@ -700,7 +700,7 @@ class TestMCPServeCommand:
         with patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn_run:
             with patch("langflow.cli.commands.create_multi_serve_app"):
                 mock_uvicorn_run.side_effect = KeyboardInterrupt("Test interrupt")
-                
+
                 result = runner.invoke(app, [
                     "serve", str(temp_python_script),
                     "--mcp", "--mcp-transport", "sse",
@@ -708,7 +708,7 @@ class TestMCPServeCommand:
                     "--port", "9000",
                     "--verbose"
                 ])
-                
+
                 # Verify custom host and port were passed
                 mock_uvicorn_run.assert_called_once()
                 run_args = mock_uvicorn_run.call_args
