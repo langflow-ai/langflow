@@ -15,13 +15,13 @@ The Playground's window arrangement changes depending on what components are bei
 
 ![](/img/playground.png)
 
-## Run a flow in the playgound
+## Run a flow in the Playground
 
 When you run a flow in the **Playground**, Langflow calls the `/build/$FLOW_ID/flow` endpoint in [chat.py](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/chat.py#L162). This call retrieves the flow data, builds a graph, and executes the graph. As each component (or node) is executed, the `build_vertex` function calls `build_and_run`, which may call the individual components' `def_build` method, if it exists. If a component doesn't have a `def_build` function, the build still returns a component.
 
 The `build` function allows components to execute logic at runtime. For example, the [Recursive character text splitter](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the `LCTextSplitterComponent` class. When text needs to be processed, the parent class's `build` method is called, which creates a `RecursiveCharacterTextSplitter` object and uses it to split the text according to the defined parameters. The split text is then passed on to the next component. This all occurs when the component is built.
 
-## View playground messages by session ID
+## View Playground messages by session ID
 
 When you send a message from the **Playground** interface, the interactions are stored in the **Message Logs** by `session_id`.
 A single flow can have multiple chats, and different flows can share the same chat. Each chat will have a different `session_id`.

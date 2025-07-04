@@ -89,7 +89,7 @@ For example:
   CrewAI: () =>
     import("@/icons/CrewAI").then((mod) => ({ default: mod.CrewAiIcon })),
   DarthVader: () =>
-    import("@/icons/DartVader").then((mod) => ({ default: mod.DarthVaderIcon })),
+    import("@/icons/DarthVader").then((mod) => ({ default: mod.DarthVaderIcon })),
   DeepSeek: () =>
     import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
 ```

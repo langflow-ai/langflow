@@ -67,7 +67,7 @@ This approach is ideal for low latency applications, but it is less deterministi
 
 * `/ws/flow_tts/{flow_id}` or `/ws/flow_tts/{flow_id}/{session_id}`: Converts audio to text using [OpenAI Realtime voice transcription](https://platform.openai.com/docs/guides/realtime-transcription), and then each flow is invoked directly for each transcript.
 This approach is more deterministic but has higher latency.
-This is the mode used in the Langflow playground.
+This is the mode used in the Langflow Playground.
 
 Path parameters:
 * `flow_id`: Required path parameter. The ID of the flow to be used as a tool.

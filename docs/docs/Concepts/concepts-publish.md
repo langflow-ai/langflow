@@ -495,7 +495,7 @@ The **Playground** isn't meant for embedding flows in applications. For informat
 * [About developing and configuring Langflow applications](/develop-overview)
 :::
 
-The **Shareable playground** option exposes the [**Playground**](/concepts-playground) for a single flow at the `/public_flow/$FLOW_ID` endpoint.
+The **Shareable Playground** option exposes the [**Playground**](/concepts-playground) for a single flow at the `/public_flow/$FLOW_ID` endpoint.
 
 After you [deploy a public Langflow server](/deployment-overview), you can share this public URL with another user to allow them to access the specified flow's **Playground** only.
 The user can interact with the flow's chat input and output and view the results without installing Langflow or generating a Langflow API key.

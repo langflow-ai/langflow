@@ -45,11 +45,8 @@ Use Docker Compose to build Langflow with a persistent PostgreSQL database servi
 
 The Docker Compose configuration spins up two services: `langflow` and `postgres`.
 
-To configure values for these services at container startup, include them in your `.env` file.
-
-An example `.env` file is available in the [project repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
-
-To pass the `.env` values at container startup, include the flag in your `docker run` command:
+To configure values for these services at container startup, define relevant [Langflow environment variables](/environment-variables) in a `.env` file.
+Then, include the `--env-file` flag in your `docker run` command:
 
 ```
 docker run -it --rm \
@@ -57,6 +54,8 @@ docker run -it --rm \
     --env-file .env \
     langflowai/langflow:latest
 ```
+
+If your `.env` file isn't in the same directory, provide the path to your `.env` file.
 
 ### Langflow service
 

@@ -36,9 +36,9 @@ To opt out of telemetry, set the `LANGFLOW_DO_NOT_TRACK` or `DO_NOT_TRACK` e
 
 ### Playground {#ae6c3859f612441db3c15a7155e9f920}
 
-- **Seconds**: Duration in seconds for playground execution, offering insights into performance during testing or experimental stages.
-- **ComponentCount**: Number of components used in the playground, which helps understand complexity and usage patterns.
-- **Success**: Success status of the playground operation, aiding in identifying the stability of experimental features.
+- **Seconds**: Duration in seconds for Playground execution, offering insights into performance during testing or experimental stages.
+- **ComponentCount**: Number of components used in the Playground, which helps understand complexity and usage patterns.
+- **Success**: Success status of the Playground operation, aiding in identifying the stability of experimental features.
 
 ### Component {#630728d6654c40a6b8901459a4bc3a4e}
 

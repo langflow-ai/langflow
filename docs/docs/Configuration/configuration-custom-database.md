@@ -12,48 +12,49 @@ This guide walks you through setting up an external database for Langflow by rep
 
 ## Connect Langflow to PostgreSQL
 
-To connect Langflow to PostgreSQL, follow these steps.
+1. If Langflow is running, quit Langflow.
 
-1. Find your PostgreSQL database's connection string.
-It looks like `postgresql://user:password@host:port/dbname`.
+2. Find your PostgreSQL database's connection string in the format `postgresql://user:password@host:port/dbname`.
 
-The hostname in your connection string depends on how you're running PostgreSQL.
-- If you're running PostgreSQL directly on your machine, use `localhost`.
-- If you're running PostgreSQL in Docker Compose, use the service name, such as `postgres`.
-- If you're running PostgreSQL in a separate Docker container with `docker run`, use the container's IP address or network alias.
+  The hostname in your connection string depends on how you're running PostgreSQL:
 
-2. Create a `.env` file for configuring Langflow.
-```
-touch .env
-```
+  - If you're running PostgreSQL directly on your machine, use `localhost`.
+  - If you're running PostgreSQL in Docker Compose, use the service name, such as `postgres`.
+  - If you're running PostgreSQL in a separate Docker container with `docker run`, use the container's IP address or network alias.
 
-3. To set the database URL environment variable, add it to your `.env` file:
-```text
-LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
-```
+3. Create a Langflow `.env` file if you don't already have one:
 
-:::tip
-The Langflow repository has a [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file to help you get started.
-You can copy the contents of this file into your own `.env` file and replace the example values with your own preferred settings.
-Replace the value for `LANGFLOW_DATABASE_URL` with your PostgreSQL connection string.
-:::
+    ```
+    touch .env
+    ```
 
-4. Run Langflow with the `.env` file:
-```bash
-uv run langflow run --env-file .env
-```
+    You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file in the Langflow repository as a template for your own `.env` file.
 
-5. In Langflow, create traffic by running a flow.
-6. Inspect your PostgreSQL deployment's tables and activity.
-New tables and traffic are created.
+4. In your `.env` file, set `LANGFLOW_DATABASE_URL` to your your PostgreSQL connection string:
+
+    ```text
+    LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
+    ```
+
+5. Save your changes, and then start Langflow with your `.env` file:
+
+    ```bash
+    uv run langflow run --env-file .env
+    ```
+
+6. In Langflow, run any flow to create traffic.
+
+7. Inspect your PostgreSQL deployment's tables and activity to verify that new tables and traffic were created after you ran a flow.
 
 ## Example Langflow and PostgreSQL docker-compose.yml
 
-The Langflow repository has a [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file for quick deployment with PostgreSQL.
+Docker Compose creates an isolated network for all services defined in `docker-compose.yml`. This ensures that the services can communicate with each other using their service names as hostnames, such as `postgres` in the database URL.
+In contrast, if you run PostgreSQL separately with `docker run`, it launches in a different network than the Langflow container, and this prevents Langflow from connecting to PostgreSQL using the service name.
 
-This configuration launches Langflow and PostgreSQL containers in the same Docker network, ensuring proper connectivity between services. It also sets up persistent volumes for both Langflow and PostgreSQL data.
+You can use the [`docker-compose.yml`](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file in the Langflow repository to launches Langflow and PostgreSQL containers in the same Docker network, ensuring proper connectivity between services.
+This configuration also sets up persistent volumes for both Langflow and PostgreSQL data.
 
-To start the services, navigate to the `/docker_example` directory, and then run `docker-compose up`.
+To start the services, navigate to the `/docker_example` directory, and then run `docker-compose up`:
 
 ```yaml
 services:
@@ -86,10 +87,6 @@ volumes:
   langflow-postgres:    # Persistent volume for PostgreSQL data
   langflow-data:        # Persistent volume for Langflow data
 ```
-
-:::note
-Docker Compose creates an isolated network for all services defined in the docker-compose.yml file. This ensures that the services can communicate with each other using their service names as hostnames, for example, `postgres` in the database URL. If you were to run PostgreSQL separately using `docker run`, it would be in a different network and Langflow wouldn't be able to connect to it using the service name.
-:::
 
 ## Deploy multiple Langflow instances with a shared database
 

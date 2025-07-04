@@ -37,7 +37,7 @@ The following tables are stored in `langflow.db`:
 
 • **Variables** - Stores global encrypted values and credentials. For more information, see [Global variables](/configuration-global-variables).
 
-• **VertexBuild** - Tracks the build status of individual nodes within flows. For more information, see [Run a flow in the playground](/concepts-playground).
+• **VertexBuild** - Tracks the build status of individual nodes within flows. For more information, see [Run a flow in the Playground](/concepts-playground).
 
 For more information, see the database models in the [source code](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/services/database/models).
 
