@@ -97,7 +97,7 @@ Ensure the existing REST API functionality remains unchanged when MCP is disable
 
 ### What's Been Implemented:
 
-1. **✅ Dependencies Added**: `fastmcp>=2.10.1` added to pyproject.toml
+1. **✅ Dependencies Added**: `fastmcp>=2.10.1` added to `src/backend/base/pyproject.toml`
 2. **✅ CLI Options Extended**: New MCP flags added to serve command:
    - `--mcp/--no-mcp`: Enable/disable MCP mode
    - `--mcp-transport`: Choose transport (stdio, sse, websocket)

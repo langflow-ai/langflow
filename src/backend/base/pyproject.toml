@@ -78,6 +78,7 @@ dependencies = [
     "networkx>=3.4.2",
     "json-repair>=0.30.3",
     "mcp~=1.10.1",
+    "fastmcp>=2.10.1",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
     "jsonquerylang>=1.1.1",
