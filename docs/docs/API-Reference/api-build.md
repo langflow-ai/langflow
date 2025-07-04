@@ -97,8 +97,6 @@ curl -X GET \
 
 ## Build parameters
 
-The `/build/$FLOW_ID/flow` endpoint accepts the following parameters in its request body:
-
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | inputs | object | Optional. Input values for flow components. |

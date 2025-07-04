@@ -32,7 +32,7 @@ curl -X POST \
   }'
 ```
 
-The response from `/v1/run/$FLOW_ID` includes metadata about the flow run, as well as inputs and outputs.
+The response from `/v1/run/$FLOW_ID` includes metadata, inputs, and outputs for the run.
 
 <details>
   <summary>Result</summary>

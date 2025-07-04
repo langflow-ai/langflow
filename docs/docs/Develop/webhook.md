@@ -13,7 +13,7 @@ The **Webhook** component provides a versatile entrypoint that can make your flo
 For example:
 
 * Use an LLM to analyze the sentiment and content of customer feedback or survey responses.
-* Get notifications from a monitoring system, and then trigger a variety of automated responses based on the notification type and severity level.
+* Receive notifications from a monitoring system, and then trigger automated responses based on alert type and severity.
 * Integrate with e-commerce platforms to process orders and update inventory.
 
 ## Configure the Webhook component

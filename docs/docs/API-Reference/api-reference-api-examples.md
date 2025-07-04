@@ -79,7 +79,7 @@ For example, you can [set environment variables](#set-environment-variables) for
 
 ### Methods, paths, and parameters
 
-Langflow API requests use a variety of methods, paths, path parameters, query parameters, and body parameters.
+Langflow API requests use various methods, paths, path parameters, query parameters, and body parameters.
 The specific requirements and options depend on the endpoint that you want to call.
 
 For example, to create a flow, you pass a JSON-formatted flow definition to `POST /v1/flows`.
@@ -95,9 +95,10 @@ If a request fails or has an unexpected result, make sure your endpoint path has
 
 ## Set environment variables
 
-As a best practice with any API, store commonly used values in environment variables to facilitate reuse, simplify token rotation, and securely reference sensitive values.
+You can store commonly used values in environment variables to facilitate reuse, simplify token rotation, and securely reference sensitive values.
 
-You can use any method you prefer to set environment variables, such as `export`, `.env`, `zshrc`, or `.curlrc`, and then reference those environment variables in your API requests.
+You can use any method you prefer to set environment variables, such as `export`, `.env`, `zshrc`, or `.curlrc`.
+Then, reference those environment variables in your API requests.
 For example:
 
 ```bash
