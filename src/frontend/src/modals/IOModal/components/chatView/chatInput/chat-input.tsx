@@ -169,10 +169,8 @@ export default function ChatInput({
     const filesToSend = files
       .map((file) => file.path ?? "")
       .filter((file) => file !== "");
-
-    // Clear files immediately when sending
+    const storedFiles = [...files];
     setFiles([]);
-
     try {
       await sendMessage({
         repeat: 1,
@@ -180,6 +178,7 @@ export default function ChatInput({
       });
     } catch (error) {
       setChatValueStore(storedChatValue);
+      setFiles(storedFiles);
     }
   };
 
