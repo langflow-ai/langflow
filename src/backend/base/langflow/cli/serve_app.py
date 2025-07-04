@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Any
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.cli.common import execute_graph_with_capture, extract_result_data
@@ -40,7 +41,7 @@ def _analyze_graph_structure(graph: Graph) -> dict[str, Any]:
     Returns:
         dict: Graph analysis including components, input/output types, and flow details
     """
-    analysis = {
+    analysis: dict[str, Any] = {
         "components": [],
         "input_types": set(),
         "output_types": set(),
@@ -222,7 +223,7 @@ def create_multi_serve_app(
     root_dir: Path,  # noqa: ARG001
     graphs: dict[str, Graph],
     metas: dict[str, FlowMeta],
-    verbose_print: Callable[[str], None],
+    verbose_print: Callable[[str], None],  # noqa: ARG001
 ) -> FastAPI:
     """Create a FastAPI app exposing multiple Langflow flows.
 
@@ -236,7 +237,7 @@ def create_multi_serve_app(
     metas
         Mapping ``flow_id -> FlowMeta`` containing metadata for each flow.
     verbose_print
-        Diagnostic printer inherited from the CLI.
+        Diagnostic printer inherited from the CLI (unused, kept for backward compatibility).
     """
     # Import here to avoid circular import
     from langflow.cli.commands import verify_api_key
@@ -291,11 +292,35 @@ def create_multi_serve_app(
         )
         async def run_flow(
             request: RunRequest,
-            _api_key: Annotated[str, Depends(verify_api_key)],
         ) -> RunResponse:
             try:
                 results, logs = execute_graph_with_capture(graph, request.input_value)
                 result_data = extract_result_data(results, logs)
+
+                # Debug logging
+                logger.debug(f"Flow {flow_id} execution completed: {len(results)} results, {len(logs)} log chars")
+                logger.debug(f"Flow {flow_id} result data: {result_data}")
+
+                # Check if the execution was successful
+                if not result_data.get("success", True):
+                    # If the flow execution failed, return error details in the response
+                    error_message = result_data.get("result", result_data.get("text", "No response generated"))
+
+                    # Add more context to the logs when there's an error
+                    error_logs = logs
+                    if not error_logs.strip():
+                        error_logs = (
+                            f"Flow execution completed but no valid result was produced.\nResult data: {result_data}"
+                        )
+
+                    return RunResponse(
+                        result=error_message,
+                        success=False,
+                        logs=error_logs,
+                        type="error",
+                        component=result_data.get("component", ""),
+                    )
+
                 return RunResponse(
                     result=result_data.get("result", result_data.get("text", "")),
                     success=result_data.get("success", True),
@@ -303,9 +328,25 @@ def create_multi_serve_app(
                     type=result_data.get("type", "message"),
                     component=result_data.get("component", ""),
                 )
-            except Exception as exc:
-                verbose_print(f"Error running flow {flow_id}: {exc}")
-                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            except Exception as exc:  # noqa: BLE001
+                import traceback
+
+                # Capture the full traceback for debugging
+                error_traceback = traceback.format_exc()
+                error_message = f"Flow execution failed: {exc!s}"
+
+                # Log to server console for debugging
+                logger.error(f"Error running flow {flow_id}: {exc}")
+                logger.debug(f"Full traceback for flow {flow_id}:\n{error_traceback}")
+
+                # Return error details in the API response instead of raising HTTPException
+                return RunResponse(
+                    result=error_message,
+                    success=False,
+                    logs=f"ERROR: {error_message}\n\nFull traceback:\n{error_traceback}",
+                    type="error",
+                    component="",
+                )
 
         @router.get("/info", summary="Flow metadata", response_model=FlowMeta)
         async def flow_info():
