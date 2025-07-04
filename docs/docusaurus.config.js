@@ -365,13 +365,6 @@ const config = {
         },
       },
       footer: {
-        logo: {
-          alt: "Langflow",
-          src: "img/lf-docs-light.svg",
-          srcDark: "img/lf-docs-dark.svg",
-          width: 160,
-          height: 40,
-        },
         links: [
           {
             title: null,
