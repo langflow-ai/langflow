@@ -1197,10 +1197,8 @@
                 "method": "search_documents",
                 "name": "search_results",
                 "required_inputs": [
-                  "database_ref",
-                  "keyspace",
-                  "table_name",
-                  "token"
+                  "index_token",
+                  "index_url"
                 ],
                 "selected": "Data",
                 "tool_mode": true,
