@@ -305,6 +305,13 @@ export const SIDEBAR_BUNDLES = [
     name: "wolframalpha",
     icon: "WolframAlphaAPI",
   },
+
+  { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
+  { display_name: "Search", name: "search", icon: "Search" },
+  { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
+  { display_name: "Ollama", name: "ollama", icon: "Ollama" },
+  { display_name: "VertexAI", name: "vertexai", icon: "VertexAI" },
+  { display_name: "JigsawStack", name: "jigsawstack", icon: "JigsawStack" },
   { display_name: "xAI", name: "xai", icon: "xAI" },
   { display_name: "YahooSearch", name: "yahoosearch", icon: "trending-up" },
   { display_name: "Youtube", name: "youtube", icon: "YouTube" },
