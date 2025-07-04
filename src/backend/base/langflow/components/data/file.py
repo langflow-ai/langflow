@@ -16,6 +16,7 @@ class FileComponent(BaseFileComponent):
 
     display_name = "File"
     description = "Loads content from one or more files as a DataFrame."
+    documentation: str = "https://docs.langflow.org/components-data#file"
     icon = "file-text"
     name = "File"
 
