@@ -1,6 +1,5 @@
 from langflow.custom.custom_component.component import Component
 from langflow.io import (
-    BoolInput,
     MultilineInput,
     Output,
     SecretStrInput,
@@ -24,26 +23,38 @@ class FirecrawlMapApi(Component):
             info="The API key to use Firecrawl API.",
         ),
         MultilineInput(
-            name="urls",
-            display_name="URLs",
+            name="url",
+            display_name="URL",
             required=True,
-            info="List of URLs to create maps from (separated by commas or new lines).",
+            info="The starting URL for URL discovery.",
             tool_mode=True,
         ),
+        IntInput(
+            name="limit",
+            display_name="Limit",
+            info="Maximum number of URLs to return.",
+            default=50,
+            advanced=True,
+        ),
+        StrInput(
+            name="search",
+            display_name="Search Term",
+            info="Optional search term to filter URLs.",
+            advanced=True,
+        ),
         BoolInput(
-            name="ignore_sitemap",
+            name="ignoreSitemap",
             display_name="Ignore Sitemap",
-            info="When true, the sitemap.xml file will be ignored during crawling.",
+            info="Skip sitemap.xml discovery and only use HTML links.",
+            default=False,
+            advanced=True,
         ),
         BoolInput(
-            name="sitemap_only",
+            name="sitemapOnly",
             display_name="Sitemap Only",
-            info="When true, only links found in the sitemap will be returned.",
-        ),
-        BoolInput(
-            name="include_subdomains",
-            display_name="Include Subdomains",
-            info="When true, subdomains of the provided URL will also be scanned.",
+            info="Only use sitemap.xml for discovery, ignore HTML links.",
+            default=False,
+            advanced=True,
         ),
     ]
 
@@ -58,32 +69,10 @@ class FirecrawlMapApi(Component):
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
 
-        # Validate URLs
-        if not self.urls:
-            msg = "URLs are required"
-            raise ValueError(msg)
-
-        # Split and validate URLs (handle both commas and newlines)
-        urls = [url.strip() for url in self.urls.replace("\n", ",").split(",") if url.strip()]
-        if not urls:
-            msg = "No valid URLs provided"
-            raise ValueError(msg)
-
         params = {
-            "ignoreSitemap": self.ignore_sitemap,
-            "sitemapOnly": self.sitemap_only,
-            "includeSubdomains": self.include_subdomains,
+            "limit": self.limit,
         }
 
         app = FirecrawlApp(api_key=self.api_key)
-
-        # Map all provided URLs and combine results
-        combined_links = []
-        for url in urls:
-            result = app.map_url(url, params=params)
-            if isinstance(result, dict) and "links" in result:
-                combined_links.extend(result["links"])
-
-        map_result = {"success": True, "links": combined_links}
-
+        map_result = app.map_url(self.url, params=params)
         return Data(data=map_result)
