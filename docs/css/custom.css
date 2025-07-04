@@ -613,6 +613,11 @@ body {
   body {
     padding-top: 0;
   }
+  
+  /* Hide the "Back to main menu" link in mobile sidebar */
+  .navbar-sidebar__back {
+    display: none !important;
+  }
 }
 
 /* DocSearch Input Styling - Simple border override */

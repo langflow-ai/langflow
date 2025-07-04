@@ -38,19 +38,15 @@
 
 .heroImage {
   width: 100%;
-  max-width: 400px;
-  height: 200px;
-  background-color: var(--ifm-color-emphasis-200);
-  border-radius: var(--ifm-global-radius);
+  max-width: 600px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--ifm-color-emphasis-300);
 }
 
-.placeholder {
-  color: var(--ifm-color-emphasis-600);
-  font-size: 0.875rem;
+.heroImageContent {
+  width: 100%;
+  height: auto;
 }
 
 /* Quick Links Section */
@@ -231,14 +227,14 @@
   font-weight: 600;
   color: var(--ifm-font-color-base);
   margin-bottom: 0.75rem;
-  font-size: 1.25rem;
+  font-size: 1rem;
   line-height: 1.3;
 }
 
 .communityDescription {
-  color: var(--ifm-color-emphasis-700);
-  font-size: 1rem;
-  line-height: 1.6;
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 /* Responsive Design */
