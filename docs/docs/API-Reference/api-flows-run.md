@@ -12,11 +12,16 @@ To create, read, update, and delete flows, see [Flow management endpoints](/api-
 
 ## Run flow
 
+:::tip
+Langflow automatically generates Python, JavaScript, and curl code snippets for the `/v1/run/$FLOW_ID` endpoint for all flows.
+For more information, see [Generate API code snippets](/concepts-publish#generate-api-code-snippets).
+:::
+
 Execute a specified flow by ID or name.
 The flow is executed as a batch, but LLM responses can be streamed.
 
-This example runs a [Basic Prompting](/basic-prompting) flow with a given flow ID and passes a JSON object as the input value.
-Flow IDs can be found on the [Publish pane](/concepts-publish) or in a flow's URL.
+The following example runs a [Basic Prompting](/basic-prompting) flow with a given flow ID and passes a JSON object as the input value.
+You can find Flow IDs in the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
 
 The parameters are passed in the request body. In this example, the values are the default values.
 

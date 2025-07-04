@@ -6,7 +6,7 @@ slug: /api-projects
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Use the `/projects` endpoint to create, read, update, and delete projects.
+Use the `/projects` endpoint to create, read, update, and delete [Langflow projects](/concepts-flows#projects).
 
 Projects store your flows and components.
 

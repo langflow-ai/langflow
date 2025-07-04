@@ -30,7 +30,7 @@ To connect the **Webhook** to a **Parser** component to view and parse your data
     :::
 7. Send a POST request with any data to trigger your flow.
 This example uses `id`, `name`, and `email` strings.
-Replace **FLOW_ID** with your flow's ID, which can be found on the [Publish pane](/concepts-publish) or in the flow's URL.
+Replace **FLOW_ID** with your flow's ID, which can be found on the code snippets on the [**API access** pane](/concepts-publish#api-access) or in the flow's URL.
     ```bash
     curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
         -H 'Content-Type: application/json' \
