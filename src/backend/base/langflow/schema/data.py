@@ -170,7 +170,7 @@ class Data(BaseModel):
         if sender == MESSAGE_SENDER_USER:
             if files:
                 from langflow.schema.image import get_file_paths
-                
+
                 contents = [{"type": "text", "text": text}]
                 resolved_file_paths = get_file_paths(files)
                 for file_path in resolved_file_paths:
