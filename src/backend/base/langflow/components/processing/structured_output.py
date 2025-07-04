@@ -42,13 +42,13 @@ class StructuredOutputComponent(Component):
             display_name="Format Instructions",
             info="The instructions to the language model for formatting the output.",
             value=(
-                "You are an AI that extracts one structured JSON object from unstructured text. "
-                "Use a predefined schema with expected types (str, int, float, bool, dict). "
-                "If multiple structures exist, extract only the first most complete one. "
-                "Fill missing or ambiguous values with defaults: null for missing values. "
-                "Ignore duplicates and partial repeats. "
-                "Always return one valid JSON, never throw errors or return multiple objects."
-                "Output: A single well-formed JSON object, and nothing else."
+                "Extract data from input_text and return only a JSON array matching the provided schema. "
+                "First check relevance: if the text lacks information for any schema field "
+                "(e.g., it is purely conversational), output a single object with defaults only. "
+                "Otherwise, emit one object per entity found. "
+                "Include every key in schema order, enforce types, and replace missing or "
+                "unparseable values with defaults (string N/A, integer 0, float 0.0, date null). "
+                "Produce nothing beyond the JSON."
             ),
             required=True,
             advanced=True,
@@ -174,9 +174,13 @@ class StructuredOutputComponent(Component):
 
     def build_structured_output(self) -> Data:
         output = self.build_structured_output_base()
+
         if not isinstance(output, list) or not output:
             # handle empty or unexpected type case
-            msg = "No structured output returned"
+            msg = (
+                "No structured output was returned."
+                "Please review your input or update the system message to obtain a better result."
+            )
             raise ValueError(msg)
         if len(output) != 1:
             msg = "Multiple structured outputs returned"

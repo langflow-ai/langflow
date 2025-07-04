@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-3Wxa2",
+            "id": "ParserComponent-LGCV2",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-811h1",
+            "id": "ChatOutput-70ST2",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,12 +24,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ParserComponent-3Wxa2{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-3Wxa2œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-811h1{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-811h1œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ParserComponent-LGCV2{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-LGCV2œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-70ST2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-70ST2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ParserComponent-3Wxa2",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-3Wxa2œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-811h1",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-811h1œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "ParserComponent-LGCV2",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-LGCV2œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-70ST2",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-70ST2œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -37,7 +37,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-uZ7jn",
+            "id": "ChatInput-oWfkr",
             "name": "message",
             "output_types": [
               "Message"
@@ -45,19 +45,19 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "AstraDB-7gXip",
+            "id": "AstraDB-eVXQi",
             "inputTypes": [
               "Message"
             ],
             "type": "query"
           }
         },
-        "id": "reactflow__edge-ChatInput-uZ7jn{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uZ7jnœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-7gXip{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-7gXipœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
+        "id": "reactflow__edge-ChatInput-oWfkr{œdataTypeœ:œChatInputœ,œidœ:œChatInput-oWfkrœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-eVXQi{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-eVXQiœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
-        "source": "ChatInput-uZ7jn",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-uZ7jnœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-7gXip",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-7gXipœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
+        "source": "ChatInput-oWfkr",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-oWfkrœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-eVXQi",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-eVXQiœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-7gXip",
+            "id": "AstraDB-eVXQi",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -73,7 +73,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-3Wxa2",
+            "id": "ParserComponent-LGCV2",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -81,77 +81,19 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraDB-7gXip{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-7gXipœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-3Wxa2{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-3Wxa2œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AstraDB-eVXQi{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-eVXQiœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-LGCV2{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-LGCV2œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AstraDB-7gXip",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-7gXipœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParserComponent-3Wxa2",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-3Wxa2œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "AstraDB-eVXQi",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-eVXQiœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ParserComponent-LGCV2",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-LGCV2œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-NEQ8S",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "StructuredOutput-n8Y3t",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-LanguageModelComponent-NEQ8S{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-NEQ8Sœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-n8Y3t{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-n8Y3tœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "LanguageModelComponent-NEQ8S",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-NEQ8Sœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-n8Y3t",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-n8Y3tœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "StructuredOutput",
-            "id": "StructuredOutput-n8Y3t",
-            "name": "structured_output",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_data",
-            "id": "ParserComponent-Kb474",
-            "inputTypes": [
-              "DataFrame",
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-StructuredOutput-n8Y3t{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-n8Y3tœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParserComponent-Kb474{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-Kb474œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "StructuredOutput-n8Y3t",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-n8Y3tœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParserComponent-Kb474",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-Kb474œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-pB4iD",
+            "id": "LanguageModelComponent-OL0qJ",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -159,25 +101,80 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-n8Y3t",
+            "id": "StructuredOutput-tBOf5",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-pB4iD{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-pB4iDœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-n8Y3t{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-n8Y3tœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__LanguageModelComponent-OL0qJ{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-OL0qJœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-tBOf5{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-tBOf5œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LanguageModelComponent-pB4iD",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-pB4iDœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-n8Y3t",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-n8Y3tœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-OL0qJ",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-OL0qJœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "StructuredOutput-tBOf5",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-tBOf5œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "LanguageModelComponent",
+            "id": "LanguageModelComponent-dsYfR",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "StructuredOutput-tBOf5",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__LanguageModelComponent-dsYfR{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-dsYfRœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-tBOf5{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-tBOf5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "LanguageModelComponent-dsYfR",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-dsYfRœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "StructuredOutput-tBOf5",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-tBOf5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "StructuredOutput",
+            "id": "StructuredOutput-tBOf5",
+            "name": "structured_output",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "ParserComponent-8A6rV",
+            "inputTypes": [
+              "DataFrame",
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__StructuredOutput-tBOf5{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-tBOf5œ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParserComponent-8A6rV{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-8A6rVœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "StructuredOutput-tBOf5",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-tBOf5œ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParserComponent-8A6rV",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-8A6rVœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-uZ7jn",
+          "id": "ChatInput-oWfkr",
           "node": {
             "base_classes": [
               "Message"
@@ -475,7 +472,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-uZ7jn",
+        "id": "ChatInput-oWfkr",
         "measured": {
           "height": 48,
           "width": 192
@@ -489,7 +486,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-Kb474",
+          "id": "ParserComponent-8A6rV",
           "node": {
             "base_classes": [
               "Message"
@@ -648,7 +645,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-Kb474",
+        "id": "ParserComponent-8A6rV",
         "measured": {
           "height": 329,
           "width": 320
@@ -662,7 +659,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-811h1",
+          "id": "ChatOutput-70ST2",
           "node": {
             "base_classes": [
               "Message"
@@ -956,7 +953,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-811h1",
+        "id": "ChatOutput-70ST2",
         "measured": {
           "height": 48,
           "width": 192
@@ -970,7 +967,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-3Wxa2",
+          "id": "ParserComponent-LGCV2",
           "node": {
             "base_classes": [
               "Message"
@@ -1129,7 +1126,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-3Wxa2",
+        "id": "ParserComponent-LGCV2",
         "measured": {
           "height": 246,
           "width": 320
@@ -1143,7 +1140,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-7gXip",
+          "id": "AstraDB-eVXQi",
           "node": {
             "base_classes": [
               "Data",
@@ -1183,6 +1180,7 @@
             ],
             "frozen": false,
             "icon": "AstraDB",
+            "last_updated": "2025-07-04T18:19:43.115Z",
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {},
@@ -1582,13 +1580,12 @@
                 "options": [],
                 "options_metadata": [
                   {
-                    "api_endpoint": "https://5b8bb22c-4a38-4f0a-865c-a18ed7590bd1-us-east-2.apps.astra.datastax.com",
-                    "collections": 5,
+                    "api_endpoint": "https://deb10a81-3c5d-4fd3-8b1b-945915d2835b-us-east-2.apps.astra.datastax.com",
+                    "collections": 1,
                     "keyspaces": [
-                      "default_keyspace",
-                      "samples_dataflow"
+                      "default_keyspace"
                     ],
-                    "org_id": "260f986d-e65c-4f05-94a3-7cebfcb867a3",
+                    "org_id": "4bd8a5f9-41b3-4d8a-b039-0dd35f5eb374",
                     "status": null
                   }
                 ],
@@ -1799,7 +1796,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "nvidia/llama-3.2-nv-rerankqa-1b-v2"
+                "value": ""
               },
               "search_method": {
                 "_input_type": "DropdownInput",
@@ -1944,7 +1941,7 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-7gXip",
+        "id": "AstraDB-eVXQi",
         "measured": {
           "height": 540,
           "width": 320
@@ -1958,7 +1955,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-NEQ8S",
+          "id": "LanguageModelComponent-dsYfR",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1982,6 +1979,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
+            "last_updated": "2025-07-04T18:19:43.122Z",
             "legacy": false,
             "metadata": {
               "keywords": [
@@ -2237,7 +2235,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-NEQ8S",
+        "id": "LanguageModelComponent-dsYfR",
         "measured": {
           "height": 451,
           "width": 320
@@ -2251,7 +2249,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-pB4iD",
+          "id": "LanguageModelComponent-OL0qJ",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2275,6 +2273,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
+            "last_updated": "2025-07-04T18:19:43.126Z",
             "legacy": false,
             "metadata": {
               "keywords": [
@@ -2530,7 +2529,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-pB4iD",
+        "id": "LanguageModelComponent-OL0qJ",
         "measured": {
           "height": 451,
           "width": 320
@@ -2544,12 +2543,39 @@
       },
       {
         "data": {
-          "id": "StructuredOutput-n8Y3t",
+          "id": "note-YHcP0",
+          "node": {
+            "description": "# Hybrid Search RAG\n\nHybrid search performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n* An [Astra DB Application Token](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html) for the Astra DB component.\n\n## Quickstart\n\n1. In the Astra DB component, add your Astra DB Application Token.\nThis connects Langflow to your Astra database.\n2. Select an Astra collection that is hybrid-enabled.\nFor more information, see the [Datastax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html).\nThe connection appears between the Parser component and the Astra DB component when a vector database is connected.\n3. Ensure the **Lexical Terms** and **Parsed Text** ports are connected.\n4. Add your OpenAI API key in the **Language Model** model component.\n5. Open the Playground and ask a question, like \"What are the features of my data?\"",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "blue"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "id": "note-YHcP0",
+        "measured": {
+          "height": 601,
+          "width": 575
+        },
+        "position": {
+          "x": 816.3801044575429,
+          "y": -279.19595575780494
+        },
+        "selected": false,
+        "type": "noteNode"
+      },
+      {
+        "data": {
+          "id": "StructuredOutput-tBOf5",
           "node": {
             "base_classes": [
               "Data"
             ],
             "beta": false,
+            "category": "processing",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Uses an LLM to generate structured data. Ideal for extraction and consistency.",
@@ -2565,6 +2591,7 @@
             ],
             "frozen": false,
             "icon": "braces",
+            "key": "StructuredOutput",
             "legacy": false,
             "metadata": {},
             "minimized": false,
@@ -2586,6 +2613,7 @@
               }
             ],
             "pinned": false,
+            "score": 0.007568328950209746,
             "template": {
               "_type": "Component",
               "code": {
@@ -2604,11 +2632,12 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from pydantic import BaseModel, Field, create_model\nfrom trustcall import create_extractor\n\nfrom langflow.base.models.chat_result import get_chat_result\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.helpers.base_model import build_model_from_schema\nfrom langflow.io import (\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    TableInput,\n)\nfrom langflow.schema.data import Data\nfrom langflow.schema.table import EditMode\n\n\nclass StructuredOutputComponent(Component):\n    display_name = \"Structured Output\"\n    description = \"Uses an LLM to generate structured data. Ideal for extraction and consistency.\"\n    documentation: str = \"https://docs.langflow.org/components-processing#structured-output\"\n    name = \"StructuredOutput\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"llm\",\n            display_name=\"Language Model\",\n            info=\"The language model to use to generate the structured output.\",\n            input_types=[\"LanguageModel\"],\n            required=True,\n        ),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Message\",\n            info=\"The input message to the language model.\",\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Format Instructions\",\n            info=\"The instructions to the language model for formatting the output.\",\n            value=(\n                \"You are an AI that extracts one structured JSON object from unstructured text. \"\n                \"Use a predefined schema with expected types (str, int, float, bool, dict). \"\n                \"If multiple structures exist, extract only the first most complete one. \"\n                \"Fill missing or ambiguous values with defaults: null for missing values. \"\n                \"Ignore duplicates and partial repeats. \"\n                \"Always return one valid JSON, never throw errors or return multiple objects.\"\n                \"Output: A single well-formed JSON object, and nothing else.\"\n            ),\n            required=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"schema_name\",\n            display_name=\"Schema Name\",\n            info=\"Provide a name for the output data schema.\",\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=\"Define the structure and data types for the model's output.\",\n            required=True,\n            # TODO: remove deault value\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"name\": \"field\",\n                    \"description\": \"description of field\",\n                    \"type\": \"str\",\n                    \"multiple\": \"False\",\n                }\n            ],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"structured_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_output\",\n        ),\n    ]\n\n    def build_structured_output_base(self):\n        schema_name = self.schema_name or \"OutputModel\"\n\n        if not hasattr(self.llm, \"with_structured_output\"):\n            msg = \"Language model does not support structured output.\"\n            raise TypeError(msg)\n        if not self.output_schema:\n            msg = \"Output schema cannot be empty\"\n            raise ValueError(msg)\n\n        output_model_ = build_model_from_schema(self.output_schema)\n\n        output_model = create_model(\n            schema_name,\n            __doc__=f\"A list of {schema_name}.\",\n            objects=(list[output_model_], Field(description=f\"A list of {schema_name}.\")),  # type: ignore[valid-type]\n        )\n\n        try:\n            llm_with_structured_output = create_extractor(self.llm, tools=[output_model])\n        except NotImplementedError as exc:\n            msg = f\"{self.llm.__class__.__name__} does not support structured output.\"\n            raise TypeError(msg) from exc\n\n        config_dict = {\n            \"run_name\": self.display_name,\n            \"project_name\": self.get_project_name(),\n            \"callbacks\": self.get_langchain_callbacks(),\n        }\n        result = get_chat_result(\n            runnable=llm_with_structured_output,\n            system_message=self.system_prompt,\n            input_value=self.input_value,\n            config=config_dict,\n        )\n\n        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure\n        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)\n        if not isinstance(result, dict):\n            return result\n\n        # Extract first response and convert BaseModel to dict\n        responses = result.get(\"responses\", [])\n        if not responses:\n            return result\n\n        # Convert BaseModel to dict (creates the \"objects\" key)\n        first_response = responses[0]\n        structured_data = first_response.model_dump() if isinstance(first_response, BaseModel) else first_response\n\n        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)\n        return structured_data.get(\"objects\", structured_data)\n\n    def build_structured_output(self) -> Data:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        if len(output) != 1:\n            msg = \"Multiple structured outputs returned\"\n            raise ValueError(msg)\n        return Data(data=output[0])\n"
+                "value": "from pydantic import BaseModel, Field, create_model\nfrom trustcall import create_extractor\n\nfrom langflow.base.models.chat_result import get_chat_result\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.helpers.base_model import build_model_from_schema\nfrom langflow.io import (\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    TableInput,\n)\nfrom langflow.schema.data import Data\nfrom langflow.schema.table import EditMode\n\n\nclass StructuredOutputComponent(Component):\n    display_name = \"Structured Output\"\n    description = \"Uses an LLM to generate structured data. Ideal for extraction and consistency.\"\n    documentation: str = \"https://docs.langflow.org/components-processing#structured-output\"\n    name = \"StructuredOutput\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"llm\",\n            display_name=\"Language Model\",\n            info=\"The language model to use to generate the structured output.\",\n            input_types=[\"LanguageModel\"],\n            required=True,\n        ),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Message\",\n            info=\"The input message to the language model.\",\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Format Instructions\",\n            info=\"The instructions to the language model for formatting the output.\",\n            value=(\n                \"Extract data from input_text and return only a JSON array matching the provided schema. \"\n                \"First check relevance: if the text lacks information for any schema field \"\n                \"(e.g., it is purely conversational), output a single object with defaults only. \"\n                \"Otherwise, emit one object per entity found. \"\n                \"Include every key in schema order, enforce types, and replace missing or \"\n                \"unparseable values with defaults (string N/A, integer 0, float 0.0, date null). \"\n                \"Produce nothing beyond the JSON.\"\n            ),\n            required=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"schema_name\",\n            display_name=\"Schema Name\",\n            info=\"Provide a name for the output data schema.\",\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=\"Define the structure and data types for the model's output.\",\n            required=True,\n            # TODO: remove deault value\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"name\": \"field\",\n                    \"description\": \"description of field\",\n                    \"type\": \"str\",\n                    \"multiple\": \"False\",\n                }\n            ],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"structured_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_output\",\n        ),\n    ]\n\n    def build_structured_output_base(self):\n        schema_name = self.schema_name or \"OutputModel\"\n\n        if not hasattr(self.llm, \"with_structured_output\"):\n            msg = \"Language model does not support structured output.\"\n            raise TypeError(msg)\n        if not self.output_schema:\n            msg = \"Output schema cannot be empty\"\n            raise ValueError(msg)\n\n        output_model_ = build_model_from_schema(self.output_schema)\n\n        output_model = create_model(\n            schema_name,\n            __doc__=f\"A list of {schema_name}.\",\n            objects=(list[output_model_], Field(description=f\"A list of {schema_name}.\")),  # type: ignore[valid-type]\n        )\n\n        try:\n            llm_with_structured_output = create_extractor(self.llm, tools=[output_model])\n        except NotImplementedError as exc:\n            msg = f\"{self.llm.__class__.__name__} does not support structured output.\"\n            raise TypeError(msg) from exc\n\n        config_dict = {\n            \"run_name\": self.display_name,\n            \"project_name\": self.get_project_name(),\n            \"callbacks\": self.get_langchain_callbacks(),\n        }\n        result = get_chat_result(\n            runnable=llm_with_structured_output,\n            system_message=self.system_prompt,\n            input_value=self.input_value,\n            config=config_dict,\n        )\n\n        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure\n        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)\n        if not isinstance(result, dict):\n            return result\n\n        # Extract first response and convert BaseModel to dict\n        responses = result.get(\"responses\", [])\n        if not responses:\n            return result\n\n        # Convert BaseModel to dict (creates the \"objects\" key)\n        first_response = responses[0]\n        structured_data = first_response.model_dump() if isinstance(first_response, BaseModel) else first_response\n\n        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)\n        return structured_data.get(\"objects\", structured_data)\n\n    def build_structured_output(self) -> Data:\n        output = self.build_structured_output_base()\n\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = (\n                \"No structured output was returned.\"\n                \"Please review your input or update the system message to obtain a better result.\"\n            )\n            raise ValueError(msg)\n        if len(output) != 1:\n            msg = \"Multiple structured outputs returned\"\n            raise ValueError(msg)\n        return Data(data=output[0])\n"
               },
               "input_value": {
-                "_input_type": "MessageTextInput",
+                "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Input Message",
                 "dynamic": false,
                 "info": "The input message to the language model.",
@@ -2618,6 +2647,7 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
+                "multiline": true,
                 "name": "input_value",
                 "placeholder": "",
                 "required": true,
@@ -2786,7 +2816,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are an AI system designed to extract structured information from unstructured text.Given the input_text, return a JSON object with predefined keys based on the expected structure.Extract values accurately and format them according to the specified type (e.g., string, integer, float, date).If a value is missing or cannot be determined, return a default (e.g., null, 0, or 'N/A').If multiple instances of the expected structure exist within the input_text, stream each as a separate JSON object."
+                "value": "Extract data from input_text and return only a JSON array matching the provided schema. First check relevance: if the text lacks information for any schema field (e.g., it is purely conversational), output a single object with defaults only. Otherwise, emit one object per entity found. Include every key in schema order, enforce types, and replace missing or unparseable values with defaults (string N/A, integer 0, float 0.0, date null). Produce nothing beyond the JSON."
               }
             },
             "tool_mode": false
@@ -2795,54 +2825,28 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-n8Y3t",
+        "id": "StructuredOutput-tBOf5",
         "measured": {
           "height": 349,
           "width": 320
         },
         "position": {
-          "x": 735.3215653605321,
-          "y": 423.7970360460631
+          "x": 735.8940947922318,
+          "y": 412.81380770523515
         },
         "selected": false,
         "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-AJ1HC",
-          "node": {
-            "description": "# Hybrid Search RAG\n\nHybrid search performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n* An [Astra DB Application Token](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html) for the Astra DB component.\n\n## Quickstart\n\n1. In the Astra DB component, add your Astra DB Application Token.\nThis connects Langflow to your Astra database.\n2. Select an Astra collection that is hybrid-enabled.\nFor more information, see the [Datastax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html).\nThe connection appears between the Parser component and the Astra DB component when a vector database is connected.\n3. Ensure the **Lexical Terms** and **Parsed Text** ports are connected.\n4. Add your OpenAI API key in the **Language Model** model component.\n5. Open the Playground and ask a question, like \"What are the features of my data?\"",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "blue"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "id": "note-AJ1HC",
-        "measured": {
-          "height": 601,
-          "width": 575
-        },
-        "position": {
-          "x": 816.3801044575429,
-          "y": -279.19595575780494
-        },
-        "selected": false,
-        "type": "noteNode"
       }
     ],
     "viewport": {
-      "x": 28.84866644052977,
-      "y": 276.30129659855504,
-      "zoom": 0.5265349644912217
+      "x": -154.98164900642905,
+      "y": 76.64695852593036,
+      "zoom": 0.7773311531740895
     }
   },
   "description": "Explore Hybrid Search with a vector database.",
   "endpoint_name": null,
-  "id": "cd58d400-fe60-47c6-b2b5-4a7d3eada7b1",
+  "id": "3ec0e9b6-d3aa-431e-b43d-b67dc0e052cc",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Hybrid Search RAG",

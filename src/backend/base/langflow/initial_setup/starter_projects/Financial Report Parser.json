@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-ZMjjt",
+            "id": "parser-w0new",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-DHgU9",
+            "id": "ChatOutput-rO8bL",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,20 +24,19 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-ZMjjt{œdataTypeœ:œparserœ,œidœ:œparser-ZMjjtœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DHgU9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DHgU9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-w0new{œdataTypeœ:œparserœ,œidœ:œparser-w0newœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-rO8bL{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-rO8bLœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-ZMjjt",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-ZMjjtœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-DHgU9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-DHgU9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-w0new",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-w0newœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-rO8bL",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-rO8bLœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-jtKdb",
+            "id": "LanguageModelComponent-rJnPl",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -45,27 +44,26 @@
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-2t0FB",
+            "id": "StructuredOutput-DFJAS",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-jtKdb{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-jtKdbœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-2t0FB{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-2t0FBœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__LanguageModelComponent-rJnPl{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-rJnPlœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-DFJAS{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-DFJASœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LanguageModelComponent-jtKdb",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-jtKdbœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-2t0FB",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-2t0FBœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-rJnPl",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-rJnPlœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "StructuredOutput-DFJAS",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-DFJASœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-VaLgK",
+            "id": "ChatInput-Dwkgx",
             "name": "message",
             "output_types": [
               "Message"
@@ -73,27 +71,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-2t0FB",
+            "id": "StructuredOutput-DFJAS",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-VaLgK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VaLgKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-2t0FB{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-2t0FBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__ChatInput-Dwkgx{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Dwkgxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-DFJAS{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-DFJASœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-VaLgK",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-VaLgKœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-2t0FB",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-2t0FBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-Dwkgx",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Dwkgxœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "StructuredOutput-DFJAS",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-DFJASœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-2t0FB",
+            "id": "StructuredOutput-DFJAS",
             "name": "structured_output",
             "output_types": [
               "Data"
@@ -101,7 +97,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-ZMjjt",
+            "id": "parser-w0new",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -109,18 +105,17 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-StructuredOutput-2t0FB{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-2t0FBœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-ZMjjt{œfieldNameœ:œinput_dataœ,œidœ:œparser-ZMjjtœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "StructuredOutput-2t0FB",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-2t0FBœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "parser-ZMjjt",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-ZMjjtœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__StructuredOutput-DFJAS{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-DFJASœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-parser-w0new{œfieldNameœ:œinput_dataœ,œidœ:œparser-w0newœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "source": "StructuredOutput-DFJAS",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-DFJASœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
+        "target": "parser-w0new",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-w0newœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatOutput-DHgU9",
+          "id": "ChatOutput-rO8bL",
           "node": {
             "base_classes": [
               "Message"
@@ -418,7 +413,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-DHgU9",
+        "id": "ChatOutput-rO8bL",
         "measured": {
           "height": 48,
           "width": 192
@@ -432,7 +427,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-VaLgK",
+          "id": "ChatInput-Dwkgx",
           "node": {
             "base_classes": [
               "Message"
@@ -732,7 +727,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-VaLgK",
+        "id": "ChatInput-Dwkgx",
         "measured": {
           "height": 48,
           "width": 192
@@ -746,7 +741,7 @@
       },
       {
         "data": {
-          "id": "note-O8fhi",
+          "id": "note-eWCJS",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -758,7 +753,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-O8fhi",
+        "id": "note-eWCJS",
         "measured": {
           "height": 324,
           "width": 324
@@ -772,7 +767,7 @@
       },
       {
         "data": {
-          "id": "note-2715s",
+          "id": "note-iAYhq",
           "node": {
             "description": "\n# Financial Report Parser\n\nThis template extracts key financial metrics from a given financial report text using OpenAI's GPT-4o-mini model. The extracted data is structured and formatted for chat consumption.\n\n## Prerequisites\n\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your OpenAI API key to the Language model.\n2. To run the flow, click **Playground**.\nThe **Chat Input** component in this template is pre-loaded with a sample financial report for demonstrating how structured data is extracted.\n\n* The **Language Model** model component identifies and retrieves Gross Profit, EBITDA, Net Income, and Operating Expenses from the financial report.\n* The **Structured Output** component formats extracted data into a structured format for better readability and further processing.\n* The **Parser** component converts extracted data into formatted messages for chat consumption.\n\n\n\n\n\n",
             "display_name": "",
@@ -783,10 +778,10 @@
         },
         "dragging": false,
         "height": 688,
-        "id": "note-2715s",
+        "id": "note-iAYhq",
         "measured": {
           "height": 688,
-          "width": 620
+          "width": 619
         },
         "position": {
           "x": 270.9912976390468,
@@ -799,7 +794,7 @@
       },
       {
         "data": {
-          "id": "parser-ZMjjt",
+          "id": "parser-w0new",
           "node": {
             "base_classes": [
               "Message"
@@ -961,21 +956,21 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-ZMjjt",
+        "id": "parser-w0new",
         "measured": {
-          "height": 360,
+          "height": 361,
           "width": 320
         },
         "position": {
           "x": 1765.290752395121,
           "y": 164.78283431885177
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "LanguageModelComponent-jtKdb",
+          "id": "LanguageModelComponent-rJnPl",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -999,6 +994,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
+            "last_updated": "2025-07-04T18:18:56.331Z",
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
@@ -1019,7 +1015,9 @@
                 "group_outputs": false,
                 "method": "text_response",
                 "name": "text_output",
-                "selected": null,
+                "options": null,
+                "required_inputs": null,
+                "selected": "Message",
                 "tool_mode": true,
                 "types": [
                   "Message"
@@ -1033,6 +1031,8 @@
                 "group_outputs": false,
                 "method": "build_model",
                 "name": "model_output",
+                "options": null,
+                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1249,9 +1249,9 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-jtKdb",
+        "id": "LanguageModelComponent-rJnPl",
         "measured": {
-          "height": 450,
+          "height": 451,
           "width": 320
         },
         "position": {
@@ -1263,12 +1263,13 @@
       },
       {
         "data": {
-          "id": "StructuredOutput-2t0FB",
+          "id": "StructuredOutput-DFJAS",
           "node": {
             "base_classes": [
               "Data"
             ],
             "beta": false,
+            "category": "processing",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Uses an LLM to generate structured data. Ideal for extraction and consistency.",
@@ -1284,8 +1285,8 @@
             ],
             "frozen": false,
             "icon": "braces",
+            "key": "StructuredOutput",
             "legacy": false,
-            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1306,6 +1307,7 @@
               }
             ],
             "pinned": false,
+            "score": 0.007568328950209746,
             "template": {
               "_type": "Component",
               "code": {
@@ -1324,11 +1326,12 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from pydantic import BaseModel, Field, create_model\nfrom trustcall import create_extractor\n\nfrom langflow.base.models.chat_result import get_chat_result\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.helpers.base_model import build_model_from_schema\nfrom langflow.io import (\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    TableInput,\n)\nfrom langflow.schema.data import Data\nfrom langflow.schema.table import EditMode\n\n\nclass StructuredOutputComponent(Component):\n    display_name = \"Structured Output\"\n    description = \"Uses an LLM to generate structured data. Ideal for extraction and consistency.\"\n    documentation: str = \"https://docs.langflow.org/components-processing#structured-output\"\n    name = \"StructuredOutput\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"llm\",\n            display_name=\"Language Model\",\n            info=\"The language model to use to generate the structured output.\",\n            input_types=[\"LanguageModel\"],\n            required=True,\n        ),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Message\",\n            info=\"The input message to the language model.\",\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Format Instructions\",\n            info=\"The instructions to the language model for formatting the output.\",\n            value=(\n                \"You are an AI that extracts one structured JSON object from unstructured text. \"\n                \"Use a predefined schema with expected types (str, int, float, bool, dict). \"\n                \"If multiple structures exist, extract only the first most complete one. \"\n                \"Fill missing or ambiguous values with defaults: null for missing values. \"\n                \"Ignore duplicates and partial repeats. \"\n                \"Always return one valid JSON, never throw errors or return multiple objects.\"\n                \"Output: A single well-formed JSON object, and nothing else.\"\n            ),\n            required=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"schema_name\",\n            display_name=\"Schema Name\",\n            info=\"Provide a name for the output data schema.\",\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=\"Define the structure and data types for the model's output.\",\n            required=True,\n            # TODO: remove deault value\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"name\": \"field\",\n                    \"description\": \"description of field\",\n                    \"type\": \"str\",\n                    \"multiple\": \"False\",\n                }\n            ],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"structured_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_output\",\n        ),\n    ]\n\n    def build_structured_output_base(self):\n        schema_name = self.schema_name or \"OutputModel\"\n\n        if not hasattr(self.llm, \"with_structured_output\"):\n            msg = \"Language model does not support structured output.\"\n            raise TypeError(msg)\n        if not self.output_schema:\n            msg = \"Output schema cannot be empty\"\n            raise ValueError(msg)\n\n        output_model_ = build_model_from_schema(self.output_schema)\n\n        output_model = create_model(\n            schema_name,\n            __doc__=f\"A list of {schema_name}.\",\n            objects=(list[output_model_], Field(description=f\"A list of {schema_name}.\")),  # type: ignore[valid-type]\n        )\n\n        try:\n            llm_with_structured_output = create_extractor(self.llm, tools=[output_model])\n        except NotImplementedError as exc:\n            msg = f\"{self.llm.__class__.__name__} does not support structured output.\"\n            raise TypeError(msg) from exc\n\n        config_dict = {\n            \"run_name\": self.display_name,\n            \"project_name\": self.get_project_name(),\n            \"callbacks\": self.get_langchain_callbacks(),\n        }\n        result = get_chat_result(\n            runnable=llm_with_structured_output,\n            system_message=self.system_prompt,\n            input_value=self.input_value,\n            config=config_dict,\n        )\n\n        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure\n        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)\n        if not isinstance(result, dict):\n            return result\n\n        # Extract first response and convert BaseModel to dict\n        responses = result.get(\"responses\", [])\n        if not responses:\n            return result\n\n        # Convert BaseModel to dict (creates the \"objects\" key)\n        first_response = responses[0]\n        structured_data = first_response.model_dump() if isinstance(first_response, BaseModel) else first_response\n\n        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)\n        return structured_data.get(\"objects\", structured_data)\n\n    def build_structured_output(self) -> Data:\n        output = self.build_structured_output_base()\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = \"No structured output returned\"\n            raise ValueError(msg)\n        if len(output) != 1:\n            msg = \"Multiple structured outputs returned\"\n            raise ValueError(msg)\n        return Data(data=output[0])\n"
+                "value": "from pydantic import BaseModel, Field, create_model\nfrom trustcall import create_extractor\n\nfrom langflow.base.models.chat_result import get_chat_result\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.helpers.base_model import build_model_from_schema\nfrom langflow.io import (\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    TableInput,\n)\nfrom langflow.schema.data import Data\nfrom langflow.schema.table import EditMode\n\n\nclass StructuredOutputComponent(Component):\n    display_name = \"Structured Output\"\n    description = \"Uses an LLM to generate structured data. Ideal for extraction and consistency.\"\n    documentation: str = \"https://docs.langflow.org/components-processing#structured-output\"\n    name = \"StructuredOutput\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"llm\",\n            display_name=\"Language Model\",\n            info=\"The language model to use to generate the structured output.\",\n            input_types=[\"LanguageModel\"],\n            required=True,\n        ),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Message\",\n            info=\"The input message to the language model.\",\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Format Instructions\",\n            info=\"The instructions to the language model for formatting the output.\",\n            value=(\n                \"Extract data from input_text and return only a JSON array matching the provided schema. \"\n                \"First check relevance: if the text lacks information for any schema field \"\n                \"(e.g., it is purely conversational), output a single object with defaults only. \"\n                \"Otherwise, emit one object per entity found. \"\n                \"Include every key in schema order, enforce types, and replace missing or \"\n                \"unparseable values with defaults (string N/A, integer 0, float 0.0, date null). \"\n                \"Produce nothing beyond the JSON.\"\n            ),\n            required=True,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"schema_name\",\n            display_name=\"Schema Name\",\n            info=\"Provide a name for the output data schema.\",\n            advanced=True,\n        ),\n        TableInput(\n            name=\"output_schema\",\n            display_name=\"Output Schema\",\n            info=\"Define the structure and data types for the model's output.\",\n            required=True,\n            # TODO: remove deault value\n            table_schema=[\n                {\n                    \"name\": \"name\",\n                    \"display_name\": \"Name\",\n                    \"type\": \"str\",\n                    \"description\": \"Specify the name of the output field.\",\n                    \"default\": \"field\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n                {\n                    \"name\": \"description\",\n                    \"display_name\": \"Description\",\n                    \"type\": \"str\",\n                    \"description\": \"Describe the purpose of the output field.\",\n                    \"default\": \"description of field\",\n                    \"edit_mode\": EditMode.POPOVER,\n                },\n                {\n                    \"name\": \"type\",\n                    \"display_name\": \"Type\",\n                    \"type\": \"str\",\n                    \"edit_mode\": EditMode.INLINE,\n                    \"description\": (\"Indicate the data type of the output field (e.g., str, int, float, bool, dict).\"),\n                    \"options\": [\"str\", \"int\", \"float\", \"bool\", \"dict\"],\n                    \"default\": \"str\",\n                },\n                {\n                    \"name\": \"multiple\",\n                    \"display_name\": \"As List\",\n                    \"type\": \"boolean\",\n                    \"description\": \"Set to True if this output field should be a list of the specified type.\",\n                    \"default\": \"False\",\n                    \"edit_mode\": EditMode.INLINE,\n                },\n            ],\n            value=[\n                {\n                    \"name\": \"field\",\n                    \"description\": \"description of field\",\n                    \"type\": \"str\",\n                    \"multiple\": \"False\",\n                }\n            ],\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"structured_output\",\n            display_name=\"Structured Output\",\n            method=\"build_structured_output\",\n        ),\n    ]\n\n    def build_structured_output_base(self):\n        schema_name = self.schema_name or \"OutputModel\"\n\n        if not hasattr(self.llm, \"with_structured_output\"):\n            msg = \"Language model does not support structured output.\"\n            raise TypeError(msg)\n        if not self.output_schema:\n            msg = \"Output schema cannot be empty\"\n            raise ValueError(msg)\n\n        output_model_ = build_model_from_schema(self.output_schema)\n\n        output_model = create_model(\n            schema_name,\n            __doc__=f\"A list of {schema_name}.\",\n            objects=(list[output_model_], Field(description=f\"A list of {schema_name}.\")),  # type: ignore[valid-type]\n        )\n\n        try:\n            llm_with_structured_output = create_extractor(self.llm, tools=[output_model])\n        except NotImplementedError as exc:\n            msg = f\"{self.llm.__class__.__name__} does not support structured output.\"\n            raise TypeError(msg) from exc\n\n        config_dict = {\n            \"run_name\": self.display_name,\n            \"project_name\": self.get_project_name(),\n            \"callbacks\": self.get_langchain_callbacks(),\n        }\n        result = get_chat_result(\n            runnable=llm_with_structured_output,\n            system_message=self.system_prompt,\n            input_value=self.input_value,\n            config=config_dict,\n        )\n\n        # OPTIMIZATION NOTE: Simplified processing based on trustcall response structure\n        # Handle non-dict responses (shouldn't happen with trustcall, but defensive)\n        if not isinstance(result, dict):\n            return result\n\n        # Extract first response and convert BaseModel to dict\n        responses = result.get(\"responses\", [])\n        if not responses:\n            return result\n\n        # Convert BaseModel to dict (creates the \"objects\" key)\n        first_response = responses[0]\n        structured_data = first_response.model_dump() if isinstance(first_response, BaseModel) else first_response\n\n        # Extract the objects array (guaranteed to exist due to our Pydantic model structure)\n        return structured_data.get(\"objects\", structured_data)\n\n    def build_structured_output(self) -> Data:\n        output = self.build_structured_output_base()\n\n        if not isinstance(output, list) or not output:\n            # handle empty or unexpected type case\n            msg = (\n                \"No structured output was returned.\"\n                \"Please review your input or update the system message to obtain a better result.\"\n            )\n            raise ValueError(msg)\n        if len(output) != 1:\n            msg = \"Multiple structured outputs returned\"\n            raise ValueError(msg)\n        return Data(data=output[0])\n"
               },
               "input_value": {
-                "_input_type": "MessageTextInput",
+                "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Input Message",
                 "dynamic": false,
                 "info": "The input message to the language model.",
@@ -1338,6 +1341,7 @@
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
+                "multiline": true,
                 "name": "input_value",
                 "placeholder": "",
                 "required": true,
@@ -1455,19 +1459,7 @@
                   {
                     "description": "description of field",
                     "multiple": "False",
-                    "name": "EBITDA",
-                    "type": "str"
-                  },
-                  {
-                    "description": "description of field",
-                    "multiple": false,
-                    "name": "NET_INCOME",
-                    "type": "str"
-                  },
-                  {
-                    "description": "description of field",
-                    "multiple": false,
-                    "name": "GROSS_PROFIT",
+                    "name": "field",
                     "type": "str"
                   }
                 ]
@@ -1518,38 +1510,37 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are an AI system designed to extract structured information from unstructured text.Given the input_text, return a JSON object with predefined keys based on the expected structure.Extract values accurately and format them according to the specified type (e.g., string, integer, float, date).If a value is missing or cannot be determined, return a default (e.g., null, 0, or 'N/A').If multiple instances of the expected structure exist within the input_text, stream each as a separate JSON object."
+                "value": "Extract data from input_text and return only a JSON array matching the provided schema. First check relevance: if the text lacks information for any schema field (e.g., it is purely conversational), output a single object with defaults only. Otherwise, emit one object per entity found. Include every key in schema order, enforce types, and replace missing or unparseable values with defaults (string N/A, integer 0, float 0.0, date null). Produce nothing beyond the JSON."
               }
             },
             "tool_mode": false
           },
-          "selected_output": "parsed_text",
           "showNode": true,
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-2t0FB",
+        "id": "StructuredOutput-DFJAS",
         "measured": {
-          "height": 348,
+          "height": 349,
           "width": 320
         },
         "position": {
-          "x": 1365.3538332076944,
-          "y": 156.68214734917737
+          "x": 1342.0004126643005,
+          "y": 156.73574022903662
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -287.9400172575938,
-      "y": 302.4551039081521,
-      "zoom": 0.6307952275474222
+      "x": -467.9195181007394,
+      "y": 223.22669942311143,
+      "zoom": 0.7494932389561056
     }
   },
   "description": "Extracts key financial metrics like Gross Profit, EBITDA, and Net Income from financial reports and structures them for easy analysis, using Structured Output Component",
   "endpoint_name": null,
-  "id": "f63a6251-214d-4f5f-8b20-20e354463908",
+  "id": "4fcbf1ce-28c7-4f14-8942-94d00e655173",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Financial Report Parser",
