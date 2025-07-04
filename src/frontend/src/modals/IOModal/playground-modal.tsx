@@ -356,7 +356,7 @@ export default function IOModal({
       setOpen={setOpen}
       disable={disable}
       type={isPlayground ? "full-screen" : undefined}
-      onSubmit={() => sendMessage({ repeat: 1 })}
+      onSubmit={async () => await sendMessage({ repeat: 1 })}
       size="x-large"
       className="!rounded-[12px] p-0"
     >

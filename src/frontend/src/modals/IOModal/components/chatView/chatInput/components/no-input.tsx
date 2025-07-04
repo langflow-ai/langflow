@@ -7,7 +7,7 @@ import { cn } from "../../../../../../utils/utils";
 
 interface NoInputViewProps {
   isBuilding: boolean;
-  sendMessage: (args: { repeat: number }) => void;
+  sendMessage: (args: { repeat: number }) => Promise<void>;
   stopBuilding: () => void;
 }
 
@@ -23,8 +23,8 @@ const NoInputView: React.FC<NoInputViewProps> = ({
           <Button
             data-testid="button-send"
             className="font-semibold"
-            onClick={() => {
-              sendMessage({
+            onClick={async () => {
+              await sendMessage({
                 repeat: 1,
               });
             }}
