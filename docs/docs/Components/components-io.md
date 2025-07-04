@@ -206,13 +206,15 @@ Optionally, to view the outputs of each component in the flow, click <Icon name=
 The **Chat Input** component is often the entry point for passing messages to the Langflow API.
 To send the same example messages programmatically to your Langflow server, do the following:
 
-1. To get your Langflow endpoint, click **Publish**, and then click **API access**.
+1. To get your Langflow endpoint, click **Share**, and then click **API access**.
 2. Copy the command from the **cURL** tab, and then paste it in your terminal.
-It looks similar to this:
+The values for `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` are automatically completed with values from your Langflow deployment.
+If your values are different, you must replace them.
 ```text
 curl --request POST \
-  --url 'http://localhost:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
-  --header 'Content-Type: application/json' \
+  --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+  --header "Content-Type: application/json" \
+  --header "x-api-key: LANGFLOW_API_KEY" \
   --data '{
   "input_value": "What's the recommended way to install Docker on Mac M1?",
   "output_type": "chat",
@@ -226,8 +228,9 @@ Note the `output_type` and `input_type` parameters that are passed with the mess
 4. Add a custom `session_id` to the message's `data` object.
 ```text
 curl --request POST \
-  --url 'http://localhost:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
-  --header 'Content-Type: application/json' \
+  --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+  --header "Content-Type: application/json" \
+  --header "x-api-key: LANGFLOW_API_KEY" \
   --data '{
   "input_value": "Whats the recommended way to install Docker on Mac M1",
   "session_id": "docker-question-on-m1",
@@ -241,13 +244,14 @@ The custom `session_id` value starts a new chat session between your client and 
 Your request is answered.
 6. Navigate to the **Playground**.
 A new chat session called `docker-question-on-m1` has appeared, using your unique `session_id`.
-7. To modify additional parameters with **Tweaks** for your **Chat Input** and **Chat Output** components, click **Publish**, and then click **API access**.
-8. Click **Tweaks** to modify parameters in the component's `data` object.
+7. To modify additional parameters with **Tweaks** for your **Chat Input** and **Chat Output** components, click **Share**, and then click **API access**.
+8. Click **Input schema** to modify parameters in the component's `data` object.
 For example, disabling storing messages from the **Chat Input** component adds a **Tweak** to your command:
 ```text
 curl --request POST \
-  --url 'http://localhost:7860/api/v1/run/51eed711-4530-4fdc-9bce-5db4351cc73a?stream=false' \
-  --header 'Content-Type: application/json' \
+  --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+  --header "Content-Type: application/json" \
+  --header "x-api-key: LANGFLOW_API_KEY" \
   --data '{
   "input_value": "Text to input to the flow",
   "output_type": "chat",

@@ -16,11 +16,12 @@ This differentiation between users per session is helpful in managing client/ser
 Custom session IDs can be set as part of the payload in API calls, or as advanced settings in individual components. The API session ID value takes precedence. If no session ID is specified, the flow ID is assigned.
 
 If you set a custom session ID in a payload, all downstream components use the upstream component's session ID value.
-
+Replace `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` with the values from your Langflow deployment.
 ```
 curl --request POST \
-  --url 'http://localhost:7860/api/v1/run/$FLOW_ID' \
-  --header 'Content-Type: application/json' \
+  --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+  --header "Content-Type: application/json" \
+  --header "x-api-key: $LANGFLOW_API_KEY" \
   --data '{
   "input_value": "Hello",
   "output_type": "chat",

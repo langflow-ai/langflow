@@ -12,7 +12,15 @@ Langflow provides several ways to publish and integrate your flows into external
 
 The **API access** pane presents code templates for integrating your flow into external applications.
 
-![](/img/api-pane.png)
+As of Langflow version 1.5, all API requests require authentication with a Langflow API key, even if `AUTO_LOGIN` is set to `True`.
+For more information, see [API keys](/configuration-api-keys).
+Alternatively, the API pane's code snippets include a script to detect your local `LANGFLOW_API_KEY`.
+To set this variable in your terminal:
+```bash
+export LANGFLOW_API_KEY="sk..."
+```
+
+![API pane](/img/api-pane.png)
 
 <Tabs>
 

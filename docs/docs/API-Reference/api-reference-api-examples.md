@@ -48,12 +48,22 @@ The Langflow port number is set in the `LANGFLOW_PORT` [environment variable](/e
 
 ### Authentication
 
-Your [Langflow deployment's authentication settings](/configuration-authentication) determine whether Langflow API requests require explicit authentication with a Langflow API key.
+<details closed>
+<summary>Auto-login and API key authentication in earlier Langflow versions</summary>
 
-If explicit authentication is required, you must provide a valid Langflow API key in either an `x-api-key` header or query parameter.
+Prior to Langflow v1.5, when `AUTO_LOGIN` was enabled with `AUTO_LOGIN=true`, Langflow automatically logged users in as a superuser without requiring authentication, and API requests could be made without a Langflow API key.
+
+If you set `SKIP_AUTH_AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key, regardless of the `AUTO_LOGIN` setting.
+
+</details>
+
+As of Langflow v1.5, all API requests require a Langflow API key, even when `AUTO_LOGIN` is enabled.
+
+The only exceptions are the MCP endpoints at `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`.
+The MCP-related endpoints will continue to require no authentication when `AUTO_LOGIN=true`.
+
+You must provide a valid Langflow API key in either an `x-api-key` header or a query parameter.
 For more information, see [API keys](/configuration-api-keys).
-
-Because authentication isn't always required, Langflow API examples in the Langflow documentation often omit authentication.
 
 ### Methods, paths, and parameters
 
@@ -84,7 +94,7 @@ For example:
 export LANGFLOW_URL="http://localhost:7860"
 export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 export PROJECT_ID="1415de42-8f01-4f36-bf34-539f23e47466"
-export API_KEY="sk-..."
+export LANGFLOW_API_KEY="sk-..."
 ```
 
 :::tip
@@ -96,8 +106,6 @@ export API_KEY="sk-..."
 
 Once you have your Langflow server URL, try calling these endpoints that return Langflow metadata.
 
-If authentication is required, include an `x-api-key` header or query parameter with a valid [Langflow API key](/configuration-api-keys), such as `-H 'x-api-key: $API_KEY'`.
-
 ### Get version
 
 Returns the current Langflow API version:
@@ -105,7 +113,8 @@ Returns the current Langflow API version:
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/version" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 <details>
@@ -126,7 +135,8 @@ Returns configuration details for your Langflow deployment:
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/config" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 <details>
@@ -152,7 +162,8 @@ Returns a dictionary of all Langflow components:
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/all" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 ## Next steps

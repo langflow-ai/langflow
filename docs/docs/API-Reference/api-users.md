@@ -24,6 +24,7 @@ This creates a new UUID for the user's `id`, which is mapped to `user_id` in the
 curl -X POST \
   "$LANGFLOW_URL/api/v1/users/" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
     "username": "newuser2",
     "password": "securepassword123"
