@@ -780,7 +780,12 @@ def api_key(
         api_key_banner(unmasked_api_key)
 
 
-@app.command()
+@app.command(
+    help=(
+        "Execute a Langflow graph script or JSON flow and return the result. "
+        "Designed for containers and serverless environments."
+    )
+)
 def execute(
     script_path: Path = typer.Argument(  # noqa: B008
         ..., help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
@@ -791,15 +796,7 @@ def execute(
 ) -> None:
     """Execute a Langflow graph script or JSON flow and return the result.
 
-    This command analyzes and executes either a Python script containing a Langflow graph
-    or a JSON flow file, returning the result in the specified format. By default, output
-    is minimal for use in containers and serverless environments.
-
-    Args:
-        script_path: Path to the Python script (.py) or JSON flow (.json) containing a graph
-        input_value: Input value to pass to the graph
-        verbose: Show diagnostic output and execution details
-        output_format: Format for output (json, text, message, or result)
+    Designed for containers and serverless environments.
     """
     import json
 
@@ -853,7 +850,10 @@ def execute(
 
 
 # Register the serve command
-app.command(name="serve")(serve_command)
+app.command(
+    name="serve",
+    help="Serve Langflow flows as a web API or MCP server. Supports single files, folders, and GitHub repos.",
+)(serve_command)
 
 
 def show_version(*, value: bool):
