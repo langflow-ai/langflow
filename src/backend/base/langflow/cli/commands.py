@@ -21,6 +21,7 @@ from langflow.cli.common import (
     download_and_extract_repo,
     ensure_dependencies_installed,
     extract_script_dependencies,
+    extract_script_docstring,
     flow_id_from_path,
     get_api_key,
     get_best_access_host,
@@ -41,6 +42,8 @@ console = Console()
 
 # Constants
 API_KEY_MASK_LENGTH = 8
+DOCSTRING_PREVIEW_LENGTH_SINGLE = 60
+DOCSTRING_PREVIEW_LENGTH_FOLDER = 100
 
 # Security - use the same pattern as Langflow main API
 API_KEY_NAME = "x-api-key"
@@ -176,13 +179,17 @@ def serve_command(
             sys.path.insert(0, str(folder_path))
 
         json_files: list[Path] = [p for p in folder_path.rglob("*.json") if p.is_file()]
-        if not json_files:
-            verbose_print("Error: No .json flow files found in the provided folder.")
+        py_files: list[Path] = [p for p in folder_path.rglob("*.py") if p.is_file()]
+
+        all_files = json_files + py_files
+        if not all_files:
+            verbose_print("Error: No .json or .py flow files found in the provided folder.")
             raise typer.Exit(1)
 
         graphs: dict[str, Graph] = {}
         metas: dict[str, FlowMeta] = {}
 
+        # Process JSON files
         for json_file in json_files:
             try:
                 graph = load_graph_from_path(json_file, ".json", verbose_print, verbose=verbose)
@@ -198,9 +205,39 @@ def serve_command(
                     description=None,
                 )
                 graphs[flow_id] = graph
-                verbose_print(f"✓ Prepared flow '{title}' (id={flow_id})")
+                verbose_print(f"✓ Prepared JSON flow '{title}' (id={flow_id})")
             except Exception as exc:
-                verbose_print(f"✗ Failed loading flow '{json_file}': {exc}")
+                verbose_print(f"✗ Failed loading JSON flow '{json_file}': {exc}")
+                raise typer.Exit(1) from exc
+
+        # Process Python files
+        for py_file in py_files:
+            try:
+                graph = load_graph_from_path(py_file, ".py", verbose_print, verbose=verbose)
+                flow_id = flow_id_from_path(py_file, folder_path)
+                graph.flow_id = flow_id  # annotate graph for reference
+                graph.prepare()
+
+                title = py_file.stem
+
+                # Extract docstring for description
+                description = extract_script_docstring(py_file)
+                if description:
+                    preview = description[:DOCSTRING_PREVIEW_LENGTH_SINGLE]
+                    if len(description) > DOCSTRING_PREVIEW_LENGTH_SINGLE:
+                        preview += "..."
+                    verbose_print(f"✓ Found docstring for '{title}': {preview}")
+
+                metas[flow_id] = FlowMeta(
+                    id=flow_id,
+                    relative_path=str(py_file.relative_to(folder_path)),
+                    title=title,
+                    description=description,
+                )
+                graphs[flow_id] = graph
+                verbose_print(f"✓ Prepared Python flow '{title}' (id={flow_id})")
+            except Exception as exc:
+                verbose_print(f"✗ Failed loading Python flow '{py_file}': {exc}")
                 raise typer.Exit(1) from exc
 
         # Check port availability
@@ -355,12 +392,25 @@ def serve_command(
     graph.flow_id = flow_id  # annotate graph for reference
 
     title = resolved_path.stem
+
+    # Extract docstring for Python files
+    description = None
+    if file_extension == ".py":
+        description = extract_script_docstring(resolved_path)
+        if description:
+            preview = description[:DOCSTRING_PREVIEW_LENGTH_FOLDER]
+            if len(description) > DOCSTRING_PREVIEW_LENGTH_FOLDER:
+                preview += "..."
+            verbose_print(f"✓ Found docstring for description: {preview}")
+        else:
+            verbose_print("No module docstring found")
+
     metas = {
         flow_id: FlowMeta(
             id=flow_id,
             relative_path=str(resolved_path.name),
             title=title,
-            description=None,
+            description=description,
         )
     }
     graphs = {flow_id: graph}

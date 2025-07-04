@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import contextlib
 import importlib.metadata as importlib_metadata
 import io
@@ -610,3 +611,40 @@ def download_and_extract_repo(url: str, verbose_print, *, timeout: float = 60.0)
         raise
     else:
         return root_path
+
+
+def extract_script_docstring(script_path: Path) -> str | None:
+    """Extract the module-level docstring from a Python script.
+
+    Args:
+        script_path: Path to the Python script file
+
+    Returns:
+        The docstring text if found, None otherwise
+    """
+    try:
+        # Read the file content
+        with script_path.open(encoding="utf-8") as f:
+            content = f.read()
+
+        # Parse the AST
+        tree = ast.parse(content)
+
+        # Check if the first statement is a docstring
+        # A docstring is a string literal that appears as the first statement
+        if (
+            tree.body
+            and isinstance(tree.body[0], ast.Expr)
+            and isinstance(tree.body[0].value, ast.Constant)
+            and isinstance(tree.body[0].value.value, str)
+        ):
+            docstring = tree.body[0].value.value
+            # Clean up the docstring by removing extra whitespace
+            return docstring.strip()
+
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        # If we can't read or parse the file, just return None
+        # Don't raise an error as this is optional functionality
+        pass
+
+    return None
