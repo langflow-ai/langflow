@@ -310,7 +310,7 @@ test(
 
       await expect(
         page.getByTestId(`checkbox-${newTxtFile}`).last(),
-      ).not.toHaveAttribute("data-state", "checked", { timeout: 3000 });
+      ).toHaveAttribute("data-state", "checked", { timeout: 3000 });
 
       await page.getByTestId("select-files-modal-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
