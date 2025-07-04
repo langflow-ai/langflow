@@ -5,7 +5,7 @@ slug: /concepts-flows-import
 
 import Icon from "@site/src/components/icon";
 
-You can import and export flows to transfer flows between Langflow instances or save backups of your flows.
+You can export flows to transfer them between Langflow instances, share them with others, or create backups.
 
 ## Export a flow
 
@@ -15,7 +15,7 @@ There are three ways to export a flow:
 * When editing a flow, click **Share**, and then click **Export**.
 * Use the Langflow API [`/flows/download`](/api-flows#export-flows) endpoint.
 
-Exported flows are downloaded to your local machine as a JSON files named `FLOW_NAME.json`.
+An exported flow is downloaded to your local machine as a JSON file named `FLOW_NAME.json`.
 For more information, see [Langflow JSON file contents](#langflow-json-file-contents).
 
 ### Save with my API keys
@@ -29,7 +29,7 @@ If you directly entered the key value into a component's API key field, then **S
 If your key is stored in a Langflow global variable, **Save with my API keys** exports only the variable name.
 :::
 
-When you or another user import the flow to another Langflow instance, that instance must have Langflow global variables with the same names and a valid values in order to run the flow successfully.
+When you or another user import the flow to another Langflow instance, that instance must have Langflow global variables with the same names and valid values in order to run the flow successfully.
 If any variables are missing or invalid, those variables must be created or edited after importing the flow.
 
 ### Export all flows
@@ -58,7 +58,7 @@ For more information, see [Save with my API keys](/concepts-flows-import#save-wi
 
 ## Langflow JSON file contents
 
-Exported flows are downloaded to your local machine as a JSON files named `FLOW_NAME.json`.
+An exported flow is downloaded to your local machine as a JSON file named `FLOW_NAME.json`.
 
 Langflow JSON files contain [nodes](#nodes) and [edges](#edges) that describe components and connections, and [additional metadata](#additional-metadata-and-project-information) that describe the flow.
 

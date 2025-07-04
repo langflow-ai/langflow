@@ -61,54 +61,54 @@ curl -X POST \
 
 ### Upload image files (v1)
 
-Send image files to the Langflow API for AI analysis.
+Send image files to the Langflow API for use in a flow.
 
-The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
-For more information, see [Supported environment variables](/environment-variables#supported-variables).
+The default file limit is 100 MB.
+To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
 
-1. To send an image to your flow with the API, POST the image file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
-   Replace **FILE_NAME** with the uploaded file name.
+1. Attach the image to a `POST /v1/files/upload/$FLOW_ID` request with `--form` and the file path:
 
-```bash
-curl -X POST "$LANGFLOW_URL/api/v1/files/upload/a430cc57-06bb-4c11-be39-d3d4de68d2c4" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@FILE_NAME.png"
-```
+    ```bash
+    curl -X POST "$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID" \
+      -H "Content-Type: multipart/form-data" \
+      -F "file=@PATH/TO/FILE.png"
+    ```
 
-The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<TIMESTAMP>_<FILE-NAME>"}`.
+    A successful request returns the `file_path` for the image in the Langflow file management system in the format `FLOW_ID/TIMESTAMP_FILENAME.TYPE`.
+    For example:
 
-```json
-{
-  "flowId": "a430cc57-06bb-4c11-be39-d3d4de68d2c4",
-  "file_path": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png"
-}
-```
-
-1. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
-   Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
-   Component `id` values can be found in [Langflow JSON files](/concepts-flows-import#langflow-json-file-contents).
-
-```bash
-curl -X POST \
-    "$LANGFLOW_URL/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
-    -H 'Content-Type: application/json'\
-    -d '{
-    "output_type": "chat",
-    "input_type": "chat",
-    "tweaks": {
-      "ChatInput-b67sL": {
-        "files": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png",
-        "input_value": "what do you see?"
-      }
+    ```json
+    {
+      "flowId": "a430cc57-06bb-4c11-be39-d3d4de68d2c4",
+      "file_path": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png"
     }
-  }'
-```
+    ```
 
-Your chatbot describes the image file you sent.
+2. Use the returned `file_path` to send the image file to other components that can accept file input. Where you specify the file path depends on the component type.
 
-```text
-"text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here's a breakdown of its components and how they might work together..."
-```
+    The following example runs a [Basic Prompting flow](/basic-prompting), passing the image file and the query `describe this image` as input for the **Chat Input** component.
+    In this case, the file path is specified in `tweaks`.
+
+    ```bash
+    curl -X POST \
+        "$LANGFLOW_URL/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
+        -H 'Content-Type: application/json'\
+        -d '{
+        "output_type": "chat",
+        "input_type": "chat",
+        "tweaks": {
+          "ChatInput-b67sL": {
+            "files": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png",
+            "input_value": "describe this image"
+          }
+        }
+      }'
+    ```
+
+    :::tip
+    For help with tweaks, use the **Input Schema** in a flow's [**API access** pane](/concepts-publish#api-access).
+    Setting tweaks with **Input Schema** also automatically populates the required component IDs.
+    :::
 
 ### List files (v1)
 

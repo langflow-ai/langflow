@@ -25,7 +25,7 @@ To [build a flow](/concepts-flows), you connect and configure component nodes. E
 With Langflow's [visual editor](/concepts-overview), you can drag and drop components to quickly build and test a functional AI application workflow.
 For example, you could build a chatbot flow for an e-commerce store that uses an LLM and a product data store to allow customers to ask questions about the store's products.
 
-![Basic prompting flow within in the workspace](/img/workspace-basic-prompting.png)
+![Basic prompting flow within the Workspace](/img/workspace-basic-prompting.png)
 
 ### Test flows in real-time
 

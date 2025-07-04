@@ -10,7 +10,7 @@ Flows receive input, process it, and produce output.
 
 Flows consist of _components_ that represent individual steps in your application's workflow.
 
-![Basic prompting flow within in the workspace](/img/workspace-basic-prompting.png)
+![Basic prompting flow within the Workspace](/img/workspace-basic-prompting.png)
 
 Langflow flows are fully serializable and can be saved and loaded from the file system where Langflow is installed.
 
@@ -55,7 +55,7 @@ If you need to build Langflow as a dependency of an application or deploy a Lang
 
 #### Flow graphs
 
-When a flow runs, Langflow builds a Directed Acyclic Graph (DAG) graph object from the nodes (components) and edges (connections), and the nodes are sorted to determine the order of execution.
+When a flow runs, Langflow builds a Directed Acyclic Graph (DAG) object from the nodes (components) and edges (connections), and the nodes are sorted to determine the order of execution.
 
 The graph build calls each component's `def_build` function to validate and prepare the nodes.
 This graph is then processed in dependency order.
@@ -70,7 +70,7 @@ Langflow projects are like folders that you can use to organize related flows.
 The default project is **Starter Project**, and your flows are stored here unless you create another project.
 To create a project, click <Icon name="Plus" aria-hidden="true"/> **Create new project**.
 
-![](/img/my-projects.png)
+![Projects page with multiple flows in a project](/img/my-projects.png)
 
 From the **Projects** page, you can manage flows within each of your projects:
 * **View flows in a project**: Select the project name in the **Projects** list.

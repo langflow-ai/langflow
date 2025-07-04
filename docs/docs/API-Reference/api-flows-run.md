@@ -21,7 +21,7 @@ Execute a specified flow by ID or name.
 The flow is executed as a batch, but LLM responses can be streamed.
 
 The following example runs a [Basic Prompting](/basic-prompting) flow with a given flow ID and passes a JSON object as the input value.
-Flow IDs can be found on the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
+You can find Flow IDs in the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
 
 The parameters are passed in the request body. In this example, the values are the default values.
 

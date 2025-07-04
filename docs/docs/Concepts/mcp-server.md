@@ -27,7 +27,7 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 Each [Langflow project](/concepts-flows#projects) has an MCP server that exposes the project's flows as tools that MCP clients can use to generate responses.
 
-By default, all of the flows in a project are exposed as tools on the project's MCP server.
+By default, all flows in a project are exposed as tools on the project's MCP server.
 
 The following steps explain how to limit the exposed flows and, optionally, rename flows for agentic use:
 
@@ -40,13 +40,13 @@ Alternatively, you can quickly access the **MCP Server** tab from within any flo
 
     ![MCP server projects page](/img/mcp-server.png)
 
-2. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Actions**.
+1. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Actions**.
 
-3. In the **MCP Server Actions** window, select the flows that you want exposed as tools.
+2. In the **MCP Server Actions** window, select the flows that you want exposed as tools.
 
     ![MCP server actions](/img/mcp-server-actions.png)
 
-4. Optional: Edit the **Flow Name** and **Flow Description**.
+3. Optional: Edit the **Flow Name** and **Flow Description**.
 
     - **Flow Name**: Enter a name thats makes it clear what the flow does.
 
@@ -57,7 +57,7 @@ Alternatively, you can quickly access the **MCP Server** tab from within any flo
    For more information about naming and describing your flows, see [Name and describe your flows for agentic use](#name-and-describe-your-flows).
    :::
 
-5. Close the **MCP Server Actions** window to save your changes.
+4. Close the **MCP Server Actions** window to save your changes.
 
 {/* The anchor on this section (connect-clients-to-use-the-servers-actions) is currently a link target in the Langflow UI. Do not change. */}
 ## Connect clients to Langflow's MCP server {#connect-clients-to-use-the-servers-actions}

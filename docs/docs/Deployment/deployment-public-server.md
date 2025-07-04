@@ -119,7 +119,7 @@ For a demo of the Langflow API in a script, see the [Quickstart](/get-started-qu
 ### Share a flow's Playground externally
 
 :::important
-The **Sharable Playground** is for testing purposes only.
+The **Shareable Playground** is for testing purposes only.
 
 The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see the following:
 
@@ -138,5 +138,5 @@ To share a flow's **Playground** with another user, do the following:
 1. In Langflow, open the flow you want share.
 2. From the **Workspace**, click **Share**, and then enable **Shareable Playground**.
 3. Click **Shareable Playground** again to open the **Playground** window.
-This window's URL is the flow's **Sharable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
+This window's URL is the flow's **Shareable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
 4. Send the URL to another user to give them access to the flow's **Playground**.
