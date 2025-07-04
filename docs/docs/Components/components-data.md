@@ -262,28 +262,37 @@ Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictu
 
 This component defines a webhook trigger that runs a flow when it receives an HTTP POST request.
 
+<!--TODO: Does this require auth in 1.5? -->
+
 If the input is not valid JSON, the component wraps it in a `payload` object so that it can be processed and still trigger the flow. The component does not require an API key.
 
-When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
+When you add a **Webhook** component to a flow, the flow's [**API access** pane](/concept-publish#api-access) exposes an additional **Webhook cURL** tab that contains a `POST /v1/webhook/$FLOW_ID` code snippet.
+You can use this request to send data to the **Webhook** component and trigger the flow.
+For example:
 
 ```bash
 curl -X POST \
-  "http://localhost:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
+  "$LANGFLOW_SERVER_URL/api/v1/webhook/$FLOW_ID" \
   -H 'Content-Type: application/json'\
   -d '{"any": "data"}'
   ```
 
-To test the webhook component:
+The **Webhook** component is often paired with a [**Parser** component](/components-processing#parser) to extract relevant data from the raw payload.
+For more information, see [Trigger flows with webhooks](/webhook).
 
-1. Add a **Webhook** component to the flow.
-2. Connect the **Webhook** component's **Data** output to the **Data** input of a [Parser](/components-processing#parser) component.
-3. Connect the **Parser** component's **Parsed Text** output to the **Text** input of a [Chat Output](/components-io#chat-output) component.
-4. In the **Parser** component, under **Mode**, select **Stringify**.
-This mode passes the webhook's data as a string for the **Chat Output** component to print.
-5. To send a POST request, copy the code from the **Webhook cURL** tab in the **API** pane and paste it into a terminal.
-6. Send the POST request.
-7. Open the **Playground**.
-Your JSON data is posted to the **Chat Output** component, which indicates that the webhook component is correctly triggering the flow.
+To troubleshoot a flow with a **Webhook** component and verify that the component is receiving data, you can create a small flow that outputs only the parsed payload:
+
+1. Create a flow with **Webhook**, **Parser**, and **Chat Output** components.
+2. Connect the Webhook component's **Data** output to the Parser component's **Data** input.
+3. Connect the Parser component's **Parsed Text** output to the Chat Output component's **Text** input.
+4. Edit the **Parser** component to set **Mode** to **Stringify**.
+
+    This mode passes the data received by the Webhook component as a string that is printed by the **Chat Output** component.
+
+5. Click **Share**, select **API access**, and then copy the **Webhook cURL** code snippet.
+6. Optional: Edit the `data` in the code snippet if you want to pass a different payload.
+7. Send the POST request to trigger the flow.
+8. Click **Playground** to verify that the **Chat Output** component printed the JSON data from your POST request.
 
 <details>
 <summary>Parameters</summary>
