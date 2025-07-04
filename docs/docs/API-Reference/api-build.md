@@ -95,8 +95,6 @@ curl -X GET \
 | accept | Required. Specifies the response format. | "application/json" |
 | x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
 
-The `/build/$FLOW_ID/flow` endpoint accepts the following parameters in its request body:
-
 ## Build parameters
 
 | Parameter | Type | Description |
