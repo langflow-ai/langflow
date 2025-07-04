@@ -104,7 +104,7 @@ test_frontend_verbose: frontend_deps_check ## run frontend tests with verbose ou
 # Run frontend tests in CI mode (no watch, with coverage)
 test_frontend_ci: frontend_deps_check ## run frontend tests in CI mode
 	@echo "Running frontend tests in CI mode..."
-	@cd $(FRONTEND_DIR) && npx jest --ci --coverage --watchAll=false
+	@cd $(FRONTEND_DIR) && CI=true npx jest --ci --coverage --watchAll=false
 
 # Clean test cache and run tests
 test_frontend_clean: frontend_deps_check ## clean test cache and run tests
@@ -186,7 +186,7 @@ help_frontend: ## show frontend help
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  format_frontend      - Format frontend code"
-	@echo ""  
+	@echo ""
 	@echo "Testing:"
 	@echo "  tests_frontend       - Run frontend Playwright e2e tests"
 	@echo "  test_frontend        - Run frontend Jest unit tests"
@@ -203,4 +203,4 @@ help_frontend: ## show frontend help
 	@echo "  test_frontend_file path         - Run tests for specific file"
 	@echo "  test_frontend_pattern pattern   - Run tests matching pattern"
 	@echo "  test_frontend_snapshots         - Update Jest snapshots"
-	@echo "  test_frontend_config            - Show Jest configuration" 
+	@echo "  test_frontend_config            - Show Jest configuration"

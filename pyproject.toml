@@ -105,7 +105,7 @@ dependencies = [
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain>=0.1.29",
     "crewai==0.102.0",
-    "mcp>=1.9.4",
+    "mcp>=1.10.1",
     "uv>=0.5.7",
     "scipy>=1.14.1",
     "ag2>=0.1.0",
@@ -175,6 +175,7 @@ dev = [
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
     "pyyaml>=6.0.2",
+    "pyleak>=0.1.12",
 ]
 
 [tool.uv.sources]

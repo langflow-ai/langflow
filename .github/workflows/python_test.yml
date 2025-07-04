@@ -2,6 +2,11 @@ name: Python tests
 
 on:
   workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+      ANTHROPIC_API_KEY:
+        required: true
     inputs:
       python-versions:
         description: "(Optional) Python versions to test"
@@ -31,6 +36,7 @@ env:
 
 jobs:
   build:
+
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
     strategy:
@@ -84,6 +90,9 @@ jobs:
         run: uv sync
       - name: Run integration tests
         run: make integration_tests_no_api_keys
+        env:
+          PYLEAK_LOG_LEVEL: debug # enable pyleak logging
+          DO_NOT_TRACK: true # disable telemetry reporting
 
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}

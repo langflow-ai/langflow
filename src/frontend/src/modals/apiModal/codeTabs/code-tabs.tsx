@@ -64,7 +64,7 @@ export default function APITabsComponent() {
     endpointName: endpointName || "",
     streaming: streaming,
     flowId: flowId || "",
-    isAuthenticated: !autologin || false,
+    isAuthenticated: autologin || false,
     processedPayload: processedPayload,
   };
   const tabsList: tabsArrayType = [
@@ -149,7 +149,7 @@ export default function APITabsComponent() {
               size="icon"
               onClick={copyToClipboard}
               data-testid="btn-copy-code"
-              className="!hover:bg-foreground group absolute right-2 top-2"
+              className="!hover:bg-foreground group absolute right-4 top-2"
             >
               {isCopied ? (
                 <IconComponent

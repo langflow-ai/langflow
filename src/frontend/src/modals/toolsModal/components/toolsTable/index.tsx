@@ -13,8 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { APITemplateType } from "@/types/api";
-import { parseString } from "@/utils/stringManipulation";
+import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
 import { ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
@@ -25,6 +24,7 @@ export default function ToolsTable({
   data,
   setData,
   isAction,
+  placeholder,
   open,
   handleOnNewValue,
 }: {
@@ -34,6 +34,7 @@ export default function ToolsTable({
   open: boolean;
   handleOnNewValue: handleOnNewValueType;
   isAction: boolean;
+  placeholder: string;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
@@ -77,7 +78,7 @@ export default function ToolsTable({
   }, [agGrid.current]);
 
   useEffect(() => {
-    if (!open && selectedRows) {
+    if (!open) {
       handleOnNewValue({
         value: data.map((row) => {
           const name = parseString(row.name, [
@@ -94,7 +95,7 @@ export default function ToolsTable({
             name !== "" && name !== display_name
               ? name
               : isAction
-                ? ""
+                ? sanitizeMcpName(display_name || row.name, 46)
                 : display_name
           ).slice(0, 46);
 
@@ -161,7 +162,7 @@ export default function ToolsTable({
     },
     {
       field: "name",
-      headerName: isAction ? "Action" : "Slug",
+      headerName: isAction ? "Tool" : "Slug",
       flex: 1,
       resizable: false,
       valueGetter: (params) =>
@@ -172,11 +173,7 @@ export default function ToolsTable({
               "uppercase",
             ])
           : isAction
-            ? parseString(params.data.display_name, [
-                "snake_case",
-                "no_blank",
-                "uppercase",
-              ])
+            ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
             : parseString(params.data.tags.join(", "), [
                 "snake_case",
                 "uppercase",
@@ -237,8 +234,10 @@ export default function ToolsTable({
   };
 
   const handleNameChange = (e) => {
-    setSidebarName(e.target.value);
-    handleSidebarInputChange("name", e.target.value);
+    const rawValue = e.target.value;
+    const sanitizedValue = isAction ? sanitizeMcpName(rawValue, 46) : rawValue;
+    setSidebarName(sanitizedValue);
+    handleSidebarInputChange("name", sanitizedValue);
   };
 
   const handleSearchChange = (e) => setSearchQuery(e.target.value);
@@ -264,7 +263,7 @@ export default function ToolsTable({
         <div className="flex-none px-4">
           <Input
             icon="Search"
-            placeholder="Search actions..."
+            placeholder="Search tools..."
             inputClassName="h-8"
             value={searchQuery}
             onChange={handleSearchChange}
@@ -301,7 +300,7 @@ export default function ToolsTable({
                     className="text-mmd font-medium"
                     htmlFor="sidebar-name-input"
                   >
-                    Name
+                    {isAction ? "Tool name" : "Name"}
                   </label>
 
                   <Input
@@ -323,7 +322,7 @@ export default function ToolsTable({
                     className="text-mmd font-medium"
                     htmlFor="sidebar-desc-input"
                   >
-                    Description
+                    {isAction ? "Tool description" : "Description"}
                   </label>
 
                   <Textarea
@@ -336,7 +335,7 @@ export default function ToolsTable({
                   />
                   <div className="text-xs text-muted-foreground">
                     {isAction
-                      ? "This is the description for the action exposed to the clients."
+                      ? "This is the description for the tool exposed to a client."
                       : "This is the description for the tool exposed to the agents."}
                   </div>
                 </div>
@@ -371,7 +370,7 @@ export default function ToolsTable({
                           Parameters
                         </h3>
                         <p className="text-mmd text-muted-foreground">
-                          Manage inputs for this action
+                          Manage inputs for this tool
                         </p>
                       </div>
                     )}
