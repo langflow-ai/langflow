@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ import IOKeyPairInput from "@/modals/IOModal/components/IOFieldView/components/k
 import { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
+import { cn } from "@/utils/utils";
 import {
   useIsFetching,
   usePrefetchQuery,
@@ -51,7 +53,9 @@ export default function AddMcpServerModal({
     initialData ? (initialData.command ? "STDIO" : "SSE") : "JSON",
   );
   const [jsonValue, setJsonValue] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    "Error downloading file: File _mcp_servers.json not found in flow 7e93e2c5-b979-49c0-b01b-4f4111d9230d",
+  );
   const { mutateAsync: addMCPServer, isPending: isAddPending } =
     useAddMCPServer();
   const { mutateAsync: patchMCPServer, isPending: isPatchPending } =
@@ -252,7 +256,7 @@ export default function AddMcpServerModal({
               {initialData ? "Update MCP Server" : "Add MCP Server"}
             </div>
             <span className="text-mmd font-normal text-muted-foreground">
-              Save MCP Servers. Manage added connections in{" "}
+              Save MCP Servers. Manage added servers in{" "}
               <CustomLink className="underline" to="/settings/mcp-servers">
                 settings
               </CustomLink>
@@ -295,9 +299,16 @@ export default function AddMcpServerModal({
                 id="global-variable-modal-inputs"
               >
                 {error && (
-                  <div className="absolute right-4 top-2.5 text-xs font-medium text-red-500">
-                    {error}
-                  </div>
+                  <ShadTooltip content={error}>
+                    <div
+                      className={cn(
+                        "absolute right-4 top-4 truncate text-xs font-medium text-red-500",
+                        type === "JSON" ? "w-3/5" : "w-4/5",
+                      )}
+                    >
+                      {error}
+                    </div>
+                  </ShadTooltip>
                 )}
                 <TabsContent value="JSON">
                   <div className="flex flex-col gap-2">

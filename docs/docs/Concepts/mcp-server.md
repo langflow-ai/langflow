@@ -21,6 +21,8 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 * Any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer to use MCP Inspector to [test and debug flows](#test-and-debug-flows).
 
+* [ngrok installed](https://ngrok.com/docs/getting-started/#1-install-ngrok) and an [ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) if you want to [deploy a public Langflow server](/deployment-public-server).
+
 ## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
 
 Each [Langflow project](/concepts-flows#projects) has an MCP server that exposes the project's flows as tools that MCP clients can use to generate responses.
@@ -88,7 +90,8 @@ For example:
     ```
 
     The **MCP Server** tab automatically includes the correct `PROJECT_NAME`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` values.
-    The default Langflow server address is `http://localhost:7860` (`http://localhost:7868` if using Langflow for Desktop).
+    The default Langflow server address is `http://localhost:7860`.
+    If you have [deployed a public Langflow server](/deployment-public-server), the address is automatically included.
 
     :::important
     If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
@@ -150,6 +153,11 @@ To include environment variables with your MCP server command, include them like
 ```
 
 Replace `KEY` and `VALUE` with the environment variable name and value you want to include.
+
+{/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
+### Deploy your MCP server externally {#deploy-your-server-externally}
+
+To deploy your MCP server externally with ngrok, see [Deploy a public Langflow server](/deployment-public-server).
 
 ## Name and describe your flows for agentic use {#name-and-describe-your-flows}
 
@@ -224,84 +232,6 @@ The default address is `http://localhost:6274`.
     From this tab, you can monitor how your flows are being registered as tools by MCP, as well as test the tools with custom input values.
 
 5. To quit MCP Inspector, press <kbd>Control+C</kbd> in the same terminal window where you started it.
-
-{/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
-## Deploy your MCP server externally {#deploy-your-server-externally}
-
-By default, Langflow isn't exposed to the public internet.
-However, you can forward Langflow server traffic with a forwarding platform like [ngrok](https://ngrok.com/docs/getting-started/) or [zrok](https://docs.zrok.io/docs/getting-started).
-
-The following procedure uses ngrok, but you can use any similar reverse proxy or forwarding platform.
-This procedure also assumes that you're using the default Langflow listening address `http://localhost:7860` (`http://localhost:7868` if using Langflow for Desktop).
-
-1. Sign up for an [ngrok account](https://dashboard.ngrok.com/signup).
-
-2. [Install ngrok](https://ngrok.com/docs/getting-started/#1-install-ngrok).
-
-3. Copy your [ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) and use it to authenticate your local ngrok server:
-
-    ```bash
-    ngrok config add-authtoken NGROK_TOKEN
-    ```
-
-    Replace `NGROK_TOKEN` with your ngrok authtoken.
-
-4. Use ngrok to expose your Langflow server to the public internet:
-
-    ```bash
-    ngrok http http://localhost:7860
-    ```
-
-    The ngrok session starts in your terminal and deploys an ephemeral domain with no authentication.
-    To add authentication or deploy a static domain, see the [ngrok documentation](https://ngrok.com/docs/).
-
-
-    The `Forwarding` row displays the forwarding address for your Langflow server:
-
-    ```
-    Forwarding https://94b1-76-64-171-14.ngrok-free.app -> http://localhost:7860
-    ```
-
-    The forwarding address is acting as a reverse proxy for your Langflow server.
-
-5. From the Langflow dashboard, select the project that contains the flows you want to serve as tools, and then click the **MCP Server** tab.
-
-      Note that the code template now contains your ngrok forwarding address instead of the localhost address:
-
-      ```json
-      {
-        "mcpServers": {
-          "PROJECT_NAME": {
-            "command": "uvx",
-            "args": [
-              "mcp-proxy",
-              "https://94b1-73-64-171-14.ngrok-free.app/api/v1/mcp/project/fdbc12af-0dd4-43dc-b9ce-c324d1ce5cd1/sse"
-            ]
-          }
-        }
-      }
-    ```
-
-6. Complete the steps in [Connect clients to Langflow's MCP server](#connect-clients-to-use-the-servers-actions) using the ngrok forwarding address.
-
-Your MCP client is now connected to your project's MCP server over the public internet.
-
-If using Cursor, your conversations are the same as they are on your local host:
-
-```
-{
-  "input_value": "What job experience does Emily have?"
-}
-Result:
-What job experience does Emily have?
-Emily J. Wilson has the following job experience:
-```
-
-You can use the ngrok console output to monitor requests for your project's endpoint:
-
-```
-16:35:48.566 EDT GET /api/v1/mcp/project/fdbc12af-0dd4-43dc-b9ce-c324d1ce5cd1 200 OK
-```
 
 ## Troubleshooting MCP server
 
