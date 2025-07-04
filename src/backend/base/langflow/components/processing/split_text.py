@@ -11,6 +11,7 @@ from langflow.utils.util import unescape_string
 class SplitTextComponent(Component):
     display_name: str = "Split Text"
     description: str = "Split text into chunks based on specified criteria."
+    documentation: str = "https://docs.langflow.org/components-processing#split-text"
     icon = "scissors-line-dashed"
     name = "SplitText"
 
