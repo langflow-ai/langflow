@@ -32,7 +32,7 @@ By default, all of the flows in a project are exposed as tools on the project's 
 The following steps explain how to limit the exposed flows and, optionally, rename flows for agentic use:
 
 1. From the Langflow dashboard, select the project that contains the flows you want to serve as tools, and then click the **MCP Server** tab.
-Alternatively, you can quickly access the **MCP Server** tab from within any flow by selecting **Publish > MCP Server**.
+Alternatively, you can quickly access the **MCP Server** tab from within any flow by selecting **Share > MCP Server**.
 
     The **MCP Server** tab displays a code template that you can use to connect MCP clients to the the project's MCP server.
 
@@ -40,13 +40,13 @@ Alternatively, you can quickly access the **MCP Server** tab from within any flo
 
     ![MCP server projects page](/img/mcp-server.png)
 
-1. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Actions**.
+2. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Actions**.
 
-2. In the **MCP Server Actions** window, select the flows that you want exposed as tools.
+3. In the **MCP Server Actions** window, select the flows that you want exposed as tools.
 
     ![MCP server actions](/img/mcp-server-actions.png)
 
-3. Optional: Edit the **Flow Name** and **Flow Description**.
+4. Optional: Edit the **Flow Name** and **Flow Description**.
 
     - **Flow Name**: Enter a name thats makes it clear what the flow does.
 
@@ -57,7 +57,7 @@ Alternatively, you can quickly access the **MCP Server** tab from within any flo
    For more information about naming and describing your flows, see [Name and describe your flows for agentic use](#name-and-describe-your-flows).
    :::
 
-4. Close the **MCP Server Actions** window to save your changes.
+5. Close the **MCP Server Actions** window to save your changes.
 
 {/* The anchor on this section (connect-clients-to-use-the-servers-actions) is currently a link target in the Langflow UI. Do not change. */}
 ## Connect clients to Langflow's MCP server {#connect-clients-to-use-the-servers-actions}

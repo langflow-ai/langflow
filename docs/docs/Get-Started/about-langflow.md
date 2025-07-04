@@ -4,7 +4,7 @@ slug: /about-langflow
 ---
 
 Langflow is an open-source, Python-based, customizable framework for building AI applications.
-It supports important AI functionality, like agents and Model Context Protocol (MCP), and it doesn't require you to use specific large language models (LLMs) or vector stores.
+It supports important AI functionality like agents and the Model Context Protocol (MCP), and it doesn't require you to use specific large language models (LLMs) or vector stores.
 
 The visual editor simplifies prototyping of application workflows, enabling developers to quickly turn their ideas into powerful, real-world solutions.
 
@@ -54,7 +54,7 @@ Langflow provides [components](/concepts-components) that support many services,
 Some components are generalized, such as inputs, outputs, and data stores.
 Others are specialized, such as agents, language models, and embedding providers.
 
-All components offer parameters that you can set to fixed or variable values. You can also use tweaks to temporarily override flow settings at run-time.
+All components offer parameters that you can set to fixed or variable values. You can also use tweaks to temporarily override flow settings at runtime.
 
 ### Agent and MCP support
 

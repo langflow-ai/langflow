@@ -5,9 +5,10 @@ slug: /concepts-overview
 
 import Icon from "@site/src/components/icon";
 
-You use Langflow's visual editor to create, test, and share flows.
+You use Langflow's visual editor to create, test, and share flows, which are functional representations of application workflows.
+Flows consist of components that represent individual steps in your application's workflow.
 
-The drag-and-drop interface allows you to create complex AI workflows without writing extensive code.
+Langflow's drag-and-drop interface allows you to create complex AI workflows without writing extensive code.
 You can connect different resources, including prompts, large language models (LLMs), data sources, agents, MCP servers, and other tools and integrations.
 
 :::tip
@@ -16,12 +17,12 @@ To try building and running a flow in a few minutes, see the [Langflow quickstar
 
 ## Workspace
 
-When building a flow, you primarily interact with the **Workspace**.
-This is where you add components, configure them, and attach them together.
+When building a [flow](/concepts-flows), you primarily interact with the **Workspace**.
+This is where you add [components](/concepts-components), configure them, and attach them together.
 
 ![Empty langflow workspace](/img/workspace.png)
 
-From the **Workspace**, you can also access the [**Playground**](#playground), [**Share** menu](#share-menu), and [flow logs](/concepts-flows#flow-logs).
+From the **Workspace**, you can also access the [**Playground**](#playground), [**Share** menu](#share-menu), and [**Logs**](/concepts-flows#flow-logs).
 
 ### Workspace gestures and interactions
 
@@ -34,8 +35,8 @@ From the **Workspace**, you can also access the [**Playground**](#playground), [
 - To lock the visual position of the components, click <Icon name="LockOpen" aria-hidden="true"/> **Lock**.
 
 - To zoom, use any of the following options:
-   - Scroll up or down on the mouse or trackpad
-   - Click <Icon name="ZoomIn" aria-hidden="true"/> **Zoom In** or <Icon name="ZoomOut" aria-hidden="true"/> **Zoom Out**
+   - Scroll up or down on the mouse or trackpad.
+   - Click <Icon name="ZoomIn" aria-hidden="true"/> **Zoom In** or <Icon name="ZoomOut" aria-hidden="true"/> **Zoom Out**.
    - Click <Icon name="Maximize" aria-hidden="true"/> **Fit To Zoom** to scale the zoom level to show the entire flow.
 
 - To add a text box for non-functional notes and comments, click <Icon name="StickyNote" aria-hidden="true"/> **Add Note**.
@@ -66,10 +67,10 @@ The **Share** menu provides the following options for integrating your flow into
 * [**Export**](/concepts-flows-import#export-a-flow): Export your flow to your local machine as a JSON file.
 * [**MCP Server**](/mcp-server): Expose your flow as a tool for MCP-compatible clients.
 * [**Embed into site**](/concepts-publish#embedded-chat-widget): Embed your flow in HTML, React, or Angular applications.
-<!--TODO_Expose_For_1.5 * [**Shareable playground**](/concepts-publish#shareable-playground): Share your **Playground** interface with another user. This is specifically for sharing the **Playground** experience; it isn't for running a flow in a production application. -->
+* [**Shareable playground**](/concepts-publish#shareable-playground): Share your **Playground** interface with another user. This is specifically for sharing the **Playground** experience; it isn't for running a flow in a production application.
 
 ## See also
 
-* [Manage files](/concepts-file-management): Upload, store, and manage files in Langflow's file management system.
+* [Manage files in Langflow](/concepts-file-management)
 * [Global variables](/configuration-global-variables)
 * [Langflow API keys](configuration-api-keys)

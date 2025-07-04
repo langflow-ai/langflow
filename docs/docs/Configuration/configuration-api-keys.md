@@ -108,7 +108,7 @@ You can store API keys for Langflow components as [global variables](/configurat
 
 1. In the Langflow UI header, click your profile icon, and then select **Settings**.
 2. Click **Global Variables**.
-3. Click **Add New**
+3. Click **Add New**.
 4. For **Type**, select **Credential**.
 5. For **Name**, enter a name for the variable that will store the API key.
 6. For **Value**, enter the API key that you want to store.
@@ -116,6 +116,6 @@ You can store API keys for Langflow components as [global variables](/configurat
 
     You can override automatically set variables by manually entering a different variable name or value when you add the affected component to a flow.
 
-    Additionally, you can override all component settings by [running a flow with tweaks](/get-started-quickstart#use-tweaks-to-apply-temporary-overrides-to-a-flow-run), which are modifications to component settings that you make at run-time and apply to a single flow run only.
+    Additionally, you can override all component settings by [running a flow with tweaks](/get-started-quickstart#use-tweaks-to-apply-temporary-overrides-to-a-flow-run), which are modifications to component settings that you make at runtime and apply to a single flow run only.
 
 8. Click **Save Variable**.

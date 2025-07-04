@@ -6,7 +6,7 @@ slug: /deployment-public-server
 By default, your Langflow server at `http://localhost:7860` isn't exposed to the public internet.
 However, you can forward Langflow server traffic with a forwarding platform like [ngrok](https://ngrok.com/docs/getting-started/) or [zrok](https://docs.zrok.io/docs/getting-started) to make your server public.
 
-When your Langflow server is public, you can do things like [deploy your Langflow MCP server externally](#deploy-your-mcp-server-externally), [serve API requests](#serve-api-requests), and [share your playground externally](#share-your-playground-externally).
+When your Langflow server is public, you can do things like [deploy your Langflow MCP server externally](#deploy-your-mcp-server-externally), [serve API requests](#serve-api-requests), and [share a flow's **Playground** externally](#share-a-flows-playground-externally).
 
 ## Prerequisites
 
@@ -55,7 +55,7 @@ When your Langflow server is public, you can do things like [deploy your Langflo
 
 ## Use a public Langflow server
 
-When your Langflow server is public, you can do things like [deploy your Langflow MCP server externally](#deploy-your-mcp-server-externally), [serve API requests](#serve-api-requests), and [share a Playground as a public website](#share-your-playground-externally).
+When your Langflow server is public, you can do things like [deploy your Langflow MCP server externally](#deploy-your-mcp-server-externally), [serve API requests](#serve-api-requests), and [share a flow's **Playground** externally](#share-a-flows-playground-externally).
 
 ### Deploy your MCP server externally
 
@@ -116,19 +116,22 @@ For example, the following code snippet calls an ngrok domain to trigger the spe
 
 For a demo of the Langflow API in a script, see the [Quickstart](/get-started-quickstart).
 
-### Share your playground externally
-
-The **Shareable playground** option exposes the **Playground** for a single flow at the `/public_flow/{flow-id}` endpoint.
-
-This allows you to share a public URL with another user that displays only the **Playground** chat window for the specified flow.
-
-The user can interact with the flow's chat input and output and view the results without requiring a Langflow installation or API keys of their own.
+### Share a flow's Playground externally
 
 :::important
 The **Sharable Playground** is for testing purposes only.
 
-The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see [About developing and configuring Langflow applications](/develop-overview) and [Publish flows](/concepts-publish).
+The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see the following:
+
+* [Embed a flow into a website](/concepts-publish#embedded-chat-widget)
+* [Use the Langflow API to run flows](/concepts-publish#api-access)
+* [About developing and configuring Langflow applications](/develop-overview)
 :::
+
+The **Shareable playground** option exposes the [**Playground**](/concepts-playground) for a single flow at the `/public_flow/$FLOW_ID` endpoint.
+
+After you deploy a public Langflow server, you can share this public URL with another user to allow them to access the specified flow's **Playground** only.
+The user can interact with the flow's chat input and output and view the results without installing Langflow or generating a Langflow API key.
 
 To share a flow's **Playground** with another user, do the following:
 

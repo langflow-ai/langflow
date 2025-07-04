@@ -206,7 +206,7 @@ Optionally, to view the outputs of each component in the flow, click <Icon name=
 The **Chat Input** component is often the entry point for passing messages to the Langflow API.
 To send the same example messages programmatically to your Langflow server, do the following:
 
-1. To get your Langflow endpoint, click **Publish**, and then click **API access**.
+1. To get your Langflow endpoint, click **Share**, and then click **API access**.
 2. Copy the command from the **cURL** tab, and then paste it in your terminal.
 It looks similar to this:
 ```text
@@ -241,7 +241,7 @@ The custom `session_id` value starts a new chat session between your client and 
 Your request is answered.
 6. Navigate to the **Playground**.
 A new chat session called `docker-question-on-m1` has appeared, using your unique `session_id`.
-7. To modify additional parameters with **Tweaks** for your **Chat Input** and **Chat Output** components, click **Publish**, and then click **API access**.
+7. To modify additional parameters with **Tweaks** for your **Chat Input** and **Chat Output** components, click **Share**, and then click **API access**.
 8. Click **Tweaks** to modify parameters in the component's `data` object.
 For example, disabling storing messages from the **Chat Input** component adds a **Tweak** to your command:
 ```text

@@ -51,9 +51,9 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
 2. Pull the latest [Langflow Docker image](https://hub.docker.com/r/langflowai/langflow) and start it:
 
-  ```bash
-  docker run -p 7860:7860 langflowai/langflow:latest
-  ```
+    ```bash
+    docker run -p 7860:7860 langflowai/langflow:latest
+    ```
 
 3. To access Langflow, navigate to `http://localhost:7860/`.
 

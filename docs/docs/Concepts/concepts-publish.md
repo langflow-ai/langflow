@@ -18,10 +18,10 @@ For more information, see [Deployment overview](/deployment-overview) and [Appli
 
 ## Use the Langflow API to run flows {#api-access}
 
-The [Langflow API](/api-reference-api-examples) is the primary way to access your flows and Langflow servers programmatically.
+The Langflow API is the primary way to access your flows and Langflow servers programmatically.
 
-:::tip Try it`
-For a demo of the Langflow API in application code, see the [Quickstart](/get-started-quickstart).
+:::tip Try it
+For an example of a script that calls the Langflow API, see the [Quickstart](/get-started-quickstart).
 :::
 
 ### Generate API code snippets
@@ -31,16 +31,18 @@ To get these code snippets, do the following:
 
 1. In Langflow, open the flow that you want to embed in your application.
 2. Click **Share**, and then click **API access**.
-3. Copy the snippet for the language that you want to use, and then run the snippet, or use the snippet in the context of a larger script.
 
-   ![API access pane](/img/api-pane.png)
+    These code snippets call the `/v1/run/$FLOW_ID` endpoint, and they automatically populate minimum values, like the Langflow server URL, flow ID, headers, and request parameters.
 
-The code snippets automatically populate necessary values, like the Langflow server URL, flow ID, headers, and request parameters.
+    ![API access pane](/img/api-pane.png)
 
-### Authentication
+3. Optional: Click [**Input Schema**](#input-schema) to modify component parameters in the code snippets without changing the flow itself.
 
-If your snippet doesn't include an authentication header, you must add one to ensure that your script can authenticate to the Langflow API.
-For more information, see [Form Langflow API requests](/api-reference-api-examples#form-langflow-api-requests)
+4. Copy the snippet for the language that you want to use.
+
+5. Run the snippet as is, or use the snippet in the context of a larger script.
+
+For more information and examples of other Langflow API endpoints, see [Get started with the Langflow API](/api-reference-api-examples).
 
 ### Input Schema (tweaks) {#input-schema}
 
@@ -58,7 +60,26 @@ In the **API access** pane, click **Input Schema** to add `tweaks` to the reques
 Changes to a flow's **Input Schema** are saved exclusively as tweaks for that flow's **API access** code snippets.
 These tweaks don't change the flow parameters set in the **Workspace**, and they don't apply to other flows.
 
-Adding tweaks with **Input Schema** is a good way to troubleshoot formatting issues with tweaks that you manually added to Langflow API requests.
+Adding tweaks through the **Input Schema** can help you troubleshoot formatting issues with tweaks that you manually added to Langflow API requests.
+
+### Authentication
+
+If your snippet doesn't include an authentication header, consider adding one to ensure that your script can authenticate to the Langflow API.
+This is particularly important for scripts that call public or remote Langflow servers that might not have inherent superuser privileges.
+
+<!--TODO_FOR_1.5:
+TODO: Verify what is auto-populated in the snippets, and which key is chosen if multiple
+TODO: Reduce duplication w api-reference-api-examples and configuration-api-keys
+
+In Langflow versions 1.5 and later, most API endpoints require authentication with a Langflow API key.
+The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
+
+Code snippets generated in the **API access** pane automatically use a local Langflow API key, if one exists.
+
+If your snippet doesn't include an authentication header, you must add one to ensure that your script can authenticate to the Langflow API.
+-->
+
+For more information, see [Get started with the Langflow API](/api-reference-api-examples) and [API keys](/configuration-api-keys).
 
 ## Embed a flow into a website {#embedded-chat-widget}
 
@@ -86,7 +107,7 @@ For example, the following HTML embeds a chat widget for a [Basic prompting flow
 ```html
 <html>
   <head>
-    <script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
   </head>
   <body>
     <langflow-chat
@@ -276,7 +297,7 @@ You must add `CUSTOM_ELEMENTS_SCHEMA` to your module's configuration to enable t
 ```html
 <html lang="en">
 <head>
-<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js"></script>
 </head>
 <body>
 <langflow-chat
@@ -479,18 +500,13 @@ The **Shareable playground** option exposes the [**Playground**](/concepts-playg
 After you [deploy a public Langflow server](/deployment-overview), you can share this public URL with another user to allow them to access the specified flow's **Playground** only.
 The user can interact with the flow's chat input and output and view the results without installing Langflow or generating a Langflow API key.
 
-<!--TODO_Expose_For_1.5
 To share a flow's **Playground** with another user, do the following:
 
 1. In Langflow, open the flow you want share.
-
 2. From the **Workspace**, click **Share**, and then enable **Shareable Playground**.
-
 3. Click **Shareable Playground** again to open the **Playground** window.
 This window's URL is the flow's **Sharable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
-
 4. Send the URL to another user to give them access to the flow's **Playground**.
--->
 
 ## See also
 

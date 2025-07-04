@@ -94,4 +94,5 @@ The image is displayed in the chat interface and can be processed by your flow c
 
 ## See also
 
+- [Share a flow's Playground](/concepts-publish#share-a-flows-playground)
 - [Session ID](/session-id)
