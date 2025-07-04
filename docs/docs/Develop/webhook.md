@@ -20,7 +20,7 @@ For example:
 
 To use the **Webhook** component in a flow, do the following:
 
-1. In Langflow, open the flow where you want use the **Webhook** component.
+1. In Langflow, open the flow where you want to use the **Webhook** component.
 
 2. Add a [**Webhook** component](/components-data#webhook) and a [**Parser** component](/components-processing#parser) to your flow.
 
@@ -54,8 +54,7 @@ To use the **Webhook** component in a flow, do the following:
 
 6. From the Webhook component's **Endpoint** field, copy the API endpoint that you will use to send data to the Webhook component and trigger the flow.
 
-    Alternatively, to get a complete `POST /v1/webhook/$FLOW_ID` code snippet, open the flow's [**API access** pane](/concept-publish#api-access), and then click the **Webhook cURL** tab.
-
+    Alternatively, to get a complete `POST /v1/webhook/$FLOW_ID` code snippet, open the flow's [**API access** pane](/concepts-publish#api-access), and then click the **Webhook cURL** tab.
     You can also modify the default curl command in the Webhook component's **cURL** field.
     If this field isn't visible by default, click the Webhook component, and then click **Controls** in the component's header menu.
 

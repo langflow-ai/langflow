@@ -20,7 +20,7 @@ This flow requires a chat input string (`input_value`), and uses default values 
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/run/$FLOW_ID" \
+  "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "input_value": "Tell me about something interesting!",
@@ -179,7 +179,7 @@ After you add a **Webhook** component to a flow, open the [**API access** pane](
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/webhook/$FLOW_ID" \
+  "$LANGFLOW_SERVER_URL/api/v1/webhook/$FLOW_ID" \
   -H "Content-Type: application/json" \
   -d '{"data": "example-data"}'
 ```

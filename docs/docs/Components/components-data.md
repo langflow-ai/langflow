@@ -266,7 +266,7 @@ This component defines a webhook trigger that runs a flow when it receives an HT
 
 If the input is not valid JSON, the component wraps it in a `payload` object so that it can be processed and still trigger the flow. The component does not require an API key.
 
-When you add a **Webhook** component to a flow, the flow's [**API access** pane](/concept-publish#api-access) exposes an additional **Webhook cURL** tab that contains a `POST /v1/webhook/$FLOW_ID` code snippet.
+When you add a **Webhook** component to a flow, the flow's [**API access** pane](/concepts-publish#api-access) exposes an additional **Webhook cURL** tab that contains a `POST /v1/webhook/$FLOW_ID` code snippet.
 You can use this request to send data to the **Webhook** component and trigger the flow.
 For example:
 

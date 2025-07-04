@@ -139,7 +139,7 @@ Returns the current Langflow API version:
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/version" \
+  "$LANGFLOW_SERVER_URL/api/v1/version" \
   -H "accept: application/json"
 ```
 
@@ -160,7 +160,7 @@ Returns configuration details for your Langflow deployment:
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/config" \
+  "$LANGFLOW_SERVER_URL/api/v1/config" \
   -H "accept: application/json"
 ```
 
@@ -186,7 +186,7 @@ Returns a dictionary of all Langflow components:
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/all" \
+  "$LANGFLOW_SERVER_URL/api/v1/all" \
   -H "accept: application/json"
 ```
 
