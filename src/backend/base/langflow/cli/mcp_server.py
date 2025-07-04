@@ -1,7 +1,6 @@
 """MCP Server implementation for Langflow CLI using existing MCP infrastructure."""
 
 import asyncio
-from typing import Any
 
 from loguru import logger
 
