@@ -187,7 +187,7 @@ async def test_delete_file(files_client, files_created_api_key):
 
     response = await files_client.delete(f"api/v2/files/{upload_response['id']}", headers=headers)
     assert response.status_code == 200
-    assert response.json() == {"message": "File deleted successfully"}
+    assert response.json() == {"detail": "File test deleted successfully"}
 
 
 async def test_edit_file(files_client, files_created_api_key):
