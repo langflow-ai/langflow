@@ -92,8 +92,18 @@ def serve_command(
         "--install-deps/--no-install-deps",
         help="Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)",
     ),
+    mcp: bool = typer.Option(  # noqa: FBT001
+        False,  # noqa: FBT003
+        "--mcp/--no-mcp",
+        help="Enable MCP (Model Context Protocol) server mode",
+    ),
+    mcp_transport: str = typer.Option(
+        "sse",
+        "--mcp-transport",
+        help="MCP transport type. Currently only 'sse' is supported",
+    ),
 ) -> None:
-    """Serve Langflow graphs as web API endpoints with API key authentication.
+    """Serve Langflow graphs as web API endpoints or MCP (Model Context Protocol) server.
 
     This command supports multiple serving modes:
 
@@ -102,6 +112,7 @@ def serve_command(
     3. **GitHub Repository**: Serve flows from a GitHub repo (supports private repos with GITHUB_TOKEN)
     4. **Remote Script**: Serve a Python script from a URL
 
+    ## REST API Mode (default):
     All served flows use a unified API structure with /flows/{id} endpoints:
     - Single flows: Use the single flow ID under /flows/{id}/run
     - Multi-flows: Use /flows/{id}/run endpoints for each flow
@@ -109,6 +120,12 @@ def serve_command(
 
     IMPORTANT: You must set the LANGFLOW_API_KEY environment variable before
     serving. This key will be required for all API requests.
+
+    ## MCP Mode (--mcp):
+    Exposes flows as MCP tools, resources, and prompts for direct LLM integration:
+    - **Tools**: Each flow becomes an executable MCP tool
+    - **Resources**: Flow metadata and schemas available as MCP resources
+    - **Prompts**: Help and troubleshooting guidance via MCP prompts
 
     For GitHub private repositories, set the GITHUB_TOKEN environment variable.
 
@@ -121,12 +138,20 @@ def serve_command(
         env_file: Path to the .env file containing environment variables
         log_level: Logging level for the server
         install_deps: Automatically install dependencies declared via PEP-723 inline metadata (Python scripts only)
+        mcp: Enable MCP (Model Context Protocol) server mode
+        mcp_transport: MCP transport type (currently only 'sse' is supported)
 
     Example usage:
-        # Single flow serving
+        # REST API mode (default)
         export LANGFLOW_API_KEY="your-secret-key-here"
         langflow serve my_flow.py --host 0.0.0.0 --port 8080
         langflow serve my_flow.json --verbose --log-level info
+
+        # MCP mode with SSE transport (for LLM clients)
+        langflow serve my_flow.py --mcp --mcp-transport sse
+
+        # MCP mode with custom port
+        langflow serve ./my_flows_folder --mcp --port 8000
 
         # Folder serving (multiple flows)
         langflow serve ./my_flows_folder --verbose
@@ -134,22 +159,26 @@ def serve_command(
         # GitHub repository serving
         export GITHUB_TOKEN="ghp_your_token_here"  # For private repos
         langflow serve https://github.com/user/repo --verbose
-        langflow serve https://github.com/user/repo/tree/main --verbose
 
-        # Remote script serving
-        langflow serve https://example.com/my_flow.py --verbose
-
-    API Endpoints:
+    REST API Endpoints:
         GET  http://host:port/flows                  # List all flows
         POST http://host:port/flows/{id}/run         # Execute specific flow
         GET  http://host:port/flows/{id}/info        # Flow metadata
         GET  http://host:port/health                 # Health check
 
-    Authentication (all POST endpoints):
+    MCP Resources:
+        flow://flows                                 # List all flows
+        flow://flows/{id}/info                       # Flow metadata
+        flow://flows/{id}/schema                     # Flow input/output schema
+
+    MCP Tools:
+        execute_{flow_name}                          # Execute specific flow
+
+    Authentication (REST API only):
         Headers: x-api-key: your-secret-key-here
         OR Query: ?x-api-key=your-secret-key-here
 
-    Request body:
+    Request body (REST API):
         {"input_value": "Your input message"}
     """
     verbose_print = create_verbose_printer(verbose=verbose)
@@ -163,14 +192,23 @@ def serve_command(
         verbose_print(f"Loading environment variables from: {env_file}")
         load_dotenv(env_file)
 
-    # Validate API key is set
-    try:
-        api_key = get_api_key()
-        verbose_print("✓ LANGFLOW_API_KEY is configured")
-    except ValueError as e:
-        verbose_print(f"✗ {e}")
-        verbose_print("Set the LANGFLOW_API_KEY environment variable before serving.")
-        raise typer.Exit(1) from e
+    # Validate MCP options
+    if mcp:
+        if mcp_transport.lower() != "sse":
+            verbose_print(
+                f"Warning: Only SSE transport is currently supported. Using 'sse' instead of '{mcp_transport}'"
+            )
+            mcp_transport = "sse"
+        verbose_print(f"✓ MCP mode enabled with {mcp_transport} transport")
+    else:
+        # Validate API key only for REST API mode
+        try:
+            api_key = get_api_key()
+            verbose_print("✓ LANGFLOW_API_KEY is configured")
+        except ValueError as e:
+            verbose_print(f"✗ {e}")
+            verbose_print("Set the LANGFLOW_API_KEY environment variable before serving.")
+            raise typer.Exit(1) from e
 
     # Validate log level
     valid_log_levels = {"debug", "info", "warning", "error", "critical"}
@@ -243,53 +281,109 @@ def serve_command(
                 verbose_print(f"Port {port} is in use, using port {available_port} instead")
             port = available_port
 
-        # Create FastAPI app
-        serve_app = create_multi_serve_app(
-            root_dir=folder_path,
-            graphs=graphs,
-            metas=metas,
-            verbose_print=verbose_print,
-        )
+        # Start server in appropriate mode
+        if mcp:
+            # For MCP mode, we start the regular FastAPI server which includes MCP endpoints
+            verbose_print("🔧 Starting Langflow with MCP server enabled...")
 
-        verbose_print("🚀 Starting multi-flow server...")
+            if mcp_transport != "sse":
+                verbose_print("Note: Currently only SSE transport is supported for MCP. Using SSE transport.")
+                mcp_transport = "sse"
 
-        protocol = "http"
-        access_host = get_best_access_host(host)
-
-        masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
-
-        console.print()
-        console.print(
-            Panel.fit(
-                f"[bold green]🎯 Folder Served Successfully![/bold green]\n\n"
-                f"[bold]Folder:[/bold] {folder_path}\n"
-                f"[bold]Flows Detected:[/bold] {len(graphs)}\n"
-                f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
-                f"[bold]API Key:[/bold] {masked_key}\n\n"
-                f"[dim]Discover flows:\n"
-                f"  GET {protocol}://{access_host}:{port}/flows\n"
-                f"Run a flow:\n"
-                f"  POST {protocol}://{access_host}:{port}/flows/{{flow_id}}/run[/dim]",
-                border_style="green",
-                title="🚀 Server Ready",
+            # Create the FastAPI app which includes MCP functionality
+            serve_app = create_multi_serve_app(
+                root_dir=folder_path,
+                graphs=graphs,
+                metas=metas,
+                verbose_print=verbose_print,
             )
-        )
-        console.print()
 
-        try:
-            uvicorn.run(
-                serve_app,
-                host=host,
-                port=port,
-                log_level=log_level.lower(),
-                access_log=verbose,
+            protocol = "http"
+            access_host = get_best_access_host(host)
+
+            console.print()
+            console.print(
+                Panel.fit(
+                    f"[bold green]🎯 MCP Server Started![/bold green]\n\n"
+                    f"[bold]Mode:[/bold] MCP (SSE)\n"
+                    f"[bold]Folder:[/bold] {folder_path}\n"
+                    f"[bold]Flows Detected:[/bold] {len(graphs)}\n"
+                    f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n\n"
+                    f"[dim]MCP SSE endpoint:[/dim]\n"
+                    f"[blue]{protocol}://{access_host}:{port}/api/v1/mcp/sse[/blue]\n\n"
+                    f"[dim]Available MCP Resources:\n"
+                    f"  {protocol}://{access_host}:{port}/api/v1/files/{{flow_id}}/{{filename}}\n\n"
+                    f"MCP Tools: Each flow becomes an executable tool\n"
+                    f"MCP Resources: Flow files accessible via resources\n"
+                    f"Note: Flows are automatically available as MCP tools[/dim]",
+                    border_style="blue",
+                    title="🔧 MCP Server Ready",
+                )
             )
-        except KeyboardInterrupt:
-            verbose_print("\n👋 Server stopped")
-            raise typer.Exit(0) from None
-        except Exception as e:
-            verbose_print(f"✗ Failed to start server: {e}")
-            raise typer.Exit(1) from e
+            console.print()
+
+            try:
+                uvicorn.run(
+                    serve_app,
+                    host=host,
+                    port=port,
+                    log_level=log_level.lower(),
+                    access_log=verbose,
+                )
+            except KeyboardInterrupt:
+                verbose_print("\n👋 MCP server stopped")
+                raise typer.Exit(0) from None
+            except Exception as e:
+                verbose_print(f"✗ Failed to start MCP server: {e}")
+                raise typer.Exit(1) from e
+        else:
+            # REST API mode - create FastAPI app
+            serve_app = create_multi_serve_app(
+                root_dir=folder_path,
+                graphs=graphs,
+                metas=metas,
+                verbose_print=verbose_print,
+            )
+
+            verbose_print("🚀 Starting multi-flow server...")
+
+            protocol = "http"
+            access_host = get_best_access_host(host)
+
+            masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
+
+            console.print()
+            console.print(
+                Panel.fit(
+                    f"[bold green]🎯 Folder Served Successfully![/bold green]\n\n"
+                    f"[bold]Folder:[/bold] {folder_path}\n"
+                    f"[bold]Flows Detected:[/bold] {len(graphs)}\n"
+                    f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
+                    f"[bold]API Key:[/bold] {masked_key}\n\n"
+                    f"[dim]Discover flows:\n"
+                    f"  GET {protocol}://{access_host}:{port}/flows\n"
+                    f"Run a flow:\n"
+                    f"  POST {protocol}://{access_host}:{port}/flows/{{flow_id}}/run[/dim]",
+                    border_style="green",
+                    title="🚀 Server Ready",
+                )
+            )
+            console.print()
+
+            try:
+                uvicorn.run(
+                    serve_app,
+                    host=host,
+                    port=port,
+                    log_level=log_level.lower(),
+                    access_log=verbose,
+                )
+            except KeyboardInterrupt:
+                verbose_print("\n👋 Server stopped")
+                raise typer.Exit(0) from None
+            except Exception as e:
+                verbose_print(f"✗ Failed to start server: {e}")
+                raise typer.Exit(1) from e
 
         return  # successfully finished
 
@@ -344,53 +438,108 @@ def serve_command(
 
     verbose_print(f"✓ Prepared single flow '{title}' (id={flow_id})")
 
-    # Create FastAPI app using multi-serve (handles single flow too)
-    serve_app = create_multi_serve_app(
-        root_dir=resolved_path.parent,
-        graphs=graphs,
-        metas=metas,
-        verbose_print=verbose_print,
-    )
+    # Start server in appropriate mode
+    if mcp:
+        # For MCP mode, we start the regular FastAPI server which includes MCP endpoints
+        verbose_print("🔧 Starting Langflow with MCP server enabled...")
 
-    verbose_print("🚀 Starting single-flow server...")
+        if mcp_transport != "sse":
+            verbose_print("Note: Currently only SSE transport is supported for MCP. Using SSE transport.")
+            mcp_transport = "sse"
 
-    protocol = "http"
-    access_host = get_best_access_host(host)
-
-    masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
-
-    console.print()
-    console.print(
-        Panel.fit(
-            f"[bold green]🎯 Single Flow Served Successfully![/bold green]\n\n"
-            f"[bold]File:[/bold] {resolved_path}\n"
-            f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
-            f"[bold]API Key:[/bold] {masked_key}\n\n"
-            f"[dim]Send POST requests to:[/dim]\n"
-            f"[blue]{protocol}://{access_host}:{port}/flows/{flow_id}/run[/blue]\n\n"
-            f"[dim]With headers:[/dim]\n"
-            f"[blue]x-api-key: {masked_key}[/blue]\n\n"
-            f"[dim]Or query parameter:[/dim]\n"
-            f"[blue]?x-api-key={masked_key}[/blue]\n\n"
-            f"[dim]Request body:[/dim]\n"
-            f"[blue]{{'input_value': 'Your input message'}}[/blue]",
-            title="[bold blue]Langflow Server[/bold blue]",
-            border_style="blue",
+        # Create the FastAPI app which includes MCP functionality
+        serve_app = create_multi_serve_app(
+            root_dir=resolved_path.parent,
+            graphs=graphs,
+            metas=metas,
+            verbose_print=verbose_print,
         )
-    )
-    console.print()
 
-    # Start the server
-    try:
-        uvicorn.run(
-            serve_app,
-            host=host,
-            port=port,
-            log_level=log_level,
+        protocol = "http"
+        access_host = get_best_access_host(host)
+
+        console.print()
+        console.print(
+            Panel.fit(
+                f"[bold green]🎯 MCP Server Started![/bold green]\n\n"
+                f"[bold]Mode:[/bold] MCP (SSE)\n"
+                f"[bold]File:[/bold] {resolved_path}\n"
+                f"[bold]Flow:[/bold] {title}\n"
+                f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n\n"
+                f"[dim]MCP SSE endpoint:[/dim]\n"
+                f"[blue]{protocol}://{access_host}:{port}/api/v1/mcp/sse[/blue]\n\n"
+                f"[dim]MCP Tools: Flow '{title}' available as executable tool\n"
+                f"MCP Resources: Flow files accessible via resources\n"
+                f"Note: Flow is automatically available as an MCP tool[/dim]",
+                border_style="blue",
+                title="🔧 MCP Server Ready",
+            )
         )
-    except KeyboardInterrupt:
-        verbose_print("\n👋 Server stopped")
-        raise typer.Exit(0) from None
-    except Exception as e:
-        verbose_print(f"✗ Failed to start server: {e}")
-        raise typer.Exit(1) from e
+        console.print()
+
+        try:
+            uvicorn.run(
+                serve_app,
+                host=host,
+                port=port,
+                log_level=log_level.lower(),
+                access_log=verbose,
+            )
+        except KeyboardInterrupt:
+            verbose_print("\n👋 MCP server stopped")
+            raise typer.Exit(0) from None
+        except Exception as e:
+            verbose_print(f"✗ Failed to start MCP server: {e}")
+            raise typer.Exit(1) from e
+    else:
+        # REST API mode
+        # Create FastAPI app using multi-serve (handles single flow too)
+        serve_app = create_multi_serve_app(
+            root_dir=resolved_path.parent,
+            graphs=graphs,
+            metas=metas,
+            verbose_print=verbose_print,
+        )
+
+        verbose_print("🚀 Starting single-flow server...")
+
+        protocol = "http"
+        access_host = get_best_access_host(host)
+
+        masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
+
+        console.print()
+        console.print(
+            Panel.fit(
+                f"[bold green]🎯 Single Flow Served Successfully![/bold green]\n\n"
+                f"[bold]File:[/bold] {resolved_path}\n"
+                f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
+                f"[bold]API Key:[/bold] {masked_key}\n\n"
+                f"[dim]Send POST requests to:[/dim]\n"
+                f"[blue]{protocol}://{access_host}:{port}/flows/{flow_id}/run[/blue]\n\n"
+                f"[dim]With headers:[/dim]\n"
+                f"[blue]x-api-key: {masked_key}[/blue]\n\n"
+                f"[dim]Or query parameter:[/dim]\n"
+                f"[blue]?x-api-key={masked_key}[/blue]\n\n"
+                f"[dim]Request body:[/dim]\n"
+                f"[blue]{{'input_value': 'Your input message'}}[/blue]",
+                title="[bold blue]Langflow Server[/bold blue]",
+                border_style="blue",
+            )
+        )
+        console.print()
+
+        # Start the server
+        try:
+            uvicorn.run(
+                serve_app,
+                host=host,
+                port=port,
+                log_level=log_level,
+            )
+        except KeyboardInterrupt:
+            verbose_print("\n👋 Server stopped")
+            raise typer.Exit(0) from None
+        except Exception as e:
+            verbose_print(f"✗ Failed to start server: {e}")
+            raise typer.Exit(1) from e
