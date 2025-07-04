@@ -1,7 +1,20 @@
 import React from "react";
 import Layout from "@theme/Layout";
 import Link from "@docusaurus/Link";
-import { CirclePlay, Server, ArrowRight, MonitorDown, AppWindow, HardDriveUpload, Code, Star, LifeBuoy } from "lucide-react";
+import {
+  CirclePlay,
+  Server,
+  ArrowRight,
+  MonitorDown,
+  AppWindow,
+  HardDriveUpload,
+  Code,
+  Star,
+  LifeBuoy,
+  SquareArrowOutUpRight,
+  GraduationCap,
+  BookMarked,
+} from "lucide-react";
 import CustomIcon from "../components/CustomIcon";
 import styles from "./index.module.css";
 
@@ -27,8 +40,11 @@ export default function Home() {
             </p>
           </div>
           <div className={styles.heroImage}>
-            {/* Placeholder for hero image */}
-            <span className={styles.placeholder}>Hero Image Coming Soon</span>
+            <img 
+              src="/img/lf-agent.png" 
+              alt="Langflow MCP Server with GitPoet agent example"
+              className={styles.heroImageContent}
+            />
           </div>
         </div>
 
@@ -40,8 +56,7 @@ export default function Home() {
             </div>
             <h2 className={styles.quickLinkTitle}>Quickstart</h2>
             <p className={styles.quickLinkDescription}>
-              Build agentic flows with your favorite models, custom
-              instructions, and tools.
+            Build and run your first flow in minutes.
             </p>
           </Link>
           <Link to="/agents" className={styles.quickLinkCard}>
@@ -50,9 +65,8 @@ export default function Home() {
             </div>
             <h2 className={styles.quickLinkTitle}>Agents</h2>
             <p className={styles.quickLinkDescription}>
-              Langflow's Agent component provides everything to create
-              an agent, including support for multiple LLM providers, custom
-              instructions, and tools.
+            Build agentic flows with your favorite models, custom
+            instructions, and tools.
             </p>
           </Link>
           <Link to="/mcp-server" className={styles.quickLinkCard}>
@@ -68,14 +82,47 @@ export default function Home() {
 
         {/* Use Cases Section */}
         <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>Use cases</h3>
+          <h3 className={styles.sectionTitle}>Learn more</h3>
           <div className={styles.cardsGrid}>
+          <Link to="/" className={styles.card}>
+              <div className={styles.cardIcon}>
+                <BookMarked size={16} strokeWidth={1.25} />
+              </div>
+              <div className={styles.cardContent}>
+                <div className={styles.cardTitle}>About Langflow</div>
+              </div>
+              <div className={styles.cardArrow}>
+                <ArrowRight size={20} strokeWidth={1.25} />
+              </div>
+            </Link>
             <Link to="/get-started-installation" className={styles.card}>
               <div className={styles.cardIcon}>
                 <MonitorDown size={16} strokeWidth={1.25} />
               </div>
               <div className={styles.cardContent}>
                 <div className={styles.cardTitle}>Install Langflow</div>
+              </div>
+              <div className={styles.cardArrow}>
+                <ArrowRight size={20} strokeWidth={1.25} />
+              </div>
+            </Link>
+            <Link to="/" className={styles.card}>
+              <div className={styles.cardIcon}>
+                <GraduationCap size={16} strokeWidth={1.25} />
+              </div>
+              <div className={styles.cardContent}>
+                <div className={styles.cardTitle}>Tutorial</div>
+              </div>
+              <div className={styles.cardArrow}>
+                <ArrowRight size={20} strokeWidth={1.25} />
+              </div>
+            </Link>
+            <Link to="/api-reference-api-examples" className={styles.card}>
+              <div className={styles.cardIcon}>
+                <Code size={16} strokeWidth={1.25} />
+              </div>
+              <div className={styles.cardContent}>
+                <div className={styles.cardTitle}>API reference</div>
               </div>
               <div className={styles.cardArrow}>
                 <ArrowRight size={20} strokeWidth={1.25} />
@@ -103,18 +150,18 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/api-reference-api-examples" className={styles.card}>
+            <Link to="/troubleshoot" className={styles.card}>
               <div className={styles.cardIcon}>
-                <Code size={16} strokeWidth={1.25} />
+                <LifeBuoy size={16} strokeWidth={1.25} />
               </div>
               <div className={styles.cardContent}>
-                <div className={styles.cardTitle}>API reference</div>
+                <div className={styles.cardTitle}>Support</div>
               </div>
               <div className={styles.cardArrow}>
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <a 
+            <a
               href="https://github.com/langflow-ai/langflow/releases/latest"
               target="_blank"
               rel="noopener noreferrer"
@@ -127,20 +174,9 @@ export default function Home() {
                 <div className={styles.cardTitle}>Release notes</div>
               </div>
               <div className={styles.cardArrow}>
-                <ArrowRight size={20} strokeWidth={1.25} />
+                <SquareArrowOutUpRight size={20} strokeWidth={1.25} />
               </div>
             </a>
-            <Link to="/troubleshoot" className={styles.card}>
-              <div className={styles.cardIcon}>
-                <LifeBuoy size={16} strokeWidth={1.25} />
-              </div>
-              <div className={styles.cardContent}>
-                <div className={styles.cardTitle}>Support</div>
-              </div>
-              <div className={styles.cardArrow}>
-                <ArrowRight size={20} strokeWidth={1.25} />
-              </div>
-            </Link>
           </div>
         </section>
 
@@ -159,7 +195,7 @@ export default function Home() {
               </div>
               <div className={styles.communityTitle}>Star the repo</div>
               <div className={styles.communityDescription}>
-                Follow development, star the repo, and shape the future.
+                Follow development, star the repo, and contribute to Langflow.
               </div>
             </a>
             <a
