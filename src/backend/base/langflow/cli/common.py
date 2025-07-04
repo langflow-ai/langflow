@@ -301,6 +301,9 @@ def execute_graph_with_capture(graph, input_value: str | None):
 
     Returns:
         Tuple of (results, captured_logs)
+
+    Raises:
+        Exception: Re-raises any exception that occurs during graph execution
     """
     # Create input request
     inputs = InputValueRequest(input_value=input_value) if input_value else None
@@ -317,6 +320,13 @@ def execute_graph_with_capture(graph, input_value: str | None):
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
         results = list(graph.start(inputs))
+    except Exception as exc:
+        # Capture any error output that was written to stderr
+        error_output = captured_stderr.getvalue()
+        if error_output:
+            # Add error output to the exception for better debugging
+            exc.args = (f"{exc.args[0] if exc.args else str(exc)}\n\nCaptured stderr:\n{error_output}",)
+        raise
     finally:
         # Restore original stdout/stderr
         sys.stdout = original_stdout
