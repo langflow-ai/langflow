@@ -169,8 +169,11 @@ class Data(BaseModel):
         files = self.data.get("files", [])
         if sender == MESSAGE_SENDER_USER:
             if files:
+                from langflow.schema.image import get_file_paths
+
                 contents = [{"type": "text", "text": text}]
-                for file_path in files:
+                resolved_file_paths = get_file_paths(files)
+                for file_path in resolved_file_paths:
                     image_url = create_data_url(file_path)
                     contents.append({"type": "image_url", "image_url": {"url": image_url}})
                 human_message = HumanMessage(content=contents)
