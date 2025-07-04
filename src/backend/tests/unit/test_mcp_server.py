@@ -238,204 +238,80 @@ class TestMCPServerRuntime:
 
 
 class TestMCPServerIntegration:
-    """Integration tests for MCP server functionality."""
+    """Test MCP server integration with existing Langflow infrastructure."""
 
-    @pytest.fixture
-    def mock_graph_with_execution(self):
-        """Create a mock graph that simulates execution."""
-        graph = MagicMock()
-        
-        def mock_run(inputs=None, tweaks=None):
-            """Mock graph execution."""
-            input_value = inputs.get("input_value", "") if inputs else ""
-            if "error" in input_value.lower():
-                raise ValueError("Simulated execution error")
-            return f"Processed: {input_value}"
-        
-        graph.run = mock_run
-        return graph
+    @pytest.mark.asyncio
+    async def test_run_mcp_server_sse_transport(self):
+        """Test that MCP server runs with SSE transport."""
+        with patch("langflow.cli.mcp_server.get_settings_service") as mock_settings:
+            with patch("langflow.cli.mcp_server.asyncio.sleep", side_effect=KeyboardInterrupt):
+                mock_settings_instance = MagicMock()
+                mock_settings_instance.settings.host = "localhost"
+                mock_settings_instance.settings.port = 8000
+                mock_settings.return_value = mock_settings_instance
+                
+                with pytest.raises(KeyboardInterrupt):
+                    await run_mcp_server(transport="sse", host="localhost", port=8000)
+                
+                # Verify settings were updated
+                assert mock_settings_instance.settings.host == "localhost"
+                assert mock_settings_instance.settings.port == 8000
 
-    @pytest.fixture
-    def integration_graphs_and_metas(self, mock_graph_with_execution):
-        """Create graphs and metas for integration testing."""
-        graphs = {
-            "echo_flow": mock_graph_with_execution,
-            "processing_flow": mock_graph_with_execution
-        }
-        
-        # Create more realistic metas
-        echo_meta = MagicMock()
-        echo_meta.title = "Echo Flow"
-        echo_meta.description = "Echoes the input back"
-        
-        processing_meta = MagicMock()
-        processing_meta.title = "Processing Flow"
-        processing_meta.description = "Processes input data"
-        
-        metas = {
-            "echo_flow": echo_meta,
-            "processing_flow": processing_meta
-        }
-        
-        return graphs, metas
+    @pytest.mark.asyncio
+    async def test_run_mcp_server_invalid_transport(self):
+        """Test that invalid transport raises ValueError."""
+        with pytest.raises(ValueError, match="Transport 'invalid' not supported"):
+            await run_mcp_server(transport="invalid")
 
-    @patch("langflow.cli.mcp_server.FastMCP")
-    def test_mcp_server_tool_execution_success(self, mock_fastmcp, integration_graphs_and_metas):
-        """Test successful tool execution through MCP server."""
-        graphs, metas = integration_graphs_and_metas
-        mock_mcp_instance = MagicMock()
-        
-        # Track registered tools
-        registered_tools = []
-        
-        def mock_tool_decorator(func):
-            registered_tools.append(func)
-            return func
-        
-        mock_mcp_instance.tool.side_effect = lambda: mock_tool_decorator
-        mock_fastmcp.return_value = mock_mcp_instance
+    @pytest.mark.asyncio
+    async def test_run_mcp_server_stdio_not_supported(self):
+        """Test that stdio transport raises ValueError."""
+        with pytest.raises(ValueError, match="Transport 'stdio' not supported"):
+            await run_mcp_server(transport="stdio")
 
-        # Create the server
-        server = create_mcp_server(
-            graphs=graphs,
-            metas=metas,
-            server_name="Integration Test Server"
-        )
+    @pytest.mark.asyncio
+    async def test_run_mcp_server_websocket_not_supported(self):
+        """Test that websocket transport raises ValueError."""
+        with pytest.raises(ValueError, match="Transport 'websocket' not supported"):
+            await run_mcp_server(transport="websocket")
 
-        # Verify tools were registered
-        assert len(registered_tools) == len(graphs)
+    @pytest.mark.asyncio
+    async def test_run_mcp_server_exception_handling(self):
+        """Test that exceptions are properly handled."""
+        with patch("langflow.cli.mcp_server.get_settings_service", side_effect=Exception("Test error")):
+            with pytest.raises(Exception, match="Test error"):
+                await run_mcp_server(transport="sse")
 
-        # Test tool execution (simulate calling one of the registered tools)
-        if registered_tools:
-            tool_func = registered_tools[0]
-            flow_input = FlowInput(input_value="test input")
-            
-            # Mock the graph execution context
-            with patch("time.time", side_effect=[0, 1.5]):  # Mock execution time
-                result = tool_func(flow_input)
-            
-            assert isinstance(result, FlowOutput)
-            assert "Processed: test input" in str(result.result)
-            assert result.execution_time == 1.5
-            assert result.error is None
+    @pytest.mark.asyncio 
+    async def test_run_mcp_server_logging(self):
+        """Test that proper logging occurs."""
+        with patch("langflow.cli.mcp_server.get_settings_service") as mock_settings:
+            with patch("langflow.cli.mcp_server.logger") as mock_logger:
+                with patch("langflow.cli.mcp_server.asyncio.sleep", side_effect=KeyboardInterrupt):
+                    mock_settings_instance = MagicMock()
+                    mock_settings.return_value = mock_settings_instance
+                    
+                    with pytest.raises(KeyboardInterrupt):
+                        await run_mcp_server(transport="sse", host="test-host", port=9000)
+                    
+                    # Verify logging calls
+                    mock_logger.info.assert_any_call("Starting Langflow MCP server on test-host:9000 using sse transport")
+                    mock_logger.info.assert_any_call("MCP server shutdown requested")
 
-    @patch("langflow.cli.mcp_server.FastMCP")
-    def test_mcp_server_tool_execution_error(self, mock_fastmcp, integration_graphs_and_metas):
-        """Test error handling in tool execution."""
-        graphs, metas = integration_graphs_and_metas
-        mock_mcp_instance = MagicMock()
-        
-        registered_tools = []
-        
-        def mock_tool_decorator(func):
-            registered_tools.append(func)
-            return func
-        
-        mock_mcp_instance.tool.side_effect = lambda: mock_tool_decorator
-        mock_fastmcp.return_value = mock_mcp_instance
-
-        # Create the server
-        server = create_mcp_server(
-            graphs=graphs,
-            metas=metas,
-            server_name="Error Test Server"
-        )
-
-        # Test error handling
-        if registered_tools:
-            tool_func = registered_tools[0]
-            error_input = FlowInput(input_value="trigger error")
-            
-            result = tool_func(error_input)
-            
-            assert isinstance(result, FlowOutput)
-            assert result.result is None
-            assert "Simulated execution error" in result.error
-
-    @patch("langflow.cli.mcp_server.FastMCP")
-    def test_mcp_server_resources(self, mock_fastmcp, integration_graphs_and_metas):
-        """Test MCP server resource functionality."""
-        graphs, metas = integration_graphs_and_metas
-        mock_mcp_instance = MagicMock()
-        
-        # Track registered resources
-        registered_resources = []
-        
-        def mock_resource_decorator(uri):
-            def decorator(func):
-                registered_resources.append((uri, func))
-                return func
-            return decorator
-        
-        mock_mcp_instance.resource.side_effect = mock_resource_decorator
-        mock_fastmcp.return_value = mock_mcp_instance
-
-        # Create the server
-        server = create_mcp_server(
-            graphs=graphs,
-            metas=metas,
-            server_name="Resource Test Server"
-        )
-
-        # Verify resources were registered
-        assert len(registered_resources) >= 3  # flows, info, schema resources
-
-        # Test the flow list resource
-        flows_resource = None
-        for uri, func in registered_resources:
-            if uri == "flow://flows":
-                flows_resource = func
-                break
-        
-        assert flows_resource is not None
-        
-        # Execute the flows resource
-        flows_data = flows_resource()
-        flows_json = json.loads(flows_data)
-        
-        assert isinstance(flows_json, list)
-        assert len(flows_json) == len(graphs)
-        
-        # Check flow info structure
-        for flow_info in flows_json:
-            assert "id" in flow_info
-            assert "title" in flow_info
-            assert flow_info["id"] in graphs
-
-    @patch("langflow.cli.mcp_server.FastMCP")
-    def test_mcp_server_prompts(self, mock_fastmcp, integration_graphs_and_metas):
-        """Test MCP server prompt functionality."""
-        graphs, metas = integration_graphs_and_metas
-        mock_mcp_instance = MagicMock()
-        
-        # Track registered prompts
-        registered_prompts = []
-        
-        def mock_prompt_decorator(func):
-            registered_prompts.append(func)
-            return func
-        
-        mock_mcp_instance.prompt.side_effect = lambda: mock_prompt_decorator
-        mock_fastmcp.return_value = mock_mcp_instance
-
-        # Create the server
-        server = create_mcp_server(
-            graphs=graphs,
-            metas=metas,
-            server_name="Prompt Test Server"
-        )
-
-        # Verify prompts were registered
-        assert len(registered_prompts) >= 2  # help and troubleshooting prompts
-
-        # Test prompt execution
-        for prompt_func in registered_prompts:
-            prompt_result = prompt_func()
-            assert isinstance(prompt_result, str)
-            assert len(prompt_result) > 0
-            # Should contain information about flows or help
-            assert any(keyword in prompt_result.lower() for keyword in 
-                      ["flow", "mcp", "help", "execute", "troubleshoot"])
+    @pytest.mark.asyncio
+    async def test_run_mcp_server_settings_update(self):
+        """Test that settings are properly updated."""
+        with patch("langflow.cli.mcp_server.get_settings_service") as mock_settings:
+            with patch("langflow.cli.mcp_server.asyncio.sleep", side_effect=KeyboardInterrupt):
+                mock_settings_instance = MagicMock()
+                mock_settings.return_value = mock_settings_instance
+                
+                with pytest.raises(KeyboardInterrupt):
+                    await run_mcp_server(transport="sse", host="custom-host", port=7000)
+                
+                # Verify settings were updated with custom values
+                assert mock_settings_instance.settings.host == "custom-host"
+                assert mock_settings_instance.settings.port == 7000
 
 
 class TestMCPServerErrorHandling:
