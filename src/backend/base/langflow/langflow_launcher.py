@@ -9,7 +9,7 @@ import sys
 
 def main():
     """Launches langflow in a subprocess on macOS to set environment variables.
-    
+
     Or directly calls main on other platforms.
     """
     if platform.system() == "Darwin":  # macOS
