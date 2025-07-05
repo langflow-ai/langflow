@@ -8,8 +8,9 @@ import sys
 
 
 def main():
-    """Launches langflow in a subprocess on macOS to set environment variables,
-    or directly calls main on other platforms.
+    """Launches langflow in a subprocess on macOS to set environment variables.
+    
+    Or directly calls main on other platforms.
     """
     if platform.system() == "Darwin":  # macOS
         _launch_with_subprocess()
@@ -61,6 +62,6 @@ def _launch_with_subprocess():
                 logging.warning("Process didn't terminate gracefully, killing...")
                 process.kill()
         return 130
-    except Exception as e:
-        logging.exception(f"Error running langflow: {e}")
+    except Exception:
+        logging.exception("Error running langflow")
         return 1
