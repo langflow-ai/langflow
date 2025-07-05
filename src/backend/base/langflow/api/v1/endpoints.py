@@ -756,3 +756,18 @@ async def get_config():
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/hil_submit/{flow_id}/{run_id}")
+async def hil_submit(
+    flow_id: str,  # noqa: ARG001
+    run_id: str,
+    user: CurrentActiveUser,  # noqa: ARG001
+    data: Annotated[dict, Body()],
+):
+    """Endpoint to submit a HIL event for a given flow_id and run_id."""
+    from langflow.base.hil.event_lock import trigger_hil
+
+    await trigger_hil(run_id, data)
+    logger.info(f"HIL event submitted for run_id: {run_id}, data: {data}")
+    return {"message": "HIL event submitted"}
