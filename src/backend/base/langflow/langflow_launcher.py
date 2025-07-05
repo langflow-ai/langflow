@@ -1,11 +1,11 @@
-import os
-import sys
-import subprocess
-import signal
-import logging
-import platform
 import contextlib
-from typing import Optional
+import logging
+import os
+import platform
+import signal
+import subprocess
+import sys
+
 
 def main():
     """Launches langflow in a subprocess on macOS to set environment variables,
@@ -26,7 +26,6 @@ def main():
 
 def _launch_with_subprocess():
     """Launch langflow in subprocess with macOS-specific environment variables."""
-
     env = os.environ.copy()
     # Required for macOS to avoid fork safety issues.
     # Error: """
@@ -39,7 +38,7 @@ def _launch_with_subprocess():
     # If no command specified, default to 'run'
     args = sys.argv[1:] if len(sys.argv) > 1 else ["run"]
     command = [*["uv", "run", "python", "-m", "langflow.__main__"], *args]
-    process: Optional[subprocess.Popen] = None
+    process: subprocess.Popen | None = None
 
     def signal_handler(signum: int, _frame):
         """Forward signals to the child process."""
@@ -51,7 +50,7 @@ def _launch_with_subprocess():
     signal.signal(signal.SIGTERM, signal_handler)
 
     try:
-        process = subprocess.Popen(command, env=env) # noqa: F841
+        process = subprocess.Popen(command, env=env)
         return process.wait()
     except KeyboardInterrupt:
         if process and process.poll() is None:
@@ -61,7 +60,7 @@ def _launch_with_subprocess():
             except subprocess.TimeoutExpired:
                 logging.warning("Process didn't terminate gracefully, killing...")
                 process.kill()
-        return 130 
-    except Exception as e: # noqa: BLE001
-        logging.error(f"Error running langflow: {e}")
+        return 130
+    except Exception as e:
+        logging.exception(f"Error running langflow: {e}")
         return 1
