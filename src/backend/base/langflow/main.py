@@ -11,7 +11,6 @@ from urllib.parse import urlencode
 
 import anyio
 import httpx
-import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -125,7 +124,6 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
-
         try:
             start_time = asyncio.get_event_loop().time()
 
@@ -203,8 +201,6 @@ def get_lifespan(*, fix_migration=False, version=None):
             logger.debug(f"Total initialization time: {total_time:.2f}s")
             yield
 
-        except asyncio.CancelledError:
-            logger.debug("Lifespan received cancellation signal")
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.exception(exc)
@@ -212,14 +208,10 @@ def get_lifespan(*, fix_migration=False, version=None):
         finally:
             # Clean shutdown with progress indicator
             # Create shutdown progress (show verbose timing if log level is DEBUG)
-            from langflow.__main__ import get_number_of_workers
             from langflow.cli.progress import create_langflow_shutdown_progress
 
             log_level = os.getenv("LANGFLOW_LOG_LEVEL", "info").lower()
-            num_workers = get_number_of_workers(get_settings_service().settings.workers)
-            shutdown_progress = create_langflow_shutdown_progress(
-                verbose=log_level == "debug", multiple_workers=num_workers > 1
-            )
+            shutdown_progress = create_langflow_shutdown_progress(verbose=log_level == "debug")
 
             try:
                 # Step 0: Stopping Server
@@ -252,6 +244,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Show completion summary and farewell
                 shutdown_progress.print_shutdown_summary()
+                shutdown_progress.print_farewell_message()
 
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.DBAPIError) as e:
                 # Case where the database connection is closed during shutdown
@@ -438,6 +431,7 @@ def get_static_files_dir():
 def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
+    logger.info(f"Setting up app with static files directory {static_files_dir}")
     if not static_files_dir:
         static_files_dir = get_static_files_dir()
 
@@ -445,7 +439,6 @@ def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = Fals
         msg = f"Static files directory {static_files_dir} does not exist."
         raise RuntimeError(msg)
     app = create_app()
-
     if not backend_only and static_files_dir is not None:
         setup_static_files(app, static_files_dir)
     return app

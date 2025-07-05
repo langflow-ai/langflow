@@ -222,8 +222,8 @@ nv-ingest = [
 ]
 
 postgresql = [
-    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
-    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+  "sqlalchemy[postgresql_psycopg2binary]",
+    "sqlalchemy[postgresql_psycopg]",
 ]
 
 [tool.uv]

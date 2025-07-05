@@ -89,7 +89,7 @@ class ServiceManager:
 
     async def teardown(self) -> None:
         """Teardown all the services."""
-        for service in list(self.services.values()):
+        for service in self.services.values():
             if service is None:
                 continue
             logger.debug(f"Teardown service {service.name}")

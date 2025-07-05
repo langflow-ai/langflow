@@ -433,14 +433,8 @@ class Settings(BaseSettings):
                     logger.debug(f"Appending {langflow_component_path} to components_path")
 
         if not value:
-            value = [BASE_COMPONENTS_PATH]
-            logger.debug("Setting default components path to components_path")
-        else:
-            if isinstance(value, Path):
-                value = [str(value)]
-            elif isinstance(value, list):
-                value = [str(p) if isinstance(p, Path) else p for p in value]
-            logger.debug("Adding default components path to components_path")
+            value = []
+            logger.debug("Setting empty components path")
 
         logger.debug(f"Components path: {value}")
         return value
