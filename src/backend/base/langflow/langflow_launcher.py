@@ -1,9 +1,11 @@
 import os
-import platform
-import signal
-import subprocess
 import sys
-
+import subprocess
+import signal
+import logging
+import platform
+import contextlib
+from typing import Optional
 
 def main():
     """Launches langflow in a subprocess on macOS to set environment variables,
@@ -24,6 +26,7 @@ def main():
 
 def _launch_with_subprocess():
     """Launch langflow in subprocess with macOS-specific environment variables."""
+
     env = os.environ.copy()
     # Required for macOS to avoid fork safety issues.
     # Error: """
@@ -35,35 +38,30 @@ def _launch_with_subprocess():
 
     # If no command specified, default to 'run'
     args = sys.argv[1:] if len(sys.argv) > 1 else ["run"]
-    command = ["uv", "run", "python", "-m", "langflow.__main__"] + args
+    command = [*["uv", "run", "python", "-m", "langflow.__main__"], *args]
+    process: Optional[subprocess.Popen] = None
 
-    process: subprocess.Popen | None = None
-
-    def signal_handler(signum: int, frame):
+    def signal_handler(signum: int, _frame):
         """Forward signals to the child process."""
         if process and process.poll() is None:
-            try:
+            with contextlib.suppress(ProcessLookupError):
                 process.send_signal(signum)
-            except ProcessLookupError:
-                # Process already terminated
-                pass
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
     try:
-        process = subprocess.Popen(command, env=env)
+        process = subprocess.Popen(command, env=env) # noqa: F841
         return process.wait()
     except KeyboardInterrupt:
-        print("\nInterrupted by user")
         if process and process.poll() is None:
             process.terminate()
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                print("Process didn't terminate gracefully, killing...")
+                logging.warning("Process didn't terminate gracefully, killing...")
                 process.kill()
-        return 130  # standard exit code for SIGINT
-    except Exception as e:
-        print(f"Error running langflow: {e}")
+        return 130 
+    except Exception as e: # noqa: BLE001
+        logging.error(f"Error running langflow: {e}")
         return 1
