@@ -237,7 +237,7 @@ export default function AddMcpServerModal({
       setOpen={setOpen}
       size="x-small"
       onSubmit={submitForm}
-      className="!p-0"
+      className="p-0!"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content className="flex flex-col justify-between overflow-hidden">
@@ -301,7 +301,7 @@ export default function AddMcpServerModal({
                 )}
                 <TabsContent value="JSON">
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">Paste in JSON config</Label>
+                    <Label className="text-mmd!">Paste in JSON config</Label>
                     <Textarea
                       value={jsonValue}
                       data-testid="json-input"
@@ -315,7 +315,7 @@ export default function AddMcpServerModal({
                 <TabsContent value="STDIO">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <Label className="flex items-start gap-1 !text-mmd">
+                      <Label className="flex items-start gap-1 text-mmd!">
                         Name <span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -327,7 +327,7 @@ export default function AddMcpServerModal({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label className="flex items-start gap-1 !text-mmd">
+                      <Label className="flex items-start gap-1 text-mmd!">
                         Command<span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -339,7 +339,7 @@ export default function AddMcpServerModal({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label className="!text-mmd">Arguments</Label>
+                      <Label className="text-mmd!">Arguments</Label>
                       <InputListComponent
                         value={stdioArgs}
                         handleOnNewValue={({ value }) => setStdioArgs(value)}
@@ -351,7 +351,7 @@ export default function AddMcpServerModal({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label className="!text-mmd">Environment Variables</Label>
+                      <Label className="text-mmd!">Environment Variables</Label>
                       <IOKeyPairInput
                         value={stdioEnv}
                         onChange={setStdioEnv}
@@ -365,7 +365,7 @@ export default function AddMcpServerModal({
                 <TabsContent value="SSE">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <Label className="flex items-start gap-1 !text-mmd">
+                      <Label className="flex items-start gap-1 text-mmd!">
                         Name<span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -376,7 +376,7 @@ export default function AddMcpServerModal({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label className="flex items-start gap-1 !text-mmd">
+                      <Label className="flex items-start gap-1 text-mmd!">
                         SSE URL<span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -387,7 +387,7 @@ export default function AddMcpServerModal({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label className="!text-mmd">Headers</Label>
+                      <Label className="text-mmd!">Headers</Label>
                       <IOKeyPairInput
                         value={sseHeaders}
                         onChange={setSseHeaders}
@@ -397,7 +397,7 @@ export default function AddMcpServerModal({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label className="!text-mmd">Environment Variables</Label>
+                      <Label className="text-mmd!">Environment Variables</Label>
                       <IOKeyPairInput
                         value={sseEnv}
                         onChange={setSseEnv}

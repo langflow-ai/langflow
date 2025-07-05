@@ -53,7 +53,7 @@ export default function SimplifiedCodeTabComponent({
       <SyntaxHighlighter
         language={language.toLowerCase()}
         style={tomorrow}
-        className="!mt-0 h-full w-full overflow-scroll !rounded-b-md !rounded-t-none border border-border text-left !custom-scroll"
+        className="!mt-0 h-full w-full overflow-scroll rounded-b-md! rounded-t-none! border border-border text-left custom-scroll!"
       >
         {code}
       </SyntaxHighlighter>

@@ -63,7 +63,7 @@ export default function UpdateComponentModal({
     {
       headerName: "Component",
       field: "display_name",
-      headerClass: "!text-mmd !font-normal",
+      headerClass: "text-mmd! !font-normal",
       flex: 1,
       headerCheckboxSelection: true,
       checkboxSelection: true,
@@ -85,7 +85,7 @@ export default function UpdateComponentModal({
     {
       headerName: "Update Type",
       field: "breakingChange",
-      headerClass: "!text-mmd !font-normal",
+      headerClass: "text-mmd! !font-normal",
       resizable: false,
       flex: 1,
       cellClass: "text-muted-foreground",

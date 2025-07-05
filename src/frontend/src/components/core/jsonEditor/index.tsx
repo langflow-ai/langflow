@@ -382,7 +382,7 @@ const JsonEditor = ({
             size="sm"
             className={cn(
               "min-w-[60px] whitespace-nowrap",
-              showSuccess && "!bg-green-500 hover:!bg-green-600",
+              showSuccess && "bg-green-500! hover:bg-green-600!",
             )}
           >
             {showSuccess ? (
@@ -404,7 +404,7 @@ const JsonEditor = ({
         </div>
       )} */}
       <div className="relative h-full min-h-0 flex-1">
-        <div ref={containerRef} className={cn("!h-full w-full", className)} />
+        <div ref={containerRef} className={cn("h-full! w-full", className)} />
       </div>
     </div>
   );

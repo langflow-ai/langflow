@@ -534,7 +534,7 @@ export default function Page({
     const color =
       nodeColorsName[edge?.data?.sourceHandle?.output_types[0]] || "cyan";
 
-    const accentColor = `hsl(var(--datatype-${color}))`;
+    const accentColor = `var(--color-datatype-${color})`;
     reactFlowWrapper.current?.style.setProperty("--selected", accentColor);
   };
 

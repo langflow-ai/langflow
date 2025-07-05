@@ -61,7 +61,7 @@ export default function EditMessageField({
                 onCancel();
                 setIsButtonClicked(false);
               }}
-              className="mt-2 !bg-transparent text-foreground hover:!bg-secondary-hover"
+              className="mt-2 bg-transparent! text-foreground hover:bg-secondary-hover!"
             >
               Cancel
             </Button>

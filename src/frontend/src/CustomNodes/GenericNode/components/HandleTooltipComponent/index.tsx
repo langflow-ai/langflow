@@ -48,11 +48,11 @@ export default function HandleTooltipComponent({
               key={`${index}-${word.toLowerCase()}`}
               style={{
                 backgroundColor: left
-                  ? `hsl(var(--datatype-${nodeColorsName[word]}))`
-                  : `hsl(var(--datatype-${nodeColorsName[word]}-foreground))`,
+                  ? `var(--color-datatype-${nodeColorsName[word]})`
+                  : `var(--color-datatype-${nodeColorsName[word]}-foreground)`,
                 color: left
-                  ? `hsl(var(--datatype-${nodeColorsName[word]}-foreground))`
-                  : `hsl(var(--datatype-${nodeColorsName[word]}))`,
+                  ? `var(--color-datatype-${nodeColorsName[word]}-foreground)`
+                  : `var(--color-datatype-${nodeColorsName[word]})`,
               }}
               data-testid={`${isInput ? "input" : "output"}-tooltip-${convertTestName(word)}`}
             >

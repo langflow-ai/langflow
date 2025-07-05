@@ -53,7 +53,7 @@ export default function PageLayout({
               </div>
               <p className="text-muted-foreground">{description}</p>
             </div>
-            <div className="flex-shrink-0">{button && button}</div>
+            <div className="shrink-0">{button && button}</div>
           </div>
         </div>
         <div className="flex shrink-0 px-6">

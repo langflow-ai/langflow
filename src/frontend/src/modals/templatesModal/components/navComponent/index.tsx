@@ -28,12 +28,12 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
         >
           <SidebarTrigger
             className={cn(
-              "flex h-8 shrink-0 items-center rounded-md text-lg font-semibold leading-none tracking-tight text-primary outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 md:hidden [&>svg]:size-4 [&>svg]:shrink-0",
+              "flex h-8 shrink-0 items-center rounded-md text-lg font-semibold leading-none tracking-tight text-primary outline-hidden ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 md:hidden [&>svg]:size-4 [&>svg]:shrink-0",
             )}
           />
           <div
             className={cn(
-              "text-base-semibold flex h-8 shrink-0 items-center rounded-md leading-none tracking-tight text-primary outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
+              "text-base-semibold flex h-8 shrink-0 items-center rounded-md leading-none tracking-tight text-primary outline-hidden ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
               "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
             )}
           >
@@ -44,11 +44,10 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
         {categories.map((category, index) => (
           <SidebarGroup key={index}>
             <SidebarGroupLabel
-              className={`${
-                index === 0
+              className={`${index === 0
                   ? "hidden"
                   : "mb-1 text-sm font-semibold text-muted-foreground"
-              }`}
+                }`}
             >
               {category.title}
             </SidebarGroupLabel>
@@ -64,11 +63,10 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
                     >
                       <ForwardedIconComponent
                         name={link.icon}
-                        className={`h-4 w-4 stroke-2 ${
-                          currentTab === link.id
+                        className={`h-4 w-4 stroke-2 ${currentTab === link.id
                             ? "text-accent-pink-foreground"
                             : "text-muted-foreground"
-                        }`}
+                          }`}
                       />
                       <span
                         data-testid={`category_title_${convertTestName(link.title)}`}

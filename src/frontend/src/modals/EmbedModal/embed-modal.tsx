@@ -79,7 +79,7 @@ export default function EmbedModal({
             ) : (
               <IconComponent
                 name="Copy"
-                className="!h-5 !w-5 text-muted-foreground"
+                className="h-5! w-5! text-muted-foreground"
               />
             )}
           </Button>
@@ -88,7 +88,7 @@ export default function EmbedModal({
             wrapLongLines={true}
             language="html"
             style={isDark ? oneDark : oneLight}
-            className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
+            className="mt-0! h-full w-full overflow-scroll rounded-b-md! border border-border text-left custom-scroll!"
           >
             {embedCode}
           </SyntaxHighlighter>

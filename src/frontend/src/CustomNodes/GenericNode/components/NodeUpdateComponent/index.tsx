@@ -35,7 +35,7 @@ export default function NodeUpdateComponent({
       <Button
         variant="ghost"
         size="icon"
-        className="shrink-0 !text-mmd"
+        className="shrink-0 text-mmd!"
         onClick={(e) => {
           e.stopPropagation();
           setDismissAll(true);
@@ -47,7 +47,7 @@ export default function NodeUpdateComponent({
       </Button>
       <Button
         size="sm"
-        className="!h-8 shrink-0 !text-mmd"
+        className="h-8! shrink-0 text-mmd!"
         onClick={(e) => {
           e.stopPropagation();
           handleUpdateCode();

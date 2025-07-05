@@ -53,7 +53,7 @@ const HandleContent = memo(function HandleContent({
       styleSheet.textContent = `
         @keyframes pulseNeon-${nodeId} {
           0% {
-            box-shadow: 0 0 0 3px hsl(var(--node-ring)),
+            box-shadow: 0 0 0 3px var(--color-node-ring),
                         0 0 2px ${handleColor},
                         0 0 4px ${handleColor},
                         0 0 6px ${handleColor},
@@ -63,7 +63,7 @@ const HandleContent = memo(function HandleContent({
                         0 0 20px ${handleColor};
           }
           50% {
-            box-shadow: 0 0 0 3px hsl(var(--node-ring)),
+            box-shadow: 0 0 0 3px var(--color-node-ring),
                         0 0 4px ${handleColor},
                         0 0 8px ${handleColor},
                         0 0 12px ${handleColor},
@@ -73,7 +73,7 @@ const HandleContent = memo(function HandleContent({
                         0 0 30px ${handleColor};
           }
           100% {
-            box-shadow: 0 0 0 3px hsl(var(--node-ring)),
+            box-shadow: 0 0 0 3px var(--color-node-ring),
                         0 0 2px ${handleColor},
                         0 0 4px ${handleColor},
                         0 0 6px ${handleColor},
@@ -100,7 +100,7 @@ const HandleContent = memo(function HandleContent({
       if (isNullHandle) return "none";
       if (!isActive) return `0 0 0 3px ${color}`;
       return [
-        "0 0 0 1px hsl(var(--border))",
+        "0 0 0 1px var(--color-border)",
         `0 0 2px ${color}`,
         `0 0 4px ${color}`,
         `0 0 6px ${color}`,
@@ -115,7 +115,7 @@ const HandleContent = memo(function HandleContent({
 
   const contentStyle = useMemo(
     () => ({
-      background: isNullHandle ? "hsl(var(--border))" : handleColor,
+      background: isNullHandle ? "var(--color-border)" : handleColor,
       width: "10px",
       height: "10px",
       transition: "all 0.2s",
@@ -127,7 +127,7 @@ const HandleContent = memo(function HandleContent({
         (isHovered || openHandle) && !isNullHandle
           ? `pulseNeon-${nodeId} 1.1s ease-in-out infinite`
           : "none",
-      border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
+      border: isNullHandle ? "2px solid var(--color-muted)" : "none",
     }),
     [
       isNullHandle,
@@ -141,9 +141,8 @@ const HandleContent = memo(function HandleContent({
 
   return (
     <div
-      data-testid={`div-handle-${testIdComplement}-${title.toLowerCase()}-${
-        !showNode ? (left ? "target" : "source") : left ? "left" : "right"
-      }`}
+      data-testid={`div-handle-${testIdComplement}-${title.toLowerCase()}-${!showNode ? (left ? "target" : "source") : left ? "left" : "right"
+        }`}
       className="noflow nowheel nopan noselect pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full"
       style={contentStyle}
     />
@@ -190,7 +189,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     handleDragging,
     filterType,
     onConnect,
-  } = useFlowStore(
+  } = useFlowStore(useShallow(
     useCallback(
       (state) => ({
         setHandleDragging: state.setHandleDragging,
@@ -200,7 +199,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         onConnect: state.onConnect,
       }),
       [],
-    ),
+    )),
   );
 
   const dark = useDarkStore((state) => state.dark);
@@ -242,7 +241,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       handleDragging &&
       (left ? handleDragging?.target : handleDragging?.source) &&
       (left ? handleDragging.targetHandle : handleDragging.sourceHandle) ===
-        myId;
+      myId;
 
     const ownFilterHandle =
       filterType &&
@@ -251,15 +250,15 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
     const draggingOpenHandle =
       handleDragging &&
-      (left ? handleDragging.source : handleDragging.target) &&
-      !ownDraggingHandle
+        (left ? handleDragging.source : handleDragging.target) &&
+        !ownDraggingHandle
         ? isValidConnection(getConnection(handleDragging))
         : false;
 
     const filterOpenHandle =
       filterType &&
-      (left ? filterType.source : filterType.target) &&
-      !ownFilterHandle
+        (left ? filterType.source : filterType.target) &&
+        !ownFilterHandle
         ? isValidConnection(getConnection(filterType))
         : false;
 
@@ -291,37 +290,37 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
     const handleColor = isNullHandle
       ? dark
-        ? "hsl(var(--accent-gray))"
-        : "hsl(var(--accent-gray-foreground)"
+        ? "var(--color-accent-gray)"
+        : "var(--color-accent-gray-foreground)"
       : connectedEdge
-        ? "hsl(var(--datatype-" + connectedColor + "))"
+        ? "var(--color-datatype-" + connectedColor + ")"
         : uniqueColorCount > 1
-          ? "hsl(var(--secondary-foreground))"
-          : "hsl(var(--datatype-" + firstUniqueColor + "))";
+          ? "var(--color-secondary-foreground))"
+          : "var(--color-datatype-" + firstUniqueColor + ")";
 
     const accentForegroundColorName = connectedEdge
-      ? "hsl(var(--datatype-" + connectedColor + "-foreground))"
+      ? "var(--color-datatype-" + connectedColor + "-foreground)"
       : uniqueColorCount > 1
-        ? "hsl(var(--input))"
-        : "hsl(var(--datatype-" + firstUniqueColor + "-foreground))";
+        ? "var(--color-input))"
+        : "var(--color-datatype-" + firstUniqueColor + "-foreground)";
 
     const currentFilter = left
       ? {
-          targetHandle: myId,
-          target: nodeId,
-          source: undefined,
-          sourceHandle: undefined,
-          type: tooltipTitle,
-          color: handleColorName,
-        }
+        targetHandle: myId,
+        target: nodeId,
+        source: undefined,
+        sourceHandle: undefined,
+        type: tooltipTitle,
+        color: handleColorName,
+      }
       : {
-          sourceHandle: myId,
-          source: nodeId,
-          target: undefined,
-          targetHandle: undefined,
-          type: tooltipTitle,
-          color: handleColorName,
-        };
+        sourceHandle: myId,
+        source: nodeId,
+        target: undefined,
+        targetHandle: undefined,
+        type: tooltipTitle,
+        color: handleColorName,
+      };
 
     return {
       sameNode: sameDraggingNode || sameFilterNode,
@@ -429,9 +428,8 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           onMouseDown={handleMouseDown}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
-            !showNode ? (left ? "target" : "source") : left ? "left" : "right"
-          }`}
+          data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${!showNode ? (left ? "target" : "source") : left ? "left" : "right"
+            }`}
         >
           <HandleContent
             isNullHandle={isNullHandle ?? false}

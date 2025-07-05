@@ -81,21 +81,21 @@ const Header: React.FC<{
   description,
   clampDescription,
 }: modalHeaderType): JSX.Element => {
-  return (
-    <DialogHeader>
-      <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
-        {children}
-      </DialogTitle>
-      {description && (
-        <DialogDescription
-          className={`line-clamp-${clampDescription ?? 2} text-sm`}
-        >
-          {description}
-        </DialogDescription>
-      )}
-    </DialogHeader>
-  );
-};
+    return (
+      <DialogHeader>
+        <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
+          {children}
+        </DialogTitle>
+        {description && (
+          <DialogDescription
+            className={`line-clamp-${clampDescription ?? 2} text-sm`}
+          >
+            {description}
+          </DialogDescription>
+        )}
+      </DialogHeader>
+    );
+  };
 
 const Footer: React.FC<{
   children?: ReactNode;
@@ -114,8 +114,8 @@ const Footer: React.FC<{
     <div
       className={
         centered
-          ? "flex flex-shrink-0 justify-center"
-          : "flex flex-shrink-0 flex-row-reverse"
+          ? "flex shrink-0 justify-center"
+          : "flex shrink-0 flex-row-reverse"
       }
     >
       {submit ? (
@@ -158,38 +158,38 @@ const Footer: React.FC<{
 };
 interface BaseModalProps {
   children:
-    | [
-        React.ReactElement<ContentProps>,
-        React.ReactElement<HeaderProps>?,
-        React.ReactElement<TriggerProps>?,
-        React.ReactElement<FooterProps>?,
-      ]
-    | React.ReactElement<ContentProps>;
+  | [
+    React.ReactElement<ContentProps>,
+    React.ReactElement<HeaderProps>?,
+    React.ReactElement<TriggerProps>?,
+    React.ReactElement<FooterProps>?,
+  ]
+  | React.ReactElement<ContentProps>;
   open?: boolean;
   setOpen?: (open: boolean) => void;
   size?:
-    | "notice"
-    | "x-small"
-    | "retangular"
-    | "smaller"
-    | "small"
-    | "small-update"
-    | "small-query"
-    | "medium"
-    | "medium-tall"
-    | "large"
-    | "three-cards"
-    | "large-thin"
-    | "large-h-full"
-    | "templates"
-    | "small-h-full"
-    | "medium-small-tall"
-    | "medium-h-full"
-    | "md-thin"
-    | "sm-thin"
-    | "smaller-h-full"
-    | "medium-log"
-    | "x-large";
+  | "notice"
+  | "x-small"
+  | "retangular"
+  | "smaller"
+  | "small"
+  | "small-update"
+  | "small-query"
+  | "medium"
+  | "medium-tall"
+  | "large"
+  | "three-cards"
+  | "large-thin"
+  | "large-h-full"
+  | "templates"
+  | "small-h-full"
+  | "medium-small-tall"
+  | "medium-h-full"
+  | "md-thin"
+  | "sm-thin"
+  | "smaller-h-full"
+  | "medium-log"
+  | "x-large";
   className?: string;
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;

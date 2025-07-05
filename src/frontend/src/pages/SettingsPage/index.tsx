@@ -31,7 +31,7 @@ export default function SettingsPage(): JSX.Element {
       icon: (
         <ForwardedIconComponent
           name="SlidersHorizontal"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+          className="w-4 shrink-0 justify-start stroke-[1.5]"
         />
       ),
     });
@@ -44,7 +44,7 @@ export default function SettingsPage(): JSX.Element {
       icon: (
         <ForwardedIconComponent
           name="Mcp"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+          className="w-4 shrink-0 justify-start stroke-[1.5]"
         />
       ),
     },
@@ -54,7 +54,7 @@ export default function SettingsPage(): JSX.Element {
       icon: (
         <ForwardedIconComponent
           name="Globe"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+          className="w-4 shrink-0 justify-start stroke-[1.5]"
         />
       ),
     },
@@ -65,7 +65,7 @@ export default function SettingsPage(): JSX.Element {
       icon: (
         <ForwardedIconComponent
           name="Keyboard"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+          className="w-4 shrink-0 justify-start stroke-[1.5]"
         />
       ),
     },
@@ -75,7 +75,7 @@ export default function SettingsPage(): JSX.Element {
       icon: (
         <ForwardedIconComponent
           name="MessagesSquare"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+          className="w-4 shrink-0 justify-start stroke-[1.5]"
         />
       ),
     },

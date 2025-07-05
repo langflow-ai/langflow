@@ -130,7 +130,7 @@ export const FilesPage = () => {
         return (
           <div className="flex items-center gap-4 font-medium">
             {params.data.progress !== undefined &&
-            params.data.progress !== -1 ? (
+              params.data.progress !== -1 ? (
               <div className="flex h-6 items-center justify-center text-xs font-semibold text-muted-foreground">
                 {Math.round(params.data.progress * 100)}%
               </div>
@@ -151,14 +151,14 @@ export const FilesPage = () => {
               className={cn(
                 "flex items-center gap-2 text-sm font-medium",
                 params.data.progress !== undefined &&
-                  params.data.progress === -1 &&
-                  "pointer-events-none text-placeholder-foreground",
+                params.data.progress === -1 &&
+                "pointer-events-none text-placeholder-foreground",
               )}
             >
               {params.value}.{type}
             </div>
             {params.data.progress !== undefined &&
-            params.data.progress === -1 ? (
+              params.data.progress === -1 ? (
               <span className="text-xs text-primary">
                 Upload failed,{" "}
                 <span
@@ -296,7 +296,7 @@ export const FilesPage = () => {
     return (
       <ShadTooltip content="Upload File" side="bottom">
         <Button
-          className="!px-3 md:!px-4 md:!pl-3.5"
+          className="px-3! md:px-4! md:pl-3.5!"
           onClick={async () => {
             await handleUpload();
           }}
@@ -330,8 +330,8 @@ export const FilesPage = () => {
               className="flex items-center pb-8 text-xl font-semibold"
               data-testid="mainpage_title"
             >
-              <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
-                <div className="relative left-0 opacity-100 transition-all group-data-[open=true]/sidebar-wrapper:md:opacity-0">
+              <div className="h-7 w-10 transition-all md:group-data-[open=true]/sidebar-wrapper:w-0 lg:hidden">
+                <div className="relative left-0 opacity-100 transition-all md:group-data-[open=true]/sidebar-wrapper:opacity-0">
                   <SidebarTrigger>
                     <ForwardedIconComponent
                       name="PanelLeftOpen"
@@ -402,8 +402,8 @@ export const FilesPage = () => {
                       className={cn(
                         "ag-no-border group w-full",
                         isShiftPressed &&
-                          quantitySelected > 0 &&
-                          "no-select-cells",
+                        quantitySelected > 0 &&
+                        "no-select-cells",
                       )}
                       pagination
                       ref={tableRef}
@@ -445,7 +445,7 @@ export const FilesPage = () => {
                             <Button
                               variant="destructive"
                               size="iconMd"
-                              className="px-2.5 !text-mmd"
+                              className="px-2.5 text-mmd!"
                               loading={isDeleting}
                               data-testid="bulk-delete-btn"
                             >

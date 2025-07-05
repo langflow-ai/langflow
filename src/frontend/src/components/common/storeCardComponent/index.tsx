@@ -110,7 +110,7 @@ export default function StoreCardComponent({
         className={cn(
           "group relative flex h-[12rem] flex-col justify-between overflow-hidden",
           !data.is_component &&
-            "hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
+          "hover:bg-muted/50 hover:shadow-md dark:hover:bg-[#5f5f5f0e]",
           disabled ? "pointer-events-none opacity-50" : "",
         )}
       >
@@ -120,10 +120,10 @@ export default function StoreCardComponent({
               <CardTitle className="flex w-full items-start justify-between gap-3 text-xl">
                 <IconComponent
                   className={cn(
-                    "visible flex-shrink-0",
+                    "visible shrink-0",
                     data.is_component
                       ? "mx-0.5 h-6 w-6 text-component-icon"
-                      : "h-7 w-7 flex-shrink-0 text-flow-icon",
+                      : "h-7 w-7 shrink-0 text-flow-icon",
                   )}
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />

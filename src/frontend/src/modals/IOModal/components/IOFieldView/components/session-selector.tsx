@@ -151,7 +151,7 @@ export default function SessionSelector({
                 onChange={handleInputChange}
                 onBlur={handleOnBlur}
                 autoFocus
-                className="h-6 flex-grow px-1 py-0"
+                className="h-6 grow px-1 py-0"
               />
               <button
                 onClick={handleCancel}

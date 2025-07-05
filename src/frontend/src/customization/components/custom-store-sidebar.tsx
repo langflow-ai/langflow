@@ -13,7 +13,7 @@ export const CustomStoreSidebar = (
       icon: (
         <ForwardedIconComponent
           name="Key"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+          className="w-4 shrink-0 justify-start stroke-[1.5]"
         />
       ),
     });
@@ -26,7 +26,7 @@ export const CustomStoreSidebar = (
       icon: (
         <ForwardedIconComponent
           name="Store"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+          className="w-4 shrink-0 justify-start stroke-[1.5]"
         />
       ),
     });

@@ -95,7 +95,7 @@ const ExportModal = forwardRef(
           track("Flow Exported", { flowId: currentFlow!.id });
         }}
       >
-        <BaseModal.Trigger asChild>{props.children ?? <></>}</BaseModal.Trigger>
+        <BaseModal.Trigger asChild>{props.children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
           <span className="pr-2">Export</span>
           <IconComponent

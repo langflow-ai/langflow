@@ -33,7 +33,7 @@ export default function TemplateCardComponent({
     >
       <div
         className={cn(
-          "relative h-20 w-20 shrink-0 overflow-hidden rounded-md p-4 outline-none ring-ring",
+          "relative h-20 w-20 shrink-0 overflow-hidden rounded-md p-4 outline-hidden ring-ring",
           swatchColors[swatchIndex],
         )}
       >

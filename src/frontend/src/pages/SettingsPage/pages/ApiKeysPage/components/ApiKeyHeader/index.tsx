@@ -28,7 +28,7 @@ const ApiKeyHeaderComponent = ({
           </h2>
           <p className="text-sm text-muted-foreground">{API_PAGE_PARAGRAPH}</p>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <SecretKeyModal
             modalProps={modalProps}
             data={userId}

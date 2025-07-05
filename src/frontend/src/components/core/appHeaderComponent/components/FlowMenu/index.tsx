@@ -147,7 +147,7 @@ export const MenuBar = memo((): JSX.Element => {
                 className={cn(
                   "h-5 w-3.5 -translate-x-2 opacity-0 transition-all",
                   !openSettings &&
-                    "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
+                  "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
                 )}
               />
             </div>
@@ -161,12 +161,12 @@ export const MenuBar = memo((): JSX.Element => {
                       ? "Saving..."
                       : "Save Changes"
                     : SAVED_HOVER +
-                      (updatedAt
-                        ? new Date(updatedAt).toLocaleString("en-US", {
-                            hour: "numeric",
-                            minute: "numeric",
-                          })
-                        : "Never")
+                    (updatedAt
+                      ? new Date(updatedAt).toLocaleString("en-US", {
+                        hour: "numeric",
+                        minute: "numeric",
+                      })
+                      : "Never")
                 }
                 side="bottom"
                 styleClasses="cursor-default z-10"

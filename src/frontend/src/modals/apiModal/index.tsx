@@ -29,7 +29,7 @@ export default function ApiModal({
   open: myOpen,
   setOpen: mySetOpen,
 }: {
-  children: ReactNode;
+  children?: ReactNode;
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
 }) {
@@ -111,19 +111,17 @@ export default function ApiModal({
         <BaseModal.Header
           description={
             autoLogin ? undefined : (
-              <>
-                <span className="pr-2">
-                  API access requires an API key. You can{" "}
-                  <a
-                    href="/settings/api-keys"
-                    className="text-accent-pink-foreground"
-                  >
-                    {" "}
-                    create an API key
-                  </a>{" "}
-                  in settings.
-                </span>
-              </>
+              <span className="pr-2">
+                API access requires an API key. You can{" "}
+                <a
+                  href="/settings/api-keys"
+                  className="text-accent-pink-foreground"
+                >
+                  {" "}
+                  create an API key
+                </a>{" "}
+                in settings.
+              </span>
             )
           }
         >
@@ -170,19 +168,17 @@ export default function ApiModal({
         <BaseModal.Header
           description={
             autoLogin ? undefined : (
-              <>
-                <span className="pr-2">
-                  API access requires an API key. You can{" "}
-                  <a
-                    href="/settings/api-keys"
-                    className="text-accent-pink-foreground"
-                  >
-                    {" "}
-                    create an API key
-                  </a>{" "}
-                  in settings.
-                </span>
-              </>
+              <span className="pr-2">
+                API access requires an API key. You can{" "}
+                <a
+                  href="/settings/api-keys"
+                  className="text-accent-pink-foreground"
+                >
+                  {" "}
+                  create an API key
+                </a>{" "}
+                in settings.
+              </span>
             )
           }
         >

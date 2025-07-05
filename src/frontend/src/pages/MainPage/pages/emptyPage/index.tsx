@@ -58,7 +58,7 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
                 <feGaussianBlur
                   in="turbulence"
                   stdDeviation="10"
-                  result="blur"
+                  result="blur-xs"
                 />
                 <feColorMatrix
                   in="blur"

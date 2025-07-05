@@ -12,10 +12,10 @@ interface ModalsProps {
 
 const ModalsComponent = ({
   openModal = false,
-  setOpenModal = () => {},
+  setOpenModal = () => { },
   openDeleteFolderModal = false,
-  setOpenDeleteFolderModal = () => {},
-  handleDeleteFolder = () => {},
+  setOpenDeleteFolderModal = () => { },
+  handleDeleteFolder = () => { },
 }: ModalsProps) => (
   <>
     {openModal && <TemplatesModal open={openModal} setOpen={setOpenModal} />}

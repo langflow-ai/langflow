@@ -150,7 +150,7 @@ export default function StorePage(): JSX.Element {
             title: COMPONENTS_ERROR_ALERT,
             list: [
               err?.response?.data?.detail ??
-                "There was an error fetching the components",
+              "There was an error fetching the components",
             ],
           });
         }
@@ -264,7 +264,7 @@ export default function StorePage(): JSX.Element {
               onValueChange={setSelectFilter}
               value={selectFilter}
             >
-              <SelectTrigger className="mr-4 w-[160px] flex-shrink-0">
+              <SelectTrigger className="mr-4 w-[160px] shrink-0">
                 <SelectValue placeholder="Filter Values" />
               </SelectTrigger>
               <SelectContent>

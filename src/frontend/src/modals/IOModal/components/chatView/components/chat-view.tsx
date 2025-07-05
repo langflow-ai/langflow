@@ -253,8 +253,8 @@ export default function ChatView({
         "flex h-full w-full flex-col rounded-md",
         visibleSession ? "h-[95%]" : "h-full",
         sidebarOpen &&
-          !isVoiceAssistantActive &&
-          "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0",
+        !isVoiceAssistantActive &&
+        "pointer-events-none blur-xs lg:pointer-events-auto lg:blur-0",
       )}
       onDragOver={dragOver}
       onDragEnter={dragEnter}

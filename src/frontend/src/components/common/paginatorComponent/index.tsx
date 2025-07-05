@@ -64,7 +64,7 @@ export default function PaginatorComponent({
           >
             <SelectTrigger
               direction="up"
-              className="h-7 w-fit gap-1 border-none p-1 pl-1.5 text-mmd focus:border-none focus:ring-0 focus:!ring-offset-0"
+              className="h-7 w-fit gap-1 border-none p-1 pl-1.5 text-mmd focus:border-none focus:ring-0 focus:ring-offset-0!"
             >
               <SelectValue placeholder="1" />
             </SelectTrigger>

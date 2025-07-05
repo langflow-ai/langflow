@@ -227,18 +227,18 @@ export type TooltipComponentType = {
   children: ReactElement;
   title: string | ReactElement;
   placement?:
-    | "bottom-end"
-    | "bottom-start"
-    | "bottom"
-    | "left-end"
-    | "left-start"
-    | "left"
-    | "right-end"
-    | "right-start"
-    | "right"
-    | "top-end"
-    | "top-start"
-    | "top";
+  | "bottom-end"
+  | "bottom-start"
+  | "bottom"
+  | "left-end"
+  | "left-start"
+  | "left"
+  | "right-end"
+  | "right-start"
+  | "right"
+  | "top-end"
+  | "top-start"
+  | "top";
 };
 
 export type ProgressBarType = {
@@ -321,7 +321,7 @@ export type TooltipProps = {
   content?: string;
   disabled?: boolean;
   htmlContent?: React.ReactNode;
-  className?: string; // This should use !impornant to override the default styles eg: '!bg-white'
+  className?: string; // This should use !impornant to override the default styles eg: 'bg-white!'
   position?: "top" | "right" | "bottom" | "left";
   clickable?: boolean;
   children: React.ReactNode;
@@ -379,8 +379,8 @@ export type ConfirmationModalType = {
   cancelText?: string;
   confirmationText?: string;
   children:
-    | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
-    | React.ReactElement<ContentProps>;
+  | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
+  | React.ReactElement<ContentProps>;
   icon?: string;
   data?: any;
   index?: number;
@@ -388,14 +388,14 @@ export type ConfirmationModalType = {
   open?: boolean;
   onClose?: () => void;
   size?:
-    | "x-small"
-    | "smaller"
-    | "small"
-    | "medium"
-    | "large"
-    | "large-h-full"
-    | "small-h-full"
-    | "medium-h-full";
+  | "x-small"
+  | "smaller"
+  | "small"
+  | "medium"
+  | "large"
+  | "large-h-full"
+  | "small-h-full"
+  | "medium-h-full";
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
 };
 
@@ -448,18 +448,18 @@ export type ApiKeyType = {
     generatedKeyMessage?: string | ReactElement | HTMLElement;
     showIcon?: boolean;
     size?:
-      | "x-small"
-      | "smaller"
-      | "small"
-      | "medium"
-      | "medium-tall"
-      | "large"
-      | "three-cards"
-      | "large-thin"
-      | "large-h-full"
-      | "templates"
-      | "small-h-full"
-      | "medium-h-full";
+    | "x-small"
+    | "smaller"
+    | "small"
+    | "medium"
+    | "medium-tall"
+    | "large"
+    | "three-cards"
+    | "large-thin"
+    | "large-h-full"
+    | "templates"
+    | "small-h-full"
+    | "medium-h-full";
   };
 };
 

@@ -56,8 +56,8 @@ export const ChatViewWrapper = ({
           <div
             className={cn(
               "truncate text-center font-semibold",
-              playgroundPage ? "" : "mr-12 flex-grow lg:mr-0",
-              sidebarOpen ? "blur-sm lg:blur-0" : "",
+              playgroundPage ? "" : "mr-12 grow lg:mr-0",
+              sidebarOpen ? "blur-xs lg:blur-0" : "",
             )}
           >
             {visibleSession === currentFlowId
@@ -68,7 +68,7 @@ export const ChatViewWrapper = ({
         <div
           className={cn(
             sidebarOpen ? "pointer-events-none opacity-0" : "",
-            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2",
             playgroundPage ? "right-2 top-4" : "absolute right-12 top-2 h-8",
           )}
         >
@@ -84,7 +84,7 @@ export const ChatViewWrapper = ({
             >
               <IconComponent
                 name="Plus"
-                className="!h-[18px] !w-[18px] text-ring"
+                className="h-[18px]! w-[18px]! text-ring"
               />
             </Button>
           </ShadTooltip>
@@ -101,8 +101,8 @@ export const ChatViewWrapper = ({
             !canvasOpen
               ? undefined
               : () => {
-                  setOpen(false);
-                }
+                setOpen(false);
+              }
           }
           playgroundPage={playgroundPage}
           sidebarOpen={sidebarOpen}

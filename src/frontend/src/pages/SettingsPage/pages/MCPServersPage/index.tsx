@@ -71,7 +71,7 @@ export default function MCPServersPage() {
             Manage MCP Servers for use in your flows.
           </p>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="primary"
             onClick={() => setAddOpen(true)}
@@ -99,14 +99,14 @@ export default function MCPServersPage() {
               {servers.map((server) => (
                 <div
                   key={server.id}
-                  className="flex items-center justify-between rounded-lg px-3 py-2 shadow-sm transition-colors hover:bg-accent"
+                  className="flex items-center justify-between rounded-lg px-3 py-2 shadow-xs transition-colors hover:bg-accent"
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{server.name}</span>
                     <ShadTooltip content={server.error}>
                       <span
                         className={cn(
-                          "cursor-default select-none !text-mmd text-muted-foreground",
+                          "cursor-default select-none text-mmd! text-muted-foreground",
                           server.error && "text-accent-red-foreground",
                         )}
                       >

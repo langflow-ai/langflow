@@ -97,8 +97,8 @@ const HeaderComponent = ({
         className="flex items-center pb-4 text-sm font-medium"
         data-testid="mainpage_title"
       >
-        <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
-          <div className="relative left-0 opacity-100 transition-all group-data-[open=true]/sidebar-wrapper:md:opacity-0">
+        <div className="h-7 w-10 transition-all md:group-data-[open=true]/sidebar-wrappemd:w-0 lg:hidden">
+          <div className="relative left-0 opacity-100 transition-all md:group-data-[open=true]/sidebar-wrapper:opacity-0">
             <SidebarTrigger>
               <ForwardedIconComponent
                 name="PanelLeftOpen"
@@ -123,11 +123,10 @@ const HeaderComponent = ({
                 onClick={() => {
                   setFlowType(type as "flows" | "components" | "mcp");
                 }}
-                className={`border-b ${
-                  flowType === type
-                    ? "border-b-2 border-foreground text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                } text-nowrap px-2 pb-2 pt-1 text-mmd`}
+                className={`border-b ${flowType === type
+                  ? "border-b-2 border-foreground text-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground"
+                  } text-nowrap px-2 pb-2 pt-1 text-mmd`}
               >
                 <div className={flowType === type ? "-mb-px" : ""}>
                   {type === "mcp"
@@ -146,19 +145,18 @@ const HeaderComponent = ({
                   data-testid="search-store-input"
                   type="text"
                   placeholder={`Search ${flowType}...`}
-                  className="mr-2 !text-mmd"
-                  inputClassName="!text-mmd"
+                  className="mr-2 text-mmd!"
+                  inputClassName="text-mmd!"
                   value={debouncedSearch}
                   onChange={handleSearch}
                 />
                 <div className="relative mr-2 flex h-fit rounded-lg border border-muted bg-muted">
                   {/* Sliding Indicator */}
                   <div
-                    className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${
-                      view === "list"
-                        ? "left-[2px] translate-x-0"
-                        : "left-[6px] translate-x-full"
-                    }`}
+                    className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${view === "list"
+                      ? "left-[2px] translate-x-0"
+                      : "left-[6px] translate-x-full"
+                      }`}
                   ></div>
 
                   {/* Buttons */}
@@ -167,11 +165,10 @@ const HeaderComponent = ({
                       key={viewType}
                       unstyled
                       size="icon"
-                      className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${
-                        view === viewType
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:bg-muted"
-                      }`}
+                      className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${view === viewType
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:bg-muted"
+                        }`}
                       onClick={() => setView(viewType as "list" | "grid")}
                     >
                       <ForwardedIconComponent
@@ -213,7 +210,7 @@ const HeaderComponent = ({
                     <Button
                       variant="destructive"
                       size="iconMd"
-                      className="px-2.5 !text-mmd"
+                      className="px-2.5 text-mmd!"
                       data-testid="delete-bulk-btn"
                       loading={isDeleting}
                     >
@@ -226,7 +223,7 @@ const HeaderComponent = ({
                   <Button
                     variant="default"
                     size="iconMd"
-                    className="z-50 px-2.5 !text-mmd"
+                    className="z-50 px-2.5 text-mmd!"
                     onClick={() => setNewProjectModal(true)}
                     id="new-project-btn"
                     data-testid="new-project-btn"

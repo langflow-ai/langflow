@@ -137,10 +137,10 @@ const NodeToolbarComponent = memo(
       if (data.node?.tool_mode !== undefined) {
         setToolMode(
           data.node?.tool_mode ||
-            data.node?.outputs?.some(
-              (output) => output.name === "component_as_tool",
-            ) ||
-            false,
+          data.node?.outputs?.some(
+            (output) => output.name === "component_as_tool",
+          ) ||
+          false,
         );
       }
     }, [data.node?.tool_mode, data.node?.outputs]);
@@ -544,7 +544,7 @@ const NodeToolbarComponent = memo(
               value={selectedValue!}
               onOpenChange={handleOpenChange}
             >
-              <SelectTrigger className="w-62">
+              <SelectTrigger>
                 <ShadTooltip content="Show More" side="top">
                   <div data-testid="more-options-modal">
                     <Button

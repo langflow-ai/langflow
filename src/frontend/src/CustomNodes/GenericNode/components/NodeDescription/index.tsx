@@ -75,16 +75,15 @@ export default function NodeDescription({
       return emptyPlaceholder;
     }
     return (
-      <MemoizedMarkdown
-        linkTarget="_blank"
-        className={cn(
-          "markdown prose flex w-full flex-col leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
-          stickyNote ? "text-mmd" : "text-xs",
-          mdClassName,
-        )}
-      >
-        {String(description)}
-      </MemoizedMarkdown>
+      <div className={cn(
+        "markdown prose flex w-full flex-col leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:bg-code-description-background! [&_pre_code]:bg-code-description-background!",
+        stickyNote ? "text-mmd" : "text-xs",
+        mdClassName,
+      )}>
+        <MemoizedMarkdown>
+          {String(description)}
+        </MemoizedMarkdown>
+      </div>
     );
   }, [description, emptyPlaceholder, mdClassName]);
 
@@ -156,7 +155,7 @@ export default function NodeDescription({
             className={cn(
               "nowheel w-full text-xs focus:border-primary focus:ring-0",
               stickyNote
-                ? "overflow-auto p-0 px-2 pt-0.5 !text-mmd"
+                ? "overflow-auto p-0 px-2 pt-0.5 text-mmd!"
                 : "px-2 py-0.5",
               inputClassName,
             )}
@@ -170,7 +169,7 @@ export default function NodeDescription({
           {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (
             <div
               className={cn(
-                "pt-1 text-left !text-mmd",
+                "pt-1 text-left text-mmd!",
                 (nodeDescription?.length ?? 0) >= charLimit
                   ? "text-error"
                   : "text-primary",

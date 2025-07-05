@@ -125,7 +125,7 @@ export default function APITabsComponent() {
               <TabsTrigger
                 key={index}
                 value={index.toString()}
-                className="flex items-center gap-2.5 rounded-md !border-0 px-4 py-2 !text-sm data-[state=active]:bg-background"
+                className="flex items-center gap-2.5 rounded-md border-0! px-4 py-2 text-sm! data-[state=active]:bg-background"
               >
                 <IconComponent name={tab.icon} className="h-4 w-4" />
                 {tab.title}
@@ -159,7 +159,7 @@ export default function APITabsComponent() {
               ) : (
                 <IconComponent
                   name="Copy"
-                  className="!h-5 !w-5 text-muted-foreground"
+                  className="h-5! w-5! text-muted-foreground"
                 />
               )}
             </Button>
@@ -168,7 +168,7 @@ export default function APITabsComponent() {
               wrapLongLines={true}
               language={tab.language}
               style={dark ? oneDark : oneLight}
-              className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
+              className="mt-0! h-full w-full overflow-scroll rounded-b-md! border border-border text-left custom-scroll!"
             >
               {tab.code}
             </SyntaxHighlighter>

@@ -129,7 +129,6 @@
     "prettier-plugin-tailwindcss": "^0.6.13",
     "simple-git-hooks": "^2.11.1",
     "tailwindcss": "^4.1.11",
-    "tailwindcss-dotted-background": "^1.1.0",
     "ts-jest": "^29.4.0",
     "typescript": "^5.4.5",
     "vite": "^7.0.1",

@@ -292,7 +292,7 @@ export default function Dropdown({
     return iconMetadata ? (
       <ForwardedIconComponent
         name={iconMetadata}
-        className="h-4 w-4 flex-shrink-0"
+        className="h-4 w-4 shrink-0"
       />
     ) : null;
   };
@@ -366,7 +366,7 @@ export default function Dropdown({
         onChange={searchRoleByTerm}
         onKeyDown={handleInputKeyDown}
         placeholder="Search options..."
-        className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
         data-testid="dropdown_search_input"
       />
@@ -450,7 +450,7 @@ export default function Dropdown({
                                 {i > 0 && (
                                   <ForwardedIconComponent
                                     name="Circle"
-                                    className="mx-1 h-1 w-1 flex-shrink-0 overflow-visible fill-muted-foreground"
+                                    className="mx-1 h-1 w-1 shrink-0 overflow-visible fill-muted-foreground"
                                   />
                                 )}
                                 <div className="truncate text-xs">
@@ -589,7 +589,7 @@ export default function Dropdown({
 
   // Main render
   return (
-    <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
+    <Popover open={open} onOpenChange={children ? () => { } : setOpen}>
       {children ? (
         <PopoverAnchor>{children}</PopoverAnchor>
       ) : refreshOptions || isLoading ? (
@@ -602,7 +602,7 @@ export default function Dropdown({
           {optionsMetaData?.[0]?.icon && (
             <ForwardedIconComponent
               name={optionsMetaData?.[0]?.icon}
-              className="h-4 w-4 flex-shrink-0"
+              className="h-4 w-4 shrink-0"
             />
           )}
           <span className="truncate text-sm">{value}</span>

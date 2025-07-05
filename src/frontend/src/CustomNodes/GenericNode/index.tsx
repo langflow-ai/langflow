@@ -380,7 +380,7 @@ function GenericNode({
             numberOfOutputHandles={shownOutputs.length ?? 0}
             showNode={showNode}
             openAdvancedModal={false}
-            onCloseAdvancedModal={() => {}}
+            onCloseAdvancedModal={() => { }}
             updateNode={() => handleUpdateCode()}
             isOutdated={isOutdated && (dismissAll || isUserEdited)}
             isUserEdited={isUserEdited}
@@ -463,7 +463,7 @@ function GenericNode({
         className={cn(
           borderColor,
           showNode ? "w-80" : `w-48`,
-          "generic-node-div group/node relative rounded-xl border shadow-sm hover:shadow-md",
+          "generic-node-div group/node relative rounded-xl border shadow-xs hover:shadow-md",
           !hasOutputs && "pb-4",
         )}
       >

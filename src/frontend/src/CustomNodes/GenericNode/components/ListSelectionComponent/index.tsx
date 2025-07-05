@@ -29,7 +29,7 @@ const ListSelectionComponent = ({
   onClose,
   searchCategories = [],
   onSelection,
-  setSelectedList = () => {},
+  setSelectedList = () => { },
   selectedList = [],
   options,
   limit = 1,
@@ -251,7 +251,7 @@ const ListSelectionComponent = ({
         <DialogFooter>
           {onAddButtonClick && (
             <Button
-              className="flex w-full items-center gap-2 border-t px-4 py-3 !text-mmd hover:bg-muted"
+              className="flex w-full items-center gap-2 border-t px-4 py-3 text-mmd! hover:bg-muted"
               unstyled
               onClick={onAddButtonClick}
             >

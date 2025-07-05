@@ -183,13 +183,13 @@ export default function InputFileComponent({
       handleOnNewValue({
         value: isList
           ? (files
-              ?.filter((f) => selectedFiles.includes(f.path))
-              .map((f) => f.name) ?? [])
+            ?.filter((f) => selectedFiles.includes(f.path))
+            .map((f) => f.name) ?? [])
           : (files?.find((f) => selectedFiles.includes(f.path))?.name ?? ""),
         file_path: isList
           ? (files
-              ?.filter((f) => selectedFiles.includes(f.path))
-              .map((f) => f.path) ?? [])
+            ?.filter((f) => selectedFiles.includes(f.path))
+            .map((f) => f.path) ?? [])
           : (files?.find((f) => selectedFiles.includes(f.path))?.path ?? ""),
       });
     }
@@ -214,9 +214,9 @@ export default function InputFileComponent({
                       handleOnNewValue({
                         value: isList
                           ? newSelectedFiles.map(
-                              (file) =>
-                                files.find((f) => f.path === file)?.name,
-                            )
+                            (file) =>
+                              files.find((f) => f.path === file)?.name,
+                          )
                           : (files.find((f) => f.path == newSelectedFiles[0]) ??
                             ""),
                         file_path: isList
@@ -233,8 +233,8 @@ export default function InputFileComponent({
                     handleOnNewValue({
                       value: isList
                         ? selectedFiles.map(
-                            (file) => files.find((f) => f.path === file)?.name,
-                          )
+                          (file) => files.find((f) => f.path === file)?.name,
+                        )
                         : (files.find((f) => f.path == selectedFiles[0]) ?? ""),
                       file_path: isList
                         ? selectedFiles
@@ -283,7 +283,7 @@ export default function InputFileComponent({
                   data-testid="input-file-component"
                   type="text"
                   className={cn(
-                    "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
+                    "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-hidden focus:ring-0",
                     !value && "text-placeholder-foreground",
                     editNode && "h-6",
                   )}
@@ -298,9 +298,9 @@ export default function InputFileComponent({
                   className={cn(
                     "h-9 w-9 rounded-l-none",
                     value &&
-                      "bg-accent-emerald-foreground ring-accent-emerald-foreground hover:bg-accent-emerald-foreground",
+                    "bg-accent-emerald-foreground ring-accent-emerald-foreground hover:bg-accent-emerald-foreground",
                     isDisabled &&
-                      "relative top-[1px] h-9 ring-1 ring-border ring-offset-0 hover:ring-border",
+                    "relative top-[1px] h-9 ring-1 ring-border ring-offset-0 hover:ring-border",
                     editNode && "h-6",
                   )}
                   onClick={handleButtonClick}
