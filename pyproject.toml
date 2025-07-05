@@ -233,7 +233,7 @@ override-dependencies = [
 ]
 
 [project.scripts]
-langflow = "langflow.__main__:main"
+langflow = "langflow.langflow_launcher:main"
 
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
