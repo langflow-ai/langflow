@@ -41,6 +41,7 @@ import ToolbarModals from "./components/toolbar-modals";
 import useShortcuts from "./hooks/use-shortcuts";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import { useShallow } from "zustand/react/shallow";
 
 const NodeToolbarComponent = memo(
   ({
@@ -67,11 +68,11 @@ const NodeToolbarComponent = memo(
     const updateFreezeStatus = useFlowStore(
       (state) => state.updateFreezeStatus,
     );
-    const { hasStore, hasApiKey, validApiKey } = useStoreStore((state) => ({
+    const { hasStore, hasApiKey, validApiKey } = useStoreStore(useShallow((state) => ({
       hasStore: state.hasStore,
       hasApiKey: state.hasApiKey,
       validApiKey: state.validApiKey,
-    }));
+    })));
     const shortcuts = useShortcutsStore((state) => state.shortcuts);
     const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
     const [openModal, setOpenModal] = useState(false);
