@@ -1,6 +1,6 @@
-from functools import lru_cache
 import json
 import os
+from functools import lru_cache
 from typing import Any
 
 import httpx
@@ -224,7 +224,7 @@ class LangWatchComponent(Component):
 
         self.evaluators = self.get_evaluators(os.getenv("LANGWATCH_ENDPOINT", "https://app.langwatch.ai"))
         self.dynamic_inputs = {}
-        if getattr(self, 'current_evaluator', None) is None and self.evaluators:
+        if getattr(self, "current_evaluator", None) is None and self.evaluators:
             self.current_evaluator = next(iter(self.evaluators))
 
         # Prioritize evaluator_name if it exists
