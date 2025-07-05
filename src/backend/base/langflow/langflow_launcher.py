@@ -50,7 +50,7 @@ def _launch_with_subprocess():
     signal.signal(signal.SIGTERM, signal_handler)
 
     try:
-        process = subprocess.Popen(command, env=env)
+        process = subprocess.Popen(command, env=env)  # noqa: S603
         return process.wait()
     except KeyboardInterrupt:
         if process and process.poll() is None:
@@ -61,6 +61,6 @@ def _launch_with_subprocess():
                 logging.warning("Process didn't terminate gracefully, killing...")
                 process.kill()
         return 130
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         logging.exception(f"Error running langflow: {e}")
         return 1
