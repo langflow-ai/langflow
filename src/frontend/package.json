@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
+    "@clerk/clerk-react": "^5.32.4",
     "@headlessui/react": "^2.0.4",
     "@hookform/resolvers": "^3.6.0",
     "@million/lint": "^1.0.0-rc.26",
