@@ -61,6 +61,6 @@ def _launch_with_subprocess():
                 logging.warning("Process didn't terminate gracefully, killing...")
                 process.kill()
         return 130
-    except Exception as e: # noqa: BLE001
+    except Exception as e:
         logging.exception(f"Error running langflow: {e}")
         return 1
