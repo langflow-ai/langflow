@@ -1,3 +1,5 @@
+import { IS_CLERK_AUTH } from "@/constants/clerk";
+import { mockClerkMutation } from "@/utils/mocks/mockMutationClerk";
 import { IS_AUTO_LOGIN, LANGFLOW_REFRESH_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
 import { useMutationFunctionType } from "@/types/api";
@@ -19,6 +21,10 @@ export const useRefreshAccessToken: useMutationFunctionType<
   const { mutate } = UseRequestProcessor();
   const cookies = new Cookies();
   const autoLogin = useAuthStore((state) => state.autoLogin);
+
+  if (IS_CLERK_AUTH) {
+    return mockClerkMutation;
+  }
 
   async function refreshAccess(): Promise<IRefreshAccessToken> {
     const res = await api.post<IRefreshAccessToken>(`${getURL("REFRESH")}`);
