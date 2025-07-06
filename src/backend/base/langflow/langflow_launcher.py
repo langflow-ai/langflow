@@ -13,10 +13,6 @@ def main():
         _launch_with_exec()
     else:
         # On non-macOS systems, call the main function directly
-        # If no command specified, default to 'run'
-        if len(sys.argv) == 1:
-            sys.argv.append("run")
-
         from langflow.__main__ import main as langflow_main
 
         langflow_main()
@@ -44,10 +40,6 @@ def _launch_with_exec():
     os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
     # Additional fix for gunicorn compatibility
     os.environ["no_proxy"] = "*"
-
-    # If no command specified, default to 'run'
-    if len(sys.argv) == 1:
-        sys.argv.append("run")
 
     try:
         os.execv(sys.executable, [sys.executable, "-m", "langflow.__main__"] + sys.argv[1:])
