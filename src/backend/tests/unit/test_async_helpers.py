@@ -45,7 +45,8 @@ class TestRunUntilComplete:
             return "complex_result"
         
         async def main_test():
-            # This would deadlock with old implementation, but works with our fix
+            # This would deadlock with old implementation that calls loop.run_until_complete
+            # using the running loop
             result = run_until_complete(complex_coro())
             return result
         
