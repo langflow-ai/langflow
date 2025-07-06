@@ -1,7 +1,8 @@
 ---
-title: Clerk Token Refresh Behavior
-slug: /clerk-token-refresh
+title: Clerk Authentication
+slug: /clerk-auth
 ---
+
 
 This page summarizes how Langflow handles access token refreshes in different authentication modes and what state changes occur when using Clerk.
 

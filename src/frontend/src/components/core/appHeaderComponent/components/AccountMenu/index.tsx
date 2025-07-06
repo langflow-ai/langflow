@@ -1,4 +1,4 @@
-import { useLogout } from "@/clerk/clerk-logout";
+import { useLogout } from "@/clerk/auth";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import {
   DATASTAX_DOCS_URL,

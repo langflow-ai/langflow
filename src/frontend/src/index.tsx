@@ -9,7 +9,7 @@ import "./App.css";
 import "./style/applies.css";
 
 // @ts-ignore
-import App from "./AppWithProvider";
+import App from "./clerk/auth";
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement,
