@@ -246,14 +246,14 @@ class URLComponent(Component):
         """
         try:
             urls = list({self.ensure_url(url) for url in self.urls if url.strip()})
-            logger.info(f"URLs: {urls}")
+            logger.debug(f"URLs: {urls}")
             if not urls:
                 msg = "No valid URLs provided."
                 raise ValueError(msg)
 
             all_docs = []
             for url in urls:
-                logger.info(f"Loading documents from {url}")
+                logger.debug(f"Loading documents from {url}")
 
                 try:
                     loader = self._create_loader(url)
@@ -263,7 +263,7 @@ class URLComponent(Component):
                         logger.warning(f"No documents found for {url}")
                         continue
 
-                    logger.info(f"Found {len(docs)} documents from {url}")
+                    logger.debug(f"Found {len(docs)} documents from {url}")
                     all_docs.extend(docs)
 
                 except requests.exceptions.RequestException as e:
