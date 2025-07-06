@@ -31,3 +31,10 @@ When `CLERK_AUTH_ENABLED` is `true`, token refresh from the frontend is skipped.
 | `authContext.userData` | populated from `/users/whoami` |
 
 With Clerk enabled the periodic refresh is disabled and all further state changes rely on Clerk sessions.
+
+## Environment variables
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| <Link id="CLERK_AUTH_ENABLED"/>CLERK_AUTH_ENABLED | Boolean | `false` | When enabled, Langflow uses Clerk for authentication. After signing in or signing up with Clerk, the frontend registers the user with the backend and then logs in via `/api/v1/login` to sync cookies. The `access_token_lf` cookie stores the Clerk session token. |
+| <Link id="CLERK_PUBLISHABLE_KEY"/>CLERK_PUBLISHABLE_KEY | String | Not set | Publishable key required when `CLERK_AUTH_ENABLED` is `true`. |
