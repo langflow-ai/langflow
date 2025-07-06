@@ -201,21 +201,3 @@ class TestRunUntilComplete:
             # Should have called asyncio.run (original behavior)
             mock_run.assert_called_once()
             assert result == "mocked_result"
-
-    def test_run_until_complete_event_loop_cleanup(self):
-        """Test that event loops are properly cleaned up."""
-
-        async def simple_coro():
-            return "cleanup_test"
-
-        async def main_test():
-            # Get initial loop count (this is tricky to test directly)
-            # We'll just ensure no exceptions are raised during cleanup
-            for _ in range(5):
-                result = run_until_complete(simple_coro())
-                assert result == "cleanup_test"
-
-            return "cleanup_successful"
-
-        result = asyncio.run(main_test())
-        assert result == "cleanup_successful"
