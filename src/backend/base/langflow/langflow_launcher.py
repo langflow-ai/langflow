@@ -1,19 +1,16 @@
-import contextlib
-import logging
 import os
 import platform
-import signal
-import subprocess
 import sys
 
 
 def main():
-    """Launches langflow in a subprocess on macOS to set environment variables.
+    """Launches langflow with appropriate environment setup.
 
-    Or directly calls main on other platforms.
+    On macOS, sets required environment variables and replaces current process.
+    On other platforms, calls main function directly.
     """
     if platform.system() == "Darwin":  # macOS
-        _launch_with_subprocess()
+        _launch_with_exec()
     else:
         # On non-macOS systems, call the main function directly
         # If no command specified, default to 'run'
@@ -25,43 +22,36 @@ def main():
         langflow_main()
 
 
-def _launch_with_subprocess():
-    """Launch langflow in subprocess with macOS-specific environment variables."""
-    env = os.environ.copy()
-    # Required for macOS to avoid fork safety issues.
-    # Error: """
-    # When fork() is called, NSCheapMutableString initialize may be in progress in another thread.
-    # This cannot be safely called or ignored in the fork() child process, causing a crash.
-    # To debug, set a breakpoint on objc_initializeAfterForkError
-    # """
-    env["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
-
+def _launch_with_exec():
+    """Launch langflow by replacing current process with properly configured environment.
+    
+    This approach is necessary because Objective-C libraries are preloaded by the Python
+    runtime before any Python code executes. Setting OBJC_DISABLE_INITIALIZE_FORK_SAFETY
+    within Python code is too late - it must be set in the parent process environment
+    before spawning Python.
+    
+    Testing with OBJC_PRINT_INITIALIZE=YES confirms that NSCheapMutableString and
+    other Objective-C classes are initialized during Python startup, before any
+    user code runs. This causes fork safety issues when gunicorn or multiprocessing
+    attempts to fork the process.
+    
+    The exec approach sets the environment variables and then replaces the current
+    process with a new Python process. This is more efficient than subprocess since
+    we don't need the launcher process to remain running, and signals are handled
+    directly by the target process.
+    """
+    # Set environment variables before exec
+    os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+    # Additional fix for gunicorn compatibility
+    os.environ["no_proxy"] = "*"
+    
     # If no command specified, default to 'run'
-    args = sys.argv[1:] if len(sys.argv) > 1 else ["run"]
-    command = [*["uv", "run", "python", "-m", "langflow.__main__"], *args]
-    process: subprocess.Popen | None = None
-
-    def signal_handler(signum: int, _frame):
-        """Forward signals to the child process."""
-        if process and process.poll() is None:
-            with contextlib.suppress(ProcessLookupError):
-                process.send_signal(signum)
-
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
+    if len(sys.argv) == 1:
+        sys.argv.append("run")
+    
     try:
-        process = subprocess.Popen(command, env=env)  # noqa: S603
-        return process.wait()
-    except KeyboardInterrupt:
-        if process and process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                logging.warning("Process didn't terminate gracefully, killing...")
-                process.kill()
-        return 130
-    except Exception:
-        logging.exception("Error running langflow")
-        return 1
+        os.execv(sys.executable, [sys.executable, "-m", "langflow.__main__"] + sys.argv[1:])
+    except OSError as e:
+        # If exec fails, we need to exit since the process replacement failed
+        print(f"Failed to exec langflow: {e}", file=sys.stderr)
+        sys.exit(1)
