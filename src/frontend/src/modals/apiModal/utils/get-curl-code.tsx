@@ -49,19 +49,21 @@ export function getNewCurlCode({
   isAuthenticated: boolean;
   endpointName: string;
   processedPayload: any;
-  platform?: 'unix' | 'powershell';
+  platform?: "unix" | "powershell";
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const apiUrl = `${protocol}//${host}/api/v1/run/${endpointName || flowId}`;
 
   // Auto-detect if no platform specified
-  const detectedPlatform = platform || (
-    /Windows|Win32|Win64|WOW32|WOW64/i.test(navigator.userAgent) ? 'powershell' : 'unix'
-  );
+  const detectedPlatform =
+    platform ||
+    (/Windows|Win32|Win64|WOW32|WOW64/i.test(navigator.userAgent)
+      ? "powershell"
+      : "unix");
 
   const singleLinePayload = JSON.stringify(processedPayload);
 
-  if (detectedPlatform === 'powershell') {
+  if (detectedPlatform === "powershell") {
     // PowerShell with here-string (most robust for complex JSON)
     return `${
       isAuthenticated

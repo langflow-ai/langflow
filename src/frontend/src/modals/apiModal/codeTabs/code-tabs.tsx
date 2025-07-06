@@ -86,15 +86,15 @@ export default function APITabsComponent() {
       title: "cURL",
       icon: "TerminalSquare",
       language: "shell",
-      code: getNewCurlCode({...codeOptions, platform: 'unix'}),
-      copyCode: getNewCurlCode({...codeOptions, platform: 'unix'}),
+      code: getNewCurlCode({ ...codeOptions, platform: "unix" }),
+      copyCode: getNewCurlCode({ ...codeOptions, platform: "unix" }),
     },
     {
       title: "PowerShell",
       icon: "TerminalSquare",
       language: "powershell",
-      code: getNewCurlCode({...codeOptions, platform: 'powershell'}),
-      copyCode: getNewCurlCode({...codeOptions, platform: 'powershell'}),
+      code: getNewCurlCode({ ...codeOptions, platform: "powershell" }),
+      copyCode: getNewCurlCode({ ...codeOptions, platform: "powershell" }),
     },
   ];
   const [activeTab, setActiveTab] = useState<number>(0);
