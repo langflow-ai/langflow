@@ -1,12 +1,11 @@
 import json
 import os
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import httpx
 import pytest
 import respx
 from httpx import Response
-
 from langflow.components.langwatch.langwatch import LangWatchComponent
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
@@ -93,9 +92,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         """Clear the LRU cache before each test."""
         LangWatchComponent._get_cached_evaluators.cache_clear()
 
-
-
-    @patch('langflow.components.langwatch.langwatch.httpx.get')
+    @patch("langflow.components.langwatch.langwatch.httpx.get")
     async def test_set_evaluators_success(self, mock_get, component, mock_evaluators):
         """Test successful setting of evaluators."""
         mock_response = Mock()
@@ -107,7 +104,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         component.set_evaluators(endpoint)
         assert component.evaluators == mock_evaluators
 
-    @patch('langflow.components.langwatch.langwatch.httpx.get')
+    @patch("langflow.components.langwatch.langwatch.httpx.get")
     async def test_set_evaluators_empty_response(self, mock_get, component):
         """Test setting evaluators with empty response."""
         mock_response = Mock()
@@ -147,23 +144,25 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
     @patch.dict(os.environ, {"LANGWATCH_ENDPOINT": "https://test.langwatch.ai"})
     def test_update_build_config_basic(self, component, mock_evaluators):
         """Test basic build config update."""
-        build_config = dotdict({
-            "evaluator_name": {"options": [], "value": None},
-            "api_key": {"value": "test_key"},
-            "code": {"value": ""},
-            "_type": {"value": ""},
-            "input": {"value": ""},
-            "output": {"value": ""},
-            "timeout": {"value": 30},
-        })
+        build_config = dotdict(
+            {
+                "evaluator_name": {"options": [], "value": None},
+                "api_key": {"value": "test_key"},
+                "code": {"value": ""},
+                "_type": {"value": ""},
+                "input": {"value": ""},
+                "output": {"value": ""},
+                "timeout": {"value": 30},
+            }
+        )
 
         # Mock the get_evaluators method (which doesn't exist, so create it)
         def mock_get_evaluators(endpoint):
             return mock_evaluators
-        
-        with patch.object(component, 'get_evaluators', side_effect=mock_get_evaluators, create=True):
+
+        with patch.object(component, "get_evaluators", side_effect=mock_get_evaluators, create=True):
             result = component.update_build_config(build_config, None, None)
-            
+
             # Should populate evaluator options
             assert "test_evaluator" in result["evaluator_name"]["options"]
             assert "boolean_evaluator" in result["evaluator_name"]["options"]
@@ -171,29 +170,31 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
     @patch.dict(os.environ, {"LANGWATCH_ENDPOINT": "https://test.langwatch.ai"})
     def test_update_build_config_with_evaluator_selection(self, component, mock_evaluators):
         """Test build config update with evaluator selection."""
-        build_config = dotdict({
-            "evaluator_name": {"options": [], "value": None},
-            "api_key": {"value": "test_key"},
-            "code": {"value": ""},
-            "_type": {"value": ""},
-            "input": {"value": ""},
-            "output": {"value": ""},
-            "timeout": {"value": 30},
-        })
+        build_config = dotdict(
+            {
+                "evaluator_name": {"options": [], "value": None},
+                "api_key": {"value": "test_key"},
+                "code": {"value": ""},
+                "_type": {"value": ""},
+                "input": {"value": ""},
+                "output": {"value": ""},
+                "timeout": {"value": 30},
+            }
+        )
 
         # Mock the get_evaluators method (which doesn't exist, so create it)
         def mock_get_evaluators(endpoint):
             return mock_evaluators
-        
-        with patch.object(component, 'get_evaluators', side_effect=mock_get_evaluators, create=True):
+
+        with patch.object(component, "get_evaluators", side_effect=mock_get_evaluators, create=True):
             # Initialize current_evaluator attribute
             component.current_evaluator = None
             result = component.update_build_config(build_config, "test_evaluator", "evaluator_name")
-            
+
             # Should set the selected evaluator
             assert result["evaluator_name"]["value"] == "test_evaluator"
 
-    @patch('langflow.components.langwatch.langwatch.httpx.get')
+    @patch("langflow.components.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_success(self, mock_get, component, mock_evaluators):
         """Test successful evaluation."""
@@ -216,7 +217,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         component.contexts = "context1, context2"
 
         result = await component.evaluate()
-        
+
         assert isinstance(result, Data)
         assert result.data == expected_response
 
@@ -224,9 +225,9 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
     async def test_evaluate_no_api_key(self, component):
         """Test evaluation with missing API key."""
         component.api_key = None
-        
+
         result = await component.evaluate()
-        
+
         assert isinstance(result, Data)
         assert result.data["error"] == "API key is required"
 
@@ -234,18 +235,18 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         """Test evaluation when no evaluators are available."""
         component.api_key = "test_api_key"
         component.evaluator_name = None
-        
+
         # Mock set_evaluators to avoid external HTTP calls
-        with patch.object(component, 'set_evaluators'):
+        with patch.object(component, "set_evaluators"):
             component.evaluators = {}  # Set empty evaluators directly
             component.current_evaluator = None  # Initialize the attribute
-            
+
             result = await component.evaluate()
-            
+
             assert isinstance(result, Data)
             assert "No evaluator selected" in result.data["error"]
 
-    @patch('langflow.components.langwatch.langwatch.httpx.get')
+    @patch("langflow.components.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_evaluator_not_found(self, mock_get, component, mock_evaluators):
         """Test evaluation with non-existent evaluator."""
@@ -257,13 +258,13 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
 
         component.api_key = "test_api_key"
         component.evaluator_name = "non_existent_evaluator"
-        
+
         result = await component.evaluate()
-        
+
         assert isinstance(result, Data)
         assert "Selected evaluator 'non_existent_evaluator' not found" in result.data["error"]
 
-    @patch('langflow.components.langwatch.langwatch.httpx.get')
+    @patch("langflow.components.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_http_error(self, mock_get, component, mock_evaluators):
         """Test evaluation with HTTP error."""
@@ -281,13 +282,13 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         component.evaluator_name = "test_evaluator"
         component.input = "test input"
         component.output = "test output"
-        
+
         result = await component.evaluate()
-        
+
         assert isinstance(result, Data)
         assert "Evaluation error" in result.data["error"]
 
-    @patch('langflow.components.langwatch.langwatch.httpx.get')
+    @patch("langflow.components.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_with_tracing(self, mock_get, component, mock_evaluators):
         """Test evaluation with tracing service."""
@@ -300,15 +301,15 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         # Mock evaluation endpoint
         eval_url = "https://app.langwatch.ai/api/evaluations/test_evaluator/evaluate"
         expected_response = {"score": 0.95, "reasoning": "Good evaluation"}
-        
+
         # Set up request capture
         request_data = None
-        
+
         def capture_request(request):
             nonlocal request_data
             request_data = json.loads(request.content.decode())
             return Response(200, json=expected_response)
-        
+
         respx.post(eval_url).mock(side_effect=capture_request)
 
         # Set up component with mock tracing
@@ -316,7 +317,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         component.evaluator_name = "test_evaluator"
         component.input = "test input"
         component.output = "test output"
-        
+
         # Mock tracing service
         mock_tracer = Mock()
         mock_tracer.trace_id = "test_trace_id"
@@ -324,13 +325,13 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         component._tracing_service.get_tracer.return_value = mock_tracer
 
         result = await component.evaluate()
-        
+
         # Verify trace_id was included in the request
         assert request_data["settings"]["trace_id"] == "test_trace_id"
         assert isinstance(result, Data)
         assert result.data == expected_response
 
-    @patch('langflow.components.langwatch.langwatch.httpx.get')
+    @patch("langflow.components.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_with_contexts_parsing(self, mock_get, component, mock_evaluators):
         """Test evaluation with contexts parsing."""
@@ -343,15 +344,15 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         # Mock evaluation endpoint
         eval_url = "https://app.langwatch.ai/api/evaluations/test_evaluator/evaluate"
         expected_response = {"score": 0.95, "reasoning": "Good evaluation"}
-        
+
         # Set up request capture
         request_data = None
-        
+
         def capture_request(request):
             nonlocal request_data
             request_data = json.loads(request.content.decode())
             return Response(200, json=expected_response)
-        
+
         respx.post(eval_url).mock(side_effect=capture_request)
 
         # Set up component
@@ -362,13 +363,13 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         component.contexts = "context1, context2, context3"
 
         result = await component.evaluate()
-        
+
         # Verify contexts were parsed correctly (contexts are split by comma, including whitespace)
         assert request_data["data"]["contexts"] == ["context1", " context2", " context3"]
         assert isinstance(result, Data)
         assert result.data == expected_response
 
-    @patch('langflow.components.langwatch.langwatch.httpx.get')
+    @patch("langflow.components.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_timeout_handling(self, mock_get, component, mock_evaluators):
         """Test evaluation with timeout."""
@@ -387,11 +388,8 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         component.input = "test input"
         component.output = "test output"
         component.timeout = 5
-        
+
         result = await component.evaluate()
-        
+
         assert isinstance(result, Data)
         assert "Evaluation error" in result.data["error"]
-
-
-
