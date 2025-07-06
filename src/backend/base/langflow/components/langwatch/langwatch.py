@@ -83,16 +83,22 @@ class LangWatchComponent(Component):
     ]
 
     @lru_cache(maxsize=1)
-    def get_evaluators(self, endpoint: str = "https://app.langwatch.ai") -> dict[str, Any]:
-        url = f"{endpoint}/api/evaluations/list"
+    def _get_cached_evaluators(url: str) -> dict[str, Any]:
         try:
             response = httpx.get(url, timeout=10)
             response.raise_for_status()
             data = response.json()
             return data.get("evaluators", {})
         except httpx.RequestError as e:
-            self.status = f"Error fetching evaluators: {e}"
+            logger.error(f"Error fetching evaluators: {e}")
             return {}
+
+    def set_evaluators(self, endpoint: str) -> dict[str, Any]:
+        url = f"{endpoint}/api/evaluations/list"
+        self.evaluators = LangWatchComponent._get_cached_evaluators(url)
+        if not self.evaluators or len(self.evaluators) == 0:
+            self.status = f"No evaluators found from {endpoint}"
+            raise ValueError(f"No evaluators found from {endpoint}")
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         try:
@@ -157,8 +163,6 @@ class LangWatchComponent(Component):
         except (KeyError, AttributeError, ValueError) as e:
             self.status = f"Error updating component: {e!s}"
             return build_config
-        else:
-            return build_config
 
     def get_dynamic_inputs(self, evaluator: dict[str, Any]):
         try:
@@ -222,7 +226,7 @@ class LangWatchComponent(Component):
         if not self.api_key:
             return Data(data={"error": "API key is required"})
 
-        self.evaluators = self.get_evaluators(os.getenv("LANGWATCH_ENDPOINT", "https://app.langwatch.ai"))
+        self.set_evaluators(os.getenv("LANGWATCH_ENDPOINT", "https://app.langwatch.ai"))
         self.dynamic_inputs = {}
         if getattr(self, "current_evaluator", None) is None and self.evaluators:
             self.current_evaluator = next(iter(self.evaluators))
