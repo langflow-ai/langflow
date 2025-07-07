@@ -1,7 +1,7 @@
-Emily J. Wilson
-Email: emilyjwilson@example.com
-Phone: 555-789-0123
-LinkedIn: linkedin.com/in/emilyjwilson
+Name: Name Example
+Email: name@example.com
+Phone: 800‑555‑0100
+LinkedIn: linkedin.com/in/username
 Summary:
 Results-driven marketing professional with over 8 years of experience in developing and executing successful marketing strategies. Proven track record of increasing brand visibility and driving sales growth.
 Work Experience:
