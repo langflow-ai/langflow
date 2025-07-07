@@ -12,7 +12,7 @@ from langflow.base.agents.utils import data_to_messages
 from langflow.custom.custom_component.component import Component, _get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import InputTypes, MultilineInput
-from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
+from langflow.io import BoolInput, HandleInput, IntInput, MessageInput
 from langflow.logging import logger
 from langflow.memory import delete_message
 from langflow.schema.content_block import ContentBlock
@@ -34,7 +34,7 @@ DEFAULT_AGENT_NAME = "Agent ({tools_names})"
 class LCAgentComponent(Component):
     trace_type = "agent"
     _base_inputs: list[InputTypes] = [
-        MessageTextInput(
+        MessageInput(
             name="input_value",
             display_name="Input",
             info="The input provided by the user for the agent to process.",
@@ -135,7 +135,9 @@ class LCAgentComponent(Component):
                 verbose=verbose,
                 max_iterations=max_iterations,
             )
-        input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
+        input_dict: dict[str, str | list[BaseMessage]] = {
+            "input": self.input_value.get_text() if isinstance(self.input_value, Message) else self.input_value
+        }
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
