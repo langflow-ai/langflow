@@ -61,7 +61,7 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
               data-testid={`disclosure-${item.display_name.toLocaleLowerCase()}`}
               tabIndex={0}
               onKeyDown={handleKeyDownInput}
-              className="flex cursor-pointer items-center gap-2"
+              className="flex cursor-pointer items-center gap-2 user-select-none"
             >
               <ForwardedIconComponent
                 name={item.icon}
