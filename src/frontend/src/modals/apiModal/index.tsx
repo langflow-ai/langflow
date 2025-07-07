@@ -138,7 +138,7 @@ export default function ApiModal({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 px-3"
+                className="h-8 select-none px-3"
                 onClick={() => setOpenTweaks(true)}
                 data-testid="tweaks-button"
               >
