@@ -5,8 +5,29 @@ import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/ext-searchbox";
 import "ace-builds/src-noconflict/mode-python";
-import "ace-builds/src-noconflict/theme-github";
+import "ace-builds/src-noconflict/theme-one_dark";
+import "ace-builds/src-noconflict/theme-github_dark";
 import "ace-builds/src-noconflict/theme-twilight";
+import "ace-builds/src-noconflict/theme-dracula";
+import "ace-builds/src-noconflict/theme-monokai";
+import "ace-builds/src-noconflict/theme-nord_dark";
+import "ace-builds/src-noconflict/theme-pastel_on_dark";
+import "ace-builds/src-noconflict/theme-solarized_dark";
+import "ace-builds/src-noconflict/theme-terminal";
+import "ace-builds/src-noconflict/theme-tomorrow_night";
+import "ace-builds/src-noconflict/theme-vibrant_ink";
+import "ace-builds/src-noconflict/theme-chaos";
+import "ace-builds/src-noconflict/theme-cobalt";
+import "ace-builds/src-noconflict/theme-gruvbox";
+import "ace-builds/src-noconflict/theme-idle_fingers";
+import "ace-builds/src-noconflict/theme-kr_theme";
+import "ace-builds/src-noconflict/theme-merbivore";
+import "ace-builds/src-noconflict/theme-merbivore_soft";
+import "ace-builds/src-noconflict/theme-mono_industrial";
+import "ace-builds/src-noconflict/theme-ambiance";
+import "ace-builds/src-noconflict/theme-clouds_midnight";
+import "ace-builds/src-noconflict/theme-gob";
+import "ace-builds/src-noconflict/theme-sqlserver";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import ReactAce from "react-ace/lib/ace";
@@ -221,7 +242,7 @@ export default function CodeAreaModal({
               fontSize={14}
               showGutter
               enableLiveAutocompletion
-              theme={dark ? "twilight" : "github"}
+              theme={dark ? "monokai" : "github"}
               name="CodeEditor"
               onChange={(value) => {
                 setCode(value);
