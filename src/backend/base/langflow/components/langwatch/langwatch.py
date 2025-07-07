@@ -99,7 +99,7 @@ class LangWatchComponent(Component):
                 build_config["evaluator_name"]["options"] = list(self.evaluators.keys())
 
                 # Set a default evaluator if none is selected
-                if not self.current_evaluator and self.evaluators:
+                if not getattr(self, "current_evaluator", None) and self.evaluators:
                     self.current_evaluator = next(iter(self.evaluators))
                     build_config["evaluator_name"]["value"] = self.current_evaluator
 
