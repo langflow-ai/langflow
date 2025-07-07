@@ -1,6 +1,5 @@
 module.exports = {
   docs: [
-    "Get-Started/welcome-to-langflow", // Placeholder for docs system root path
     {
       type: "category",
       label: "Get started",
