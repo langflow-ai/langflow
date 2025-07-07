@@ -135,15 +135,6 @@ const config = {
       {
         redirects: [
           {
-            to: "/",
-            from: [
-              "/whats-new-a-new-chapter-langflow",
-              "/👋 Welcome-to-Langflow",
-              "/getting-started-welcome-to-langflow",
-              "/guides-new-to-llms",
-            ],
-          },
-          {
             to: "/get-started-installation",
             from: [
               "/getting-started-installation",
