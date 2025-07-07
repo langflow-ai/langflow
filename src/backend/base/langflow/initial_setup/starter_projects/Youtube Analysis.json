@@ -1957,7 +1957,7 @@
         "data": {
           "id": "note-eKoWw",
           "node": {
-            "description": "# 📖 README\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n## Quickstart\n-  Add your **OpenAI API Key** to the **Language Model** and **YT-Insight** Agent Component\n-  Add your **YouTube Data API v3 key**\n- If you don't have a YoutTube API key create one in the [Google Cloud Console](https://console.cloud.google.com).\n- Please ensure the chat input is a valid Youtube video URL, sample URL provided in chat input.\n",
+            "description": "# 📖 README\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n## Quickstart\n-  Add your **OpenAI API Key** to the **Language Model** and **YT-Insight** Agent Component\n-  Add your **YouTube Data API v3 key**\n- If you don't have a YoutTube API key, create one in the [Google Cloud Console](https://console.cloud.google.com).\n- Ensure the chat input is a valid Youtube video URL. A sample URL is provided in the chat input component.\n",
             "display_name": "",
             "documentation": "",
             "template": {
