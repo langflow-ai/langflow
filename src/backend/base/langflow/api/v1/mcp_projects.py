@@ -838,20 +838,25 @@ class ProjectMCPServer:
                                 stream=False,
                                 api_key_user=current_user,
                             )
-                            # Process all outputs and messages
+                            # Process all outputs and messages, ensuring no duplicates
+                            processed_texts = set()
+
+                            def add_result(text: str):
+                                if text not in processed_texts:
+                                    processed_texts.add(text)
+                                    collected_results.append(types.TextContent(type="text", text=text))
+
                             for run_output in result.outputs:
                                 for component_output in run_output.outputs:
                                     # Handle messages
                                     for msg in component_output.messages or []:
-                                        text_content = types.TextContent(type="text", text=msg.message)
-                                        collected_results.append(text_content)
+                                        add_result(msg.message)
                                     # Handle results
                                     for value in (component_output.results or {}).values():
                                         if isinstance(value, Message):
-                                            text_content = types.TextContent(type="text", text=value.get_text())
-                                            collected_results.append(text_content)
+                                            add_result(value.get_text())
                                         else:
-                                            collected_results.append(types.TextContent(type="text", text=str(value)))
+                                            add_result(str(value))
                         except Exception as e:  # noqa: BLE001
                             error_msg = f"Error Executing the {flow.name} tool. Error: {e!s}"
                             collected_results.append(types.TextContent(type="text", text=error_msg))
