@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable
 
 from langflow.base.agents.callback import AgentAsyncHandler
@@ -145,6 +146,18 @@ class LCAgentComponent(Component):
                 input_dict["chat_history"] = data_to_messages(self.chat_history)
             if all(isinstance(m, Message) for m in self.chat_history):
                 input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
+        if hasattr(input_dict["input"], "content") and isinstance(input_dict["input"].content, list):
+            # ! Because the input has to be a string, we must pass the images in the chat_history
+
+            image_dicts = [item for item in input_dict["input"].content if item.get("type") == "image"]
+            input_dict["input"].content = [item for item in input_dict["input"].content if item.get("type") != "image"]
+
+            if "chat_history" not in input_dict:
+                input_dict["chat_history"] = []
+            if isinstance(input_dict["chat_history"], list):
+                input_dict["chat_history"].extend(HumanMessage(content=[image_dict]) for image_dict in image_dicts)
+            else:
+                input_dict["chat_history"] = [HumanMessage(content=[image_dict]) for image_dict in image_dicts]
 
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
