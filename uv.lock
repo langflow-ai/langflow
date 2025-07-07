@@ -4748,16 +4748,17 @@ wheels = [
 
 [[package]]
 name = "langchain-sambanova"
-version = "0.1.0"
+version = "0.1.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "langchain" },
     { name = "langchain-core" },
     { name = "sseclient-py" },
     { name = "types-requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4f/dd/88a2aa89b24b2f1e245bf39989a6cd8fe3b21f09171326e1f77696e853d9/langchain_sambanova-0.1.0.tar.gz", hash = "sha256:70ead669b4d440b50fd02e11d5e7e3249b61cf7bb73a79173e40da410b006c0f", size = 23297, upload-time = "2025-01-24T20:12:10.964Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/69/a9/4aab3dd39f8bf2f6fb4aa38460618d0385580febcd6925bce4f61e1b2cbb/langchain_sambanova-0.1.5.tar.gz", hash = "sha256:bf029c36600c8248bb45da831ca729767285e94395473e3b1ac51f5f65bf81aa", size = 25798, upload-time = "2025-05-06T17:55:06.603Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/5a/5a1a3671f70de77d6d8b06c170ba562776c6d88ffbb74cbdb12dc4fbef80/langchain_sambanova-0.1.0-py3-none-any.whl", hash = "sha256:b740011b136414e1ee503bca551bcd869731418457e27510de3a323476d09797", size = 23987, upload-time = "2025-01-24T20:12:08.916Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/f8/1d890c4e4891867e12fa852092636e709b963fc6eb22ad2630c62c9dcd1c/langchain_sambanova-0.1.5-py3-none-any.whl", hash = "sha256:6c9eec70facca8b9cacfc9f28e65de98394f71a14cf8500d8a4ed73ad8bf2f4b", size = 26821, upload-time = "2025-05-06T17:55:04.961Z" },
 ]
 
 [[package]]
@@ -5077,7 +5078,7 @@ requires-dist = [
     { name = "langchain-ollama", specifier = "==0.2.1" },
     { name = "langchain-openai", specifier = ">=0.2.12" },
     { name = "langchain-pinecone", specifier = ">=0.2.8" },
-    { name = "langchain-sambanova", specifier = "==0.1.0" },
+    { name = "langchain-sambanova", specifier = "==0.1.5" },
     { name = "langchain-unstructured", specifier = "==0.1.5" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "==2.53.9" },
