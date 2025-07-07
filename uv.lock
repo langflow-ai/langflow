@@ -5156,7 +5156,7 @@ dev = [
     { name = "pandas-stubs", specifier = ">=2.1.4.231227" },
     { name = "pre-commit", specifier = ">=3.7.0" },
     { name = "pydantic-ai", specifier = ">=0.0.19" },
-    { name = "pyleak", specifier = ">=0.1.12" },
+    { name = "pyleak", specifier = ">=0.1.14" },
     { name = "pytest", specifier = ">=8.2.0" },
     { name = "pytest-asyncio", specifier = ">=0.23.0" },
     { name = "pytest-cov", specifier = ">=5.0.0" },
@@ -8479,14 +8479,14 @@ sdist = { url = "https://files.pythonhosted.org/packages/5d/ab/34ec41718af73c001
 
 [[package]]
 name = "pyleak"
-version = "0.1.12"
+version = "0.1.14"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "exceptiongroup" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/14/55/bdc246baf6870185555d6ebcb35a7361f9bb95ba3fd0ff295d8fc4ff9e6e/pyleak-0.1.12.tar.gz", hash = "sha256:6af479b2dd5d4c71ff2b33ba5eeccda04b2d248f884801cf414fc84777a636de", size = 104742, upload-time = "2025-07-01T12:04:44.708Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/98/fd/49af96e55001fe611abd891b7c482cf1324fb6997e3430c87a7ec0f7c887/pyleak-0.1.14.tar.gz", hash = "sha256:51be2741542fdaa6024c31a1b8212e59485e2a91e7fdc34c151d488e9a6fb3c4", size = 105644, upload-time = "2025-07-03T09:28:54.965Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4d/08/e8bc7e2f63deca307575bcf98d112fe75f80ecd716d3dcc69330ad096fff/pyleak-0.1.12-py3-none-any.whl", hash = "sha256:17a1c8b11d89fdcee79f0a479378bd6de23de323754a81efe8d8d9550ac12863", size = 23762, upload-time = "2025-07-01T12:04:43.494Z" },
+    { url = "https://files.pythonhosted.org/packages/67/75/55c968828bf81a73d9c484f7be4e6f7d04d07da3d1d78cc5705461802b24/pyleak-0.1.14-py3-none-any.whl", hash = "sha256:98d6cf19f3eeed172effef42415bf9f01a3d46cbde59780b85924f9dcd57003a", size = 24813, upload-time = "2025-07-03T09:28:53.79Z" },
 ]
 
 [[package]]
