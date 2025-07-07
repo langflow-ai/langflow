@@ -260,8 +260,6 @@ export const FilesPage = () => {
   const handleDownload = () => {
     handleBulkDownload(
       selectedFiles,
-      setSelectedFiles,
-      setQuantitySelected,
       setSuccessData,
       setErrorData,
       setIsDownloading,

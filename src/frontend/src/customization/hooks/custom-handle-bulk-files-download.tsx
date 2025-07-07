@@ -5,8 +5,6 @@ export const useCustomHandleBulkFilesDownload = () => {
 
   const handleBulkDownload = async (
     selectedFiles: any,
-    setSelectedFiles: (files: any[]) => void,
-    setQuantitySelected: (quantity: number) => void,
     setSuccessData: (data: { title: string }) => void,
     setErrorData: (data: { title: string; list: string[] }) => void,
     setIsDownloading: (isDownloading: boolean) => void,
@@ -20,8 +18,6 @@ export const useCustomHandleBulkFilesDownload = () => {
         onSuccess: (data) => {
           setSuccessData({ title: data.message });
           setIsDownloading(false);
-          setQuantitySelected(0);
-          setSelectedFiles([]);
         },
         onError: (error) => {
           setErrorData({
