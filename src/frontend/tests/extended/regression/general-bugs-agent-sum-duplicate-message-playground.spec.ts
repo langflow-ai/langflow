@@ -5,7 +5,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user must not experience message duplication in mathematical expressions with agent component",
-  { tag: ["@release", "@components"] },
+  { tag: ["@release", "@components", "@workspace"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.ANTHROPIC_API_KEY,
