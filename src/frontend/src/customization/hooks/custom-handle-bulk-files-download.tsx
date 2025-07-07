@@ -9,6 +9,7 @@ export const useCustomHandleBulkFilesDownload = () => {
     setErrorData: (data: { title: string; list: string[] }) => void,
     setIsDownloading: (isDownloading: boolean) => void,
   ) => {
+    setIsDownloading(true);
     downloadFiles(
       {
         ids: selectedFiles.map((file) => file.id),
