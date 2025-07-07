@@ -52,39 +52,6 @@ def _calculate_duration(start_time: float) -> int:
     return result
 
 
-def _get_message_from_base_message(base_message: BaseMessage) -> str:
-    r"""Extract text content from a BaseMessage.
-
-    BaseMessage content can be either a string or a list of content dictionaries.
-    When it's a list, each dictionary contains a 'type' field and content data.
-    This function extracts only the text content and joins multiple text blocks.
-
-    Args:
-        base_message: The BaseMessage to extract text from. Content can be:
-            - A string (returned as-is)
-            - A list of dicts like [{"type": "text", "text": "content"}, ...]
-
-    Returns:
-        The extracted text content, with multiple text blocks joined by newlines.
-
-    Example:
-        >>> msg = BaseMessage(content="Hello world")
-        >>> _get_message_from_base_message(msg)
-        "Hello world"
-
-        >>> msg = BaseMessage(content=[
-        ...     {"type": "text", "text": "Hello"},
-        ...     {"type": "image", "data": "..."},
-        ...     {"type": "text", "text": "World"}
-        ... ])
-        >>> _get_message_from_base_message(msg)
-        "Hello\nWorld"
-    """
-    if isinstance(base_message.content, list):
-        return "\n".join([item["text"].strip() for item in base_message.content if item["type"] == "text"])
-    return base_message.content
-
-
 async def handle_on_chain_start(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float
 ) -> tuple[Message, float]:
@@ -98,7 +65,7 @@ async def handle_on_chain_start(
             # Cast the input_data to InputDict
             input_message = input_data.get("input", "")
             if isinstance(input_message, BaseMessage):
-                input_message = _get_message_from_base_message(input_message)
+                input_message = input_message.text()
             elif not isinstance(input_message, str):
                 input_message = str(input_message)
 
