@@ -3,7 +3,7 @@ import { useGetDownloadFilesV2 } from "@/controllers/API/queries/file-management
 export const useCustomHandleBulkFilesDownload = () => {
   const { mutate: downloadFiles } = useGetDownloadFilesV2();
 
-  const handleBulkDownload = (
+  const handleBulkDownload = async (
     selectedFiles: any,
     setSuccessData: (data: { title: string }) => void,
     setErrorData: (data: { title: string; list: string[] }) => void,
