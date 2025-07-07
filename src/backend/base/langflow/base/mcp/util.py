@@ -402,9 +402,8 @@ class MCPSessionManager:
                 if session_is_healthy:
                     logger.debug(f"Session for context_id {context_id} is healthy, reusing")
                     return session
-                else:
-                    msg = f"Session for context_id {context_id} failed health check: background task is done"
-                    logger.info(msg)
+                msg = f"Session for context_id {context_id} failed health check: background task is done"
+                logger.info(msg)
 
             except Exception as e:  # noqa: BLE001
                 msg = f"Session for context_id {context_id} is dead due to exception: {e}"
