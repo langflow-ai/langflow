@@ -6,6 +6,7 @@ import httpx
 import pytest
 import respx
 from httpx import Response
+from langflow.base.langwatch.utils import get_cached_evaluators
 from langflow.components.langwatch.langwatch import LangWatchComponent
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
@@ -91,7 +92,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture(autouse=True)
     def clear_cache(self):
         """Clear the LRU cache before each test."""
-        LangWatchComponent._get_cached_evaluators.cache_clear()
+        get_cached_evaluators.cache_clear()
 
     @patch("langflow.components.langwatch.langwatch.httpx.get")
     async def test_set_evaluators_success(self, mock_get, component, mock_evaluators):
