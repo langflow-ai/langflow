@@ -156,6 +156,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-public-server",
+          label: "Deploy a public Langflow server"
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-caddyfile",
           label: "Deploy Langflow on a remote server"
         },
