@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
+import { CustomLink } from "@/customization/components/custom-link";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -169,21 +170,17 @@ export default function ApiModal({
       >
         <BaseModal.Header
           description={
-            autoLogin ? undefined : (
-              <>
-                <span className="pr-2">
-                  API access requires an API key. You can{" "}
-                  <a
-                    href="/settings/api-keys"
-                    className="text-accent-pink-foreground"
-                  >
-                    {" "}
-                    create an API key
-                  </a>{" "}
-                  in settings.
-                </span>
-              </>
-            )
+            <span className="pr-2">
+              API access requires an API key. You can{" "}
+              <CustomLink
+                to="/settings/api-keys"
+                className="text-accent-pink-foreground"
+              >
+                {" "}
+                create an API key
+              </CustomLink>{" "}
+              in settings.
+            </span>
           }
         >
           <IconComponent name="SlidersHorizontal" className="text-f h-6 w-6" />
