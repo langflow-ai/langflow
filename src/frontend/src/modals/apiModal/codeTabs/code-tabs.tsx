@@ -153,6 +153,7 @@ export default function APITabsComponent() {
                   : "text-muted-foreground hover:text-foreground"
               } px-3 py-2 text-[13px]`}
               onClick={() => setSelectedTab(tab.title)}
+              data-testid={`api_tab_${tab.title.toLowerCase()}`}
             >
               <IconComponent name={tab.icon} className="h-4 w-4" />
               <span>{tab.title}</span>
