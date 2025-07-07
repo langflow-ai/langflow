@@ -166,18 +166,20 @@ export default function ChatInput({
 
   const send = async () => {
     const storedChatValue = chatValue;
+    const filesToSend = files
+      .map((file) => file.path ?? "")
+      .filter((file) => file !== "");
+    const storedFiles = [...files];
+    setFiles([]);
     try {
       await sendMessage({
         repeat: 1,
-        files: files
-          .map((file) => file.path ?? "")
-          .filter((file) => file !== ""),
+        files: filesToSend,
       });
     } catch (error) {
       setChatValueStore(storedChatValue);
+      setFiles(storedFiles);
     }
-
-    setFiles([]);
   };
 
   const checkSendingOk = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
