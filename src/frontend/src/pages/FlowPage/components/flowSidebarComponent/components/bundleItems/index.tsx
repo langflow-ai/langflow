@@ -48,7 +48,7 @@ export const BundleItem = memo(
               <div
                 tabIndex={0}
                 onKeyDown={(e) => handleKeyDownInput(e, item.name)}
-                className="flex cursor-pointer items-center gap-2 user-select-none"
+                className="user-select-none flex cursor-pointer items-center gap-2"
                 data-testid={`disclosure-bundles-${item.display_name.toLowerCase()}`}
               >
                 <ForwardedIconComponent

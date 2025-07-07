@@ -33,7 +33,9 @@ export const MemoizedSidebarGroup = memo(
 
     return (
       <SidebarGroup className="p-3">
-        <SidebarGroupLabel className="cursor-default">Bundles</SidebarGroupLabel>
+        <SidebarGroupLabel className="cursor-default">
+          Bundles
+        </SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             {sortedBundles.map((item) => (
