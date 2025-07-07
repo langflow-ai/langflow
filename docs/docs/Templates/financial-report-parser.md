@@ -5,13 +5,13 @@ slug: /financial-report-parser
 
 import Icon from "@site/src/components/icon";
 
-Build a **Financial Report Parser** flow with the [Structured output](/components-helpers#structured-output) and [Parser](/components-processing#parser) components to parse LLM responses into a structured format.
+Build a **Financial Report Parser** flow with the [Structured output](/docs/components-helpers#structured-output) and [Parser](/docs/components-processing#parser) components to parse LLM responses into a structured format.
 
 In this example, the **Chat Input** component is pre-loaded with a sample financial report to demonstrate extracting `Gross Profit`, `EBITDA`, and `Net Income`.
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
+- [A running Langflow instance](/docs/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/)
 
 ## Create the financial report parser flow
@@ -37,7 +37,7 @@ EBITDA: $900 million , Net Income: $500 million , GROSS_PROFIT: $1.2 billion
 Inspect the flow to understand how this information was extracted.
 
 3. To inspect the output schema table, in the **Structured Output** component, click **Open table**.
-The **Structured Output** component uses the attached **OpenAI** model component as its "brain" to extract financial data into a [DataFrame](/concepts-objects#dataframe-object) with this defined schema.
+The **Structured Output** component uses the attached **OpenAI** model component as its "brain" to extract financial data into a [DataFrame](/docs/concepts-objects#dataframe-object) with this defined schema.
 ```text
 | Name         | Description           | Type | Multiple |
 |--------------|-----------------------|------|----------|

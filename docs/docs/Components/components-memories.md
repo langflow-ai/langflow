@@ -5,17 +5,17 @@ slug: /components-memories
 
 # Memory components in Langflow
 
-Memory components store and retrieve chat messages by [`session_id`](/session-id).
+Memory components store and retrieve chat messages by [`session_id`](/docs/session-id).
 
 They are distinct from vector store components, because they are built specifically for storing and retrieving chat messages from external databases.
 
-Memory components provide access to their respective external databases **as memory**. This allows Large Language Models (LLMs) or [agents](/components-agents) to access external memory for persistence and context retention.
+Memory components provide access to their respective external databases **as memory**. This allows Large Language Models (LLMs) or [agents](/docs/components-agents) to access external memory for persistence and context retention.
 
 ## Use a memory component in a flow
 
 This example flow stores and retrieves chat history from an **Astra DB Chat Memory** component with **Store Message** and **Message history** components.
 
-The **Store Message** helper component stores chat memories as [Data](/concepts-objects) objects, and the **Message History** helper component retrieves chat messages as [Data](/concepts-objects) objects or strings.
+The **Store Message** helper component stores chat memories as [Data](/docs/concepts-objects) objects, and the **Message History** helper component retrieves chat messages as [Data](/docs/concepts-objects) objects or strings.
 
 ![Sample Flow storing Message history in AstraDB](/img/astra_db_chat_memory_rounded.png)
 

@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 
 The **Playground** is a dynamic interface designed for real-time interaction with LLMs, allowing users to chat, access memories, and monitor inputs and outputs. Here, users can directly prototype their models, making adjustments and observing different outcomes.
 
-As long as you have an [Input or Output](/components-io) component working, you can open it by clicking the **Playground** button.
+As long as you have an [Input or Output](/docs/components-io) component working, you can open it by clicking the **Playground** button.
 The Playground's window arrangement changes depending on what components are being used.
 
 ![](/img/playground.png)
@@ -29,7 +29,7 @@ To view messages by `session_id` within the Playground, click the <Icon name="El
 
 Individual messages in chat memory can be edited or deleted. Modifying these memories influences the behavior of the chatbot responses.
 
-To learn more about chat memories in Langflow, see [Memory components](/components-memories).
+To learn more about chat memories in Langflow, see [Memory components](/docs/components-memories).
 
 ## Use custom Session IDs for multiple user interactions
 
@@ -91,4 +91,4 @@ The image is displayed in the chat interface and can be processed by your flow c
 
 ## See also
 
-- [Session ID](/session-id)
+- [Session ID](/docs/session-id)

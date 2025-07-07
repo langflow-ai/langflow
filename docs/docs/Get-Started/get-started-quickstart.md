@@ -11,7 +11,7 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
+- [A running Langflow instance](/docs/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Run the Simple Agent template flow
@@ -20,14 +20,14 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
 ![Simple agent starter flow](/img/quickstart-simple-agent-flow.png)
 
-The Simple Agent flow consists of an [Agent component](/agents) connected to [Chat I/O components](/components-io), a [Calculator component](/components-tools#calculator-tool), and a [URL component](/components-data#url). When you run this flow, you submit a query to the agent through the Chat Input component, the agent uses the Calculator and URL tools to generate a response, and then returns the response through the Chat Output component.
+The Simple Agent flow consists of an [Agent component](/docs/agents) connected to [Chat I/O components](/docs/components-io), a [Calculator component](/docs/components-tools#calculator-tool), and a [URL component](/docs/components-data#url). When you run this flow, you submit a query to the agent through the Chat Input component, the agent uses the Calculator and URL tools to generate a response, and then returns the response through the Chat Output component.
 
-Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/mcp-server). The agent decides which tools to call based on the context of a given query.
+Many components can be tools for agents, including [Model Context Protocol (MCP) servers](/docs/mcp-server). The agent decides which tools to call based on the context of a given query.
 
 2. In the **Agent** component's settings, in the **OpenAI API Key** field, enter your OpenAI API key.
 This guide uses an OpenAI model for demonstration purposes. If you want to use a different provider, change the **Model Provider** field, and then provide credentials for your selected provider.
 
-    Optionally, you can click <Icon name="Globe" aria-hidden="true"/> **Globe** to store the key in a Langflow [global variable](/configuration-global-variables).
+    Optionally, you can click <Icon name="Globe" aria-hidden="true"/> **Globe** to store the key in a Langflow [global variable](/docs/configuration-global-variables).
 
 3. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 
@@ -58,7 +58,7 @@ Langflow is an IDE, but it's also a runtime you can call through an API with Pyt
 
 When you start Langflow locally, you can send requests to the local Langflow server.
 For production applications, you need to deploy a stable Langflow instance to handle API calls.
-For more information, see [Langflow deployment overview](/deployment-overview).
+For more information, see [Langflow deployment overview](/docs/deployment-overview).
 
 For example, you can use `POST /run` to run a flow and get the result.
 
@@ -517,5 +517,5 @@ payload = {
 
 ## Next steps
 
-* [Model Context Protocol (MCP) servers](/mcp-server)
-* [Langflow deployment overview](/deployment-overview)
+* [Model Context Protocol (MCP) servers](/docs/mcp-server)
+* [Langflow deployment overview](/docs/deployment-overview)

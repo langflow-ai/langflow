@@ -8,7 +8,7 @@ The Notion Agent for Meeting Notes is an AI-powered tool that automatically proc
 ## Prerequisites
 ---
 
-- [Notion App](/integrations/notion/setup)
+- [Notion App](/docs/integrations/notion/setup)
 - [Notion API key](https://www.notion.so/my-integrations)
 - [OpenAI API key](https://platform.openai.com/account/api-keys)
 - [Download Flow Meeting Agent Flow](./Meeting_Notes_Agent.json)(Download link)

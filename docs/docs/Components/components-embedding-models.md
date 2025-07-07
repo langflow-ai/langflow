@@ -69,10 +69,10 @@ This component is used to load embedding models from [Amazon Bedrock](https://aw
 
 :::important
 This component is deprecated as of Langflow version 1.1.2.
-Instead, use the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store).
+Instead, use the [Astra DB vector store component](/docs/components-vector-stores#astra-db-vector-store).
 :::
 
-Connect this component to the **Embeddings** port of the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store) to generate embeddings.
+Connect this component to the **Embeddings** port of the [Astra DB vector store component](/docs/components-vector-stores#astra-db-vector-store) to generate embeddings.
 
 This component requires that your Astra DB database has a collection that uses a vectorize embedding provider integration.
 For more information and instructions, see [Embedding Generation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
@@ -280,7 +280,7 @@ To run an embeddings inference locally, see the [HuggingFace documentation](http
 
 To connect the local Hugging Face model to the **Hugging Face embeddings inference** component and use it in a flow, follow these steps:
 
-1. Create a [Vector store RAG flow](/vector-store-rag).
+1. Create a [Vector store RAG flow](/docs/vector-store-rag).
 There are two embeddings models in this flow that you can replace with **Hugging Face** embeddings inference components.
 2. Replace both **OpenAI** embeddings model components with **Hugging Face** model components.
 3. Connect both **Hugging Face** components to the **Embeddings** ports of the **Astra DB vector store** components.
@@ -424,7 +424,7 @@ This value is set as the `OLLAMA_HOST` environment variable in Ollama. The defau
 2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh**.
 3. In the **Ollama Model** field, select an embeddings model. This example uses `all-minilm:latest`.
 4. Connect the **Ollama** embeddings component to a flow.
-For example, this flow connects a local Ollama server running a `all-minilm:latest` embeddings model to a [Chroma DB](/components-vector-stores#chroma-db) vector store to generate embeddings for split text.
+For example, this flow connects a local Ollama server running a `all-minilm:latest` embeddings model to a [Chroma DB](/docs/components-vector-stores#chroma-db) vector store to generate embeddings for split text.
 
 ![Ollama embeddings connected to Chroma DB](/img/component-ollama-embeddings-chromadb.png)
 

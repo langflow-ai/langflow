@@ -19,7 +19,7 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-pr
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
+- [A running Langflow instance](/docs/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/)
 - [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with the following:
 	- An Astra DB application token scoped to read and write to the database

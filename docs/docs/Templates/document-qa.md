@@ -7,7 +7,7 @@ Build a question-and-answer chatbot with a document loaded from local memory.
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
+- [A running Langflow instance](/docs/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/)
 
 ## Create the document QA flow
@@ -26,7 +26,7 @@ The **Prompt** component is instructed to answer questions based on the conten
 
 1. Add your **OpenAI API key** to the **Open AI** model component.
 
-2. To select a document to load, in the **File** component, click the **Select files** button. Select a local file or a file loaded with [File management](/concepts-file-management), and then click **Select file**. The file name appears in the component.
+2. To select a document to load, in the **File** component, click the **Select files** button. Select a local file or a file loaded with [File management](/docs/concepts-file-management), and then click **Select file**. The file name appears in the component.
 
 3. Click the **Playground** button. Enter a question about the loaded document's content. You should receive a contextual response indicating that the AI has read your document.
 

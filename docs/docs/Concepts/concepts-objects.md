@@ -207,4 +207,4 @@ DataFrameInput(
 
 ## See also
 
-- [Session ID](/session-id)
+- [Session ID](/docs/session-id)

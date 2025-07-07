@@ -11,11 +11,11 @@ This page explores the fundamental building blocks of Langflow, beginning with t
 
 A _flow_ is a functional representation of an application. It receives input, processes it, and produces output.
 
-Flows consist of [components](/concepts-components) that you configure and connect in the **Workspace**.
+Flows consist of [components](/docs/concepts-components) that you configure and connect in the **Workspace**.
 
 ![Basic prompting flow within in the workspace](/img/workspace-basic-prompting.png)
 
-A flow can be as simple as the [basic prompting flow](/get-started-quickstart), which creates an OpenAI chatbot with four components.
+A flow can be as simple as the [basic prompting flow](/docs/get-started-quickstart), which creates an OpenAI chatbot with four components.
 
 - Each component in a flow is a **node** that performs a specific task, like an AI model or a data source.
 - Each component has a **Configuration** menu. Click the <Icon name="Code" aria-hidden="true"/> **Code** button on a component to see its underlying Python code.
@@ -30,7 +30,7 @@ Flows are stored on local disk at the following default locations:
 - **Linux and WSL**: `home/<username>/.cache/langflow/`
 - **macOS**: `/Users/<username>/Library/Caches/langflow/`
 
-The flow storage location can be customized with the [LANGFLOW_CONFIG_DIR](/environment-variables#LANGFLOW_CONFIG_DIR) environment variable.
+The flow storage location can be customized with the [LANGFLOW_CONFIG_DIR](/docs/environment-variables#LANGFLOW_CONFIG_DIR) environment variable.
 
 ## Find your way around
 
@@ -53,7 +53,7 @@ The **workspace** is where you create AI applications by connecting and running 
 ## Components
 
 Components are the building blocks of your flows.
-For more information, see [Components overview](/concepts-components).
+For more information, see [Components overview](/docs/concepts-components).
 
 <img src="/img/prompt-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
 
@@ -65,7 +65,7 @@ Chat with your flow, view inputs and outputs, and modify your AI's memories to t
 
 Either the **Chat Input** or **Chat Output** component can be opened in the **Playground** and tested in real time.
 
-For more information, see the [Playground](/concepts-playground).
+For more information, see the [Playground](/docs/concepts-playground).
 
 ![](/img/playground.png)
 
@@ -73,7 +73,7 @@ For more information, see the [Playground](/concepts-playground).
 
 The **Publish** pane provides code templates to integrate your flows into external applications.
 
-For more information, see the [Publish pane](/concepts-publish).
+For more information, see the [Publish pane](/docs/concepts-publish).
 
 ![](/img/api-pane.png)
 
@@ -118,7 +118,7 @@ You can select multiple flows in a single action.
 
 Upload, store, and manage files in Langflow's **File management** system.
 
-For more on managing your files, see [Manage files](/concepts-file-management).
+For more on managing your files, see [Manage files](/docs/concepts-file-management).
 
 ## Options menu
 

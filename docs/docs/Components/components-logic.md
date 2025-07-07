@@ -9,9 +9,9 @@ Logic components provide functionalities for routing, conditional processing, an
 
 ## Use a logic component in a flow
 
-This flow creates a summarizing "for each" loop with the [Loop](/components-logic#loop) component.
+This flow creates a summarizing "for each" loop with the [Loop](/docs/components-logic#loop) component.
 
-The component iterates over a list of [Data](/concepts-objects#data-object) objects until it's completed, and then the **Done** loop aggregates the results.
+The component iterates over a list of [Data](/docs/concepts-objects#data-object) objects until it's completed, and then the **Done** loop aggregates the results.
 
 The **File** component loads text files from your local machine, and then the **Parser** component parses them into a list of structured `Data` objects.
 The **Loop** component passes each `Data` object to a **Prompt** to be summarized.
@@ -147,7 +147,7 @@ This component listens for a notification and retrieves its associated state.
 For another **Loop** component example, see the **Research Translation Loop** template.
 :::
 
-This component iterates over a list of [Data](/concepts-objects#data-object) objects, outputting one item at a time and aggregating results from loop inputs.
+This component iterates over a list of [Data](/docs/concepts-objects#data-object) objects, outputting one item at a time and aggregating results from loop inputs.
 
 In this example, the **Loop** component iterates over a CSV file through the **Item** port until there are no rows left to process. Then, the **Loop** component performs the actions connected to the **Done** port, which in this case is loading the structured data into **Chroma DB**.
 
@@ -232,12 +232,12 @@ This component forwards the input message, unchanged.
 
 This component allows you to run any flow stored in your Langflow database without opening the flow editor.
 
-The Run Flow component can also be used as a tool when connected to an [Agent](/components-agents). The `name` and `description` metadata that the Agent uses to register the tool are created automatically.
+The Run Flow component can also be used as a tool when connected to an [Agent](/docs/components-agents). The `name` and `description` metadata that the Agent uses to register the tool are created automatically.
 
 When you select a flow, the component fetches the flow's graph structure and uses it to generate the inputs and outputs for the Run Flow component.
 
 To use the Run Flow component as a tool, do the following:
-1. Add the **Run Flow** component to the [Simple Agent](/simple-agent) flow.
+1. Add the **Run Flow** component to the [Simple Agent](/docs/simple-agent) flow.
 2. In the **Flow Name** menu, select the sub-flow you want to run.
 The appearance of the **Run Flow** component changes to reflect the inputs and outputs of the selected flow.
 3. On the **Run Flow** component, enable **Tool Mode**.
@@ -323,7 +323,7 @@ Deprecated components have been replaced by newer alternatives and should not be
 
 :::important
 This component is deprecated as of Langflow version 1.1.2.
-Instead, use the [Run flow component](/components-logic#run-flow)
+Instead, use the [Run flow component](/docs/components-logic#run-flow)
 :::
 
 This component constructs a tool from a function that runs a loaded flow.
@@ -347,7 +347,7 @@ This component constructs a tool from a function that runs a loaded flow.
 
 :::important
 This component is deprecated as of Langflow version 1.1.2.
-Instead, use the [Run flow component](/components-logic#run-flow)
+Instead, use the [Run flow component](/docs/components-logic#run-flow)
 :::
 
 This `SubFlowComponent` generates a component from a flow with all of its inputs and outputs.

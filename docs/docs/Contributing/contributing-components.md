@@ -45,13 +45,13 @@ class DataFrameProcessor(Component):
    * `description`: A brief description of what your component does.
    * `documentation`: A link to detailed documentation.
    * `icon`: An emoji or icon identifier for visual representation.
-    For more information, see [Contributing bundles](/contributing-bundles#add-the-bundle-to-the-frontend-folder).
+    For more information, see [Contributing bundles](/docs/contributing-bundles#add-the-bundle-to-the-frontend-folder).
    * `priority`: An optional integer to control display order. Lower numbers appear first.
    * `name`: An optional internal identifier that defaults to class name.
 
 4. Define the component's interface by specifying its inputs, outputs, and the method that will process them. The method name must match the `method` field in your outputs list, as this is how Langflow knows which method to call to generate each output.
 This example creates a minimal custom component skeleton.
-For more information on creating your custom component, see [Create custom Python components](/components-custom-components).
+For more information on creating your custom component, see [Create custom Python components](/docs/components-custom-components).
 ```python
 from typing import Any, Dict, Optional
 import pandas as pd
@@ -124,7 +124,7 @@ Always favor asynchronous methods and functions in your components. When interac
 
 ### Include tests with your component
 
-Include tests for your changes using `ComponentTestBase` classes. For more information, see [Contribute component tests](/contributing-component-tests).
+Include tests for your changes using `ComponentTestBase` classes. For more information, see [Contribute component tests](/docs/contributing-component-tests).
 
 ### Documentation
 
@@ -169,7 +169,7 @@ Maintain the class name and `name` attribute if the purpose remains the same.
 Otherwise, create a new component and move the old component to `legacy`.
 2. Add tests.
 Create tests using one of the `ComponentTestBase` classes.
-For more information, see [Contribute component tests](/contributing-component-tests).
+For more information, see [Contribute component tests](/docs/contributing-component-tests).
 3. Flag outdated fields and outputs as `deprecated` and keep them in the same location to ensure backward compatibility.
 4. Document your changes.
 Include migration instructions if breaking changes occur.

@@ -11,7 +11,7 @@ OpenAI uses this loaded data to generate a blog post, as instructed by the **Tex
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
+- [A running Langflow instance](/docs/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/)
 
 ## Create the blog writer flow

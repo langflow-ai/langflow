@@ -106,7 +106,7 @@ Custom component `Output` properties define:
 * `name`, `display_name`, `method`
 * Optional: `info`
 
-For more information, see [Custom component inputs and outputs](/components-custom-components#custom-component-inputs-and-outputs).
+For more information, see [Custom component inputs and outputs](/docs/components-custom-components#custom-component-inputs-and-outputs).
 
 ### Associated Methods
 
@@ -175,7 +175,7 @@ def some_method(self):
 
 By default, Langflow looks for custom components in the `langflow/components` directory.
 
-If you're creating custom components in a different location using the [LANGFLOW_COMPONENTS_PATH](/environment-variables#LANGFLOW_COMPONENTS_PATH) environment variable, components must be organized in a specific directory structure to be properly loaded and displayed in the UI:
+If you're creating custom components in a different location using the [LANGFLOW_COMPONENTS_PATH](/docs/environment-variables#LANGFLOW_COMPONENTS_PATH) environment variable, components must be organized in a specific directory structure to be properly loaded and displayed in the UI:
 
 ```
 /your/custom/components/path/    # Base directory set by LANGFLOW_COMPONENTS_PATH
@@ -216,7 +216,7 @@ Inputs and outputs define how data flows through the component, how it appears i
 
 ### Inputs
 
-Inputs are defined in a class-level `inputs` list. When Langflow loads the component, it uses this list to render component fields and [ports](/concepts-components#component-ports) in the UI. Users or other components provide values or connections to fill these inputs.
+Inputs are defined in a class-level `inputs` list. When Langflow loads the component, it uses this list to render component fields and [ports](/docs/concepts-components#component-ports) in the UI. Users or other components provide values or connections to fill these inputs.
 
 An input is usually an instance of a class from `langflow.io` (such as `StrInput`, `DataInput`, or `MessageTextInput`). The most common constructor parameters are:
 
@@ -556,5 +556,5 @@ To build more reliable components, consider the following best practices:
 
 ## Contribute custom components to Langflow
 
-See [How to Contribute](/contributing-components) to contribute your custom component to Langflow.
+See [How to Contribute](/docs/contributing-components) to contribute your custom component to Langflow.
 

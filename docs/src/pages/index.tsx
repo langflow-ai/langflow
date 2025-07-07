@@ -153,7 +153,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to={useBaseUrl('/docs/troubleshooting')} className={styles.card}>
+            <Link to={useBaseUrl('/docs/troubleshoot')} className={styles.card}>
               <div className={styles.cardIcon}>
                 <LifeBuoy size={16} strokeWidth={1.25} />
               </div>

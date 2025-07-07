@@ -3,7 +3,7 @@ title: Simple agent
 slug: /simple-agent
 ---
 
-Build a **Simple Agent** flow for an agentic application using the [Agent](/agents) component.
+Build a **Simple Agent** flow for an agentic application using the [Agent](/docs/agents) component.
 
 An **agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
 
@@ -12,7 +12,7 @@ The agent selects the **Calculator** tool for simple math problems and the **URL
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
+- [A running Langflow instance](/docs/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/)
 
 ## Open Langflow and start a new flow

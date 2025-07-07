@@ -23,7 +23,7 @@ Langflow can be installed in multiple ways:
   3. Mount and install the Langflow application.
   4. When the installation completes, open the Langflow application.
 
-  After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
+  After confirming that Langflow is running, create your first flow with the [Quickstart](/docs/get-started-quickstart).
 
 ### Manage your version of Langflow Desktop
 
@@ -53,7 +53,7 @@ Running applications in [Docker](https://docs.docker.com/) containers ensures co
 
 3. To access Langflow, navigate to `http://localhost:7860/`.
 
-For more information, see [Deploy Langflow on Docker](/deployment-docker).
+For more information, see [Deploy Langflow on Docker](/docs/deployment-docker).
 
 ## Install and run the Langflow OSS Python package
 
@@ -127,18 +127,18 @@ To delete the virtual environment, type `Remove-Item VENV_NAME`.
 4. To confirm that a local Langflow instance is running, navigate to the default Langflow URL `http://127.0.0.1:7860`.
 It can take a few minutes for Langflow to start.
 
-After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
+After confirming that Langflow is running, create your first flow with the [Quickstart](/docs/get-started-quickstart).
 
 ### Install Langflow from source
 
-To install Langflow from source, see [Install Langflow from source](/contributing-how-to-contribute#install-langflow-from-source).
+To install Langflow from source, see [Install Langflow from source](/docs/contributing-how-to-contribute#install-langflow-from-source).
 
 ### Manage Langflow OSS versions
 
 :::important
 The Langflow team recommends installing new Langflow versions in a new virtual environment before upgrading your primary installation.
 
-This allows you to [import flows](/concepts-flows#import-flow) from your existing installation and test them in the new version without disrupting your existing installation.
+This allows you to [import flows](/docs/concepts-flows#import-flow) from your existing installation and test them in the new version without disrupting your existing installation.
 In the event of breaking changes or bugs, your existing installation is preserved in a stable state.
 :::
 
@@ -151,12 +151,12 @@ To manage your Langflow OSS version, use the following commands:
 ### Manage Langflow OSS dependencies
 
 Langflow OSS provides optional dependency groups and support for custom dependencies to extend Langflow functionality.
-For more information, see [Install custom dependencies](/install-custom-dependencies).
+For more information, see [Install custom dependencies](/docs/install-custom-dependencies).
 
 ## Troubleshoot Langflow installation and startup issues
 
-If you encounter an issue when installing or running Langflow, see [Troubleshoot Langflow](/troubleshoot).
+If you encounter an issue when installing or running Langflow, see [Troubleshoot Langflow](/docs/troubleshoot).
 
 ## Next steps
 
-After installing Langflow, build and run a flow with the [quickstart](/get-started-quickstart).
+After installing Langflow, build and run a flow with the [quickstart](/docs/get-started-quickstart).

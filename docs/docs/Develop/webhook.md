@@ -10,14 +10,14 @@ Add a **Webhook** component to your flow to trigger it with external requests.
 To connect the **Webhook** to a **Parser** component to view and parse your data payload, do the following:
 
 1. Add a **Webhook** component to your flow.
-2. Add a [Parser](/components-processing#parser) component to your flow.
+2. Add a [Parser](/docs/components-processing#parser) component to your flow.
 3. Connect the **Webhook** component's **Data** output to the **Parser** component's **Data** input.
 4. In the **Template** field of the **Parser** component, enter a template for parsing the **Webhook** component's input into structured text.
     :::important
     The component may fail to build because it needs data from the **Webhook** first.
     If you experience issues, change the **Mode** on the **Parser** component to **Stringify**, so the component outputs a single string.
     :::
-    Create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component.
+    Create variables for values in the `template` the same way you would in a [Prompt](/docs/components-prompts) component.
     For example, to parse `id`, `name`, and `email` strings:
     ```text
     ID: {id} - Name: {name} - Email: {email}
@@ -30,7 +30,7 @@ To connect the **Webhook** to a **Parser** component to view and parse your data
     :::
 7. Send a POST request with any data to trigger your flow.
 This example uses `id`, `name`, and `email` strings.
-Replace **FLOW_ID** with your flow's ID, which can be found on the [Publish pane](/concepts-publish) or in the flow's URL.
+Replace **FLOW_ID** with your flow's ID, which can be found on the [Publish pane](/docs/concepts-publish) or in the flow's URL.
     ```bash
     curl -X POST "http://localhost:7860/api/v1/webhook/YOUR_FLOW_ID" \
         -H 'Content-Type: application/json' \
@@ -60,4 +60,4 @@ Now that you've triggered the webhook component manually, follow along with this
 
 ## See also
 
-- [Flow trigger endpoints](/api-flows-run)
+- [Flow trigger endpoints](/docs/api-flows-run)

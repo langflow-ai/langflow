@@ -9,7 +9,7 @@ The Notion Conversational Agent is an AI-powered assistant that interacts with y
 
 ---
 
-- [Notion App](/integrations/notion/setup)
+- [Notion App](/docs/integrations/notion/setup)
 - [Notion account and API key](https://www.notion.so/my-integrations)
 - [OpenAI API key](https://platform.openai.com/account/api-keys)
 - [Download Flow Conversation Agent Flow](./Conversational_Notion_Agent.json)(Download link)

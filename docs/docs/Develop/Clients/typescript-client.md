@@ -53,7 +53,7 @@ The `LangflowClient` object allows you to interact with the Langflow API.
 
 Replace `BASE_URL` and `API_KEY` with values from your deployment.
 The default Langflow base URL is `http://localhost:7860`.
-To create an API key, see [API keys](/configuration-api-keys).
+To create an API key, see [API keys](/docs/configuration-api-keys).
 
 ```tsx
 const baseUrl = "BASE_URL";
@@ -99,7 +99,7 @@ FlowResponse {
 </details>
 
 This confirms your client is connecting to Langflow.
-* The `sessionID` value is a unique identifier for the client-server session. For more information, see [Session ID](/session-id).
+* The `sessionID` value is a unique identifier for the client-server session. For more information, see [Session ID](/docs/session-id).
 * The `outputs` array contains the results of your flow execution.
 
 2. To get the full response objects from your server, change the `console.log` code to stringify the returned JSON object:
@@ -128,13 +128,13 @@ This example tweaks the Open-AI model component to enforce using the `gpt-4o-min
 ```tsx
 const tweaks = { model_name: "gpt-4o-mini" };
 ```
-2. Pass a [session ID](/session-id) with the request to maintain the same conversation with the LLM from this application.
+2. Pass a [session ID](/docs/session-id) with the request to maintain the same conversation with the LLM from this application.
 ```tsx
 const session_id = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
 ```
 3. Instead of calling `run` on the Flow object, call `stream` with the same arguments.
 The response is a [ReadableStream](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) of objects.
-For more information on streaming Langflow responses, see the [/run endpoint](/api-flows-run#run-flow).
+For more information on streaming Langflow responses, see the [/run endpoint](/docs/api-flows-run#run-flow).
 ```tsx
 const response = await client.flow(flowId).stream(input);
 
@@ -256,7 +256,7 @@ LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000
 LANGFLOW_LOG_LEVEL=DEBUG
 ```
 
-For more information, see [Logs endpoints](/api-logs).
+For more information, see [Logs endpoints](/docs/api-logs).
 
 This complete example starts streaming logs in the background, and then runs a flow so you can see how a flow executes.
 Replace `baseUrl` and `flowId` with values from your deployment.

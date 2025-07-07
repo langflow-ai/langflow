@@ -16,7 +16,7 @@ In the Langflow header, click your profile icon, select **Settings**, and then c
 
 ## Add a component to a flow {#component-menus}
 
-To add a component to a flow, drag the component from the **Components** menu to the [**Workspace**](/concepts-overview).
+To add a component to a flow, drag the component from the **Components** menu to the [**Workspace**](/docs/concepts-overview).
 
 The **Components** menu is organized by component type, and some components are hidden by default:
 
@@ -123,7 +123,7 @@ In the context of creating and running flows, component code does the following:
 All components inherit from a base `Component` class that defines the component's interface and behavior.
 For example, the [Recursive character text splitter](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [LCTextSplitterComponent](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
 
-Each component's code includes definitions for inputs and outputs, which are represented in the **Workspace** as [component ports](/concepts-components#component-ports).
+Each component's code includes definitions for inputs and outputs, which are represented in the **Workspace** as [component ports](/docs/concepts-components#component-ports).
 For example, the `RecursiveCharacterTextSplitter` has four inputs. Each input definition specifies the input type, such as `IntInput`, as well as the encoded name, display name, description, and other parameters for that specific input.
 These values determine the component settings, such as display names and tooltips in the Langflow UI.
 

@@ -23,31 +23,31 @@ The default storage option in Langflow is a [SQLite](https://www.sqlite.org/) da
 
 The following tables are stored in `langflow.db`:
 
-• **User** - Stores user account information including credentials, permissions, and profiles. For more information, see [Authentication](/configuration-authentication).
+• **User** - Stores user account information including credentials, permissions, and profiles. For more information, see [Authentication](/docs/configuration-authentication).
 
-• **Flow** - Contains flow configurations. For more information, see [Flows](/concepts-flows).
+• **Flow** - Contains flow configurations. For more information, see [Flows](/docs/concepts-flows).
 
-• **Message** - Stores chat messages and interactions that occur between components. For more information, see [Message objects](/concepts-objects#message-object).
+• **Message** - Stores chat messages and interactions that occur between components. For more information, see [Message objects](/docs/concepts-objects#message-object).
 
-• **Transaction** - Records execution history and results of flow runs. This information is used for [logging](/logging).
+• **Transaction** - Records execution history and results of flow runs. This information is used for [logging](/docs/logging).
 
-• **ApiKey** - Manages API authentication keys for users. For more information, see [API keys](/configuration-api-keys).
+• **ApiKey** - Manages API authentication keys for users. For more information, see [API keys](/docs/configuration-api-keys).
 
-• **Project** - Provides a structure for flow storage. For more information, see [Projects](/concepts-overview#projects).
+• **Project** - Provides a structure for flow storage. For more information, see [Projects](/docs/concepts-overview#projects).
 
-• **Variables** - Stores global encrypted values and credentials. For more information, see [Global variables](/configuration-global-variables).
+• **Variables** - Stores global encrypted values and credentials. For more information, see [Global variables](/docs/configuration-global-variables).
 
-• **VertexBuild** - Tracks the build status of individual nodes within flows. For more information, see [Run a flow in the playground](/concepts-playground).
+• **VertexBuild** - Tracks the build status of individual nodes within flows. For more information, see [Run a flow in the playground](/docs/concepts-playground).
 
 For more information, see the database models in the [source code](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/services/database/models).
 
 ## Store messages in local memory
 
-To store messages in local Langflow memory, add a [Message store](/components-helpers#message-store) component to your flow.
+To store messages in local Langflow memory, add a [Message store](/docs/components-helpers#message-store) component to your flow.
 
-To retrieve messages from local Langflow memory, add a [Message history](/components-helpers#message-history) component to your flow.
+To retrieve messages from local Langflow memory, add a [Message history](/docs/components-helpers#message-history) component to your flow.
 
-For an example of using local chat memory, see the [Memory chatbot](/memory-chatbot) starter flow.
+For an example of using local chat memory, see the [Memory chatbot](/docs/memory-chatbot) starter flow.
 
 To store or retrieve chat messages from external memory, connect the **External memory** port of the **Message store** or **Message history** component to a **Memory** component, like the [Astra DB chat memory](components-memories#astradbchatmemory-component) component. An example flow looks like this:
 
@@ -63,7 +63,7 @@ To replace the default Langflow SQLite database with another database, modify th
 LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
 ```
 
-For an example, see [Configure an external PostgreSQL database](/configuration-custom-database).
+For an example, see [Configure an external PostgreSQL database](/docs/configuration-custom-database).
 
 ## Configure the external database connection
 

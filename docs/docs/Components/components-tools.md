@@ -19,13 +19,13 @@ The agent then uses a connected LLM to reason through the problem to decide whic
 
 Tools are typically connected to agent components at the **Tools** port.
 
-The [simple agent starter project](/simple-agent) uses URL and Calculator tools connected to an [agent component](/components-agents#agent-component) to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use.
+The [simple agent starter project](/docs/simple-agent) uses URL and Calculator tools connected to an [agent component](/docs/components-agents#agent-component) to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use.
 
 ![Simple agent starter flow](/img/starter-flow-simple-agent.png)
 
 To make a component into a tool that an agent can use, enable **Tool Mode** in the component. Enabling tool mode modifies a component input to accept calls from an agent.
 If the component you want to connect to an agent doesn't have a **Tool Mode** option, you can modify the component's inputs to become a tool.
-For an example, see [Make any component a tool](/agents-tools#make-any-component-a-tool).
+For an example, see [Make any component a tool](/docs/agents-tools#make-any-component-a-tool).
 
 ## arXiv
 
@@ -123,7 +123,7 @@ The **Data** output is used when directly querying Astra DB, while the **Tool** 
 
 | Name | Type | Description |
 |------|------|-------------|
-| Data | List[Data] | A list of [Data](/concepts-objects) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
+| Data | List[Data] | A list of [Data](/docs/concepts-objects) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
 | Tool | StructuredTool | A LangChain `StructuredTool` object that can be used in agent workflows. Contains the tool name, description, argument schema based on tool parameters, and the query function. |
 
 </details>
@@ -155,7 +155,7 @@ The `Astra DB CQL Tool` allows agents to query data from CQL tables in Astra DB.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Data | List[Data] | A list of [Data](/concepts-objects) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter. |
+| Data | List[Data] | A list of [Data](/docs/concepts-objects) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter. |
 | Tool | StructuredTool | A LangChain StructuredTool object that can be used in agent workflows. Contains the tool name, description, argument schema based on partition and clustering keys, and the query function. |
 
 </details>
@@ -311,12 +311,12 @@ This component allows you to call the Serper.dev Google Search API.
 
 ## MCP connection
 
-The **MCP connection** component exposes Model Context Protocol (MCP) servers, including your other flows, as tools for Langflow agents. For information about this component, see [Use Langflow as an MCP client](/mcp-client).
+The **MCP connection** component exposes Model Context Protocol (MCP) servers, including your other flows, as tools for Langflow agents. For information about this component, see [Use Langflow as an MCP client](/docs/mcp-client).
 
 ### MCP Tools (deprecated)
 
 The **MCP Tools (stdio)** and **MCP Tools (SSE)** components are deprecated as of Langflow version 1.3.
-They are replaced by the [MCP connection component](/mcp-client).
+They are replaced by the [MCP connection component](/docs/mcp-client).
 
 ## Wikidata
 

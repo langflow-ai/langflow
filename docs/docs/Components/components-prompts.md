@@ -13,7 +13,7 @@ Prompts are a combination of natural language and variables created with curly b
 
 ## Use a prompt component in a flow
 
-An example of modifying a prompt can be found in [Vector RAG starter flow](/vector-store-rag), where a basic chatbot flow is extended to include a full vector RAG pipeline.
+An example of modifying a prompt can be found in [Vector RAG starter flow](/docs/vector-store-rag), where a basic chatbot flow is extended to include a full vector RAG pipeline.
 
 ![Vector RAG connected to a chatbot](/img/starter-flow-vector-rag.png)
 
@@ -30,7 +30,7 @@ Answer the question
 {user_question}
 ```
 
-When variables are added to a prompt template, new fields are automatically created in the component. These fields can be connected to receive text input from other components to automate prompting, or to output instructions to other components. An example of prompts controlling agents behavior is available in the [sequential tasks agent starter flow](/sequential-agent).
+When variables are added to a prompt template, new fields are automatically created in the component. These fields can be connected to receive text input from other components to automate prompting, or to output instructions to other components. An example of prompts controlling agents behavior is available in the [sequential tasks agent starter flow](/docs/sequential-agent).
 
 <details>
 <summary>Parameters</summary>

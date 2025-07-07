@@ -17,7 +17,7 @@ You can use the Langflow API for programmatic interactions with Langflow, such a
 To view and test all available endpoints, you can access the Langflow API's OpenAPI specification at your Langflow deployment's `/docs` endpoint, such as `http://localhost:7860/docs`.
 
 :::tip
-For an example of the Langflow API in a script, see the [Langflow quickstart](/get-started-quickstart).
+For an example of the Langflow API in a script, see the [Langflow quickstart](/docs/get-started-quickstart).
 
 The quickstart demonstrates how to get automatically generated code snippets for your flows, use a script to run a flow, and extract data from the Langfow API response.
 :::
@@ -43,15 +43,15 @@ For example:
 * `http://IP_OR_DNS:LANGFLOW_PORT/api`
 
 :::tip
-The Langflow port number is set in the `LANGFLOW_PORT` [environment variable](/environment-variables).
+The Langflow port number is set in the `LANGFLOW_PORT` [environment variable](/docs/environment-variables).
 ::::
 
 ### Authentication
 
-Your [Langflow deployment's authentication settings](/configuration-authentication) determine whether Langflow API requests require explicit authentication with a Langflow API key.
+Your [Langflow deployment's authentication settings](/docs/configuration-authentication) determine whether Langflow API requests require explicit authentication with a Langflow API key.
 
 If explicit authentication is required, you must provide a valid Langflow API key in either an `x-api-key` header or query parameter.
-For more information, see [API keys](/configuration-api-keys).
+For more information, see [API keys](/docs/configuration-api-keys).
 
 Because authentication isn't always required, Langflow API examples in the Langflow documentation often omit authentication.
 
@@ -88,7 +88,7 @@ export API_KEY="sk-..."
 ```
 
 :::tip
-- You can find flow IDs on the [Publish pane](/concepts-publish), in a flow's URL, and with [`GET /flows`](/api-flows#read-flows).
+- You can find flow IDs on the [Publish pane](/docs/concepts-publish), in a flow's URL, and with [`GET /flows`](/docs/api-flows#read-flows).
 - You can retrieve project IDs with `GET /projects`(/api-projects#read-projects).
 :::
 
@@ -96,7 +96,7 @@ export API_KEY="sk-..."
 
 Once you have your Langflow server URL, try calling these endpoints that return Langflow metadata.
 
-If authentication is required, include an `x-api-key` header or query parameter with a valid [Langflow API key](/configuration-api-keys), such as `-H 'x-api-key: $API_KEY'`.
+If authentication is required, include an `x-api-key` header or query parameter with a valid [Langflow API key](/docs/configuration-api-keys), such as `-H 'x-api-key: $API_KEY'`.
 
 ### Get version
 
@@ -157,7 +157,7 @@ curl -X GET \
 
 ## Next steps
 
-- Use the Langflow API to [run a flow](/api-flows-run).
-- Use the Langflow API to [upload files](/api-files).
-- Use the Langflow API to [get flow logs](/api-logs).
+- Use the Langflow API to [run a flow](/docs/api-flows-run).
+- Use the Langflow API to [upload files](/docs/api-files).
+- Use the Langflow API to [get flow logs](/docs/api-logs).
 - Explore all endpoints in the [Langflow API specification](/api).

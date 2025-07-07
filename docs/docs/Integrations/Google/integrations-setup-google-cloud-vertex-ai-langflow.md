@@ -3,7 +3,7 @@ title: Integrate Google Cloud Vertex AI with Langflow
 slug: /integrations-setup-google-cloud-vertex-ai-langflow
 ---
 
-Langflow integrates with the [Google Vertex AI API](https://console.cloud.google.com/marketplace/product/google/aiplatform.googleapis.com) for authenticating the [Vertex AI embeddings model](/components-embedding-models#vertexai-embeddings) and [Vertex AI](/components-models#vertexai) components.
+Langflow integrates with the [Google Vertex AI API](https://console.cloud.google.com/marketplace/product/google/aiplatform.googleapis.com) for authenticating the [Vertex AI embeddings model](/docs/components-embedding-models#vertexai-embeddings) and [Vertex AI](/docs/components-models#vertexai) components.
 
 Learn how to create a service account JSON in Google Cloud to authenticate Langflow’s Vertex AI components.
 

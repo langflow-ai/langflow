@@ -3,7 +3,7 @@ title: Get help and request enhancements
 slug: /contributing-github-issues
 ---
 
-The Langflow GitHub repository is an integral part of the [Langflow community](/contributing-community).
+The Langflow GitHub repository is an integral part of the [Langflow community](/docs/contributing-community).
 
 In addition to general assistance with Langflow, the repository is the best place to report bugs and request enhancements to ensure that they are tracked by the Langflow project.
 
@@ -21,7 +21,7 @@ Use the [Langflow repository's labels](https://github.com/langflow-ai/langflow/l
 
 ## GitHub discussions
 
-If you need help with your code or Langflow in general, you can visit the [Langflow GitHub Discussions page](https://github.com/langflow-ai/langflow/discussions) or reach out through other [Langflow community](/contributing-community) channels.
+If you need help with your code or Langflow in general, you can visit the [Langflow GitHub Discussions page](https://github.com/langflow-ai/langflow/discussions) or reach out through other [Langflow community](/docs/contributing-community) channels.
 
 The Langflow team doesn't provide individual support over email, and the team believes that public discussions help more users by virtue of their discoverability.
 

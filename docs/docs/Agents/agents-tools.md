@@ -12,7 +12,7 @@ Configure tools connected to agents to extend their capabilities.
 To edit a tool's actions, in the tool component, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Edit Tools** to modify its `name`, `description`, or `enabled` metadata.
 These fields help connected agents understand how to use the action, without having to modify the agent's prompt instructions.
 
-For example, the [URL](/components-data#url) component has two actions available when **Tool Mode** is enabled:
+For example, the [URL](/docs/components-data#url) component has two actions available when **Tool Mode** is enabled:
 
 | Tool Name | Description | Enabled |
 |-----------|-------------|---------|
@@ -29,7 +29,7 @@ The agent component itself also supports **Tool Mode** for creating multi-agent 
 
 Add an agent to your flow that uses a different OpenAI model for a larger context window.
 
-1. Create the [Simple agent starter flow](/simple-agent).
+1. Create the [Simple agent starter flow](/docs/simple-agent).
 2. Add a second agent component to the flow.
 3. Add your **Open AI API Key** to the **Agent** component.
 4. In the **Model Name** field, select `gpt-4.1`.
@@ -162,7 +162,7 @@ inputs = [
 
 ## Use flows as tools
 
-An agent can use flows that are saved in your workspace as tools with the [Run flow](/components-logic#run-flow) component.
+An agent can use flows that are saved in your workspace as tools with the [Run flow](/docs/components-logic#run-flow) component.
 
 1. To add a **Run flow** component, click and drag a **Run flow** component to your workspace.
 2. Select the flow you want the agent to use as a tool.

@@ -64,7 +64,7 @@ For example, changing the **Chat Input** component's `input_value` changes that 
 
 ### Send files to your flow with the API
 
-For information on sending files to the Langflow API, see [Files endpoint](/api-files).
+For information on sending files to the Langflow API, see [Files endpoint](/docs/api-files).
 
 ## Shareable playground
 
@@ -78,4 +78,4 @@ If you're using **Datastax Langflow**, you can share the URL with any users with
 
 The **Embed into site** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
 
-For more information, see [Embedded chat widget](/embedded-chat-widget).
+For more information, see [Embedded chat widget](/docs/embedded-chat-widget).

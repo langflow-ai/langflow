@@ -11,23 +11,23 @@ As Langflow development continues, components are often recategorized or depreca
 
 If a component appears to be missing from the expected location on the **Components** menu, try the following:
 
-* Search for the component or check other component categories, including [Bundles](/components-bundle-components).
-* [Expose legacy components](/concepts-components#component-menus), which are hidden by default.
+* Search for the component or check other component categories, including [Bundles](/docs/components-bundle-components).
+* [Expose legacy components](/docs/concepts-components#component-menus), which are hidden by default.
 * Check the [Changelog](https://github.com/langflow-ai/langflow/releases/latest) for component changes in recent releases.
 * Make sure the component isn't already present in your flow if it is a single-use component.
 
-If you still cannot locate the component, see [Langflow GitHub Issues and Discussions](/contributing-github-issues).
+If you still cannot locate the component, see [Langflow GitHub Issues and Discussions](/docs/contributing-github-issues).
 
 ## No input in the Playground
 
-If there is no text box for input in the Playground, make sure your flow has a [Input component](/components-io) that is connected to the **Input** port of another component.
+If there is no text box for input in the Playground, make sure your flow has a [Input component](/docs/components-io) that is connected to the **Input** port of another component.
 
 ## Missing key, no key found, or invalid API key
 
 If you get an API key error when running a flow, try the following:
 
 * For all components that require credentials, make sure those components have a valid credential in the component's settings, such as the **API key** field.
-* If you store your credentials in [Langflow global variables](/configuration-global-variables), make sure you selected the correct global variable and that the variable contains a valid credential.
+* If you store your credentials in [Langflow global variables](/docs/configuration-global-variables), make sure you selected the correct global variable and that the variable contains a valid credential.
 * Make sure the provided credentials are active, have the required permissions, and, if applicable, have sufficient funds in the account to execute the required action. For example, model providers require credits to use their LLMs.
 
 ## Langflow installation issues
@@ -42,7 +42,7 @@ Installing Langflow OSS with `pip install langflow` slowly fails with this error
 pip is looking at multiple versions of <<library>> to determine which version is compatible with other requirements. This could take a while.
 ```
 
-To work around this issue, install Langflow with `uv` instead of `pip`, as explained in [Install and run the Langflow OSS Python package](/get-started-installation#install-and-run-the-langflow-oss-python-package).
+To work around this issue, install Langflow with `uv` instead of `pip`, as explained in [Install and run the Langflow OSS Python package](/docs/get-started-installation#install-and-run-the-langflow-oss-python-package).
 
 ### Linux installation fails to build required package
 
@@ -112,7 +112,7 @@ There are two possible reasons for this error:
 
 The following issues can occur when upgrading your Langflow version.
 
-For information about managing Langflow versions, see [Install Langflow](/get-started-installation).
+For information about managing Langflow versions, see [Install Langflow](/docs/get-started-installation).
 
 ### Something went wrong running migrations
 
@@ -137,16 +137,16 @@ The cache folder location depends on your OS:
 
 ## MCP server issues
 
-- [Use MCP Inspector to test and debug flows](/mcp-server#test-and-debug-flows)
-- [Troubleshooting MCP server](/mcp-server#troubleshooting-mcp-server)
+- [Use MCP Inspector to test and debug flows](/docs/mcp-server#test-and-debug-flows)
+- [Troubleshooting MCP server](/docs/mcp-server#troubleshooting-mcp-server)
 
 ## Custom components and integrations issues
 
 For troubleshooting advice for a third-party integration, see the information about that integration in the Langflow documentation and the provider's documentation.
 
-If you are building a custom component, see [Error handling and logging for custom Python components](/components-custom-components#error-handling-and-logging).
+If you are building a custom component, see [Error handling and logging for custom Python components](/docs/components-custom-components#error-handling-and-logging).
 
 ## See also
 
-- [Langflow GitHub Issues and Discussions](/contributing-github-issues)
-- [Langflow telemetry](/contributing-telemetry)
+- [Langflow GitHub Issues and Discussions](/docs/contributing-github-issues)
+- [Langflow telemetry](/docs/contributing-telemetry)

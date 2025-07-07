@@ -64,7 +64,7 @@ curl -X POST \
 Send image files to the Langflow API for AI analysis.
 
 The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
-For more information, see [Supported environment variables](/environment-variables#supported-variables).
+For more information, see [Supported environment variables](/docs/environment-variables#supported-variables).
 
 1. To send an image to your flow with the API, POST the image file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
    Replace **FILE_NAME** with the uploaded file name.
@@ -87,7 +87,7 @@ The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<
 <!-- TODO: What link goes here? -->
 2. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
    Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
-   Component `id` values can be found in [Langflow JSON files](/concepts-flows#langflow-json-file-contents).
+   Component `id` values can be found in [Langflow JSON files](/docs/concepts-flows#langflow-json-file-contents).
 
 ```bash
 curl -X POST \
@@ -189,7 +189,7 @@ curl -X DELETE \
 Use the `/files` endpoints to move files between your local machine and Langflow.
 
 The `v2` endpoints require authentication by an API key or JWT.
-To create a Langflow API key and export it as an environment variable, see [Get started with the Langflow API](/api-reference-api-examples).
+To create a Langflow API key and export it as an environment variable, see [Get started with the Langflow API](/docs/api-reference-api-examples).
 
 ### Upload file (v2)
 
@@ -240,11 +240,11 @@ The `/v2/files` endpoint does not support sending **image** files to flows.
 To send **image** files to your flows through the API, follow the procedure in [Upload image files (v1)](#upload-image-files-v1).
 :::
 
-Send a file to your flow for analysis using the [File](/components-data#file) component and the API.
-Your flow must contain a [File](/components-data#file) component to receive the file.
+Send a file to your flow for analysis using the [File](/docs/components-data#file) component and the API.
+Your flow must contain a [File](/docs/components-data#file) component to receive the file.
 
 The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
-For more information, see [Supported environment variables](/environment-variables#supported-variables).
+For more information, see [Supported environment variables](/docs/environment-variables#supported-variables).
 
 1. To send a file to your flow with the API, POST the file to the `/api/v2/files` endpoint.
    Replace **FILE_NAME** with the uploaded file name.
@@ -271,9 +271,9 @@ The file is uploaded in the format `USER_ID/FILE_ID.FILE_EXTENSION`, and the API
 }
 ```
 
-2. To use this file in your flow, add a [File](/components-data#file) component to load a file into the flow.
+2. To use this file in your flow, add a [File](/docs/components-data#file) component to load a file into the flow.
 3. To load the file into your flow, send it to the **File** component.
-To retrieve the **File** component's full name with the UUID attached, call the [Read flow](/api-flows#read-flow) endpoint, and then include your **File** component and the file path as a tweak with the `/v1/run` POST request.
+To retrieve the **File** component's full name with the UUID attached, call the [Read flow](/docs/api-flows#read-flow) endpoint, and then include your **File** component and the file path as a tweak with the `/v1/run` POST request.
 In this example, the file uploaded to `/v2/files` is included with the `/v1/run` POST request.
 
 ```text

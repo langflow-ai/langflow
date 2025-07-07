@@ -104,17 +104,17 @@ This component recursively loads files from a directory, with options for file t
 
 ## File
 
-This component loads and parses files of various supported formats and converts the content into a [Data](/concepts-objects) object. It supports multiple file types and provides options for parallel processing and error handling.
+This component loads and parses files of various supported formats and converts the content into a [Data](/docs/concepts-objects) object. It supports multiple file types and provides options for parallel processing and error handling.
 
 To load a document, follow these steps:
 
 1. Click the **Select files** button.
-2. Select a local file or a file loaded with [File management](/concepts-file-management), and then click **Select file**.
+2. Select a local file or a file loaded with [File management](/docs/concepts-file-management), and then click **Select file**.
 
 The loaded file name appears in the component.
 
 The default maximum supported file size is 100 MB.
-To modify this value, see [--max-file-size-upload](/environment-variables#LANGFLOW_MAX_FILE_SIZE_UPLOAD).
+To modify this value, see [--max-file-size-upload](/docs/environment-variables#LANGFLOW_MAX_FILE_SIZE_UPLOAD).
 
 <details>
 <summary>Parameters</summary>
@@ -137,9 +137,9 @@ To modify this value, see [--max-file-size-upload](/environment-variables#LANGFL
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The parsed content of the file as a [Data](/concepts-objects) object. |
-| dataframe | DataFrame | The file content as a [DataFrame](/concepts-objects#dataframe-object) object. |
-| message | Message | The file content as a [Message](/concepts-objects#message-object) object. |
+| data | Data | The parsed content of the file as a [Data](/docs/concepts-objects) object. |
+| dataframe | DataFrame | The file content as a [DataFrame](/docs/concepts-objects#dataframe-object) object. |
+| message | Message | The file content as a [Message](/docs/concepts-objects#message-object) object. |
 
 </details>
 
@@ -252,9 +252,9 @@ Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictu
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | A list of [Data](/concepts-objects) objects containing fetched content and metadata. |
+| data | Data | A list of [Data](/docs/concepts-objects) objects containing fetched content and metadata. |
 | text | Message | The fetched content as formatted text. |
-| dataframe | DataFrame | The content formatted as a [DataFrame](/concepts-objects#dataframe-object) object. |
+| dataframe | DataFrame | The content formatted as a [DataFrame](/docs/concepts-objects#dataframe-object) object. |
 
 </details>
 
@@ -276,8 +276,8 @@ curl -X POST \
 To test the webhook component:
 
 1. Add a **Webhook** component to the flow.
-2. Connect the **Webhook** component's **Data** output to the **Data** input of a [Parser](/components-processing#parser) component.
-3. Connect the **Parser** component's **Parsed Text** output to the **Text** input of a [Chat Output](/components-io#chat-output) component.
+2. Connect the **Webhook** component's **Data** output to the **Data** input of a [Parser](/docs/components-processing#parser) component.
+3. Connect the **Parser** component's **Parsed Text** output to the **Text** input of a [Chat Output](/docs/components-io#chat-output) component.
 4. In the **Parser** component, under **Mode**, select **Stringify**.
 This mode passes the webhook's data as a string for the **Chat Output** component to print.
 5. To send a POST request, copy the code from the **Webhook cURL** tab in the **API** pane and paste it into a terminal.
@@ -300,7 +300,7 @@ Your JSON data is posted to the **Chat Output** component, which indicates that 
 
 | Name | Display Name | Description |
 |------|--------------|-------------|
-| output_data | Data | Outputs processed data from the webhook input, and returns an empty [Data](/concepts-objects) object if no input is provided. If the input is not valid JSON, the component wraps it in a `payload` object. |
+| output_data | Data | Outputs processed data from the webhook input, and returns an empty [Data](/docs/concepts-objects) object if no input is provided. If the input is not valid JSON, the component wraps it in a `payload` object. |
 
 </details>
 

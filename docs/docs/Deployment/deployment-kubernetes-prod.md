@@ -33,7 +33,7 @@ helm repo update
 
 2. Install the Langflow app with the default options in the `langflow` namespace.
 
-If you have a created a [custom image with packaged flows](/deployment-docker#package-your-flow-as-a-docker-image), you can deploy Langflow by overriding the default [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file with the `--set` flag.
+If you have a created a [custom image with packaged flows](/docs/deployment-docker#package-your-flow-as-a-docker-image), you can deploy Langflow by overriding the default [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file with the `--set` flag.
 
 * Use a custom image with bundled flows:
 ```shell

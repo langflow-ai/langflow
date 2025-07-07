@@ -19,7 +19,7 @@ Instead of juggling multiple integrations and components in your flow, connect t
 2. In the **Workspace**, add the **Composio Tools** component.
 3. Connect the **Agent** component's **Tools** port to the **Composio Tools** component's **Tools** port.
 4. In the **Composio API Key** field, paste your Composio API key.
-Alternatively, add the key as a [global variable](/configuration-global-variables).
+Alternatively, add the key as a [global variable](/docs/configuration-global-variables).
 5. In the **Tool Name** field, select the tool you want your agent to have access to.
 For this example, select the **Gmail** tool, which allows your agent to control an email account with the Composio tool.
 6. In the **Actions** field, select the action you want the **Agent** to take with the **Gmail** tool.
@@ -35,7 +35,7 @@ For more information, see the [Composio documentation](https://docs.composio.dev
 ![Simple agent flow with composio connected as a tool](/img/composio/composio-create-flow.png)
 
 3. In the **OpenAI API Key** field of the **Agent** component, paste your OpenAI API key.
-Alternatively, add the key as a [global variable](/configuration-global-variables).
+Alternatively, add the key as a [global variable](/docs/configuration-global-variables).
 4. To open the **Playground** pane, click **Playground**.
 5. Ask your AI:
 

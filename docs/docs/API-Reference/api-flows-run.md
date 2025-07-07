@@ -8,15 +8,15 @@ import TabItem from '@theme/TabItem';
 
 Use the `/run` amd `/webhook` endpoints to run flows.
 
-To create, read, update, and delete flows, see [Flow management endpoints](/api-flows).
+To create, read, update, and delete flows, see [Flow management endpoints](/docs/api-flows).
 
 ## Run flow
 
 Execute a specified flow by ID or name.
 The flow is executed as a batch, but LLM responses can be streamed.
 
-This example runs a [Basic Prompting](/basic-prompting) flow with a given flow ID and passes a JSON object as the input value.
-Flow IDs can be found on the [Publish pane](/concepts-publish) or in a flow's URL.
+This example runs a [Basic Prompting](/docs/basic-prompting) flow with a given flow ID and passes a JSON object as the input value.
+Flow IDs can be found on the [Publish pane](/docs/concepts-publish) or in a flow's URL.
 
 The parameters are passed in the request body. In this example, the values are the default values.
 
@@ -142,7 +142,7 @@ This result is abbreviated, but illustrates where the `end` event completes the 
 | output_type | string | Optional. JSON body field. Output type ("chat", "any", "debug"). Default: `"chat"` |
 | output_component | string | Optional. JSON body field. Target component for output. Default: `""` |
 | tweaks | object | Optional. JSON body field. Component adjustments. Default: `null` |
-| session_id | string | Optional. JSON body field. Conversation context ID. See [Session ID](/session-id). Default: `null` |
+| session_id | string | Optional. JSON body field. Conversation context ID. See [Session ID](/docs/session-id). Default: `null` |
 
 ### Request example with all headers and parameters
 
@@ -171,7 +171,7 @@ curl -X POST \
 Use the `/webhook` endpoint to start a flow by sending an HTTP `POST` request.
 
 :::tip
-After you add a **Webhook** component to a flow, open the [**API access** pane](/concepts-publish), and then click the **Webhook cURL** tab to get an automatically generated `POST /webhook` request for your flow.
+After you add a **Webhook** component to a flow, open the [**API access** pane](/docs/concepts-publish), and then click the **Webhook cURL** tab to get an automatically generated `POST /webhook` request for your flow.
 :::
 
 ```bash
@@ -191,7 +191,7 @@ curl -X POST \
 ```
 </details>
 
-For more information, see [Webhook component](/components-data#webhook) and [Trigger flows with webhooks](/webhook).
+For more information, see [Webhook component](/docs/components-data#webhook) and [Trigger flows with webhooks](/docs/webhook).
 
 ## Deprecated flow trigger endpoints
 

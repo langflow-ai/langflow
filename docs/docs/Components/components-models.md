@@ -15,9 +15,9 @@ Refer to your specific component's documentation for more information on paramet
 
 Model components receive inputs and prompts for generating text, and the generated text is sent to an output component.
 
-The model output can also be sent to the **Language Model** port and on to a **Parse Data** component, where the output can be parsed into structured [Data](/concepts-objects) objects.
+The model output can also be sent to the **Language Model** port and on to a **Parse Data** component, where the output can be parsed into structured [Data](/docs/concepts-objects) objects.
 
-This example has the OpenAI model in a chatbot flow. For more information, see the [Basic prompting flow](/basic-prompting).
+This example has the OpenAI model in a chatbot flow. For more information, see the [Basic prompting flow](/docs/basic-prompting).
 
 ![](/img/starter-flow-basic-prompting.png)
 
@@ -227,7 +227,7 @@ For more information, see the [Google Generative AI documentation](https://cloud
 
 This component generates text using Groq's language models.
 
-1. To use this component in a flow, connect it as a **Model** in a flow like the [Basic prompting flow](/basic-prompting), or select it as the **Model Provider** if you're using an **Agent** component.
+1. To use this component in a flow, connect it as a **Model** in a flow like the [Basic prompting flow](/docs/basic-prompting), or select it as the **Model Provider** if you're using an **Agent** component.
 
 ![Groq component in a basic prompting flow](/img/component-groq.png)
 
@@ -274,9 +274,9 @@ This component sends requests to the Hugging Face API to generate text using the
 
 The Hugging Face API is a hosted inference API for models hosted on Hugging Face, and requires a [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) to authenticate.
 
-In this example based on the [Basic prompting flow](/basic-prompting), the **Hugging Face API** model component replaces the **Open AI** model. By selecting different hosted models, you can see how different models return different results.
+In this example based on the [Basic prompting flow](/docs/basic-prompting), the **Hugging Face API** model component replaces the **Open AI** model. By selecting different hosted models, you can see how different models return different results.
 
-1. Create a [Basic prompting flow](/basic-prompting).
+1. Create a [Basic prompting flow](/docs/basic-prompting).
 
 2. Replace the **OpenAI** model component with a **Hugging Face API** model component.
 
@@ -545,7 +545,7 @@ This value is set as the `OLLAMA_HOST` environment variable in Ollama.
 The default base URL is `http://localhost:11434`.
 2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh**.
 3. In the **Model Name** field, select a model. This example uses `llama3.2:latest`.
-4. Connect the **Ollama** model component to a flow. For example, this flow connects a local Ollama server running a Llama 3.2 model as the custom model for an [Agent](/components-agents) component.
+4. Connect the **Ollama** model component to a flow. For example, this flow connects a local Ollama server running a Llama 3.2 model as the custom model for an [Agent](/docs/components-agents) component.
 
 ![Ollama model as Agent custom model](/img/component-ollama-model.png)
 

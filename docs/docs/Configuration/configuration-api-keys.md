@@ -74,7 +74,7 @@ Langflow uses the [Fernet](https://pypi.org/project/cryptography/) library for e
 
 If no `LANGFLOW_SECRET_KEY` is provided, Langflow automatically generates one.
 
-For more information, see [Authentication](/configuration-authentication#langflow_secret_key).
+For more information, see [Authentication](/docs/configuration-authentication#langflow_secret_key).
 
 ## Revoke an API key
 
@@ -113,4 +113,4 @@ To add component API keys as **Global variables** with the Langflow UI:
 
 Component values set directly in a flow override values set in the UI **and** environment variables.
 
-For more information, see [Global variables](/configuration-global-variables).
+For more information, see [Global variables](/docs/configuration-global-variables).

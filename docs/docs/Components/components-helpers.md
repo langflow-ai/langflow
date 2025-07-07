@@ -13,15 +13,15 @@ Helper components provide utility functions to help manage data, tasks, and othe
 
 Chat memory in Langflow is stored either in local Langflow tables with `LCBufferMemory`, or connected to an external database.
 
-The **Store Message** helper component stores chat memories as [Data](/concepts-objects) objects, and the **Message History** helper component retrieves chat messages as data objects or strings.
+The **Store Message** helper component stores chat memories as [Data](/docs/concepts-objects) objects, and the **Message History** helper component retrieves chat messages as data objects or strings.
 
-This example flow stores and retrieves chat history from an [AstraDBChatMemory](/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
+This example flow stores and retrieves chat history from an [AstraDBChatMemory](/docs/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
 
 ![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
 
 ## Batch Run
 
-The **Batch Run** component runs a language model over **each row** of a [DataFrame](/concepts-objects#dataframe-object) text column and returns a new DataFrame with the original text and an LLM response.
+The **Batch Run** component runs a language model over **each row** of a [DataFrame](/docs/concepts-objects#dataframe-object) text column and returns a new DataFrame with the original text and an LLM response.
 
 The response contains the following columns:
 
@@ -128,7 +128,7 @@ In this example, the **Message Store** component stores the complete chat histor
 
 ![Message store and history components](/img/component-message-history-message-store.png)
 
-For more information on configuring memory in Langflow, see [Memory](/memory).
+For more information on configuring memory in Langflow, see [Memory](/docs/memory).
 
 <details>
 <summary>Parameters</summary>
@@ -163,7 +163,7 @@ In this example, the **Message Store** component stores the complete chat histor
 
 ![Message store and history components](/img/component-message-history-message-store.png)
 
-For more information on configuring memory in Langflow, see [Memory](/memory).
+For more information on configuring memory in Langflow, see [Memory](/docs/memory).
 
 <details>
 <summary>Parameters</summary>
@@ -301,4 +301,4 @@ Please list three fruits.
 
 ## See also
 
-- [Session ID](/session-id)
+- [Session ID](/docs/session-id)

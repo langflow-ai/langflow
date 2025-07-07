@@ -34,14 +34,14 @@ You can download multiple files in a single action, but they will be saved toget
 
 To use your uploaded files in flows:
 
-1. Include the [File](/components-data#file) component in a flow.
+1. Include the [File](/docs/components-data#file) component in a flow.
 2. To select a document to load, in the **File** component, click the **Select files** button.
 3. Select a file to upload, and then click **Select file**. The loaded file name appears in the component.
 
-For an example of using the **File** component in a flow, see the [Document QA tutorial project](/document-qa).
+For an example of using the **File** component in a flow, see the [Document QA tutorial project](/docs/document-qa).
 
 :::note
-If you prefer a one-time upload, the [File](/components-data#file) component still allows one-time uploads directly from your local machine.
+If you prefer a one-time upload, the [File](/docs/components-data#file) component still allows one-time uploads directly from your local machine.
 :::
 
 ## Supported file types

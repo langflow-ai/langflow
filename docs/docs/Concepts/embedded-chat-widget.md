@@ -7,7 +7,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import ChatWidget from '@site/src/components/ChatWidget';
 
-On the [Publish pane](/concepts-publish), the **Embed into site** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
+On the [Publish pane](/docs/concepts-publish), the **Embed into site** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
 
 The chat widget is implemented as a web component called `langflow-chat` and is loaded from a CDN. For more information, see the [langflow-embedded-chat repository](https://github.com/langflow-ai/langflow-embedded-chat).
 
@@ -16,7 +16,7 @@ For a sandbox example, see the [Langflow embedded chat CodeSandbox](https://code
 The following example includes the minimum required inputs, called [props](https://react.dev/learn/passing-props-to-a-component) in React, for using the chat widget in your HTML code, which are `host_url` and `flow_id`.
 The `host_url` value must be `HTTPS`, and may not include a `/` after the URL.
 The `flow_id` value is found in your Langflow URL.
-For a Langflow server running the [Basic prompting flow](/basic-prompting) at `https://c822-73-64-93-151.ngrok-free.app/flow/dcbed533-859f-4b99-b1f5-16fce884f28f`, your chat widget code is similar to the following:
+For a Langflow server running the [Basic prompting flow](/docs/basic-prompting) at `https://c822-73-64-93-151.ngrok-free.app/flow/dcbed533-859f-4b99-b1f5-16fce884f28f`, your chat widget code is similar to the following:
 ```html
 <html>
   <head>
@@ -59,7 +59,7 @@ To add some styling to the chat widget, customize its elements with JSON:
   ></langflow-chat>
 ```
 
-To add a custom [session ID](/session-id) value and an API key for authentication to your Langflow server:
+To add a custom [session ID](/docs/session-id) value and an API key for authentication to your Langflow server:
 ```html
 <html>
   <head>

@@ -9,11 +9,11 @@ import Icon from "@site/src/components/icon";
 The **Chat memory** component is also known as the **Message history** component.
 :::
 
-This flow extends the [basic prompting flow](/basic-prompting) with a **Message history** component that stores up to 100 previous chat messages and uses them to provide context for the current conversation.
+This flow extends the [basic prompting flow](/docs/basic-prompting) with a **Message history** component that stores up to 100 previous chat messages and uses them to provide context for the current conversation.
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
+- [A running Langflow instance](/docs/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/)
 
 ## Create the memory chatbot flow
@@ -74,5 +74,5 @@ In the **Memory Chatbot** flow you created, the **Message history** component re
 
 ## See also
 
-- [Memory components](/components-memories)
-- [Session ID](/session-id)
+- [Memory components](/docs/components-memories)
+- [Session ID](/docs/session-id)

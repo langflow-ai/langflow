@@ -11,7 +11,7 @@ Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontext
 
 This page describes how to use Langflow as an MCP server.
 
-For information about using Langflow as an MCP client, see [Use Langflow as an MCP client](/mcp-client).
+For information about using Langflow as an MCP client, see [Use Langflow as an MCP client](/docs/mcp-client).
 
 As an MCP server, Langflow exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use to take actions.
 
@@ -23,7 +23,7 @@ As an MCP server, Langflow exposes your flows as [tools](https://modelcontextpro
 
 ## Select and configure flows to expose as MCP tools {#select-flows-to-serve}
 
-Langflow runs a separate MCP server for every [project](/concepts-overview#projects).
+Langflow runs a separate MCP server for every [project](/docs/concepts-overview#projects).
 The MCP server for each project exposes that project's flows as tools.
 
 All of the flows in a project are exposed by default.
@@ -91,7 +91,7 @@ For example:
     The default Langflow server address is `http://localhost:7860` (`http://localhost:7868` if using Langflow for Desktop).
 
     :::important
-    If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
+    If your Langflow server [requires authentication](/docs/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/docs/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), you must include your Langflow API key in the configuration.
     For more information, see [MCP server authentication and environment variables](#authentication).
     :::
 
@@ -105,7 +105,7 @@ For more information, see the [Cursor's MCP documentation](https://docs.cursor.c
 
 ### MCP server authentication and environment variables {#authentication}
 
-If your Langflow server [requires authentication](/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), then you must supply a [Langflow API key](/configuration-api-keys) in your MCP client configuration.
+If your Langflow server [requires authentication](/docs/configuration-authentication) ([`LANGFLOW_AUTO_LOGIN`](/docs/environment-variables#LANGFLOW_AUTO_LOGIN) is set to `false`), then you must supply a [Langflow API key](/docs/configuration-api-keys) in your MCP client configuration.
 When this is the case, the code template in your project's **MCP Server** tab automatically includes the `--header` and `x-api-key` arguments:
 
 ```json
@@ -155,12 +155,12 @@ Replace `KEY` and `VALUE` with the environment variable name and value you want 
 
 MCP clients like [Cursor](https://www.cursor.com/) "see" your Langflow project as a single MCP server, with _all_ of your enabled flows listed as tools.
 This can confuse agents.
-For example, an agent won't know that flow `adbbf8c7-0a34-493b-90ea-5e8b42f78b66` is a [Document Q&A](/document-qa) flow for a specific text file.
+For example, an agent won't know that flow `adbbf8c7-0a34-493b-90ea-5e8b42f78b66` is a [Document Q&A](/docs/document-qa) flow for a specific text file.
 
 To prevent this behavior, make sure to [name and describe](#select-flows-to-serve) your flows clearly.
 It's helpful to think of the names and descriptions as function names and code comments, making sure to use clear statements describing the problems your flows solve.
 
-For example, let's say you have a [Document Q&A](/document-qa) flow that loads a sample resume for an LLM to chat with, and that you've given it the following name and description:
+For example, let's say you have a [Document Q&A](/docs/document-qa) flow that loads a sample resume for an LLM to chat with, and that you've given it the following name and description:
 
  - **Flow Name**: `document_qa_for_resume`
 
@@ -352,5 +352,5 @@ To find your NPX path, run `which npx`.
 
 ## See also
 
-- [Use Langflow as an MCP client](/mcp-client)
-- [Use a DataStax Astra DB MCP server](/mcp-component-astra)
+- [Use Langflow as an MCP client](/docs/mcp-client)
+- [Use a DataStax Astra DB MCP server](/docs/mcp-component-astra)

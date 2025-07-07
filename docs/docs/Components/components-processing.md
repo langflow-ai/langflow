@@ -9,7 +9,7 @@ Processing components process and transform data within a flow.
 
 ## Use a processing component in a flow
 
-The **Split Text** processing component in this flow splits the incoming [Data](/concepts-objects) into chunks to be embedded into the vector store component.
+The **Split Text** processing component in this flow splits the incoming [Data](/docs/concepts-objects) into chunks to be embedded into the vector store component.
 
 The component offers control over chunk size, overlap, and separator, which affect context and granularity in vector store retrieval results.
 
@@ -19,7 +19,7 @@ The component offers control over chunk size, overlap, and separator, which affe
 
 This component performs operations on [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) rows and columns.
 
-To use this component in a flow, connect a component that outputs [DataFrame](/concepts-objects#dataframe-object) to the **DataFrame Operations** component.
+To use this component in a flow, connect a component that outputs [DataFrame](/docs/concepts-objects#dataframe-object) to the **DataFrame Operations** component.
 
 This example fetches JSON data from an API. The **Smart function** component extracts and flattens the results into a tabular DataFrame. The **DataFrame Operations** component can then work with the retrieved data.
 
@@ -104,10 +104,10 @@ This component can perform the following operations on Pandas [DataFrame](https:
 
 ## Data operations
 
-This component performs operations on [Data](/concepts-objects#data-object) objects, including selecting keys, evaluating literals, combining data, filtering values, appending/updating data, removing keys, and renaming keys.
+This component performs operations on [Data](/docs/concepts-objects#data-object) objects, including selecting keys, evaluating literals, combining data, filtering values, appending/updating data, removing keys, and renaming keys.
 
-1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data Operations** component's input.
-All operations in the component require at least one [Data](/concepts-objects#data-object) input.
+1. To use this component in a flow, connect a component that outputs [Data](/docs/concepts-objects#data-object) to the **Data Operations** component's input.
+All operations in the component require at least one [Data](/docs/concepts-objects#data-object) input.
 2. In the **Operations** field, select the operation you want to perform.
 For example, send this request to the **Webhook** component.
 Replace `YOUR_FLOW_ID` with your flow ID.
@@ -154,7 +154,7 @@ To add additional keys, click <Icon name="Plus" aria-hidden="true"/> **Add More*
 ### Operations
 
 The component supports the following operations.
-All operations in the **Data operations** component require at least one [Data](/concepts-objects#data-object) input.
+All operations in the **Data operations** component require at least one [Data](/docs/concepts-objects#data-object) input.
 
 | Operation | Required Inputs | Info |
 |-----------|----------------|-------------|
@@ -173,7 +173,7 @@ All operations in the **Data operations** component require at least one [Data](
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The [Data](/concepts-objects#data-object) object to operate on. |
+| data | Data | The [Data](/docs/concepts-objects#data-object) object to operate on. |
 | operations | Operations | The operation to perform on the data. |
 | select_keys_input | Select Keys | A list of keys to select from the data. |
 | filter_key | Filter Key | The key to filter by. |
@@ -193,9 +193,9 @@ All operations in the **Data operations** component require at least one [Data](
 
 ## Data to DataFrame
 
-This component converts one or multiple [Data](/concepts-objects#data-object) objects into a [DataFrame](/concepts-objects#dataframe-object). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
+This component converts one or multiple [Data](/docs/concepts-objects#data-object) objects into a [DataFrame](/docs/concepts-objects#dataframe-object). Each Data object corresponds to one row in the resulting DataFrame. Fields from the `.data` attribute become columns, and the `.text` field (if present) is placed in a 'text' column.
 
-1. To use this component in a flow, connect a component that outputs [Data](/concepts-objects#data-object) to the **Data to Dataframe** component's input.
+1. To use this component in a flow, connect a component that outputs [Data](/docs/concepts-objects#data-object) to the **Data to Dataframe** component's input.
 This example connects a **Webhook** component to convert `text` and `data` into a DataFrame.
 2. To view the flow's output, connect a **Chat Output** component to the **Data to Dataframe** component.
 
@@ -290,7 +290,7 @@ This component routes requests to the most appropriate LLM based on OpenRouter m
 
 ## Message to data
 
-This component converts [Message](/concepts-objects#message-object) objects to [Data](/concepts-objects#data-object) objects.
+This component converts [Message](/docs/concepts-objects#message-object) objects to [Data](/docs/concepts-objects#data-object) objects.
 
 <details>
 <summary>Parameters</summary>
@@ -313,7 +313,7 @@ This component converts [Message](/concepts-objects#message-object) objects to [
 
 This component formats `DataFrame` or `Data` objects into text using templates, with an option to convert inputs directly to strings using `stringify`.
 
-To use this component, create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component. For `DataFrames`, use column names, for example `Name: {Name}`. For `Data` objects, use `{text}`.
+To use this component, create variables for values in the `template` the same way you would in a [Prompt](/docs/components-prompts) component. For `DataFrames`, use column names, for example `Name: {Name}`. For `Data` objects, use `{text}`.
 
 To use the **Parser** component with a **Structured Output** component, do the following:
 
@@ -331,7 +331,7 @@ The table contains the rows **Name**, **Description**, **Type**, and **Multiple*
 5. Create a table that maps to the data you're loading from the **File** loader.
 For example, to create a table for employees, you might have the rows `id`, `name`, and `email`, all of type `string`.
 6. In the **Template** field of the **Parser** component, enter a template for parsing the **Structured Output** component's DataFrame output into structured text.
-Create variables for values in the `template` the same way you would in a [Prompt](/components-prompts) component.
+Create variables for values in the `template` the same way you would in a [Prompt](/docs/components-prompts) component.
 For example, to present a table of employees in Markdown:
 ```text
 # Employee Profile
@@ -363,7 +363,7 @@ For an additional example of using the **Parser** component to format a DataFram
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| parsed_text | Parsed Text | The resulting formatted text as a [Message](/concepts-objects#message-object) object. |
+| parsed_text | Parsed Text | The resulting formatted text as a [Message](/docs/concepts-objects#message-object) object. |
 
 </details>
 
@@ -390,9 +390,9 @@ Peruvian writer and Nobel Prize in Literature laureate Mario Vargas Llosa (pictu
 
 ## Save to File
 
-This component saves [DataFrames, Data, or Messages](/concepts-objects) to various file formats.
+This component saves [DataFrames, Data, or Messages](/docs/concepts-objects) to various file formats.
 
-1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/concepts-objects) to the **Save to File** component's input.
+1. To use this component in a flow, connect a component that outputs [DataFrames, Data, or Messages](/docs/concepts-objects) to the **Save to File** component's input.
 The following example connects a **Webhook** component to two **Save to File** components to demonstrate the different outputs.
 
 ![Two Save-to File components connected to a webhook](/img/component-save-to-file.png)
@@ -475,7 +475,7 @@ For `Message` inputs, the component can create:
 
 This component uses an LLM to generate a Lambda function for filtering or transforming structured data.
 
-To use the **Smart function** component, you must connect it to a [Language Model](/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
+To use the **Smart function** component, you must connect it to a [Language Model](/docs/components-models#language-model) component, which the component uses to generate a function based on the natural language instructions in the **Instructions** field.
 
 This example gets JSON data from the `https://jsonplaceholder.typicode.com/users` API endpoint.
 The **Instructions** field in the **Smart function** component specifies the task `extract emails`.
@@ -491,7 +491,7 @@ The connected LLM creates a filter based on the instructions, and successfully e
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | The structured data to filter or transform using a Lambda function. |
-| llm | Language Model | The connection port for a [Model](/components-models) component. |
+| llm | Language Model | The connection port for a [Model](/docs/components-models) component. |
 | filter_instruction | Instructions | The natural language instructions for how to filter or transform the data using a Lambda function, such as `Filter the data to only include items where the 'status' is 'active'`. |
 | sample_size | Sample Size | For large datasets, the number of characters to sample from the dataset head and tail. |
 | max_size | Max Size | The number of characters for the data to be considered "large", which triggers sampling by the `sample_size` value. |
@@ -500,8 +500,8 @@ The connected LLM creates a filter based on the instructions, and successfully e
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| filtered_data | Filtered Data | The filtered or transformed [Data object](/concepts-objects#data-object). |
-| dataframe | DataFrame | The filtered data as a [DataFrame](/concepts-objects#dataframe-object). |
+| filtered_data | Filtered Data | The filtered or transformed [Data object](/docs/concepts-objects#data-object). |
+| dataframe | DataFrame | The filtered data as a [DataFrame](/docs/concepts-objects#dataframe-object). |
 
 </details>
 
@@ -513,7 +513,7 @@ The **Split Text** component outputs **Chunks** or **DataFrame**.
 The **Chunks** output returns a list of individual text chunks.
 The **DataFrame** output returns a structured data format, with additional `text` and `metadata` columns applied.
 
-1. To use this component in a flow, connect a component that outputs [Data or DataFrame](/concepts-objects) to the **Split Text** component's **Data** port.
+1. To use this component in a flow, connect a component that outputs [Data or DataFrame](/docs/concepts-objects) to the **Split Text** component's **Data** port.
 This example uses the **URL** component, which is fetching JSON placeholder data.
 
 ![Split text component and chroma-db](/img/component-split-text.png)
@@ -563,7 +563,7 @@ Third chunk:  "s of Artificial Intelligence and its applications"
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data_inputs | Input Documents | The data to split. The component accepts [Data](/concepts-objects#data-object) or [DataFrame](/concepts-objects#dataframe-object) objects. |
+| data_inputs | Input Documents | The data to split. The component accepts [Data](/docs/concepts-objects#data-object) or [DataFrame](/docs/concepts-objects#dataframe-object) objects. |
 | chunk_overlap | Chunk Overlap | The number of characters to overlap between chunks. Default: `200`. |
 | chunk_size | Chunk Size | The maximum number of characters in each chunk. Default: `1000`. |
 | separator | Separator | The character to split on. Default: `newline`. |
@@ -573,8 +573,8 @@ Third chunk:  "s of Artificial Intelligence and its applications"
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| chunks | Chunks | A list of split text chunks as [Data](/concepts-objects#data-object) objects. |
-| dataframe | DataFrame | A list of split text chunks as [DataFrame](/concepts-objects#dataframe-object) objects. |
+| chunks | Chunks | A list of split text chunks as [Data](/docs/concepts-objects#data-object) objects. |
+| dataframe | DataFrame | A list of split text chunks as [DataFrame](/docs/concepts-objects#dataframe-object) objects. |
 
 </details>
 
@@ -613,7 +613,7 @@ This component is in **Legacy**, which means it is available for use but no long
 Instead, use the [Data operations](#data-operations) component.
 :::
 
-This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects#data-object) objects, and can also create a new Data object from user-provided text.
+This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/docs/concepts-objects#message-object) and [Data](/docs/concepts-objects#data-object) objects, and can also create a new Data object from user-provided text.
 
 <details>
 <summary>Parameters</summary>
@@ -623,7 +623,7 @@ This component modifies metadata of input objects. It can add new metadata, upda
 | Name | Display Name | Info |
 |------|--------------|------|
 | input_value | Input | Objects to which Metadata should be added. |
-| text_in | User Text | Text input; the value is contained in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
+| text_in | User Text | Text input; the value is contained in the 'text' attribute of the [Data](/docs/concepts-objects#data-object) object. Empty text entries are ignored. |
 | metadata | Metadata | Metadata to add to each object. |
 | remove_fields | Fields to Remove | Metadata fields to remove. |
 
@@ -642,7 +642,7 @@ This component is in **Legacy**, which means it is available for use but no long
 Prior to Langflow version 1.1.3, this component was named **Merge Data**.
 :::
 
-This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
+This component combines multiple data sources into a single unified [Data](/docs/concepts-objects#data-object) object.
 
 The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
 
@@ -659,7 +659,7 @@ The component iterates through the input list of data objects, merging them into
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
+| merged_data | Merged Data | A single [Data](/docs/concepts-objects#data-object) object containing the combined information from all input data objects. |
 
 </details>
 
@@ -672,7 +672,7 @@ This component is in **Legacy**, which means it is available for use but no long
 
 This component concatenates two text sources into a single text chunk using a specified delimiter.
 
-1. To use this component in a flow, connect two components that output [Messages](/concepts-objects#message-object) to the **Combine Text** component's **First Text** and **Second Text** inputs.
+1. To use this component in a flow, connect two components that output [Messages](/docs/concepts-objects#message-object) to the **Combine Text** component's **First Text** and **Second Text** inputs.
 This example uses two **Text Input** components.
 
 ![Combine text component](/img/component-combine-text.png)
@@ -716,7 +716,7 @@ Here's the second part. We'll see how combining text works.
 This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
-This component dynamically creates a [Data](/concepts-objects#data-object) object with a specified number of fields.
+This component dynamically creates a [Data](/docs/concepts-objects#data-object) object with a specified number of fields.
 
 <details>
 <summary>Parameters</summary>
@@ -732,7 +732,7 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | A [Data](/concepts-objects#data-object) object created with the specified fields and text key. |
+| data | Data | A [Data](/docs/concepts-objects#data-object) object created with the specified fields and text key. |
 
 </details>
 
@@ -744,7 +744,7 @@ This component is in **Legacy**, which means it is available for use but no long
 Instead, use the [Data operations](#data-operations) component.
 :::
 
-This component filters a [Data](/concepts-objects#data-object) object based on a list of keys.
+This component filters a [Data](/docs/concepts-objects#data-object) object based on a list of keys.
 
 <details>
 <summary>Parameters</summary>
@@ -863,14 +863,14 @@ This component converts and extracts JSON fields using JQ queries.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_value | Input | Data object to filter ([Message](/concepts-objects#message-object) or [Data](/concepts-objects#data-object)). |
+| input_value | Input | Data object to filter ([Message](/docs/concepts-objects#message-object) or [Data](/docs/concepts-objects#data-object)). |
 | query | JQ Query | JQ Query to filter the data |
 
 **Outputs**
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| filtered_data | Filtered Data | Filtered data as list of [Data](/concepts-objects#data-object) objects. |
+| filtered_data | Filtered Data | Filtered data as list of [Data](/docs/concepts-objects#data-object) objects. |
 
 </details>
 
@@ -880,7 +880,7 @@ This component converts and extracts JSON fields using JQ queries.
 This component is in **Legacy**, which means it is available for use but no longer in active development.
 :::
 
-This component selects a single [Data](/concepts-objects#data-object) item from a list.
+This component selects a single [Data](/docs/concepts-objects#data-object) item from a list.
 
 <details>
 <summary>Parameters</summary>
@@ -896,6 +896,6 @@ This component selects a single [Data](/concepts-objects#data-object) item from 
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| selected_data | Selected Data | The selected [Data](/concepts-objects#data-object) object. |
+| selected_data | Selected Data | The selected [Data](/docs/concepts-objects#data-object) object. |
 
 </details>

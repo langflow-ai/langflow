@@ -135,7 +135,7 @@ To hide untrustworthy responses, configure the **CleanlabRemediator** component 
 
 ### Evaluate RAG pipeline
 
-This example flow includes the [Vector Store RAG](/vector-store-rag) template with the **CleanlabRAGEvaluator** component added to evaluate the flow's context, query, and response.
+This example flow includes the [Vector Store RAG](/docs/vector-store-rag) template with the **CleanlabRAGEvaluator** component added to evaluate the flow's context, query, and response.
 
 To use the **CleanlabRAGEvaluator** component in a flow, connect the `context`, `query`, and `response` outputs from any RAG pipeline to the **CleanlabRAGEvaluator** component.
 

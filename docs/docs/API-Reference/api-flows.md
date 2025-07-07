@@ -8,7 +8,7 @@ import TabItem from '@theme/TabItem';
 
 Use the `/flows` endpoint to create, read, update, and delete flows.
 
-If you want to use the Langflow API to run a flow, see [Flow trigger endpoints](/api-flows-run).
+If you want to use the Langflow API to run a flow, see [Flow trigger endpoints](/docs/api-flows-run).
 
 ## Create flow
 
@@ -261,7 +261,7 @@ curl -X DELETE \
 
 Exports specified flows to a ZIP file.
 
-This endpoint downloads a ZIP file containing [Langflow JSON files](/concepts-flows#langflow-json-file-contents) for each flow ID listed in the request body.
+This endpoint downloads a ZIP file containing [Langflow JSON files](/docs/concepts-flows#langflow-json-file-contents) for each flow ID listed in the request body.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -292,10 +292,10 @@ curl -X POST \
 
 ## Import flows
 
-Imports flows by uploading a [Langflow-compatible JSON file](/concepts-flows#langflow-json-file-contents).
+Imports flows by uploading a [Langflow-compatible JSON file](/docs/concepts-flows#langflow-json-file-contents).
 
 To specify a target project for the flow, include the query parameter `project_id`.
-The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](/api-projects#read-projects) endpoint for a list of available projects.
+The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](/docs/api-projects#read-projects) endpoint for a list of available projects.
 
 This example uploads a local file named `agent-with-astra-db-tool.json` to a project specified by a `PROJECT_ID` variable.
 

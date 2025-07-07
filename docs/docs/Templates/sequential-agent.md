@@ -11,7 +11,7 @@ Each successive agent in the flow builds on the work of the previous agent, crea
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
+- [A running Langflow instance](/docs/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/)
 - [A Tavily AI API key](https://www.tavily.com/)
 
@@ -51,4 +51,4 @@ This question provides clear instructions to the agents about how to proceed and
 
 ## Next steps
 
-To create your own multi-agent flow, see [Create a problem solving agent](/agents).
+To create your own multi-agent flow, see [Create a problem solving agent](/docs/agents).

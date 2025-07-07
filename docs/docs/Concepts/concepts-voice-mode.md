@@ -9,7 +9,7 @@ The Langflow **Playground** supports **voice mode** for interacting with your ap
 
 An [OpenAI API key](https://platform.openai.com/) is required to use **voice mode**. An [ElevenLabs](https://elevenlabs.io) API key enables more voices in the chat, but is optional.
 
-Your flow must have a [Chat input](/components-io#chat-input) component to interact with the **Playground**.
+Your flow must have a [Chat input](/docs/components-io#chat-input) component to interact with the **Playground**.
 
 ## Prerequisite
 
@@ -19,13 +19,13 @@ Your flow must have a [Chat input](/components-io#chat-input) component to inter
 
 Chat with an agent in the **Playground**, and get more recent results by asking the agent to use tools.
 
-1. Create a [Simple agent starter project](/simple-agent).
+1. Create a [Simple agent starter project](/docs/simple-agent).
 2. Add your **OpenAI API key** credentials to the **Agent** component.
 3. To start a chat session, click **Playground**.
 4. To enable voice mode, click the <Icon name="Mic" aria-hidden="true"/> **Microphone** icon.
 The **Voice mode** pane opens.
 5. In the **OpenAI API Key** field, add your **OpenAI API key** credentials.
-This key is saved as a [global variable](/configuration-global-variables) in Langflow and is accessible from any component or flow.
+This key is saved as a [global variable](/docs/configuration-global-variables) in Langflow and is accessible from any component or flow.
 6. Your browser may prompt you for microphone access.
 Browser access is **required** to use voice mode.
 To continue, allow microphone access in your browser.
@@ -35,7 +35,7 @@ A higher quality microphone improves OpenAI's voice chat comprehension.
 :::
 8. Optionally, add your **ElevenLabs API key** in the **ElevenLabs API Key** field.
 This makes more voices available for your AI responses.
-This key is saved as a [global variable](/configuration-global-variables) in Langflow and is accessible from any component or flow.
+This key is saved as a [global variable](/docs/configuration-global-variables) in Langflow and is accessible from any component or flow.
 9. In the **Preferred Language** menu, select your language for conversing with Langflow.
 This option changes both the spoken conversation and the chat responses in the **Playground**.
 10. Talk into your microphone.

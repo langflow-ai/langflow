@@ -18,7 +18,7 @@ Follow [@langflow_ai](https://twitter.com/langflow_ai) on X to get the latest ne
 If you like Langflow, you can star the [Langflow GitHub repository](https://github.com/langflow-ai/langflow).
 Stars help other users find Langflow more easily, and quickly understand that other users have found it useful.
 
-Because Langflow is an open-source project, the more visible the repository is, the more likely the project is to attract [contributors](/contributing-how-to-contribute).
+Because Langflow is an open-source project, the more visible the repository is, the more likely the project is to attract [contributors](/docs/contributing-how-to-contribute).
 
 ## Watch the GitHub repository
 
@@ -32,4 +32,4 @@ For information about customizing repository notifications, see the [GitHub docu
 ## Request enhancements and get help through GitHub
 
 You can also submit feature requests and get help with Langflow through the GitHub repository.
-For more information, see [Get help and request enhancements](/contributing-github-issues).
+For more information, see [Get help and request enhancements](/docs/contributing-github-issues).

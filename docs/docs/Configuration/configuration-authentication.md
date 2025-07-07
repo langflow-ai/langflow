@@ -106,7 +106,7 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 
 ## Start a secure Langflow server with authentication
 
-Start a secure Langflow server with authentication enabled and secret key encryption using the variables described in [Authentication configuration values](/configuration-authentication#authentication-configuration-values).
+Start a secure Langflow server with authentication enabled and secret key encryption using the variables described in [Authentication configuration values](/docs/configuration-authentication#authentication-configuration-values).
 
 Once you are logged in as a superuser, create a new user on your server.
 

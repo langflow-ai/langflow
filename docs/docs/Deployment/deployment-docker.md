@@ -143,7 +143,7 @@ docker build -t myuser/langflow-hello-world:1.0.0 .
 docker push myuser/langflow-hello-world:1.0.0
 ```
 
-To deploy the image with Helm, see [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod).
+To deploy the image with Helm, see [Deploy the Langflow production environment on Kubernetes](/docs/deployment-kubernetes-prod).
 
 ## Customize the Langflow Docker image with your own code
 

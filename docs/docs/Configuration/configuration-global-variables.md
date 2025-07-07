@@ -209,4 +209,4 @@ Langflow automatically detects and converts some environment variables into glob
 - `VECTARA_CUSTOMER_ID`
 
 
-For information about other environment variables and their usage, see [Environment Variables](/environment-variables).
+For information about other environment variables and their usage, see [Environment Variables](/docs/environment-variables).

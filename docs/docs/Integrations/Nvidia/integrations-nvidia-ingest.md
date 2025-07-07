@@ -11,7 +11,7 @@ The **NVIDIA Retriever Extraction** component integrates with the [NVIDIA nv-ing
 
 The `nv-ingest` service supports multiple extraction methods for PDF, DOCX, and PPTX file types, and includes pre-  and post-processing services like splitting, chunking, and embedding generation.
 
-The **NVIDIA Retriever Extraction** component imports the NVIDIA `Ingestor` client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of [Data](/concepts-objects#data-object) objects. `Ingestor` accepts additional configuration options for data extraction from other text formats. To configure these options, see the [component parameters](/integrations-nvidia-ingest#parameters).
+The **NVIDIA Retriever Extraction** component imports the NVIDIA `Ingestor` client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of [Data](/docs/concepts-objects#data-object) objects. `Ingestor` accepts additional configuration options for data extraction from other text formats. To configure these options, see the [component parameters](/docs/integrations-nvidia-ingest#parameters).
 
 ## Prerequisites
 
@@ -85,7 +85,7 @@ For more information, see the [NV-Ingest documentation](https://nvidia.github.io
 
 ### Outputs
 
-The **NVIDIA Retriever Extraction** component outputs a list of [Data](/concepts-objects#data-object) objects where each object contains:
+The **NVIDIA Retriever Extraction** component outputs a list of [Data](/docs/concepts-objects#data-object) objects where each object contains:
 - `text`: The extracted content.
   - For text documents: The extracted text content.
   - For tables and charts: The extracted table/chart content.
