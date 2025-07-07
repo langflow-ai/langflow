@@ -1,6 +1,7 @@
 import React from "react";
 import Layout from "@theme/Layout";
 import Link from "@docusaurus/Link";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 import {
   CirclePlay,
   Server,
@@ -19,6 +20,8 @@ import CustomIcon from "../components/CustomIcon";
 import styles from "./index.module.css";
 
 export default function Home() {
+  const baseUrl = useBaseUrl('/');
+  
   return (
     <Layout
       title="Build smarter AI apps with Langflow"
@@ -41,7 +44,7 @@ export default function Home() {
           </div>
           <div className={styles.heroImage}>
             <img 
-              src="/img/lf-agent.png" 
+              src={useBaseUrl('/img/lf-agent.png')}
               alt="Langflow MCP Server with GitPoet agent example"
               className={styles.heroImageContent}
             />
@@ -50,7 +53,7 @@ export default function Home() {
 
         {/* Quick Links Section */}
         <div className={styles.quickLinksSection}>
-          <Link to="/docs/get-started-quickstart" className={styles.quickLinkCard}>
+          <Link to={useBaseUrl('/docs/get-started-quickstart')} className={styles.quickLinkCard}>
             <div className={styles.quickLinkIcon}>
               <CirclePlay size={32} strokeWidth={1.25} />
             </div>
@@ -59,7 +62,7 @@ export default function Home() {
             Build and run your first flow in minutes.
             </p>
           </Link>
-          <Link to="/docs/agents" className={styles.quickLinkCard}>
+          <Link to={useBaseUrl('/docs/agents')} className={styles.quickLinkCard}>
             <div className={styles.quickLinkIcon}>
               <CustomIcon name="agents" size={32} />
             </div>
@@ -69,7 +72,7 @@ export default function Home() {
             instructions, and tools.
             </p>
           </Link>
-          <Link to="/docs/mcp-server" className={styles.quickLinkCard}>
+          <Link to={useBaseUrl('/docs/mcp-server')} className={styles.quickLinkCard}>
             <div className={styles.quickLinkIcon}>
               <Server size={32} strokeWidth={1.25} />
             </div>
@@ -84,7 +87,7 @@ export default function Home() {
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>Learn more</h3>
           <div className={styles.cardsGrid}>
-          <Link to="/" className={styles.card}>
+          <Link to={useBaseUrl('/')} className={styles.card}>
               <div className={styles.cardIcon}>
                 <BookMarked size={16} strokeWidth={1.25} />
               </div>
@@ -95,7 +98,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/docs/get-started-installation" className={styles.card}>
+            <Link to={useBaseUrl('/docs/get-started-installation')} className={styles.card}>
               <div className={styles.cardIcon}>
                 <MonitorDown size={16} strokeWidth={1.25} />
               </div>
@@ -106,7 +109,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/" className={styles.card}>
+            <Link to={useBaseUrl('/')} className={styles.card}>
               <div className={styles.cardIcon}>
                 <GraduationCap size={16} strokeWidth={1.25} />
               </div>
@@ -117,7 +120,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/docs/api-reference-api-examples" className={styles.card}>
+            <Link to={useBaseUrl('/docs/api-reference-api-examples')} className={styles.card}>
               <div className={styles.cardIcon}>
                 <Code size={16} strokeWidth={1.25} />
               </div>
@@ -128,7 +131,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/docs/develop-application" className={styles.card}>
+            <Link to={useBaseUrl('/docs/develop-application')} className={styles.card}>
               <div className={styles.cardIcon}>
                 <AppWindow size={16} strokeWidth={1.25} />
               </div>
@@ -139,7 +142,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/docs/deployment-overview" className={styles.card}>
+            <Link to={useBaseUrl('/docs/deployment-overview')} className={styles.card}>
               <div className={styles.cardIcon}>
                 <HardDriveUpload size={16} strokeWidth={1.25} />
               </div>
@@ -150,7 +153,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/docs/troubleshooting" className={styles.card}>
+            <Link to={useBaseUrl('/docs/troubleshooting')} className={styles.card}>
               <div className={styles.cardIcon}>
                 <LifeBuoy size={16} strokeWidth={1.25} />
               </div>
