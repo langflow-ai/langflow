@@ -1,3 +1,4 @@
+import contextlib
 import json
 from io import BytesIO
 
@@ -43,8 +44,22 @@ async def get_server_list(
     # Read the server configuration from a file using the files api
     server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
 
-    # If the file does not exist, create a new one with an empty configuration
-    if not server_config_file:
+    # Attempt to download the configuration file content
+    try:
+        server_config_bytes = await download_file(
+            server_config_file.id if server_config_file else None,
+            current_user,
+            session,
+            storage_service=storage_service,
+            return_content=True,
+        )
+    except (FileNotFoundError, HTTPException):
+        # Storage file missing - DB entry may be stale. Remove it and recreate.
+        if server_config_file:
+            with contextlib.suppress(Exception):
+                await delete_file(server_config_file.id, current_user, session, storage_service)
+
+        # Create a fresh empty config
         await upload_server_config(
             {"mcpServers": {}},
             current_user,
@@ -52,24 +67,23 @@ async def get_server_list(
             storage_service=storage_service,
             settings_service=settings_service,
         )
+
+        # Fetch and download again
         server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+        if not server_config_file:
+            raise HTTPException(status_code=500, detail="Failed to create _mcp_servers.json") from None
 
-    # Make sure we have it now
-    if not server_config_file:
-        raise HTTPException(status_code=500, detail="Server configuration file not found.")
+        server_config_bytes = await download_file(
+            server_config_file.id,
+            current_user,
+            session,
+            storage_service=storage_service,
+            return_content=True,
+        )
 
-    # Download the server configuration file content
-    server_config = await download_file(
-        server_config_file.id,
-        current_user,
-        session,
-        storage_service=storage_service,
-        return_content=True,
-    )
-
-    # Parse the JSON content
+    # Parse JSON content
     try:
-        servers = json.loads(server_config)
+        servers = json.loads(server_config_bytes)
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Invalid server configuration file format.") from None
 

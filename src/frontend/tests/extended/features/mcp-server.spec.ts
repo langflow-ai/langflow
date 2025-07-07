@@ -105,13 +105,11 @@ test(
 
     await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
 
-    await page.waitForSelector('[data-testid="sidebar-nav-MCP Connections"]', {
+    await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
       timeout: 30000,
     });
 
-    await page
-      .getByTestId("sidebar-nav-MCP Connections")
-      .click({ timeout: 3000 });
+    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
 
     await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
       timeout: 3000,

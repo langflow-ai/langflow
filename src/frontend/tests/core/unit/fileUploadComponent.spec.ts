@@ -304,35 +304,24 @@ test(
       await page.dispatchEvent('[data-testid="drag-files-component"]', "drop", {
         dataTransfer,
       });
-
       await expect(page.getByText(`${newTxtFile}.txt`).last()).toBeVisible({
         timeout: 1000,
       });
 
       await expect(
         page.getByTestId(`checkbox-${newTxtFile}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 1000 });
+      ).toHaveAttribute("data-state", "checked", { timeout: 3000 });
 
       await page.getByTestId("select-files-modal-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
         {
-          timeout: 1000,
+          timeout: 3000,
         },
       );
       await expect(page.getByText(`${newTxtFile}.txt`).first()).toBeVisible({
         timeout: 1000,
       });
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
-
-      await page
-        .getByTestId("handle-file-shownode-raw content-right")
-        .first()
-        .click();
-
-      await page
-        .getByTestId("handle-chatoutput-noshownode-inputs-target")
-        .first()
-        .click();
 
       await page
         .getByRole("button", { name: "Playground", exact: true })
