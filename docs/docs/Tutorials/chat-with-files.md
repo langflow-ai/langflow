@@ -25,14 +25,15 @@ The main focus of this tutorial is to show you how to provide files as input to 
 
 To ingest files, your flow must have a **File** component attached to a component that receives input, such as a **Prompt** or **Agent** component.
 
-The following steps modify the [**Basic prompting**](/basic-prompting) template to accept file input.
+The following steps modify the [**Basic prompting**](/basic-prompting) template to accept file input:
+
 1. In Langflow, click **New Flow**, and then select the **Basic prompting** template.
 2. In the **Language Model** component, enter your OpenAI API key.
 
     If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
 3. To verify that your API key is valid, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM a question.
-The LLM should respond as the **Prompt** component's **Template** field specifies.
-4. Modify the **Prompt** component to accept file input in addition to chat input.
+The LLM should respond according to the specifications in the **Prompt** component's **Template** field.
+4. Exit the **Playground**, and then modify the **Prompt** component to accept file input in addition to chat input.
 To do this, edit the **Template** field, and then replace the default prompt with the following text:
     ```text
     ChatInput:
@@ -46,7 +47,8 @@ To do this, edit the **Template** field, and then replace the default prompt wit
     Within the curly braces, you can use any port name you like. For this tutorial, the ports are named after the components that connect to them.
     :::
 
-5. Add a [File component](/components-data#file) to the flow, and then connect the **Raw Content** output to the Prompt component's **file** input.
+5. Add a [File component](/components-data#file) to the flow, and then connect the **Raw Content** output port to the Prompt component's **file** input port.
+To connect ports, click and drag from one port to the other.
 
     You can add files directly to the file component to pre-load input before running the flow, or you can load files at runtime. The next section of this tutorial covers runtime file uploads.
 
@@ -59,27 +61,26 @@ To do this, edit the **Template** field, and then replace the default prompt wit
 
 This section of the tutorial demonstrates how you can send file input to a flow from an application.
 
-Send a `POST /run` request to your Langflow server with the file you want to upload and a text prompt.
+To do this, your application must send a `POST /run` request to your Langflow server with the file you want to upload and a text prompt.
 The result includes the outcome of the flow run and the LLM's response.
 
 This example uses a local Langflow instance, and it asks the LLM to evaluate a sample resume.
-If you don't have a resume on hand, use [fake-resume.txt](/files/fake-resume.txt).
+If you don't have a resume on hand, you can download [fake-resume.txt](/files/fake-resume.txt).
 
 :::tip
-For help with constructing file upload requests for Python, JavaScript, and curl, see the [Langflow File Upload Utility](https://langflow-file-upload-examples.onrender.com).
+For help with constructing file upload requests in Python, JavaScript, and curl, see the [Langflow File Upload Utility](https://langflow-file-upload-examples.onrender.com).
 :::
 
-1. To construct the request, gather the following values from Langflow.
-You can find the values for `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` in the auto-generated code snippets provided in the [API pane](/concepts-publish#api-pane).
+1. To construct the request, gather the following information:
 
-    * `LANGFLOW_SERVER_ADDRESS`: The default value is `127.0.0.1:7860`.
-    * `FLOW_ID`: The UUID of your flow, or the endpoint name you've chosen in the **Input schema** pane.
-    * File Component name: To find the ID of your file component, in the File component, click **Controls**. For this example, the component name is `File-KZP68`.
-    * Input value: This is the message you want to send to the Chat Input of your flow, such as `Evaluate this resume for a job opening in my Marketing department.`
-    * File path: The path to the local file you want to load with your request. This example is loading `fake-resume.txt` from the same directory as the script.
-    * Langflow API key: To create an API key, see [API keys](/configuration-api-keys).
+    * `LANGFLOW_SERVER_ADDRESS`: Your Langflow server's domain. The default value is `127.0.0.1:7860`. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-pane).
+    * `FLOW_ID`: Your flow's UUID or custom endpoint name. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-pane).
+    * `FILE_COMPONENT_ID`: The UUID of the File component in your flow, such as `File-KZP68`. To find the component ID, open your flow in Langflow, click the File component, and then click **Controls**.
+    * `CHAT_INPUT`: The message you want to send to the Chat Input of your flow, such as `Evaluate this resume for a job opening in my Marketing department.`
+    * `FILE_NAME` and `FILE_PATH`: The name and path to the local file that you want to send to your flow.
+    * `LANGFLOW_API_KEY`: A valid Langflow API key. To create an API key, see [API keys](/configuration-api-keys).
 
-2. Replace the values in the script below.
+2. Copy the following script into a Python file, and then replace the placeholders with the information you gathered in the previous step:
 
     ```python
     # Python example using requests
@@ -92,7 +93,7 @@ You can find the values for `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` in the auto-
     # 2. Prepare the file and payload
     payload = {}
     files = [
-      ('file', ('fake-resume.txt', open('fake-resume.txt', 'rb'), 'application/octet-stream'))
+      ('file', ('FILE_PATH', open('FILE_NAME', 'rb'), 'application/octet-stream'))
     ]
     headers = {
       'Accept': 'application/json',
@@ -110,11 +111,11 @@ You can find the values for `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` in the auto-
     # 5. Call the Langflow run endpoint with the uploaded file path
     run_url = "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID"
     run_payload = {
-        "input_value": "Evaluate this resume for a job opening in my Marketing department.",
+        "input_value": "CHAT_INPUT",
         "output_type": "chat",
         "input_type": "chat",
         "tweaks": {
-            "File-KZP68": {
+            "FILE_COMPONENT_ID": {
                 "path": uploaded_path
             }
         }
@@ -138,12 +139,12 @@ You can find the values for `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` in the auto-
 
     This script contains two requests.
 
-    The first request uploads `fake-resume.txt` to your Langflow server at the `/v2/files` endpoint, which returns a file path that can be referenced in subsequent Langflow requests: `02791d46-812f-4988-ab1c-7c430214f8d5/fake-resume.txt`
+    The first request uploads a file, such as `fake-resume.txt`, to your Langflow server at the `/v2/files` endpoint. This request returns a file path that can be referenced in subsequent Langflow requests, such as `02791d46-812f-4988-ab1c-7c430214f8d5/fake-resume.txt`
 
     The second request sends a chat message to the Langflow flow at the `/v1/run/` endpoint.
     The `tweaks` parameter includes the path to the uploaded file as the variable `uploaded_path`, and sends this file directly to the File component.
 
-3. Run the script to send the requests and test the flow.
+3. Save and run the script to send the requests and test the flow.
 
     <details>
     <summary>Response</summary>
@@ -180,13 +181,13 @@ You can find the values for `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` in the auto-
 
     The initial output contains the JSON response object from the file upload endpoint, including the internal path where Langflow stores the file.
 
-    The LLM then retrieves this file and correctly evaluates its content, in this case the suitability of the resume for a job position.
+    The LLM then retrieves this file and evaluates its content, in this case the suitability of the resume for a job position.
 
 ## Next steps
 
-To process multiple files in a single flow run, add a separate File component for each file you want to ingest. Each file must be uploaded and the component referenced individually in your API request.
+To process multiple files in a single flow run, add a separate File component for each file you want to ingest. Then, modify your script to upload each file, retrieve each returned file path, and then pass a unique file path to each File component ID.
 
-For example, modify the `tweaks` to accept multiple file components.
+For example, you can modify `tweaks` to accept multiple file components.
 This is just an example, and not working code.
 
 ```python
@@ -197,7 +198,7 @@ file_paths = {
 }
 
 def chat_with_flow(input_message, file_paths):
-    """Send a chat message to the flow with multiple files"""
+    """Compare the contents of these two files."""
     run_url = f"{LANGFLOW_SERVER_ADDRESS}/api/v1/run/{FLOW_ID}"
     # Prepare tweaks with both file paths
     tweaks = {}
@@ -205,4 +206,4 @@ def chat_with_flow(input_message, file_paths):
         tweaks[component_id] = {"path": file_path}
 ```
 
-To upload files from another machine that is not your local environment, your Langflow server must first be accessible over the internet. Authenticated users can upload files directly to the `/v2/files/` endpoint as shown in the tutorial. For more information, see [Langflow deployment overview](/deployment-overview).
+To upload files from another machine that is not your local environment, your Langflow server must first be accessible over the internet. Then, authenticated users can upload files your public Langflow server's `/v2/files/` endpoint, as shown in the tutorial. For more information, see [Langflow deployment overview](/deployment-overview).
