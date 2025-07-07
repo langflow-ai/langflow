@@ -134,18 +134,18 @@ const config = {
       {
         redirects: [
           {
-            to: "/get-started-installation",
+            to: "/docs/get-started-installation",
             from: [
               "/getting-started-installation",
               "/getting-started-common-installation-issues",
             ],
           },
           {
-            to: "/get-started-quickstart",
+            to: "/docs/get-started-quickstart",
             from: "/getting-started-quickstart",
           },
           {
-            to: "concepts-overview",
+            to: "/docs/concepts-overview",
             from: [
               "/workspace-overview",
               "/365085a8-a90a-43f9-a779-f8769ec7eca1",
@@ -155,15 +155,15 @@ const config = {
             ],
           },
           {
-            to: "/concepts-components",
+            to: "/docs/concepts-components",
             from: ["/components", "/components-overview"],
           },
           {
-            to: "/configuration-global-variables",
+            to: "/docs/configuration-global-variables",
             from: "/settings-global-variables",
           },
           {
-            to: "/concepts-playground",
+            to: "/docs/concepts-playground",
             from: [
               "/workspace-playground",
               "/workspace-logs",
@@ -171,26 +171,26 @@ const config = {
             ],
           },
           {
-            to: "/concepts-objects",
+            to: "/docs/concepts-objects",
             from: ["/guides-data-message", "/configuration-objects"],
           },
           {
-            to: "/blog-writer",
+            to: "/docs/blog-writer",
             from: ["/starter-projects-blog-writer", "/tutorials-blog-writer"],
           },
           {
-            to: "/memory-chatbot",
+            to: "/docs/memory-chatbot",
             from: [
               "/starter-projects-memory-chatbot",
               "/tutorials-memory-chatbot",
             ],
           },
           {
-            to: "/document-qa",
+            to: "/docs/document-qa",
             from: ["/starter-projects-document-qa", "/tutorials-document-qa"],
           },
           {
-            to: "/simple-agent",
+            to: "/docs/simple-agent",
             from: [
               "/math-agent",
               "/starter-projects-simple-agent",
@@ -199,14 +199,14 @@ const config = {
             ],
           },
           {
-            to: "/sequential-agent",
+            to: "/docs/sequential-agent",
             from: [
               "/starter-projects-sequential-agent",
               "/tutorials-sequential-agent",
             ],
           },
           {
-            to: "/travel-planning-agent",
+            to: "/docs/travel-planning-agent",
             from: [
               "/starter-projects-travel-planning-agent",
               "/tutorials-travel-planning-agent",
@@ -214,18 +214,18 @@ const config = {
             ],
           },
           {
-            to: "/components-vector-stores",
+            to: "/docs/components-vector-stores",
             from: "/components-rag",
           },
           {
-            to: "/configuration-authentication",
+            to: "/docs/configuration-authentication",
             from: [
               "/configuration-security-best-practices",
               "/Configuration/configuration-security-best-practices",
             ],
           },
           {
-            to: "/environment-variables",
+            to: "/docs/environment-variables",
             from: [
               "/configuration-auto-saving",
               "/Configuration/configuration-auto-saving",
@@ -234,45 +234,45 @@ const config = {
             ],
           },
           {
-            to: "/concepts-publish",
+            to: "/docs/concepts-publish",
             from: ["/concepts-api", "/workspace-api"],
           },
           {
-            to: "/components-custom-components",
+            to: "/docs/components-custom-components",
             from: "/components/custom",
           },
           {
-            to: "/components-bundle-components",
+            to: "/docs/components-bundle-components",
             from: "/components-loaders",
           },
           {
-            to: "/mcp-server",
+            to: "/docs/mcp-server",
             from: "/integrations-mcp",
           },
           {
-            to: "/integrations-nvidia-g-assist",
+            to: "/docs/integrations-nvidia-g-assist",
             from: "/integrations-nvidia-system-assist",
           },
           {
-            to: "/deployment-kubernetes-dev",
+            to: "/docs/deployment-kubernetes-dev",
             from: [
               "/deployment-kubernetes",
             ],
           },
           {
-            to: "/basic-prompting",
+            to: "/docs/basic-prompting",
             from: "/starter-projects-basic-prompting",
           },
           {
-            to: "/vector-store-rag",
+            to: "/docs/vector-store-rag",
             from: "/starter-projects-vector-store-rag",
           },
           {
-            to: "/contributing-github-issues",
+            to: "/docs/contributing-github-issues",
             from: "/contributing-github-discussions",
           },
           {
-            to: "/agents",
+            to: "/docs/agents",
             from: "/agents-tool-calling-agent-component",
           },
           // add more redirects like this
