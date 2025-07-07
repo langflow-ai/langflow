@@ -2,6 +2,8 @@ import os
 import platform
 import sys
 
+import typer
+
 
 def main():
     """Launches langflow with appropriate environment setup.
@@ -42,8 +44,8 @@ def _launch_with_exec():
     os.environ["no_proxy"] = "*"
 
     try:
-        os.execv(sys.executable, [sys.executable, "-m", "langflow.__main__"] + sys.argv[1:])
+        os.execv(sys.executable, [sys.executable, "-m", "langflow.__main__"] + sys.argv[1:])  # noqa: S606
     except OSError as e:
         # If exec fails, we need to exit since the process replacement failed
-        print(f"Failed to exec langflow: {e}", file=sys.stderr)
+        typer.echo(f"Failed to exec langflow: {e}", file=sys.stderr)
         sys.exit(1)
