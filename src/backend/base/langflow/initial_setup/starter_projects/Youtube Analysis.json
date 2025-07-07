@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeCommentsComponent",
-            "id": "YouTubeCommentsComponent-IUxWi",
+            "id": "YouTubeCommentsComponent-y3wJZ",
             "name": "comments",
             "output_types": [
               "DataFrame"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "df",
-            "id": "BatchRunComponent-r0qdQ",
+            "id": "BatchRunComponent-30WdR",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YouTubeCommentsComponent-IUxWi{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-IUxWiœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-r0qdQ{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-r0qdQœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeCommentsComponent-y3wJZ{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-y3wJZœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-30WdR{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-30WdRœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeCommentsComponent-IUxWi",
-        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-IUxWiœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "BatchRunComponent-r0qdQ",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-r0qdQœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "YouTubeCommentsComponent-y3wJZ",
+        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-y3wJZœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "BatchRunComponent-30WdR",
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-30WdRœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-L0waQ",
+            "id": "Prompt-yqoLt",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-hIuju",
+            "id": "Agent-JRSRu",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-L0waQ{œdataTypeœ:œPromptœ,œidœ:œPrompt-L0waQœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-hIuju{œfieldNameœ:œinput_valueœ,œidœ:œAgent-hIujuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-yqoLt{œdataTypeœ:œPromptœ,œidœ:œPrompt-yqoLtœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-JRSRu{œfieldNameœ:œinput_valueœ,œidœ:œAgent-JRSRuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-L0waQ",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-L0waQœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-hIuju",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-hIujuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-yqoLt",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-yqoLtœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-JRSRu",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-JRSRuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-hIuju",
+            "id": "Agent-JRSRu",
             "name": "response",
             "output_types": [
               "Message"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-lb1Li",
+            "id": "ChatOutput-vlskP",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -80,12 +80,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-hIuju{œdataTypeœ:œAgentœ,œidœ:œAgent-hIujuœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-lb1Li{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-lb1Liœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-JRSRu{œdataTypeœ:œAgentœ,œidœ:œAgent-JRSRuœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-vlskP{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vlskPœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-hIuju",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-hIujuœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-lb1Li",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-lb1Liœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-JRSRu",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-JRSRuœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-vlskP",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-vlskPœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeTranscripts",
-            "id": "YouTubeTranscripts-t0fXs",
+            "id": "YouTubeTranscripts-TlFcG",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -101,131 +101,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-hIuju",
+            "id": "Agent-JRSRu",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YouTubeTranscripts-t0fXs{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-t0fXsœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-hIuju{œfieldNameœ:œtoolsœ,œidœ:œAgent-hIujuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeTranscripts-TlFcG{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-TlFcGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-JRSRu{œfieldNameœ:œtoolsœ,œidœ:œAgent-JRSRuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeTranscripts-t0fXs",
-        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-t0fXsœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-hIuju",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-hIujuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-S8drL",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_text",
-            "id": "ConditionalRouter-PnjYg",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-S8drL{œdataTypeœ:œChatInputœ,œidœ:œChatInput-S8drLœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-PnjYg{œfieldNameœ:œinput_textœ,œidœ:œConditionalRouter-PnjYgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-S8drL",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-S8drLœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ConditionalRouter-PnjYg",
-        "targetHandle": "{œfieldNameœ: œinput_textœ, œidœ: œConditionalRouter-PnjYgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-S8drL",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "message",
-            "id": "ConditionalRouter-PnjYg",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-S8drL{œdataTypeœ:œChatInputœ,œidœ:œChatInput-S8drLœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-PnjYg{œfieldNameœ:œmessageœ,œidœ:œConditionalRouter-PnjYgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-S8drL",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-S8drLœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ConditionalRouter-PnjYg",
-        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œConditionalRouter-PnjYgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ConditionalRouter",
-            "id": "ConditionalRouter-PnjYg",
-            "name": "true_result",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "video_url",
-            "id": "YouTubeCommentsComponent-IUxWi",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ConditionalRouter-PnjYg{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-PnjYgœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-IUxWi{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-IUxWiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ConditionalRouter-PnjYg",
-        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-PnjYgœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "YouTubeCommentsComponent-IUxWi",
-        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-IUxWiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ConditionalRouter",
-            "id": "ConditionalRouter-PnjYg",
-            "name": "true_result",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "url",
-            "id": "Prompt-L0waQ",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ConditionalRouter-PnjYg{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-PnjYgœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-Prompt-L0waQ{œfieldNameœ:œurlœ,œidœ:œPrompt-L0waQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ConditionalRouter-PnjYg",
-        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-PnjYgœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-L0waQ",
-        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-L0waQœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "YouTubeTranscripts-TlFcG",
+        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-TlFcGœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-JRSRu",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-JRSRuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -233,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "BatchRunComponent",
-            "id": "BatchRunComponent-r0qdQ",
+            "id": "BatchRunComponent-30WdR",
             "name": "batch_results",
             "output_types": [
               "DataFrame"
@@ -241,7 +129,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-5gaa5",
+            "id": "parser-k0Bpy",
             "inputTypes": [
               "DataFrame",
               "Data"
@@ -249,12 +137,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-BatchRunComponent-r0qdQ{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-r0qdQœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-parser-5gaa5{œfieldNameœ:œinput_dataœ,œidœ:œparser-5gaa5œ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-BatchRunComponent-30WdR{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-30WdRœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-parser-k0Bpy{œfieldNameœ:œinput_dataœ,œidœ:œparser-k0Bpyœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "BatchRunComponent-r0qdQ",
-        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-r0qdQœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "parser-5gaa5",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-5gaa5œ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "source": "BatchRunComponent-30WdR",
+        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-30WdRœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "parser-k0Bpy",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-k0Bpyœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -262,7 +150,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-5gaa5",
+            "id": "parser-k0Bpy",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -270,19 +158,19 @@
           },
           "targetHandle": {
             "fieldName": "analysis",
-            "id": "Prompt-L0waQ",
+            "id": "Prompt-yqoLt",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-5gaa5{œdataTypeœ:œparserœ,œidœ:œparser-5gaa5œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-L0waQ{œfieldNameœ:œanalysisœ,œidœ:œPrompt-L0waQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-k0Bpy{œdataTypeœ:œparserœ,œidœ:œparser-k0Bpyœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-yqoLt{œfieldNameœ:œanalysisœ,œidœ:œPrompt-yqoLtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-5gaa5",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-5gaa5œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-L0waQ",
-        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-L0waQœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "parser-k0Bpy",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-k0Bpyœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-yqoLt",
+        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-yqoLtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -290,7 +178,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-UjJqZ",
+            "id": "LanguageModelComponent-OvIt5",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -298,25 +186,81 @@
           },
           "targetHandle": {
             "fieldName": "model",
-            "id": "BatchRunComponent-r0qdQ",
+            "id": "BatchRunComponent-30WdR",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-UjJqZ{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-UjJqZœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-BatchRunComponent-r0qdQ{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-r0qdQœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-OvIt5{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-OvIt5œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-BatchRunComponent-30WdR{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-30WdRœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LanguageModelComponent-UjJqZ",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-UjJqZœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "BatchRunComponent-r0qdQ",
-        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-r0qdQœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-OvIt5",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-OvIt5œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "BatchRunComponent-30WdR",
+        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-30WdRœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-kaWcL",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "video_url",
+            "id": "YouTubeCommentsComponent-y3wJZ",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-kaWcL{œdataTypeœ:œChatInputœ,œidœ:œChatInput-kaWcLœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-y3wJZ{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-y3wJZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-kaWcL",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-kaWcLœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "YouTubeCommentsComponent-y3wJZ",
+        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-y3wJZœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-kaWcL",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "url",
+            "id": "Prompt-yqoLt",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-kaWcL{œdataTypeœ:œChatInputœ,œidœ:œChatInput-kaWcLœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-yqoLt{œfieldNameœ:œurlœ,œidœ:œPrompt-yqoLtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-kaWcL",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-kaWcLœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-yqoLt",
+        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-yqoLtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "BatchRunComponent-r0qdQ",
+          "id": "BatchRunComponent-30WdR",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -339,7 +283,7 @@
             "icon": "List",
             "key": "BatchRunComponent",
             "legacy": false,
-            "lf_version": "1.1.3",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -515,9 +459,9 @@
           "type": "BatchRunComponent"
         },
         "dragging": false,
-        "id": "BatchRunComponent-r0qdQ",
+        "id": "BatchRunComponent-30WdR",
         "measured": {
-          "height": 389,
+          "height": 391,
           "width": 320
         },
         "position": {
@@ -529,7 +473,7 @@
       },
       {
         "data": {
-          "id": "YouTubeCommentsComponent-IUxWi",
+          "id": "YouTubeCommentsComponent-y3wJZ",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -554,7 +498,7 @@
             "icon": "YouTube",
             "key": "YouTubeCommentsComponent",
             "legacy": false,
-            "lf_version": "1.1.3",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -585,7 +529,7 @@
                 "dynamic": false,
                 "info": "Your YouTube Data API key.",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -593,7 +537,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": null
+                "value": "YOUTUBE_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -721,9 +665,9 @@
           "type": "YouTubeCommentsComponent"
         },
         "dragging": false,
-        "id": "YouTubeCommentsComponent-IUxWi",
+        "id": "YouTubeCommentsComponent-y3wJZ",
         "measured": {
-          "height": 465,
+          "height": 467,
           "width": 320
         },
         "position": {
@@ -735,7 +679,7 @@
       },
       {
         "data": {
-          "id": "Agent-hIuju",
+          "id": "Agent-JRSRu",
           "node": {
             "base_classes": [
               "Message"
@@ -771,7 +715,9 @@
             ],
             "frozen": false,
             "icon": "bot",
+            "last_updated": "2025-07-07T14:52:14.999Z",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1265,9 +1211,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-hIuju",
+        "id": "Agent-JRSRu",
         "measured": {
-          "height": 591,
+          "height": 594,
           "width": 320
         },
         "position": {
@@ -1279,7 +1225,7 @@
       },
       {
         "data": {
-          "id": "Prompt-L0waQ",
+          "id": "Prompt-yqoLt",
           "node": {
             "base_classes": [
               "Message"
@@ -1308,7 +1254,7 @@
             "is_input": null,
             "is_output": null,
             "legacy": false,
-            "lf_version": "1.1.3",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "name": "",
@@ -1443,9 +1389,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-L0waQ",
+        "id": "Prompt-yqoLt",
         "measured": {
-          "height": 447,
+          "height": 449,
           "width": 320
         },
         "position": {
@@ -1457,7 +1403,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-lb1Li",
+          "id": "ChatOutput-vlskP",
           "node": {
             "base_classes": [
               "Message"
@@ -1485,7 +1431,7 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
-            "lf_version": "1.1.3",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -1756,9 +1702,9 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-lb1Li",
+        "id": "ChatOutput-vlskP",
         "measured": {
-          "height": 203,
+          "height": 204,
           "width": 320
         },
         "position": {
@@ -1770,7 +1716,7 @@
       },
       {
         "data": {
-          "id": "YouTubeTranscripts-t0fXs",
+          "id": "YouTubeTranscripts-TlFcG",
           "node": {
             "base_classes": [
               "Data",
@@ -1791,8 +1737,9 @@
             ],
             "frozen": false,
             "icon": "YouTube",
+            "last_updated": "2025-07-07T14:52:15.000Z",
             "legacy": false,
-            "lf_version": "1.4.2",
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1994,9 +1941,9 @@
           "type": "YouTubeTranscripts"
         },
         "dragging": false,
-        "id": "YouTubeTranscripts-t0fXs",
+        "id": "YouTubeTranscripts-TlFcG",
         "measured": {
-          "height": 327,
+          "height": 328,
           "width": 320
         },
         "position": {
@@ -2008,323 +1955,9 @@
       },
       {
         "data": {
-          "id": "ChatInput-S8drL",
+          "id": "note-eKoWw",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "category": "inputs",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Get chat inputs from the Playground.",
-            "display_name": "URL video",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_value",
-              "should_store_message",
-              "sender",
-              "sender_name",
-              "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
-            ],
-            "frozen": false,
-            "icon": "MessagesSquare",
-            "key": "ChatInput",
-            "legacy": false,
-            "lf_version": "1.4.2",
-            "metadata": {},
-            "minimized": true,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Chat Message",
-                "group_outputs": false,
-                "method": "message_response",
-                "name": "message",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.0020353564437605998,
-            "template": {
-              "_type": "Component",
-              "background_color": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Background Color",
-                "dynamic": false,
-                "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "background_color",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "chat_icon": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Icon",
-                "dynamic": false,
-                "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "chat_icon",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/components-io#chat-input\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
-              },
-              "files": {
-                "_input_type": "FileInput",
-                "advanced": true,
-                "display_name": "Files",
-                "dynamic": false,
-                "fileTypes": [
-                  "txt",
-                  "md",
-                  "mdx",
-                  "csv",
-                  "json",
-                  "yaml",
-                  "yml",
-                  "xml",
-                  "html",
-                  "htm",
-                  "pdf",
-                  "docx",
-                  "py",
-                  "sh",
-                  "sql",
-                  "js",
-                  "ts",
-                  "tsx",
-                  "jpg",
-                  "jpeg",
-                  "png",
-                  "bmp",
-                  "image"
-                ],
-                "file_path": "",
-                "info": "Files to be sent with the message.",
-                "list": true,
-                "list_add_label": "Add More",
-                "name": "files",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "temp_file": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "file",
-                "value": ""
-              },
-              "input_value": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "display_name": "Input Text",
-                "dynamic": false,
-                "info": "Message to be passed as input.",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "https://www.youtube.com/watch?v=8f61j3W-27U&ab_channel=Langflow"
-              },
-              "sender": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender Type",
-                "dynamic": false,
-                "info": "Type of sender.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "User"
-              },
-              "sender_name": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Sender Name",
-                "dynamic": false,
-                "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sender_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "User"
-              },
-              "session_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Session ID",
-                "dynamic": false,
-                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "session_id",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "should_store_message": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Store Messages",
-                "dynamic": false,
-                "info": "Store the message in the history.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "should_store_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "text_color": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Text Color",
-                "dynamic": false,
-                "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "text_color",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "message",
-          "showNode": true,
-          "type": "ChatInput"
-        },
-        "dragging": false,
-        "id": "ChatInput-S8drL",
-        "measured": {
-          "height": 203,
-          "width": 320
-        },
-        "position": {
-          "x": -894.6710448870117,
-          "y": 6583.98979261026
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-jaOgT",
-          "node": {
-            "description": "# 📖 README\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n\n## Quickstart\n-  Add your **OpenAI API Key** to the **Language Model** and **YT-Insight** Agent Component\n-  Add your **YouTube Data API v3 key**\n- If you don't have a YoutTube API key create one in the [Google Cloud Console](https://console.cloud.google.com).\n",
+            "description": "# 📖 README\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n## Quickstart\n-  Add your **OpenAI API Key** to the **Language Model** and **YT-Insight** Agent Component\n-  Add your **YouTube Data API v3 key**\n- If you don't have a YoutTube API key, create one in the [Google Cloud Console](https://console.cloud.google.com).\n- Ensure the chat input is a valid Youtube video URL. A sample URL is provided in the chat input component.\n",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2334,15 +1967,15 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 479,
-        "id": "note-jaOgT",
+        "height": 582,
+        "id": "note-eKoWw",
         "measured": {
-          "height": 479,
+          "height": 582,
           "width": 553
         },
         "position": {
-          "x": -888.5407609400555,
-          "y": 5632.664673333763
+          "x": -499.7725169737987,
+          "y": 5666.258559615042
         },
         "resizing": false,
         "selected": false,
@@ -2351,294 +1984,7 @@
       },
       {
         "data": {
-          "id": "ConditionalRouter-PnjYg",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "category": "logic",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Routes an input message to a corresponding output based on text comparison.",
-            "display_name": "If-Else",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_text",
-              "match_text",
-              "operator",
-              "case_sensitive",
-              "message",
-              "max_iterations",
-              "default_route"
-            ],
-            "frozen": false,
-            "icon": "split",
-            "key": "ConditionalRouter",
-            "legacy": false,
-            "lf_version": "1.1.3",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "True",
-                "group_outputs": true,
-                "method": "true_response",
-                "name": "true_result",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "False",
-                "group_outputs": true,
-                "method": "false_response",
-                "name": "false_result",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.001,
-            "template": {
-              "_type": "Component",
-              "case_sensitive": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Case Sensitive",
-                "dynamic": false,
-                "info": "If true, the comparison will be case sensitive.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "case_sensitive",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import re\n\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageInput, MessageTextInput, Output\nfrom langflow.schema.message import Message\n\n\nclass ConditionalRouterComponent(Component):\n    display_name = \"If-Else\"\n    description = \"Routes an input message to a corresponding output based on text comparison.\"\n    documentation: str = \"https://docs.langflow.org/components-logic#conditional-router-if-else-component\"\n    icon = \"split\"\n    name = \"ConditionalRouter\"\n\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        self.__iteration_updated = False\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_text\",\n            display_name=\"Text Input\",\n            info=\"The primary text input for the operation.\",\n            required=True,\n        ),\n        DropdownInput(\n            name=\"operator\",\n            display_name=\"Operator\",\n            options=[\n                \"equals\",\n                \"not equals\",\n                \"contains\",\n                \"starts with\",\n                \"ends with\",\n                \"regex\",\n                \"less than\",\n                \"less than or equal\",\n                \"greater than\",\n                \"greater than or equal\",\n            ],\n            info=\"The operator to apply for comparing the texts.\",\n            value=\"equals\",\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"match_text\",\n            display_name=\"Match Text\",\n            info=\"The text input to compare against.\",\n            required=True,\n        ),\n        BoolInput(\n            name=\"case_sensitive\",\n            display_name=\"Case Sensitive\",\n            info=\"If true, the comparison will be case sensitive.\",\n            value=True,\n            advanced=True,\n        ),\n        MessageInput(\n            name=\"true_case_message\",\n            display_name=\"Case True\",\n            info=\"The message to pass if the condition is True.\",\n            advanced=True,\n        ),\n        MessageInput(\n            name=\"false_case_message\",\n            display_name=\"Case False\",\n            info=\"The message to pass if the condition is False.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_iterations\",\n            display_name=\"Max Iterations\",\n            info=\"The maximum number of iterations for the conditional router.\",\n            value=10,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"default_route\",\n            display_name=\"Default Route\",\n            options=[\"true_result\", \"false_result\"],\n            info=\"The default route to take when max iterations are reached.\",\n            value=\"false_result\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"True\", name=\"true_result\", method=\"true_response\", group_outputs=True),\n        Output(display_name=\"False\", name=\"false_result\", method=\"false_response\", group_outputs=True),\n    ]\n\n    def _pre_run_setup(self):\n        self.__iteration_updated = False\n\n    def evaluate_condition(self, input_text: str, match_text: str, operator: str, *, case_sensitive: bool) -> bool:\n        if not case_sensitive and operator != \"regex\":\n            input_text = input_text.lower()\n            match_text = match_text.lower()\n\n        if operator == \"equals\":\n            return input_text == match_text\n        if operator == \"not equals\":\n            return input_text != match_text\n        if operator == \"contains\":\n            return match_text in input_text\n        if operator == \"starts with\":\n            return input_text.startswith(match_text)\n        if operator == \"ends with\":\n            return input_text.endswith(match_text)\n        if operator == \"regex\":\n            try:\n                return bool(re.match(match_text, input_text))\n            except re.error:\n                return False  # Return False if the regex is invalid\n        if operator in [\"less than\", \"less than or equal\", \"greater than\", \"greater than or equal\"]:\n            try:\n                input_num = float(input_text)\n                match_num = float(match_text)\n                if operator == \"less than\":\n                    return input_num < match_num\n                if operator == \"less than or equal\":\n                    return input_num <= match_num\n                if operator == \"greater than\":\n                    return input_num > match_num\n                if operator == \"greater than or equal\":\n                    return input_num >= match_num\n            except ValueError:\n                return False  # Invalid number format for comparison\n        return False\n\n    def iterate_and_stop_once(self, route_to_stop: str):\n        if not self.__iteration_updated:\n            self.update_ctx({f\"{self._id}_iteration\": self.ctx.get(f\"{self._id}_iteration\", 0) + 1})\n            self.__iteration_updated = True\n            if self.ctx.get(f\"{self._id}_iteration\", 0) >= self.max_iterations and route_to_stop == self.default_route:\n                route_to_stop = \"true_result\" if route_to_stop == \"false_result\" else \"false_result\"\n            self.stop(route_to_stop)\n\n    def true_response(self) -> Message:\n        result = self.evaluate_condition(\n            self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive\n        )\n        if result:\n            self.status = self.true_case_message\n            self.iterate_and_stop_once(\"false_result\")\n            return self.true_case_message\n        self.iterate_and_stop_once(\"true_result\")\n        return Message(content=\"\")\n\n    def false_response(self) -> Message:\n        result = self.evaluate_condition(\n            self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive\n        )\n        if not result:\n            self.status = self.false_case_message\n            self.iterate_and_stop_once(\"true_result\")\n            return self.false_case_message\n        self.iterate_and_stop_once(\"false_result\")\n        return Message(content=\"\")\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:\n        if field_name == \"operator\":\n            if field_value == \"regex\":\n                build_config.pop(\"case_sensitive\", None)\n            elif \"case_sensitive\" not in build_config:\n                case_sensitive_input = next(\n                    (input_field for input_field in self.inputs if input_field.name == \"case_sensitive\"), None\n                )\n                if case_sensitive_input:\n                    build_config[\"case_sensitive\"] = case_sensitive_input.to_dict()\n        return build_config\n"
-              },
-              "default_route": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Default Route",
-                "dynamic": false,
-                "info": "The default route to take when max iterations are reached.",
-                "name": "default_route",
-                "options": [
-                  "true_result",
-                  "false_result"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "false_result"
-              },
-              "false_case_message": {
-                "_input_type": "MessageInput",
-                "advanced": true,
-                "display_name": "Case False",
-                "dynamic": false,
-                "info": "The message to pass if the condition is False.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "false_case_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "input_text": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Text Input",
-                "dynamic": false,
-                "info": "The primary text input for the operation.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "input_text",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "match_text": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Match Text",
-                "dynamic": false,
-                "info": "The text input to compare against.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "match_text",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "^(?:https?:\\/\\/)?(?:www\\.)?(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/)([A-Za-z0-9_-]{11})(?:&\\S*)?$"
-              },
-              "max_iterations": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Iterations",
-                "dynamic": false,
-                "info": "The maximum number of iterations for the conditional router.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_iterations",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 10
-              },
-              "operator": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Operator",
-                "dynamic": false,
-                "info": "The operator to apply for comparing the texts.",
-                "name": "operator",
-                "options": [
-                  "equals",
-                  "not equals",
-                  "contains",
-                  "starts with",
-                  "ends with",
-                  "regex",
-                  "less than",
-                  "less than or equal",
-                  "greater than",
-                  "greater than or equal"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "regex"
-              },
-              "true_case_message": {
-                "_input_type": "MessageInput",
-                "advanced": true,
-                "display_name": "Case True",
-                "dynamic": false,
-                "info": "The message to pass if the condition is True.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "true_case_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "true_result",
-          "showNode": true,
-          "type": "ConditionalRouter"
-        },
-        "dragging": false,
-        "id": "ConditionalRouter-PnjYg",
-        "measured": {
-          "height": 427,
-          "width": 320
-        },
-        "position": {
-          "x": -352.80314888328695,
-          "y": 6273.805228201546
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "parser-5gaa5",
+          "id": "parser-k0Bpy",
           "node": {
             "base_classes": [
               "Message"
@@ -2661,6 +2007,7 @@
             "icon": "braces",
             "key": "parser",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -2799,9 +2146,9 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-5gaa5",
+        "id": "parser-k0Bpy",
         "measured": {
-          "height": 359,
+          "height": 361,
           "width": 320
         },
         "position": {
@@ -2813,7 +2160,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-UjJqZ",
+          "id": "LanguageModelComponent-OvIt5",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2839,7 +2186,9 @@
             "frozen": false,
             "icon": "brain-circuit",
             "key": "LanguageModelComponent",
+            "last_updated": "2025-07-07T14:52:15.000Z",
             "legacy": false,
+            "lf_version": "1.4.3",
             "metadata": {
               "keywords": [
                 "model",
@@ -2896,7 +2245,7 @@
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2905,7 +2254,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": null
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -3095,9 +2444,9 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-UjJqZ",
+        "id": "LanguageModelComponent-OvIt5",
         "measured": {
-          "height": 449,
+          "height": 451,
           "width": 320
         },
         "position": {
@@ -3106,17 +2455,332 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ChatInput-kaWcL",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "category": "input_output",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Get chat inputs from the Playground.",
+            "display_name": "Chat Input",
+            "documentation": "https://docs.langflow.org/components-io#chat-input",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "files",
+              "background_color",
+              "chat_icon",
+              "text_color"
+            ],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "key": "ChatInput",
+            "legacy": false,
+            "lf_version": "1.4.3",
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Chat Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.0020353564437605998,
+            "template": {
+              "_type": "Component",
+              "background_color": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Background Color",
+                "dynamic": false,
+                "info": "The background color of the icon.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "background_color",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "chat_icon": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Icon",
+                "dynamic": false,
+                "info": "The icon of the message.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "chat_icon",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/components-io#chat-input\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+              },
+              "files": {
+                "_input_type": "FileInput",
+                "advanced": true,
+                "display_name": "Files",
+                "dynamic": false,
+                "fileTypes": [
+                  "txt",
+                  "md",
+                  "mdx",
+                  "csv",
+                  "json",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "pdf",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx",
+                  "jpg",
+                  "jpeg",
+                  "png",
+                  "bmp",
+                  "image"
+                ],
+                "file_path": "",
+                "info": "Files to be sent with the message.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "files",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "temp_file": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "file",
+                "value": ""
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "copy_field": false,
+                "display_name": "Input Text",
+                "dynamic": false,
+                "info": "Message to be passed as input.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "https://www.youtube.com/watch?v=8f61j3W-27U&ab_channel=Langflow"
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "User"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "User"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "text_color": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Text Color",
+                "dynamic": false,
+                "info": "The text color of the name",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "text_color",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "ChatInput"
+        },
+        "dragging": false,
+        "id": "ChatInput-kaWcL",
+        "measured": {
+          "height": 204,
+          "width": 320
+        },
+        "position": {
+          "x": -467.5929504081053,
+          "y": 6344.887293468443
+        },
+        "selected": false,
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 714.6944520675179,
-      "y": -3573.58657693275,
-      "zoom": 0.6658251158030362
+      "x": 508.76864320642323,
+      "y": -4013.82831792662,
+      "zoom": 0.763024505964603
     }
   },
   "description": "The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.",
   "endpoint_name": null,
-  "id": "82b410ce-6aba-402a-9376-34ec348b5b41",
+  "id": "3d1e15c2-b095-46de-8247-949c7a5bda04",
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Youtube Analysis",
