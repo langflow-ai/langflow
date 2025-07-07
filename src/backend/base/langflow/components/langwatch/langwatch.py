@@ -1,11 +1,11 @@
 import json
 import os
-from functools import lru_cache
 from typing import Any
 
 import httpx
 from loguru import logger
 
+from langflow.base.langwatch.utils import get_cached_evaluators
 from langflow.custom.custom_component.component import Component
 from langflow.inputs.inputs import MultilineInput
 from langflow.io import (
@@ -82,23 +82,13 @@ class LangWatchComponent(Component):
         Output(name="evaluation_result", display_name="Evaluation Result", method="evaluate"),
     ]
 
-    @lru_cache(maxsize=1)
-    def _get_cached_evaluators(url: str) -> dict[str, Any]:
-        try:
-            response = httpx.get(url, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            return data.get("evaluators", {})
-        except httpx.RequestError as e:
-            logger.error(f"Error fetching evaluators: {e}")
-            return {}
-
-    def set_evaluators(self, endpoint: str) -> dict[str, Any]:
+    def set_evaluators(self, endpoint: str):
         url = f"{endpoint}/api/evaluations/list"
-        self.evaluators = LangWatchComponent._get_cached_evaluators(url)
+        self.evaluators = get_cached_evaluators(url)
         if not self.evaluators or len(self.evaluators) == 0:
             self.status = f"No evaluators found from {endpoint}"
-            raise ValueError(f"No evaluators found from {endpoint}")
+            msg = f"No evaluators found from {endpoint}"
+            raise ValueError(msg)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         try:
@@ -158,11 +148,10 @@ class LangWatchComponent(Component):
             build_config["evaluator_name"]["value"] = self.current_evaluator
 
             logger.info(f"Current evaluator set to: {self.current_evaluator}")
-            return build_config
 
         except (KeyError, AttributeError, ValueError) as e:
             self.status = f"Error updating component: {e!s}"
-            return build_config
+        return build_config
 
     def get_dynamic_inputs(self, evaluator: dict[str, Any]):
         try:
