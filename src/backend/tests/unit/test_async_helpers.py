@@ -30,8 +30,7 @@ class TestRunUntilComplete:
 
         async def main_test():
             # This should work with our fix - runs in separate thread
-            result = run_until_complete(simple_coro())
-            return result
+            return run_until_complete(simple_coro())
 
         result = asyncio.run(main_test())
         assert result == "from_thread"
@@ -46,8 +45,7 @@ class TestRunUntilComplete:
         async def main_test():
             # This would deadlock with old implementation that calls loop.run_until_complete
             # using the running loop
-            result = run_until_complete(complex_coro())
-            return result
+            return run_until_complete(complex_coro())
 
         result = asyncio.run(main_test())
         assert result == "complex_result"
@@ -56,7 +54,8 @@ class TestRunUntilComplete:
         """Test that exceptions in the new thread are properly propagated."""
 
         async def failing_coro():
-            raise ValueError("Test exception")
+            msg = "Test exception"
+            raise ValueError(msg)
 
         async def main_test():
             with pytest.raises(ValueError, match="Test exception"):
@@ -71,8 +70,7 @@ class TestRunUntilComplete:
             return {"key": "value", "list": [1, 2, 3], "nested": {"inner": "data"}}
 
         async def main_test():
-            result = run_until_complete(return_complex())
-            return result
+            return run_until_complete(return_complex())
 
         result = asyncio.run(main_test())
         expected = {"key": "value", "list": [1, 2, 3], "nested": {"inner": "data"}}
@@ -96,8 +94,7 @@ class TestRunUntilComplete:
             assert getattr(local_data, "value", None) == "main_thread"
 
             # Check that new thread doesn't have access
-            result = run_until_complete(check_thread_isolation())
-            return result
+            return run_until_complete(check_thread_isolation())
 
         result = asyncio.run(main_test())
         assert result == "no_value"  # Thread isolation working
@@ -116,9 +113,7 @@ class TestRunUntilComplete:
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = [executor.submit(run_until_complete, delayed_coro(0.01, i)) for i in range(3)]
 
-                results = [f.result() for f in futures]
-
-            return results
+                return [f.result() for f in futures]
 
         results = asyncio.run(main_test())
         expected = ["result_0", "result_1", "result_2"]
@@ -156,13 +151,11 @@ class TestRunUntilComplete:
         async def outer_async():
             # This creates tasks that need event loop scheduling
             tasks = [asyncio.create_task(inner_async()) for _ in range(3)]
-            results = await asyncio.gather(*tasks)
-            return results
+            return await asyncio.gather(*tasks)
 
         async def main_test():
             # This would definitely deadlock with old implementation
-            result = run_until_complete(outer_async())
-            return result
+            return run_until_complete(outer_async())
 
         result = asyncio.run(main_test())
         assert result == ["inner", "inner", "inner"]
@@ -177,13 +170,12 @@ class TestRunUntilComplete:
         async def timeout_coro():
             try:
                 await asyncio.wait_for(slow_coro(), timeout=0.01)
-                return "no_timeout"
             except asyncio.TimeoutError:
                 return "timeout_occurred"
+            return "no_timeout"
 
         async def main_test():
-            result = run_until_complete(timeout_coro())
-            return result
+            return run_until_complete(timeout_coro())
 
         result = asyncio.run(main_test())
         assert result == "timeout_occurred"
