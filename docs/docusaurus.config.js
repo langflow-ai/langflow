@@ -90,7 +90,6 @@ const config = {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
-          homePageId: false, // Disable automatic homepage generation
           beforeDefaultRemarkPlugins: [
             [
               remarkCodeHike,
