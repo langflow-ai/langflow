@@ -99,7 +99,7 @@ test(
 
     await page.getByTestId("button-send").click();
 
-    await page.getByRole("tab", { name: "python" }).isVisible({
+    await page.getByTestId("api_tab_python").isVisible({
       timeout: 100000,
     });
 
