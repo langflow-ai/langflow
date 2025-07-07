@@ -176,7 +176,7 @@ dev = [
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
     "pyyaml>=6.0.2",
-    "pyleak>=0.1.12",
+    "pyleak>=0.1.14",
 ]
 
 [tool.uv.sources]
@@ -234,7 +234,7 @@ override-dependencies = [
 ]
 
 [project.scripts]
-langflow = "langflow.__main__:main"
+langflow = "langflow.langflow_launcher:main"
 
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
