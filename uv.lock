@@ -5157,7 +5157,7 @@ dev = [
     { name = "pandas-stubs", specifier = ">=2.1.4.231227" },
     { name = "pre-commit", specifier = ">=3.7.0" },
     { name = "pydantic-ai", specifier = ">=0.0.19" },
-    { name = "pyleak", specifier = ">=0.1.12" },
+    { name = "pyleak", specifier = ">=0.1.14" },
     { name = "pytest", specifier = ">=8.2.0" },
     { name = "pytest-asyncio", specifier = ">=0.23.0" },
     { name = "pytest-cov", specifier = ">=5.0.0" },
