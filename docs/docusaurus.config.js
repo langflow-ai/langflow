@@ -87,7 +87,6 @@ const config = {
           routeBasePath: "/api", // The base URL for your API docs
         },
         docs: {
-          routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
           beforeDefaultRemarkPlugins: [

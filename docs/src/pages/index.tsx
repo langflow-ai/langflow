@@ -50,7 +50,7 @@ export default function Home() {
 
         {/* Quick Links Section */}
         <div className={styles.quickLinksSection}>
-          <Link to="/get-started-quickstart" className={styles.quickLinkCard}>
+          <Link to="/docs/get-started-quickstart" className={styles.quickLinkCard}>
             <div className={styles.quickLinkIcon}>
               <CirclePlay size={32} strokeWidth={1.25} />
             </div>
@@ -59,7 +59,7 @@ export default function Home() {
             Build and run your first flow in minutes.
             </p>
           </Link>
-          <Link to="/agents" className={styles.quickLinkCard}>
+          <Link to="/docs/agents" className={styles.quickLinkCard}>
             <div className={styles.quickLinkIcon}>
               <CustomIcon name="agents" size={32} />
             </div>
@@ -69,7 +69,7 @@ export default function Home() {
             instructions, and tools.
             </p>
           </Link>
-          <Link to="/mcp-server" className={styles.quickLinkCard}>
+          <Link to="/docs/mcp-server" className={styles.quickLinkCard}>
             <div className={styles.quickLinkIcon}>
               <Server size={32} strokeWidth={1.25} />
             </div>
@@ -95,7 +95,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/get-started-installation" className={styles.card}>
+            <Link to="/docs/get-started-installation" className={styles.card}>
               <div className={styles.cardIcon}>
                 <MonitorDown size={16} strokeWidth={1.25} />
               </div>
@@ -117,7 +117,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/api-reference-api-examples" className={styles.card}>
+            <Link to="/docs/api-reference-api-examples" className={styles.card}>
               <div className={styles.cardIcon}>
                 <Code size={16} strokeWidth={1.25} />
               </div>
@@ -128,7 +128,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/develop-application" className={styles.card}>
+            <Link to="/docs/develop-application" className={styles.card}>
               <div className={styles.cardIcon}>
                 <AppWindow size={16} strokeWidth={1.25} />
               </div>
@@ -139,7 +139,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/deployment-overview" className={styles.card}>
+            <Link to="/docs/deployment-overview" className={styles.card}>
               <div className={styles.cardIcon}>
                 <HardDriveUpload size={16} strokeWidth={1.25} />
               </div>
@@ -150,7 +150,7 @@ export default function Home() {
                 <ArrowRight size={20} strokeWidth={1.25} />
               </div>
             </Link>
-            <Link to="/troubleshoot" className={styles.card}>
+            <Link to="/docs/troubleshooting" className={styles.card}>
               <div className={styles.cardIcon}>
                 <LifeBuoy size={16} strokeWidth={1.25} />
               </div>
