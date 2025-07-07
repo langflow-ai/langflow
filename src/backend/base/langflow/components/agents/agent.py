@@ -127,6 +127,7 @@ class AgentComponent(ToolCallingAgentComponent):
             raise
 
     async def get_memory_data(self):
+        # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.
         messages = (
             await MemoryComponent(**self.get_base_args())
             .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
