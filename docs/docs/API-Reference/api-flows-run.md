@@ -6,7 +6,7 @@ slug: /api-flows-run
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Use the `/run` amd `/webhook` endpoints to run flows.
+Use the `/run` and `/webhook` endpoints to run flows.
 
 To create, read, update, and delete flows, see [Flow management endpoints](/api-flows).
 
@@ -18,19 +18,14 @@ For more information, see [Generate API code snippets](/concepts-publish#generat
 :::
 
 Execute a specified flow by ID or name.
-The flow is executed as a batch, but LLM responses can be streamed.
+Flow IDs can be found on the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
 
-The following example runs a [Basic Prompting](/basic-prompting) flow with a given flow ID and passes a JSON object as the input value.
-You can find Flow IDs in the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
-
-The parameters are passed in the request body. In this example, the values are the default values.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
+The following example runs a [Basic Prompting](/basic-prompting) flow with flow parameters passed in the request body.
+This flow requires a chat input string (`input_value`), and uses default values for all other parameters.
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/run/$FLOW_ID" \
+  "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID" \
   -H "Content-Type: application/json" \
   -d '{
     "input_value": "Tell me about something interesting!",
@@ -42,10 +37,14 @@ curl -X POST \
   }'
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+The response from `/v1/run/$FLOW_ID` includes metadata, inputs, and outputs for the run.
 
-```text
+<details>
+  <summary>Result</summary>
+
+The following example illustrates a response from a Basic Prompting flow:
+
+```json
 {
   "session_id": "chat-123",
   "outputs": [{
@@ -76,20 +75,20 @@ curl -X POST \
   }]
 }
 ```
+</details>
 
-  </TabItem>
-</Tabs>
+If you are parsing the response in an application, you most likely need to extract the relevant content from the response, rather than pass the entire response back to the user.
+For an example of a script that extracts data from a Langflow API response, see the [Quickstart](/get-started-quickstart).
 
 ### Stream LLM token responses
 
-To stream LLM token responses, append the `?stream=true` query parameter to the request. LLM chat responses are streamed back as `token` events until the `end` event closes the connection.
+With `/v1/run/$FLOW_ID`, the flow is executed as a batch with optional LLM token response streaming.
 
-<Tabs>
-  <TabItem value="curl" label="curl" default>
+To stream LLM token responses, append the `?stream=true` query parameter to the request:
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/run/$FLOW_ID?stream=true" \
+  "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID?stream=true" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
@@ -98,8 +97,12 @@ curl -X POST \
   }'
 ```
 
-  </TabItem>
-  <TabItem value="result" label="Result">
+LLM chat responses are streamed back as `token` events, culminating in a final `end` event that closes the connection.
+
+<details>
+  <summary>Result</summary>
+
+The following example is truncated to illustrate a series of `token` events as well as the final `end` event that closes the LLM's token streaming response:
 
 ```text
 {"event": "add_message", "data": {"timestamp": "2025-03-03T17:20:18", "sender": "User", "sender_name": "User", "session_id": "chat-123", "text": "Tell me about something interesting!", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "0103a21b-ebf7-4c02-9d72-017fb297f812", "flow_id": "d2bbd92b-187e-4c84-b2d4-5df365704201"}}
@@ -122,21 +125,19 @@ curl -X POST \
 
 {"event": "end", "data": {"result": {"session_id": "chat-123", "message": "Sure! Have you ever heard of the phenomenon known as \"bioluminescence\"?..."}}}
 ```
-
-  </TabItem>
-</Tabs>
-
-This result is abbreviated, but illustrates where the `end` event completes the LLM's token streaming response.
+</details>
 
 ### Run endpoint headers
 
 | Header | Info | Example |
 |--------|------|---------|
 | Content-Type | Required. Specifies the JSON format. | "application/json" |
-| accept | Required. Specifies the response format. | "application/json" |
+| accept | Optional. Specifies the response format. | "application/json" |
 | x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
 
 ### Run endpoint parameters
+
+<!-- TODO: Can there be other parameters depending on the components in the flow? -->
 
 | Parameter | Type | Info |
 |-----------|------|------|
@@ -153,7 +154,7 @@ This result is abbreviated, but illustrates where the `end` event completes the 
 
 ```bash
 curl -X POST \
-  "http://$LANGFLOW_URL/api/v1/run/$FLOW_ID?stream=true" \
+  "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID?stream=true" \
   -H "Content-Type: application/json" \
   -H "accept: application/json" \
   -H "x-api-key: sk-..." \
@@ -181,7 +182,7 @@ After you add a **Webhook** component to a flow, open the [**API access** pane](
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/webhook/$FLOW_ID" \
+  "$LANGFLOW_SERVER_URL/api/v1/webhook/$FLOW_ID" \
   -H "Content-Type: application/json" \
   -d '{"data": "example-data"}'
 ```

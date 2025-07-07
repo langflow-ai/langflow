@@ -24,13 +24,13 @@ The quickstart demonstrates how to get automatically generated code snippets for
 
 ## Form Langflow API requests
 
-While individual parameters vary by endpoint, all Langflow API requests share some commonalities, like a URL, method, parameters, and authentication.
+While individual options vary by endpoint, all Langflow API requests share some commonalities, like a URL, method, parameters, and authentication.
 
 As an example of a Langflow API request, the following curl command calls the `/v1/run` endpoint, and it passes a runtime override (`tweaks`) to the flow's Chat Output component:
 
 ```bash
 curl --request POST \
-  --url "http://$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID$?stream=false" \
+  --url "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID?stream=false" \
   --header "Content-Type: application/json" \
   --header "x-api-key: $LANGFLOW_API_KEY" \
   --data '{
@@ -46,6 +46,14 @@ curl --request POST \
 ```
 
 ### Base URL
+
+<!-- For 1.5
+By default, local deployments serve the Langflow API at `http://localhost:7860/api`.
+
+Remotely hosted Langflow deployments are available at the domain set by the hosting service, such as `http://IP_OR_DNS/api` or `http://IP_OR_DNS:LANGFLOW_PORT/api`.
+
+You can configure the Langflow port number in the `LANGFLOW_PORT` [environment variable](/environment-variables).
+-->
 
 Local deployments serve the Langflow API at `http://localhost:LANGFLOW_PORT/api`.
 The default port is 7868 or 7860:
@@ -79,7 +87,7 @@ For example, you can [set environment variables](#set-environment-variables) for
 
 ### Methods, paths, and parameters
 
-Langflow API requests use a variety of methods, paths, path parameters, query parameters, and body parameters.
+Langflow API requests use various methods, paths, path parameters, query parameters, and body parameters.
 The specific requirements and options depend on the endpoint that you want to call.
 
 For example, to create a flow, you pass a JSON-formatted flow definition to `POST /v1/flows`.
@@ -95,9 +103,10 @@ If a request fails or has an unexpected result, make sure your endpoint path has
 
 ## Set environment variables
 
-As a best practice with any API, store commonly used values in environment variables to facilitate reuse, simplify token rotation, and securely reference sensitive values.
+You can store commonly used values in environment variables to facilitate reuse, simplify token rotation, and securely reference sensitive values.
 
-You can use any method you prefer to set environment variables, such as `export`, `.env`, `zshrc`, or `.curlrc`, and then reference those environment variables in your API requests.
+You can use any method you prefer to set environment variables, such as `export`, `.env`, `zshrc`, or `.curlrc`.
+Then, reference those environment variables in your API requests.
 For example:
 
 ```bash
@@ -108,7 +117,7 @@ export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 
 # Use environment variables in API requests
 curl --request POST \
-  --url "http://$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID$?stream=false" \
+  --url "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID$?stream=false" \
   --header "Content-Type: application/json" \
   --header "x-api-key: $LANGFLOW_API_KEY" \
   --data '{
@@ -139,7 +148,7 @@ Returns the current Langflow API version:
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/version" \
+  "$LANGFLOW_SERVER_URL/api/v1/version" \
   -H "accept: application/json"
 ```
 
@@ -160,7 +169,7 @@ Returns configuration details for your Langflow deployment:
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/config" \
+  "$LANGFLOW_SERVER_URL/api/v1/config" \
   -H "accept: application/json"
 ```
 
@@ -186,7 +195,7 @@ Returns a dictionary of all Langflow components:
 
 ```bash
 curl -X GET \
-  "$LANGFLOW_URL/api/v1/all" \
+  "$LANGFLOW_SERVER_URL/api/v1/all" \
   -H "accept: application/json"
 ```
 
