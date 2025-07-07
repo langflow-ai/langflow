@@ -14,7 +14,6 @@ from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
 from langchain_core.prompts.prompt import PromptTemplate
-from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
 from langflow.base.prompts.utils import dict_values_to_string
@@ -30,7 +29,7 @@ from langflow.utils.constants import (
     MESSAGE_SENDER_NAME_USER,
     MESSAGE_SENDER_USER,
 )
-from langflow.utils.image import create_data_url
+from langflow.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:
     from langflow.schema.dataframe import DataFrame
@@ -124,34 +123,6 @@ class Message(Data):
     def set_flow_id(self, flow_id: str) -> None:
         self.flow_id = flow_id
 
-    def to_lc_message(
-        self,
-    ) -> BaseMessage:
-        """Converts the Data to a BaseMessage.
-
-        Returns:
-            BaseMessage: The converted BaseMessage.
-        """
-        # The idea of this function is to be a helper to convert a Data to a BaseMessage
-        # It will use the "sender" key to determine if the message is Human or AI
-        # If the key is not present, it will default to AI
-        # But first we check if all required keys are present in the data dictionary
-        # they are: "text", "sender"
-        if self.text is None or not self.sender:
-            logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
-        text = "" if not isinstance(self.text, str) else self.text
-
-        if self.sender == MESSAGE_SENDER_USER or not self.sender:
-            if self.files:
-                contents = [{"type": "text", "text": text}]
-                contents.extend(self.get_file_content_dicts())
-                human_message = HumanMessage(content=contents)
-            else:
-                human_message = HumanMessage(content=text)
-            return human_message
-
-        return AIMessage(content=text)
-
     @classmethod
     def from_lc_message(cls, lc_message: BaseMessage) -> Message:
         if lc_message.type == "human":
@@ -206,8 +177,7 @@ class Message(Data):
             if isinstance(file, Image):
                 content_dicts.append(file.to_content_dict())
             else:
-                image_url = create_data_url(file)
-                content_dicts.append({"type": "image_url", "image_url": {"url": image_url}})
+                content_dicts.append(create_image_content_dict(file))
         return content_dicts
 
     def load_lc_prompt(self):
