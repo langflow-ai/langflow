@@ -188,7 +188,7 @@ For help with constructing file upload requests in Python, JavaScript, and curl,
 To process multiple files in a single flow run, add a separate File component for each file you want to ingest. Then, modify your script to upload each file, retrieve each returned file path, and then pass a unique file path to each File component ID.
 
 For example, you can modify `tweaks` to accept multiple file components.
-This is just an example, and not working code.
+The following code is just an example; it is not working code:
 
 ```python
 ## set multiple file paths
