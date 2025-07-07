@@ -10,7 +10,8 @@ import Icon from "@site/src/components/icon";
 You can use Langflow API keys to interact with Langflow programmatically.
 
 The API key has the same permissions and access as you do when you launch Langflow. This means your API key can only access your own flows, components, and data. You cannot access other users' resources with your own Langflow API keys.
-The API key represents the user who created them. If you create your key as a superuser, you will have superuser privileges and can manage other users, but will do so with your API key.
+An API key represents the user who created it. If you create a key as a superuser, then that key will have superuser privileges.
+Anyone who has that key can authorize superuser actions through the Langflow API, including user management and flow management.
 
 In Langflow versions 1.5 and later, most API requests require a Langflow API key, even when `AUTO_LOGIN=true`.
 
