@@ -137,7 +137,8 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["api_key"]["display_name"] = "Google API Key"
         elif field_name == "model_name" and field_value.startswith("o1") and self.provider == "OpenAI":
             # Hide system_message for o1 models - currently unsupported
-            build_config["system_message"]["show"] = False
-        elif field_name == "model_name" and not field_value.startswith("o1"):
+            if "system_message" in build_config:
+                build_config["system_message"]["show"] = False
+        elif field_name == "model_name" and not field_value.startswith("o1") and "system_message" in build_config:
             build_config["system_message"]["show"] = True
         return build_config
