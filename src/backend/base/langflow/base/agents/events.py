@@ -53,9 +53,33 @@ def _calculate_duration(start_time: float) -> int:
 
 
 def _get_message_from_base_message(base_message: BaseMessage) -> str:
-    # The content can be a list of dicts or a string
-    # [{"type": "text", "text": "anotehr test"}, {"type": "image_url", "image_url": {...}}]
-    # because of this, we need to get just the ones that are text and then join them together
+    r"""Extract text content from a BaseMessage.
+
+    BaseMessage content can be either a string or a list of content dictionaries.
+    When it's a list, each dictionary contains a 'type' field and content data.
+    This function extracts only the text content and joins multiple text blocks.
+
+    Args:
+        base_message: The BaseMessage to extract text from. Content can be:
+            - A string (returned as-is)
+            - A list of dicts like [{"type": "text", "text": "content"}, ...]
+
+    Returns:
+        The extracted text content, with multiple text blocks joined by newlines.
+
+    Example:
+        >>> msg = BaseMessage(content="Hello world")
+        >>> _get_message_from_base_message(msg)
+        "Hello world"
+
+        >>> msg = BaseMessage(content=[
+        ...     {"type": "text", "text": "Hello"},
+        ...     {"type": "image", "data": "..."},
+        ...     {"type": "text", "text": "World"}
+        ... ])
+        >>> _get_message_from_base_message(msg)
+        "Hello\nWorld"
+    """
     if isinstance(base_message.content, list):
         return "\n".join([item["text"].strip() for item in base_message.content if item["type"] == "text"])
     return base_message.content
