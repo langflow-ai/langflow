@@ -431,7 +431,14 @@ export const FilesPage = () => {
                         selectedFiles.length > 0 ? "opacity-100" : "opacity-0",
                       )}
                     >
-                      <div className="pointer-events-auto ml-12 flex h-full flex-1 items-center justify-between bg-background">
+                      <div
+                        className={cn(
+                          "ml-12 flex h-full flex-1 items-center justify-between bg-background",
+                          selectedFiles.length > 0
+                            ? "pointer-events-auto"
+                            : "pointer-events-none",
+                        )}
+                      >
                         <span className="text-xs text-muted-foreground">
                           {quantitySelected} selected
                         </span>
