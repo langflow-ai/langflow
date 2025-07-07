@@ -51,12 +51,12 @@ export default function AppHeader(): JSX.Element {
 
   return (
     <div
-      className={`z-10 flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background`}
+      className={`z-10 flex h-[48px] w-full items-center border-b px-6 dark:bg-background`}
       data-testid="app-header"
     >
       {/* Left Section */}
       <div
-        className={`z-30 flex items-center gap-2`}
+        className={`z-30 flex shrink-0 items-center gap-2`}
         data-testid="header_left_section_wrapper"
       >
         <Button
@@ -80,13 +80,13 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Middle Section */}
-      <div className="absolute left-1/2 w-full flex-1 -translate-x-1/2">
+      <div className="flex min-w-0 flex-1 justify-center px-4">
         <FlowMenu />
       </div>
 
       {/* Right Section */}
       <div
-        className={`relative left-3 z-30 flex items-center gap-3`}
+        className={`z-30 flex shrink-0 items-center gap-3`}
         data-testid="header_right_section_wrapper"
       >
         <>
