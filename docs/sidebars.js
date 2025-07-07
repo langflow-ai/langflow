@@ -30,7 +30,6 @@ module.exports = {
       items: [
         "Concepts/concepts-overview",
         "Concepts/concepts-playground",
-        "Concepts/concepts-components",
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
@@ -43,6 +42,7 @@ module.exports = {
       type: "category",
       label: "Components",
       items: [
+        "Concepts/concepts-components",
         "Components/components-agents",
         "Components/components-bundles",
         "Components/components-custom-components",
@@ -153,6 +153,11 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-docker",
           label: "Docker"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-public-server",
+          label: "Deploy a public Langflow server"
         },
         {
           type: "doc",
