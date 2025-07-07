@@ -8,8 +8,8 @@ import Loading from "@/components/ui/loading";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
-import { useGetDownloadFilesV2 } from "@/controllers/API/queries/file-management/use-get-download-files";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
+import { useCustomHandleBulkFilesDownload } from "@/customization/hooks/custom-handle-bulk-files-download";
 import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
@@ -37,6 +37,7 @@ export const FilesPage = () => {
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -75,8 +76,7 @@ export const FilesPage = () => {
   const { mutate: rename } = usePostRenameFileV2();
 
   const { mutate: deleteFiles, isPending: isDeleting } = useDeleteFilesV2();
-  const { mutate: downloadFiles, isPending: isDownloading } =
-    useGetDownloadFilesV2();
+  const { handleBulkDownload } = useCustomHandleBulkFilesDownload();
 
   const handleRename = (params: NewValueParams<any, any>) => {
     rename({
@@ -115,8 +115,9 @@ export const FilesPage = () => {
   const { mutate: uploadFileDirect } = customPostUploadFileV2();
 
   useEffect(() => {
-    if (files && files.length > 0) {
+    if (files) {
       setQuantitySelected(0);
+      setSelectedFiles([]);
     }
   }, [files]);
 
@@ -257,28 +258,16 @@ export const FilesPage = () => {
   };
 
   const handleDownload = () => {
-    console.log(selectedFiles);
-    downloadFiles(
-      {
-        ids: selectedFiles.map((file) => file.id),
-      },
-      {
-        onSuccess: (data) => {
-          setSuccessData({ title: data.message });
-          setQuantitySelected(0);
-          setSelectedFiles([]);
-        },
-        onError: (error) => {
-          setErrorData({
-            title: "Error downloading files",
-            list: [
-              error.message || "An error occurred while downloading the files",
-            ],
-          });
-        },
-      },
+    handleBulkDownload(
+      selectedFiles,
+      setSelectedFiles,
+      setQuantitySelected,
+      setSuccessData,
+      setErrorData,
+      setIsDownloading,
     );
   };
+
   const handleDelete = () => {
     deleteFiles(
       {
