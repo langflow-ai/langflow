@@ -58,6 +58,45 @@ export default function InputComponent({
     if (onBlur) onBlur(event);
   }
 
+  function handleSaveVariable() {
+    let data: {
+      name: string;
+      value: string;
+      type?: string;
+      default_fields?: string[];
+    } = {
+      name: key,
+      type,
+      value,
+      default_fields: fields,
+    };
+
+    mutateAddGlobalVariable(data, {
+      onSuccess: (res) => {
+        const { name } = res;
+        setKey("");
+        setValue("");
+        setType("");
+        setFields([]);
+        setOpen(false);
+
+        setSuccessData({
+          title: `Variable ${name} ${initialData ? "updated" : "created"} successfully`,
+        });
+      },
+      onError: (error) => {
+        let responseError = error as ResponseErrorDetailAPI;
+        setErrorData({
+          title: `Error ${initialData ? "updating" : "creating"} variable`,
+          list: [
+            responseError?.response?.data?.detail ??
+              `An unexpected error occurred while ${initialData ? "updating a new" : "creating"} variable. Please try again.`,
+          ],
+        });
+      },
+    });
+  }
+
   return (
     <div className="relative w-full">
       {isForm ? (
@@ -157,6 +196,7 @@ export default function InputComponent({
               commandWidth={commandWidth}
               blockAddNewGlobalVariable={blockAddNewGlobalVariable}
               hasRefreshButton={hasRefreshButton}
+              name={name}
             />
           )}
         </>
@@ -175,6 +215,11 @@ export default function InputComponent({
               disabled={disabled}
               onClick={(e) => {
                 if (disabled) return;
+                if (name === "api_key" && value !== "") {
+                  handleSaveVariable();
+                  return;
+                }
+
                 setShowOptions(!showOptions);
                 e.preventDefault();
                 e.stopPropagation();
@@ -186,23 +231,31 @@ export default function InputComponent({
                 !disabled && "hover:text-foreground",
               )}
             >
-              <ForwardedIconComponent
-                name={
-                  getIconName(
-                    disabled!,
-                    selectedOption!,
-                    optionsIcon,
-                    nodeStyle!,
-                    isToolMode!,
-                  ) || "ChevronsUpDown"
-                }
-                className={cn(
-                  disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
-                  "icon-size",
-                )}
-                strokeWidth={ICON_STROKE_WIDTH}
-                aria-hidden="true"
-              />
+              {name === "api_key" && selectedOptions === "" ? (
+                <div className="text-input-foreground text-[12px]">
+                  {value === "" ? "Add" : "Save"} variable
+                </div>
+              ) : name !== "api_key" ? (
+                <ForwardedIconComponent
+                  name={
+                    getIconName(
+                      disabled!,
+                      selectedOption!,
+                      optionsIcon,
+                      nodeStyle!,
+                      isToolMode!,
+                    ) || "ChevronsUpDown"
+                  }
+                  className={cn(
+                    disabled
+                      ? "cursor-grab text-placeholder"
+                      : "cursor-pointer",
+                    "icon-size",
+                  )}
+                  strokeWidth={ICON_STROKE_WIDTH}
+                  aria-hidden="true"
+                />
+              ) : null}
             </button>
           </span>
         )}
