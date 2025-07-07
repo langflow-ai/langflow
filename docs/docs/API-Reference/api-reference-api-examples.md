@@ -28,25 +28,25 @@ While individual parameters vary by endpoint, all Langflow API requests share so
 
 ### Base URL
 
-Local deployments serve the Langflow API at `http://localhost:LANGFLOW_PORT/api`.
-The default port is 7868 or 7860:
+By default, local deployments serve the Langflow API at `http://localhost:7860/api`.
 
-* Local Langflow Desktop: `http://localhost:7868/api`
-* Local Langflow OSS: `http://localhost:7860/api`
-* Local Langflow Docker image: `http://localhost:7860/api`
+Remotely hosted Langflow deployments are available at the domain set by the hosting service, such as `http://IP_OR_DNS/api` or `http://IP_OR_DNS:LANGFLOW_PORT/api`.
 
-Remotely hosted Langflow deployments are available at the domain set by the hosting service.
-For example:
+You can configure the Langflow port number in the `LANGFLOW_PORT` [environment variable](/environment-variables).
 
 * `https://UUID.ngrok.app/api`
 * `http://IP_OR_DNS/api`
 * `http://IP_OR_DNS:LANGFLOW_PORT/api`
 
-:::tip
-The Langflow port number is set in the `LANGFLOW_PORT` [environment variable](/environment-variables).
-::::
-
 ### Authentication
+
+As of Langflow v1.5, all API requests require a Langflow API key, even when `AUTO_LOGIN` is enabled.
+
+The only exceptions are the MCP endpoints at `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`.
+The MCP-related endpoints will continue to require no authentication when `AUTO_LOGIN=true`.
+
+You must provide a valid Langflow API key in either an `x-api-key` header or a query parameter.
+For more information, see [API keys](/configuration-api-keys).
 
 <details closed>
 <summary>Auto-login and API key authentication in earlier Langflow versions</summary>
@@ -56,14 +56,6 @@ Prior to Langflow v1.5, when `AUTO_LOGIN` was enabled with `AUTO_LOGIN=true`, La
 If you set `SKIP_AUTH_AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key, regardless of the `AUTO_LOGIN` setting.
 
 </details>
-
-As of Langflow v1.5, all API requests require a Langflow API key, even when `AUTO_LOGIN` is enabled.
-
-The only exceptions are the MCP endpoints at `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`.
-The MCP-related endpoints will continue to require no authentication when `AUTO_LOGIN=true`.
-
-You must provide a valid Langflow API key in either an `x-api-key` header or a query parameter.
-For more information, see [API keys](/configuration-api-keys).
 
 ### Methods, paths, and parameters
 
