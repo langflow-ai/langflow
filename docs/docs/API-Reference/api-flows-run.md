@@ -124,12 +124,10 @@ The following example is truncated to illustrate a series of `token` events as w
 
 ### Run endpoint headers
 
-<!-- TODO: Is accept required? -->
-
 | Header | Info | Example |
 |--------|------|---------|
 | Content-Type | Required. Specifies the JSON format. | "application/json" |
-| accept | Required. Specifies the response format. | "application/json" |
+| accept | Optional. Specifies the response format. | "application/json" |
 | x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
 
 ### Run endpoint parameters
