@@ -114,6 +114,12 @@ export const FilesPage = () => {
 
   const { mutate: uploadFileDirect } = customPostUploadFileV2();
 
+  useEffect(() => {
+    if (files && files.length > 0) {
+      setQuantitySelected(0);
+    }
+  }, [files]);
+
   const colDefs: ColDef[] = [
     {
       headerName: "Name",
@@ -259,6 +265,8 @@ export const FilesPage = () => {
       {
         onSuccess: (data) => {
           setSuccessData({ title: data.message });
+          setQuantitySelected(0);
+          setSelectedFiles([]);
         },
         onError: (error) => {
           setErrorData({
@@ -279,6 +287,8 @@ export const FilesPage = () => {
       {
         onSuccess: (data) => {
           setSuccessData({ title: data.message });
+          setQuantitySelected(0);
+          setSelectedFiles([]);
         },
         onError: (error) => {
           setErrorData({
