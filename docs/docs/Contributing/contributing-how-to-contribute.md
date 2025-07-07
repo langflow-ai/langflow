@@ -21,11 +21,9 @@ Install Langflow from source by forking the repository, and then set up your dev
 * [Node.js](https://nodejs.org/en/download/package-manager)
 * [Make](https://www.gnu.org/software/make/#documentation)
 
-:::important
-Make is not required for Windows installations. Installing and running Windows from source uses node and uv.
-Scripts are also provided in the `/scripts/windows` directory of the Langflow project.
+:::tip Windows
+For Windows installations, you don't need need Make, and you can find [Windows scripts](https://github.com/langflow-ai/langflow/tree/main/scripts/windows) in the Langflow repository.
 :::
-
 ### Clone the Langflow repository
 
 1. Fork the [Langflow GitHub repository](https://github.com/langflow-ai/langflow).
@@ -43,14 +41,14 @@ Replace the following:
 If you're not developing, but want to run Langflow from source after cloning the repo, run the following commands.
 
 <Tabs groupId="os">
-  <TabItem value="macOS/Linux" label="macOS/Linux" default>
+  <TabItem value="Linux and macOS" label="Linux and macOS" default>
 
 1. To run Langflow from source, run the following command:
     ```bash
     make run_cli
     ```
 
-    This command:
+    This command does the following:
     - Installs frontend and backend dependencies
     - Builds the frontend static files
     - Starts the application with default settings
@@ -106,7 +104,7 @@ Two scripts are available to install and start Langflow.
     make init
     ```
 
-    This command sets up the development environment by:
+    This command sets up the development environment by doing the following:
     - Checking for uv and npm.
     - Installing backend and frontend dependencies.
     - Installing pre-commit hooks.
@@ -125,7 +123,7 @@ Two scripts are available to install and start Langflow.
 
     The `make backend` and `make frontend` commands automatically install dependencies, so you don't need to run install commands separately.
 
-3. (Optional) Install pre-commit hooks to help keep your changes clean and well-formatted. `make init` installs pre-commit hooks automatically.
+3. Optional: Install pre-commit hooks to help keep your changes clean and well-formatted. `make init` installs pre-commit hooks automatically.
 
     ```bash
     uv sync
@@ -211,7 +209,7 @@ yarn install
 yarn start
 ```
 
-The documentation will be available at `localhost:3000`.
+The documentation is available at `localhost:3000`.
 The Markdown content files are located in the `langflow/docs/docs` folder.
 
 5. Optional: Run `yarn build` to build the site locally and ensure there are no broken links.

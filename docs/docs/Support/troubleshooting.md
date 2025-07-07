@@ -139,14 +139,16 @@ The cache folder location depends on your OS:
 
 The following issues can occur when uninstalling Langflow.
 
-### Uninstalling Langflow Desktop on macOS
+### Dot directory isn't deleted when uninstalling Langflow Desktop on macOS
 
-On macOS, uninstalling Langflow Desktop deletes the `.app` file but does **not** delete files generated during usage, which remain stored in the `/Users/USERNAME/.langflow` directory. These files include data and settings from the previous installation, so when Langflow Desktop is reinstalled, it will start with the existing data.
+On macOS, uninstalling Langflow Desktop deletes the `.app` file but doesn't delete files in `~/.langflow`, which includes files generated during usage like cache and settings.
 
-To fully remove Langflow and start fresh with a future installation, delete the `/Users/USERNAME/.langflow` folder with the following command:
+If you reinstall Langflow Desktop, it starts with the existing data from the previous installation.
+
+To fully remove a Langflow Desktop macOS installation, you must also delete `~/.langflow`:
 
     ```bash
-    rm -rf /Users/USERNAME/.langflow
+    rm -rf .langflow
     ```
 
 ## MCP server issues
