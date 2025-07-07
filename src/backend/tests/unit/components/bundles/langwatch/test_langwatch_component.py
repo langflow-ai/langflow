@@ -9,6 +9,7 @@ from httpx import Response
 from langflow.components.langwatch.langwatch import LangWatchComponent
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -157,7 +158,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         )
 
         # Mock the get_evaluators method (which doesn't exist, so create it)
-        def mock_get_evaluators(endpoint):
+        def mock_get_evaluators(endpoint):  # noqa: ARG001
             return mock_evaluators
 
         with patch.object(component, "get_evaluators", side_effect=mock_get_evaluators, create=True):
@@ -183,7 +184,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         )
 
         # Mock the get_evaluators method (which doesn't exist, so create it)
-        def mock_get_evaluators(endpoint):
+        def mock_get_evaluators(endpoint):  # noqa: ARG001
             return mock_evaluators
 
         with patch.object(component, "get_evaluators", side_effect=mock_get_evaluators, create=True):
