@@ -11,9 +11,9 @@ import {
 } from "@/controllers/API/queries/mcp";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
+import { useCustomIsLocalConnection } from "@/customization/hooks/use-custom-is-local-connection";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
-import { useIsLocalConnection } from "@/hooks/useIsLocalConnection";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -150,7 +150,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
 
   // Check if the current connection is local
-  const isLocalConnection = useIsLocalConnection();
+  const isLocalConnection = useCustomIsLocalConnection();
 
   const [selectedMode, setSelectedMode] = useState(
     isLocalConnection ? "Auto install" : "JSON",
