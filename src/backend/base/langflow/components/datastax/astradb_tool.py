@@ -17,7 +17,7 @@ from langflow.schema.table import EditMode
 class AstraDBToolComponent(LCToolComponent):
     display_name: str = "Astra DB Tool"
     description: str = "Tool to run hybrid vector and metadata search on DataStax Astra DB Collection"
-    documentation: str = "https://docs.langflow.org/components-tools#astra-db-tool"
+    documentation: str = "https://docs.langflow.org/components-bundle-components"
     icon: str = "AstraDB"
 
     inputs = [
