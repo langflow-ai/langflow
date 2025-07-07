@@ -24,7 +24,7 @@ export const MCPServerNotice: FC<{
         </div>
         <img src={MCPLangflow} alt="MCP Notice Modal" className="rounded-xl" />
         <p className="text-sm text-secondary-foreground">
-          Expose flows as actions from clients like Cursor or Claude.
+          Expose flows as tools from clients like Cursor or Claude.
         </p>
       </div>
 
