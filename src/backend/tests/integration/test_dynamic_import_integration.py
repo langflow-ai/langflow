@@ -36,7 +36,6 @@ class TestDynamicImportIntegration:
 
         # Test module imports
         import langflow.components.openai as openai_comp
-        from langflow.components.agents import AgentComponent
 
         # All should work
         assert OpenAIModelComponent is not None
@@ -62,6 +61,23 @@ class TestDynamicImportIntegration:
 
         # Components should have all necessary attributes for template creation
         assert hasattr(OpenAIModelComponent, "__name__")
+        assert hasattr(OpenAIModelComponent, "__module__")
+        assert hasattr(OpenAIModelComponent, "display_name")
+        assert isinstance(OpenAIModelComponent.display_name, str)
+        assert OpenAIModelComponent.display_name
+        assert hasattr(OpenAIModelComponent, "description")
+        assert isinstance(OpenAIModelComponent.description, str)
+        assert OpenAIModelComponent.description
+        assert hasattr(OpenAIModelComponent, "icon")
+        assert isinstance(OpenAIModelComponent.icon, str)
+        assert OpenAIModelComponent.icon
+        assert hasattr(OpenAIModelComponent, "inputs")
+        assert isinstance(OpenAIModelComponent.inputs, list)
+        assert len(OpenAIModelComponent.inputs) > 0
+        # Check that each input has required attributes
+        for input_field in OpenAIModelComponent.inputs:
+            assert hasattr(input_field, "name"), f"Input {input_field} missing 'name' attribute"
+            assert hasattr(input_field, "display_name"), f"Input {input_field} missing 'display_name' attribute"
 
     def test_multiple_import_styles_same_result(self):
         """Test that different import styles yield the same component."""
@@ -258,6 +274,10 @@ class TestDynamicImportIntegration:
         # Test all major import patterns that should still work
 
         # 1. Direct component imports
+        from langflow.components.data import APIRequestComponent
+
+        assert AgentComponent is not None
+        assert APIRequestComponent is not None
 
         # 2. Module imports
         # 3. Main module access
@@ -270,8 +290,6 @@ class TestDynamicImportIntegration:
         direct_component = openai_mod.OpenAIModelComponent
 
         # All patterns should work and yield consistent results
-        assert AgentComponent is not None
-        assert APIRequestComponent is not None
         assert openai_mod.OpenAIModelComponent is not None
         assert helpers_mod.CalculatorComponent is not None
         assert nested_component is direct_component
