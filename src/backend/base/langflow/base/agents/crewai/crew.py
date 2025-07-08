@@ -21,23 +21,20 @@ def _find_api_key(model):
     Returns:
         The API key if found, otherwise None.
     """
-    # Define the possible API key attribute patterns
-    key_patterns = ["key", "token"]
+    # Use lower-case pattern set for fast substring checks
+    key_patterns = ("key", "token")  # tuple for faster iteration
+    attributes = (
+        vars(model) if hasattr(model, "__dict__") else {attr: getattr(model, attr, None) for attr in dir(model)}
+    )
 
-    # Iterate over the model attributes
-    for attr in dir(model):
-        attr_lower = attr.lower()
-
-        # Check if the attribute name contains any of the key patterns
-        if any(pattern in attr_lower for pattern in key_patterns):
-            value = getattr(model, attr, None)
-
-            # Check if the value is a non-empty string
-            if isinstance(value, str):
+    for attr, value in attributes.items():
+        alower = attr.lower()
+        if ("key" in alower) or ("token" in alower):
+            # Check for non-empty string or SecretStr, as before
+            if isinstance(value, str) and value:
                 return value
             if isinstance(value, SecretStr):
                 return value.get_secret_value()
-
     return None
 
 
@@ -60,23 +57,17 @@ def convert_llm(llm: Any, excluded_keys=None):
     if not llm:
         return None
 
-    # Check if this is already an LLM object
     if isinstance(llm, LLM):
         return llm
 
-    # Check if we should use model_name model, or something else
-    if hasattr(llm, "model_name") and llm.model_name:
-        model_name = llm.model_name
-    elif hasattr(llm, "model") and llm.model:
-        model_name = llm.model
-    elif hasattr(llm, "deployment_name") and llm.deployment_name:
-        model_name = llm.deployment_name
+    # Fast path for selecting model_name
+    for attr in ("model_name", "model", "deployment_name"):
+        model_name = getattr(llm, attr, None)
+        if model_name:
+            break
     else:
-        msg = "Could not find model name in the LLM object"
-        raise ValueError(msg)
+        raise ValueError("Could not find model name in the LLM object")
 
-    # Normalize to the LLM model name
-    # Remove langchain_ prefix if present
     provider = llm.get_lc_namespace()[0]
     api_base = None
     if provider.startswith("langchain_"):
@@ -86,19 +77,21 @@ def convert_llm(llm: Any, excluded_keys=None):
         api_base = llm.azure_endpoint
         model_name = f"azure/{model_name}"
 
-    # Retrieve the API Key from the LLM
+    # Only create excluded_keys if needed
     if excluded_keys is None:
         excluded_keys = {"model", "model_name", "_type", "api_key", "azure_deployment"}
 
-    # Find the API key in the LLM
     api_key = _find_api_key(llm)
 
-    # Convert Langchain LLM to CrewAI-compatible LLM object
+    # Use a list/generator expression for dict filtering for a slight speedup
+    llm_dict = llm.dict()
+    filtered = {k: v for k, v in llm_dict.items() if k not in excluded_keys}
+
     return LLM(
         model=model_name,
         api_key=api_key,
         api_base=api_base,
-        **{k: v for k, v in llm.dict().items() if k not in excluded_keys},
+        **filtered,
     )
 
 
