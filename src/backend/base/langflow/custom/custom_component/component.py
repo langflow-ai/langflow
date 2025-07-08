@@ -900,7 +900,9 @@ class Component(CustomComponent):
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
-        return_type = get_type_hints(method)["return"]
+        return_type = get_type_hints(method).get("return")
+        if return_type is None:
+            return []
         extracted_return_types = self._extract_return_type(return_type)
         return [format_type(extracted_return_type) for extracted_return_type in extracted_return_types]
 
