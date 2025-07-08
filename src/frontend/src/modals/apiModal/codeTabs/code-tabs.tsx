@@ -120,12 +120,12 @@ export default function APITabsComponent() {
     >
       <div className="flex items-center justify-between">
         {tabsList.length > 0 && tabsList[0].title !== "" ? (
-          <TabsList className="flex w-fit items-center rounded bg-muted p-1">
+          <TabsList className="bg-muted flex w-fit items-center rounded p-1">
             {tabsList.map((tab, index) => (
               <TabsTrigger
                 key={index}
                 value={index.toString()}
-                className="flex items-center gap-2.5 rounded-md border-0! px-4 py-2 text-sm! data-[state=active]:bg-background"
+                className="data-[state=active]:bg-background flex items-center gap-2.5 rounded-md border-0! px-4 py-2 text-sm!"
               >
                 <IconComponent name={tab.icon} className="h-4 w-4" />
                 {tab.title}
@@ -149,17 +149,17 @@ export default function APITabsComponent() {
               size="icon"
               onClick={copyToClipboard}
               data-testid="btn-copy-code"
-              className="!hover:bg-foreground group absolute right-4 top-2"
+              className="!hover:bg-foreground group absolute top-2 right-4"
             >
               {isCopied ? (
                 <IconComponent
                   name="Check"
-                  className="h-5 w-5 text-muted-foreground"
+                  className="text-muted-foreground h-5 w-5"
                 />
               ) : (
                 <IconComponent
                   name="Copy"
-                  className="h-5! w-5! text-muted-foreground"
+                  className="text-muted-foreground h-5! w-5!"
                 />
               )}
             </Button>
@@ -168,7 +168,7 @@ export default function APITabsComponent() {
               wrapLongLines={true}
               language={tab.language}
               style={dark ? oneDark : oneLight}
-              className="mt-0! h-full w-full overflow-scroll rounded-b-md! border border-border text-left custom-scroll!"
+              className="border-border custom-scroll! mt-0! h-full w-full overflow-scroll rounded-b-md! border text-left"
             >
               {tab.code}
             </SyntaxHighlighter>

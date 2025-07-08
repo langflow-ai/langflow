@@ -85,7 +85,7 @@ function ConfirmationModal({
         {icon && (
           <GenericIconComponent
             name={icon}
-            className="h-6 w-6 pl-1 text-foreground"
+            className="text-foreground h-6 w-6 pl-1"
             aria-hidden="true"
           />
         )}

@@ -75,14 +75,14 @@ export default function NodeDescription({
       return emptyPlaceholder;
     }
     return (
-      <div className={cn(
-        "markdown prose flex w-full flex-col leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:bg-code-description-background! [&_pre_code]:bg-code-description-background!",
-        stickyNote ? "text-mmd" : "text-xs",
-        mdClassName,
-      )}>
-        <MemoizedMarkdown>
-          {String(description)}
-        </MemoizedMarkdown>
+      <div
+        className={cn(
+          "markdown prose word-break-break-word [&_pre]:bg-code-description-background! [&_pre_code]:bg-code-description-background! flex w-full flex-col leading-5 [&_pre]:whitespace-break-spaces",
+          stickyNote ? "text-mmd" : "text-xs",
+          mdClassName,
+        )}
+      >
+        <MemoizedMarkdown>{String(description)}</MemoizedMarkdown>
       </div>
     );
   }, [description, emptyPlaceholder, mdClassName]);
@@ -153,9 +153,9 @@ export default function NodeDescription({
           <Textarea
             maxLength={charLimit}
             className={cn(
-              "nowheel w-full text-xs focus:border-primary focus:ring-0",
+              "nowheel focus:border-primary w-full text-xs focus:ring-0",
               stickyNote
-                ? "overflow-auto p-0 px-2 pt-0.5 text-mmd!"
+                ? "text-mmd! overflow-auto p-0 px-2 pt-0.5"
                 : "px-2 py-0.5",
               inputClassName,
             )}
@@ -169,7 +169,7 @@ export default function NodeDescription({
           {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (
             <div
               className={cn(
-                "pt-1 text-left text-mmd!",
+                "text-mmd! pt-1 text-left",
                 (nodeDescription?.length ?? 0) >= charLimit
                   ? "text-error"
                   : "text-primary",
@@ -186,7 +186,7 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-grab text-muted-foreground word-break-break-word",
+            "nodoubleclick generic-node-desc-text text-muted-foreground word-break-break-word h-full cursor-grab",
             description === "" || !description ? "font-light italic" : "",
             placeholderClassName,
           )}

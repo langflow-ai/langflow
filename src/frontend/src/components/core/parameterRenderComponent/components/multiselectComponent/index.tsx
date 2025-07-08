@@ -122,7 +122,7 @@ export default function MultiselectComponent({
       >
         <span className="truncate" data-testid={`value-dropdown-${id}`}>
           {treatedValue.length > 0 &&
-            options.find((option) => treatedValue.includes(option))
+          options.find((option) => treatedValue.includes(option))
             ? treatedValue.join(", ")
             : "Choose an option..."}
         </span>
@@ -145,7 +145,7 @@ export default function MultiselectComponent({
           setSearchValue(event.target.value);
         }}
         placeholder="Search options..."
-        className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        className="placeholder:text-muted-foreground flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
       />
       <Button
         unstyled
@@ -170,7 +170,7 @@ export default function MultiselectComponent({
               <CommandItem
                 value={option}
                 onSelect={handleOptionSelect}
-                className="items-center overflow-hidden truncate"
+                className="items-center truncate overflow-hidden"
                 data-testid={`${option}-${id ?? ""}-option`}
               >
                 {(customValues.includes(option) || searchValue === option) && (
@@ -180,7 +180,7 @@ export default function MultiselectComponent({
                 <ForwardedIconComponent
                   name="Check"
                   className={cn(
-                    "ml-auto h-4 w-4 shrink-0 text-primary",
+                    "text-primary ml-auto h-4 w-4 shrink-0",
                     treatedValue.includes(option) ? "opacity-100" : "opacity-0",
                   )}
                 />

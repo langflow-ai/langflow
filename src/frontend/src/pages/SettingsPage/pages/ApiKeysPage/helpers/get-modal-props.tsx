@@ -17,7 +17,7 @@ export const getModalPropsApiKey = () => {
     inputLabel: (
       <>
         <span className="text-sm">Description</span>{" "}
-        <span className="text-xs text-muted-foreground">(optional)</span>
+        <span className="text-muted-foreground text-xs">(optional)</span>
       </>
     ),
   };

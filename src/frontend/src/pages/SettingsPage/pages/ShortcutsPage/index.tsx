@@ -63,10 +63,10 @@ export default function ShortcutsPage() {
             Shortcuts
             <ForwardedIconComponent
               name="Keyboard"
-              className="ml-2 h-5 w-5 text-primary"
+              className="text-primary ml-2 h-5 w-5"
             />
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Manage Shortcuts for quick access to frequently used actions.
           </p>
         </div>

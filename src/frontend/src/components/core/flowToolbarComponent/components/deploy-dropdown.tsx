@@ -120,7 +120,7 @@ export default function PublishDropdown() {
           >
             <DropdownMenuItem
               className="deploy-dropdown-item group"
-              onClick={() => { }}
+              onClick={() => {}}
               data-testid="mcp-server-item"
             >
               <IconComponent name="Mcp" className={`icon-size mr-2`} />
@@ -145,7 +145,7 @@ export default function PublishDropdown() {
             <DropdownMenuItem
               className="deploy-dropdown-item group"
               disabled={!hasIO}
-              onClick={() => { }}
+              onClick={() => {}}
               data-testid="shareable-playground"
             >
               <div className="flex w-full items-center justify-between">

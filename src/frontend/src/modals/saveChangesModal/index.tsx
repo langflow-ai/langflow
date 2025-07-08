@@ -45,7 +45,7 @@ export function SaveChangesModal({
     >
       <ConfirmationModal.Content>
         {autoSave ? (
-          <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-muted px-4 py-2 text-muted-foreground">
+          <div className="bg-muted text-muted-foreground mb-4 flex w-full items-center gap-3 rounded-md px-4 py-2">
             <Loading className="h-5 w-5" />
             Saving your changes...
           </div>

@@ -253,8 +253,8 @@ export default function ChatView({
         "flex h-full w-full flex-col rounded-md",
         visibleSession ? "h-[95%]" : "h-full",
         sidebarOpen &&
-        !isVoiceAssistantActive &&
-        "pointer-events-none blur-xs lg:pointer-events-auto lg:blur-0",
+          !isVoiceAssistantActive &&
+          "lg:blur-0 pointer-events-none blur-xs lg:pointer-events-auto",
       )}
       onDragOver={dragOver}
       onDragEnter={dragEnter}
@@ -295,11 +295,11 @@ export default function ChatView({
                     className="h-10 w-10 scale-[1.5]"
                   />
                   <div className="flex flex-col items-center justify-center">
-                    <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
+                    <h3 className="text-primary mt-2 pb-2 text-2xl font-semibold">
                       New chat
                     </h3>
                     <p
-                      className="text-lg text-muted-foreground"
+                      className="text-muted-foreground text-lg"
                       data-testid="new-chat-text"
                     >
                       <TextEffectPerChar>
@@ -314,7 +314,7 @@ export default function ChatView({
         <div
           className={
             displayLoadingMessage
-              ? "w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
+              ? "word-break-break-word w-full max-w-[768px] py-4 md:w-5/6"
               : ""
           }
           ref={ref}

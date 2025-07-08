@@ -35,7 +35,7 @@ const ActiveButton = () => (
 
 const DisabledButton = () => (
   <div
-    className="playground-btn-flow-toolbar cursor-not-allowed text-muted-foreground duration-150"
+    className="playground-btn-flow-toolbar text-muted-foreground cursor-not-allowed duration-150"
     data-testid="playground-btn-flow"
   >
     <PlayIcon />

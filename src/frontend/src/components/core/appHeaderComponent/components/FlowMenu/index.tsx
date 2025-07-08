@@ -102,7 +102,7 @@ export const MenuBar = memo((): JSX.Element => {
             {currentFolder?.name && (
               <div className="hidden truncate md:flex">
                 <div
-                  className="cursor-pointer truncate text-sm text-muted-foreground hover:text-primary"
+                  className="text-muted-foreground hover:text-primary cursor-pointer truncate text-sm"
                   onClick={() => {
                     navigate(
                       currentFolder?.id
@@ -117,7 +117,7 @@ export const MenuBar = memo((): JSX.Element => {
             )}
           </div>
           <div
-            className="hidden w-fit shrink-0 select-none font-normal text-muted-foreground md:flex"
+            className="text-muted-foreground hidden w-fit shrink-0 font-normal select-none md:flex"
             data-testid="menu_bar_separator"
           >
             /
@@ -135,7 +135,7 @@ export const MenuBar = memo((): JSX.Element => {
             >
               <span
                 ref={measureRef}
-                className="w-fit max-w-[35vw] truncate whitespace-pre text-mmd font-semibold sm:max-w-full sm:text-sm"
+                className="text-mmd w-fit max-w-[35vw] truncate font-semibold whitespace-pre sm:max-w-full sm:text-sm"
                 aria-hidden="true"
                 data-testid="flow_name"
               >
@@ -147,7 +147,7 @@ export const MenuBar = memo((): JSX.Element => {
                 className={cn(
                   "h-5 w-3.5 -translate-x-2 opacity-0 transition-all",
                   !openSettings &&
-                  "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
+                    "sm:group-hover:translate-x-0 sm:group-hover:opacity-100",
                 )}
               />
             </div>
@@ -161,12 +161,12 @@ export const MenuBar = memo((): JSX.Element => {
                       ? "Saving..."
                       : "Save Changes"
                     : SAVED_HOVER +
-                    (updatedAt
-                      ? new Date(updatedAt).toLocaleString("en-US", {
-                        hour: "numeric",
-                        minute: "numeric",
-                      })
-                      : "Never")
+                      (updatedAt
+                        ? new Date(updatedAt).toLocaleString("en-US", {
+                            hour: "numeric",
+                            minute: "numeric",
+                          })
+                        : "Never")
                 }
                 side="bottom"
                 styleClasses="cursor-default z-10"
@@ -176,7 +176,7 @@ export const MenuBar = memo((): JSX.Element => {
                     variant="primary"
                     size="iconMd"
                     disabled={!changesNotSaved || isBuilding || saveLoading}
-                    className={cn("h-7 w-7 border-border")}
+                    className={cn("border-border h-7 w-7")}
                     onClick={handleSave}
                     data-testid="save-flow-button"
                   >

@@ -55,7 +55,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
     <div className="flex w-full flex-col-reverse">
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-focus:border-primary"
+        className="border-input hover:border-muted-foreground has-focus:border-primary flex w-full flex-col rounded-md border p-4 focus:border-[1.75px]"
       >
         <TextAreaWrapper
           isBuilding={isBuilding}
@@ -86,13 +86,13 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
           <div className={isBuilding ? "cursor-not-allowed" : ""}>
             {(!playgroundPage ||
               (playgroundPage && ENABLE_IMAGE_ON_PLAYGROUND)) && (
-                <UploadFileButton
-                  isBuilding={isBuilding}
-                  fileInputRef={fileInputRef}
-                  handleFileChange={handleFileChange}
-                  handleButtonClick={handleButtonClick}
-                />
-              )}
+              <UploadFileButton
+                isBuilding={isBuilding}
+                fileInputRef={fileInputRef}
+                handleFileChange={handleFileChange}
+                handleButtonClick={handleButtonClick}
+              />
+            )}
           </div>
           <div className="flex items-center gap-2">
             {ENABLE_VOICE_ASSISTANT && (

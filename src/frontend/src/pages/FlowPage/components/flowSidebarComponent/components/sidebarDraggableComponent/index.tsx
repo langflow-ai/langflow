@@ -123,17 +123,17 @@ export const SidebarDraggableComponent = forwardRef(
             data-tooltip-id={itemName}
             tabIndex={0}
             onKeyDown={handleKeyDown}
-            className="m-[1px] rounded-md outline-hidden ring-ring focus-visible:ring-1"
+            className="ring-ring m-[1px] rounded-md outline-hidden focus-visible:ring-1"
             data-testid={`${sectionName.toLowerCase()}_${display_name.toLowerCase()}_draggable`}
           >
             <div
               data-testid={sectionName + display_name}
               id={sectionName + display_name}
               className={cn(
-                "group/draggable flex cursor-grab items-center gap-2 rounded-md bg-muted p-3 hover:bg-secondary-hover/75",
+                "group/draggable bg-muted hover:bg-secondary-hover/75 flex cursor-grab items-center gap-2 rounded-md p-3",
                 error && "cursor-not-allowed select-none",
                 disabled
-                  ? "pointer-events-none bg-accent text-placeholder-foreground"
+                  ? "bg-accent text-placeholder-foreground pointer-events-none"
                   : "bg-muted text-foreground",
               )}
               draggable={!error}
@@ -201,7 +201,7 @@ export const SidebarDraggableComponent = forwardRef(
                 <div ref={popoverRef}>
                   <ForwardedIconComponent
                     name="GripVertical"
-                    className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
+                    className="text-muted-foreground group-hover/draggable:text-primary h-4 w-4 shrink-0"
                   />
                   <SelectTrigger tabIndex={-1}></SelectTrigger>
                   <SelectContent

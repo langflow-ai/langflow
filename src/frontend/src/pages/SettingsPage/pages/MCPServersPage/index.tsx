@@ -64,10 +64,10 @@ export default function MCPServersPage() {
             MCP Servers
             <ForwardedIconComponent
               name="Mcp"
-              className="ml-2 h-5 w-5 text-primary"
+              className="text-primary ml-2 h-5 w-5"
             />
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Manage MCP Servers for use in your flows.
           </p>
         </div>
@@ -87,11 +87,11 @@ export default function MCPServersPage() {
         {servers ? (
           <>
             {servers.length === 0 ? (
-              <div className="w-full pt-8 text-center text-sm text-muted-foreground">
+              <div className="text-muted-foreground w-full pt-8 text-center text-sm">
                 No MCP servers added
               </div>
             ) : (
-              <div className="text-sm font-medium text-muted-foreground">
+              <div className="text-muted-foreground text-sm font-medium">
                 Added MCP Servers
               </div>
             )}
@@ -99,14 +99,14 @@ export default function MCPServersPage() {
               {servers.map((server) => (
                 <div
                   key={server.id}
-                  className="flex items-center justify-between rounded-lg px-3 py-2 shadow-xs transition-colors hover:bg-accent"
+                  className="hover:bg-accent flex items-center justify-between rounded-lg px-3 py-2 shadow-xs transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{server.name}</span>
                     <ShadTooltip content={server.error}>
                       <span
                         className={cn(
-                          "cursor-default select-none text-mmd! text-muted-foreground",
+                          "text-mmd! text-muted-foreground cursor-default select-none",
                           server.error && "text-accent-red-foreground",
                         )}
                       >

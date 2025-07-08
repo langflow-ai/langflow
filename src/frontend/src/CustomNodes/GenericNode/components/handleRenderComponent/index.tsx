@@ -141,9 +141,10 @@ const HandleContent = memo(function HandleContent({
 
   return (
     <div
-      data-testid={`div-handle-${testIdComplement}-${title.toLowerCase()}-${!showNode ? (left ? "target" : "source") : left ? "left" : "right"
-        }`}
-      className="noflow nowheel nopan noselect pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full"
+      data-testid={`div-handle-${testIdComplement}-${title.toLowerCase()}-${
+        !showNode ? (left ? "target" : "source") : left ? "left" : "right"
+      }`}
+      className="noflow nowheel nopan noselect pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full"
       style={contentStyle}
     />
   );
@@ -189,17 +190,19 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     handleDragging,
     filterType,
     onConnect,
-  } = useFlowStore(useShallow(
-    useCallback(
-      (state) => ({
-        setHandleDragging: state.setHandleDragging,
-        setFilterType: state.setFilterType,
-        handleDragging: state.handleDragging,
-        filterType: state.filterType,
-        onConnect: state.onConnect,
-      }),
-      [],
-    )),
+  } = useFlowStore(
+    useShallow(
+      useCallback(
+        (state) => ({
+          setHandleDragging: state.setHandleDragging,
+          setFilterType: state.setFilterType,
+          handleDragging: state.handleDragging,
+          filterType: state.filterType,
+          onConnect: state.onConnect,
+        }),
+        [],
+      ),
+    ),
   );
 
   const dark = useDarkStore((state) => state.dark);
@@ -241,7 +244,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       handleDragging &&
       (left ? handleDragging?.target : handleDragging?.source) &&
       (left ? handleDragging.targetHandle : handleDragging.sourceHandle) ===
-      myId;
+        myId;
 
     const ownFilterHandle =
       filterType &&
@@ -250,15 +253,15 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
     const draggingOpenHandle =
       handleDragging &&
-        (left ? handleDragging.source : handleDragging.target) &&
-        !ownDraggingHandle
+      (left ? handleDragging.source : handleDragging.target) &&
+      !ownDraggingHandle
         ? isValidConnection(getConnection(handleDragging))
         : false;
 
     const filterOpenHandle =
       filterType &&
-        (left ? filterType.source : filterType.target) &&
-        !ownFilterHandle
+      (left ? filterType.source : filterType.target) &&
+      !ownFilterHandle
         ? isValidConnection(getConnection(filterType))
         : false;
 
@@ -306,21 +309,21 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
     const currentFilter = left
       ? {
-        targetHandle: myId,
-        target: nodeId,
-        source: undefined,
-        sourceHandle: undefined,
-        type: tooltipTitle,
-        color: handleColorName,
-      }
+          targetHandle: myId,
+          target: nodeId,
+          source: undefined,
+          sourceHandle: undefined,
+          type: tooltipTitle,
+          color: handleColorName,
+        }
       : {
-        sourceHandle: myId,
-        source: nodeId,
-        target: undefined,
-        targetHandle: undefined,
-        type: tooltipTitle,
-        color: handleColorName,
-      };
+          sourceHandle: myId,
+          source: nodeId,
+          target: undefined,
+          targetHandle: undefined,
+          type: tooltipTitle,
+          color: handleColorName,
+        };
 
     return {
       sameNode: sameDraggingNode || sameFilterNode,
@@ -428,8 +431,9 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           onMouseDown={handleMouseDown}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${!showNode ? (left ? "target" : "source") : left ? "left" : "right"
-            }`}
+          data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
+            !showNode ? (left ? "target" : "source") : left ? "left" : "right"
+          }`}
         >
           <HandleContent
             isNullHandle={isNullHandle ?? false}

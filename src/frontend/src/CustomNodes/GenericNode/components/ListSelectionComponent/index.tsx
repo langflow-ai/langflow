@@ -29,7 +29,7 @@ const ListSelectionComponent = ({
   onClose,
   searchCategories = [],
   onSelection,
-  setSelectedList = () => { },
+  setSelectedList = () => {},
   selectedList = [],
   options,
   limit = 1,
@@ -180,7 +180,7 @@ const ListSelectionComponent = ({
             <div className="flex items-center gap-2 p-1">
               <ForwardedIconComponent
                 name={nodeClass?.icon || "unknown"}
-                className="h-[18px] w-[18px] text-muted-foreground"
+                className="text-muted-foreground h-[18px] w-[18px]"
               />
               <div className="text-[13px] font-semibold">
                 {nodeClass?.display_name}
@@ -251,7 +251,7 @@ const ListSelectionComponent = ({
         <DialogFooter>
           {onAddButtonClick && (
             <Button
-              className="flex w-full items-center gap-2 border-t px-4 py-3 text-mmd! hover:bg-muted"
+              className="text-mmd! hover:bg-muted flex w-full items-center gap-2 border-t px-4 py-3"
               unstyled
               onClick={onAddButtonClick}
             >

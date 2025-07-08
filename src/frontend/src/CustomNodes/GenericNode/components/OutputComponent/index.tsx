@@ -80,11 +80,11 @@ export default function OutputComponent({
               className="no-focus-visible group flex items-center gap-2"
               data-testid={`dropdown-output-${outputName?.toLowerCase()}`}
             >
-              <div className="flex items-center gap-1 truncate rounded-md px-2 py-1 text-[13px] font-medium group-hover:bg-primary/10">
+              <div className="group-hover:bg-primary/10 flex items-center gap-1 truncate rounded-md px-2 py-1 text-[13px] font-medium">
                 {name}
                 <ForwardedIconComponent
                   name="ChevronDown"
-                  className="h-4 w-4 text-muted-foreground"
+                  className="text-muted-foreground h-4 w-4"
                 />
               </div>
             </Button>
@@ -92,7 +92,7 @@ export default function OutputComponent({
           <PopoverContentWithoutPortal
             side="bottom"
             align="end"
-            className="noflow nowheel nopan nodelete nodrag w-full min-w-[200px] max-w-[250px] p-0"
+            className="noflow nowheel nopan nodelete nodrag w-full max-w-[250px] min-w-[200px] p-0"
           >
             <Command>
               <CommandList>
@@ -110,7 +110,7 @@ export default function OutputComponent({
                       <span className="truncate text-[13px]">
                         {output.display_name ?? output.name}
                       </span>
-                      <span className="ml-4 text-[13px] text-muted-foreground">
+                      <span className="text-muted-foreground ml-4 text-[13px]">
                         {output.types.join(", ")}
                       </span>
                     </CommandItem>

@@ -52,7 +52,7 @@ export const AccountMenu = () => {
           </div>
         </HeaderMenuToggle>
         <HeaderMenuItems position="right" classNameSize="w-[272px]">
-          <div className="divide-y divide-foreground/10">
+          <div className="divide-foreground/10 divide-y">
             <div>
               <div className="h-[44px] items-center px-4 pt-3">
                 <div className="flex items-center justify-between">

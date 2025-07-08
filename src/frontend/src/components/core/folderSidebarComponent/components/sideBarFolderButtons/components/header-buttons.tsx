@@ -54,7 +54,7 @@ export const HeaderButtons = ({
           />
 
           <div className="-mx-4 mt-1 w-[280px]">
-            <hr className="border-t-1 w-full" />
+            <hr className="w-full border-t-1" />
           </div>
         </>
       )}

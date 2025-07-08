@@ -50,7 +50,7 @@ export const SelectOptions = ({
             <IconComponent
               name={"MoreHorizontal"}
               className={cn(
-                `w-4 stroke-[1.5] px-0 text-muted-foreground group-hover/menu-button:block group-hover/menu-button:text-foreground`,
+                `text-muted-foreground group-hover/menu-button:text-foreground w-4 stroke-[1.5] px-0 group-hover/menu-button:block`,
                 checkPathName(item.id!) ? "block" : "hidden",
               )}
             />

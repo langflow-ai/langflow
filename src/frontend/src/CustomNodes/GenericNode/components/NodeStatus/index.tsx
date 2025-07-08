@@ -374,7 +374,7 @@ export default function NodeStatus({
             >
               <div className="cursor-help">
                 {conditionSuccess && validationStatus?.data?.duration ? (
-                  <div className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald">
+                  <div className="text-accent-emerald-foreground hover:bg-accent-emerald flex rounded-sm px-1 font-mono text-xs transition-colors">
                     <span>
                       {normalizeTimeString(validationStatus?.data?.duration)}
                     </span>
@@ -402,7 +402,7 @@ export default function NodeStatus({
                   onClick={handleClickConnect}
                   data-testid={getDataTestId()}
                 >
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                     <IconComponent
                       name={
                         isPolling
@@ -419,11 +419,11 @@ export default function NodeStatus({
                       strokeWidth={ICON_STROKE_WIDTH}
                     />
                   </div>
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                     <IconComponent
                       name={"Unlink"}
                       className={cn(
-                        "h-2.5 w-2.5 text-accent-amber-foreground opacity-0 transition-opacity",
+                        "text-accent-amber-foreground h-2.5 w-2.5 opacity-0 transition-opacity",
                         isAuthenticated && !isPolling
                           ? "group-hover:opacity-100"
                           : "",

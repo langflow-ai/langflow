@@ -131,7 +131,7 @@ export default function ApiModal({
           />
           <span className="pl-2">API access</span>
           {nodes.length > 0 && (
-            <div className="border-r-1 absolute right-12 flex items-center text-mmd font-medium leading-[16px]">
+            <div className="text-mmd absolute right-12 flex items-center border-r-1 leading-[16px] font-medium">
               <Button
                 variant="ghost"
                 size="icon"
@@ -172,7 +172,7 @@ export default function ApiModal({
           {true && (
             <Label>
               <div className="edit-flow-arrangement mt-2">
-                <span className="shrink-0 text-mmd font-medium">
+                <span className="text-mmd shrink-0 font-medium">
                   Endpoint Name
                 </span>
                 {!validEndpointName && (
@@ -203,7 +203,7 @@ export default function ApiModal({
                 API schema.
               </span>
             </div>
-            <div className="min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll">
+            <div className="bg-muted custom-scroll min-h-0 w-full flex-1 flex-col overflow-x-hidden overflow-y-auto rounded-lg">
               <TweaksComponent open={openTweaks} />
             </div>
           </div>

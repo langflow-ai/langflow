@@ -196,7 +196,7 @@ export default function CodeAreaModal({
         <span className="pr-2"> {EDIT_CODE_TITLE} </span>
         <IconComponent
           name="prompts"
-          className="h-6 w-6 pl-1 text-primary"
+          className="text-primary h-6 w-6 pl-1"
           aria-hidden="true"
         />
       </BaseModal.Header>
@@ -204,7 +204,7 @@ export default function CodeAreaModal({
         <Input
           value={code}
           readOnly
-          className="absolute left-[500%] top-[500%]"
+          className="absolute top-[500%] left-[500%]"
           id="codeValue"
         />
         <div className="flex h-full w-full flex-col transition-all">
@@ -226,7 +226,7 @@ export default function CodeAreaModal({
               onChange={(value) => {
                 setCode(value);
               }}
-              className="h-full min-w-full rounded-lg border-[1px] border-gray-300 custom-scroll dark:border-gray-600"
+              className="custom-scroll h-full min-w-full rounded-lg border-[1px] border-gray-300 dark:border-gray-600"
             />
           </div>
           <div
@@ -235,15 +235,15 @@ export default function CodeAreaModal({
               (error?.detail?.error !== undefined ? "h-2/6" : "h-0")
             }
           >
-            <div className="mt-5 h-full max-h-[10rem] w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
+            <div className="custom-scroll mt-5 h-full max-h-[10rem] w-full overflow-x-clip overflow-y-auto text-left">
               <h1
                 data-testid="title_error_code_modal"
-                className="text-lg text-error"
+                className="text-error text-lg"
               >
                 {error?.detail?.error}
               </h1>
-              <div className="ml-2 mt-2 w-full text-sm text-destructive word-break-break-word">
-                <span className="w-full word-break-break-word">
+              <div className="text-destructive word-break-break-word mt-2 ml-2 w-full text-sm">
+                <span className="word-break-break-word w-full">
                   {error?.detail?.traceback}
                 </span>
               </div>

@@ -91,7 +91,7 @@ export default function UpdateComponentModal({
       cellClass: "text-muted-foreground",
       cellRenderer: (params) => {
         return params.value ? (
-          <span className="font-semibold text-accent-amber-foreground">
+          <span className="text-accent-amber-foreground font-semibold">
             Breaking
           </span>
         ) : (
@@ -139,11 +139,11 @@ export default function UpdateComponentModal({
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-3 text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex flex-col gap-3 text-sm">
             {isMultiple ? (
               <p>
                 Updates marked as{" "}
-                <span className="font-semibold text-accent-amber-foreground">
+                <span className="text-accent-amber-foreground font-semibold">
                   breaking
                 </span>{" "}
                 may change inputs, outputs, or component behavior. In some
@@ -156,7 +156,7 @@ export default function UpdateComponentModal({
                 <p>
                   This update may change inputs, outputs, or component behavior.
                   In some cases, it will{" "}
-                  <span className="font-semibold text-accent-amber-foreground">
+                  <span className="text-accent-amber-foreground font-semibold">
                     disconnect this component from your flow
                   </span>
                   , requiring you to review or reconnect it afterward.

@@ -13,6 +13,7 @@ import { APIClassType } from "@/types/api";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import {
   Select,
@@ -41,7 +42,6 @@ import ToolbarModals from "./components/toolbar-modals";
 import useShortcuts from "./hooks/use-shortcuts";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
-import { useShallow } from "zustand/react/shallow";
 
 const NodeToolbarComponent = memo(
   ({
@@ -68,11 +68,13 @@ const NodeToolbarComponent = memo(
     const updateFreezeStatus = useFlowStore(
       (state) => state.updateFreezeStatus,
     );
-    const { hasStore, hasApiKey, validApiKey } = useStoreStore(useShallow((state) => ({
-      hasStore: state.hasStore,
-      hasApiKey: state.hasApiKey,
-      validApiKey: state.validApiKey,
-    })));
+    const { hasStore, hasApiKey, validApiKey } = useStoreStore(
+      useShallow((state) => ({
+        hasStore: state.hasStore,
+        hasApiKey: state.hasApiKey,
+        validApiKey: state.validApiKey,
+      })),
+    );
     const shortcuts = useShortcutsStore((state) => state.shortcuts);
     const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
     const [openModal, setOpenModal] = useState(false);
@@ -138,10 +140,10 @@ const NodeToolbarComponent = memo(
       if (data.node?.tool_mode !== undefined) {
         setToolMode(
           data.node?.tool_mode ||
-          data.node?.outputs?.some(
-            (output) => output.name === "component_as_tool",
-          ) ||
-          false,
+            data.node?.outputs?.some(
+              (output) => output.name === "component_as_tool",
+            ) ||
+            false,
         );
       }
     }, [data.node?.tool_mode, data.node?.outputs]);
@@ -564,7 +566,7 @@ const NodeToolbarComponent = memo(
                 </ShadTooltip>
               </SelectTrigger>
               <SelectContentWithoutPortal
-                className={"relative top-1 w-56 bg-background"}
+                className={"bg-background relative top-1 w-56"}
               >
                 <SelectItem value={"save"}>
                   <ToolbarSelectItem
@@ -701,14 +703,14 @@ const NodeToolbarComponent = memo(
                   />
                 </SelectItem>
                 <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
-                  <div className="font-red flex text-status-red">
+                  <div className="font-red text-status-red flex">
                     <IconComponent
                       name="Trash2"
                       className="relative top-0.5 mr-2 h-4 w-4"
                     />{" "}
                     <span className="">Delete</span>{" "}
                     <span
-                      className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2]`}
+                      className={`absolute top-2 right-2 flex items-center justify-center rounded-sm px-1 py-[0.2]`}
                     >
                       <IconComponent
                         name="Delete"

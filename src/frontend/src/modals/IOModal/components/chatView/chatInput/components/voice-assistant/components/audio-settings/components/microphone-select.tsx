@@ -80,7 +80,7 @@ const MicrophoneSelect = ({
             <IconComponent
               name="Info"
               strokeWidth={2}
-              className="relative -top-[3px] left-1 h-[14px] w-[14px] text-placeholder"
+              className="text-placeholder relative -top-[3px] left-1 h-[14px] w-[14px]"
             />
           </div>
         </ShadTooltip>

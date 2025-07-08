@@ -84,7 +84,7 @@ export default function ImageViewer({ image }: { image: string }) {
   }
 
   return image === "" ? (
-    <div className="align-center flex h-full w-full flex-col justify-center gap-5 rounded-md border border-border bg-muted">
+    <div className="align-center border-border bg-muted flex h-full w-full flex-col justify-center gap-5 rounded-md border">
       <div className="align-center flex justify-center gap-2">
         <ForwardedIconComponent name="Image" />
         {IMGViewErrorTitle}
@@ -98,14 +98,14 @@ export default function ImageViewer({ image }: { image: string }) {
   ) : (
     <>
       <div className="align-center my-2 mb-4 flex w-full justify-center">
-        <div className="shadow-round-btn-shadow hover:shadow-round-btn-shadow flex w-[50%] items-center justify-center rounded-sm border bg-muted shadow-md transition-all">
+        <div className="shadow-round-btn-shadow hover:shadow-round-btn-shadow bg-muted flex w-[50%] items-center justify-center rounded-sm border shadow-md transition-all">
           <button
             id="zoom-in-button"
-            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
+            className="hover:bg-hover relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out"
           >
             <ForwardedIconComponent
               name="ZoomIn"
-              className={"h-5 w-5 text-secondary-foreground"}
+              className={"text-secondary-foreground h-5 w-5"}
             />
           </button>
           <div>
@@ -113,11 +113,11 @@ export default function ImageViewer({ image }: { image: string }) {
           </div>
           <button
             id="zoom-out-button"
-            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
+            className="hover:bg-hover relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out"
           >
             <ForwardedIconComponent
               name="ZoomOut"
-              className={"h-5 w-5 text-secondary-foreground"}
+              className={"text-secondary-foreground h-5 w-5"}
             />
           </button>
           <div>
@@ -125,11 +125,11 @@ export default function ImageViewer({ image }: { image: string }) {
           </div>
           <button
             id="home-button"
-            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
+            className="hover:bg-hover relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out"
           >
             <ForwardedIconComponent
               name="RotateCcw"
-              className={"h-5 w-5 text-secondary-foreground"}
+              className={"text-secondary-foreground h-5 w-5"}
             />
           </button>
           <div>
@@ -137,11 +137,11 @@ export default function ImageViewer({ image }: { image: string }) {
           </div>
           <button
             id="full-page-button"
-            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
+            className="hover:bg-hover relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out"
           >
             <ForwardedIconComponent
               name="Maximize2"
-              className={"h-5 w-5 text-secondary-foreground"}
+              className={"text-secondary-foreground h-5 w-5"}
             />
           </button>
           <div>
@@ -150,11 +150,11 @@ export default function ImageViewer({ image }: { image: string }) {
 
           <button
             onClick={download}
-            className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover"
+            className="hover:bg-hover relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all duration-500 ease-in-out"
           >
             <ForwardedIconComponent
               name="ArrowDownToLine"
-              className={"h-5 w-5 text-secondary-foreground"}
+              className={"text-secondary-foreground h-5 w-5"}
             />
           </button>
         </div>

@@ -57,10 +57,11 @@ const TextAreaWrapper = ({
         resize: "none",
         bottom: `${inputRef?.current?.scrollHeight}px`,
         maxHeight: "150px",
-        overflow: `${inputRef.current && inputRef.current.scrollHeight > 150
-          ? "auto"
-          : "hidden"
-          }`,
+        overflow: `${
+          inputRef.current && inputRef.current.scrollHeight > 150
+            ? "auto"
+            : "hidden"
+        }`,
       }}
       value={chatValue}
       onChange={(event): void => {
