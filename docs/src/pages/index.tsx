@@ -1,6 +1,7 @@
 import React from "react";
 import Layout from "@theme/Layout";
 import Link from "@docusaurus/Link";
+import ThemedImage from "@theme/ThemedImage";
 import {
   CirclePlay,
   Server,
@@ -40,9 +41,12 @@ export default function Home() {
             </p>
           </div>
           <div className={styles.heroImage}>
-            <img
-              src="img/lf-agent.png"
+            <ThemedImage
               alt="Langflow MCP Server with GitPoet agent example"
+              sources={{
+                light: "img/lf-agent-light.png",
+                dark: "img/lf-agent-dark.png",
+              }}
               className={styles.heroImageContent}
             />
           </div>
