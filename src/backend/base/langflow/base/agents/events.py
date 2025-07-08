@@ -63,8 +63,14 @@ async def handle_on_chain_start(
         input_data = event["data"].get("input")
         if isinstance(input_data, dict) and "input" in input_data:
             # Cast the input_data to InputDict
+            input_message = input_data.get("input", "")
+            if isinstance(input_message, BaseMessage):
+                input_message = input_message.text()
+            elif not isinstance(input_message, str):
+                input_message = str(input_message)
+
             input_dict: InputDict = {
-                "input": str(input_data.get("input", "")),
+                "input": input_message,
                 "chat_history": input_data.get("chat_history", []),
             }
             text_content = TextContent(

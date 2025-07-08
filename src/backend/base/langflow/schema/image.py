@@ -22,7 +22,7 @@ def get_file_paths(files: list[str]):
     storage_service = get_storage_service()
     file_paths = []
     for file in files:
-        file_path = Path(file)
+        file_path = Path(file.path) if hasattr(file, "path") and file.path else Path(file)
         flow_id, file_name = str(file_path.parent), file_path.name
         file_paths.append(storage_service.build_full_path(flow_id=flow_id, file_name=file_name))
     return file_paths

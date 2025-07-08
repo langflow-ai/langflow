@@ -13,7 +13,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
-from langflow.utils.image import create_data_url
+from langflow.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:
     from langflow.schema.dataframe import DataFrame
@@ -171,11 +171,10 @@ class Data(BaseModel):
             if files:
                 from langflow.schema.image import get_file_paths
 
-                contents = [{"type": "text", "text": text}]
                 resolved_file_paths = get_file_paths(files)
-                for file_path in resolved_file_paths:
-                    image_url = create_data_url(file_path)
-                    contents.append({"type": "image_url", "image_url": {"url": image_url}})
+                contents = [create_image_content_dict(file_path) for file_path in resolved_file_paths]
+                # add to the beginning of the list
+                contents.insert(0, {"type": "text", "text": text})
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(
