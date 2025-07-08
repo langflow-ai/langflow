@@ -23,7 +23,22 @@ To install multiple extras, use commas to separate each dependency group:
 uv pip install "langflow[deploy,local,postgresql]"
 ```
 
-## Install custom dependencies
+## Install custom dependencies in Langflow Desktop {#langflow-desktop}
+
+To add dependencies to **Langflow Desktop**, add an entry for the package to the application's `requirements.txt` file.
+
+    * On macOS, the file is located at `/Users/<name>/.langflow/data/requirements.txt`.
+    * On Windows, the file is located at `C:\Users\<name>\AppData\Roaming\com.Langflow\data\requirements.txt`.
+
+Add the dependency and version to `requirements.txt` in the following format:
+
+    ```
+    docling==2.40.0
+    ```
+
+Restart Langflow desktop to install the dependency.
+
+## Install custom dependencies in Langflow OSS
 
 To install your own custom dependencies in your Langflow environment, add them with your package manager.
 

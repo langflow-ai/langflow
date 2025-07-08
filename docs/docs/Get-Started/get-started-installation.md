@@ -39,6 +39,10 @@ To manage your version of Langflow Desktop, follow these steps:
   3. To apply the change, click **Confirm**.
   Langflow desktop restarts to install and activate the new version.
 
+### Manage dependencies in Langflow Desktop
+
+To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
+
 ## Install and run Langflow with Docker {#install-and-run-langflow-docker}
 
 You can use the [Langflow Docker image](https://hub.docker.com/r/langflowai/langflow) to run Langflow in an isolated environment.

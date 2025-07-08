@@ -108,6 +108,12 @@ There are two possible reasons for this error:
 
 * **Version conflict during installation**: Some version conflicts might have occurred during the installation process. To resolve this issue, reinstall Langflow and its dependencies by running `python -m pip install langflow --pre -U --force-reinstall`.
 
+### Package is not installed in Langflow Desktop
+
+In Langflow OSS, you can follow the error message's instructions to install the missing dependency.
+
+For managing dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
+
 ## Langflow upgrade issues
 
 The following issues can occur when upgrading your Langflow version.
