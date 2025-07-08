@@ -7,6 +7,5 @@ export const WatsonxAiIcon = forwardRef<
   React.PropsWithChildren<{}>
 >((props, ref) => {
   const isdark = useDarkStore((state) => state.dark).toString();
-  console.log(isdark);
   return <SvgWatsonxAI ref={ref} isdark={isdark} {...props} />;
 });
