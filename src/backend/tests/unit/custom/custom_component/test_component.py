@@ -9,6 +9,14 @@ from langflow.schema import dotdict
 from langflow.template import Output
 from typing_extensions import override
 
+crewai_available = False
+try:
+    import crewai  # noqa: F401
+
+    crewai_available = True
+except ImportError:
+    pass
+
 
 def test_set_invalid_output():
     chatinput = ChatInput()
@@ -17,6 +25,7 @@ def test_set_invalid_output():
         chatoutput.set(input_value=chatinput.build_config)
 
 
+@pytest.mark.skipif(not crewai_available, reason="CrewAI is not installed")
 def test_set_component():
     crewai_agent = CrewAIAgentComponent()
     task = SequentialTaskComponent()
