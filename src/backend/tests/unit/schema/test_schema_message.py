@@ -65,9 +65,8 @@ def test_message_from_human_text():
     lc_message = message.to_lc_message()
 
     assert isinstance(lc_message, HumanMessage)
-    assert isinstance(lc_message.content, list)
-    assert len(lc_message.content) == 1
-    assert lc_message.content[0] == {"type": "text", "text": text}
+    assert isinstance(lc_message.content, str)
+    assert lc_message.content == text
 
 
 def test_message_from_ai_text():
