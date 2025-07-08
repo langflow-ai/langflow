@@ -1650,7 +1650,7 @@
 @utility input-slider-text {
   @apply absolute right-3 w-14 -translate-y-3.5 cursor-text rounded-sm px-2 py-[1px] text-center hover:ring-[1px] hover:ring-slider-input-border;
 }
-
+  
 @utility btn-add-input-list {
   @apply flex h-6 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
 }
@@ -1665,6 +1665,15 @@
   --tw-ring-shadow: none !important;
   --tw-ring-offset-shadow: none !important;
   --tw-ring-color: none !important;
+}
+
+/* Customs */
+.cursor-pointer,
+.cursor-default,
+.cursor-not-allowed,
+label,
+button {
+  @apply select-none;
 }
 
 /* Gradient background */
