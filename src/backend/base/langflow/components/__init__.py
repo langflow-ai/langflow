@@ -73,7 +73,6 @@ if TYPE_CHECKING:
         tools,
         twelvelabs,
         unstructured,
-        vectara,
         vectorstores,
         vertexai,
         wikipedia,
@@ -156,7 +155,6 @@ _dynamic_imports = {
     "wikipedia": "langflow.components.wikipedia",
     "youtube": "langflow.components.youtube",
     "scrapegraph": "langflow.components.scrapegraph",
-    "vectara": "langflow.components.vectara",
     "Notion": "langflow.components.Notion",
     "wolframalpha": "langflow.components.wolframalpha",
 }
