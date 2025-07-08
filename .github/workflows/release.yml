@@ -41,6 +41,7 @@ on:
         default: true
 
 
+
 jobs:
   ci:
     if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' }}
@@ -50,6 +51,8 @@ jobs:
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
+    secrets: inherit
+
 
   release-base:
     name: Release Langflow Base
