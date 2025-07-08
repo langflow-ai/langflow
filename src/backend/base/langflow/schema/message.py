@@ -141,7 +141,7 @@ class Message(Data):
             logger.warning("Missing required keys ('text', 'sender') in Message, defaulting to HumanMessage.")
         text = "" if not isinstance(self.text, str) else self.text
 
-        if self.sender == MESSAGE_SENDER_USER or not self.sender:
+        if self.sender == MESSAGE_SENDER_USER:
             if self.files:
                 contents = [{"type": "text", "text": text}]
                 contents.extend(self.get_file_content_dicts())
