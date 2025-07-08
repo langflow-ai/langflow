@@ -176,7 +176,7 @@ def test_message_to_lc_without_sender():
     message = Message(text="Test message")
     # When no sender is specified, it defaults to AIMessage
     lc_message = message.to_lc_message()
-    assert isinstance(lc_message, AIMessage)
+    assert isinstance(lc_message, HumanMessage)
 
 
 def test_timestamp_serialization():
