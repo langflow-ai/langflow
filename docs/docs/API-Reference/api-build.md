@@ -95,10 +95,8 @@ curl -X GET \
 | Header | Info | Example |
 |--------|------|---------|
 | Content-Type | Required. Specifies the JSON format. | "application/json" |
-| accept | Required. Specifies the response format. | "application/json" |
+| accept | Optional. Specifies the response format. | "application/json" |
 | x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
-
-The `/build/$FLOW_ID/flow` endpoint accepts the following parameters in its request body:
 
 ## Build parameters
 
