@@ -53,46 +53,61 @@ const ExportModal = forwardRef(
         size="smaller-h-full"
         open={open}
         setOpen={setOpen}
-        onSubmit={() => {
-          if (checked) {
-            downloadFlow(
-              {
-                id: currentFlow!.id,
-                data: currentFlow!.data!,
+        onSubmit={async () => {
+          try {
+            let filePath: string | undefined | void;
+
+            if (checked) {
+              filePath = await downloadFlow(
+                {
+                  id: currentFlow!.id,
+                  data: currentFlow!.data!,
+                  description,
+                  name,
+                  last_tested_version: version,
+                  endpoint_name: currentFlow!.endpoint_name,
+                  is_component: false,
+                  tags: currentFlow!.tags,
+                },
+                name!,
                 description,
-                name,
-                last_tested_version: version,
-                endpoint_name: currentFlow!.endpoint_name,
-                is_component: false,
-                tags: currentFlow!.tags,
-              },
-              name!,
-              description,
-            );
-            setNoticeData({
-              title: API_WARNING_NOTICE_ALERT,
-            });
-          } else
-            downloadFlow(
-              removeApiKeys({
-                id: currentFlow!.id,
-                data: currentFlow!.data!,
+              );
+
+              if (filePath) {
+                setNoticeData({
+                  title: API_WARNING_NOTICE_ALERT,
+                });
+                setOpen(false);
+                track("Flow Exported", { flowId: currentFlow!.id });
+              }
+            } else {
+              filePath = await downloadFlow(
+                removeApiKeys({
+                  id: currentFlow!.id,
+                  data: currentFlow!.data!,
+                  description,
+                  name,
+                  last_tested_version: version,
+                  endpoint_name: currentFlow!.endpoint_name,
+                  is_component: false,
+                  tags: currentFlow!.tags,
+                }),
+                name!,
                 description,
-                name,
-                last_tested_version: version,
-                endpoint_name: currentFlow!.endpoint_name,
-                is_component: false,
-                tags: currentFlow!.tags,
-              }),
-              name!,
-              description,
-            ).then(() => {
-              setSuccessData({
-                title: "Flow exported successfully",
-              });
-            });
-          setOpen(false);
-          track("Flow Exported", { flowId: currentFlow!.id });
+              );
+
+              if (filePath) {
+                setSuccessData({
+                  title: "Flow exported successfully",
+                });
+                setOpen(false);
+                track("Flow Exported", { flowId: currentFlow!.id });
+              }
+            }
+          } catch (error) {
+            console.error("Error exporting flow:", error);
+            // Handle error - maybe show an error alert
+          }
         }}
       >
         <BaseModal.Trigger asChild>{props.children ?? <></>}</BaseModal.Trigger>
