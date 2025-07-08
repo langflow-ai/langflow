@@ -40,8 +40,8 @@ export default function Home() {
             </p>
           </div>
           <div className={styles.heroImage}>
-            <img 
-              src="/img/lf-agent.png" 
+            <img
+              src="img/lf-agent.png"
               alt="Langflow MCP Server with GitPoet agent example"
               className={styles.heroImageContent}
             />

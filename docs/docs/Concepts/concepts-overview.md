@@ -55,7 +55,7 @@ The **workspace** is where you create AI applications by connecting and running 
 Components are the building blocks of your flows.
 For more information, see [Components overview](/concepts-components).
 
-<img src="/img/prompt-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
+<img src="img/prompt-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
 
 ## Playground
 

@@ -47,8 +47,8 @@ export default function Navbar(props) {
         <ThemedImage
           alt="Langflow Logo"
           sources={{
-            light: "/img/lf-docs-light.svg",
-            dark: "/img/lf-docs-dark.svg",
+            light: "img/lf-docs-light.svg",
+            dark: "img/lf-docs-dark.svg",
           }}
         />
       </Link>

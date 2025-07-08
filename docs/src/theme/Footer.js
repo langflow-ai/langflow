@@ -60,7 +60,7 @@ export default function FooterWrapper(props) {
         }}
       >
         <img
-          src="/img/langflow-icon-black-transparent.svg"
+          src="img/langflow-icon-black-transparent.svg"
           style={{ width: "40px" }}
           alt="Search"
         />
