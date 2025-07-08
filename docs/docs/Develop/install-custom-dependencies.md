@@ -27,8 +27,8 @@ uv pip install "langflow[deploy,local,postgresql]"
 
 To add dependencies to **Langflow Desktop**, add an entry for the package to the application's `requirements.txt` file.
 
-    * On macOS, the file is located at `/Users/<name>/.langflow/data/requirements.txt`.
-    * On Windows, the file is located at `C:\Users\<name>\AppData\Roaming\com.Langflow\data\requirements.txt`.
+    * On macOS, the file is located at `/Users/USER/.langflow/data/requirements.txt`.
+    * On Windows, the file is located at `C:\Users\USER\AppData\Roaming\com.Langflow\data\requirements.txt`.
 
 Add the dependency and version to `requirements.txt` in the following format:
 
