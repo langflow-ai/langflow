@@ -51,9 +51,6 @@ __all__ = [
     "YfinanceToolComponent",
 ]
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", LangChainDeprecationWarning)
-
 
 def __getattr__(attr_name: str) -> Any:
     """Lazily import tool components on attribute access."""
@@ -61,7 +58,9 @@ def __getattr__(attr_name: str) -> Any:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)
     try:
-        result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", LangChainDeprecationWarning)
+            result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
     except (ModuleNotFoundError, ImportError, AttributeError) as e:
         msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
         raise AttributeError(msg) from e
