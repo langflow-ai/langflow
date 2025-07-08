@@ -233,7 +233,7 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_WORKERS"/><span class="env-prefix">LANGFLOW_</span>WORKERS | Integer | `1` | Number of worker processes.<br/>See [`--workers` option](./configuration-cli.md#run-workers). |
 | <Link id="LANGFLOW_SSL_CERT_FILE"/><span class="env-prefix">LANGFLOW_</span>SSL_CERT_FILE | String | Not set | Path to the SSL certificate file on the local system. |
 | <Link id="LANGFLOW_SSL_KEY_FILE"/><span class="env-prefix">LANGFLOW_</span>SSL_KEY_FILE | String | Not set | Path to the SSL key file on the local system. |
-| <Link id="SKIP_AUTH_AUTO_LOGIN"/>SKIP_AUTH_AUTO_LOGIN | Boolean | `false` | If set to `true`, disables automatic login and enforces authentication, regardless of the value of `LANGFLOW_AUTO_LOGIN`. Useful for deployments where authentication must always be required. |
+| <Link id="SKIP_AUTH_AUTO_LOGIN"/>SKIP_AUTH_AUTO_LOGIN | Boolean | `false` | If set to `true`, disables automatic login and enforces authentication, regardless of the value of `LANGFLOW_AUTO_LOGIN`.
 </div>
 
 
