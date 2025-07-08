@@ -66,7 +66,7 @@ class SequentialTaskComponent(Component):
         tasks.append(task)
         self.status = task
         if self.task:
-            if isinstance(self.task, list) and all(isinstance(task, SequentialTask) for task in self.task):
+            if isinstance(self.task, list) and all(isinstance(task_item, SequentialTask) for task_item in self.task):
                 tasks = self.task + tasks
             elif isinstance(self.task, SequentialTask):
                 tasks = [self.task, *tasks]
