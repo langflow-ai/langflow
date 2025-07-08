@@ -8,7 +8,7 @@ from langflow.base.models.model_input_constants import (
     MODEL_PROVIDERS,
 )
 from langflow.base.models.openai_constants import (
-    OPENAI_MODEL_NAMES,
+    OPENAI_CHAT_MODEL_NAMES,
     OPENAI_REASONING_MODEL_NAMES,
 )
 from langflow.components.agents.agent import AgentComponent
@@ -142,7 +142,7 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
 
         # Iterate over all OpenAI models
         failed_models = []
-        for model_name in OPENAI_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
+        for model_name in OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
             # Initialize the AgentComponent with mocked inputs
             tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
             agent = AgentComponent(
