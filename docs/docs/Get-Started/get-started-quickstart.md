@@ -37,7 +37,7 @@ To create a Langflow API key, do the following:
        "input_value": "Hello"
      }'
     ```
-    Alternatively, the API pane's code snippets include a script to detect your local `LANGFLOW_API_KEY` variable.
+    The API access pane's code snippets include a script that looks for a `LANGFLOW_API_KEY` environment variable set in your terminal session.
     Set this variable in your terminal so you can copy and paste the commands.
     ```bash
     export LANGFLOW_API_KEY="sk..."
@@ -96,7 +96,7 @@ Langflow provides code snippets to help you get started with the Langflow API.
 1. To open the **API access pane**, in the **Playground**, click **Share**, and then click **API access**.
 
     The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data.
-    The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow, and a script to include your `LANGFLOW_API_KEY` if you've set it as a variable.
+    The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow, and a script to include your `LANGFLOW_API_KEY` if you've set it as an environment variable in your terminal session.
     Replace these values if you're using the code for a different server or flow.
     The default Langflow server address is `http://localhost:7860`.
 

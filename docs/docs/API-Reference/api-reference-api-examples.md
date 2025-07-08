@@ -62,7 +62,7 @@ You can configure the Langflow port number in the `LANGFLOW_PORT` [environment v
 As of Langflow v1.5, all API requests require a Langflow API key, even when `AUTO_LOGIN` is enabled.
 
 The only exceptions are the MCP endpoints at `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`.
-The MCP-related endpoints will continue to require no authentication when `AUTO_LOGIN=true`.
+These endpoints don't require authentication, regardless of the `AUTO_LOGIN` setting.
 
 You must provide a valid Langflow API key in either an `x-api-key` header or a query parameter.
 For more information, see [API keys](/configuration-api-keys).
