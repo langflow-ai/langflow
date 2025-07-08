@@ -32,6 +32,7 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 5. If you installed the new version in isolation, upgrade your primary installation after testing the new version.
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
+
 ## 1.5.0
 
 The following updates are included in this version:
