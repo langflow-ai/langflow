@@ -2,12 +2,10 @@ import { customGetHostProtocol } from "@/customization/utils/custom-get-host-pro
 
 export function getNewPythonApiCode({
   flowId,
-  isAuthenticated,
   endpointName,
   processedPayload,
 }: {
   flowId: string;
-  isAuthenticated: boolean;
   endpointName: string;
   processedPayload: any;
 }): string {
@@ -20,18 +18,14 @@ export function getNewPythonApiCode({
     .replace(/null/g, "None");
 
   return `import requests
-${
-  isAuthenticated
-    ? `import os
+import os
 
 # API Configuration
 try:
     api_key = os.environ["LANGFLOW_API_KEY"]
 except KeyError:
     raise ValueError("LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.")
-`
-    : ""
-}
+
 url = "${apiUrl}"  # The complete API endpoint URL for this flow
 
 # Request payload configuration
@@ -39,7 +33,7 @@ payload = ${payloadString}
 
 # Request headers
 headers = {
-    "Content-Type": "application/json"${isAuthenticated ? ',\n    "x-api-key": api_key  # Authentication key from environment variable' : ""}
+    "Content-Type": "application/json",\n    "x-api-key": api_key  # Authentication key from environment variable
 }
 
 try:

@@ -40,13 +40,11 @@ export function getCurlWebhookCode({
 
 export function getNewCurlCode({
   flowId,
-  isAuthenticated,
   endpointName,
   processedPayload,
   platform,
 }: {
   flowId: string;
-  isAuthenticated: boolean;
   endpointName: string;
   processedPayload: any;
   platform?: "unix" | "powershell";
@@ -65,27 +63,19 @@ export function getNewCurlCode({
 
   if (detectedPlatform === "powershell") {
     // PowerShell with here-string (most robust for complex JSON)
-    return `${
-      isAuthenticated
-        ? `if (-not $env:LANGFLOW_API_KEY) {
+    return `if (-not $env:LANGFLOW_API_KEY) {
     Write-Error "LANGFLOW_API_KEY environment variable not found"
     exit 1
 }
 
-`
-        : ""
-    }$jsonData = @'
+$jsonData = @'
 ${singleLinePayload}
 '@
 
 curl --request POST \`
      --url "${apiUrl}?stream=false" \`
-     --header "Content-Type: application/json"${
-       isAuthenticated
-         ? ` \`
-     --header "x-api-key: $env:LANGFLOW_API_KEY"`
-         : ""
-     } \`
+     --header "Content-Type: application/json" \`
+     --header "x-api-key: $env:LANGFLOW_API_KEY" \`
      --data $jsonData`;
   } else {
     // Unix-like systems (Linux, Mac, WSL2)
@@ -94,24 +84,16 @@ curl --request POST \`
       .map((line, index) => (index === 0 ? line : "         " + line))
       .join("\n\t\t");
 
-    return `${
-      isAuthenticated
-        ? `# Get API key from environment variable
+    return `# Get API key from environment variable
 if [ -z "$LANGFLOW_API_KEY" ]; then
     echo "Error: LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables."
     exit 1
 fi
 
-`
-        : ""
-    }curl --request POST \\
+curl --request POST \\
      --url '${apiUrl}?stream=false' \\
-     --header 'Content-Type: application/json' \\${
-       isAuthenticated
-         ? `
-     --header "x-api-key: $LANGFLOW_API_KEY" \\`
-         : ""
-     }
+     --header 'Content-Type: application/json' \\
+     --header "x-api-key: $LANGFLOW_API_KEY" \\
      --data '${unixFormattedPayload}'`;
   }
 }
