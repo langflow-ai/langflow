@@ -324,6 +324,16 @@ test(
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
 
       await page
+        .getByTestId("handle-file-shownode-raw content-right")
+        .first()
+        .click();
+
+      await page
+        .getByTestId("handle-chatoutput-noshownode-inputs-target")
+        .first()
+        .click();
+
+      await page
         .getByRole("button", { name: "Playground", exact: true })
         .click();
       await page.getByTestId("icon-MoreHorizontal").last().click();
