@@ -6,7 +6,7 @@ const SvgSambaNovaLogo = ({ ...props }) => (
     className="fill-foreground"
     fill="none"
     viewBox="0 0 52.416 46.20814479638009"
-    style="max-height: 500px"
+    style={{ maxHeight: "500px" }}
     {...props}
   >
     <path
