@@ -1,6 +1,6 @@
 [project]
-name = "langflow-base"
-version = "0.5.0"
+name = "langflow-base-nightly"
+version = "v0.5.0.dev1"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
