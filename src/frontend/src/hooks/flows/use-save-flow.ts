@@ -3,9 +3,9 @@ import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-up
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
-import { ReactFlowJsonObject } from "@xyflow/react";
+import type { ReactFlowJsonObject } from "@xyflow/react";
 const useSaveFlow = () => {
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);

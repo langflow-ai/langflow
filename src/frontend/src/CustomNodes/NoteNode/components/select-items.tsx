@@ -4,7 +4,7 @@ import {
   SelectItem,
 } from "@/components/ui/select-custom";
 import ToolbarSelectItem from "@/pages/FlowPage/components/nodeToolbarComponent/toolbarSelectItem";
-import { NoteDataType } from "@/types/flow";
+import type { NoteDataType } from "@/types/flow";
 
 import { memo } from "react";
 

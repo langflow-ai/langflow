@@ -13,7 +13,8 @@ import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import React, { useEffect, useRef, useState } from "react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { v5 as uuidv5 } from "uuid";
 
 export default function SessionSelector({
@@ -40,7 +41,7 @@ export default function SessionSelector({
   setActiveSession: (session: string) => void;
 }) {
   const clientId = useUtilityStore((state) => state.clientId);
-  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;

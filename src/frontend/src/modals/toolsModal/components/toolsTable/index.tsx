@@ -12,10 +12,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
-import { ColDef } from "ag-grid-community";
-import { AgGridReact } from "ag-grid-react";
+import type { ColDef } from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";
 

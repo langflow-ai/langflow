@@ -2,7 +2,7 @@ import { useGetDownloadFileMutation } from "@/controllers/API/queries/files";
 import { useState } from "react";
 import { ForwardedIconComponent } from "../../../../../../components/common/genericIconComponent";
 import { BASE_URL_API } from "../../../../../../constants/constants";
-import { fileCardPropsType } from "../../../../../../types/components";
+import type { fileCardPropsType } from "../../../../../../types/components";
 import formatFileName from "../utils/format-file-name";
 import getClasses from "../utils/get-classes";
 import DownloadButton from "./download-button";

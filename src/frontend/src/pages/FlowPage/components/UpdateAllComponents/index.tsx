@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
 import useUpdateAllNodes, {
-  UpdateNodesType,
+  type UpdateNodesType,
 } from "@/CustomNodes/hooks/use-update-all-nodes";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import useAlertStore from "@/stores/alertStore";

@@ -40,7 +40,7 @@ import { getStoreComponents } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
-import { storeComponent } from "../../types/store";
+import type { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
 import InputSearchComponent from "../MainPage/components/inputSearchComponent";
 

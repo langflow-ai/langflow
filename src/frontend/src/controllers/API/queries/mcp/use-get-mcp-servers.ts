@@ -1,5 +1,5 @@
-import { useQueryFunctionType } from "@/types/api";
-import { MCPServerInfoType } from "@/types/mcp";
+import type { useQueryFunctionType } from "@/types/api";
+import type { MCPServerInfoType } from "@/types/mcp";
 import { useEffect } from "react";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";

@@ -15,8 +15,8 @@ import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { VertexBuildTypeAPI } from "@/types/api";
-import { NodeDataType } from "@/types/flow";
+import type { VertexBuildTypeAPI } from "@/types/api";
+import type { NodeDataType } from "@/types/flow";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
 import { useEffect, useRef, useState } from "react";
@@ -188,12 +188,12 @@ export default function NodeStatus({
   );
 
   const getBaseBorderClass = (selected) => {
-    let className =
+    const className =
       selected && !isBuilding
         ? " border ring-[0.75px] ring-muted-foreground border-muted-foreground hover:shadow-node"
         : "border ring-[0.5px] hover:shadow-node ring-border";
-    let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
-    let updateClass =
+    const frozenClass = selected ? "border-ring-frozen" : "border-frozen";
+    const updateClass =
       isOutdated && !isUserEdited && !dismissAll && isBreakingChange
         ? "border-warning"
         : "";

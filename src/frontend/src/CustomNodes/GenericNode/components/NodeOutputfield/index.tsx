@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { targetHandleType } from "@/types/flow";
+import type { targetHandleType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import {
@@ -21,7 +21,7 @@ import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { NodeOutputFieldComponentType } from "../../../../types/components";
+import type { NodeOutputFieldComponentType } from "../../../../types/components";
 import {
   getGroupOutputNodeId,
   scapedJSONStringfy,
@@ -195,7 +195,7 @@ function NodeOutputField({
     (value?: boolean) => {
       setNode(data.id, (oldNode) => {
         if (oldNode.type !== "genericNode") return oldNode;
-        let newNode = cloneDeep(oldNode);
+        const newNode = cloneDeep(oldNode);
         newNode.data = {
           ...newNode.data,
           node: {

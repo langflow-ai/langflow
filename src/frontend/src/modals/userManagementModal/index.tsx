@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { CONTROL_NEW_USER } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import {
+import type {
   UserInputType,
   UserManagementType,
   inputHandlerEventType,

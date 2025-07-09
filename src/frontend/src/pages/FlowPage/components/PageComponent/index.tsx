@@ -15,19 +15,19 @@ import { useAddComponent } from "@/hooks/use-add-component";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import {
-  Connection,
-  Edge,
-  OnNodeDrag,
-  OnSelectionChangeParams,
+  type Connection,
+  type Edge,
+  type OnNodeDrag,
+  type OnSelectionChangeParams,
   ReactFlow,
   reconnectEdge,
-  SelectionDragHandler,
+  type SelectionDragHandler,
 } from "@xyflow/react";
 import { AnimatePresence } from "framer-motion";
 import _, { cloneDeep } from "lodash";
 import {
-  KeyboardEvent,
-  MouseEvent,
+  type KeyboardEvent,
+  type MouseEvent,
   useCallback,
   useEffect,
   useRef,
@@ -47,8 +47,8 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { APIClassType } from "../../../../types/api";
-import { AllNodeType, EdgeType, NoteNodeType } from "../../../../types/flow";
+import type { APIClassType } from "../../../../types/api";
+import type { AllNodeType, EdgeType, NoteNodeType } from "../../../../types/flow";
 import {
   generateFlow,
   generateNodeFromFlow,

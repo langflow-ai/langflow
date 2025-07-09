@@ -1,6 +1,6 @@
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";
-import { APIObjectType, useQueryFunctionType } from "../../../../types/api";
+import type { APIObjectType, useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";

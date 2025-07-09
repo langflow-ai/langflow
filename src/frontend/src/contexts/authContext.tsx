@@ -11,8 +11,8 @@ import { setLocalStorage } from "@/utils/local-storage-util";
 import { createContext, useEffect, useState } from "react";
 import { Cookies } from "react-cookie";
 import { useStoreStore } from "../stores/storeStore";
-import { Users } from "../types/api";
-import { AuthContextType } from "../types/contexts/auth";
+import type { Users } from "../types/api";
+import type { AuthContextType } from "../types/contexts/auth";
 
 const initialValue: AuthContextType = {
   accessToken: null,

@@ -3,7 +3,7 @@ import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import IconComponent from "../../../../components/common/genericIconComponent";
-import { SingleAlertComponentType } from "../../../../types/alerts";
+import type { SingleAlertComponentType } from "../../../../types/alerts";
 
 export default function SingleAlert({
   dropItem,

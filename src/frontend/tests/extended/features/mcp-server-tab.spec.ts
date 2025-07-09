@@ -100,7 +100,7 @@ test(
 
         await page.waitForTimeout(500);
 
-        let count = 0;
+        const count = 0;
 
         while (
           elementText !==

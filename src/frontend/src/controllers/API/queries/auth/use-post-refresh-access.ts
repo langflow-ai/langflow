@@ -1,6 +1,6 @@
 import { IS_AUTO_LOGIN, LANGFLOW_REFRESH_TOKEN } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
-import { useMutationFunctionType } from "@/types/api";
+import type { useMutationFunctionType } from "@/types/api";
 import { Cookies } from "react-cookie";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";

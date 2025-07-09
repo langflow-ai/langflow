@@ -14,7 +14,7 @@ import {
   SN_ERROR_TEXT,
 } from "../../../../../constants/constants";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import {
+import type {
   ChatInputType,
   FilePreviewType,
 } from "../../../../../types/components";

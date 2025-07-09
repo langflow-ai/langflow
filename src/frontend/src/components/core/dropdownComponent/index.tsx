@@ -11,8 +11,8 @@ import {
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { DropDownComponent } from "../../../types/components";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import type { DropDownComponent } from "../../../types/components";
 import {
   cn,
   filterNullOptions,
@@ -35,7 +35,7 @@ import {
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../../ui/popover";
-import { BaseInputProps } from "../parameterRenderComponent/types";
+import type { BaseInputProps } from "../parameterRenderComponent/types";
 
 export default function Dropdown({
   disabled,

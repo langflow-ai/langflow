@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import Loading from "@/components/ui/loading";
-import React, { useEffect, useRef, useState } from "react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../../../../../components/common/genericIconComponent";
 import { ICON_STROKE_WIDTH } from "../../../../../../constants/constants";
 import { cn } from "../../../../../../utils/utils";
@@ -50,7 +51,7 @@ const NoInputView: React.FC<NoInputViewProps> = ({
           <a
             className="underline underline-offset-4"
             target="_blank"
-            href="https://docs.langflow.org/components-io#chat-input"
+            href="https://docs.langflow.org/components-io#chat-input" rel="noopener"
           >
             Chat Input
           </a>{" "}

@@ -1,6 +1,6 @@
 import CustomIOFileInput from "@/customization/components/custom-file-input";
 import useHandleNewValue from "@/CustomNodes/hooks/use-handle-new-value";
-import { AllNodeType } from "@/types/flow";
+import type { AllNodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
 import ImageViewer from "../../../../components/common/ImageViewer";
@@ -17,7 +17,7 @@ import {
 } from "../../../../constants/enums";
 import TextOutputView from "../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../stores/flowStore";
-import { IOFieldViewProps } from "../../../../types/components";
+import type { IOFieldViewProps } from "../../../../types/components";
 import {
   convertValuesToNumbers,
   hasDuplicateKeys,
@@ -44,7 +44,7 @@ export default function IOFieldView({
   ];
   const handleChangeSelect = (e) => {
     if (node) {
-      let newNode = cloneDeep(node);
+      const newNode = cloneDeep(node);
       if (newNode.data.node?.template.separator) {
         newNode.data.node.template.separator.value = e;
         setNode(newNode.id, newNode);
@@ -82,7 +82,7 @@ export default function IOFieldView({
                 onChange={(e) => {
                   e.target.value;
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value =
                       e.target.value;
                     setNode(node.id, newNode);
@@ -96,7 +96,7 @@ export default function IOFieldView({
                 field={node.data.node!.template["file_path"]["value"]}
                 updateValue={(e) => {
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["file_path"].value = e;
                     setNode(node.id, newNode);
                   }
@@ -110,7 +110,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value = e;
                     setNode(node.id, newNode);
                   }
@@ -129,7 +129,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value = e;
                     setNode(node.id, newNode);
                   }
@@ -162,7 +162,7 @@ export default function IOFieldView({
                 onChange={(e) => {
                   e.target.value;
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value =
                       e.target.value;
                     setNode(node.id, newNode);
@@ -213,7 +213,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value = e;
                     setNode(node.id, newNode);
                   }
@@ -229,7 +229,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    let newNode = cloneDeep(node);
+                    const newNode = cloneDeep(node);
                     newNode.data.node!.template["input_value"].value = e;
                     setNode(node.id, newNode);
                   }

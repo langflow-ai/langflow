@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import React from "react";
 import {
@@ -19,7 +19,7 @@ import {
 import { DialogClose } from "@radix-ui/react-dialog";
 import * as Form from "@radix-ui/react-form";
 import { Button } from "../../components/ui/button";
-import { modalHeaderType } from "../../types/components";
+import type { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { switchCaseModalSize } from "./helpers/switch-case-size";
 
@@ -225,7 +225,7 @@ function BaseModal({
     (child) => (child as React.ReactElement).type === Footer,
   );
 
-  let { minWidth, height } = switchCaseModalSize(size);
+  const { minWidth, height } = switchCaseModalSize(size);
 
   useEffect(() => {
     if (onChangeOpenModal) {

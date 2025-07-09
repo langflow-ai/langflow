@@ -1,6 +1,6 @@
-import { Users, useMutationFunctionType } from "@/types/api";
-import { UserInputType } from "@/types/components";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { Users, useMutationFunctionType } from "@/types/api";
+import type { UserInputType } from "@/types/components";
+import type { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

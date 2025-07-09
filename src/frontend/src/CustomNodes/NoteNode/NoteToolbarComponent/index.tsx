@@ -11,7 +11,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { NoteDataType } from "@/types/flow";
+import type { NoteDataType } from "@/types/flow";
 import { classNames, cn } from "@/utils/utils";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useMemo } from "react";
@@ -65,10 +65,11 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
           takeSnapshot();
           deleteNode(data.id);
           break;
-        case "copy":
+        case "copy": {
           const node = nodes.filter((node) => node.id === data.id);
           setLastCopiedSelection({ nodes: cloneDeep(node), edges: [] });
           break;
+        }
         case "duplicate":
           paste(
             {

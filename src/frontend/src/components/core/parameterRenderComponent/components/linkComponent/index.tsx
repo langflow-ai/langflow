@@ -2,7 +2,7 @@ import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { classNames } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
-import { InputProps, LinkComponentType } from "../../types";
+import type { InputProps, LinkComponentType } from "../../types";
 const DEFAULT_ICON = "ExternalLink";
 
 export default function LinkComponent({

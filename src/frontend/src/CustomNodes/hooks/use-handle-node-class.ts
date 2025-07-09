@@ -1,5 +1,5 @@
 import useFlowStore from "@/stores/flowStore";
-import { AllNodeType } from "@/types/flow";
+import type { AllNodeType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 
@@ -15,7 +15,7 @@ const useHandleNodeClass = (
 
   const handleNodeClass = (newNodeClass, type?: string) => {
     setNode(nodeId, (oldNode) => {
-      let newNode = cloneDeep(oldNode);
+      const newNode = cloneDeep(oldNode);
 
       newNode.data = {
         ...newNode.data,

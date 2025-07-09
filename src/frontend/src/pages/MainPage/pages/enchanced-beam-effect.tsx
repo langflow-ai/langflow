@@ -1,5 +1,5 @@
 import { cn } from "@/utils/utils";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { BorderBeam } from "../../../components/ui/border-beams";
 
 interface EnhancedBeamEffectProps {

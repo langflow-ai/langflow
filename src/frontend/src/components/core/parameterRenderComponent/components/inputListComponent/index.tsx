@@ -7,7 +7,7 @@ import { ButtonInputList } from "./components/button-input-list";
 
 import { cn } from "../../../../../utils/utils";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputListComponentType, InputProps } from "../../types";
+import type { InputListComponentType, InputProps } from "../../types";
 import { DeleteButtonInputList } from "./components/delete-button-input-list";
 
 export default function InputListComponent({

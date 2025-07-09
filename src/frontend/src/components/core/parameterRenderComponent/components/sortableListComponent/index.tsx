@@ -4,7 +4,7 @@ import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSel
 import { cn } from "@/utils/utils";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { ReactSortable } from "react-sortablejs";
-import { InputProps } from "../../types";
+import type { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
 
 type SortableListComponentProps = {

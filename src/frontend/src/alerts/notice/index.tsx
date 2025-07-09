@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import IconComponent from "../../components/common/genericIconComponent";
-import { NoticeAlertType } from "../../types/alerts";
+import type { NoticeAlertType } from "../../types/alerts";
 
 export default function NoticeAlert({
   title,

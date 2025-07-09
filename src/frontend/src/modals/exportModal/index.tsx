@@ -1,7 +1,7 @@
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
-import { FlowType } from "@/types/flow";
-import { ReactNode, forwardRef, useEffect, useState } from "react";
+import type { FlowType } from "@/types/flow";
+import { type ReactNode, forwardRef, useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import EditFlowSettings from "../../components/core/editFlowSettingsComponent";
 import { Checkbox } from "../../components/ui/checkbox";

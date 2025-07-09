@@ -4,9 +4,9 @@ import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
 import { useGetUserData, useUpdateUser } from "@/controllers/API/queries/auth";
 import ModalsComponent from "@/pages/MainPage/components/modalsComponent";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { Users } from "@/types/api";
+import type { Users } from "@/types/api";
 import { cn } from "@/utils/utils";
-import { FC, useEffect, useMemo, useState } from "react";
+import { type FC, useEffect, useMemo, useState } from "react";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 
 export const GetStartedProgress: FC<{

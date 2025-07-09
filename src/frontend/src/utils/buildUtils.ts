@@ -10,16 +10,16 @@ import {
   customEventsUrl,
 } from "@/customization/utils/custom-buildUtils";
 import { useMessagesStore } from "@/stores/messagesStore";
-import { Edge, Node } from "@xyflow/react";
-import { AxiosError } from "axios";
+import type { Edge, Node } from "@xyflow/react";
+import type { AxiosError } from "axios";
 import { flushSync } from "react-dom";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
-import { VertexBuildTypeAPI } from "../types/api";
+import type { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
-import { VertexLayerElementType } from "../types/zustand/flow";
+import type { VertexLayerElementType } from "../types/zustand/flow";
 import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
@@ -49,14 +49,14 @@ type BuildVerticesParams = {
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   // Build VertexBuildTypeAPI
-  let inactiveData = {
+  const inactiveData = {
     results: {},
     outputs: {},
     messages: [],
     logs: {},
     inactive: true,
   };
-  let inactiveVertexData = {
+  const inactiveVertexData = {
     id: vertexId,
     data: inactiveData,
     inactivated_vertices: null,
@@ -115,7 +115,7 @@ export async function updateVerticesOrder(
     // orderResponse.data.ids,
     // for each id we need to build the VertexLayerElementType object as
     // {id: id, reference: id}
-    let verticesLayers: Array<Array<VertexLayerElementType>> =
+    const verticesLayers: Array<Array<VertexLayerElementType>> =
       orderResponse.data.ids.map((id: string) => {
         return [{ id: id, reference: id }];
       });
@@ -678,7 +678,7 @@ export async function buildVertices({
   if (startNodeId && stopNodeId) {
     return;
   }
-  let verticesOrderResponse = await updateVerticesOrder(
+  const verticesOrderResponse = await updateVerticesOrder(
     flowId,
     startNodeId,
     stopNodeId,
@@ -694,7 +694,7 @@ export async function buildVertices({
     }
   }
   if (onGetOrderSuccess) onGetOrderSuccess();
-  let verticesBuild = useFlowStore.getState().verticesBuild;
+  const verticesBuild = useFlowStore.getState().verticesBuild;
 
   const verticesIds = verticesBuild?.verticesIds!;
   const verticesLayers = verticesBuild?.verticesLayers!;

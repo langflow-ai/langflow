@@ -1,7 +1,7 @@
 import { useFolderStore } from "@/stores/foldersStore";
-import { useMutationFunctionType } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
-import { ReactFlowJsonObject } from "@xyflow/react";
+import type { useMutationFunctionType } from "@/types/api";
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { ReactFlowJsonObject } from "@xyflow/react";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

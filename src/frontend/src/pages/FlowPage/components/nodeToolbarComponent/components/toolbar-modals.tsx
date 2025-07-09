@@ -2,8 +2,8 @@ import CodeAreaModal from "@/modals/codeAreaModal";
 import ConfirmationModal from "@/modals/confirmationModal";
 import EditNodeModal from "@/modals/editNodeModal";
 import ShareModal from "@/modals/shareModal";
-import { APIClassType } from "@/types/api";
-import { FlowType } from "@/types/flow";
+import type { APIClassType } from "@/types/api";
+import type { FlowType } from "@/types/flow";
 import { memo } from "react";
 
 interface ToolbarModalsProps {

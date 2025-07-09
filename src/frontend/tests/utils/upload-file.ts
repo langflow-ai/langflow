@@ -1,6 +1,6 @@
 import path from "path";
 
-import { Page, expect } from "@playwright/test";
+import { type Page, expect } from "@playwright/test";
 import fs from "fs";
 import { generateRandomFilename } from "./generate-filename";
 

@@ -1,5 +1,5 @@
-import { ContentType } from "@/types/chat";
-import { ReactNode } from "react";
+import type { ContentType } from "@/types/chat";
+import type { ReactNode } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
@@ -144,7 +144,7 @@ export default function ContentDisplay({
       );
       break;
 
-    case "tool_use":
+    case "tool_use": {
       const formatToolOutput = (output: any) => {
         if (output === null || output === undefined) return "";
 
@@ -241,6 +241,7 @@ export default function ContentDisplay({
         </div>
       );
       break;
+    }
 
     case "media":
       contentData = (

@@ -1,5 +1,5 @@
 import useAuthStore from "@/stores/authStore";
-import { useMutationFunctionType } from "@/types/api";
+import type { useMutationFunctionType } from "@/types/api";
 
 import {
   IS_AUTO_LOGIN,

@@ -10,8 +10,8 @@ import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { GlobalVariable } from "@/types/global_variables";
-import {
+import type { GlobalVariable } from "@/types/global_variables";
+import type {
   ColDef,
   RowClickedEvent,
   SelectionChangedEvent,

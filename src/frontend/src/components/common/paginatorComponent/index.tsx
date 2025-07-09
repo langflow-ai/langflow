@@ -4,7 +4,7 @@ import {
   PAGINATION_SIZE,
 } from "@/constants/constants";
 import { useEffect, useState } from "react";
-import { PaginatorComponentType } from "../../../types/components";
+import type { PaginatorComponentType } from "../../../types/components";
 import IconComponent from "../../common/genericIconComponent";
 import { Button } from "../../ui/button";
 import {

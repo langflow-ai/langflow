@@ -1,12 +1,12 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import {
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
+import type {
   APIClassType,
   APITemplateType,
   InputFieldType,
   TableOptionsTypeAPI,
 } from "@/types/api";
-import { RangeSpecType } from "@/types/components";
-import { ColumnField } from "@/types/utils/functions";
+import type { RangeSpecType } from "@/types/components";
+import type { ColumnField } from "@/types/utils/functions";
 
 // Base type for RefreshParameterComponent children
 export type BaseInputProps<valueType = any> = {

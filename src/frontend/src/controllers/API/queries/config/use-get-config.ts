@@ -6,7 +6,7 @@ import { EventDeliveryType } from "@/constants/enums";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import axios from "axios";
-import { useQueryFunctionType } from "../../../../types/api";
+import type { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

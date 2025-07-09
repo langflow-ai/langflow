@@ -1,5 +1,5 @@
-import { useMutationFunctionType } from "@/types/api";
-import { FlowType } from "@/types/flow";
+import type { useMutationFunctionType } from "@/types/api";
+import type { FlowType } from "@/types/flow";
 import { processFlows } from "@/utils/reactflowUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api";

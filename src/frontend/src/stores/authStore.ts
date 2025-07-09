@@ -1,6 +1,6 @@
 // authStore.js
 import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
-import { AuthStoreType } from "@/types/zustand/auth";
+import type { AuthStoreType } from "@/types/zustand/auth";
 import { Cookies } from "react-cookie";
 import { create } from "zustand";
 

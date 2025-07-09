@@ -14,7 +14,7 @@ import { track } from "@/customization/utils/analytics";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { APIClassType, InputFieldType } from "@/types/api";
+import type { APIClassType, InputFieldType } from "@/types/api";
 import { useState } from "react";
 
 interface NodeDialogProps {

@@ -40,8 +40,8 @@ import { AuthContext } from "../../contexts/authContext";
 import ConfirmationModal from "../../modals/confirmationModal";
 import UserManagementModal from "../../modals/userManagementModal";
 import useAlertStore from "../../stores/alertStore";
-import { Users } from "../../types/api";
-import { UserInputType } from "../../types/components";
+import type { Users } from "../../types/api";
+import type { UserInputType } from "../../types/components";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");

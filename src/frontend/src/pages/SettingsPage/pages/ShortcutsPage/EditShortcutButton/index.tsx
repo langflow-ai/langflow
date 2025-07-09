@@ -29,7 +29,7 @@ export default function EditShortcutButton({
   disable?: boolean;
   setSelected: (selected: string[]) => void;
 }): JSX.Element {
-  let shortcutInitialValue =
+  const shortcutInitialValue =
     defaultShortcuts.length > 0
       ? defaultShortcuts.find(
           (s) => toCamelCase(s.name) === toCamelCase(shortcut[0]),
@@ -123,7 +123,7 @@ export default function EditShortcutButton({
 
   function checkForKeys(keys: string, keyToCompare: string): boolean {
     const keysArr = keys.split(" ");
-    let hasNewKey = false;
+    const hasNewKey = false;
     return keysArr.some(
       (k) => k.toLowerCase().trim() === keyToCompare.toLowerCase().trim(),
     );

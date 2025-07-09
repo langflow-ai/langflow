@@ -1,10 +1,10 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent, {
-  TableComponentProps,
+  type TableComponentProps,
 } from "@/components/core/parameterRenderComponent/components/tableComponent";
-import { TableOptionsTypeAPI } from "@/types/api";
-import { AgGridReact } from "ag-grid-react";
-import { ForwardedRef, forwardRef } from "react";
+import type { TableOptionsTypeAPI } from "@/types/api";
+import type { AgGridReact } from "ag-grid-react";
+import { type ForwardedRef, forwardRef } from "react";
 import BaseModal from "../baseModal";
 
 interface TableModalProps extends TableComponentProps {

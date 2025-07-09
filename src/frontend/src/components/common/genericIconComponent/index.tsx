@@ -1,5 +1,5 @@
 import React, { Suspense, forwardRef, memo } from "react";
-import { IconComponentProps } from "../../../types/components";
+import type { IconComponentProps } from "../../../types/components";
 import { getCachedIcon, getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";
 

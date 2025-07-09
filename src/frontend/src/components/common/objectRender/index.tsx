@@ -15,7 +15,7 @@ export default function ObjectRender({
       newObject = object;
     }
   }
-  let preview =
+  const preview =
     newObject === null || newObject === undefined
       ? "‎"
       : JSON.stringify(newObject);

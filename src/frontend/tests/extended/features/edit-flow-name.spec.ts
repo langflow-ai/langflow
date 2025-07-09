@@ -16,7 +16,7 @@ test(
 
     await renameFlow(page, { flowName: randomName });
 
-    let { flowName } = await renameFlow(page);
+    const { flowName } = await renameFlow(page);
 
     expect(flowName).toBe(randomName);
 
@@ -37,7 +37,7 @@ test(
 
     await renameFlow(page, { flowName: randomName2 });
 
-    let { flowName: flowName2 } = await renameFlow(page);
+    const { flowName: flowName2 } = await renameFlow(page);
 
     expect(flowName2).toBe(randomName2);
 
@@ -58,7 +58,7 @@ test(
 
     await renameFlow(page, { flowName: randomName3 });
 
-    let { flowName: flowName3 } = await renameFlow(page);
+    const { flowName: flowName3 } = await renameFlow(page);
 
     expect(flowName3).toBe(randomName3);
 
@@ -79,7 +79,7 @@ test(
 
     await renameFlow(page, { flowName: randomName4 });
 
-    let { flowName: flowName4 } = await renameFlow(page);
+    const { flowName: flowName4 } = await renameFlow(page);
 
     expect(flowName4).toBe(randomName4);
 

@@ -1,8 +1,8 @@
 import { getMinOrMaxValue } from "@/components/core/parameterRenderComponent/components/sliderComponent/helpers/get-min-max-value";
-import { InputProps } from "@/components/core/parameterRenderComponent/types";
+import type { InputProps } from "@/components/core/parameterRenderComponent/types";
 import { Case } from "@/shared/components/caseComponent";
 import { useDarkStore } from "@/stores/darkStore";
-import { SliderComponentType } from "@/types/components";
+import type { SliderComponentType } from "@/types/components";
 import { cn } from "@/utils/utils";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import clsx from "clsx";

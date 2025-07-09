@@ -1,4 +1,4 @@
-import { AllNodeType } from "@/types/flow";
+import type { AllNodeType } from "@/types/flow";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied to the grid
 import { useEffect, useMemo, useState } from "react";
@@ -8,7 +8,7 @@ import {
   CSVViewErrorTitle,
 } from "../../../constants/constants";
 import { useDarkStore } from "../../../stores/darkStore";
-import { VertexBuildTypeAPI } from "../../../types/api";
+import type { VertexBuildTypeAPI } from "../../../types/api";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import Loading from "../../ui/loading";
 import TableComponent from "../parameterRenderComponent/components/tableComponent";

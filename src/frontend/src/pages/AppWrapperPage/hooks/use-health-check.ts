@@ -3,7 +3,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { AxiosError } from "axios";
+import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 
 export function useHealthCheck() {
@@ -39,7 +39,7 @@ export function useHealthCheck() {
     if (isServerBusy && isErrorHealth && !disabled) {
       const maxRetries = healthCheckMaxRetries;
       if (retryCount < maxRetries) {
-        const delay = Math.pow(2, retryCount) * 1000;
+        const delay = 2 ** retryCount * 1000;
         const timer = setTimeout(() => {
           refetch();
           setRetryCount(retryCount + 1);

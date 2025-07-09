@@ -16,6 +16,9 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
+			"a11y": {
+        "noStaticElementInteractions": "warn"
+      },
 			"correctness": {
 				"useExhaustiveDependencies": "off",
 				"noSelfAssign": "warn"

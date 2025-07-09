@@ -363,7 +363,7 @@ const config = {
     tailwindcssForms({
       strategy: "class", // only generate classes
     }),
-    plugin(function ({ addUtilities }) {
+    plugin(({ addUtilities }) => {
       addUtilities({
         ".scrollbar-hide": {
           /* IE and Edge */
@@ -466,7 +466,7 @@ const config = {
     }),
     tailwindcssTypography,
     tailwindcssDottedBackground,
-    plugin(function ({ addUtilities, theme, e }) {
+    plugin(({ addUtilities, theme, e }) => {
       const colors = theme("colors");
 
       const generateUtilities = (colors, prefix = "") => {

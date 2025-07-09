@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { COLOR_OPTIONS } from "@/constants/constants";
-import { noteDataType } from "@/types/flow";
+import type { noteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 
 import { memo } from "react";

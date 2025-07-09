@@ -1,6 +1,6 @@
-import { useMutationFunctionType } from "@/types/api";
-import { ReactFlowJsonObject } from "@xyflow/react";
-import { AxiosRequestConfig } from "axios";
+import type { useMutationFunctionType } from "@/types/api";
+import type { ReactFlowJsonObject } from "@xyflow/react";
+import type { AxiosRequestConfig } from "axios";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

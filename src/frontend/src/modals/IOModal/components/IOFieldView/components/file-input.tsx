@@ -11,7 +11,7 @@ import {
   BASE_URL_API,
 } from "../../../../../constants/constants";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import { IOFileInputProps } from "../../../../../types/components";
+import type { IOFileInputProps } from "../../../../../types/components";
 
 export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
   //component to handle file upload from chatIO

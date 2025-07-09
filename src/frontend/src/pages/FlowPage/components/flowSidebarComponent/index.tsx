@@ -22,7 +22,7 @@ import { useShallow } from "zustand/react/shallow";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { APIClassType } from "../../../../types/api";
+import type { APIClassType } from "../../../../types/api";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";

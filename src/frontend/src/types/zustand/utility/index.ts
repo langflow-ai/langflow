@@ -1,5 +1,5 @@
-import { EventDeliveryType } from "@/constants/enums";
-import { Pagination, Tag } from "@/types/utils/types";
+import type { EventDeliveryType } from "@/constants/enums";
+import type { Pagination, Tag } from "@/types/utils/types";
 
 export type UtilityStoreType = {
   selectedItems: any[];

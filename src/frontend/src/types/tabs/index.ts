@@ -1,5 +1,5 @@
-import { XYPosition } from "@xyflow/react";
-import { FlowType, NodeDataType } from "../flow";
+import type { XYPosition } from "@xyflow/react";
+import type { FlowType, NodeDataType } from "../flow";
 
 type OnChange<ChangesType> = (changes: ChangesType[]) => void;
 
@@ -19,7 +19,7 @@ export type FlowsContextType = {
     flow?: FlowType,
     override?: boolean,
     position?: XYPosition,
-  ) => Promise<String | undefined>;
+  ) => Promise<string | undefined>;
   downloadFlow: (
     flow: FlowType,
     flowName: string,
@@ -40,7 +40,7 @@ export type FlowsContextType = {
     file?: File;
     isComponent?: boolean;
     position?: XYPosition;
-  }) => Promise<String | never>;
+  }) => Promise<string | never>;
   tabsState: FlowsState;
   setTabsState: (
     update: FlowsState | ((oldState: FlowsState) => FlowsState),
@@ -48,7 +48,7 @@ export type FlowsContextType = {
   saveComponent: (
     component: NodeDataType,
     override: boolean,
-  ) => Promise<String | undefined>;
+  ) => Promise<string | undefined>;
   deleteComponent: (key: string) => void;
   version: string;
   flows: Array<FlowType>;

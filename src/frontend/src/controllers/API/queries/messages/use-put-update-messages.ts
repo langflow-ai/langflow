@@ -1,8 +1,8 @@
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { useMutationFunctionType } from "@/types/api";
-import { Message } from "@/types/messages";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
+import type { Message } from "@/types/messages";
+import type { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

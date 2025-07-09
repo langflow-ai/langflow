@@ -3,8 +3,8 @@ import {
   SAVE_DEBOUNCE_TIME,
   TITLE_ERROR_UPDATING_COMPONENT,
 } from "@/constants/constants";
-import { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
+import type { UseMutationResult } from "@tanstack/react-query";
 import { cloneDeep, debounce } from "lodash";
 import { updateHiddenOutputs } from "./update-hidden-outputs";
 

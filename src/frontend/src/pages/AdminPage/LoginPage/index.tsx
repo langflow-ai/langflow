@@ -7,8 +7,8 @@ import { SIGNIN_ERROR_ALERT } from "../../../constants/alerts_constants";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
 import { AuthContext } from "../../../contexts/authContext";
 import useAlertStore from "../../../stores/alertStore";
-import { LoginType } from "../../../types/api";
-import {
+import type { LoginType } from "../../../types/api";
+import type {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../../types/components";

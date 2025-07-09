@@ -1,6 +1,6 @@
 import JsonOutputViewComponent from "@/components/core/jsonOutputComponent/json-output-view";
 import { MAX_TEXT_LENGTH } from "@/constants/constants";
-import { LogsLogType, OutputLogType } from "@/types/api";
+import type { LogsLogType, OutputLogType } from "@/types/api";
 import { useMemo } from "react";
 import ForwardedIconComponent from "../../../../../../components/common/genericIconComponent";
 import DataOutputComponent from "../../../../../../components/core/dataOutputComponent";
@@ -31,7 +31,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     (flowPool[nodeId]?.length ?? 1) - 1
   ];
 
-  let results: OutputLogType | LogsLogType =
+  const results: OutputLogType | LogsLogType =
     (type === "Outputs"
       ? flowPoolNode?.data?.outputs?.[outputName]
       : flowPoolNode?.data?.logs?.[outputName]) ?? {};

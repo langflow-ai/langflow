@@ -7,7 +7,7 @@ import {
 } from "@/constants/constants";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import useFlowStore from "@/stores/flowStore";
-import { NoteDataType } from "@/types/flow";
+import type { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { NodeResizer } from "@xyflow/react";
 import { debounce } from "lodash";

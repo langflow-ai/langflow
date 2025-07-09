@@ -13,7 +13,7 @@ import IconComponent, {
 import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
 import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
 import useAlertStore from "../../../../../stores/alertStore";
-import { chatMessagePropsType } from "../../../../../types/components";
+import type { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
 import { ErrorView } from "./components/content-view";
 import { MarkdownField } from "./components/edit-message";
@@ -63,7 +63,7 @@ export default function ChatMessage({
     return new Promise<boolean>((resolve, reject) => {
       eventSource.current = new EventSource(url);
       eventSource.current.onmessage = (event) => {
-        let parsedData = JSON.parse(event.data);
+        const parsedData = JSON.parse(event.data);
         if (parsedData.chunk) {
           setChatMessage((prev) => prev + parsedData.chunk);
         }

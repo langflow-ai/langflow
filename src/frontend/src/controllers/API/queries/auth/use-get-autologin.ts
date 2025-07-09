@@ -6,9 +6,9 @@ import {
 import { AuthContext } from "@/contexts/authContext";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
-import { AxiosError } from "axios";
+import type { AxiosError } from "axios";
 import { useContext, useRef } from "react";
-import { useQueryFunctionType, Users } from "../../../../types/api";
+import type { useQueryFunctionType, Users } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -87,7 +87,7 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
     } else if (autoLoginNotAuthenticated) {
       const retryCount = retryCountRef.current;
       const delay = Math.min(
-        AUTO_LOGIN_RETRY_DELAY * Math.pow(2, retryCount),
+        AUTO_LOGIN_RETRY_DELAY * 2 ** retryCount,
         AUTO_LOGIN_MAX_RETRY_DELAY,
       );
 

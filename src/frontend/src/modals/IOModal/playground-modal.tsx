@@ -23,7 +23,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useMessagesStore } from "../../stores/messagesStore";
-import { IOModalPropsType } from "../../types/components";
+import type { IOModalPropsType } from "../../types/components";
 import { cn, getNumberFromString } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
@@ -78,7 +78,7 @@ export default function IOModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
   const clientId = useUtilityStore((state) => state.clientId);
-  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;

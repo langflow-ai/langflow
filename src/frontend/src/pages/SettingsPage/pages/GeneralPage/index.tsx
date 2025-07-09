@@ -20,7 +20,7 @@ import { CONTROL_PATCH_USER_STATE } from "../../../../constants/constants";
 import { AuthContext } from "../../../../contexts/authContext";
 import useAlertStore from "../../../../stores/alertStore";
 import { useStoreStore } from "../../../../stores/storeStore";
-import {
+import type {
   inputHandlerEventType,
   patchUserInputStateType,
 } from "../../../../types/components";
@@ -87,7 +87,7 @@ export const GeneralPage = () => {
         { user_id: userData!.id, user: { profile_image: profile_picture } },
         {
           onSuccess: () => {
-            let newUserData = cloneDeep(userData);
+            const newUserData = cloneDeep(userData);
             newUserData!.profile_image = profile_picture;
             setUserData(newUserData);
             setSuccessData({ title: SAVE_SUCCESS_ALERT });

@@ -1,4 +1,4 @@
-import { MCPServerType } from "@/types/mcp";
+import type { MCPServerType } from "@/types/mcp";
 
 /**
  * Extracts the first MCP server from a JSON string or object.

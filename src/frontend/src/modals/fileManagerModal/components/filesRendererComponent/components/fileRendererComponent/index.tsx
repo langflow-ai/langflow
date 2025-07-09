@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
-import { FileType } from "@/types/file_management";
+import type { FileType } from "@/types/file_management";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";

@@ -15,7 +15,7 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { cloneDeep } from "lodash";
-import { ChangeEvent, ReactNode, useEffect, useState } from "react";
+import { type ChangeEvent, type ReactNode, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import IconComponent from "../../components/common/genericIconComponent";
 import { useTweaksStore } from "../../stores/tweaksStore";

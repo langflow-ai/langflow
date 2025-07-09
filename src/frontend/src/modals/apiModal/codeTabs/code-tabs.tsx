@@ -34,7 +34,7 @@ const operatingSystemTabs = [
 ];
 
 export default function APITabsComponent() {
-  const [isCopied, setIsCopied] = useState<Boolean>(false);
+  const [isCopied, setIsCopied] = useState<boolean>(false);
   const endpointName = useFlowStore(
     useShallow((state) => state.currentFlow?.endpoint_name),
   );

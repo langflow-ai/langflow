@@ -1,6 +1,6 @@
 "use client";
 import { BorderTrail } from "@/components/core/border-trail";
-import { ContentBlock } from "@/types/chat";
+import type { ContentBlock } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
