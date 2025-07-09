@@ -11,7 +11,7 @@ module.exports = {
           type: "category",
           label: "Tutorials",
           items: [
-            "Tutorials/agent",
+            "Tutorials/agents-tutorial",
           ],
         },
       ],

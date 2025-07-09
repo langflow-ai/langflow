@@ -1,6 +1,6 @@
 ---
-title: Connect an agent
-slug: /chat-with-sqlite
+title: Connect applications to agents
+slug: /agents-tutorial
 ---
 
 import Icon from "@site/src/components/icon";
