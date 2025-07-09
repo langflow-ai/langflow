@@ -144,4 +144,4 @@ This component exports DoclingDocument to Markdown, HTML, and other formats.
 
 ## Docling video tutorial
 
-To learn more content extraction with Docling, see the video tutorial [Docling + Langflow: Document Processing for AI Workflows](https://www.youtube.com/watch?v=5DuS6uRI5OM).
+To learn more about content extraction with Docling, see the video tutorial [Docling + Langflow: Document Processing for AI Workflows](https://www.youtube.com/watch?v=5DuS6uRI5OM).
