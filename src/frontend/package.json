@@ -120,6 +120,7 @@
   },
   "proxy": "http://localhost:7860",
   "devDependencies": {
+    "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
     "@playwright/test": "^1.52.0",
     "@swc/cli": "^0.5.2",
