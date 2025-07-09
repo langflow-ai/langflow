@@ -1,33 +1,104 @@
 import asyncio
-import contextlib
 import os
 import platform
+import re
+import shutil
+import unicodedata
 from collections.abc import Awaitable, Callable
-from contextlib import AsyncExitStack
-from typing import Any, cast
+from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID
 
-import aiofiles
 import httpx
-from anyio import Path
 from httpx import codes as httpx_codes
+from langchain_core.tools import StructuredTool
 from loguru import logger
-from mcp import ClientSession, StdioServerParameters, stdio_client
-from mcp.client.sse import sse_client
+from mcp import ClientSession
 from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
 
-from langflow.services.database.models import Flow
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.deps import get_settings_service
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
 
 
-def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], session) -> Callable[..., Awaitable]:
+def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
+    """Sanitize a name for MCP usage by removing emojis, diacritics, and special characters.
+
+    Args:
+        name: The original name to sanitize
+        max_length: Maximum length for the sanitized name
+
+    Returns:
+        A sanitized name containing only letters, numbers, hyphens, and underscores
+    """
+    if not name or not name.strip():
+        return ""
+
+    # Remove emojis using regex pattern
+    emoji_pattern = re.compile(
+        "["
+        "\U0001f600-\U0001f64f"  # emoticons
+        "\U0001f300-\U0001f5ff"  # symbols & pictographs
+        "\U0001f680-\U0001f6ff"  # transport & map symbols
+        "\U0001f1e0-\U0001f1ff"  # flags (iOS)
+        "\U00002500-\U00002bef"  # chinese char
+        "\U00002702-\U000027b0"
+        "\U00002702-\U000027b0"
+        "\U000024c2-\U0001f251"
+        "\U0001f926-\U0001f937"
+        "\U00010000-\U0010ffff"
+        "\u2640-\u2642"
+        "\u2600-\u2b55"
+        "\u200d"
+        "\u23cf"
+        "\u23e9"
+        "\u231a"
+        "\ufe0f"  # dingbats
+        "\u3030"
+        "]+",
+        flags=re.UNICODE,
+    )
+
+    # Remove emojis
+    name = emoji_pattern.sub("", name)
+
+    # Normalize unicode characters to remove diacritics
+    name = unicodedata.normalize("NFD", name)
+    name = "".join(char for char in name if unicodedata.category(char) != "Mn")
+
+    # Replace spaces and special characters with underscores
+    name = re.sub(r"[^\w\s-]", "", name)  # Keep only word chars, spaces, and hyphens
+    name = re.sub(r"[-\s]+", "_", name)  # Replace spaces and hyphens with underscores
+    name = re.sub(r"_+", "_", name)  # Collapse multiple underscores
+
+    # Remove leading/trailing underscores
+    name = name.strip("_")
+
+    # Ensure it starts with a letter or underscore (not a number)
+    if name and name[0].isdigit():
+        name = f"_{name}"
+
+    # Convert to lowercase
+    name = name.lower()
+
+    # Truncate to max length
+    if len(name) > max_length:
+        name = name[:max_length].rstrip("_")
+
+    # If empty after sanitization, provide a default
+    if not name:
+        name = "unnamed"
+
+    return name
+
+
+def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
-        field_names = list(arg_schema.__fields__.keys())
+        field_names = list(arg_schema.model_fields.keys())
         provided_args = {}
         # Map positional arguments to their corresponding field names
         for i, arg in enumerate(args):
@@ -39,18 +110,25 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], session) 
         provided_args.update(kwargs)
         # Validate input and fill defaults for missing optional fields
         try:
-            validated = arg_schema.parse_obj(provided_args)
+            validated = arg_schema.model_validate(provided_args)
         except Exception as e:
             msg = f"Invalid input: {e}"
             raise ValueError(msg) from e
-        return await session.call_tool(tool_name, arguments=validated.dict())
+
+        try:
+            return await client.run_tool(tool_name, arguments=validated.model_dump())
+        except Exception as e:
+            logger.error(f"Tool '{tool_name}' execution failed: {e}")
+            # Re-raise with more context
+            msg = f"Tool '{tool_name}' execution failed: {e}"
+            raise ValueError(msg) from e
 
     return tool_coroutine
 
 
-def create_tool_func(tool_name: str, arg_schema: type[BaseModel], session) -> Callable[..., str]:
+def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., str]:
     def tool_func(*args, **kwargs):
-        field_names = list(arg_schema.__fields__.keys())
+        field_names = list(arg_schema.model_fields.keys())
         provided_args = {}
         for i, arg in enumerate(args):
             if i >= len(field_names):
@@ -59,14 +137,35 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], session) -> Ca
             provided_args[field_names[i]] = arg
         provided_args.update(kwargs)
         try:
-            validated = arg_schema.parse_obj(provided_args)
+            validated = arg_schema.model_validate(provided_args)
         except Exception as e:
             msg = f"Invalid input: {e}"
             raise ValueError(msg) from e
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(session.call_tool(tool_name, arguments=validated.dict()))
+
+        try:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(client.run_tool(tool_name, arguments=validated.model_dump()))
+        except Exception as e:
+            logger.error(f"Tool '{tool_name}' execution failed: {e}")
+            # Re-raise with more context
+            msg = f"Tool '{tool_name}' execution failed: {e}"
+            raise ValueError(msg) from e
 
     return tool_func
+
+
+def get_unique_name(base_name, max_length, existing_names):
+    name = base_name[:max_length]
+    if name not in existing_names:
+        return name
+    i = 1
+    while True:
+        suffix = f"_{i}"
+        truncated_base = base_name[: max_length - len(suffix)]
+        candidate = f"{truncated_base}{suffix}"
+        if candidate not in existing_names:
+            return candidate
+        i += 1
 
 
 async def get_flow_snake_case(flow_name: str, user_id: str, session, is_action: bool | None = None) -> Flow | None:
@@ -75,7 +174,11 @@ async def get_flow_snake_case(flow_name: str, user_id: str, session, is_action: 
     flows = (await session.exec(stmt)).all()
 
     for flow in flows:
-        this_flow_name = flow.action_name if is_action and flow.action_name else "_".join(flow.name.lower().split())
+        if is_action and flow.action_name:
+            this_flow_name = sanitize_mcp_name(flow.action_name)
+        else:
+            this_flow_name = sanitize_mcp_name(flow.name)
+
         if this_flow_name == flow_name:
             return flow
     return None
@@ -213,30 +316,249 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
     return create_model("InputSchema", **top_fields)
 
 
-class MCPStdioClient:
+def _is_valid_key_value_item(item: Any) -> bool:
+    """Check if an item is a valid key-value dictionary."""
+    return isinstance(item, dict) and "key" in item and "value" in item
+
+
+def _process_headers(headers: Any) -> dict:
+    """Process the headers input into a valid dictionary.
+
+    Args:
+        headers: The headers to process, can be dict, str, or list
+    Returns:
+        Processed dictionary
+    """
+    if headers is None:
+        return {}
+    if isinstance(headers, dict):
+        return headers
+    if isinstance(headers, list):
+        processed_headers = {}
+        try:
+            for item in headers:
+                if not _is_valid_key_value_item(item):
+                    continue
+                key = item["key"]
+                value = item["value"]
+                processed_headers[key] = value
+        except (KeyError, TypeError, ValueError):
+            return {}  # Return empty dictionary instead of None
+        return processed_headers
+    return {}
+
+
+def _validate_node_installation(command: str) -> str:
+    """Validate the npx command."""
+    if "npx" in command and not shutil.which("node"):
+        msg = "Node.js is not installed. Please install Node.js to use npx commands."
+        raise ValueError(msg)
+    return command
+
+
+async def _validate_connection_params(mode: str, command: str | None = None, url: str | None = None) -> None:
+    """Validate connection parameters based on mode."""
+    if mode not in ["Stdio", "SSE"]:
+        msg = f"Invalid mode: {mode}. Must be either 'Stdio' or 'SSE'"
+        raise ValueError(msg)
+
+    if mode == "Stdio" and not command:
+        msg = "Command is required for Stdio mode"
+        raise ValueError(msg)
+    if mode == "Stdio" and command:
+        _validate_node_installation(command)
+    if mode == "SSE" and not url:
+        msg = "URL is required for SSE mode"
+        raise ValueError(msg)
+
+
+class MCPSessionManager:
+    """Manages persistent MCP sessions with proper context manager lifecycle."""
+
     def __init__(self):
+        self.sessions = {}  # context_id -> session_info
+        self._background_tasks = set()  # Keep references to background tasks
+
+    async def get_session(self, context_id: str, connection_params, transport_type: str):
+        """Get or create a persistent session."""
+        if context_id in self.sessions:
+            session_info = self.sessions[context_id]
+            # Check if session and background task are still alive
+            try:
+                session = session_info["session"]
+                task = session_info["task"]
+
+                # Break down the health check to understand why cleanup is triggered
+                task_not_done = not task.done()
+
+                logger.debug(f"Session health check for context_id {context_id}:")
+                logger.debug(f"  - task_not_done: {task_not_done}")
+
+                # For MCP ClientSession, we rely on the background task being alive
+                session_is_healthy = task_not_done
+
+                logger.debug(f"  - session_is_healthy: {session_is_healthy}")
+
+                if session_is_healthy:
+                    logger.debug(f"Session for context_id {context_id} is healthy, reusing")
+                    return session
+                msg = f"Session for context_id {context_id} failed health check: background task is done"
+                logger.info(msg)
+
+            except Exception as e:  # noqa: BLE001
+                msg = f"Session for context_id {context_id} is dead due to exception: {e}"
+                logger.info(msg)
+            # Session is dead, clean it up
+            await self._cleanup_session(context_id)
+
+        # Create new session
+        if transport_type == "stdio":
+            return await self._create_stdio_session(context_id, connection_params)
+        if transport_type == "sse":
+            return await self._create_sse_session(context_id, connection_params)
+        msg = f"Unknown transport type: {transport_type}"
+        raise ValueError(msg)
+
+    async def _create_stdio_session(self, context_id: str, connection_params):
+        """Create a new stdio session as a background task to avoid context issues."""
+        import asyncio
+
+        from mcp.client.stdio import stdio_client
+
+        # Create a future to get the session
+        session_future: asyncio.Future[ClientSession] = asyncio.Future()
+
+        async def session_task():
+            """Background task that keeps the session alive."""
+            try:
+                async with stdio_client(connection_params) as (read, write):
+                    session = ClientSession(read, write)
+                    async with session:
+                        await session.initialize()
+                        # Signal that session is ready
+                        session_future.set_result(session)
+
+                        # Keep the session alive until cancelled
+                        import anyio
+
+                        event = anyio.Event()
+                        try:
+                            await event.wait()
+                        except asyncio.CancelledError:
+                            # Session is being shut down
+                            msg = "Message is shutting down"
+                            logger.info(msg)
+            except Exception as e:  # noqa: BLE001
+                if not session_future.done():
+                    session_future.set_exception(e)
+
+        # Start the background task
+        task = asyncio.create_task(session_task())
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+
+        # Wait for session to be ready
+        session = await session_future
+
+        # Store session info
+        self.sessions[context_id] = {"session": session, "task": task, "type": "stdio"}
+
+        return session
+
+    async def _create_sse_session(self, context_id: str, connection_params):
+        """Create a new SSE session as a background task to avoid context issues."""
+        import asyncio
+
+        from mcp.client.sse import sse_client
+
+        # Create a future to get the session
+        session_future: asyncio.Future[ClientSession] = asyncio.Future()
+
+        async def session_task():
+            """Background task that keeps the session alive."""
+            try:
+                async with sse_client(
+                    connection_params["url"],
+                    connection_params["headers"],
+                    connection_params["timeout_seconds"],
+                    connection_params["sse_read_timeout_seconds"],
+                ) as (read, write):
+                    session = ClientSession(read, write)
+                    async with session:
+                        await session.initialize()
+                        # Signal that session is ready
+                        session_future.set_result(session)
+
+                        # Keep the session alive until cancelled
+                        import anyio
+
+                        event = anyio.Event()
+                        try:
+                            await event.wait()
+                        except asyncio.CancelledError:
+                            # Session is being shut down
+                            msg = "Message is shutting down"
+                            logger.info(msg)
+            except Exception as e:  # noqa: BLE001
+                if not session_future.done():
+                    session_future.set_exception(e)
+
+        # Start the background task
+        task = asyncio.create_task(session_task())
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+
+        # Wait for session to be ready
+        session = await session_future
+
+        # Store session info
+        self.sessions[context_id] = {"session": session, "task": task, "type": "sse"}
+
+        return session
+
+    async def _cleanup_session(self, context_id: str):
+        """Clean up a session by cancelling its background task."""
+        if context_id not in self.sessions:
+            return
+
+        session_info = self.sessions[context_id]
+        try:
+            # Cancel the background task which will properly close the session
+            if "task" in session_info:
+                task = session_info["task"]
+                if not task.done():
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        logger.info(f"Issue cancelling task for context_id {context_id}")
+        except Exception as e:  # noqa: BLE001
+            logger.info(f"issue cleaning up mcp session: {e}")
+        finally:
+            del self.sessions[context_id]
+
+    async def cleanup_all(self):
+        """Clean up all sessions."""
+        for context_id in list(self.sessions.keys()):
+            await self._cleanup_session(context_id)
+
+
+class MCPStdioClient:
+    def __init__(self, component_cache=None):
         self.session: ClientSession | None = None
-        self.exit_stack = AsyncExitStack()
-        self.max_retries = 1
-        self.retry_delay = 1.0  # seconds
-        self.timeout_seconds = 30  # default timeout
+        self._connection_params = None
+        self._connected = False
+        self._session_context: str | None = None
+        self._component_cache = component_cache
 
-    async def connect_to_server(self, command_str: str, env: list[str] | None = None):
-        env_dict: dict[str, str] = {}
-        if env is None:
-            env = []
-        for var in env:
-            if "=" not in var:
-                msg = f"Invalid env var format: {var}. Must be in the format 'VAR_NAME=VAR_VALUE'"
-                raise ValueError(msg)
-            env_dict[var.split("=")[0]] = var.split("=")[1]
+    async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
+        """Connect to MCP server using stdio transport (SDK style)."""
+        from mcp import StdioServerParameters
+
         command = command_str.split(" ")
-        server_params = None
-        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env_dict or {})}
+        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
 
-        # Create platform-specific command wrapper
         if platform.system() == "Windows":
-            # For Windows, use cmd.exe with error reporting
             server_params = StdioServerParameters(
                 command="cmd",
                 args=[
@@ -246,97 +568,135 @@ class MCPStdioClient:
                 env=env_data,
             )
         else:
-            # For Unix-like systems, use bash with error reporting
             server_params = StdioServerParameters(
                 command="bash",
-                args=["-c", f"{command_str} || echo 'Command failed with exit code $?' >&2"],
+                args=["-c", f"exec {command_str} || echo 'Command failed with exit code $?' >&2"],
                 env=env_data,
             )
 
-        # Create a temporary file to capture stderr
-        errlog_path = ""
-        async with aiofiles.tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=False) as tmp:
-            errlog_path = cast(str, tmp.name)
+        # Store connection parameters for later use in run_tool
+        self._connection_params = server_params
 
-            try:
-                # Pass the temp file as errlog to capture stderr
-                stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params, errlog=tmp))
-                self.stdio, self.write = stdio_transport
-                self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+        # If no session context is set, create a default one
+        if not self._session_context:
+            # Generate a fallback context based on connection parameters
+            import uuid
 
-                # Create a watcher task to monitor stderr
-                async def watch_stderr():
-                    last_size = 0
-                    full_log = ""
-                    while True:
-                        await asyncio.sleep(0.05)
-                        await tmp.flush()
-                        current = (await Path(errlog_path).stat()).st_size
-                        if current > last_size:
-                            async with aiofiles.open(errlog_path, encoding="utf-8") as f:
-                                await f.seek(last_size)
-                                data = await f.read()
-                                full_log += data
-                                data = data.strip()
+            param_hash = uuid.uuid4().hex[:8]
+            self._session_context = f"default_{param_hash}"
 
-                            # Check for our specific error message pattern
-                            if "Command failed with exit code" in data:
-                                msg = f"MCP server command failed: {command_str}\nFull error log:\n{full_log}"
-                                raise RuntimeError(msg)
-                        last_size = current
+        # Get or create a persistent session
+        session = await self._get_or_create_session()
+        response = await session.list_tools()
+        self._connected = True
+        return response.tools
 
-                # Create tasks for both operations
-                watcher = asyncio.create_task(watch_stderr())
-                initializer = asyncio.create_task(self.session.initialize())
+    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
+        """Connect to MCP server using stdio transport (SDK style)."""
+        return await asyncio.wait_for(
+            self._connect_to_server(command_str, env), timeout=get_settings_service().settings.mcp_server_timeout
+        )
 
-                # Race them: first to finish wins
-                done, pending = await asyncio.wait({watcher, initializer}, return_when=asyncio.FIRST_COMPLETED)
+    def set_session_context(self, context_id: str):
+        """Set the session context (e.g., flow_id + user_id + session_id)."""
+        self._session_context = context_id
 
-                if watcher in done:
-                    # stderr watcher fired → cancel and propagate its error
-                    initializer.cancel()
-                    watcher.result()  # This will re-raise the RuntimeError
-                else:
-                    # initialize succeeded → cancel watcher
-                    watcher.cancel()
-                    initializer.result()  # Will re-raise any initialization errors
+    def _get_session_manager(self) -> MCPSessionManager:
+        """Get or create session manager from component cache."""
+        if not self._component_cache:
+            # Fallback to instance-level session manager if no cache
+            if not hasattr(self, "_session_manager"):
+                self._session_manager = MCPSessionManager()
+            return self._session_manager
 
-                # If we get here, initialization succeeded
-                response = await self.session.list_tools()
-                # return response.tools
+        from langflow.services.cache.utils import CacheMiss
 
-            except FileNotFoundError as e:
-                # Command not found, raise immediately
-                msg = f"Command not found: {command[0]}. Error: {e}"
-                raise ValueError(msg) from e
-            except OSError as e:
-                # Other OS errors (e.g., permission denied)
-                msg = f"Failed to start command '{command[0]}': {e}"
-                raise ValueError(msg) from e
-            except RuntimeError as e:
-                # This is from our stderr watcher
-                msg = f"MCP server error: {e}"
-                raise ConnectionError(msg) from e
-            except Exception as e:
-                msg = f"Failed to initialize MCP session: {e}"
-                logger.warning(msg)
-                raise ConnectionError(msg) from e
-            else:
-                return response.tools
-            finally:
-                # Clean up the temp file
-                with contextlib.suppress(FileNotFoundError, PermissionError):
-                    await Path(errlog_path).unlink()
+        session_manager = self._component_cache.get("mcp_session_manager")
+        if isinstance(session_manager, CacheMiss):
+            session_manager = MCPSessionManager()
+            self._component_cache.set("mcp_session_manager", session_manager)
+        return session_manager
+
+    async def _get_or_create_session(self) -> ClientSession:
+        """Get or create a persistent session for the current context."""
+        if not self._session_context or not self._connection_params:
+            msg = "Session context and connection params must be set"
+            raise ValueError(msg)
+
+        # Use cached session manager to get/create persistent session
+        session_manager = self._get_session_manager()
+        return await session_manager.get_session(self._session_context, self._connection_params, "stdio")
+
+    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+        """Run a tool with the given arguments using context-specific session.
+
+        Args:
+            tool_name: Name of the tool to run
+            arguments: Dictionary of arguments to pass to the tool
+
+        Returns:
+            The result of the tool execution
+
+        Raises:
+            ValueError: If session is not initialized or tool execution fails
+        """
+        if not self._connected or not self._connection_params:
+            msg = "Session not initialized or disconnected. Call connect_to_server first."
+            raise ValueError(msg)
+
+        # If no session context is set, create a default one
+        if not self._session_context:
+            # Generate a fallback context based on connection parameters
+            import uuid
+
+            param_hash = uuid.uuid4().hex[:8]
+            self._session_context = f"default_{param_hash}"
+
+        try:
+            # Get or create persistent session
+            session = await self._get_or_create_session()
+            return await session.call_tool(tool_name, arguments=arguments)
+
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+            msg = f"Failed to run tool '{tool_name}': {e}"
+            logger.error(msg)
+            # Clean up failed session from cache
+            if self._session_context and self._component_cache:
+                cache_key = f"mcp_session_stdio_{self._session_context}"
+                self._component_cache.delete(cache_key)
+            self._connected = False
+            raise ValueError(msg) from e
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.disconnect()
 
 
 class MCPSseClient:
-    def __init__(self):
-        self.write = None
-        self.sse = None
+    def __init__(self, component_cache=None):
         self.session: ClientSession | None = None
-        self.exit_stack = AsyncExitStack()
-        self.max_retries = 3
-        self.retry_delay = 1.0  # seconds
+        self._connection_params = None
+        self._connected = False
+        self._session_context: str | None = None
+        self._component_cache = component_cache
+
+    def _get_session_manager(self) -> MCPSessionManager:
+        """Get or create session manager from component cache."""
+        if not self._component_cache:
+            # Fallback to instance-level session manager if no cache
+            if not hasattr(self, "_session_manager"):
+                self._session_manager = MCPSessionManager()
+            return self._session_manager
+
+        from langflow.services.cache.utils import CacheMiss
+
+        session_manager = self._component_cache.get("mcp_session_manager")
+        if isinstance(session_manager, CacheMiss):
+            session_manager = MCPSessionManager()
+            self._component_cache.set("mcp_session_manager", session_manager)
+        return session_manager
 
     async def validate_url(self, url: str | None) -> tuple[bool, str]:
         """Validate the SSE URL before attempting connection."""
@@ -375,70 +735,203 @@ class MCPSseClient:
             logger.warning(f"Error checking redirects: {e}")
         return url
 
-    async def _connect_with_timeout(
-        self, url: str | None, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
-    ):
-        """Attempt to connect with timeout."""
-        try:
-            if url is None:
-                return
-            sse_transport = await self.exit_stack.enter_async_context(
-                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
-            )
-            self.sse, self.write = sse_transport
-            self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
-            await self.session.initialize()
-        except Exception as e:
-            msg = f"Failed to establish SSE connection: {e!s}"
-            raise ConnectionError(msg) from e
-
-    async def connect_to_server(
+    async def _connect_to_server(
         self,
         url: str | None,
-        headers: dict[str, str] | None,
+        headers: dict[str, str] | None = None,
         timeout_seconds: int = 30,
         sse_read_timeout_seconds: int = 30,
-    ):
-        """Connect to server with retries and improved error handling."""
+    ) -> list[StructuredTool]:
+        """Connect to MCP server using SSE transport (SDK style)."""
         if headers is None:
             headers = {}
-
-        # First validate the URL
+        if url is None:
+            msg = "URL is required for SSE mode"
+            raise ValueError(msg)
         is_valid, error_msg = await self.validate_url(url)
         if not is_valid:
             msg = f"Invalid SSE URL ({url}): {error_msg}"
             raise ValueError(msg)
 
         url = await self.pre_check_redirect(url)
-        last_error = None
 
-        for attempt in range(self.max_retries):
-            try:
-                await asyncio.wait_for(
-                    self._connect_with_timeout(url, headers, timeout_seconds, sse_read_timeout_seconds),
-                    timeout=timeout_seconds,
-                )
+        # Store connection parameters for later use in run_tool
+        self._connection_params = {
+            "url": url,
+            "headers": headers,
+            "timeout_seconds": timeout_seconds,
+            "sse_read_timeout_seconds": sse_read_timeout_seconds,
+        }
 
-                if self.session is None:
-                    msg = "Session not initialized"
-                    raise ValueError(msg)
+        # If no session context is set, create a default one
+        if not self._session_context:
+            # Generate a fallback context based on connection parameters
+            import uuid
 
-                response = await self.session.list_tools()
+            param_hash = uuid.uuid4().hex[:8]
+            self._session_context = f"default_sse_{param_hash}"
 
-            except asyncio.TimeoutError:
-                last_error = f"Connection to {url} timed out after {timeout_seconds} seconds"
-                logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
-            except ConnectionError as err:
-                last_error = str(err)
-                logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
-            except (ValueError, httpx.HTTPError, OSError) as err:
-                last_error = f"Connection error: {err!s}"
-                logger.warning(f"Connection attempt {attempt + 1} failed: {last_error}")
-            else:
-                return response.tools
+        # Get or create a persistent session
+        session = await self._get_or_create_session()
+        response = await session.list_tools()
+        self._connected = True
+        return response.tools
 
-            if attempt < self.max_retries - 1:
-                await asyncio.sleep(self.retry_delay * (attempt + 1))
+    async def connect_to_server(self, url: str, headers: dict[str, str] | None = None) -> list[StructuredTool]:
+        """Connect to MCP server using SSE transport (SDK style)."""
+        return await asyncio.wait_for(
+            self._connect_to_server(url, headers), timeout=get_settings_service().settings.mcp_server_timeout
+        )
 
-        msg = f"Failed to connect after {self.max_retries} attempts. Last error: {last_error}"
-        raise ConnectionError(msg)
+    def set_session_context(self, context_id: str):
+        """Set the session context (e.g., flow_id + user_id + session_id)."""
+        self._session_context = context_id
+
+    async def _get_or_create_session(self) -> ClientSession:
+        """Get or create a persistent session for the current context."""
+        if not self._session_context or not self._connection_params:
+            msg = "Session context and params must be set"
+            raise ValueError(msg)
+
+        # Use cached session manager to get/create persistent session
+        session_manager = self._get_session_manager()
+        return await session_manager.get_session(self._session_context, self._connection_params, "sse")
+
+    async def disconnect(self):
+        """Properly close the connection and clean up resources."""
+        # Clean up session using session manager
+        if self._session_context:
+            session_manager = self._get_session_manager()
+            await session_manager._cleanup_session(self._session_context)
+
+        self.session = None
+        self._connection_params = None
+        self._connected = False
+        self._session_context = None
+
+    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+        """Run a tool with the given arguments using context-specific session.
+
+        Args:
+            tool_name: Name of the tool to run
+            arguments: Dictionary of arguments to pass to the tool
+
+        Returns:
+            The result of the tool execution
+
+        Raises:
+            ValueError: If session is not initialized or tool execution fails
+        """
+        if not self._connected or not self._connection_params:
+            msg = "Session not initialized or disconnected. Call connect_to_server first."
+            raise ValueError(msg)
+
+        # If no session context is set, create a default one
+        if not self._session_context:
+            # Generate a fallback context based on connection parameters
+            import uuid
+
+            param_hash = uuid.uuid4().hex[:8]
+            self._session_context = f"default_sse_{param_hash}"
+
+        try:
+            # Get or create persistent session
+            session = await self._get_or_create_session()
+            return await session.call_tool(tool_name, arguments=arguments)
+
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+            msg = f"Failed to run tool '{tool_name}': {e}"
+            logger.error(msg)
+            # Clean up failed session from cache
+            if self._session_context and self._component_cache:
+                cache_key = f"mcp_session_sse_{self._session_context}"
+                self._component_cache.delete(cache_key)
+            self._connected = False
+            raise ValueError(msg) from e
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.disconnect()
+
+
+async def update_tools(
+    server_name: str,
+    server_config: dict,
+    mcp_stdio_client: MCPStdioClient | None = None,
+    mcp_sse_client: MCPSseClient | None = None,
+) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
+    """Fetch server config and update available tools."""
+    if server_config is None:
+        server_config = {}
+    if not server_name:
+        return "", [], {}
+    if mcp_stdio_client is None:
+        mcp_stdio_client = MCPStdioClient()
+    if mcp_sse_client is None:
+        mcp_sse_client = MCPSseClient()
+
+    # Fetch server config from backend
+    mode = "Stdio" if "command" in server_config else "SSE" if "url" in server_config else ""
+    command = server_config.get("command", "")
+    url = server_config.get("url", "")
+    tools = []
+    headers = _process_headers(server_config.get("headers", {}))
+
+    try:
+        await _validate_connection_params(mode, command, url)
+    except ValueError as e:
+        logger.error(f"Invalid MCP server configuration for '{server_name}': {e}")
+        raise
+
+    # Determine connection type and parameters
+    client: MCPStdioClient | MCPSseClient | None = None
+    if mode == "Stdio":
+        # Stdio connection
+        args = server_config.get("args", [])
+        env = server_config.get("env", {})
+        full_command = " ".join([command, *args])
+        tools = await mcp_stdio_client.connect_to_server(full_command, env)
+        client = mcp_stdio_client
+    elif mode == "SSE":
+        # SSE connection
+        tools = await mcp_sse_client.connect_to_server(url, headers=headers)
+        client = mcp_sse_client
+    else:
+        logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")
+        return "", [], {}
+
+    if not tools or not client or not client._connected:
+        logger.warning(f"No tools available from MCP server '{server_name}' or connection failed")
+        return "", [], {}
+
+    tool_list = []
+    tool_cache: dict[str, StructuredTool] = {}
+    for tool in tools:
+        if not tool or not hasattr(tool, "name"):
+            continue
+        try:
+            args_schema = create_input_schema_from_json_schema(tool.inputSchema)
+            if not args_schema:
+                logger.warning(f"Could not create schema for tool '{tool.name}' from server '{server_name}'")
+                continue
+
+            tool_obj = StructuredTool(
+                name=tool.name,
+                description=tool.description or "",
+                args_schema=args_schema,
+                func=create_tool_func(tool.name, args_schema, client),
+                coroutine=create_tool_coroutine(tool.name, args_schema, client),
+                tags=[tool.name],
+                metadata={"server_name": server_name},
+            )
+            tool_list.append(tool_obj)
+            tool_cache[tool.name] = tool_obj
+        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
+            logger.error(f"Failed to create tool '{tool.name}' from server '{server_name}': {e}")
+            msg = f"Failed to create tool '{tool.name}' from server '{server_name}': {e}"
+            raise ValueError(msg) from e
+
+    logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
+    return mode, tool_list, tool_cache

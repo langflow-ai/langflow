@@ -37,9 +37,6 @@ test(
     await uploadFile(page, "chain.png");
 
     await page.getByTestId("button_run_chat output").click();
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
 

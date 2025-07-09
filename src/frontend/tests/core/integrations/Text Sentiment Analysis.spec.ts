@@ -39,16 +39,16 @@ withEventDeliveryModes(
     await page.waitForTimeout(500);
     await page.getByTestId("select-files-modal-button").click();
 
-    await page.waitForSelector('[data-testid="button_run_chat output"]', {
+    await page.waitForSelector('[data-testid="title-Chat Output"]', {
       timeout: 3000,
     });
 
+    await page.getByTestId("title-Chat Output").last().click();
+    await page.getByTestId("icon-MoreHorizontal").click();
+    await page.getByText("Expand").click();
+
     await page.getByTestId("button_run_chat output").last().click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page

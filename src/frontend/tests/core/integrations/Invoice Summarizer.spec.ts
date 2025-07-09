@@ -39,9 +39,6 @@ test(
 
     // Wait for the flow to build successfully
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
-    });
 
     // Switch to Playground
     await page.getByRole("button", { name: "Playground", exact: true }).click();

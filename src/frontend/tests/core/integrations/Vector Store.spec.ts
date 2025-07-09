@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
@@ -243,15 +242,10 @@ withEventDeliveryModes(
     await page.waitForSelector("text=built successfully", {
       timeout: 60000 * 2,
     });
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
-    });
+
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", {
       timeout: 60000 * 2,
-    });
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
     });
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();

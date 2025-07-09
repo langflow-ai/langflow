@@ -3,12 +3,19 @@ from typing import Any
 import pytest
 from langflow.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
 from langflow.components.custom_component import CustomComponent
-from langflow.components.inputs import ChatInput
-from langflow.components.outputs import ChatOutput
+from langflow.components.input_output import ChatInput, ChatOutput
 from langflow.custom.utils import update_component_build_config
 from langflow.schema import dotdict
 from langflow.template import Output
 from typing_extensions import override
+
+crewai_available = False
+try:
+    import crewai  # noqa: F401
+
+    crewai_available = True
+except ImportError:
+    pass
 
 
 def test_set_invalid_output():
@@ -18,6 +25,7 @@ def test_set_invalid_output():
         chatoutput.set(input_value=chatinput.build_config)
 
 
+@pytest.mark.skipif(not crewai_available, reason="CrewAI is not installed")
 def test_set_component():
     crewai_agent = CrewAIAgentComponent()
     task = SequentialTaskComponent()

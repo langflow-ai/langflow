@@ -1,7 +1,6 @@
-from langflow.components.inputs import ChatInput
-from langflow.components.models import OpenAIModelComponent
-from langflow.components.outputs import ChatOutput
-from langflow.components.prompts import PromptComponent
+from langflow.components.input_output import ChatInput, ChatOutput
+from langflow.components.openai.openai_chat_model import OpenAIModelComponent
+from langflow.components.processing import PromptComponent
 from langflow.graph import Graph
 
 

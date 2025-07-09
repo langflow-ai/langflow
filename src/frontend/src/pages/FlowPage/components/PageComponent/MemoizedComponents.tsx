@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControls, {
   CustomControlButton,
 } from "@/components/core/canvasControlsComponent";
+import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
 import { Background, Panel } from "@xyflow/react";
@@ -17,6 +18,8 @@ interface MemoizedCanvasControlsProps {
   shadowBoxWidth: number;
   shadowBoxHeight: number;
 }
+
+export const MemoizedLogCanvasControls = memo(() => <LogCanvasControls />);
 
 export const MemoizedCanvasControls = memo(
   ({
@@ -38,7 +41,6 @@ export const MemoizedCanvasControls = memo(
             shadowBox.style.top = `${position.y - shadowBoxHeight / 2}px`;
           }
         }}
-        iconClasses="text-primary"
         testId="add_note"
       />
     </CanvasControls>

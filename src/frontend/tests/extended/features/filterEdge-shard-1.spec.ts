@@ -56,15 +56,12 @@ test(
     });
 
     const disclosureTestIds = [
-      "disclosure-inputs",
-      "disclosure-outputs",
+      "disclosure-input / output",
       "disclosure-data",
       "disclosure-models",
       "disclosure-helpers",
       "disclosure-vector stores",
-      "disclosure-embeddings",
       "disclosure-agents",
-      "disclosure-memories",
       "disclosure-logic",
       "disclosure-tools",
       "disclosure-bundles-langchain",
@@ -73,19 +70,24 @@ test(
     ];
 
     const elementTestIds = [
-      "outputsChat Output",
+      "input_outputChat Output",
       "dataAPI Request",
       "vectorstoresAstra DB",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
-      "memoriesMem0 Chat Memory",
+      "mem0Mem0 Chat Memory",
       "logicCondition",
       "langchain_utilitiesSelf Query Retriever",
       "langchain_utilitiesCharacterTextSplitter",
     ];
 
     await Promise.all(
-      disclosureTestIds.map((id) => expect(page.getByTestId(id)).toBeVisible()),
+      disclosureTestIds.map((id) => {
+        if (!expect(page.getByTestId(id)).toBeVisible()) {
+          console.error(`${id} is not visible`);
+        }
+        return expect(page.getByTestId(id)).toBeVisible();
+      }),
     );
 
     await Promise.all(
@@ -99,29 +101,24 @@ test(
     await page.getByTestId("sidebar-search-input").click();
 
     const visibleModelSpecsTestIds = [
-      "modelsAIML",
-      "modelsAnthropic",
-      "modelsAzure OpenAI",
-      "modelsCohere",
-      "modelsGoogle Generative AI",
-      "modelsGroq",
-      "modelsHuggingFace",
-      "modelsLM Studio",
-      "modelsMaritalk",
-      "modelsMistralAI",
-      "modelsNVIDIA",
-      "modelsOllama",
-      "modelsOpenAI",
-      "modelsPerplexity",
-      "modelsQianfan",
-      "modelsSambaNova",
-      "modelsVertex AI",
+      "cohereCohere Language Models",
+      "groqGroq",
+      "lmstudioLM Studio",
+      "maritalkMaritalk",
+      "mistralMistralAI",
+      "perplexityPerplexity",
+      "baiduQianfan",
+      "sambanovaSambaNova",
+      "xaixAI",
     ];
 
     await Promise.all(
-      visibleModelSpecsTestIds.map((id) =>
-        expect(page.getByTestId(id)).toBeVisible(),
-      ),
+      visibleModelSpecsTestIds.map((id) => {
+        if (!expect(page.getByTestId(id)).toBeVisible()) {
+          console.error(`${id} is not visible`);
+        }
+        return expect(page.getByTestId(id)).toBeVisible();
+      }),
     );
 
     const chainInputElements1 = await page
@@ -158,7 +155,6 @@ test(
 
     await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
     await expect(page.getByTestId("disclosure-agents")).toBeVisible();
-    await expect(page.getByTestId("disclosure-memories")).toBeVisible();
     await expect(page.getByTestId("disclosure-logic")).toBeVisible();
   },
 );

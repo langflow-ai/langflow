@@ -7,11 +7,12 @@ from astrapy.data.info.reranking import RerankServiceOptions
 from astrapy.info import CollectionDescriptor, CollectionLexicalOptions, CollectionRerankOptions
 from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
 from langchain_astradb.utils.astradb import HybridSearchMode, _AstraDBCollectionEnvironment
+from langchain_core.documents import Document
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.vector_store_connection_decorator import vector_store_connection
-from langflow.helpers import docs_to_data
-from langflow.inputs import FloatInput, NestedDictInput
+from langflow.helpers.data import docs_to_data
+from langflow.inputs.inputs import FloatInput, NestedDictInput
 from langflow.io import (
     BoolInput,
     DropdownInput,
@@ -21,7 +22,8 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-from langflow.schema import Data
+from langflow.schema.data import Data
+from langflow.serialization import serialize
 from langflow.utils.version import get_version_info
 
 
@@ -1163,6 +1165,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             else:
                 msg = "Vector Store Inputs must be Data objects."
                 raise TypeError(msg)
+
+        documents = [
+            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents
+        ]
 
         if documents and self.deletion_field:
             self.log(f"Deleting documents where {self.deletion_field}")

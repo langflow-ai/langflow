@@ -41,6 +41,10 @@ class MyCsvReader(Component):
 * **name**: A unique internal identifier.
 * **documentation**: An optional link to external docs.
 
+:::tip Icon usage
+Langflow uses [Lucide](https://lucide.dev/icons) for icons. To assign an icon to your component, set the icon attribute to the name of a Lucide icon as a string, such as `icon = "file-text"`. Langflow renders icons from the Lucide library automatically.
+:::
+
 ### Structure of a custom component
 
 A **Langflow custom component** goes beyond a simple class with inputs and outputs. It includes an internal structure with optional lifecycle steps, output generation, front-end interaction, and logic organization.
@@ -212,7 +216,7 @@ Inputs and outputs define how data flows through the component, how it appears i
 
 ### Inputs
 
-Inputs are defined in a class-level `inputs` list. When Langflow loads the component, it uses this list to render fields and handles in the UI. Users or other components provide values or connections to fill these inputs.
+Inputs are defined in a class-level `inputs` list. When Langflow loads the component, it uses this list to render component fields and [ports](/concepts-components#component-ports) in the UI. Users or other components provide values or connections to fill these inputs.
 
 An input is usually an instance of a class from `langflow.io` (such as `StrInput`, `DataInput`, or `MessageTextInput`). The most common constructor parameters are:
 

@@ -14,9 +14,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import useAlertStore from "@/stores/alertStore";
 import { useEffect, useRef, useState } from "react";
-import { AccountMenu } from "./components/AccountMenu";
 import FlowMenu from "./components/FlowMenu";
-import LangflowCounts from "./components/langflow-counts";
 
 export default function AppHeader(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
@@ -47,18 +45,18 @@ export default function AppHeader(): JSX.Element {
   const getNotificationBadge = () => {
     const baseClasses = "absolute h-1 w-1 rounded-full bg-destructive";
     return notificationCenter
-      ? `${baseClasses} right-[5.1rem] top-[5px]`
+      ? `${baseClasses} right-[0.3rem] top-[5px]`
       : "hidden";
   };
 
   return (
     <div
-      className={`flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background`}
+      className={`z-10 flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background`}
       data-testid="app-header"
     >
       {/* Left Section */}
       <div
-        className={`z-30 flex items-center gap-2`}
+        className={`z-30 flex shrink-0 items-center gap-2`}
         data-testid="header_left_section_wrapper"
       >
         <Button
@@ -82,13 +80,13 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Middle Section */}
-      <div className="w-full flex-1 truncate lg:absolute lg:left-1/2 lg:-translate-x-1/2">
+      <div className="absolute left-1/2 -translate-x-1/2">
         <FlowMenu />
       </div>
 
       {/* Right Section */}
       <div
-        className={`relative left-3 z-30 flex items-center gap-1`}
+        className={`relative left-3 z-30 flex shrink-0 items-center gap-3`}
         data-testid="header_right_section_wrapper"
       >
         <>
@@ -119,7 +117,7 @@ export default function AppHeader(): JSX.Element {
                 }
                 data-testid="notification_button"
               >
-                <div className="hit-area-hover group items-center rounded-md px-2 py-1 text-muted-foreground">
+                <div className="hit-area-hover group relative items-center rounded-md px-2 py-2 text-muted-foreground">
                   <span className={getNotificationBadge()} />
                   <ForwardedIconComponent
                     name="Bell"
@@ -140,7 +138,7 @@ export default function AppHeader(): JSX.Element {
         </AlertDropdown>
         <Separator
           orientation="vertical"
-          className="my-auto ml-3 h-7 dark:border-zinc-700"
+          className="my-auto h-7 dark:border-zinc-700"
         />
 
         <div className="flex">

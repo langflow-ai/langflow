@@ -1,6 +1,6 @@
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
-import useFlowStore from "@/stores/flowStore";
+import { clearHandlesFromAdvancedFields } from "@/utils/reactflowUtils";
 import "ace-builds/src-noconflict/ace";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/ext-searchbox";
@@ -83,7 +83,6 @@ export default function CodeAreaModal({
               });
               setOpen(false);
               setValue(code);
-              // setValue(code);
             } else {
               if (funcErrors.length !== 0) {
                 setErrorData({
@@ -121,6 +120,8 @@ export default function CodeAreaModal({
         onSuccess: ({ data, type }) => {
           if (data && type) {
             setValue(code);
+            clearHandlesFromAdvancedFields(componentId!, data);
+
             setNodeClass(data, type);
             setError({ detail: { error: undefined, traceback: undefined } });
             setOpen(false);
@@ -199,7 +200,7 @@ export default function CodeAreaModal({
           aria-hidden="true"
         />
       </BaseModal.Header>
-      <BaseModal.Content>
+      <BaseModal.Content overflowHidden={true}>
         <Input
           value={code}
           readOnly
@@ -255,6 +256,7 @@ export default function CodeAreaModal({
               type="submit"
               id="checkAndSaveBtn"
               disabled={readonly}
+              data-testid="checkAndSaveBtn"
             >
               Check & Save
             </Button>

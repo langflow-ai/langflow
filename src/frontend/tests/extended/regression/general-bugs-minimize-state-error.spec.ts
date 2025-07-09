@@ -2,10 +2,10 @@ import { expect, Page, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 async function toggleNodeState(page: Page, action: "minimize" | "expand") {
-  const expectedCount = action === "minimize" ? 0 : 1;
+  const expectedCount = action === "minimize" ? 1 : 0;
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId(`${action}-button-modal`).click();
-  expect(await page.getByTestId("show-node-content").count()).toBe(
+  expect(await page.getByTestId("hide-node-content").count()).toBe(
     expectedCount,
   );
 }
@@ -24,7 +24,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("text output");
 
     await page
-      .getByTestId("outputsText Output")
+      .getByTestId("input_outputText Output")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-text-output").click();
@@ -36,7 +36,7 @@ test(
 
     expect(await page.getByText("Toolset", { exact: true }).count()).toBe(0);
     await page.getByTestId("title-Text Output").click();
-    expect(await page.getByTestId("show-node-content").count()).toBe(1);
+    expect(await page.getByTestId("hide-node-content").count()).toBe(0);
 
     for (let i = 0; i < 5; i++) {
       await toggleNodeState(page, "minimize");

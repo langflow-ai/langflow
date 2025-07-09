@@ -280,7 +280,7 @@ To run an embeddings inference locally, see the [HuggingFace documentation](http
 
 To connect the local Hugging Face model to the **Hugging Face embeddings inference** component and use it in a flow, follow these steps:
 
-1. Create a [Vector store RAG flow](/starter-projects-vector-store-rag).
+1. Create a [Vector store RAG flow](/vector-store-rag).
 There are two embeddings models in this flow that you can replace with **Hugging Face** embeddings inference components.
 2. Replace both **OpenAI** embeddings model components with **Hugging Face** model components.
 3. Connect both **Hugging Face** components to the **Embeddings** ports of the **Astra DB vector store** components.
@@ -420,8 +420,8 @@ For a list of Ollama embeddings models, see the [Ollama documentation](https://o
 To use this component in a flow, connect Langflow to your locally running Ollama server and select an embeddings model.
 
 1. In the Ollama component, in the **Ollama Base URL** field, enter the address for your locally running Ollama server.
-This value is set as the `OLLAMA_HOST` environment variable in Ollama. The default base URL is `http://127.0.0.1:11434`.
-2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-label="Refresh"/>.
+This value is set as the `OLLAMA_HOST` environment variable in Ollama. The default base URL is `http://localhost:11434`.
+2. To refresh the server's list of models, click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh**.
 3. In the **Ollama Model** field, select an embeddings model. This example uses `all-minilm:latest`.
 4. Connect the **Ollama** embeddings component to a flow.
 For example, this flow connects a local Ollama server running a `all-minilm:latest` embeddings model to a [Chroma DB](/components-vector-stores#chroma-db) vector store to generate embeddings for split text.

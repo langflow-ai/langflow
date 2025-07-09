@@ -1,6 +1,6 @@
 export const ENABLE_DARK_MODE = true;
 export const ENABLE_API = true;
-export const ENABLE_LANGFLOW_STORE = true;
+export const ENABLE_LANGFLOW_STORE = false;
 export const ENABLE_PROFILE_ICONS = true;
 export const ENABLE_SOCIAL_LINKS = true;
 export const ENABLE_BRANDING = true;
@@ -14,4 +14,4 @@ export const ENABLE_WIDGET = true;
 export const ENABLE_VOICE_ASSISTANT = true;
 export const ENABLE_IMAGE_ON_PLAYGROUND = false;
 export const ENABLE_MCP = true;
-export const ENABLE_MCP_NOTICE = true;
+export const ENABLE_MCP_NOTICE = false;

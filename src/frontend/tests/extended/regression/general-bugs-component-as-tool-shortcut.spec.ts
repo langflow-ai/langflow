@@ -14,22 +14,22 @@ test(
       timeout: 100000,
     });
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("id generator");
+    await page.getByTestId("sidebar-search-input").fill("prompt");
 
     await page
-      .getByTestId("helpersID Generator")
+      .getByTestId("processingPrompt Template")
       .hover()
       .then(async () => {
-        await page.getByTestId("add-component-button-id-generator").click();
+        await page.getByTestId("add-component-button-prompt-template").click();
       });
 
-    await page.waitForSelector('[data-testid="title-ID Generator"]', {
+    await page.waitForSelector('[data-testid="title-Prompt Template"]', {
       timeout: 3000,
     });
 
     expect(await page.getByText("Toolset", { exact: true }).count()).toBe(0);
 
-    await page.getByTestId("title-ID Generator").click();
+    await page.getByTestId("title-Prompt Template").click();
     await page.keyboard.press("ControlOrMeta+Shift+m");
 
     await page.waitForSelector('text="Toolset"', {
@@ -39,7 +39,7 @@ test(
       await page.getByText("Toolset", { exact: true }).count(),
     ).toBeGreaterThan(0);
 
-    await page.getByTestId("title-ID Generator").click();
+    await page.getByTestId("title-Prompt Template").click();
 
     await page.waitForSelector('[data-testid="code-button-modal"]', {
       timeout: 3000,
@@ -61,11 +61,11 @@ test(
     // check if the response is 200
     expect(customComponentResponse?.status()).toBe(200);
 
-    await page.waitForSelector('[data-testid="title-ID Generator"]', {
+    await page.waitForSelector('[data-testid="title-Prompt Template"]', {
       timeout: 3000,
     });
 
-    await page.getByTestId("title-ID Generator").click();
+    await page.getByTestId("title-Prompt Template").click();
     await page.keyboard.press("ControlOrMeta+Shift+m");
 
     expect(await page.getByText("Toolset", { exact: true }).count()).toBe(0);

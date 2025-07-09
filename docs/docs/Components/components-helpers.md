@@ -48,8 +48,8 @@ To use all three columns from the **Batch Run** component, include them like thi
 ```text
 record_number: {batch_index}, name: {text_input}, summary: {model_response}
 ```
-7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-label="Play icon" />.
-8. To view your created DataFrame, in the **Parser** component, click <Icon name="TextSearch" aria-label="Inspect icon" />.
+7. To run the flow, in the **Parser** component, click <Icon name="Play" aria-hidden="true"/> **Run component**.
+8. To view your created DataFrame, in the **Parser** component, click <Icon name="TextSearch" aria-hidden="true"/>.
 9. Optionally, connect a **Chat Output** component, and open the **Playground** to see the output.
 
 <details>
@@ -190,7 +190,7 @@ For more information on configuring memory in Langflow, see [Memory](/memory).
 
 This component transforms LLM responses into structured data formats.
 
-In this example from the **Financial Support Parser** template, the **Structured Output** component transforms unstructured financial reports into structured data.
+In this example from the **Financial Report Parser** template, the **Structured Output** component transforms unstructured financial reports into structured data.
 
 ![Structured output example](/img/component-structured-output.png)
 
@@ -204,7 +204,7 @@ The `Output Schema` parameter defines the structure and data types for the model
 * **Type**: The data type of the output field. The available types are `str`, `int`, `float`, `bool`, `list`, or `dict`. The default is `text`.
 * **Multiple**: This feature is deprecated. Currently, it is set to `True` by default if you expect multiple values for a single field. For example, a `list` of `features` is set to `True` to contain multiple values, such as `["waterproof", "durable", "lightweight"]`. Default: `True`.
 
-The **Parse DataFrame** component parses the structured output into a template for orderly presentation in chat output. The template receives the values from the `output_schema` table with curly braces.
+The **Parser** component parses the structured output into a template for orderly presentation in chat output. The template receives the values from the `output_schema` table with curly braces.
 
 For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}` presents the extracted values in the **Playground** as `EBITDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion`.
 
@@ -298,3 +298,7 @@ Please list three fruits.
 | output_parser | Parser | The constructed output parser that can be used to parse LLM responses. |
 
 </details>
+
+## See also
+
+- [Session ID](/session-id)

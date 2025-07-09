@@ -1,4 +1,3 @@
-import asyncio
 import json
 import re
 import tempfile
@@ -13,66 +12,76 @@ import httpx
 import validators
 
 from langflow.base.curl.parse import parse_context
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import TabInput
 from langflow.io import (
     BoolInput,
     DataInput,
     DropdownInput,
-    FloatInput,
     IntInput,
     MessageTextInput,
     MultilineInput,
     Output,
-    StrInput,
     TableInput,
 )
-from langflow.schema import Data
-from langflow.schema.dataframe import DataFrame
+from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 from langflow.services.deps import get_settings_service
+from langflow.utils.component_utils import set_current_fields, set_field_advanced, set_field_display
 
-# Get settings using the service
+# Define fields for each mode
+MODE_FIELDS = {
+    "URL": [
+        "url_input",
+        "method",
+    ],
+    "cURL": ["curl_input"],
+}
+
+# Fields that should always be visible
+DEFAULT_FIELDS = ["mode"]
 
 
 class APIRequestComponent(Component):
     display_name = "API Request"
-    description = "Make HTTP requests using URLs or cURL commands."
+    description = "Make HTTP requests using URL or cURL commands."
+    documentation: str = "https://docs.langflow.org/components-data#api-request"
     icon = "Globe"
     name = "APIRequest"
 
-    default_keys = ["urls", "method", "query_params"]
-
     inputs = [
         MessageTextInput(
-            name="urls",
-            display_name="URLs",
-            list=True,
-            info="Enter one or more URLs, separated by commas.",
+            name="url_input",
+            display_name="URL",
+            info="Enter the URL for the request.",
             advanced=False,
             tool_mode=True,
         ),
         MultilineInput(
-            name="curl",
+            name="curl_input",
             display_name="cURL",
             info=(
                 "Paste a curl command to populate the fields. "
                 "This will fill in the dictionary fields for headers and body."
             ),
-            advanced=True,
             real_time_refresh=True,
             tool_mode=True,
+            advanced=True,
+            show=False,
         ),
         DropdownInput(
             name="method",
             display_name="Method",
             options=["GET", "POST", "PATCH", "PUT", "DELETE"],
+            value="GET",
             info="The HTTP method to use.",
             real_time_refresh=True,
         ),
-        BoolInput(
-            name="use_curl",
-            display_name="Use cURL",
-            value=False,
+        TabInput(
+            name="mode",
+            display_name="Mode",
+            options=["URL", "cURL"],
+            value="URL",
             info="Enable cURL mode to populate fields from a cURL command.",
             real_time_refresh=True,
         ),
@@ -161,8 +170,7 @@ class APIRequestComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="make_requests"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="API Response", name="data", method="make_api_request"),
     ]
 
     def _parse_json_value(self, value: Any) -> Any:
@@ -178,13 +186,7 @@ class APIRequestComponent(Component):
             return parsed
 
     def _process_body(self, body: Any) -> dict:
-        """Process the body input into a valid dictionary.
-
-        Args:
-            body: The body to process, can be dict, str, or list
-        Returns:
-            Processed dictionary
-        """
+        """Process the body input into a valid dictionary."""
         if body is None:
             return {}
         if isinstance(body, dict):
@@ -193,7 +195,6 @@ class APIRequestComponent(Component):
             return self._process_string_body(body)
         if isinstance(body, list):
             return self._process_list_body(body)
-
         return {}
 
     def _process_dict_body(self, body: dict) -> dict:
@@ -210,20 +211,16 @@ class APIRequestComponent(Component):
     def _process_list_body(self, body: list) -> dict:
         """Process list body by converting to key-value dictionary."""
         processed_dict = {}
-
         try:
             for item in body:
                 if not self._is_valid_key_value_item(item):
                     continue
-
                 key = item["key"]
                 value = self._parse_json_value(item["value"])
                 processed_dict[key] = value
-
         except (KeyError, TypeError, ValueError) as e:
             self.log(f"Failed to process body list: {e}")
-            return {}  # Return empty dictionary instead of None
-
+            return {}
         return processed_dict
 
     def _is_valid_key_value_item(self, item: Any) -> bool:
@@ -231,29 +228,21 @@ class APIRequestComponent(Component):
         return isinstance(item, dict) and "key" in item and "value" in item
 
     def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
-        """Parse a cURL command and update build configuration.
-
-        Args:
-            curl: The cURL command to parse
-            build_config: The build configuration to update
-        Returns:
-            Updated build configuration
-        """
+        """Parse a cURL command and update build configuration."""
         try:
             parsed = parse_context(curl)
 
             # Update basic configuration
-            build_config["urls"]["value"] = [parsed.url]
+            url = parsed.url
+            # Normalize URL before setting it
+            url = self._normalize_url(url)
+
+            build_config["url_input"]["value"] = url
             build_config["method"]["value"] = parsed.method.upper()
-            build_config["headers"]["advanced"] = True
-            build_config["body"]["advanced"] = True
 
             # Process headers
             headers_list = [{"key": k, "value": v} for k, v in parsed.headers.items()]
             build_config["headers"]["value"] = headers_list
-
-            if headers_list:
-                build_config["headers"]["advanced"] = False
 
             # Process body data
             if not parsed.data:
@@ -267,13 +256,10 @@ class APIRequestComponent(Component):
                             for k, v in json_data.items()
                         ]
                         build_config["body"]["value"] = body_list
-                        build_config["body"]["advanced"] = False
                     else:
                         build_config["body"]["value"] = [{"key": "data", "value": json.dumps(json_data)}]
-                        build_config["body"]["advanced"] = False
                 except json.JSONDecodeError:
                     build_config["body"]["value"] = [{"key": "data", "value": parsed.data}]
-                    build_config["body"]["advanced"] = False
 
         except Exception as exc:
             msg = f"Error parsing curl: {exc}"
@@ -282,106 +268,16 @@ class APIRequestComponent(Component):
 
         return build_config
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-        if field_name == "use_curl" and field_value:
-            # if we remove field value from validation, this gets validated every time
-            build_config = self._update_curl_mode(build_config, use_curl=field_value)
+    def _normalize_url(self, url: str) -> str:
+        """Normalize URL by adding https:// if no protocol is specified."""
+        if not url or not isinstance(url, str):
+            msg = "URL cannot be empty"
+            raise ValueError(msg)
 
-            # If curl is not used, we don't need to reset the fields
-            if not self.use_curl:
-                return build_config
-
-            # Fields that should not be reset
-            preserve_fields = {"timeout", "follow_redirects", "save_to_file", "include_httpx_metadata", "use_curl"}
-
-            # Mapping between input types and their reset values
-            type_reset_mapping = {
-                TableInput: [],
-                BoolInput: False,
-                IntInput: 0,
-                FloatInput: 0.0,
-                MessageTextInput: "",
-                StrInput: "",
-                MultilineInput: "",
-                DropdownInput: "GET",
-                DataInput: {},
-            }
-
-            for input_field in self.inputs:
-                # Only reset if field is not in preserve list
-                if input_field.name not in preserve_fields:
-                    reset_value = type_reset_mapping.get(type(input_field), None)
-                    build_config[input_field.name]["value"] = reset_value
-                    self.log(f"Reset field {input_field.name} to {reset_value}")
-            # Don't try to parse the boolean value as a curl command
-            return build_config
-        if field_name == "method" and not self.use_curl:
-            build_config = self._update_method_fields(build_config, field_value)
-        elif field_name == "curl" and self.use_curl and field_value:
-            # Not reachable, because we don't have a way to update
-            # the curl field, self.use_curl is set after the build_config is created
-            build_config = self.parse_curl(field_value, build_config)
-        return build_config
-
-    def _update_curl_mode(self, build_config: dotdict, *, use_curl: bool) -> dotdict:
-        always_visible = ["method", "use_curl"]
-
-        for field in self.inputs:
-            field_name = field.name
-            field_config = build_config.get(field_name)
-            if isinstance(field_config, dict):
-                if field_name in always_visible:
-                    field_config["advanced"] = False
-                elif field_name == "urls":
-                    field_config["advanced"] = use_curl
-                elif field_name == "curl":
-                    field_config["advanced"] = not use_curl
-                    field_config["real_time_refresh"] = use_curl
-                elif field_name in {"body", "headers"}:
-                    field_config["advanced"] = True  # Always keep body and headers in advanced when use_curl is False
-                else:
-                    field_config["advanced"] = use_curl or field_config.get("advanced")
-            else:
-                self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
-
-        if not use_curl:
-            current_method = build_config.get("method", {}).get("value", "GET")
-            build_config = self._update_method_fields(build_config, current_method)
-
-        return build_config
-
-    def _update_method_fields(self, build_config: dotdict, method: str) -> dotdict:
-        common_fields = [
-            "urls",
-            "method",
-            "use_curl",
-        ]
-
-        always_advanced_fields = [
-            "body",
-            "headers",
-            "timeout",
-            "follow_redirects",
-            "save_to_file",
-            "include_httpx_metadata",
-        ]
-
-        body_fields = ["body"]
-
-        for field in self.inputs:
-            field_name = field.name
-            field_config = build_config.get(field_name)
-            if isinstance(field_config, dict):
-                if field_name in common_fields:
-                    field_config["advanced"] = False
-                elif field_name in body_fields:
-                    field_config["advanced"] = method not in {"POST", "PUT", "PATCH"}
-                elif field_name in always_advanced_fields:
-                    field_config["advanced"] = True
-            else:
-                self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
-
-        return build_config
+        url = url.strip()
+        if url.startswith(("http://", "https://")):
+            return url
+        return f"https://{url}"
 
     async def make_request(
         self,
@@ -401,19 +297,20 @@ class APIRequestComponent(Component):
             msg = f"Unsupported method: {method}"
             raise ValueError(msg)
 
-        # Process body using the new helper method
         processed_body = self._process_body(body)
         redirection_history = []
 
         try:
-            response = await client.request(
-                method,
-                url,
-                headers=headers,
-                json=processed_body,
-                timeout=timeout,
-                follow_redirects=follow_redirects,
-            )
+            # Prepare request parameters
+            request_params = {
+                "method": method,
+                "url": url,
+                "headers": headers,
+                "json": processed_body,
+                "timeout": timeout,
+                "follow_redirects": follow_redirects,
+            }
+            response = await client.request(**request_params)
 
             redirection_history = [
                 {
@@ -426,15 +323,20 @@ class APIRequestComponent(Component):
             is_binary, file_path = await self._response_info(response, with_file_path=save_to_file)
             response_headers = self._headers_to_dict(response.headers)
 
-            metadata: dict[str, Any] = {
+            # Base metadata
+            metadata = {
                 "source": url,
+                "status_code": response.status_code,
+                "response_headers": response_headers,
             }
+
+            if redirection_history:
+                metadata["redirection_history"] = redirection_history
 
             if save_to_file:
                 mode = "wb" if is_binary else "w"
                 encoding = response.encoding if mode == "w" else None
                 if file_path:
-                    # Ensure parent directory exists
                     await aiofiles_os.makedirs(file_path.parent, exist_ok=True)
                     if is_binary:
                         async with aiofiles.open(file_path, "wb") as f:
@@ -447,16 +349,10 @@ class APIRequestComponent(Component):
                     metadata["file_path"] = str(file_path)
 
                 if include_httpx_metadata:
-                    metadata.update(
-                        {
-                            "headers": headers,
-                            "status_code": response.status_code,
-                            "response_headers": response_headers,
-                            **({"redirection_history": redirection_history} if redirection_history else {}),
-                        }
-                    )
+                    metadata.update({"headers": headers})
                 return Data(data=metadata)
 
+            # Handle response content
             if is_binary:
                 result = response.content
             else:
@@ -466,28 +362,13 @@ class APIRequestComponent(Component):
                     self.log("Failed to decode JSON response")
                     result = response.text.encode("utf-8")
 
-            metadata.update({"result": result})
+            metadata["result"] = result
 
             if include_httpx_metadata:
-                metadata.update(
-                    {
-                        "headers": headers,
-                        "status_code": response.status_code,
-                        "response_headers": response_headers,
-                        **({"redirection_history": redirection_history} if redirection_history else {}),
-                    }
-                )
+                metadata.update({"headers": headers})
+
             return Data(data=metadata)
-        except httpx.TimeoutException:
-            return Data(
-                data={
-                    "source": url,
-                    "headers": headers,
-                    "status_code": 408,
-                    "error": "Request timed out",
-                },
-            )
-        except Exception as exc:  # noqa: BLE001
+        except (httpx.HTTPError, httpx.RequestError, httpx.TimeoutException) as exc:
             self.log(f"Error making request to {url}")
             return Data(
                 data={
@@ -500,15 +381,33 @@ class APIRequestComponent(Component):
             )
 
     def add_query_params(self, url: str, params: dict) -> str:
+        """Add query parameters to URL efficiently."""
+        if not params:
+            return url
         url_parts = list(urlparse(url))
         query = dict(parse_qsl(url_parts[4]))
         query.update(params)
         url_parts[4] = urlencode(query)
         return urlunparse(url_parts)
 
-    async def make_requests(self) -> list[Data]:
+    def _headers_to_dict(self, headers: httpx.Headers) -> dict[str, str]:
+        """Convert HTTP headers to a dictionary with lowercased keys."""
+        return {k.lower(): v for k, v in headers.items()}
+
+    def _process_headers(self, headers: Any) -> dict:
+        """Process the headers input into a valid dictionary."""
+        if headers is None:
+            return {}
+        if isinstance(headers, dict):
+            return headers
+        if isinstance(headers, list):
+            return {item["key"]: item["value"] for item in headers if self._is_valid_key_value_item(item)}
+        return {}
+
+    async def make_api_request(self) -> Data:
+        """Make HTTP request with optimized parameter handling."""
         method = self.method
-        urls = [url.strip() for url in self.urls if url.strip()]
+        url = self.url_input.strip() if isinstance(self.url_input, str) else ""
         headers = self.headers or {}
         body = self.body or {}
         timeout = self.timeout
@@ -516,48 +415,68 @@ class APIRequestComponent(Component):
         save_to_file = self.save_to_file
         include_httpx_metadata = self.include_httpx_metadata
 
-        if self.use_curl and self.curl:
-            self._build_config = self.parse_curl(self.curl, dotdict())
+        # if self.mode == "cURL" and self.curl_input:
+        #     self._build_config = self.parse_curl(self.curl_input, dotdict())
+        #     # After parsing curl, get the normalized URL
+        #     url = self._build_config["url_input"]["value"]
 
-        invalid_urls = [url for url in urls if not validators.url(url)]
-        if invalid_urls:
-            msg = f"Invalid URLs provided: {invalid_urls}"
+        # Normalize URL before validation
+        url = self._normalize_url(url)
+
+        # Validate URL
+        if not validators.url(url):
+            msg = f"Invalid URL provided: {url}"
             raise ValueError(msg)
 
+        # Process query parameters
         if isinstance(self.query_params, str):
             query_params = dict(parse_qsl(self.query_params))
         else:
             query_params = self.query_params.data if self.query_params else {}
 
-        # Process headers here
+        # Process headers and body
         headers = self._process_headers(headers)
-
-        # Process body
         body = self._process_body(body)
-
-        bodies = [body] * len(urls)
-
-        urls = [self.add_query_params(url, query_params) for url in urls]
+        url = self.add_query_params(url, query_params)
 
         async with httpx.AsyncClient() as client:
-            results = await asyncio.gather(
-                *[
-                    self.make_request(
-                        client,
-                        method,
-                        u,
-                        headers,
-                        rec,
-                        timeout,
-                        follow_redirects=follow_redirects,
-                        save_to_file=save_to_file,
-                        include_httpx_metadata=include_httpx_metadata,
-                    )
-                    for u, rec in zip(urls, bodies, strict=False)
-                ]
+            result = await self.make_request(
+                client,
+                method,
+                url,
+                headers,
+                body,
+                timeout,
+                follow_redirects=follow_redirects,
+                save_to_file=save_to_file,
+                include_httpx_metadata=include_httpx_metadata,
             )
-        self.status = results
-        return results
+        self.status = result
+        return result
+
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+        """Update the build config based on the selected mode."""
+        if field_name != "mode":
+            if field_name == "curl_input" and self.mode == "cURL" and self.curl_input:
+                return self.parse_curl(self.curl_input, build_config)
+            return build_config
+
+        # print(f"Current mode: {field_value}")
+        if field_value == "cURL":
+            set_field_display(build_config, "curl_input", value=True)
+            if build_config["curl_input"]["value"]:
+                build_config = self.parse_curl(build_config["curl_input"]["value"], build_config)
+        else:
+            set_field_display(build_config, "curl_input", value=False)
+
+        return set_current_fields(
+            build_config=build_config,
+            action_fields=MODE_FIELDS,
+            selected_action=field_value,
+            default_fields=DEFAULT_FIELDS,
+            func=set_field_advanced,
+            default_value=True,
+        )
 
     async def _response_info(
         self, response: httpx.Response, *, with_file_path: bool = False
@@ -624,43 +543,3 @@ class APIRequestComponent(Component):
             file_path = component_temp_dir / f"{timestamp}-{filename}"
 
         return is_binary, file_path
-
-    def _headers_to_dict(self, headers: httpx.Headers) -> dict[str, str]:
-        """Convert HTTP headers to a dictionary with lowercased keys."""
-        return {k.lower(): v for k, v in headers.items()}
-
-    def _process_headers(self, headers: Any) -> dict:
-        """Process the headers input into a valid dictionary.
-
-        Args:
-            headers: The headers to process, can be dict, str, or list
-        Returns:
-            Processed dictionary
-        """
-        if headers is None:
-            return {}
-        if isinstance(headers, dict):
-            return headers
-        if isinstance(headers, list):
-            processed_headers = {}
-            try:
-                for item in headers:
-                    if not self._is_valid_key_value_item(item):
-                        continue
-                    key = item["key"]
-                    value = item["value"]
-                    processed_headers[key] = value
-            except (KeyError, TypeError, ValueError) as e:
-                self.log(f"Failed to process headers list: {e}")
-                return {}  # Return empty dictionary instead of None
-            return processed_headers
-        return {}
-
-    async def as_dataframe(self) -> DataFrame:
-        """Convert the API response data into a DataFrame.
-
-        Returns:
-            DataFrame: A DataFrame containing the API response data.
-        """
-        data = await self.make_requests()
-        return DataFrame(data)
