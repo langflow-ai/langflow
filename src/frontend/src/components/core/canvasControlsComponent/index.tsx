@@ -13,10 +13,9 @@ import {
   type ReactFlowState,
 } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { shallow } from "zustand/shallow";
-import React from "react";
 
 type CustomControlButtonProps = {
   iconName: string;
@@ -88,11 +87,13 @@ const CanvasControls = ({ children }) => {
   const collapseTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Animated wrapper logic
-  const [maxHeight, setMaxHeight] = useState('40px');
+  const [maxHeight, setMaxHeight] = useState("40px");
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Calculate number of visible buttons (4 default + real children if present)
-  const numButtons = 4 + (children ? React.Children.toArray(children).filter(Boolean).length : 0);
+  const numButtons =
+    4 +
+    (children ? React.Children.toArray(children).filter(Boolean).length : 0);
 
   useEffect(() => {
     store.setState({
@@ -104,9 +105,9 @@ const CanvasControls = ({ children }) => {
 
   useEffect(() => {
     if (!collapsed && contentRef.current) {
-      setMaxHeight(contentRef.current.scrollHeight + 'px');
+      setMaxHeight(contentRef.current.scrollHeight + "px");
     } else {
-      setMaxHeight('40px');
+      setMaxHeight("40px");
     }
   }, [collapsed, children]);
 
@@ -169,10 +170,8 @@ const CanvasControls = ({ children }) => {
     <Panel
       data-testid="canvas_controls"
       className={cn(
-        "react-flow__controls !left-auto !m-2 flex flex-col items-center overflow-hidden absolute w-9 min-w-9 max-w-9 rounded-md p-0 border border-border bg-background",
-        collapsed
-          ? "opacity-80 pt-0"
-          : "opacity-100 shadow-lg pt-1"
+        "react-flow__controls absolute !left-auto !m-2 flex w-9 min-w-9 max-w-9 flex-col items-center overflow-hidden rounded-md border border-border bg-background p-0",
+        collapsed ? "pt-0 opacity-80" : "pt-1 opacity-100 shadow-lg",
       )}
       position="bottom-left"
       onMouseEnter={handleMouseEnter}
@@ -181,11 +180,14 @@ const CanvasControls = ({ children }) => {
       <div
         style={{
           maxHeight,
-          overflow: 'hidden',
-          transition: 'max-height 0.4s cubic-bezier(0.4,0.2,0.2,1)',
+          overflow: "hidden",
+          transition: "max-height 0.4s cubic-bezier(0.4,0.2,0.2,1)",
         }}
       >
-        <div ref={contentRef} className="flex flex-col justify-evenly items-center">
+        <div
+          ref={contentRef}
+          className="flex flex-col items-center justify-evenly"
+        >
           {collapsed ? (
             renderCollapsed()
           ) : (
@@ -222,7 +224,9 @@ const CanvasControls = ({ children }) => {
                   (isInteractive ? "" : "bg-destructive ") + "h-10"
                 }
                 iconClasses={
-                  isInteractive ? "" : "text-primary-foreground dark:text-primary"
+                  isInteractive
+                    ? ""
+                    : "text-primary-foreground dark:text-primary"
                 }
                 testId="lock_unlock"
               />
