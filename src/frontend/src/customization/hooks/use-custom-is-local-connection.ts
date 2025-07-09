@@ -4,7 +4,7 @@ import { useMemo } from "react";
  * Hook to check if the current window is being accessed through a local connection
  * @returns A boolean indicating if the current connection is local
  */
-export function useIsLocalConnection(): boolean {
+export function useCustomIsLocalConnection(): boolean {
   return useMemo(() => {
     // Get the current window's hostname
     const currentHostname = window.location.hostname;
