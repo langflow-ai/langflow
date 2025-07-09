@@ -105,7 +105,7 @@ class Component(CustomComponent):
         if overlap := self._there_is_overlap_in_inputs_and_outputs():
             msg = f"Inputs and outputs have overlapping names: {overlap}"
             raise ValueError(msg)
-        
+
         # Initialize all attributes in one go to reduce overhead
         self._output_logs: dict[str, list[Log]] = {}
         self._current_output: str = ""
@@ -121,7 +121,7 @@ class Component(CustomComponent):
         self._components: list[Component] = []
         self._event_manager: EventManager | None = None
         self._state_model = None
-        
+
         # Cache for frequently accessed attributes
         self._attr_cache: dict[str, Any] = {}
 
@@ -129,7 +129,7 @@ class Component(CustomComponent):
         inputs = {}
         config = {}
         config_attrs_set = set(CONFIG_ATTRIBUTES)
-        
+
         for key, value in kwargs.items():
             if key.startswith("_"):
                 config[key] = value
@@ -139,7 +139,7 @@ class Component(CustomComponent):
                 inputs[key] = value
 
         self._parameters = inputs
-        
+
         # Store references without unnecessary copies
         self.__inputs = inputs
         self.__config = config
@@ -164,7 +164,7 @@ class Component(CustomComponent):
         if self._outputs_map:
             self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
-        
+
         # Set attributes after all initialization
         if inputs:
             self.set_attributes(inputs)
@@ -225,14 +225,14 @@ class Component(CustomComponent):
         # Early exit if either list is empty
         if not self.inputs or not self.outputs:
             return set()
-            
+
         # Use generator expressions to avoid creating intermediate collections
         input_names = {input_.name for input_ in self.inputs if input_.name is not None}
         if not input_names:
             return set()
-            
+
         output_names = {output.name for output in self.outputs if output.name is not None}
-        
+
         # Return the intersection of the sets
         return input_names & output_names
 
@@ -332,7 +332,7 @@ class Component(CustomComponent):
     def __deepcopy__(self, memo: dict) -> Component:
         if id(self) in memo:
             return memo[id(self)]
-            
+
         # Optimize deepcopy by copying only mutable/necessary attributes
         kwargs = {}
         for key, value in self.__config.items():
@@ -340,7 +340,7 @@ class Component(CustomComponent):
                 kwargs[key] = value  # Immutable types don't need deepcopy
             else:
                 kwargs[key] = deepcopy(value, memo)
-                
+
         # Only deepcopy inputs if they exist and are mutable
         if self.__inputs:
             kwargs["inputs"] = {}
@@ -349,12 +349,12 @@ class Component(CustomComponent):
                     kwargs["inputs"][key] = value
                 else:
                     kwargs["inputs"][key] = deepcopy(value, memo)
-        
+
         new_component = type(self)(**kwargs)
-        
+
         # Share immutable references instead of copying
         new_component._code = self._code  # String, can be shared
-        
+
         # Copy mutable collections efficiently
         new_component._outputs_map = {k: deepcopy(v, memo) for k, v in self._outputs_map.items()}
         new_component._inputs = {k: deepcopy(v, memo) for k, v in self._inputs.items()}
@@ -364,7 +364,7 @@ class Component(CustomComponent):
         new_component._attributes = dict(self._attributes)  # Shallow copy
         new_component._output_logs = {k: list(v) for k, v in self._output_logs.items()}
         new_component._logs = list(self._logs)  # type: ignore[attr-defined]
-        
+
         memo[id(self)] = new_component
         return new_component
 
@@ -372,13 +372,13 @@ class Component(CustomComponent):
         # Get the source code of the calling class with caching
         if self._code:
             return
-            
+
         # Cache source code at class level to avoid repeated inspection
         cache_key = f"_source_code_cache_{self.__class__.__name__}"
         if hasattr(self.__class__, cache_key):
             self._code = getattr(self.__class__, cache_key)
             return
-            
+
         try:
             module = inspect.getmodule(self.__class__)
             if module is None:
@@ -512,17 +512,17 @@ class Component(CustomComponent):
                     raise ValueError(msg) from e
         else:
             outputs = self.outputs or []
-            
+
         # Pre-allocate dictionary and batch process
         if not self._outputs_map:
             self._outputs_map = {}
-            
+
         for output in outputs:
             if output.name is None:
                 msg = "Output name cannot be None."
                 raise ValueError(msg)
             # Optimize deepcopy - only copy if necessary
-            if hasattr(output, '__dict__') and output.__dict__:
+            if hasattr(output, "__dict__") and output.__dict__:
                 self._outputs_map[output.name] = deepcopy(output)
             else:
                 self._outputs_map[output.name] = output
@@ -540,16 +540,16 @@ class Component(CustomComponent):
         # Pre-allocate dictionary size for better performance
         if not self._inputs:
             self._inputs = {}
-            
+
         for input_ in inputs:
             if input_.name is None:
                 msg = self.build_component_error_message("Input name cannot be None")
                 raise ValueError(msg)
-            
+
             # Avoid expensive deepcopy when possible
             try:
                 # Only deepcopy if the object is mutable and shared
-                if hasattr(input_, '__dict__') and input_.__dict__:
+                if hasattr(input_, "__dict__") and input_.__dict__:
                     self._inputs[input_.name] = deepcopy(input_)
                 else:
                     self._inputs[input_.name] = input_
@@ -879,31 +879,27 @@ class Component(CustomComponent):
         # Resolve callable inputs efficiently with batching
         coroutine_tasks = []
         thread_tasks = []
-        
+
         for key, _input in self._inputs.items():
             if asyncio.iscoroutinefunction(_input.value):
                 coroutine_tasks.append((key, _input.value()))
             elif callable(_input.value):
                 thread_tasks.append((key, _input.value))
-        
+
         # Execute coroutines concurrently
         if coroutine_tasks:
-            coroutine_results = await asyncio.gather(
-                *[task for _, task in coroutine_tasks], 
-                return_exceptions=True
-            )
-            for (key, _), result in zip(coroutine_tasks, coroutine_results):
+            coroutine_results = await asyncio.gather(*[task for _, task in coroutine_tasks], return_exceptions=True)
+            for (key, _), result in zip(coroutine_tasks, coroutine_results, strict=False):
                 if isinstance(result, Exception):
                     raise result
                 self._inputs[key].value = result
-        
+
         # Execute thread tasks concurrently
         if thread_tasks:
             thread_results = await asyncio.gather(
-                *[asyncio.to_thread(task) for _, task in thread_tasks],
-                return_exceptions=True
+                *[asyncio.to_thread(task) for _, task in thread_tasks], return_exceptions=True
             )
-            for (key, _), result in zip(thread_tasks, thread_results):
+            for (key, _), result in zip(thread_tasks, thread_results, strict=False):
                 if isinstance(result, Exception):
                     raise result
                 self._inputs[key].value = result
@@ -913,37 +909,37 @@ class Component(CustomComponent):
 
     def __getattr__(self, name: str) -> Any:
         # Check cache first for frequently accessed attributes
-        if hasattr(self, '_attr_cache') and name in self._attr_cache:
+        if hasattr(self, "_attr_cache") and name in self._attr_cache:
             return self._attr_cache[name]
-            
+
         # Optimize attribute lookup order based on frequency
         __dict__ = self.__dict__
-        
+
         # Most common: inputs (check first)
         if "_inputs" in __dict__ and name in __dict__["_inputs"]:
             value = __dict__["_inputs"][name].value
-            if hasattr(self, '_attr_cache'):
+            if hasattr(self, "_attr_cache"):
                 self._attr_cache[name] = value
             return value
-            
+
         # Second most common: attributes
         if "_attributes" in __dict__ and name in __dict__["_attributes"]:
             value = __dict__["_attributes"][name]
-            if hasattr(self, '_attr_cache'):
+            if hasattr(self, "_attr_cache"):
                 self._attr_cache[name] = value
             return value
-            
+
         # Outputs
         if "_outputs_map" in __dict__ and name in __dict__["_outputs_map"]:
             return __dict__["_outputs_map"][name]
-            
+
         # Backwards compatibility (use set for faster lookup)
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return __dict__.get(f"_{name}")
-            
+
         if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return __dict__.get(name)
-            
+
         # Special case for graph
         if name == "graph":
             return PlaceholderGraph(
@@ -951,9 +947,9 @@ class Component(CustomComponent):
                 user_id=str(getattr(self, "_user_id", None)) if hasattr(self, "_user_id") else None,
                 session_id=getattr(self, "_session_id", None),
                 context={},
-                flow_name=getattr(self, "_flow_name", None)
+                flow_name=getattr(self, "_flow_name", None),
             )
-            
+
         msg = f"Attribute {name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
 
@@ -1011,7 +1007,7 @@ class Component(CustomComponent):
         cache_key = f"_return_type_cache_{method_name}"
         if hasattr(self, cache_key):
             return getattr(self, cache_key)
-            
+
         method = getattr(self, method_name)
         return_type = get_type_hints(method).get("return")
         if return_type is None:
@@ -1019,7 +1015,7 @@ class Component(CustomComponent):
         else:
             extracted_return_types = self._extract_return_type(return_type)
             result = [format_type(extracted_return_type) for extracted_return_type in extracted_return_types]
-            
+
         # Cache the result
         setattr(self, cache_key, result)
         return result
@@ -1106,13 +1102,13 @@ class Component(CustomComponent):
         """
         if not params:
             return
-            
+
         self._validate_inputs(params)
-        
+
         # Pre-size attributes dict to avoid resizing
         attributes = dict(self._attributes) if self._attributes else {}
         __dict__ = self.__dict__
-        
+
         # Batch process parameters
         for key, value in params.items():
             if key in __dict__ and key not in self._attributes and value != getattr(self, key):
@@ -1122,16 +1118,16 @@ class Component(CustomComponent):
                 )
                 raise ValueError(msg)
             attributes[key] = value
-            
+
         # Add missing input values in batch
         for key, input_obj in self._inputs.items():
             if key not in attributes:
                 attributes[key] = input_obj.value or None
 
         self._attributes = attributes
-        
+
         # Clear attribute cache when attributes change
-        if hasattr(self, '_attr_cache'):
+        if hasattr(self, "_attr_cache"):
             self._attr_cache.clear()
 
     def _set_outputs(self, outputs: list[dict]) -> None:
@@ -1201,69 +1197,65 @@ class Component(CustomComponent):
     async def _build_results(self) -> tuple[dict, dict]:
         self._pre_run_setup_if_needed()
         self._handle_tool_mode()
-        
+
         outputs_to_process = self._get_outputs_to_process()
-        
+
         # If no outputs to process, return early
         if not outputs_to_process:
             return {}, {}
-        
+
         # Process outputs concurrently when possible
         if len(outputs_to_process) > 1 and self._can_process_outputs_concurrently():
             return await self._build_results_concurrent(outputs_to_process)
-        else:
-            return await self._build_results_sequential(outputs_to_process)
-    
+        return await self._build_results_sequential(outputs_to_process)
+
     def _can_process_outputs_concurrently(self) -> bool:
         """Check if outputs can be processed concurrently (no interdependencies)."""
         # Simple heuristic - can be enhanced to check actual dependencies
         return len(self._outputs_map) > 1 and not any(
-            hasattr(output, 'depends_on') for output in self._outputs_map.values()
+            hasattr(output, "depends_on") for output in self._outputs_map.values()
         )
-    
+
     async def _build_results_concurrent(self, outputs_to_process) -> tuple[dict, dict]:
         """Build results concurrently for independent outputs."""
         tasks = []
         for output in outputs_to_process:
             task = self._process_single_output(output)
             tasks.append((output.name, task))
-        
+
         results = {}
         artifacts = {}
-        
+
         # Execute all output tasks concurrently
-        task_results = await asyncio.gather(
-            *[task for _, task in tasks], 
-            return_exceptions=True
-        )
-        
-        for (output_name, _), task_result in zip(tasks, task_results):
+        task_results = await asyncio.gather(*[task for _, task in tasks], return_exceptions=True)
+
+        for (output_name, _), task_result in zip(tasks, task_results, strict=False):
             if isinstance(task_result, Exception):
                 raise task_result
             result, artifact = task_result
             results[output_name] = result
             artifacts[output_name] = artifact
-        
+
         self._finalize_results(results, artifacts)
         return results, artifacts
-    
+
     async def _build_results_sequential(self, outputs_to_process) -> tuple[dict, dict]:
         """Build results sequentially for dependent outputs."""
         results = {}
         artifacts = {}
-        
+
         for output in outputs_to_process:
             self._current_output = output.name
             result = await self._get_output_result(output)
             artifact = self._build_artifact(result)
-            
+
             results[output.name] = result
             artifacts[output.name] = artifact
             self._log_output(output)
-        
+
         self._finalize_results(results, artifacts)
         return results, artifacts
-    
+
     async def _process_single_output(self, output) -> tuple[Any, dict]:
         """Process a single output and return result and artifact."""
         self._current_output = output.name
@@ -1339,7 +1331,7 @@ class Component(CustomComponent):
             raise ValueError(msg)
 
         method = getattr(self, output.method)
-        
+
         # Optimize method execution
         try:
             if inspect.iscoroutinefunction(method):
@@ -1365,16 +1357,16 @@ class Component(CustomComponent):
             and self._vertex.graph.flow_id is not None
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
-            
+
         result = output.apply_options(result)
         output.value = result
         return result
-        
+
     def _is_cpu_bound_method(self, method) -> bool:
         """Heuristic to determine if a method is CPU-bound and benefits from threading."""
         # This is a simple heuristic - could be enhanced based on specific method patterns
-        method_name = getattr(method, '__name__', '')
-        cpu_bound_indicators = ['process', 'compute', 'calculate', 'transform', 'parse']
+        method_name = getattr(method, "__name__", "")
+        cpu_bound_indicators = ["process", "compute", "calculate", "transform", "parse"]
         return any(indicator in method_name.lower() for indicator in cpu_bound_indicators)
 
     async def resolve_output(self, output_name: str) -> Any:
