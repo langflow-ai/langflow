@@ -310,18 +310,18 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         # Verify the result contains multiple people
         assert isinstance(result, list)
         assert len(result) >= 3  # Should extract all three people
-        
+
         # Check that we have names and ages for multiple people
         names = [item["name"] for item in result if "name" in item]
         ages = [item["age"] for item in result if "age" in item]
-        
+
         assert len(names) >= 3
         assert len(ages) >= 3
-        
+
         # Check that we extracted the expected people (order may vary)
         expected_names = ["John Doe", "Jane Smith", "Bob Johnson"]
         expected_ages = [30, 25, 35]
-        
+
         for expected_name in expected_names:
             assert any(expected_name in name for name in names)
         for expected_age in expected_ages:
@@ -333,12 +333,14 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
-                    return {"objects": [
-                        {"product": "iPhone", "price": 999.99},
-                        {"product": "iPhone", "price": 1099.99},  # Variation - different price
-                        {"product": "Samsung", "price": 899.99},
-                        {"product": "iPhone", "price": 999.99},  # Exact duplicate - should be removed
-                    ]}
+                    return {
+                        "objects": [
+                            {"product": "iPhone", "price": 999.99},
+                            {"product": "iPhone", "price": 1099.99},  # Variation - different price
+                            {"product": "Samsung", "price": 899.99},
+                            {"product": "iPhone", "price": 999.99},  # Exact duplicate - should be removed
+                        ]
+                    }
 
             return {
                 "messages": ["mock_message"],
@@ -370,12 +372,14 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             # Should have multiple results due to multiple patterns
             assert isinstance(result.data, dict)
             assert "results" in result.data
-            assert len(result.data["results"]) == 4  # All items returned (duplicate handling is expected to be done by LLM)
+            assert (
+                len(result.data["results"]) == 4
+            )  # All items returned (duplicate handling is expected to be done by LLM)
 
             # Verify the expected products are present
             products = [item["product"] for item in result.data["results"]]
             prices = [item["price"] for item in result.data["results"]]
-            
+
             assert "iPhone" in products
             assert "Samsung" in products
             assert 999.99 in prices
@@ -723,11 +727,13 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
-                    return {"objects": [
-                        {"name": "John", "age": 30},
-                        {"name": "Jane", "age": 25},
-                        {"name": "Bob", "age": 35}
-                    ]}
+                    return {
+                        "objects": [
+                            {"name": "John", "age": 30},
+                            {"name": "Jane", "age": 25},
+                            {"name": "Bob", "age": 35},
+                        ]
+                    }
 
             return {
                 "messages": ["mock_message"],
