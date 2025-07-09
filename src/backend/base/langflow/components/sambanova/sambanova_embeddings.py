@@ -2,6 +2,7 @@ from langchain_sambanova import SambaNovaCloudEmbeddings
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
+from langflow.base.models.sambanova_constants import SAMBANOVA_EMBEDDING_MODEL_NAMES
 from langflow.field_typing import Embeddings
 from langflow.io import DropdownInput, Output, SecretStrInput
 
@@ -20,10 +21,8 @@ class SambaNovaEmbeddingsComponent(LCModelComponent):
             name="model_name",
             display_name="Model",
             advanced=False,
-            options=[
-                "E5-Mistral-7B-Instruct",
-            ],
-            value="e5-mistral-7b",
+            options=SAMBANOVA_EMBEDDING_MODEL_NAMES,
+            value=SAMBANOVA_EMBEDDING_MODEL_NAMES[0] if SAMBANOVA_EMBEDDING_MODEL_NAMES else "",
             refresh_button=True,
             combobox=True,
         ),
@@ -43,8 +42,7 @@ class SambaNovaEmbeddingsComponent(LCModelComponent):
             )
         except Exception as e:
             msg = (
-                "Unable to create SambaNova Embeddings. ",
-                "Please verify the API key and model parameters, and try again.",
+                "Unable to create SambaNova Embeddings. Please verify the API key and model parameters, and try again."
             )
             raise ValueError(msg) from e
         return embeddings
