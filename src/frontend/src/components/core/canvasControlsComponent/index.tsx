@@ -4,6 +4,7 @@ import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
+import { getImprovedLayoutedNodes } from "@/utils/layoutUtils";
 import {
   ControlButton,
   Panel,
@@ -13,7 +14,7 @@ import {
   type ReactFlowState,
 } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { shallow } from "zustand/shallow";
 
@@ -68,7 +69,7 @@ const selector = (s: ReactFlowState) => ({
 
 const CanvasControls = ({ children }) => {
   const store = useStoreApi();
-  const { fitView, zoomIn, zoomOut } = useReactFlow();
+  const { fitView, zoomIn, zoomOut, setNodes } = useReactFlow();
   const { isInteractive, minZoomReached, maxZoomReached } = useStore(
     selector,
     shallow,
@@ -79,6 +80,10 @@ const CanvasControls = ({ children }) => {
   );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
+  const nodes = useFlowStore((state) => state.nodes);
+  const edges = useFlowStore((state) => state.edges);
+  const setNodesState = useFlowStore((state) => state.setNodes);
+  const [isLayouting, setIsLayouting] = useState(false);
 
   useEffect(() => {
     store.setState({
@@ -109,6 +114,26 @@ const CanvasControls = ({ children }) => {
     handleSaveFlow();
   }, [isInteractive, store, handleSaveFlow]);
 
+  const onAutoLayout = useCallback(async () => {
+    if (nodes.length === 0 || isLayouting) return;
+    
+    setIsLayouting(true);
+    try {
+      const layoutedNodes = await getImprovedLayoutedNodes(nodes, edges);
+      setNodes(layoutedNodes);
+      setNodesState(layoutedNodes);
+      
+      // Fit view after layout with a slight delay for better UX
+      setTimeout(() => {
+        fitView({ duration: 800, padding: 0.1 });
+      }, 150);
+    } catch (error) {
+      console.error("Error applying auto layout:", error);
+    } finally {
+      setIsLayouting(false);
+    }
+  }, [nodes, edges, setNodes, setNodesState, fitView, isLayouting]);
+
   return (
     <Panel
       data-testid="canvas_controls"
@@ -137,6 +162,14 @@ const CanvasControls = ({ children }) => {
         tooltipText="Fit To Zoom"
         onClick={fitView}
         testId="fit_view"
+      />
+      {/* Auto Layout */}
+      <CustomControlButton
+        iconName="AlignLeft"
+        tooltipText="Auto Layout"
+        onClick={onAutoLayout}
+        disabled={nodes.length === 0 || isLayouting}
+        testId="auto_layout"
       />
       {children}
       {/* Lock/Unlock */}
