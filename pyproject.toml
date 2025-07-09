@@ -126,6 +126,7 @@ dependencies = [
     "twelvelabs>=0.4.7",
     "docling_core>=2.36.1",
     "filelock>=3.18.0",
+    "authlib>=1.2.1,<2.0.0",
 ]
 
 [dependency-groups]

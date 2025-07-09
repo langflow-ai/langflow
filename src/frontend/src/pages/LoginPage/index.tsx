@@ -1,8 +1,10 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
+import { useGetOAuthProviders } from "@/controllers/API/queries/auth/use-get-oauth-providers";
 import { CustomLink } from "@/customization/components/custom-link";
 import * as Form from "@radix-ui/react-form";
 import { useContext, useState } from "react";
+import OAuthLoginButtons from "../../components/auth/OAuthLoginButtons";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -23,6 +25,7 @@ export default function LoginPage(): JSX.Element {
   const { password, username } = inputState;
   const { login } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { data: oauthData } = useGetOAuthProviders();
 
   function handleInput({
     target: { name, value },
@@ -127,6 +130,15 @@ export default function LoginPage(): JSX.Element {
               </Button>
             </Form.Submit>
           </div>
+
+          {/* OAuth Login Buttons */}
+          {oauthData?.enabled && oauthData.providers.length > 0 && (
+            <OAuthLoginButtons
+              className="w-full"
+              providers={oauthData.providers}
+            />
+          )}
+
           <div className="w-full">
             <CustomLink to="/signup">
               <Button className="w-full" variant="outline" type="button">

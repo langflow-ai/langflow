@@ -22,6 +22,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.middleware.sessions import SessionMiddleware
 
 from langflow.api import health_check_router, log_router, router
 from langflow.api.v1.mcp_projects import init_mcp_servers
@@ -345,7 +346,25 @@ def create_app():
 
         return await call_next(request)
 
-    settings = get_settings_service().settings
+    settings_service = get_settings_service()
+    settings = settings_service.settings
+    # Add session middleware for OAuth support
+    secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+
+    if not secret_key:
+        # Generate a random secret key if none is provided
+        import secrets
+
+        secret_key = secrets.token_urlsafe(32)
+
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=secret_key,
+        max_age=300,  # 5 minutes for OAuth sessions
+        same_site="lax",
+        https_only=False,  # Allow HTTP for development
+    )
+
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)

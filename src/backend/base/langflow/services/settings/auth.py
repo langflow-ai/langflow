@@ -23,6 +23,36 @@ class AuthSettings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_SECONDS: int = 60 * 60  # 1 hour
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 24 * 7  # 7 days
 
+    # OAuth Settings
+    ENABLE_OAUTH: bool = False
+    """Enable OAuth authentication (Google and Microsoft AD)"""
+
+    # Google OAuth Settings
+    GOOGLE_OAUTH_CLIENT_ID: str | None = None
+    """Google OAuth Client ID"""
+    GOOGLE_OAUTH_CLIENT_SECRET: SecretStr | None = None
+    """Google OAuth Client Secret"""
+    GOOGLE_OAUTH_REDIRECT_URI: str = "http://localhost:7860/api/v1/oauth/google/callback"
+    """Google OAuth Redirect URI"""
+
+    # Microsoft AD OAuth Settings
+    MICROSOFT_OAUTH_CLIENT_ID: str | None = None
+    """Microsoft AD OAuth Client ID"""
+    MICROSOFT_OAUTH_CLIENT_SECRET: SecretStr | None = None
+    """Microsoft AD OAuth Client Secret"""
+    MICROSOFT_OAUTH_REDIRECT_URI: str = "http://localhost:7860/api/v1/oauth/microsoft/callback"
+    """Microsoft AD OAuth Redirect URI"""
+    MICROSOFT_OAUTH_TENANT_ID: str | None = None
+    """Microsoft AD Tenant ID (optional, for single tenant)"""
+
+    # OAuth User Creation Settings
+    OAUTH_AUTO_CREATE_USERS: bool = True
+    """Automatically create users from OAuth authentication"""
+    OAUTH_DEFAULT_IS_ACTIVE: bool = True
+    """Default active status for OAuth-created users"""
+    OAUTH_DEFAULT_IS_SUPERUSER: bool = False
+    """Default superuser status for OAuth-created users"""
+
     # API Key to execute /process endpoint
     API_KEY_ALGORITHM: str = "HS256"
     API_V1_STR: str = "/api/v1"

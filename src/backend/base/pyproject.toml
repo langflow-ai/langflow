@@ -88,6 +88,7 @@ dependencies = [
     "ibm-watsonx-ai>=1.3.1",
     "langchain-ibm>=0.3.8",
     "trustcall>=0.0.38",
+    "authlib>=1.2.1,<2.0.0",
 ]
 
 [dependency-groups]

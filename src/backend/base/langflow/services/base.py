@@ -1,4 +1,5 @@
 from abc import ABC
+from enum import Enum
 
 
 class Service(ABC):
@@ -26,3 +27,15 @@ class Service(ABC):
 
     def set_ready(self) -> None:
         self.ready = True
+
+
+class ServiceType(str, Enum):
+    SETTINGS_SERVICE = "settings_service"
+    DATABASE_SERVICE = "database_service"
+    CACHE_SERVICE = "cache_service"
+    STORAGE_SERVICE = "storage_service"
+    TELEMETRY_SERVICE = "telemetry_service"
+    TRACING_SERVICE = "tracing_service"
+    VARIABLE_SERVICE = "variable_service"
+    JOB_QUEUE_SERVICE = "job_queue_service"
+    OAUTH_SERVICE = "oauth_service"

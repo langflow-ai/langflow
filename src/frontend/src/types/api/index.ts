@@ -348,3 +348,8 @@ export type TableOptionsTypeAPI = {
   field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
   description?: string;
 };
+
+export type OAuthProvidersResponse = {
+  enabled: boolean;
+  providers: string[];
+};

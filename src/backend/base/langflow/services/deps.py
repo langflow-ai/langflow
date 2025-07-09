@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
     from langflow.services.job_queue.service import JobQueueService
+    from langflow.services.oauth.service import OAuthService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
     from langflow.services.socket.service import SocketIOService
@@ -247,3 +248,10 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_oauth_service() -> OAuthService:
+    """Get the OAuth service."""
+    from langflow.services.oauth.factory import OAuthServiceFactory
+
+    return get_service(ServiceType.OAUTH_SERVICE, OAuthServiceFactory())

@@ -18,18 +18,32 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
     from langflow.services.deps import get_db_service
 
     database_service: DatabaseService = get_db_service()
+
+    # Check if Alembic has been initialized (i.e., if the database has been migrated)
+    alembic_initialized = False
     try:
-        if database_service.settings_service.settings.database_connection_retry:
-            await database_service.create_db_and_tables_with_retry()
-        else:
-            await database_service.create_db_and_tables()
-    except Exception as exc:
-        # if the exception involves tables already existing
-        # we can ignore it
-        if "already exists" not in str(exc):
-            msg = "Error creating DB and tables"
-            logger.exception(msg)
-            raise RuntimeError(msg) from exc
+        async with database_service.with_session() as session:
+            await session.exec(text("SELECT * FROM alembic_version"))
+            alembic_initialized = True
+            logger.debug("Alembic already initialized, skipping table creation")
+    except (ValueError, RuntimeError, KeyError):
+        logger.debug("Alembic not initialized, will create tables and run migrations")
+
+    # Only create tables if Alembic hasn't been initialized
+    if not alembic_initialized:
+        try:
+            if database_service.settings_service.settings.database_connection_retry:
+                await database_service.create_db_and_tables_with_retry()
+            else:
+                await database_service.create_db_and_tables()
+        except Exception as exc:
+            # if the exception involves tables already existing
+            # we can ignore it
+            if "already exists" not in str(exc):
+                msg = "Error creating DB and tables"
+                logger.exception(msg)
+                raise RuntimeError(msg) from exc
+
     try:
         await database_service.check_schema_health()
     except Exception as exc:

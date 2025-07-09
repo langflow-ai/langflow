@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from loguru import logger
+from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import select
@@ -20,6 +21,24 @@ async def get_user_by_id(db: AsyncSession, user_id: UUID) -> User | None:
     if isinstance(user_id, str):
         user_id = UUID(user_id)
     stmt = select(User).where(User.id == user_id)
+    return (await db.exec(stmt)).first()
+
+
+async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
+    """Get user by email address."""
+    stmt = select(User).where(User.email == email)
+    return (await db.exec(stmt)).first()
+
+
+async def get_user_by_oauth_id(db: AsyncSession, provider: str, oauth_id: str) -> User | None:
+    """Get user by OAuth provider and ID."""
+    stmt = select(User).where(and_(User.oauth_provider == provider, User.oauth_id == oauth_id))
+    return (await db.exec(stmt)).first()
+
+
+async def get_user_by_oauth_email(db: AsyncSession, oauth_email: str) -> User | None:
+    """Get user by OAuth email."""
+    stmt = select(User).where(User.oauth_email == oauth_email)
     return (await db.exec(stmt)).first()
 
 

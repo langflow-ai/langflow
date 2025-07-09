@@ -26,12 +26,17 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)
     password: str = Field()
+    email: str | None = Field(default=None, nullable=True, index=True)
     profile_image: str | None = Field(default=None, nullable=True)
     is_active: bool = Field(default=False)
     is_superuser: bool = Field(default=False)
     create_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login_at: datetime | None = Field(default=None, nullable=True)
+    # OAuth fields
+    oauth_provider: str | None = Field(default=None, nullable=True)  # "google" or "microsoft"
+    oauth_id: str | None = Field(default=None, nullable=True, index=True)  # External OAuth ID
+    oauth_email: str | None = Field(default=None, nullable=True, index=True)  # OAuth email
     api_keys: list["ApiKey"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
@@ -62,6 +67,7 @@ class UserCreate(SQLModel):
 class UserRead(SQLModel):
     id: UUID = Field(default_factory=uuid4)
     username: str = Field()
+    email: str | None = Field()
     profile_image: str | None = Field()
     store_api_key: str | None = Field(nullable=True)
     is_active: bool = Field()
@@ -69,14 +75,21 @@ class UserRead(SQLModel):
     create_at: datetime = Field()
     updated_at: datetime = Field()
     last_login_at: datetime | None = Field(nullable=True)
+    oauth_provider: str | None = Field()
+    oauth_id: str | None = Field()
+    oauth_email: str | None = Field()
     optins: dict[str, Any] | None = Field(default=None)
 
 
 class UserUpdate(SQLModel):
     username: str | None = None
+    email: str | None = None
     profile_image: str | None = None
     password: str | None = None
     is_active: bool | None = None
     is_superuser: bool | None = None
     last_login_at: datetime | None = None
+    oauth_provider: str | None = None
+    oauth_id: str | None = None
+    oauth_email: str | None = None
     optins: dict[str, Any] | None = None

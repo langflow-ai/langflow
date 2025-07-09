@@ -484,7 +484,7 @@ class Settings(BaseSettings):
 
     @classmethod
     @override
-    def settings_customise_sources(  # type: ignore[misc]
+    def settings_customise_sources(
         cls,
         settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
@@ -492,7 +492,14 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        return (MyCustomSource(settings_cls),)
+        # Include all standard sources in the correct order
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            file_secret_settings,
+            MyCustomSource(settings_cls),  # Custom source last for overrides
+        )
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str) -> None:

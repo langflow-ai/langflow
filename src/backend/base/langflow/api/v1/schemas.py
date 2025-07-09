@@ -428,3 +428,8 @@ class MCPSettings(BaseModel):
 
 class MCPInstallRequest(BaseModel):
     client: str
+
+
+class OAuthProvidersResponse(BaseModel):
+    enabled: bool
+    providers: list[str]
