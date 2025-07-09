@@ -73,7 +73,9 @@ class JigsawStackAIScraperComponent(Component):
             if self.html:
                 scrape_params["html"] = self.html
 
-            if len(scrape_params.get("url", "").strip()) == 0 and len(scrape_params.get("html", "").strip()) == 0:
+            url_value = scrape_params.get("url", "")
+            html_value = scrape_params.get("html", "")
+            if (not url_value or not url_value.strip()) and (not html_value or not html_value.strip()):
                 url_or_html_error = "Either 'url' or 'html' must be provided for scraping"
                 raise ValueError(url_or_html_error)
 
