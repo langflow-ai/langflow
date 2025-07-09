@@ -99,7 +99,7 @@ The **NVIDIA Retriever Extraction** component outputs a list of [Data](/concepts
   - For images: The image caption.
   - For infographics: The extracted infographic content.
 - `file_path`: The source file name and path.
-- `document_type`: The type of the document, which can be "text", "structured", or "image".
+- `document_type`: The type of the document, which can be `text`, `structured`, or `image`.
 - `description`: Additional description of the content.
 
 The output varies based on the `document_type`:
