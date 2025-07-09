@@ -14,20 +14,11 @@ Langflow integrates with [Docling](https://docling-project.github.io/docling/) t
 * Install the Docling extra in Langflow OSS with `uv pip install langflow[docling]` or `uv pip install docling`.
 
     To add a dependency to Langflow Desktop, add an entry for Docling to the application's `requirements.txt` file.
-
-    * On macOS, the file is located at `/Users/<name>/.langflow/data/requirements.txt`.
-    * On Windows, the file is located at `C:\Users\<name>\AppData\Roaming\com.Langflow\data\requirements.txt`.
-
-    Add the dependency to `requirements.txt` in the following format:
-        ```
-        docling==2.40.0
-        ```
-    Restart Langflow desktop to install the dependency.
+    For more information, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
 
 ## Use Docling components in a flow
 
-This example demonstrates how to use some Docling components to split a PDF in a flow:
-
+This example demonstrates how to use Docling components to split a PDF in a flow:
 
 1. Connect a **Docling** and an **ExportDoclingDocument** component to a [**Split Text**](/components-processing#split-text) component.
     The **Docling** component loads the document, and the **ExportDoclingDocument** component converts the DoclingDocument into the format you select. This example converts the document to Markdown, with images represented as placeholders.
@@ -97,7 +88,7 @@ This component uses Docling to process input documents connecting to your instan
 
 </details>
 
-## Chunk DoclingDocument
+### Chunk DoclingDocument
 
 This component uses the DoclingDocument chunkers to split a document into chunks.
 
