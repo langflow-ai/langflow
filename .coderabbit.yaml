@@ -133,6 +133,8 @@ chat:
       usage: auto
 knowledge_base:
   opt_out: false
+  code_guidelines:
+    enabled: true
   web_search:
     enabled: true
   learnings:
