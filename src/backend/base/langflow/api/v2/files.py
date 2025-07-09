@@ -275,7 +275,6 @@ async def delete_files_batch(
             await session.delete(file)
 
         # Delete all files from the database
-        await session.flush()  # Ensures delete is staged
         await session.commit()  # Commit deletion
 
     except Exception as e:
@@ -474,7 +473,7 @@ async def delete_file(
 
         # Delete from the database
         await session.delete(file_to_delete)
-        await session.flush()  # Ensures delete is staged
+        await session.commit()
 
     except HTTPException:
         # Re-raise HTTPException to avoid being caught by the generic exception handler
@@ -506,7 +505,6 @@ async def delete_all_files(
             await session.delete(file)
 
         # Delete all files from the database
-        await session.flush()  # Ensures delete is staged
         await session.commit()  # Commit deletion
 
     except Exception as e:
