@@ -1,14 +1,10 @@
-from unittest import mock
-from uuid import uuid4
-
 import pytest
-from fastapi import HTTPException, status
+from fastapi import status
 from httpx import AsyncClient
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
 
 @pytest.mark.asyncio
-async def test_duplicate_flow_name_basic(client: AsyncClient, logged_in_headers, session):
+async def test_duplicate_flow_name_basic(client: AsyncClient, logged_in_headers):
     """Test that duplicate flow names get numbered correctly."""
     base_flow = {
         "name": "Test Flow",
@@ -34,7 +30,7 @@ async def test_duplicate_flow_name_basic(client: AsyncClient, logged_in_headers,
 
 
 @pytest.mark.asyncio
-async def test_duplicate_flow_name_with_numbers_in_original(client: AsyncClient, logged_in_headers, session):
+async def test_duplicate_flow_name_with_numbers_in_original(client: AsyncClient, logged_in_headers):
     """Test duplication of flows with numbers in their original name."""
     base_flow = {
         "name": "Untitled document (7)",
@@ -60,7 +56,7 @@ async def test_duplicate_flow_name_with_numbers_in_original(client: AsyncClient,
 
 
 @pytest.mark.asyncio
-async def test_duplicate_flow_name_with_non_numeric_suffixes(client: AsyncClient, logged_in_headers, session):
+async def test_duplicate_flow_name_with_non_numeric_suffixes(client: AsyncClient, logged_in_headers):
     """Test that non-numeric suffixes don't interfere with numbering."""
     base_flow = {
         "name": "My Flow",
@@ -89,7 +85,7 @@ async def test_duplicate_flow_name_with_non_numeric_suffixes(client: AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_duplicate_flow_name_gaps_in_numbering(client: AsyncClient, logged_in_headers, session):
+async def test_duplicate_flow_name_gaps_in_numbering(client: AsyncClient, logged_in_headers):
     """Test that gaps in numbering are handled correctly (uses max + 1)."""
     base_flow = {
         "name": "Gapped Flow",
@@ -124,7 +120,7 @@ async def test_duplicate_flow_name_gaps_in_numbering(client: AsyncClient, logged
 
 
 @pytest.mark.asyncio
-async def test_duplicate_flow_name_special_characters(client: AsyncClient, logged_in_headers, session):
+async def test_duplicate_flow_name_special_characters(client: AsyncClient, logged_in_headers):
     """Test duplication with special characters in flow names."""
     base_flow = {
         "name": "Flow-with_special@chars!",
@@ -145,7 +141,7 @@ async def test_duplicate_flow_name_special_characters(client: AsyncClient, logge
 
 
 @pytest.mark.asyncio
-async def test_duplicate_flow_name_regex_patterns(client: AsyncClient, logged_in_headers, session):
+async def test_duplicate_flow_name_regex_patterns(client: AsyncClient, logged_in_headers):
     """Test that flow names containing regex special characters work correctly."""
     base_flow = {
         "name": "Flow (.*) [test]",
