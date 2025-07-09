@@ -77,7 +77,6 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
   let newEdges: EdgeType[] = cloneDeep(
     edges.map((edge) => ({ ...edge, selected: false, animated: false })),
   );
-  console.log("edges", edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
@@ -151,8 +150,6 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
                 )?.length ?? 0) <= 1) &&
               output.name === name,
           );
-
-        console.log("output", output);
 
         if (output) {
           const outputTypes =
