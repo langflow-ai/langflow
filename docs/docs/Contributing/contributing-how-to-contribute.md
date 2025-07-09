@@ -24,6 +24,7 @@ Install Langflow from source by forking the repository, and then set up your dev
 :::tip Windows
 For Windows installations, you don't need need Make, and you can find [Windows scripts](https://github.com/langflow-ai/langflow/tree/main/scripts/windows) in the Langflow repository.
 :::
+
 ### Clone the Langflow repository
 
 1. Fork the [Langflow GitHub repository](https://github.com/langflow-ai/langflow).
@@ -41,9 +42,9 @@ Replace the following:
 If you're not developing, but want to run Langflow from source after cloning the repo, run the following commands.
 
 <Tabs groupId="os">
-  <TabItem value="Linux and macOS" label="Linux and macOS" default>
+  <TabItem value="macOS/Linux" label="macOS/Linux" default>
 
-1. To run Langflow from source, run the following command:
+    1. To run Langflow from source, run the following command:
     ```bash
     make run_cli
     ```
@@ -58,38 +59,71 @@ If you're not developing, but want to run Langflow from source after cloning the
   </TabItem>
   <TabItem value="Windows" label="Windows">
 
-To run Langflow from source on Windows, you can use the Langflow project's included scripts, or run the commands in the terminal.
+    To run Langflow from source on Windows, you can use the Langflow project's included scripts, or run the commands in the terminal.
 
-1. To run Langflow with the included scripts, navigate to the `scripts/windows` directory.
-Two scripts are available to install and start Langflow.
+    1. To run Langflow with the included scripts, navigate to the `scripts/windows` directory.
+    Two scripts are available to install and start Langflow.
 
-2. Run Langflow with one of the scripts.
+    2. Run Langflow with one of the scripts.
 
-    * To install and start Langflow with a Windows Batch file, double-click `build_and_run.bat`.
-    * To install and start Langflow with the Powershell script, run:
+    <Tabs groupId="windows-shell">
+      <TabItem value="Windows CMD" label="Windows CMD" default>
 
-        ```ps
-        .\build_and_run.ps1
+        To install and start Langflow with a Windows Batch file, double-click `build_and_run.bat`.
+
+      </TabItem>
+      <TabItem value="Powershell" label="Powershell">
+
+        To install and start Langflow with the Powershell script, run:
+
+            ```ps
+            .\build_and_run.ps1
+            ```
+
+      </TabItem>
+    </Tabs>
+
+    **Alternatively**, to run Langflow from source with the Windows Command Line or Powershell, do the following.
+
+    <Tabs groupId="windows-shell">
+      <TabItem value="Windows CMD" label="Windows CMD" default>
+
+        1. Run the following commands to build the Langflow frontend.
+        ```
+        cd src/frontend && npm install && npm run build && npm run start
         ```
 
-**Alternatively**, to run Langflow from source with the Windows Command Line or Powershell, do the following.
+        2. Copy the contents of the built `src/frontend/build` directory to `src/backend/base/langflow/frontend`.
 
-1. Run the following commands to build the Langflow frontend.
-    ```
-    cd src/frontend
-    npm install
-    npm run build
-    npm run start
-    ```
+        3. To start Langflow, run the following command.
+        ```
+        uv run langflow run
+        ```
 
-2. Copy the contents of the built `src/frontend/build` directory to `src/backend/base/langflow/frontend`.
+        The frontend is served at http://localhost:7860.
 
-3. To start Langflow, run the following command.
-    ```
-    uv run langflow run
-    ```
+      </TabItem>
+      <TabItem value="Powershell" label="Powershell">
 
-    The frontend is served at http://localhost:7860.
+        1. Run the following commands to build the Langflow frontend.
+        ```
+        cd src/frontend
+        npm install
+        npm run build
+        npm run start
+        ```
+
+        2. Copy the contents of the built `src/frontend/build` directory to `src/backend/base/langflow/frontend`.
+
+        3. To start Langflow, run the following command.
+        ```
+        uv run langflow run
+        ```
+
+        The frontend is served at http://localhost:7860.
+
+      </TabItem>
+    </Tabs>
 
   </TabItem>
 </Tabs>
