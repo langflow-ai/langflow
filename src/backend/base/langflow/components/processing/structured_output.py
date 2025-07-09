@@ -43,12 +43,13 @@ class StructuredOutputComponent(Component):
             display_name="Format Instructions",
             info="The instructions to the language model for formatting the output.",
             value=(
-                "You are an AI that extracts one structured JSON object from unstructured text. "
+                "You are an AI that extracts structured JSON objects from unstructured text. "
                 "Use a predefined schema with expected types (str, int, float, bool, dict). "
+                "Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. "
                 "Fill missing or ambiguous values with defaults: null for missing values. "
-                "Ignore duplicates and partial repeats. "
-                "Always return one valid JSON, never throw errors or return multiple objects."
-                "Output: A single well-formed JSON object, and nothing else."
+                "Remove exact duplicates but keep variations that have different field values. "
+                "Always return valid JSON in the expected format, never throw errors. "
+                "If multiple objects can be extracted, return them all in the structured format."
             ),
             required=True,
             advanced=True,
