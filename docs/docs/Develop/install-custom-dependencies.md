@@ -5,24 +5,6 @@ slug: /install-custom-dependencies
 
 Langflow provides optional dependency groups and support for custom dependencies to extend Langflow functionality.
 
-## Install optional dependency groups
-
-Langflow OSS provides optional dependency groups that extend its functionality.
-
-These dependencies are listed in the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L191) file under `[project.optional-dependencies]`.
-
-Install dependency groups using pip's `[extras]` syntax. For example, to install Langflow with the `postgresql` dependency group, enter the following command:
-
-```bash
-uv pip install "langflow[postgresql]"
-```
-
-To install multiple extras, use commas to separate each dependency group:
-
-```bash
-uv pip install "langflow[deploy,local,postgresql]"
-```
-
 ## Install custom dependencies in Langflow Desktop {#langflow-desktop}
 
 To add dependencies to Langflow Desktop, add an entry for the package to the application's `requirements.txt` file:
@@ -44,6 +26,24 @@ If you're working within a cloned Langflow repository, add dependencies with `uv
 
 ```bash
 uv add langflow DEPENDENCY
+```
+
+### Install optional dependency groups
+
+Langflow OSS provides optional dependency groups that extend its functionality.
+
+These dependencies are listed in the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/main/pyproject.toml#L191) file under `[project.optional-dependencies]`.
+
+Install dependency groups using pip's `[extras]` syntax. For example, to install Langflow with the `postgresql` dependency group, enter the following command:
+
+```bash
+uv pip install "langflow[postgresql]"
+```
+
+To install multiple extras, use commas to separate each dependency group:
+
+```bash
+uv pip install "langflow[deploy,local,postgresql]"
 ```
 
 ### Use a virtual environment to test custom dependencies
