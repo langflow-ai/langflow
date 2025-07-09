@@ -9,7 +9,7 @@ import Icon from "@site/src/components/icon";
 
 Langflow integrates with [Docling](https://docling-project.github.io/docling/) through a suite of components for parsing documents.
 
-## Prerequisites
+## Install Docling dependency
 
 * Install the Docling extra in Langflow OSS with `uv pip install langflow[docling]` or `uv pip install docling`.
 
@@ -24,7 +24,10 @@ Langflow integrates with [Docling](https://docling-project.github.io/docling/) t
         ```
     Restart Langflow desktop to install the dependency.
 
-## Use Docling components in a flow to split a PDF
+## Use Docling components in a flow
+
+This example demonstrates how to use some Docling components to split a PDF in a flow:
+
 
 1. Connect a **Docling** and an **ExportDoclingDocument** component to a [**Split Text**](/components-processing#split-text) component.
     The **Docling** component loads the document, and the **ExportDoclingDocument** component converts the DoclingDocument into the format you select. This example converts the document to Markdown, with images represented as placeholders.
@@ -41,7 +44,11 @@ The flow looks like this:
 6. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
     The chunked document is loaded as vectors into your vector database.
 
-## Docling
+## Docling components
+
+The following sections describe the purpose and configuration options for each component in the Docling bundle.
+
+### Docling
 
 This component uses Docling to process input documents running the Docling models locally.
 
@@ -64,7 +71,7 @@ This component uses Docling to process input documents running the Docling model
 
 </details>
 
-## Docling Serve
+### Docling Serve
 
 This component uses Docling to process input documents connecting to your instance of Docling Serve.
 
@@ -92,7 +99,7 @@ This component uses Docling to process input documents connecting to your instan
 
 ## Chunk DoclingDocument
 
-This component uses the DocumentDocument chunkers to split the document into chunks.
+This component uses the DoclingDocument chunkers to split a document into chunks.
 
 <details>
 <summary>Parameters</summary>
@@ -117,9 +124,9 @@ This component uses the DocumentDocument chunkers to split the document into chu
 
 </details>
 
-## Export DoclingDocument
+### Export DoclingDocument
 
-This component exports DoclingDocument to markdown, html or other formats.
+This component exports DoclingDocument to Markdown, HTML, and other formats.
 
 <details>
 <summary>Parameters</summary>
