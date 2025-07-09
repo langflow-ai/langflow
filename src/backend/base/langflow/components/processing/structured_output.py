@@ -189,7 +189,7 @@ class StructuredOutputComponent(Component):
         if len(output) > 1:
             # Multiple outputs - wrap them in a results container
             return Data(data={"results": output})
-        return None
+        return Data(data={})
 
     def build_structured_dataframe(self) -> DataFrame:
         output = self.build_structured_output_base()
