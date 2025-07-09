@@ -9,12 +9,12 @@ from contextvars import ContextVar
 from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
-from typing import Annotated
+from subprocess import CalledProcessError
 from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
 
 from anyio import BrokenResourceError
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
@@ -22,6 +22,7 @@ from mcp.server.sse import SseServerTransport
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
+from langflow.api.utils import CurrentActiveMCPUser
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.mcp import (
     current_user_ctx,
@@ -30,11 +31,11 @@ from langflow.api.v1.mcp import (
     with_db_session,
 )
 from langflow.api.v1.schemas import MCPInstallRequest, MCPSettings, SimplifiedAPIRequest
-from langflow.base.mcp.util import get_flow_snake_case
+from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH, MAX_MCP_TOOL_NAME_LENGTH
+from langflow.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
-from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models import Flow, Folder, User
+from langflow.services.database.models import Flow, Folder
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.services.storage.utils import build_content_type_from_extension
 
@@ -60,7 +61,7 @@ def get_project_sse(project_id: UUID) -> SseServerTransport:
 @router.get("/{project_id}")
 async def list_project_tools(
     project_id: UUID,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveMCPUser,
     *,
     mcp_enabled: bool = True,
 ) -> list[MCPSettings]:
@@ -94,10 +95,10 @@ async def list_project_tools(
                     continue
 
                 # Format the flow name according to MCP conventions (snake_case)
-                flow_name = "_".join(flow.name.lower().split())
+                flow_name = sanitize_mcp_name(flow.name)
 
                 # Use action_name and action_description if available, otherwise use defaults
-                name = flow.action_name or flow_name
+                name = sanitize_mcp_name(flow.action_name) if flow.action_name else flow_name
                 description = flow.action_description or (
                     flow.description if flow.description else f"Tool generated from flow: {flow_name}"
                 )
@@ -134,7 +135,7 @@ async def im_alive():
 async def handle_project_sse(
     project_id: UUID,
     request: Request,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveMCPUser,
 ):
     """Handle SSE connections for a specific project."""
     # Verify project exists and user has access
@@ -185,9 +186,7 @@ async def handle_project_sse(
 
 
 @router.post("/{project_id}")
-async def handle_project_messages(
-    project_id: UUID, request: Request, current_user: Annotated[User, Depends(get_current_active_user)]
-):
+async def handle_project_messages(project_id: UUID, request: Request, current_user: CurrentActiveMCPUser):
     """Handle POST messages for a project-specific MCP server."""
     # Verify project exists and user has access
     async with session_scope() as session:
@@ -214,9 +213,7 @@ async def handle_project_messages(
 
 
 @router.post("/{project_id}/")
-async def handle_project_messages_with_slash(
-    project_id: UUID, request: Request, current_user: Annotated[User, Depends(get_current_active_user)]
-):
+async def handle_project_messages_with_slash(project_id: UUID, request: Request, current_user: CurrentActiveMCPUser):
     """Handle POST messages for a project-specific MCP server with trailing slash."""
     # Call the original handler
     return await handle_project_messages(project_id, request, current_user)
@@ -226,7 +223,7 @@ async def handle_project_messages_with_slash(
 async def update_project_mcp_settings(
     project_id: UUID,
     settings: list[MCPSettings],
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveMCPUser,
 ):
     """Update the MCP settings of all flows in a project."""
     try:
@@ -327,9 +324,9 @@ async def install_mcp_config(
     project_id: UUID,
     body: MCPInstallRequest,
     request: Request,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveMCPUser,
 ):
-    """Install MCP server configuration for Cursor or Claude."""
+    """Install MCP server configuration for Cursor, Windsurf, or Claude."""
     # Check if the request is coming from a local IP address
     client_ip = get_client_ip(request)
     if not is_local_ip(client_ip):
@@ -358,7 +355,9 @@ async def install_mcp_config(
         args = ["mcp-proxy", sse_url]
 
         # Check if running on WSL (will appear as Linux but with Microsoft in release info)
-        if os_type == "Linux" and "microsoft" in platform.uname().release.lower():
+        is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
+
+        if is_wsl:
             logger.debug("WSL detected, using Windows-specific configuration")
 
             # If we're in WSL and the host is localhost, we might need to adjust the URL
@@ -389,19 +388,78 @@ async def install_mcp_config(
             args = ["/c", "uvx", "mcp-proxy", sse_url]
             logger.debug("Windows detected, using cmd command")
 
+        name = project.name
+
         # Create the MCP configuration
         mcp_config = {
-            "mcpServers": {f"lf-{project.name.lower().replace(' ', '_')[:11]}": {"command": command, "args": args}}
+            "mcpServers": {
+                f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}": {
+                    "command": command,
+                    "args": args,
+                }
+            }
         }
+
+        server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+        logger.debug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
 
         # Determine the config file path based on the client and OS
         if body.client.lower() == "cursor":
             config_path = Path.home() / ".cursor" / "mcp.json"
+        elif body.client.lower() == "windsurf":
+            config_path = Path.home() / ".codeium" / "windsurf" / "mcp_config.json"
         elif body.client.lower() == "claude":
             if os_type == "Darwin":  # macOS
                 config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
-            elif os_type == "Windows":
-                config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
+            elif os_type == "Windows" or is_wsl:  # Windows or WSL (Claude runs on Windows host)
+                if is_wsl:
+                    # In WSL, we need to access the Windows APPDATA directory
+                    try:
+                        # First try to get the Windows username
+                        proc = await create_subprocess_exec(
+                            "/mnt/c/Windows/System32/cmd.exe",
+                            "/c",
+                            "echo %USERNAME%",
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE,
+                        )
+                        stdout, stderr = await proc.communicate()
+
+                        if proc.returncode == 0 and stdout.strip():
+                            windows_username = stdout.decode().strip()
+                            config_path = Path(
+                                f"/mnt/c/Users/{windows_username}/AppData/Roaming/Claude/claude_desktop_config.json"
+                            )
+                        else:
+                            # Fallback: try to find the Windows user directory
+                            users_dir = Path("/mnt/c/Users")
+                            if users_dir.exists():
+                                # Get the first non-system user directory
+                                user_dirs = [
+                                    d
+                                    for d in users_dir.iterdir()
+                                    if d.is_dir() and not d.name.startswith(("Default", "Public", "All Users"))
+                                ]
+                                if user_dirs:
+                                    config_path = (
+                                        user_dirs[0] / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
+                                    )
+                                else:
+                                    raise HTTPException(
+                                        status_code=400, detail="Could not find Windows user directory in WSL"
+                                    )
+                            else:
+                                raise HTTPException(
+                                    status_code=400, detail="Windows C: drive not mounted at /mnt/c in WSL"
+                                )
+                    except (OSError, CalledProcessError) as e:
+                        logger.warning("Failed to determine Windows user path in WSL: %s", str(e))
+                        raise HTTPException(
+                            status_code=400, detail=f"Could not determine Windows Claude config path in WSL: {e!s}"
+                        ) from e
+                else:
+                    # Regular Windows
+                    config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
             else:
                 raise HTTPException(status_code=400, detail="Unsupported operating system for Claude configuration")
         else:
@@ -442,9 +500,9 @@ async def install_mcp_config(
 @router.get("/{project_id}/installed")
 async def check_installed_mcp_servers(
     project_id: UUID,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    current_user: CurrentActiveMCPUser,
 ):
-    """Check if MCP server configuration is installed for this project in Cursor or Claude."""
+    """Check if MCP server configuration is installed for this project in Cursor, Windsurf, or Claude."""
     try:
         # Verify project exists and user has access
         async with session_scope() as session:
@@ -455,40 +513,126 @@ async def check_installed_mcp_servers(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
-        # Project server name pattern
-        project_server_name = f"lf-{project.name.lower().replace(' ', '_')[:11]}"
+        # Project server name pattern (must match the logic in install function)
+        name = project.name
+        project_server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+
+        logger.debug(
+            "Checking for installed MCP servers for project: %s (server name: %s)", project.name, project_server_name
+        )
 
         # Check configurations for different clients
         results = []
 
         # Check Cursor configuration
         cursor_config_path = Path.home() / ".cursor" / "mcp.json"
+        logger.debug("Checking Cursor config at: %s (exists: %s)", cursor_config_path, cursor_config_path.exists())
         if cursor_config_path.exists():
             try:
                 with cursor_config_path.open("r") as f:
                     cursor_config = json.load(f)
                     if "mcpServers" in cursor_config and project_server_name in cursor_config["mcpServers"]:
+                        logger.debug("Found Cursor config for project server: %s", project_server_name)
                         results.append("cursor")
+                    else:
+                        logger.debug(
+                            "Cursor config exists but no entry for server: %s (available servers: %s)",
+                            project_server_name,
+                            list(cursor_config.get("mcpServers", {}).keys()),
+                        )
             except json.JSONDecodeError:
-                pass
+                logger.warning("Failed to parse Cursor config JSON at: %s", cursor_config_path)
+
+        # Check Windsurf configuration
+        windsurf_config_path = Path.home() / ".codeium" / "windsurf" / "mcp_config.json"
+        logger.debug(
+            "Checking Windsurf config at: %s (exists: %s)", windsurf_config_path, windsurf_config_path.exists()
+        )
+        if windsurf_config_path.exists():
+            try:
+                with windsurf_config_path.open("r") as f:
+                    windsurf_config = json.load(f)
+                    if "mcpServers" in windsurf_config and project_server_name in windsurf_config["mcpServers"]:
+                        logger.debug("Found Windsurf config for project server: %s", project_server_name)
+                        results.append("windsurf")
+                    else:
+                        logger.debug(
+                            "Windsurf config exists but no entry for server: %s (available servers: %s)",
+                            project_server_name,
+                            list(windsurf_config.get("mcpServers", {}).keys()),
+                        )
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse Windsurf config JSON at: %s", windsurf_config_path)
 
         # Check Claude configuration
         claude_config_path = None
-        if platform.system() == "Darwin":  # macOS
+        os_type = platform.system()
+        is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
+
+        if os_type == "Darwin":  # macOS
             claude_config_path = (
                 Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
             )
-        elif platform.system() == "Windows":
-            claude_config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
+        elif os_type == "Windows" or is_wsl:  # Windows or WSL (Claude runs on Windows host)
+            if is_wsl:
+                # In WSL, we need to access the Windows APPDATA directory
+                try:
+                    # First try to get the Windows username
+                    proc = await create_subprocess_exec(
+                        "/mnt/c/Windows/System32/cmd.exe",
+                        "/c",
+                        "echo %USERNAME%",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                    )
+                    stdout, stderr = await proc.communicate()
+
+                    if proc.returncode == 0 and stdout.strip():
+                        windows_username = stdout.decode().strip()
+                        claude_config_path = Path(
+                            f"/mnt/c/Users/{windows_username}/AppData/Roaming/Claude/claude_desktop_config.json"
+                        )
+                    else:
+                        # Fallback: try to find the Windows user directory
+                        users_dir = Path("/mnt/c/Users")
+                        if users_dir.exists():
+                            # Get the first non-system user directory
+                            user_dirs = [
+                                d
+                                for d in users_dir.iterdir()
+                                if d.is_dir() and not d.name.startswith(("Default", "Public", "All Users"))
+                            ]
+                            if user_dirs:
+                                claude_config_path = (
+                                    user_dirs[0] / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
+                                )
+                except (OSError, CalledProcessError) as e:
+                    logger.warning(
+                        "Failed to determine Windows user path in WSL for checking Claude config: %s", str(e)
+                    )
+                    # Don't set claude_config_path, so it will be skipped
+            else:
+                # Regular Windows
+                claude_config_path = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
 
         if claude_config_path and claude_config_path.exists():
+            logger.debug("Checking Claude config at: %s", claude_config_path)
             try:
                 with claude_config_path.open("r") as f:
                     claude_config = json.load(f)
                     if "mcpServers" in claude_config and project_server_name in claude_config["mcpServers"]:
+                        logger.debug("Found Claude config for project server: %s", project_server_name)
                         results.append("claude")
+                    else:
+                        logger.debug(
+                            "Claude config exists but no entry for server: %s (available servers: %s)",
+                            project_server_name,
+                            list(claude_config.get("mcpServers", {}).keys()),
+                        )
             except json.JSONDecodeError:
-                pass
+                logger.warning("Failed to parse Claude config JSON at: %s", claude_config_path)
+        else:
+            logger.debug("Claude config path not found or doesn't exist: %s", claude_config_path)
 
     except Exception as e:
         msg = f"Error checking MCP configuration: {e!s}"
@@ -517,13 +661,16 @@ class ProjectMCPServer:
                             select(Flow).where(Flow.mcp_enabled == True, Flow.folder_id == self.project_id)  # noqa: E712
                         )
                     ).all()
-
+                    existing_names = set()
                     for flow in flows:
                         if flow.user_id is None:
                             continue
 
                         # Use action_name if available, otherwise construct from flow name
-                        name = flow.action_name or "_".join(flow.name.lower().split())
+                        base_name = (
+                            sanitize_mcp_name(flow.action_name) if flow.action_name else sanitize_mcp_name(flow.name)
+                        )
+                        name = get_unique_name(base_name, MAX_MCP_TOOL_NAME_LENGTH, existing_names)
 
                         # Use action_description if available, otherwise use defaults
                         description = flow.action_description or (
@@ -536,6 +683,7 @@ class ProjectMCPServer:
                             inputSchema=json_schema_from_flow(flow),
                         )
                         tools.append(tool)
+                        existing_names.add(name)
             except Exception as e:  # noqa: BLE001
                 msg = f"Error in listing project tools: {e!s} from flow: {name}"
                 logger.warning(msg)
@@ -690,20 +838,25 @@ class ProjectMCPServer:
                                 stream=False,
                                 api_key_user=current_user,
                             )
-                            # Process all outputs and messages
+                            # Process all outputs and messages, ensuring no duplicates
+                            processed_texts = set()
+
+                            def add_result(text: str):
+                                if text not in processed_texts:
+                                    processed_texts.add(text)
+                                    collected_results.append(types.TextContent(type="text", text=text))
+
                             for run_output in result.outputs:
                                 for component_output in run_output.outputs:
                                     # Handle messages
                                     for msg in component_output.messages or []:
-                                        text_content = types.TextContent(type="text", text=msg.message)
-                                        collected_results.append(text_content)
+                                        add_result(msg.message)
                                     # Handle results
                                     for value in (component_output.results or {}).values():
                                         if isinstance(value, Message):
-                                            text_content = types.TextContent(type="text", text=value.get_text())
-                                            collected_results.append(text_content)
+                                            add_result(value.get_text())
                                         else:
-                                            collected_results.append(types.TextContent(type="text", text=str(value)))
+                                            add_result(str(value))
                         except Exception as e:  # noqa: BLE001
                             error_msg = f"Error Executing the {flow.name} tool. Error: {e!s}"
                             collected_results.append(types.TextContent(type="text", text=error_msg))

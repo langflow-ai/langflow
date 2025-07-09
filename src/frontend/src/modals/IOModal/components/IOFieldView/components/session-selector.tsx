@@ -26,6 +26,7 @@ export default function SessionSelector({
   selectedView,
   setSelectedView,
   playgroundPage,
+  setActiveSession,
 }: {
   deleteSession: (session: string) => void;
   session: string;
@@ -36,6 +37,7 @@ export default function SessionSelector({
   selectedView?: { type: string; id: string };
   setSelectedView: (view: { type: string; id: string } | undefined) => void;
   playgroundPage: boolean;
+  setActiveSession: (session: string) => void;
 }) {
   const clientId = useUtilityStore((state) => state.clientId);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -46,6 +48,9 @@ export default function SessionSelector({
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();
   const inputRef = useRef<HTMLInputElement>(null);
+  const setNewChatOnPlayground = useFlowStore(
+    (state) => state.setNewChatOnPlayground,
+  );
 
   useEffect(() => {
     setEditedSession(session);
@@ -68,13 +73,13 @@ export default function SessionSelector({
         {
           onSuccess: () => {
             if (isVisible) {
-              updateVisibleSession(editedSession);
+              updateVisibleSession(editedSession.trim());
             }
             if (
               selectedView?.type === "Session" &&
               selectedView?.id === session
             ) {
-              setSelectedView({ type: "Session", id: editedSession });
+              setSelectedView({ type: "Session", id: editedSession.trim() });
             }
           },
         },
@@ -164,15 +169,24 @@ export default function SessionSelector({
             </div>
           ) : (
             <ShadTooltip styleClasses="z-50" content={session}>
-              <div
-                className={cn(
-                  "w-full whitespace-nowrap group-hover:truncate-secondary-hover",
-                  isVisible
-                    ? "truncate-secondary-hover"
-                    : "truncate-muted dark:truncate-canvas",
-                )}
-              >
-                {session === currentFlowId ? "Default Session" : session}
+              <div className="relative w-full overflow-hidden">
+                <span className="w-full truncate">
+                  {session === currentFlowId ? "Default Session" : session}
+                </span>
+                <div
+                  className={cn(
+                    "pointer-events-none absolute left-0 right-0 top-0 h-full whitespace-nowrap",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-full w-full group-hover:truncate-secondary-hover",
+                      isVisible
+                        ? "truncate-secondary-hover"
+                        : "truncate-muted dark:truncate-canvas",
+                    )}
+                  ></div>
+                </div>
               </div>
             </ShadTooltip>
           )}

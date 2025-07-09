@@ -162,12 +162,24 @@ export default function ChatInput({
     };
   }, [handleFileChange, currentFlowId, isBuilding]);
 
-  const send = () => {
-    sendMessage({
-      repeat: 1,
-      files: files.map((file) => file.path ?? "").filter((file) => file !== ""),
-    });
+  const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
+
+  const send = async () => {
+    const storedChatValue = chatValue;
+    const filesToSend = files
+      .map((file) => file.path ?? "")
+      .filter((file) => file !== "");
+    const storedFiles = [...files];
     setFiles([]);
+    try {
+      await sendMessage({
+        repeat: 1,
+        files: filesToSend,
+      });
+    } catch (error) {
+      setChatValueStore(storedChatValue);
+      setFiles(storedFiles);
+    }
   };
 
   const checkSendingOk = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

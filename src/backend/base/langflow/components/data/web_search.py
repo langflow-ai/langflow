@@ -14,6 +14,7 @@ from langflow.services.deps import get_settings_service
 class WebSearchComponent(Component):
     display_name = "Web Search"
     description = "Performs a basic DuckDuckGo search (HTML scraping). May be subject to rate limits."
+    documentation: str = "https://docs.langflow.org/components-data#web-search"
     icon = "search"
     name = "WebSearchNoAPI"
 
@@ -23,7 +24,6 @@ class WebSearchComponent(Component):
             display_name="Search Query",
             info="Keywords to search for.",
             tool_mode=True,
-            input_types=[],
             required=True,
         ),
         IntInput(

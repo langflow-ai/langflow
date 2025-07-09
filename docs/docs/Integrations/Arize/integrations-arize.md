@@ -67,7 +67,7 @@ For more information, see the [Arize documentation](https://docs.arize.com/phoen
 
 ## Run a flow and view metrics in Arize
 
-1. In Langflow, select the [Simple agent](/starter-projects-simple-agent) starter project.
+1. In Langflow, select the [Simple agent](/simple-agent) starter project.
 2. In the **Agent** component's **OpenAI API Key** field, paste your **OpenAI API key**.
 3. Click **Playground**.
 Ask your Agent some questions to generate traffic.

@@ -9,6 +9,7 @@ from langflow.template.field.base import Output
 class DirectoryComponent(Component):
     display_name = "Directory"
     description = "Recursively load files from a directory."
+    documentation: str = "https://docs.langflow.org/components-data#directory"
     icon = "folder"
     name = "Directory"
 
@@ -67,8 +68,7 @@ class DirectoryComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="load_directory"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Loaded Files", name="dataframe", method="as_dataframe"),
     ]
 
     def load_directory(self) -> list[Data]:

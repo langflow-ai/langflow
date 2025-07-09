@@ -544,7 +544,7 @@ async def experimental_run_flow(
         try:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            stmt = select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
+            stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)
             flow = (await session.exec(stmt)).first()
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
@@ -717,6 +717,7 @@ async def custom_component_update(
                 for field_name, field_dict in template.items()
                 if isinstance(field_dict, dict) and field_dict.get("load_from_db") and field_dict.get("value")
             ]
+
             params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
             cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()

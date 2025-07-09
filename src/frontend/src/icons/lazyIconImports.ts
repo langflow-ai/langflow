@@ -72,6 +72,8 @@ export const lazyIconsMapping = {
     import("@/icons/Cursor").then((mod) => ({ default: mod.CursorIcon })),
   DeepSeek: () =>
     import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
+  Docling: () =>
+    import("@/icons/Docling").then((mod) => ({ default: mod.DoclingIcon })),
   Dropbox: () =>
     import("@/icons/Dropbox").then((mod) => ({ default: mod.DropboxIcon })),
   DuckDuckGo: () =>
@@ -155,6 +157,10 @@ export const lazyIconsMapping = {
     import("@/icons/IFixIt").then((mod) => ({ default: mod.IFixIcon })),
   javascript: () =>
     import("@/icons/JSicon").then((mod) => ({ default: mod.JSIcon })),
+  JigsawStack: () =>
+    import("@/icons/JigsawStack").then((mod) => ({
+      default: mod.JigsawStackIcon,
+    })),
   LangChain: () =>
     import("@/icons/LangChain").then((mod) => ({ default: mod.LangChainIcon })),
   Langwatch: () =>
@@ -296,6 +302,8 @@ export const lazyIconsMapping = {
     import("@/icons/Wikipedia/Wikipedia").then((mod) => ({
       default: mod.default,
     })),
+  Windsurf: () =>
+    import("@/icons/Windsurf").then((mod) => ({ default: mod.WindsurfIcon })),
   Wolfram: () =>
     import("@/icons/Wolfram/Wolfram").then((mod) => ({ default: mod.default })),
   xAI: () => import("@/icons/xAI").then((mod) => ({ default: mod.XAIIcon })),

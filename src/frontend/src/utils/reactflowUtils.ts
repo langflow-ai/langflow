@@ -138,9 +138,18 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const name = parsedSourceHandle.name;
 
       if (sourceNode.type == "genericNode") {
-        const output = sourceNode.data.node!.outputs?.find(
-          (output) => output.name === name,
-        );
+        const output =
+          sourceNode.data.node!.outputs?.find(
+            (output) => output.name === sourceNode.data.selected_output,
+          ) ??
+          sourceNode.data.node!.outputs?.find(
+            (output) =>
+              (output.selected ||
+                (sourceNode.data.node!.outputs?.filter(
+                  (output) => !output.group_outputs,
+                )?.length ?? 0) <= 1) &&
+              output.name === name,
+          );
 
         if (output) {
           const outputTypes =
@@ -166,6 +175,45 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
   });
   return newEdges;
 }
+
+export function clearHandlesFromAdvancedFields(
+  componentId: string,
+  data: APIClassType,
+): void {
+  if (!componentId || !data?.template) {
+    return;
+  }
+
+  try {
+    const flowStore = useFlowStore.getState();
+    const { edges, deleteEdge } = flowStore;
+
+    const connectedEdges = edges.filter((edge) => edge.target === componentId);
+
+    if (connectedEdges.length === 0) {
+      return;
+    }
+
+    const edgeIdsToDelete: string[] = [];
+
+    for (const edge of connectedEdges) {
+      const fieldName = edge.data?.targetHandle?.fieldName;
+
+      if (fieldName && isAdvancedField(data, fieldName)) {
+        edgeIdsToDelete.push(edge.id);
+      }
+    }
+
+    edgeIdsToDelete.forEach(deleteEdge);
+  } catch (error) {
+    console.error("Error clearing handles from advanced fields:", error);
+  }
+}
+
+const isAdvancedField = (data: APIClassType, fieldName: string): boolean => {
+  const field = data.template[fieldName];
+  return field && "advanced" in field && field.advanced === true;
+};
 
 export function filterHiddenFieldsEdges(
   edge: EdgeType,
@@ -320,10 +368,11 @@ export function unselectAllNodesEdges(nodes: Node[], edges: Edge[]) {
 }
 
 export function isValidConnection(
-  { source, target, sourceHandle, targetHandle }: Connection,
+  connection: Connection,
   nodes?: AllNodeType[],
   edges?: EdgeType[],
 ): boolean {
+  const { source, target, sourceHandle, targetHandle } = connection;
   if (source === target) {
     return false;
   }
@@ -333,6 +382,33 @@ export function isValidConnection(
 
   const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle!);
   const sourceHandleObject: sourceHandleType = scapeJSONParse(sourceHandle!);
+
+  // Helper to find the edge between two nodes
+  function findEdgeBetween(srcId: string, tgtId: string) {
+    return edgesArray.find((e) => e.source === srcId && e.target === tgtId);
+  }
+
+  // Modified hasCycle to return the path of edges forming the loop
+  const findCyclePath = (
+    node: AllNodeType,
+    visited = new Set(),
+    path: EdgeType[] = [],
+  ): EdgeType[] | null => {
+    if (visited.has(node.id)) return null;
+    visited.add(node.id);
+    for (const outgoer of getOutgoers(node, nodesArray, edgesArray)) {
+      const edge = findEdgeBetween(node.id, outgoer.id);
+      if (!edge) continue;
+      if (outgoer.id === source) {
+        // This edge would close the loop
+        return [...path, edge];
+      }
+      const result = findCyclePath(outgoer, visited, [...path, edge]);
+      if (result) return result;
+    }
+    return null;
+  };
+
   if (
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,
@@ -350,22 +426,43 @@ export function isValidConnection(
         t === targetHandleObject.type,
     )
   ) {
-    let targetNode = nodesArray.find((node) => node.id === target!)?.data?.node;
-    if (!targetNode) {
-      if (!edgesArray.find((e) => e.targetHandle === targetHandle)) {
+    let targetNode = nodesArray.find((node) => node.id === target!);
+    let targetNodeDataNode = targetNode?.data?.node;
+    if (
+      (!targetNodeDataNode &&
+        !edgesArray.find((e) => e.targetHandle === targetHandle)) ||
+      (targetNodeDataNode &&
+        targetHandleObject.output_types &&
+        !edgesArray.find((e) => e.targetHandle === targetHandle)) ||
+      (targetNodeDataNode &&
+        !targetHandleObject.output_types &&
+        ((!targetNodeDataNode.template[targetHandleObject.fieldName].list &&
+          !edgesArray.find((e) => e.targetHandle === targetHandle)) ||
+          targetNodeDataNode.template[targetHandleObject.fieldName].list))
+    ) {
+      // If the current target handle is a loop component, allow connection immediately
+      if (targetHandleObject.output_types) {
         return true;
       }
-    } else if (
-      targetHandleObject.output_types &&
-      !edgesArray.find((e) => e.targetHandle === targetHandle)
-    ) {
-      return true;
-    } else if (
-      !targetHandleObject.output_types &&
-      ((!targetNode.template[targetHandleObject.fieldName].list &&
-        !edgesArray.find((e) => e.targetHandle === targetHandle)) ||
-        targetNode.template[targetHandleObject.fieldName].list)
-    ) {
+      // Check for loop and if any edge in the loop is a loop component
+      let cyclePath: EdgeType[] | null = null;
+      if (targetNode) {
+        cyclePath = findCyclePath(targetNode);
+      }
+      if (cyclePath) {
+        // Check if any edge in the cycle path is a loop component
+        const hasLoopComponent = cyclePath.some((edge) => {
+          try {
+            const th = scapeJSONParse(edge.targetHandle!);
+            return !!th.output_types;
+          } catch {
+            return false;
+          }
+        });
+        if (!hasLoopComponent) {
+          return false;
+        }
+      }
       return true;
     }
   }
@@ -1807,7 +1904,7 @@ export async function downloadFlow(
   flow: FlowType,
   flowName: string,
   flowDescription?: string,
-) {
+): Promise<string | undefined | void> {
   try {
     const clonedFlow = cloneDeep(flow);
 
@@ -1822,9 +1919,10 @@ export async function downloadFlow(
     const sortedData = sortJsonStructure(flowData);
     const sortedJsonString = JSON.stringify(sortedData, null, 2);
 
-    customDownloadFlow(flow, sortedJsonString, flowName);
+    return await customDownloadFlow(flow, sortedJsonString, flowName);
   } catch (error) {
     console.error("Error downloading flow:", error);
+    throw error;
   }
 }
 
@@ -2035,4 +2133,45 @@ export function buildPositionDictionary(nodes: AllNodeType[]) {
 
 export function hasStreaming(nodes: AllNodeType[]) {
   return nodes.some((node) => node.data.node?.template?.stream?.value);
+}
+
+// Utility to get all connected nodes and edges from a given nodeId, in a given direction
+export function getConnectedSubgraph(
+  nodeId: string,
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+  direction: "upstream" | "downstream",
+): { nodes: AllNodeType[]; edges: EdgeType[] } {
+  const visited = new Set<string>();
+  const resultNodes: AllNodeType[] = [];
+  const resultEdges: EdgeType[] = [];
+
+  function dfs(currentId: string) {
+    if (visited.has(currentId)) return;
+    visited.add(currentId);
+    const node = nodes.find((n) => n.id === currentId);
+    if (node) {
+      resultNodes.push(node);
+      if (direction === "upstream") {
+        // Find all incoming edges
+        const incomingEdges = edges.filter((e) => e.target === currentId);
+        for (const edge of incomingEdges) {
+          resultEdges.push(edge);
+          dfs(edge.source);
+        }
+      } else {
+        // downstream: Find all outgoing edges
+        const outgoingEdges = edges.filter((e) => e.source === currentId);
+        for (const edge of outgoingEdges) {
+          resultEdges.push(edge);
+          dfs(edge.target);
+        }
+      }
+    }
+  }
+  dfs(nodeId);
+  return {
+    nodes: resultNodes,
+    edges: resultEdges,
+  };
 }
