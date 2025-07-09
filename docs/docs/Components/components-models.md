@@ -667,7 +667,7 @@ For more information, see [Qianfan documentation](https://github.com/baidubce/bc
 
 This component generates text using SambaNova LLMs.
 
-For more information, see [Sambanova Cloud documentation](https://cloud.sambanova.ai/).
+For more information, see [Sambanova Cloud documentation](https://cloud.sambanova.ai?utm_source=langflow&utm_medium=external&utm_campaign=cloud_signup).
 
 <details>
 <summary>Parameters</summary>
