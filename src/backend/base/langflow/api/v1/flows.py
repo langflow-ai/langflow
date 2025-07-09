@@ -83,7 +83,9 @@ async def _new_flow(
                 )
             ).all()
             if flows:
-                extract_number = re.compile(r"\((\d+)\)$")
+                # Only extract numbers from flows that match the exact pattern "{flow.name} ({number})"
+                # This prevents matching the original flow name if it ends with a number in parentheses
+                extract_number = re.compile(rf"^{re.escape(flow.name)} \((\d+)\)$")
                 numbers = []
                 for _flow in flows:
                     result = extract_number.search(_flow.name)
@@ -91,6 +93,8 @@ async def _new_flow(
                         numbers.append(int(result.groups(1)[0]))
                 if numbers:
                     flow.name = f"{flow.name} ({max(numbers) + 1})"
+                else:
+                    flow.name = f"{flow.name} (1)"
             else:
                 flow.name = f"{flow.name} (1)"
         # Now check if the endpoint is unique
