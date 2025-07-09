@@ -22,14 +22,15 @@ This tutorial uses an OpenAI LLM. If you want to use a different provider, you n
 
 ## Create an agentic flow
 
-The following steps modify the [**Simple agent**](/simple-agent) template to connect [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components as tools for the agent.
+The following steps modify the [**Simple agent**](/simple-agent) template to connect [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components as tools for the **Agent**.
 The Directory component loads all files of a given type from a target directory on your local machine, and the Web search component performs a DuckDuckGo search.
 
 1. In Langflow, click **New Flow**, and then select the **Simple agent** template.
 2. Remove the **URL** and **Calculator** tools, and drag the [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components to your workspace.
 3. In the **Directory** component's **Path** field, enter the path to your directory, and the types of files you want to provide to your agent.
 In this example, the directory name is `customer_orders` and the file type is `.csv`, because you want the agent to have access to a record of customer purchases.
-If you don't have a csv on hand, you can download [customer-orders.csv](/files/customer_orders/customer_orders.csv) and save it in a folder called `customer_orders`.
+If you don't have a `.csv` file available, you can download [customer-orders.csv](/files/customer_orders/customer_orders.csv) and save it in a folder on your local machine called `customer_orders`.
+This example assumes you're searching `customer_orders` for an `email` value, but you can adapt the tutorial to suit your data.
 4. In the **Directory** and **Web search** components, enable **Tool Mode**, and connect the **Toolset** port to the agent's **Tools** port.
 This mode registers the connected tools with your Agent, so it understands what they do and how to use them.
 5. In the **Agent** component, enter your OpenAI API key.
@@ -47,7 +48,10 @@ With your flow operational, connect it to a JavaScript application to use the ag
 In this example, the application sends a customer's email address to the Langflow agent. The agent compares the customer's previous orders within the Directory component, searches the web for used versions of those items, and returns three results.
 
 1. To include the email address as a value in your flow, add a [Prompt](/components-prompts) component to your flow between the **Chat Input** and **Agent**.
-2. In the Prompt component's **Template** field, enter `Recommend 3 used items for ${email}, based on previous orders.`
+2. In the Prompt component's **Template** field, enter `Recommend 3 used items for {email}, based on previous orders.`
+Adding the `{email}` value in curly braces creates a new input in the **Prompt** component, and the component connected to the `{email}` port is supplying the value for that variable.
+This creates a point for the user's email to enter the flow from your request.
+If you aren't using the `customer_orders.csv` example file, modify the input to search for a value in your dataset.
 
     The flow appears like this.
 
@@ -60,7 +64,8 @@ In this example, the application sends a customer's email address to the Langflo
     * `LANGFLOW_API_KEY`: A valid Langflow API key. To create an API key, see [API keys](/configuration-api-keys).
 
 2. Copy the following script into a JavaScript file, and then replace the placeholders with the information you gathered in the previous step.
-If you're using the `customer_orders.csv` example file, you can run this as-is with the example email address.
+If you're using the `customer_orders.csv` example file, you can run this example as-is with the example email address in the code sample.
+If not, modify the `const email = "isabella.rodriguez@example.com"` to search for a value in your dataset.
 
     <details open>
     <summary>JavaScript</summary>
