@@ -9,7 +9,7 @@ NVIDIA Retriever Extraction is also known as NV-Ingest and NeMo Retriever Extrac
 
 The **NVIDIA Retriever Extraction** component integrates with the [NVIDIA nv-ingest](https://github.com/NVIDIA/nv-ingest) microservice for data ingestion, processing, and extraction of text files.
 
-The `nv-ingest` service supports multiple extraction methods for PDF, DOCX, and PPTX file types, and includes pre-  and post-processing services like splitting, chunking, and embedding generation.
+The `nv-ingest` service supports multiple extraction methods for PDF, DOCX, and PPTX file types, and includes pre-  and post-processing services like splitting, chunking, and embedding generation. The extractor service's High Resolution mode uses the `nemoretriever-parse` extraction method for better quality extraction from scanned PDF documents. This feature is only available for PDF files.
 
 The **NVIDIA Retriever Extraction** component imports the NVIDIA `Ingestor` client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of [Data](/concepts-objects#data-object) objects. `Ingestor` accepts additional configuration options for data extraction from other text formats. To configure these options, see the [component parameters](/integrations-nvidia-ingest#parameters).
 
@@ -48,16 +48,17 @@ Optionally, add the endpoint URL as a **Global variable**:
     5. Click **Save Variable**.
 3. Click the **Select files** button to select which file you want to ingest.
 4. Select which text type to extract from the file.
-The component supports text, charts, and tables.
+The component supports text, charts, tables, images, and infographics.
+Optionally, for PDF files, enable High Resolution mode for better quality extraction from scanned documents.
 5. Select whether to split the text into chunks.
 Modify the splitting parameters in the component's **Configuration** tab.
-7. Click **Run** to ingest the file.
-8. To confirm the component is ingesting the file, open the **Logs** pane to view the output of the flow.
-9. To store the processed data in a vector database, add an **AstraDB Vector** component to your flow, and connect the **NVIDIA Retriever Extraction** component to the **AstraDB Vector** component with a **Data** output.
+6. Click **Run** to ingest the file.
+7. To confirm the component is ingesting the file, open the **Logs** pane to view the output of the flow.
+8. To store the processed data in a vector database, add an **AstraDB Vector** component to your flow, and connect the **NVIDIA Retriever Extraction** component to the **AstraDB Vector** component with a **Data** output.
 
 ![NVIDIA Retriever Extraction component flow](nvidia-component-ingest-astra.png)
 
-10. Run the flow.
+9. Run the flow.
 Inspect your Astra DB vector database to view the processed data.
 
 ## NVIDIA Retriever Extraction component parameters {#parameters}
@@ -75,13 +76,19 @@ For more information, see the [NV-Ingest documentation](https://nvidia.github.io
 | extract_text | Extract Text | Extract text from documents. Default: `True`. |
 | extract_charts | Extract Charts | Extract text from charts. Default: `False`. |
 | extract_tables | Extract Tables | Extract text from tables. Default: `True`. |
-| text_depth | Text Depth | The level at which text is extracted. Options: 'document', 'page', 'block', 'line', 'span'. Default: `document`. |
+| extract_images | Extract Images | Extract images from document. Default: `True`. |
+| extract_infographics | Extract Infographics | Extract infographics from document. Default: `False`. |
+| text_depth | Text Depth | The level at which text is extracted. Options: 'document', 'page', 'block', 'line', 'span'. Default: `page`. |
 | split_text | Split Text | Split text into smaller chunks. Default: `True`. |
-| split_by | Split By | How to split into chunks. Options: 'page', 'sentence', 'word', 'size'. Default: `word`. |
-| split_length | Split Length | The size of each chunk based on the 'split_by' method. Default: `200`. |
-| split_overlap | Split Overlap | The number of segments to overlap from the previous chunk. Default: `20`. |
-| max_character_length | Max Character Length | The maximum number of characters in each chunk. Default: `1000`. |
-| sentence_window_size | Sentence Window Size | The number of sentences to include from previous and following chunks when `split_by=sentence`. Default: `0`. |
+| chunk_size | Chunk Size | The number of tokens per chunk. Default: `500`. |
+| chunk_overlap | Chunk Overlap | Number of tokens to overlap from previous chunk. Default: `150`. |
+| filter_images | Filter Images | Filter images (see advanced options for filtering criteria). Default: `False`. |
+| min_image_size | Minimum Image Size Filter | Minimum image width/length in pixels. Default: `128`. |
+| min_aspect_ratio | Minimum Aspect Ratio Filter | Minimum allowed aspect ratio (width / height). Default: `0.2`. |
+| max_aspect_ratio | Maximum Aspect Ratio Filter | Maximum allowed aspect ratio (width / height). Default: `5.0`. |
+| dedup_images | Deduplicate Images | Filter duplicated images. Default: `True`. |
+| caption_images | Caption Images | Generate captions for images using the NVIDIA captioning model. Default: `True`. |
+| high_resolution | High Resolution (PDF only) | Process PDF in high-resolution mode for better quality extraction from scanned PDF. Default: `False`. |
 
 ### Outputs
 
@@ -89,8 +96,10 @@ The **NVIDIA Retriever Extraction** component outputs a list of [Data](/concepts
 - `text`: The extracted content.
   - For text documents: The extracted text content.
   - For tables and charts: The extracted table/chart content.
+  - For images: The image caption.
+  - For infographics: The extracted infographic content.
 - `file_path`: The source file name and path.
-- `document_type`: The type of the document ("text" or "structured").
+- `document_type`: The type of the document, which can be `text`, `structured`, or `image`.
 - `description`: Additional description of the content.
 
 The output varies based on the `document_type`:
@@ -101,10 +110,11 @@ The output varies based on the `document_type`:
   - Content extracted using the `extract_text` parameter.
 
 - Documents with `document_type: "structured"` contain:
-  - Text extracted from tables and charts and processed to preserve structural information.
-  - Content extracted using the `extract_tables` and `extract_charts` parameters.
+  - Text extracted from tables, charts, and infographics and processed to preserve structural information.
+  - Content extracted using the `extract_tables`, `extract_charts`, and `extract_infographics` parameters.
   - Content stored in the `text` field after being processed from the `table_content` metadata.
 
-:::note
-Images are currently not supported and will be skipped during processing.
-:::
+- Documents with `document_type: "image"` contain:
+  - Image content extracted from documents.
+  - Caption text stored in the `text` field when `caption_images` is enabled.
+  - Content extracted using the `extract_images` parameter.
