@@ -211,7 +211,7 @@ export default function UpdateAllComponents({}: {}) {
               variants={CONTAINER_VARIANTS}
               transition={{ duration: 0.2, ease: "easeOut" }}
               className={cn(
-                "flex items-center justify-between gap-8 rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-md",
+                "bg-background flex items-center justify-between gap-8 rounded-lg border px-4 py-2 text-sm font-medium shadow-md",
                 componentsToUpdateFiltered.some(
                   (component) => component.breakingChange,
                 ) && "border-accent-amber-foreground",

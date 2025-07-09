@@ -99,7 +99,7 @@ export default function InputListComponent({
                 type="text"
                 value={singleValue}
                 className={cn(
-                  "w-full text-primary",
+                  "text-primary w-full",
                   value.length > 1 && "pr-10",
                   editNode ? "input-edit-node" : "",
                   disabled ? "disabled-state" : "",
@@ -114,7 +114,7 @@ export default function InputListComponent({
               />
 
               {value.length > 1 && (
-                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <div className="absolute top-1/2 right-2 -translate-y-1/2">
                   <DeleteButtonInputList
                     index={index}
                     removeInput={(e) => removeInput(index, e)}
@@ -128,7 +128,7 @@ export default function InputListComponent({
                 <div className="pointer-events-none absolute top-1/2 flex w-full -translate-y-1/2">
                   <div
                     className={cn(
-                      "flex-1 cursor-text select-text text-nowrap pl-3 text-sm text-muted-foreground truncate-background",
+                      "text-muted-foreground truncate-background flex-1 cursor-text pl-3 text-sm text-nowrap select-text",
                       value.length > 1 ? "mr-10" : "mr-3",
                     )}
                   >

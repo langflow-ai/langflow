@@ -110,7 +110,7 @@ export default function StoreCardComponent({
         className={cn(
           "group relative flex h-[12rem] flex-col justify-between overflow-hidden",
           !data.is_component &&
-          "hover:bg-muted/50 hover:shadow-md dark:hover:bg-[#5f5f5f0e]",
+            "hover:bg-muted/50 hover:shadow-md dark:hover:bg-[#5f5f5f0e]",
           disabled ? "pointer-events-none opacity-50" : "",
         )}
       >
@@ -122,8 +122,8 @@ export default function StoreCardComponent({
                   className={cn(
                     "visible shrink-0",
                     data.is_component
-                      ? "mx-0.5 h-6 w-6 text-component-icon"
-                      : "h-7 w-7 shrink-0 text-flow-icon",
+                      ? "text-component-icon mx-0.5 h-6 w-6"
+                      : "text-flow-icon h-7 w-7 shrink-0",
                   )}
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />
@@ -134,14 +134,14 @@ export default function StoreCardComponent({
                 <div className="flex items-center gap-3">
                   {data.private && (
                     <ShadTooltip content="Private">
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
                         <IconComponent name="Lock" className="h-4 w-4" />
                       </span>
                     </ShadTooltip>
                   )}
                   {!data.is_component && (
                     <ShadTooltip content="Components">
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
                         <IconComponent name="ToyBrick" className="h-4 w-4" />
                         <span data-testid={`total-${data.name}`}>
                           {data?.metadata?.total ?? 0}
@@ -150,7 +150,7 @@ export default function StoreCardComponent({
                     </ShadTooltip>
                   )}
                   <ShadTooltip content="Likes">
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
                       <IconComponent name="Heart" className={cn("h-4 w-4")} />
                       <span data-testid={`likes-${data.name}`}>
                         {likesCount ?? 0}
@@ -158,7 +158,7 @@ export default function StoreCardComponent({
                     </span>
                   </ShadTooltip>
                   <ShadTooltip content="Downloads">
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
                       <IconComponent name="DownloadCloud" className="h-4 w-4" />
                       <span data-testid={`downloads-${data.name}`}>
                         {downloadsCount ?? 0}
@@ -170,7 +170,7 @@ export default function StoreCardComponent({
             </div>
             <div className="flex gap-2">
               {data.user_created && data.user_created.username && (
-                <span className="text-sm text-primary">
+                <span className="text-primary text-sm">
                   by <b>{data.user_created.username}</b>
                   {data.last_tested_version && (
                     <>
@@ -187,7 +187,7 @@ export default function StoreCardComponent({
               <div className="flex w-full flex-1 flex-wrap gap-2"></div>
             </div>
 
-            <CardDescription className="pb-2 pt-2">
+            <CardDescription className="pt-2 pb-2">
               <div className="truncate-doubleline">{data.description}</div>
             </CardDescription>
           </CardHeader>

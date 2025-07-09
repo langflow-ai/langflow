@@ -67,12 +67,12 @@ export default function PromptAreaComponent({
     >
       {value !== "" ? (
         <SanitizedHTMLWrapper
-          className="m-0 whitespace-pre-wrap p-0 text-xs"
+          className="m-0 p-0 text-xs whitespace-pre-wrap"
           content={coloredContent}
           suppressWarning={true}
         />
       ) : (
-        <span className="text-sm text-muted-foreground">
+        <span className="text-muted-foreground text-sm">
           {getPlaceholder(disabled, "Type your prompt here...")}
         </span>
       )}
@@ -84,7 +84,7 @@ export default function PromptAreaComponent({
       <ForwardedIconComponent
         name={disabled ? "lock" : "Scan"}
         className={cn(
-          "icons-parameters-comp pointer-events-none absolute right-3 top-1/2 h-4 w-4 shrink-0 -translate-y-1/2",
+          "icons-parameters-comp pointer-events-none absolute top-1/2 right-3 h-4 w-4 shrink-0 -translate-y-1/2",
           disabled ? "text-placeholder-foreground" : "text-foreground",
         )}
       />

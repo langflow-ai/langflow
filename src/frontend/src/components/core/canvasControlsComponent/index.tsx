@@ -50,7 +50,7 @@ export const CustomControlButton = ({
             name={iconName}
             aria-hidden="true"
             className={cn(
-              "scale-150 text-muted-foreground group-hover:text-primary",
+              "text-muted-foreground group-hover:text-primary scale-150",
               iconClasses,
             )}
           />
@@ -112,7 +112,7 @@ const CanvasControls = ({ children }) => {
   return (
     <Panel
       data-testid="canvas_controls"
-      className="react-flow__controls left-auto! m-2! flex flex-col! gap-1.5 rounded-md border border-border bg-background fill-foreground stroke-foreground p-0.5 text-primary [&>button]:border-0 [&>button]:bg-background [&>button]:hover:bg-accent"
+      className="react-flow__controls border-border bg-background fill-foreground stroke-foreground text-primary [&>button]:bg-background [&>button]:hover:bg-accent left-auto! m-2! flex flex-col! gap-1.5 rounded-md border p-0.5 [&>button]:border-0"
       position="bottom-left"
     >
       {/* Zoom In */}

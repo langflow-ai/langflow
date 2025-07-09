@@ -49,7 +49,7 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
           data-testid="notification-dropdown-content"
           className="noflow nowheel nopan nodelete nodrag z-50 flex h-[500px] w-[500px] flex-col"
         >
-          <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
+          <div className="text-md text-foreground flex flex-row justify-between pl-3 font-medium">
             Notifications
             <div className="flex gap-3 pr-3">
               <button
@@ -71,7 +71,7 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
               </button>
             </div>
           </div>
-          <div className="text-high-foreground mt-3 flex h-full w-full flex-col overflow-y-scroll scrollbar-hide">
+          <div className="text-high-foreground scrollbar-hide mt-3 flex h-full w-full flex-col overflow-y-scroll">
             {notificationList.length !== 0 ? (
               notificationList.map((alertItem) => (
                 <SingleAlert
@@ -81,7 +81,7 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
                 />
               ))
             ) : (
-              <div className="flex h-full w-full items-center justify-center pb-16 text-ring">
+              <div className="text-ring flex h-full w-full items-center justify-center pb-16">
                 {ZERO_NOTIFICATIONS}
               </div>
             )}

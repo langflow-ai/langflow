@@ -120,7 +120,7 @@ function NoteNode({
           "duration-200 ease-in-out",
           !isResizing && "transition-transform",
           COLOR_OPTIONS[bgColor] !== null &&
-          `border ${!selected && "-z-50 shadow-xs"}`,
+            `border ${!selected && "-z-50 shadow-xs"}`,
         )}
       >
         {MemoNoteToolbarComponent}

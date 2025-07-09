@@ -44,25 +44,25 @@ export default function NoticeAlert({
     >
       <div
         onClick={handleClick}
-        className="noflow nowheel nopan nodelete nodrag mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl"
+        className="noflow nowheel nopan nodelete nodrag bg-info-background mt-6 w-96 rounded-md p-4 shadow-xl"
       >
         <div className="flex">
           <div className="shrink-0 cursor-help">
             <IconComponent
               name="Info"
-              className="h-5 w-5 text-status-blue"
+              className="text-status-blue h-5 w-5"
               aria-hidden="true"
             />
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
-            <p className="text-sm text-info-foreground word-break-break-word">
+            <p className="text-info-foreground word-break-break-word text-sm">
               {title}
             </p>
-            <p className="mt-3 text-sm md:ml-6 md:mt-0">
+            <p className="mt-3 text-sm md:mt-0 md:ml-6">
               {link && (
                 <CustomLink
                   to={link}
-                  className="whitespace-nowrap font-medium text-info-foreground hover:text-accent-foreground"
+                  className="text-info-foreground hover:text-accent-foreground font-medium whitespace-nowrap"
                 >
                   Details
                 </CustomLink>

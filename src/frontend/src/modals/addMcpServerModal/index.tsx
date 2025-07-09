@@ -250,12 +250,12 @@ export default function AddMcpServerModal({
             <div className="flex items-center gap-2 text-sm font-medium">
               <ForwardedIconComponent
                 name="Mcp"
-                className="h-4 w-4 text-primary"
+                className="text-primary h-4 w-4"
                 aria-hidden="true"
               />
               {initialData ? "Update MCP Server" : "Add MCP Server"}
             </div>
-            <span className="text-mmd font-normal text-muted-foreground">
+            <span className="text-mmd text-muted-foreground font-normal">
               Save MCP Servers. Manage added servers in{" "}
               <CustomLink className="underline" to="/settings/mcp-servers">
                 settings
@@ -302,7 +302,7 @@ export default function AddMcpServerModal({
                   <ShadTooltip content={error}>
                     <div
                       className={cn(
-                        "absolute right-4 top-4 truncate text-xs font-medium text-red-500",
+                        "absolute top-4 right-4 truncate text-xs font-medium text-red-500",
                         type === "JSON" ? "w-3/5" : "w-4/5",
                       )}
                     >
@@ -317,7 +317,7 @@ export default function AddMcpServerModal({
                       value={jsonValue}
                       data-testid="json-input"
                       onChange={(e) => setJsonValue(e.target.value)}
-                      className="min-h-[225px] font-mono text-mmd"
+                      className="text-mmd min-h-[225px] font-mono"
                       placeholder="Paste in JSON config to add server"
                       disabled={isPending}
                     />
@@ -326,7 +326,7 @@ export default function AddMcpServerModal({
                 <TabsContent value="STDIO">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <Label className="flex items-start gap-1 text-mmd!">
+                      <Label className="text-mmd! flex items-start gap-1">
                         Name <span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -338,7 +338,7 @@ export default function AddMcpServerModal({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label className="flex items-start gap-1 text-mmd!">
+                      <Label className="text-mmd! flex items-start gap-1">
                         Command<span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -376,7 +376,7 @@ export default function AddMcpServerModal({
                 <TabsContent value="SSE">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <Label className="flex items-start gap-1 text-mmd!">
+                      <Label className="text-mmd! flex items-start gap-1">
                         Name<span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -387,7 +387,7 @@ export default function AddMcpServerModal({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label className="flex items-start gap-1 text-mmd!">
+                      <Label className="text-mmd! flex items-start gap-1">
                         SSE URL<span className="text-red-500">*</span>
                       </Label>
                       <Input

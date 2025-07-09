@@ -167,7 +167,7 @@ export default function McpComponent({
               </span>
               <ForwardedIconComponent
                 name={!showSaveButton ? "ChevronsUpDown" : "X"}
-                className="ml-auto h-5 w-5 text-muted-foreground"
+                className="text-muted-foreground ml-auto h-5 w-5"
               />
             </div>
           </Button>
@@ -181,7 +181,7 @@ export default function McpComponent({
             >
               <ForwardedIconComponent
                 name="Save"
-                className="h-5 w-5 text-muted-foreground"
+                className="text-muted-foreground h-5 w-5"
               />
             </Button>
           )}

@@ -126,7 +126,7 @@ export default function CopyFieldAreaComponent({
           dataTestId={`btn_copy_${id?.toLowerCase()}${editNode ? "_advanced" : ""}`}
           name={isCopied ? "Check" : "Copy"}
           className={cn(
-            "cursor-pointer bg-muted",
+            "bg-muted cursor-pointer",
             externalLinkIconClasses.icon,
             editNode
               ? externalLinkIconClasses.editNodeTop

@@ -428,7 +428,7 @@ const SideBarFoldersButtonsComponent = ({
                           </div>
                         </SidebarMenuButton>
                         <div
-                          className="absolute right-2 top-[0.45rem] flex items-center hover:text-foreground"
+                          className="hover:text-foreground absolute top-[0.45rem] right-2 flex items-center"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <SelectOptions

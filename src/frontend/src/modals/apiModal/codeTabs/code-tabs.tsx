@@ -147,7 +147,7 @@ export default function APITabsComponent() {
             <Button
               unstyled
               key={tab.title}
-              className={`flex h-8 select-none flex-row items-center gap-2 text-nowrap border-b-2 border-border border-b-transparent !py-1 font-medium ${selectedTab === tab.title
+              className={`flex h-8 select-none flex-row items-center gap-2 text-nowrap border-b-2 border-border border-b-transparent py-1! font-medium ${selectedTab === tab.title
                   ? "border-b-2 border-black dark:border-b-white"
                   : "text-muted-foreground hover:text-foreground"
                 } px-3 py-2 text-[13px]`}
@@ -189,7 +189,7 @@ export default function APITabsComponent() {
                 size="icon"
                 onClick={copyToClipboard}
                 data-testid="btn-copy-code"
-                className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
+                className="hover:bg-foreground! group absolute right-4 top-2 z-10 select-none"
               >
                 {isCopied ? (
                   <IconComponent
@@ -199,7 +199,7 @@ export default function APITabsComponent() {
                 ) : (
                   <IconComponent
                     name="Copy"
-                    className="!h-5 !w-5 text-muted-foreground"
+                    className="h-5! w-5! text-muted-foreground"
                   />
                 )}
               </Button>
@@ -208,7 +208,7 @@ export default function APITabsComponent() {
                 wrapLongLines={true}
                 language={currentTab.language}
                 style={dark ? oneDark : oneLight}
-                className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
+                className="mt-0! h-full w-full overflow-scroll rounded-b-md! border border-border text-left custom-scroll!"
               >
                 {currentTab.code}
               </SyntaxHighlighter>

@@ -18,19 +18,19 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
       dragMessage={`Drop your flows or components here`}
       onFileDrop={handleFileDrop}
     >
-      <div className="m-0 h-full w-full bg-secondary p-0">
+      <div className="bg-secondary m-0 h-full w-full p-0">
         <div className="text-container">
           <div className="relative z-20 flex w-full flex-col items-center justify-center gap-2">
             <LangflowLogo className="h-7 w-8" />
             <h3
-              className="pt-5 font-chivo text-2xl font-semibold text-foreground"
+              className="font-chivo text-foreground pt-5 text-2xl font-semibold"
               data-testid="mainpage_title"
             >
               {folders?.length > 1 ? "Empty project" : "Start building"}
             </h3>
             <p
               data-testid="empty-project-description"
-              className="pb-5 text-sm text-secondary-foreground"
+              className="text-secondary-foreground pb-5 text-sm"
             >
               Begin with a template, or start from scratch.
             </p>
@@ -45,7 +45,7 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
                 aria-hidden="true"
                 className="h-4 w-4"
               />
-              <span className="hidden whitespace-nowrap font-semibold md:inline">
+              <span className="hidden font-semibold whitespace-nowrap md:inline">
                 New Flow
               </span>
             </Button>

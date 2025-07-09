@@ -9,7 +9,10 @@ const useTheme = () => {
 
   const updateDataThemeAttribute = useCallback((isDark: boolean) => {
     if (typeof document !== "undefined") {
-      document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+      document.documentElement.setAttribute(
+        "data-theme",
+        isDark ? "dark" : "light",
+      );
     }
   }, []);
 

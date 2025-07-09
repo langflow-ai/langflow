@@ -68,7 +68,7 @@ export default function ToolsComponent({
             disabled={!value || disabled}
             size={"iconMd"}
             className={cn(
-              "absolute -top-8 right-0 text-mmd! font-normal text-muted-foreground group-hover:text-primary",
+              "text-mmd! text-muted-foreground group-hover:text-primary absolute -top-8 right-0 font-normal",
             )}
             data-testid="button_open_actions"
             onClick={() => setIsModalOpen(true)}
@@ -97,13 +97,13 @@ export default function ToolsComponent({
                 className="truncate font-normal"
                 data-testid={testIdCase(`tool_${action.name}`)}
               >
-                <span className="truncate text-xxs font-medium">
+                <span className="text-xxs truncate font-medium">
                   {action.name.toUpperCase()}
                 </span>
               </Badge>
             ))}
             {remainingCount > 0 && (
-              <span className="ml-1 self-center text-xs font-normal text-muted-foreground">
+              <span className="text-muted-foreground ml-1 self-center text-xs font-normal">
                 +{remainingCount} more
               </span>
             )}
@@ -112,7 +112,7 @@ export default function ToolsComponent({
           visibleActions.length === 0 &&
           isAction && (
             <div className="mt-2 flex w-full flex-col items-center gap-2 rounded-md border border-dashed p-8">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-muted-foreground text-sm">
                 No actions added to this server
               </span>
               <Button size={"sm"} onClick={() => setIsModalOpen(true)}>

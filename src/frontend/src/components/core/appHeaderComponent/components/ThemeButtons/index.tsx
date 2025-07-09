@@ -30,10 +30,10 @@ export const ThemeButtons = () => {
   };
 
   return (
-    <div className="relative ml-auto inline-flex rounded-full border border-border">
+    <div className="border-border relative ml-auto inline-flex rounded-full border">
       {/* Sliding Indicator - Behind the Buttons */}
       <div
-        className={`absolute bottom-0.5 left-[1px] top-0.5 w-[30%] rounded-full bg-amber-400 ${
+        className={`absolute top-0.5 bottom-0.5 left-[1px] w-[30%] rounded-full bg-amber-400 ${
           hasInteracted ? "transition-all duration-300" : ""
         } dark:bg-purple-400`}
         style={{
@@ -54,7 +54,7 @@ export const ThemeButtons = () => {
         className={`relative z-10 inline-flex items-center rounded-full px-1 ${
           selectedTheme === "light"
             ? "text-foreground"
-            : "text-foreground hover:bg-amber-400 hover:text-background"
+            : "text-foreground hover:text-background hover:bg-amber-400"
         }`}
         onClick={() => handleThemeChange("light")}
         data-testid="menu_light_button"

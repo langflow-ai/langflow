@@ -27,32 +27,32 @@ const OptionBadge = ({
 }: {
   option: string;
   variant?:
-  | "default"
-  | "emerald"
-  | "gray"
-  | "secondary"
-  | "destructive"
-  | "outline"
-  | "secondaryStatic"
-  | "pinkStatic"
-  | "successStatic"
-  | "errorStatic";
+    | "default"
+    | "emerald"
+    | "gray"
+    | "secondary"
+    | "destructive"
+    | "outline"
+    | "secondaryStatic"
+    | "pinkStatic"
+    | "successStatic"
+    | "errorStatic";
   className?: string;
   onRemove: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }) => (
   <Badge
     variant={
       variant as
-      | "default"
-      | "emerald"
-      | "gray"
-      | "secondary"
-      | "destructive"
-      | "outline"
-      | "secondaryStatic"
-      | "pinkStatic"
-      | "successStatic"
-      | "errorStatic"
+        | "default"
+        | "emerald"
+        | "gray"
+        | "secondary"
+        | "destructive"
+        | "outline"
+        | "secondaryStatic"
+        | "pinkStatic"
+        | "successStatic"
+        | "errorStatic"
     }
     className={cn("flex items-center gap-1 truncate", className)}
   >
@@ -63,7 +63,7 @@ const OptionBadge = ({
         onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
       }
     >
-      <X className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive" />
+      <X className="hover:text-destructive h-3 w-3 cursor-pointer bg-transparent" />
     </div>
   </Badge>
 );
@@ -109,14 +109,14 @@ const SelectionIndicator = ({ isSelected }: { isSelected: boolean }) => (
     <div className="absolute opacity-100 transition-all group-hover:opacity-0">
       <ForwardedIconComponent
         name="Check"
-        className="mr-2 h-4 w-4 text-primary"
+        className="text-primary mr-2 h-4 w-4"
         aria-hidden="true"
       />
     </div>
     <div className="absolute opacity-0 transition-all group-hover:opacity-100">
       <ForwardedIconComponent
         name="X"
-        className="mr-2 h-4 w-4 text-status-red"
+        className="text-status-red mr-2 h-4 w-4"
         aria-hidden="true"
       />
     </div>
@@ -135,7 +135,7 @@ const getInputClassName = (
     editNode && "pl-2 pr-6",
     editNode && disabled && "h-fit w-fit",
     disabled &&
-    "disabled:text-muted disabled:opacity-100 disabled:placeholder:text-muted-foreground",
+      "disabled:text-muted disabled:opacity-100 disabled:placeholder:text-muted-foreground",
     password && "text-clip pr-14",
     blockAddNewGlobalVariable && "text-clip pr-8",
     selectedOptions?.length > 0 && "cursor-default",
@@ -153,7 +153,7 @@ const getAnchorClassName = (
     editNode && disabled && "min-h-5 border-muted",
     disabled && "bg-muted text-muted",
     isFocused &&
-    "border-foreground ring-1 ring-foreground hover:border-foreground",
+      "border-foreground ring-1 ring-foreground hover:border-foreground",
   );
 };
 

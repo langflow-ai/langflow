@@ -1,9 +1,9 @@
 import ReactDOM from "react-dom/client";
 import reportWebVitals from "./reportWebVitals";
 
+import "./App.css";
 import "./style/classes.css";
 import "./style/index.css";
-import "./App.css";
 
 import App from "./customization/custom-App";
 

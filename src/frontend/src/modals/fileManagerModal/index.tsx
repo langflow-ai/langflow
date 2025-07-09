@@ -74,7 +74,7 @@ export default function FileManagerModal({
         </BaseModal.Trigger>
         <BaseModal.Header description={null}>
           <span className="flex items-center gap-2 font-medium">
-            <div className="rounded-md bg-muted p-1.5">
+            <div className="bg-muted rounded-md p-1.5">
               <ForwardedIconComponent name="File" className="h-5 w-5" />
             </div>
             My Files

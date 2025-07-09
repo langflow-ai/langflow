@@ -12,7 +12,7 @@ export function DotBackgroundDemo({
   return (
     <div
       className={cn(
-        "relative flex h-full w-full items-center justify-center bg-background",
+        "bg-background relative flex h-full w-full items-center justify-center",
         className,
       )}
     >
@@ -26,7 +26,7 @@ export function DotBackgroundDemo({
       />
       <div
         className={cn(
-          "absolute inset-0 bg-linear-to-b from-background/0 from-0% via-background/50 via-30% to-background to-50%",
+          "from-background/0 via-background/50 to-background absolute inset-0 bg-linear-to-b from-0% via-30% to-50%",
           containerClassName,
         )}
       />

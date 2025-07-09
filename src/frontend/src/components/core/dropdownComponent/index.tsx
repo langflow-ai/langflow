@@ -317,7 +317,7 @@ export default function Dropdown({
             editNode
               ? "dropdown-component-outline input-edit-node"
               : "dropdown-component-false-outline py-2",
-            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
+            "no-focus-visible disabled:bg-muted disabled:text-muted-foreground w-full justify-between font-normal",
           )}
         >
           <span
@@ -340,7 +340,7 @@ export default function Dropdown({
           <ForwardedIconComponent
             name={disabled ? "Lock" : "ChevronsUpDown"}
             className={cn(
-              "ml-2 h-4 w-4 shrink-0 text-foreground",
+              "text-foreground ml-2 h-4 w-4 shrink-0",
               disabled
                 ? "text-placeholder-foreground hover:text-placeholder-foreground"
                 : "hover:text-foreground",
@@ -349,7 +349,7 @@ export default function Dropdown({
         </Button>
       </PopoverTrigger>
       {helperText && (
-        <span className="pt-2 text-xs text-muted-foreground">
+        <span className="text-muted-foreground pt-2 text-xs">
           {convertStringToHTML(helperText)}
         </span>
       )}
@@ -366,7 +366,7 @@ export default function Dropdown({
         onChange={searchRoleByTerm}
         onKeyDown={handleInputKeyDown}
         placeholder="Search options..."
-        className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        className="placeholder:text-muted-foreground flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
         data-testid="dropdown_search_input"
       />
@@ -401,7 +401,7 @@ export default function Dropdown({
                     {filteredMetadata?.[index]?.icon && (
                       <ForwardedIconComponent
                         name={filteredMetadata?.[index]?.icon || "Unknown"}
-                        className="h-4 w-4 shrink-0 text-primary"
+                        className="text-primary h-4 w-4 shrink-0"
                       />
                     )}
                     <div
@@ -431,7 +431,7 @@ export default function Dropdown({
                       )}
 
                       {filteredMetadata && filteredMetadata?.length > 0 && (
-                        <div className="ml-auto flex items-center overflow-hidden pl-2 text-muted-foreground">
+                        <div className="text-muted-foreground ml-auto flex items-center overflow-hidden pl-2">
                           {Object.entries(
                             filterMetadataKeys(filteredMetadata?.[index] || {}),
                           )
@@ -450,7 +450,7 @@ export default function Dropdown({
                                 {i > 0 && (
                                   <ForwardedIconComponent
                                     name="Circle"
-                                    className="mx-1 h-1 w-1 shrink-0 overflow-visible fill-muted-foreground"
+                                    className="fill-muted-foreground mx-1 h-1 w-1 shrink-0 overflow-visible"
                                   />
                                 )}
                                 <div className="truncate text-xs">
@@ -469,7 +469,7 @@ export default function Dropdown({
                         <ForwardedIconComponent
                           name="Check"
                           className={cn(
-                            "h-4 w-4 shrink-0 text-primary",
+                            "text-primary h-4 w-4 shrink-0",
                             value === option ? "opacity-100" : "opacity-0",
                           )}
                         />
@@ -489,7 +489,7 @@ export default function Dropdown({
       <CommandSeparator />
       {dialogInputs && dialogInputs?.fields && (
         <CommandGroup className="p-0">
-          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
+          <CommandItem className="text-muted-foreground flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold">
             <Button
               className="w-full"
               unstyled
@@ -500,13 +500,13 @@ export default function Dropdown({
               <div className="flex items-center gap-2 pl-1">
                 <ForwardedIconComponent
                   name="Plus"
-                  className="h-3 w-3 text-primary"
+                  className="text-primary h-3 w-3"
                 />
                 {`New ${firstWord}`}
               </div>
             </Button>
           </CommandItem>
-          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
+          <CommandItem className="text-muted-foreground flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold">
             <Button
               className="w-full"
               unstyled
@@ -518,7 +518,7 @@ export default function Dropdown({
               <div className="flex items-center gap-2 pl-1">
                 <ForwardedIconComponent
                   name="RefreshCcw"
-                  className={cn("refresh-icon h-3 w-3 text-primary")}
+                  className={cn("refresh-icon text-primary h-3 w-3")}
                 />
                 Refresh list
               </div>
@@ -553,8 +553,8 @@ export default function Dropdown({
         {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
         {!dialogInputs?.fields && hasRefreshButton && (
-          <div className="sticky bottom-0 border-t bg-background">
-            <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs font-semibold text-muted-foreground">
+          <div className="bg-background sticky bottom-0 border-t">
+            <CommandItem className="text-muted-foreground flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs font-semibold">
               <Button
                 className="w-full"
                 unstyled
@@ -566,7 +566,7 @@ export default function Dropdown({
                 <div className="flex items-center gap-2 pl-1">
                   <ForwardedIconComponent
                     name="RefreshCcw"
-                    className={cn("refresh-icon h-3 w-3 text-primary")}
+                    className={cn("refresh-icon text-primary h-3 w-3")}
                   />
                   Refresh list
                 </div>
@@ -589,7 +589,7 @@ export default function Dropdown({
 
   // Main render
   return (
-    <Popover open={open} onOpenChange={children ? () => { } : setOpen}>
+    <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
       {children ? (
         <PopoverAnchor>{children}</PopoverAnchor>
       ) : refreshOptions || isLoading ? (

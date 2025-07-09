@@ -180,12 +180,12 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               lastSaved={
                 updatedAt
                   ? new Date(updatedAt).toLocaleString("en-US", {
-                    hour: "numeric",
-                    minute: "numeric",
-                    second: "numeric",
-                    month: "numeric",
-                    day: "numeric",
-                  })
+                      hour: "numeric",
+                      minute: "numeric",
+                      second: "numeric",
+                      month: "numeric",
+                      day: "numeric",
+                    })
                   : undefined
               }
               autoSave={autoSaving}

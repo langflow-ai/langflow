@@ -110,9 +110,9 @@ const ListComponent = ({
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`flex flex-row bg-background ${
+        className={`bg-background flex flex-row ${
           isComponent ? "cursor-default" : "cursor-pointer"
-        } group justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted`}
+        } group hover:bg-muted justify-between rounded-lg border-none px-4 py-3 shadow-none`}
         data-testid="list-card"
       >
         <div
@@ -168,7 +168,7 @@ const ListComponent = ({
                   {flowData.name}
                 </span>
               </div>
-              <div className="flex min-w-0 flex-shrink text-xs text-muted-foreground">
+              <div className="text-muted-foreground flex min-w-0 flex-shrink text-xs">
                 <span className="truncate">
                   Edited {timeElapsed(flowData.updated_at)} ago
                 </span>
@@ -189,7 +189,7 @@ const ListComponent = ({
                 <ForwardedIconComponent
                   name="Ellipsis"
                   aria-hidden="true"
-                  className="h-5 w-5 text-muted-foreground group-hover:text-foreground"
+                  className="text-muted-foreground group-hover:text-foreground h-5 w-5"
                 />
               </Button>
             </DropdownMenuTrigger>

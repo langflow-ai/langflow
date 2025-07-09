@@ -26,10 +26,10 @@ export default function EditMessageField({
   }, []);
 
   return (
-    <div className="flex h-fit w-full flex-col rounded-md bg-muted px-4 py-2">
+    <div className="bg-muted flex h-fit w-full flex-col rounded-md px-4 py-2">
       <Textarea
         ref={textareaRef}
-        className="max-h-[400px] w-full resize-none rounded-none border-0 bg-muted shadow-none focus:ring-0"
+        className="bg-muted max-h-[400px] w-full resize-none rounded-none border-0 shadow-none focus:ring-0"
         // onBlur={() => {
         //   if (!isButtonClicked) {
         //     onCancel();
@@ -49,7 +49,7 @@ export default function EditMessageField({
                 onEdit(message);
                 setIsButtonClicked(false);
               }}
-              className="mt-2 bg-primary text-background hover:bg-primary-hover hover:text-secondary"
+              className="bg-primary text-background hover:bg-primary-hover hover:text-secondary mt-2"
             >
               Save
             </Button>
@@ -61,12 +61,12 @@ export default function EditMessageField({
                 onCancel();
                 setIsButtonClicked(false);
               }}
-              className="mt-2 bg-transparent! text-foreground hover:bg-secondary-hover!"
+              className="text-foreground hover:bg-secondary-hover! mt-2 bg-transparent!"
             >
               Cancel
             </Button>
           </div>
-          <div className="text-mmd font-medium text-muted-foreground word-break-break-word">
+          <div className="text-mmd text-muted-foreground word-break-break-word font-medium">
             Editing messages will update the memory but won't restart the
             conversation.
           </div>

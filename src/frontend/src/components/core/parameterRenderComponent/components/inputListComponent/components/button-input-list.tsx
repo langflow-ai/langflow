@@ -27,9 +27,9 @@ export const ButtonInputList = ({
         <div
           onClick={addNewInput}
           className={cn(
-            "hit-area-icon group absolute -top-8 right-0 flex items-center justify-center bg-background text-center hover:bg-muted",
+            "hit-area-icon group bg-background hover:bg-muted absolute -top-8 right-0 flex items-center justify-center text-center",
             disabled
-              ? "pointer-events-none bg-background hover:bg-background"
+              ? "bg-background hover:bg-background pointer-events-none"
               : "",
           )}
         >
@@ -46,8 +46,8 @@ export const ButtonInputList = ({
             <IconComponent
               name="Plus"
               className={cn(
-                "icon-size justify-self-center text-muted-foreground",
-                !disabled && "hover:cursor-pointer hover:text-foreground",
+                "icon-size text-muted-foreground justify-self-center",
+                !disabled && "hover:text-foreground hover:cursor-pointer",
                 "group-hover:text-foreground",
               )}
               strokeWidth={ICON_STROKE_WIDTH}

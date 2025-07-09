@@ -107,15 +107,15 @@ export const GetStartedProgress: FC<{
         </button>
       </div>
 
-      <div className="mb-1 mt-2 flex items-center justify-between gap-3">
-        <div className="h-1 w-full rounded-full bg-muted">
+      <div className="mt-2 mb-1 flex items-center justify-between gap-3">
+        <div className="bg-muted h-1 w-full rounded-full">
           <div
-            className="h-1 w-[33%] rounded-full bg-accent-pink-foreground"
+            className="bg-accent-pink-foreground h-1 w-[33%] rounded-full"
             style={{ width: `${percentageGetStarted}%` }}
           />
         </div>
         <span
-          className="text-sm text-muted-foreground"
+          className="text-muted-foreground text-sm"
           data-testid="get_started_progress_percentage"
         >
           {percentageGetStarted}%
@@ -140,7 +140,7 @@ export const GetStartedProgress: FC<{
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-md px-2 py-[10px] hover:bg-muted",
+              "hover:bg-muted flex items-center gap-2 rounded-md px-2 py-[10px]",
               isGithubStarredChild && "pointer-events-none",
             )}
           >
@@ -148,7 +148,7 @@ export const GetStartedProgress: FC<{
               <span data-testid="github_starred_icon_get_started">
                 <IconComponent
                   name="Check"
-                  className="h-4 w-4 text-accent-emerald-foreground"
+                  className="text-accent-emerald-foreground h-4 w-4"
                 />
               </span>
             ) : (
@@ -182,7 +182,7 @@ export const GetStartedProgress: FC<{
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
+              "hover:bg-muted flex items-center gap-2 rounded-md p-2 py-[10px]",
               isDiscordJoinedChild && "pointer-events-none",
             )}
           >
@@ -190,7 +190,7 @@ export const GetStartedProgress: FC<{
               <span data-testid="discord_joined_icon_get_started">
                 <IconComponent
                   name="Check"
-                  className="h-4 w-4 text-accent-emerald-foreground"
+                  className="text-accent-emerald-foreground h-4 w-4"
                 />
               </span>
             ) : (
@@ -214,8 +214,8 @@ export const GetStartedProgress: FC<{
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
-              hasFlows && "pointer-events-none text-muted-foreground",
+              "hover:bg-muted flex items-center gap-2 rounded-md p-2 py-[10px]",
+              hasFlows && "text-muted-foreground pointer-events-none",
             )}
             data-testid="create_flow_btn_get_started"
           >
@@ -223,7 +223,7 @@ export const GetStartedProgress: FC<{
               <IconComponent
                 name={hasFlows ? "Check" : "Plus"}
                 className={cn(
-                  "h-4 w-4 text-primary",
+                  "text-primary h-4 w-4",
                   hasFlows && "text-accent-emerald-foreground",
                 )}
               />
