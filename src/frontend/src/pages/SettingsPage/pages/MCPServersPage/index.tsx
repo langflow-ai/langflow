@@ -61,7 +61,7 @@ export default function MCPServersPage() {
       <div className="flex w-full items-start justify-between gap-6">
         <div className="flex flex-col">
           <h2 className="flex items-center text-lg font-semibold tracking-tight">
-            MCP Connections
+            MCP Servers
             <ForwardedIconComponent
               name="Mcp"
               className="ml-2 h-5 w-5 text-primary"
@@ -92,7 +92,7 @@ export default function MCPServersPage() {
               </div>
             ) : (
               <div className="text-sm font-medium text-muted-foreground">
-                Servers
+                Added MCP Servers
               </div>
             )}
             <div className="flex flex-col gap-1">
@@ -112,9 +112,13 @@ export default function MCPServersPage() {
                       >
                         {server.toolsCount === null
                           ? server.error
-                            ? "Error"
+                            ? server.error.startsWith("Timeout")
+                              ? "Timeout"
+                              : "Error"
                             : "Loading..."
-                          : `${server.toolsCount} action${server.toolsCount === 1 ? "" : "s"}`}
+                          : !server.toolsCount
+                            ? "No tools found"
+                            : `${server.toolsCount} tool${server.toolsCount === 1 ? "" : "s"}`}
                       </span>
                     </ShadTooltip>
                   </div>
