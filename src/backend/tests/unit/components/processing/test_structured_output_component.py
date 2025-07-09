@@ -287,6 +287,105 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         "OPENAI_API_KEY" not in os.environ,
         reason="OPENAI_API_KEY environment variable not set",
     )
+    def test_with_real_openai_model_multiple_patterns(self):
+        # Create a real OpenAI model
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+        # Create a component with multiple people in the input
+        component = StructuredOutputComponent(
+            llm=llm,
+            input_value="Extract all people from this text: John Doe is 30 years old, Jane Smith is 25, and Bob Johnson is 35.",
+            schema_name="PersonInfo",
+            output_schema=[
+                {"name": "name", "type": "str", "description": "The person's name"},
+                {"name": "age", "type": "int", "description": "The person's age"},
+            ],
+            multiple=False,
+            system_prompt="Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all.",
+        )
+
+        # Get the structured output
+        result = component.build_structured_output_base()
+
+        # Verify the result contains multiple people
+        assert isinstance(result, list)
+        assert len(result) >= 3  # Should extract all three people
+        
+        # Check that we have names and ages for multiple people
+        names = [item["name"] for item in result if "name" in item]
+        ages = [item["age"] for item in result if "age" in item]
+        
+        assert len(names) >= 3
+        assert len(ages) >= 3
+        
+        # Check that we extracted the expected people (order may vary)
+        expected_names = ["John Doe", "Jane Smith", "Bob Johnson"]
+        expected_ages = [30, 25, 35]
+        
+        for expected_name in expected_names:
+            assert any(expected_name in name for name in names)
+        for expected_age in expected_ages:
+            assert expected_age in ages
+
+    def test_multiple_patterns_with_duplicates_and_variations(self):
+        """Test that multiple patterns are extracted while removing exact duplicates but keeping variations."""
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [
+                        {"product": "iPhone", "price": 999.99},
+                        {"product": "iPhone", "price": 1099.99},  # Variation - different price
+                        {"product": "Samsung", "price": 899.99},
+                        {"product": "iPhone", "price": 999.99},  # Exact duplicate - should be removed
+                    ]}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Products: iPhone $999.99, iPhone $1099.99, Samsung $899.99, iPhone $999.99",
+            schema_name="ProductSchema",
+            output_schema=[
+                {"name": "product", "type": "str", "description": "Product name"},
+                {"name": "price", "type": "float", "description": "Product price"},
+            ],
+            multiple=False,
+            system_prompt="Remove exact duplicates but keep variations that have different field values.",
+        )
+
+        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_output()
+
+            # Check that result is a Data object
+            from langflow.schema.data import Data
+
+            assert isinstance(result, Data)
+
+            # Should have multiple results due to multiple patterns
+            assert isinstance(result.data, dict)
+            assert "results" in result.data
+            assert len(result.data["results"]) == 4  # All items returned (duplicate handling is expected to be done by LLM)
+
+            # Verify the expected products are present
+            products = [item["product"] for item in result.data["results"]]
+            prices = [item["price"] for item in result.data["results"]]
+            
+            assert "iPhone" in products
+            assert "Samsung" in products
+            assert 999.99 in prices
+            assert 1099.99 in prices
+            assert 899.99 in prices
+
+    @pytest.mark.skipif(
+        "OPENAI_API_KEY" not in os.environ,
+        reason="OPENAI_API_KEY environment variable not set",
+    )
     def test_with_real_openai_model_simple_schema_fail(self):
         # Create a real OpenAI model with very low max_tokens to force truncation
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, max_tokens=1)
@@ -617,6 +716,55 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert "number" in result.data
             assert result.data["field"] == "value2"
             assert result.data["number"] == 24
+
+    def test_build_structured_output_returns_multiple_objects(self):
+        """Test that build_structured_output() returns Data object with multiple objects wrapped in results."""
+
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+            class MockBaseModel(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [
+                        {"name": "John", "age": 30},
+                        {"name": "Jane", "age": 25},
+                        {"name": "Bob", "age": 35}
+                    ]}
+
+            return {
+                "messages": ["mock_message"],
+                "responses": [MockBaseModel()],
+                "response_metadata": [{"id": "mock_id"}],
+                "attempts": 1,
+            }
+
+        component = StructuredOutputComponent(
+            llm=MockLanguageModel(),
+            input_value="Extract multiple people: John is 30, Jane is 25, Bob is 35",
+            schema_name="PersonSchema",
+            output_schema=[
+                {"name": "name", "type": "str", "description": "Person's name"},
+                {"name": "age", "type": "int", "description": "Person's age"},
+            ],
+            multiple=False,
+            system_prompt="Extract ALL relevant instances that match the schema",
+        )
+
+        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+            result = component.build_structured_output()
+
+            # Check that result is a Data object
+            from langflow.schema.data import Data
+
+            assert isinstance(result, Data)
+
+            # Check that result.data is a dict with results key
+            assert isinstance(result.data, dict)
+            assert "results" in result.data
+            assert len(result.data["results"]) == 3
+
+            # Check the content of each result
+            assert result.data["results"][0] == {"name": "John", "age": 30}
+            assert result.data["results"][1] == {"name": "Jane", "age": 25}
+            assert result.data["results"][2] == {"name": "Bob", "age": 35}
 
     def test_build_structured_output_returns_data_with_single_item(self):
         """Test that build_structured_output() returns Data object when only one item in objects."""

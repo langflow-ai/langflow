@@ -189,6 +189,7 @@ class StructuredOutputComponent(Component):
         if len(output) > 1:
             # Multiple outputs - wrap them in a results container
             return Data(data={"results": output})
+        return None
 
     def build_structured_dataframe(self) -> DataFrame:
         output = self.build_structured_output_base()
@@ -196,11 +197,6 @@ class StructuredOutputComponent(Component):
             # handle empty or unexpected type case
             msg = "No structured output returned"
             raise ValueError(msg)
-        if len(output) == 1:
-            # Single output - create list with one Data object
-            data_list = [Data(data=output[0])]
-        else:
-            # Multiple outputs - create list of Data objects
-            data_list = [Data(data=item) for item in output]
+        data_list = [Data(data=output[0])] if len(output) == 1 else [Data(data=item) for item in output]
 
         return DataFrame(data_list)
