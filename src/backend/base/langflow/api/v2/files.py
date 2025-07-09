@@ -474,8 +474,8 @@ async def delete_file(
 
         # Delete from the database
         await session.delete(file_to_delete)
-        await session.commit()
         await session.flush()  # Ensures delete is staged
+        await session.commit()
 
     except HTTPException:
         # Re-raise HTTPException to avoid being caught by the generic exception handler
