@@ -9,7 +9,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
-import { useCustomHandleBulkFilesDownload } from "@/customization/hooks/custom-handle-bulk-files-download";
+import { useCustomHandleBulkFilesDownload } from "@/customization/hooks/use-custom-handle-bulk-files-download";
 import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
@@ -113,6 +113,13 @@ export const FilesPage = () => {
   };
 
   const { mutate: uploadFileDirect } = customPostUploadFileV2();
+
+  useEffect(() => {
+    if (files) {
+      setQuantitySelected(0);
+      setSelectedFiles([]);
+    }
+  }, [files]);
 
   const colDefs: ColDef[] = [
     {
@@ -267,6 +274,8 @@ export const FilesPage = () => {
       {
         onSuccess: (data) => {
           setSuccessData({ title: data.message });
+          setQuantitySelected(0);
+          setSelectedFiles([]);
         },
         onError: (error) => {
           setErrorData({
@@ -409,7 +418,14 @@ export const FilesPage = () => {
                         selectedFiles.length > 0 ? "opacity-100" : "opacity-0",
                       )}
                     >
-                      <div className="pointer-events-auto ml-12 flex h-full flex-1 items-center justify-between bg-background">
+                      <div
+                        className={cn(
+                          "ml-12 flex h-full flex-1 items-center justify-between bg-background",
+                          selectedFiles.length > 0
+                            ? "pointer-events-auto"
+                            : "pointer-events-none",
+                        )}
+                      >
                         <span className="text-xs text-muted-foreground">
                           {quantitySelected} selected
                         </span>

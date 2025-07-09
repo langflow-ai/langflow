@@ -57,7 +57,7 @@ export const switchCaseModalSize = (size: string) => {
     case "templates":
       minWidth = "w-[97vw] max-w-[1200px]";
       height =
-        "min-h-[700px] lg:min-h-0 h-[90vh] md:h-[80vh] lg:h-[50vw] lg:max-h-[620px]";
+        "min-h-[500px] h-[90vh] md:h-[85vh] lg:h-[80vh] xl:h-[70vh] max-h-[90vh]";
       break;
     case "three-cards":
       minWidth = "min-w-[1066px]";
