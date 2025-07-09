@@ -142,15 +142,16 @@ export default function APITabsComponent() {
     <div className="api-modal-tabs inset-0 m-0 h-full overflow-hidden">
       <div className="flex h-full flex-col gap-4 overflow-hidden">
         {/* Main language tabs */}
-        <div className="flex flex-row justify-start border-b border-border">
+        <div className="border-border flex flex-row justify-start border-b">
           {tabsList.map((tab) => (
             <Button
               unstyled
               key={tab.title}
-              className={`flex h-8 select-none flex-row items-center gap-2 text-nowrap border-b-2 border-border border-b-transparent py-1! font-medium ${selectedTab === tab.title
+              className={`border-border flex h-8 flex-row items-center gap-2 border-b-2 border-b-transparent py-1! font-medium text-nowrap select-none ${
+                selectedTab === tab.title
                   ? "border-b-2 border-black dark:border-b-white"
                   : "text-muted-foreground hover:text-foreground"
-                } px-3 py-2 text-[13px]`}
+              } px-3 py-2 text-[13px]`}
               onClick={() => setSelectedTab(tab.title)}
               data-testid={`api_tab_${tab.title.toLowerCase()}`}
             >
@@ -167,7 +168,7 @@ export default function APITabsComponent() {
               <TabsList>
                 {operatingSystemTabs.map((tab, index) => (
                   <TabsTrigger
-                    className="flex select-none items-center gap-2"
+                    className="flex items-center gap-2 select-none"
                     key={index}
                     value={tab.name}
                   >
@@ -189,17 +190,17 @@ export default function APITabsComponent() {
                 size="icon"
                 onClick={copyToClipboard}
                 data-testid="btn-copy-code"
-                className="hover:bg-foreground! group absolute right-4 top-2 z-10 select-none"
+                className="hover:bg-foreground! group absolute top-2 right-4 z-10 select-none"
               >
                 {isCopied ? (
                   <IconComponent
                     name="Check"
-                    className="h-5 w-5 text-muted-foreground"
+                    className="text-muted-foreground h-5 w-5"
                   />
                 ) : (
                   <IconComponent
                     name="Copy"
-                    className="h-5! w-5! text-muted-foreground"
+                    className="text-muted-foreground h-5! w-5!"
                   />
                 )}
               </Button>
@@ -208,7 +209,7 @@ export default function APITabsComponent() {
                 wrapLongLines={true}
                 language={currentTab.language}
                 style={dark ? oneDark : oneLight}
-                className="mt-0! h-full w-full overflow-scroll rounded-b-md! border border-border text-left custom-scroll!"
+                className="border-border custom-scroll! mt-0! h-full w-full overflow-scroll rounded-b-md! border text-left"
               >
                 {currentTab.code}
               </SyntaxHighlighter>
