@@ -6,7 +6,10 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from "@tanstack/react-query";
-import type { MutationFunctionType, QueryFunctionType } from "../../../types/api";
+import type {
+  MutationFunctionType,
+  QueryFunctionType,
+} from "../../../types/api";
 
 export function UseRequestProcessor(): {
   query: QueryFunctionType;

@@ -48,7 +48,11 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import type { APIClassType } from "../../../../types/api";
-import type { AllNodeType, EdgeType, NoteNodeType } from "../../../../types/flow";
+import type {
+  AllNodeType,
+  EdgeType,
+  NoteNodeType,
+} from "../../../../types/flow";
 import {
   generateFlow,
   generateNodeFromFlow,

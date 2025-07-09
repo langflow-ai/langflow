@@ -10,7 +10,8 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
   tweaks: {},
   nodes: [],
   setNodes: (change) => {
-    const newChange = typeof change === "function" ? change(get().nodes) : change;
+    const newChange =
+      typeof change === "function" ? change(get().nodes) : change;
 
     set({
       nodes: newChange,

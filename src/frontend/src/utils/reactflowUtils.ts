@@ -864,11 +864,15 @@ export function updateNewOutput({ nodes, edges }: updateEdgesHandleIdsType) {
   const newNodes = cloneDeep(nodes);
   newEdges.forEach((edge) => {
     if (edge.sourceHandle && edge.targetHandle) {
-      const newSourceHandle: sourceHandleType = scapeJSONParse(edge.sourceHandle);
-      const newTargetHandle: targetHandleType = scapeJSONParse(edge.targetHandle);
+      const newSourceHandle: sourceHandleType = scapeJSONParse(
+        edge.sourceHandle,
+      );
+      const newTargetHandle: targetHandleType = scapeJSONParse(
+        edge.targetHandle,
+      );
       const id = newSourceHandle.id;
       const sourceNodeIndex = newNodes.findIndex((node) => node.id === id);
-      let sourceNode: AllNodeType | undefined ;
+      let sourceNode: AllNodeType | undefined;
       if (sourceNodeIndex !== -1) {
         sourceNode = newNodes[sourceNodeIndex];
       }

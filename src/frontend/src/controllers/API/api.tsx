@@ -4,7 +4,11 @@ import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-header
 import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import axios, { type AxiosError, type AxiosInstance, type AxiosRequestConfig } from "axios";
+import axios, {
+  type AxiosError,
+  type AxiosInstance,
+  type AxiosRequestConfig,
+} from "axios";
 import * as fetchIntercept from "fetch-intercept";
 import { useEffect } from "react";
 import { Cookies } from "react-cookie";

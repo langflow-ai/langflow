@@ -3,7 +3,7 @@ import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVar
 import { CommandItem } from "@/components/ui/command";
 import { cn } from "@/utils/utils";
 
-type GeneralGlobalVariableModalProps = {}
+type GeneralGlobalVariableModalProps = {};
 
 const GeneralGlobalVariableModal = ({}: GeneralGlobalVariableModalProps) => {
   return (

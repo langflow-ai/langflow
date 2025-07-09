@@ -2,7 +2,10 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableModal from "@/modals/tableModal";
 import { isMarkdownTable } from "@/utils/markdownUtils";
 import { FormatColumns, generateBackendColumnsFromValue } from "@/utils/utils";
-import type { DataTypeDefinition, SelectionChangedEvent } from "ag-grid-community";
+import type {
+  DataTypeDefinition,
+  SelectionChangedEvent,
+} from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";

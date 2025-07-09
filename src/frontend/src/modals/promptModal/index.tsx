@@ -207,7 +207,8 @@ export default function PromptModal({
 
       // Use caretPositionFromPoint to get the closest text position. Does not work on Safari.
       if ("caretPositionFromPoint" in document) {
-        const range = (document as any).caretPositionFromPoint(x, y)?.offset ?? 0;
+        const range =
+          (document as any).caretPositionFromPoint(x, y)?.offset ?? 0;
         if (range) {
           const position = range;
           textArea.setSelectionRange(position, position);

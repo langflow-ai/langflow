@@ -205,20 +205,20 @@ const TableComponent = forwardRef<
     }
 
     if (colDef.length === 0) {
-        return (
-          <div className="flex h-full w-full items-center justify-center rounded-md border">
-            <Alert variant={"default"} className="w-fit">
-              <ForwardedIconComponent
-                name="AlertCircle"
-                className="h-5 w-5 text-primary"
-              />
-              <AlertTitle>{NO_COLUMN_DEFINITION_ALERT_TITLE}</AlertTitle>
-              <AlertDescription>
-                {NO_COLUMN_DEFINITION_ALERT_DESCRIPTION}
-              </AlertDescription>
-            </Alert>
-          </div>
-        );
+      return (
+        <div className="flex h-full w-full items-center justify-center rounded-md border">
+          <Alert variant={"default"} className="w-fit">
+            <ForwardedIconComponent
+              name="AlertCircle"
+              className="h-5 w-5 text-primary"
+            />
+            <AlertTitle>{NO_COLUMN_DEFINITION_ALERT_TITLE}</AlertTitle>
+            <AlertDescription>
+              {NO_COLUMN_DEFINITION_ALERT_DESCRIPTION}
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
     }
     return (
       <div

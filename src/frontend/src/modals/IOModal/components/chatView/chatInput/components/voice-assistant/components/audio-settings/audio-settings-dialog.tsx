@@ -76,12 +76,13 @@ const SettingsVoiceModal = ({
   );
 
   const openaiVoices = useVoiceStore((state) => state.openaiVoices);
-  const [allVoices, setAllVoices] = useState<
-    {
-      name: string;
-      value: string;
-    }[]
-  >(openaiVoices);
+  const [allVoices, setAllVoices] =
+    useState<
+      {
+        name: string;
+        value: string;
+      }[]
+    >(openaiVoices);
 
   const saveButtonClicked = useRef(false);
 

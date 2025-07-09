@@ -271,7 +271,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   setNodes: (change) => {
-    const newChange = typeof change === "function" ? change(get().nodes) : change;
+    const newChange =
+      typeof change === "function" ? change(get().nodes) : change;
     const newEdges = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
     get().updateComponentsToUpdate(newChange);
@@ -289,7 +290,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
   },
   setEdges: (change) => {
-    const newChange = typeof change === "function" ? change(get().edges) : change;
+    const newChange =
+      typeof change === "function" ? change(get().edges) : change;
     set({
       edges: newChange,
       flowState: undefined,

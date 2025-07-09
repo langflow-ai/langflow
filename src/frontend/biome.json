@@ -1,59 +1,59 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.1.1/schema.json",
-	"vcs": {
-		"enabled": false,
-		"clientKind": "git",
-		"useIgnoreFile": false
-	},
-	"files": {
-		"ignoreUnknown": false
-	},
-	"formatter": {
-		"enabled": true,
-		"indentStyle": "space",
-		"indentWidth": 2
-	},
-	"linter": {
-		"enabled": true,
-		"rules": {
-			"a11y": {
+  "$schema": "https://biomejs.dev/schemas/2.1.1/schema.json",
+  "vcs": {
+    "enabled": false,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": false
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "a11y": {
         "noStaticElementInteractions": "warn"
       },
-			"correctness": {
-				"useExhaustiveDependencies": "off",
-				"noSelfAssign": "warn"
-			},
-			"suspicious": {
-				"noAssignInExpressions": "error",
-				"noConsole": "warn",
-				"noSelfCompare": "warn",
-				"noDuplicateObjectKeys": "error"
-			},
-			"complexity": {
-				"noExcessiveCognitiveComplexity": {
-					"level": "error",
-					"options": {
-						"maxAllowedComplexity": 15
-					}
-				}
-			},
-			"nursery": {
-				"noAwaitInLoop": "error"
-			},
-			"recommended": true
-		}
-	},
-	"javascript": {
-		"formatter": {
-			"quoteStyle": "double"
-		}
-	},
-	"assist": {
-		"enabled": true,
-		"actions": {
-			"source": {
-				"organizeImports": "on"
-			}
-		}
-	}
+      "correctness": {
+        "useExhaustiveDependencies": "off",
+        "noSelfAssign": "warn"
+      },
+      "suspicious": {
+        "noAssignInExpressions": "error",
+        "noConsole": "warn",
+        "noSelfCompare": "warn",
+        "noDuplicateObjectKeys": "error"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": {
+            "maxAllowedComplexity": 15
+          }
+        }
+      },
+      "nursery": {
+        "noAwaitInLoop": "error"
+      },
+      "recommended": true
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
 }
