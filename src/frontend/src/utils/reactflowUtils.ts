@@ -157,7 +157,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
           const id: sourceHandleType = {
             id: sourceNode.data.id,
-            name: name,
+            name: output?.name ?? name,
             output_types: outputTypes,
             dataType: sourceNode.data.type,
           };
