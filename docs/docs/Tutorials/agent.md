@@ -16,6 +16,7 @@ With the agent connected, your application can use any connected tools to retrie
 - [A running Langflow instance](/get-started-installation)
 - [A Langflow API key](/configuration-api-keys)
 - [An OpenAI API key](https://platform.openai.com/api-keys)
+- [Langflow JavaScript client installed](/typescript-client)
 
 This tutorial uses an OpenAI LLM. If you want to use a different provider, you need a valid credential for that provider.
 
@@ -65,41 +66,66 @@ If you're using the `customer_orders.csv` example file, you can run this as-is w
     <summary>JavaScript</summary>
 
         ```js
-        // Configuration - Replace these values with your own
+        import { LangflowClient } from "@datastax/langflow-client";
+
         const LANGFLOW_SERVER_ADDRESS = 'LANGFLOW_SERVER_ADDRESS';
         const FLOW_ID = 'FLOW_ID';
         const LANGFLOW_API_KEY = 'LANGFLOW_API_KEY';
-        const email = "alice.smith@example.com";
+        const email = "isabella.rodriguez@example.com";
 
-        // Request payload
-        const payload = {
-            "output_type": "chat",
-            "input_type": "chat",
-            "input_value": email,
-            "session_id": email
-        };
+        async function runAgentFlow(): Promise<void> {
+            try {
+                // Initialize the Langflow client
+                const client = new LangflowClient({
+                    baseUrl: LANGFLOW_SERVER_ADDRESS,
+                    apiKey: LANGFLOW_API_KEY
+                });
 
-        // Make the API request
-        fetch(`${LANGFLOW_SERVER_ADDRESS}/api/v1/run/${FLOW_ID}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                "x-api-key": LANGFLOW_API_KEY
-            },
-            body: JSON.stringify(payload)
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Just search for URLs in the entire response
-            const responseText = JSON.stringify(data);
-            const urls = responseText.match(/https?:\/\/[^\s"')\]]+/g) || [];
+                console.log(`Connecting to Langflow server at: ${LANGFLOW_SERVER_ADDRESS} `);
+                console.log(`Flow ID: ${FLOW_ID}`);
+                console.log(`Email: ${email}`);
 
-            // Clean the URLs and remove duplicates
-            const cleanUrls = [...new Set(urls)].map(url => url.trim());
-            console.log('URLs found:');
-            cleanUrls.slice(0, 3).forEach(url => console.log(url));
-        })
-        .catch(err => console.error(err));
+                // Get the flow instance
+                const flow = client.flow(FLOW_ID);
+
+                // Run the flow with the email as input
+                console.log('\nSending request to agent...');
+                const response = await flow.run(email, {
+                    session_id: email // Use email as session ID for context
+                });
+
+                console.log('\n=== Response from Langflow ===');
+                console.log('Session ID:', response.sessionId);
+
+                // Extract URLs from the chat message
+                const chatMessage = response.chatOutputText();
+                console.log('\n=== URLs from Chat Message ===');
+                const messageUrls = chatMessage.match(/https?:\/\/[^\s"')\]]+/g) || [];
+                const cleanMessageUrls = [...new Set(messageUrls)].map(url => url.trim());
+                console.log('URLs from message:');
+                cleanMessageUrls.slice(0, 3).forEach(url => console.log(url));
+
+            } catch (error) {
+                console.error('Error running flow:', error);
+
+                // Provide error messages
+                if (error instanceof Error) {
+                    if (error.message.includes('fetch')) {
+                        console.error('\nMake sure your Langflow server is running and accessible at:', LANGFLOW_SERVER_ADDRESS);
+                    }
+                    if (error.message.includes('401') || error.message.includes('403')) {
+                        console.error('\nCheck your API key configuration');
+                    }
+                    if (error.message.includes('404')) {
+                        console.error('\nCheck your Flow ID - make sure it exists and is correct');
+                    }
+                }
+            }
+        }
+
+        // Run the function
+        console.log('Starting Langflow Agent...\n');
+        runAgentFlow().catch(console.error);
         ```
     </details>
 
@@ -111,46 +137,30 @@ If you're using the `customer_orders.csv` example file, you can run this as-is w
     The following is an example of a response returned from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
 
     ```
+    Starting Langflow Agent...
+
+    Connecting to Langflow server at: http://localhost:7860
+    Flow ID: local-db-search
+    Email: isabella.rodriguez@example.com
+
+    Sending request to agent...
+
+    === Response from Langflow ===
+    Session ID: isabella.rodriguez@example.com
+
     URLs found:
-    https://www.facebook.com/marketplace/108225782538164/electronics/
-    https://www.facebook.com/marketplace/108944152458332/furniture/
-    https://www.facebook.com/marketplace/137493719613732/kitchen-cabinets/
+    https://www.facebook.com/marketplace/258164108225783/electronics/
+    https://www.facebook.com/marketplace/458332108944152/furniture/
+    https://www.facebook.com/marketplace/613732137493719/kitchen-cabinets/
     ```
 
     </details>
 
 4. Check your flow's **Playground**.
-New sessions appear named after the user's email address.
-Keeping sessions distinct helps the agent maintain context. For more on session IDs, see [Session ID](/session-id).
+    New sessions appear named after the user's email address.
+    Keeping sessions distinct helps the agent maintain context. For more on session IDs, see [Session ID](/session-id).
 
-    The preceding example stringifies the entire Langflow response and pattern-matches for the first three URLs.
-    Alternatively, for more precision, navigate through the response structure to the `artifacts.message` field and match the first three markdown links there.
-
-    <details closed>
-    <summary>Alternate message extraction</summary>
-
-    ```js
-    .then(data => {
-        // Navigate to the specific message field
-        const message = data.outputs?.['0']?.outputs?.['0']?.artifacts?.message || '';
-
-        // Extract URLs from markdown links in the message
-        const urlMatches = message.match(/\[([^\]]+)\]\(([^)]+)\)/g) || [];
-        const urls = urlMatches.map(match => {
-            const urlMatch = match.match(/\[([^\]]+)\]\(([^)]+)\)/);
-            return urlMatch ? urlMatch[2] : null;
-        }).filter(url => url);
-
-        // Print the first 3 URLs
-        console.log('URLs found:');
-        urls.slice(0, 3).forEach(url => console.log(url));
-    })
-    .catch(err => console.error(err));
-    ```
-
-    </details>
-
-    Which ever approach you choose, your application receives three URLs for recommended used items based on a customer's previous orders in your local CSV, all without changing any code.
+Your application receives three URLs for recommended used items based on a customer's previous orders in your local CSV, all without changing any code.
 
 ## Next steps
 
