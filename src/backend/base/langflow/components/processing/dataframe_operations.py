@@ -167,11 +167,7 @@ class DataFrameOperationsComponent(Component):
         if field_name == "operation":
             # Handle SortableListInput format
             if isinstance(field_value, list):
-                if len(field_value) > 0:
-                    operation_name = field_value[0].get("name", "")
-                else:
-                    # Handle empty selection (user deselected)
-                    operation_name = ""
+                operation_name = field_value[0].get("name", "") if field_value else ""
             else:
                 operation_name = field_value or ""
 
