@@ -11,8 +11,12 @@ module.exports = {
           type: "category",
           label: "Tutorials",
           items: [
-            "Tutorials/agents-tutorial",
-          ],
+            {
+              type: "doc",
+              id: "Tutorials/agent",
+              label: "Connect applications to agents"
+            }
+          ]
         },
       ],
     },

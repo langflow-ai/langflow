@@ -1,6 +1,6 @@
 ---
 title: Connect applications to agents
-slug: /agents-tutorial
+slug: /agent-tutorial
 ---
 
 import Icon from "@site/src/components/icon";
@@ -28,7 +28,7 @@ The Directory component loads all files of a given type from a target directory 
 2. Remove the **URL** and **Calculator** tools, and drag the [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components to your workspace.
 3. In the **Directory** component's **Path** field, enter the path to your directory, and the types of files you want to provide to your agent.
 In this example, the directory name is `customer_orders` and the file type is `.csv`, because you want the agent to have access to a record of customer purchases.
-If you don't have a csv on hand, you can download [customer-orders.csv](/files/customer-orders.csv) and save it in a folder called `customer_orders`.
+If you don't have a csv on hand, you can download [customer-orders.csv](/files/customer_orders/customer_orders.csv) and save it in a folder called `customer_orders`.
 4. In the **Directory** and **Web search** components, enable **Tool Mode**, and connect the **Toolset** port to the agent's **
 This mode registers the connected tools with your Agent, so it understands what they do and how to use them.
 5. In the **Agent** component, enter your OpenAI API key.
@@ -37,7 +37,7 @@ This mode registers the connected tools with your Agent, so it understands what 
 
 6. To verify that your flow is operational, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM a question, such as `Recommend 3 used items for carol.davis@example.com, based on previous orders.`
 The LLM should respond with recommendations and web links for items based on previous orders in `customer_orders.csv`.
-The Playground displays the agent's chain of thought as it uses the Directory component's `as_dataframe` tool to retrieve a [DataFrame](/concepts-objects#dataframe-objects), and the Web search component's `perform_search` tool to find links to related items.
+The Playground displays the agent's chain of thought as it uses the Directory component's `as_dataframe` tool to retrieve a [DataFrame](/concepts-objects#dataframe-object), and the Web search component's `perform_search` tool to find links to related items.
 
 ## Send requests to your flow from a JavaScript application
 
@@ -154,4 +154,4 @@ Keeping sessions distinct helps the agent maintain context. For more on session 
 
 ## Next steps
 
-You can build out this tutorial by connecting more tools to the agent, or add even more context for your LLMs by connecting [MCP servers](/mcp-clients) to your agent as tools.
+You can build out this tutorial by connecting more tools to the agent, or add even more context for your LLMs by connecting [MCP servers](/mcp-client) to your agent as tools.
