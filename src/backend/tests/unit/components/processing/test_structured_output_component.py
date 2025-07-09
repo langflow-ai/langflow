@@ -8,8 +8,8 @@ from langchain_openai import ChatOpenAI
 from langflow.components.processing.structured_output import StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
-
 from pydantic import BaseModel
+
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
@@ -295,8 +295,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         component = StructuredOutputComponent(
             llm=llm,
             input_value=(
-                "Extract all people from this text: "
-                "John Doe is 30 years old, Jane Smith is 25, and Bob Johnson is 35."
+                "Extract all people from this text: John Doe is 30 years old, Jane Smith is 25, and Bob Johnson is 35."
             ),
             schema_name="PersonInfo",
             output_schema=[
@@ -312,7 +311,8 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 "Remove exact duplicates but keep variations that have different field values. "
                 "Always return valid JSON in the expected format, never throw errors. "
                 "If multiple objects can be extracted, return them all in the structured format."
-            ),)
+            ),
+        )
 
         # Get the structured output
         result = component.build_structured_output_base()
