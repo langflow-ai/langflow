@@ -55,10 +55,8 @@ const ExportModal = forwardRef(
         setOpen={setOpen}
         onSubmit={async () => {
           try {
-            let filePath: string | undefined | void;
-
             if (checked) {
-              filePath = await downloadFlow(
+              await downloadFlow(
                 {
                   id: currentFlow!.id,
                   data: currentFlow!.data!,
@@ -73,15 +71,13 @@ const ExportModal = forwardRef(
                 description,
               );
 
-              if (filePath) {
-                setNoticeData({
-                  title: API_WARNING_NOTICE_ALERT,
-                });
-                setOpen(false);
-                track("Flow Exported", { flowId: currentFlow!.id });
-              }
+              setNoticeData({
+                title: API_WARNING_NOTICE_ALERT,
+              });
+              setOpen(false);
+              track("Flow Exported", { flowId: currentFlow!.id });
             } else {
-              filePath = await downloadFlow(
+              await downloadFlow(
                 removeApiKeys({
                   id: currentFlow!.id,
                   data: currentFlow!.data!,
@@ -96,13 +92,11 @@ const ExportModal = forwardRef(
                 description,
               );
 
-              if (filePath) {
-                setSuccessData({
-                  title: "Flow exported successfully",
-                });
-                setOpen(false);
-                track("Flow Exported", { flowId: currentFlow!.id });
-              }
+              setSuccessData({
+                title: "Flow exported successfully",
+              });
+              setOpen(false);
+              track("Flow Exported", { flowId: currentFlow!.id });
             }
           } catch (error) {
             console.error("Error exporting flow:", error);
