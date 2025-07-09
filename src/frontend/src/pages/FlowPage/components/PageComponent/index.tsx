@@ -22,6 +22,9 @@ import {
   ReactFlow,
   reconnectEdge,
   SelectionDragHandler,
+  OnConnectStartParams,
+  OnConnectEnd,
+  useReactFlow,
 } from "@xyflow/react";
 import { AnimatePresence } from "framer-motion";
 import _, { cloneDeep } from "lodash";
@@ -141,8 +144,13 @@ export default function Page({
   }, [currentFlowId]);
 
   const [isAddingNote, setIsAddingNote] = useState(false);
+  const [connectStartNode, setConnectStartNode] = useState<string | null>(null);
+  const [connectStartHandle, setConnectStartHandle] = useState<string | null>(null);
+  const [connectStartHandleType, setConnectStartHandleType] = useState<'source' | 'target' | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const addComponent = useAddComponent();
+  const { screenToFlowPosition, getNode } = useReactFlow();
 
   const zoomLevel = reactFlowInstance?.getZoom();
   const shadowBoxWidth = NOTE_NODE_MIN_WIDTH * (zoomLevel || 1);
@@ -345,6 +353,156 @@ export default function Page({
   //@ts-ignore
   useHotkeys("delete", handleDelete);
 
+  // Proximity connect utility functions
+  const MIN_PROXIMITY_DISTANCE = 200; // Increased for easier testing
+
+  const getActualHandlePosition = useCallback((nodeId: string, handleId: string): { x: number; y: number } | null => {
+    if (!reactFlowWrapper.current) return null;
+    
+    // Try different handle selectors to find the actual handle element
+    const selectors = [
+      `[data-id="${nodeId}"] [data-handleid="${handleId}"]`,
+      `[data-id="${nodeId}"] [data-id*="${handleId}"]`,
+      `.react-flow__node[data-id="${nodeId}"] .react-flow__handle[data-handleid="${handleId}"]`,
+      `.react-flow__node[data-id="${nodeId}"] .react-flow__handle[data-id*="${handleId}"]`
+    ];
+    
+    for (const selector of selectors) {
+      const handleElement = document.querySelector(selector) as HTMLElement;
+      if (handleElement) {
+        const handleRect = handleElement.getBoundingClientRect();
+        const flowRect = reactFlowWrapper.current.getBoundingClientRect();
+        
+        // Return screen coordinates instead of flow coordinates
+        const position = {
+          x: handleRect.left + handleRect.width / 2,
+          y: handleRect.top + handleRect.height / 2
+        };
+        
+        return position;
+      }
+    }
+    
+    return null;
+  }, []);
+
+  const findNearestCompatibleHandle = useCallback((
+    endPosition: { x: number; y: number },
+    startNodeId: string,
+    startHandleId: string,
+    startHandleType: 'source' | 'target'
+  ): { nodeId: string; handleId: string; handleType: string; position: { x: number; y: number }; distance: number } | null => {
+    if (!reactFlowInstance) return null;
+    
+    console.log('🔍 Searching for compatible handles. Start:', startNodeId, 'Type:', startHandleType);
+    console.log('🔍 End position:', endPosition);
+    console.log('🔍 Available nodes:', nodes.length);
+    
+    let nearestHandle: { nodeId: string; handleId: string; handleType: string; position: { x: number; y: number }; distance: number } | null = null;
+    let minDistance = MIN_PROXIMITY_DISTANCE;
+    
+    nodes.forEach(node => {
+      if (node.id === startNodeId) {
+        console.log('🔍 Skipping start node:', node.id);
+        return; // Skip the starting node
+      }
+      
+      console.log('🔍 Checking node:', node.id, 'Data:', node.data);
+      
+      // Get node position and dimensions
+      const nodeRect = reactFlowInstance.getNode(node.id);
+      if (!nodeRect) {
+        console.log('🔍 No node rect for:', node.id);
+        return;
+      }
+      
+      console.log('🔍 Node rect:', nodeRect);
+      
+      // Check compatible handles based on the start handle type
+      const targetHandleType = startHandleType === 'source' ? 'target' : 'source';
+      const handleKey = targetHandleType === 'target' ? 'inputs' : 'outputs';
+      
+      console.log('🔍 Looking for', targetHandleType, 'handles in', handleKey);
+      console.log('🔍 Node data[handleKey]:', node.data?.[handleKey]);
+      
+      if (node.data && node.data[handleKey]) {
+        Object.entries(node.data[handleKey]).forEach(([fieldName, handleData]: [string, any]) => {
+          console.log('🔍 Processing handle:', fieldName, 'Data:', handleData);
+          
+          // Generate the actual handle ID used by React Flow
+          const handleId = JSON.stringify({
+            dataType: handleData.type || 'str',
+            id: fieldName,
+            name: fieldName,
+            output_types: handleData.output_types || [],
+          });
+          
+          console.log('🔍 Generated handle ID:', handleId);
+          
+          // Get actual handle position from DOM
+          let handlePosition = getActualHandlePosition(node.id, handleId);
+          
+          console.log('🔍 Actual handle position from DOM:', handlePosition);
+          console.log('🔍 Expected input handle around screen position:', { x: 993, y: 357 });
+          
+          if (!handlePosition) {
+            // Fallback to estimated position if DOM query fails
+            const isInput = targetHandleType === 'target';
+            
+            // Convert node position to screen coordinates
+            const flowPosition = {
+              x: nodeRect.position.x + (isInput ? 0 : (nodeRect.width || 200)),
+              y: nodeRect.position.y + (nodeRect.height || 100) / 2
+            };
+            
+            // Convert to screen coordinates using React Flow's built-in conversion
+            const screenPos = reactFlowInstance.flowToScreenPosition(flowPosition);
+            
+            handlePosition = {
+              x: screenPos.x,
+              y: screenPos.y
+            };
+            console.log('🔍 Using fallback position:', handlePosition);
+          }
+          
+          // Calculate distance
+          const distance = Math.sqrt(
+            Math.pow(endPosition.x - handlePosition.x, 2) + 
+            Math.pow(endPosition.y - handlePosition.y, 2)
+          );
+          
+          console.log('🔍 Distance to handle:', distance, 'Min distance:', minDistance);
+          console.log('🔍 Handle position:', handlePosition, 'End position:', endPosition);
+          
+          if (distance < minDistance) {
+            console.log('🔍 Handle is within range! Testing connection validity...');
+            // Check if connection would be valid
+            const testConnection: Connection = {
+              source: startHandleType === 'source' ? startNodeId : node.id,
+              target: startHandleType === 'source' ? node.id : startNodeId,
+              sourceHandle: startHandleType === 'source' ? startHandleId : handleId,
+              targetHandle: startHandleType === 'source' ? handleId : startHandleId
+            };
+            
+            // Check if connection would be valid (includes type compatibility and edge validation)
+            if (isValidConnection(testConnection, nodes, edges)) {
+              minDistance = distance;
+              nearestHandle = {
+                nodeId: node.id,
+                handleId: handleId,
+                handleType: targetHandleType,
+                position: handlePosition,
+                distance: distance
+              };
+            }
+          }
+        });
+      }
+    });
+    
+    return nearestHandle;
+  }, [nodes, edges, reactFlowInstance, getActualHandlePosition]);
+
   const onConnectMod = useCallback(
     (params: Connection) => {
       takeSnapshot();
@@ -353,6 +511,170 @@ export default function Page({
     },
     [takeSnapshot, onConnect],
   );
+
+  const onConnectStart = useCallback((event: any, params: OnConnectStartParams) => {
+    console.log('🔵 Proximity connect - connection started:', params);
+    setIsConnecting(true);
+    setConnectStartNode(params.nodeId || null);
+    setConnectStartHandle(params.handleId || null);
+    setConnectStartHandleType(params.handleType || null);
+
+    let isConnectionMade = false;
+    let intervalId: NodeJS.Timeout;
+
+    // Periodic proximity checking since mouse events might not fire properly
+    const checkProximity = () => {
+      console.log('🔶 checkProximity called - isConnectionMade:', isConnectionMade, 'reactFlowWrapper:', !!reactFlowWrapper.current);
+      
+      if (isConnectionMade) {
+        console.log('🔶 Connection already made, skipping');
+        return;
+      }
+      
+      if (!reactFlowWrapper.current) {
+        console.log('🔶 No reactFlowWrapper, skipping');
+        return;
+      }
+      
+      // Get current mouse position from the global position tracker
+      const currentMousePosition = position.current;
+      console.log('🔶 Checking proximity at position:', currentMousePosition);
+
+      // Find nearest compatible handle
+      const nearestHandle = findNearestCompatibleHandle(
+        currentMousePosition,
+        params.nodeId || null,
+        params.handleId || null,
+        params.handleType || null
+      );
+
+      console.log('🔶 Found nearest handle:', nearestHandle);
+
+      if (nearestHandle && nearestHandle.distance <= 150) {
+        console.log('🟢 Auto-connecting - handles are within proximity!', nearestHandle);
+        
+        // Create the connection automatically
+        const connection: Connection = {
+          source: params.handleType === 'source' ? params.nodeId! : nearestHandle.nodeId,
+          target: params.handleType === 'source' ? nearestHandle.nodeId : params.nodeId!,
+          sourceHandle: params.handleType === 'source' ? params.handleId! : nearestHandle.handleId,
+          targetHandle: params.handleType === 'source' ? nearestHandle.handleId : params.handleId!
+        };
+
+        console.log('🟢 Creating auto-connection:', connection);
+        onConnectMod(connection);
+        isConnectionMade = true;
+        
+        // Clean up immediately after connection
+        cleanup();
+      }
+    };
+
+    const handleMouseUp = () => {
+      console.log('🔶 Mouse up - final proximity check');
+      checkProximity(); // Final check on mouse up
+      cleanup();
+    };
+
+    const cleanup = () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('mouseup', handleMouseUp);
+      setIsConnecting(false);
+      setConnectStartNode(null);
+      setConnectStartHandle(null);
+      setConnectStartHandleType(null);
+    };
+
+    console.log('🔶 Setting up proximity checking for connection');
+    // Check proximity periodically during drag
+    intervalId = setInterval(checkProximity, 50); // Check every 50ms
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    // Also do an immediate check
+    setTimeout(checkProximity, 100);
+  }, [findNearestCompatibleHandle, onConnectMod]);
+
+  const onConnectEnd: OnConnectEnd = useCallback((event) => {
+    console.log('🔴 onConnectEnd called with event:', event);
+    console.log('🔴 Connection state:', { connectStartNode, connectStartHandle, connectStartHandleType, reactFlowInstance: !!reactFlowInstance });
+    
+    if (!connectStartNode || !connectStartHandle || !connectStartHandleType || !reactFlowInstance) {
+      console.log('🔴 onConnectEnd: Missing required state, exiting');
+      setIsConnecting(false);
+      setConnectStartNode(null);
+      setConnectStartHandle(null);
+      setConnectStartHandleType(null);
+      return;
+    }
+
+    // Get the end position from the mouse event
+    const rect = reactFlowWrapper.current?.getBoundingClientRect();
+    if (!rect) {
+      setIsConnecting(false);
+      setConnectStartNode(null);
+      setConnectStartHandle(null);
+      setConnectStartHandleType(null);
+      return;
+    }
+    
+    let clientX: number, clientY: number;
+    
+    if (event instanceof MouseEvent) {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    } else if (event instanceof TouchEvent && event.touches.length > 0) {
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    } else {
+      setIsConnecting(false);
+      setConnectStartNode(null);
+      setConnectStartHandle(null);
+      setConnectStartHandleType(null);
+      return;
+    }
+    
+    const screenPosition = { x: clientX, y: clientY };
+    console.log('🟡 Proximity connect - looking for nearest handle from screen position:', screenPosition);
+
+    // Find nearest compatible handle using screen coordinates
+    const nearestHandle = findNearestCompatibleHandle(
+      screenPosition,
+      connectStartNode,
+      connectStartHandle,
+      connectStartHandleType
+    );
+
+    console.log('🟡 Proximity connect - found nearest handle:', nearestHandle);
+
+    if (nearestHandle && nearestHandle.distance <= 150) {
+      console.log('🟢 Creating proximity connection! Distance:', nearestHandle.distance);
+      
+      // Create the connection
+      const connection: Connection = {
+        source: connectStartHandleType === 'source' ? connectStartNode : nearestHandle.nodeId,
+        target: connectStartHandleType === 'source' ? nearestHandle.nodeId : connectStartNode,
+        sourceHandle: connectStartHandleType === 'source' ? connectStartHandle : nearestHandle.handleId,
+        targetHandle: connectStartHandleType === 'source' ? nearestHandle.handleId : connectStartHandle
+      };
+
+      console.log('🟢 Connection details:', connection);
+      onConnectMod(connection);
+    } else {
+      console.log('🔴 No proximity connection - distance:', nearestHandle?.distance || 'N/A');
+    }
+
+    // Reset state
+    setIsConnecting(false);
+    setConnectStartNode(null);
+    setConnectStartHandle(null);
+    setConnectStartHandleType(null);
+  }, [connectStartNode, connectStartHandle, connectStartHandleType, reactFlowInstance, screenToFlowPosition, findNearestCompatibleHandle, onConnectMod]);
+
+  // Debug state changes
+  useEffect(() => {
+    console.log('🔵 Connection state changed:', { isConnecting, connectStartNode, connectStartHandle, connectStartHandleType });
+  }, [isConnecting, connectStartNode, connectStartHandle, connectStartHandleType]);
+
 
   const onNodeDragStart: OnNodeDrag = useCallback(() => {
     // 👇 make dragging a node undoable
@@ -599,6 +921,8 @@ export default function Page({
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={isLocked ? undefined : onConnectMod}
+            onConnectStart={isLocked ? undefined : onConnectStart}
+            onConnectEnd={isLocked ? undefined : onConnectEnd}
             disableKeyboardA11y={true}
             onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
