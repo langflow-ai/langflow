@@ -474,6 +474,7 @@ async def delete_file(
 
         # Delete from the database
         await session.delete(file_to_delete)
+        await session.commit()
         await session.flush()  # Ensures delete is staged
 
     except HTTPException:
