@@ -184,6 +184,8 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     useShallow((state) => state.currentFlow?.locked),
   );
 
+  const edges = useFlowStore((state) => state.edges);
+
   const {
     setHandleDragging,
     setFilterType,
@@ -221,8 +223,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     target: semiConnection.target ?? nodeId,
     targetHandle: semiConnection.targetHandle ?? myId,
   });
-
-  const edges = useFlowStore((state) => state.edges);
 
   const {
     sameNode,
