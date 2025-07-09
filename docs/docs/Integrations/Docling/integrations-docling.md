@@ -13,10 +13,10 @@ Langflow integrates with [Docling](https://docling-project.github.io/docling/) t
 
 * Install the Docling extra in Langflow OSS with `uv pip install langflow[docling]` or `uv pip install docling`.
 
-    To add a dependency to Langflow Desktop, add an entry to Docling to the application's `requirements.txt` file.
+    To add a dependency to Langflow Desktop, add an entry for Docling to the application's `requirements.txt` file.
 
-    * On macOS, the file is located at `/Users/<name>/.langflow/data/`.
-    * On Windows, it can be found at `C:\Users\<name>\AppData\Roaming\com.Langflow\data`.
+    * On macOS, the file is located at `/Users/<name>/.langflow/data/requirements.txt`.
+    * On Windows, the file is located at `C:\Users\<name>\AppData\Roaming\com.Langflow\data\requirements.txt`.
 
     Add the dependency to `requirements.txt` in the following format:
         ```
