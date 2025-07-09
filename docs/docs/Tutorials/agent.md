@@ -7,10 +7,9 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This tutorial shows you how to connect a JavaScript application to Langflow and use a Langflow [agent](/agents).
-With the agent connected, your application can use any tools connected to the agent to retrieve more contextual and timely data without changing any application code.
+This tutorial shows you how to connect a JavaScript application to a Langflow [agent](/agents).
 
-The main focus of this tutorial is to show you how to connect your applications to a Langflow agent.
+With the agent connected, your application can use any connected tools to retrieve more contextual and timely data without changing any application code. The tools are selected by the agent's internal LLM to solve problems and answer questions.
 
 ## Prerequisites
 
@@ -24,7 +23,6 @@ This tutorial uses an OpenAI LLM. If you want to use a different provider, you n
 
 The following steps modify the [**Simple agent**](/simple-agent) template to connect [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components as tools for the agent.
 The Directory component loads all files of a given type from a target directory on your local machine, and the Web search component performs a DuckDuckGo search.
-When connected to the Agent, the tools are selected by the agent's internal LLM to solve problems and answer questions.
 
 1. In Langflow, click **New Flow**, and then select the **Simple agent** template.
 2. Remove the **URL** and **Calculator** tools, and drag the [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components to your workspace.
@@ -50,9 +48,9 @@ In this example, the application sends a customer's email address to the Langflo
 1. To include the email address as a value in your flow, add a [Prompt](/components-prompts) component to your flow between the **Chat Input** and **Agent**.
 2. In the Prompt component's **Template** field, enter `Recommend 3 used items for ${email}, based on previous orders.`
 
-The flow appears like this.
+    The flow appears like this.
 
-[An agent component connected to web search and directory components](/img-tutorial-agent-with-directory.png)
+    ![An agent component connected to web search and directory components](/img/tutorial-agent-with-directory.png)
 
 3. To construct a JavaScript application to connect to your flow, gather the following information:
 
@@ -63,93 +61,97 @@ The flow appears like this.
 2. Copy the following script into a JavaScript file, and then replace the placeholders with the information you gathered in the previous step.
 If you're using the `customer_orders.csv` example file, you can run this as-is with the example email address.
 
-<details open>
-<summary>JavaScript</summary>
+    <details open>
+    <summary>JavaScript</summary>
 
-```js
-// Configuration - Replace these values with your own
-const LANGFLOW_SERVER_ADDRESS = 'LANGFLOW_SERVER_ADDRESS';
-const FLOW_ID = 'FLOW_ID';
-const LANGFLOW_API_KEY = 'LANGFLOW_API_KEY';
-const email = "alice.smith@example.com";
+        ```js
+        // Configuration - Replace these values with your own
+        const LANGFLOW_SERVER_ADDRESS = 'LANGFLOW_SERVER_ADDRESS';
+        const FLOW_ID = 'FLOW_ID';
+        const LANGFLOW_API_KEY = 'LANGFLOW_API_KEY';
+        const email = "alice.smith@example.com";
 
-// Request payload
-const payload = {
-    "output_type": "chat",
-    "input_type": "chat",
-    "input_value": email,
-    "session_id": email
-};
+        // Request payload
+        const payload = {
+            "output_type": "chat",
+            "input_type": "chat",
+            "input_value": email,
+            "session_id": email
+        };
 
-// Make the API request
-fetch(`${LANGFLOW_SERVER_ADDRESS}/api/v1/run/${FLOW_ID}`, {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        "x-api-key": LANGFLOW_API_KEY
-    },
-    body: JSON.stringify(payload)
-})
-.then(response => response.json())
-.then(data => {
-    // Just search for URLs in the entire response
-    const responseText = JSON.stringify(data);
-    const urls = responseText.match(/https?:\/\/[^\s"')\]]+/g) || [];
+        // Make the API request
+        fetch(`${LANGFLOW_SERVER_ADDRESS}/api/v1/run/${FLOW_ID}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                "x-api-key": LANGFLOW_API_KEY
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Just search for URLs in the entire response
+            const responseText = JSON.stringify(data);
+            const urls = responseText.match(/https?:\/\/[^\s"')\]]+/g) || [];
 
-    // Clean the URLs and remove duplicates
-    const cleanUrls = [...new Set(urls)].map(url => url.trim());
-    console.log('URLs found:');
-    cleanUrls.slice(0, 3).forEach(url => console.log(url));
-})
-.catch(err => console.error(err));
-```
+            // Clean the URLs and remove duplicates
+            const cleanUrls = [...new Set(urls)].map(url => url.trim());
+            console.log('URLs found:');
+            cleanUrls.slice(0, 3).forEach(url => console.log(url));
+        })
+        .catch(err => console.error(err));
+        ```
+    </details>
 
 3. Save and run the script to send the request and test the flow.
 
-<details>
-<summary>Response</summary>
-The following is an example of a response returned from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
+    <details closed>
+    <summary>Response</summary>
 
-```
-URLs found:
-https://www.facebook.com/marketplace/108225782538164/electronics/
-https://www.facebook.com/marketplace/108944152458332/furniture/
-https://www.facebook.com/marketplace/137493719613732/kitchen-cabinets/
-```
+    The following is an example of a response returned from this tutorial's flow. Due to the nature of LLMs and variations in your inputs, your response might be different.
 
-</details>
+    ```
+    URLs found:
+    https://www.facebook.com/marketplace/108225782538164/electronics/
+    https://www.facebook.com/marketplace/108944152458332/furniture/
+    https://www.facebook.com/marketplace/137493719613732/kitchen-cabinets/
+    ```
 
-4. Check your flow's **Playground**. New sessions appear named after the user's email address. Keeping sessions distinct helps the agent maintain context. For more on session IDs, see [Session ID](/session-id).
+    </details>
 
-The preceding example stringifies the entire Langflow response and pattern-matches for the first three URLs.
-Alternatively, for more precision, navigate through the response structure to the `artifacts.message` field and match the first three markdown links there.
+4. Check your flow's **Playground**.
+New sessions appear named after the user's email address.
+Keeping sessions distinct helps the agent maintain context. For more on session IDs, see [Session ID](/session-id).
 
-<details open>
-<summary>Alternate message extraction</summary>
+    The preceding example stringifies the entire Langflow response and pattern-matches for the first three URLs.
+    Alternatively, for more precision, navigate through the response structure to the `artifacts.message` field and match the first three markdown links there.
 
-```js
-.then(data => {
-    // Navigate to the specific message field
-    const message = data.outputs?.['0']?.outputs?.['0']?.artifacts?.message || '';
+    <details closed>
+    <summary>Alternate message extraction</summary>
 
-    // Extract URLs from markdown links in the message
-    const urlMatches = message.match(/\[([^\]]+)\]\(([^)]+)\)/g) || [];
-    const urls = urlMatches.map(match => {
-        const urlMatch = match.match(/\[([^\]]+)\]\(([^)]+)\)/);
-        return urlMatch ? urlMatch[2] : null;
-    }).filter(url => url);
+    ```js
+    .then(data => {
+        // Navigate to the specific message field
+        const message = data.outputs?.['0']?.outputs?.['0']?.artifacts?.message || '';
 
-    // Print the first 3 URLs
-    console.log('URLs found:');
-    urls.slice(0, 3).forEach(url => console.log(url));
-})
-.catch(err => console.error(err));
-```
+        // Extract URLs from markdown links in the message
+        const urlMatches = message.match(/\[([^\]]+)\]\(([^)]+)\)/g) || [];
+        const urls = urlMatches.map(match => {
+            const urlMatch = match.match(/\[([^\]]+)\]\(([^)]+)\)/);
+            return urlMatch ? urlMatch[2] : null;
+        }).filter(url => url);
 
-</details>
+        // Print the first 3 URLs
+        console.log('URLs found:');
+        urls.slice(0, 3).forEach(url => console.log(url));
+    })
+    .catch(err => console.error(err));
+    ```
 
-Which ever approach you choose, your application receives three URLs for recommended used items based on a customer's previous orders in your local CSV, all without changing any code.
+    </details>
+
+    Which ever approach you choose, your application receives three URLs for recommended used items based on a customer's previous orders in your local CSV, all without changing any code.
 
 ## Next steps
 
-You can build out and modify this tutorial as a template by connecting more tools to the agent, or add even more context for your LLMs by connect [MCP servers](/mcp-clients) to your agent as tools.
+You can build out this tutorial by connecting more tools to the agent, or add even more context for your LLMs by connecting [MCP servers](/mcp-clients) to your agent as tools.

@@ -7,6 +7,13 @@ module.exports = {
       items: [
         "Get-Started/get-started-installation",
         "Get-Started/get-started-quickstart",
+        {
+          type: "category",
+          label: "Tutorials",
+          items: [
+            "Tutorials/agent",
+          ],
+        },
       ],
     },
     {
@@ -65,13 +72,6 @@ module.exports = {
       items: [
         "Agents/agents",
         "Agents/agents-tools",
-      ],
-    },
-    {
-      type: "category",
-      label: "Tutorials",
-      items: [
-        "Tutorials/agent",
       ],
     },
     {
