@@ -29,7 +29,7 @@ The Directory component loads all files of a given type from a target directory 
 3. In the **Directory** component's **Path** field, enter the path to your directory, and the types of files you want to provide to your agent.
 In this example, the directory name is `customer_orders` and the file type is `.csv`, because you want the agent to have access to a record of customer purchases.
 If you don't have a csv on hand, you can download [customer-orders.csv](/files/customer_orders/customer_orders.csv) and save it in a folder called `customer_orders`.
-4. In the **Directory** and **Web search** components, enable **Tool Mode**, and connect the **Toolset** port to the agent's **
+4. In the **Directory** and **Web search** components, enable **Tool Mode**, and connect the **Toolset** port to the agent's **Tools** port.
 This mode registers the connected tools with your Agent, so it understands what they do and how to use them.
 5. In the **Agent** component, enter your OpenAI API key.
 
