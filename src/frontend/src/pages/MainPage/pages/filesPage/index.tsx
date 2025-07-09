@@ -9,7 +9,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
-import { useCustomHandleBulkFilesDownload } from "@/customization/hooks/custom-handle-bulk-files-download";
+import { useCustomHandleBulkFilesDownload } from "@/customization/hooks/use-custom-handle-bulk-files-download";
 import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";

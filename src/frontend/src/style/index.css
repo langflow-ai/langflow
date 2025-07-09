@@ -1309,7 +1309,7 @@
   @apply flex items-center justify-between px-2 py-2;
 }
 @utility api-modal-tabs-content {
-  @apply -mt-1 h-full w-full pb-4;
+  @apply h-full w-full;
 }
 @utility api-modal-accordion-display {
   @apply mt-2 flex h-full w-full;
