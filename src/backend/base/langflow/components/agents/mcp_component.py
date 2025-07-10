@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import Any
+
+from langchain_core.tools import StructuredTool  # noqa: TC002
 
 from langflow.api.v2.mcp import get_server
 from langflow.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
@@ -13,6 +15,7 @@ from langflow.base.mcp.util import (
     update_tools,
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
+from langflow.inputs.inputs import InputTypes  # noqa: TC001
 from langflow.io import DropdownInput, McpInput, MessageTextInput, Output
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
@@ -23,11 +26,6 @@ from langflow.services.auth.utils import create_user_longterm_token
 # Import get_server from the backend API
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_session, get_settings_service, get_storage_service
-
-if TYPE_CHECKING:
-    from langchain_core.tools import StructuredTool
-
-    from langflow.inputs.inputs import InputTypes
 
 
 class MCPToolsComponent(ComponentWithCache):
