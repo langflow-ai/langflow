@@ -11,12 +11,10 @@ module.exports = {
           type: "category",
           label: "Tutorials",
           items: [
-            {
-              type: "doc",
-              id: "Tutorials/agent",
-              label: "Connect applications to agents"
-            }
-          ]
+            "Tutorials/chat-with-rag",
+            "Tutorials/chat-with-files",
+            "Tutorials/agent",
+          ],
         },
       ],
     },
@@ -305,6 +303,11 @@ module.exports = {
           label: "Composio",
         },
         {
+          type: "doc",
+          id: "Integrations/Docling/integrations-docling",
+          label: "Docling",
+        },
+        {
           type: 'category',
           label: 'Google',
           items: [
@@ -363,12 +366,12 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Changelog",
+      label: "Release notes",
       items: [
         {
-          type: "link",
-          label: "Changelog",
-          href: "https://github.com/langflow-ai/langflow/releases/latest",
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
         },
       ],
     },

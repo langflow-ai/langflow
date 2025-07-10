@@ -27,7 +27,12 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import build_custom_component_template, get_instance_name, update_component_build_config
+from langflow.custom.utils import (
+    add_code_field_to_build_config,
+    build_custom_component_template,
+    get_instance_name,
+    update_component_build_config,
+)
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
@@ -727,6 +732,8 @@ async def custom_component_update(
             field_value=code_request.field_value,
             field_name=code_request.field,
         )
+        if "code" not in updated_build_config:
+            updated_build_config = add_code_field_to_build_config(updated_build_config, code_request.code)
         component_node["template"] = updated_build_config
 
         if isinstance(cc_instance, Component):
