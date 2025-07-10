@@ -1,4 +1,3 @@
-import re
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -173,33 +172,48 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
     full nested structure; otherwise return flat as is.
     """
     # Quick check: do we have any nested keys?
-    if not any(re.search(r"\.|\[\d+\]", key) for key in flat):
+    # Optimized: check for '.' or '[' in keys, faster than regex
+    if not any(("." in key) or ("[" in key and "]" in key) for key in flat):
         return flat
 
-    # Otherwise, unflatten into dicts/lists
     nested: dict[str, Any] = {}
-    array_re = re.compile(r"^(.+)\[(\d+)\]$")
+
+    # Precompiled regex replaced by a fast parser
+    def parse_array_part(part):
+        # Only called if "[" in part and part[-1] == ']'
+        lb = part.rfind("[")
+        # Only accept if the content within [] is all digits and there is at least one char before [
+        if lb > 0 and part[-1] == "]" and part[lb + 1 : -1].isdigit():
+            return part[:lb], int(part[lb + 1 : -1])
+        return None
+
+    setdefault = dict.setdefault  # Local binding for speed
 
     for key, val in flat.items():
         parts = key.split(".")
         cur = nested
+        last = len(parts) - 1
         for i, part in enumerate(parts):
-            m = array_re.match(part)
-            # Array segment?
-            if m:
-                name, idx = m.group(1), int(m.group(2))
-                lst = cur.setdefault(name, [])
-                # Ensure list is big enough
-                while len(lst) <= idx:
-                    lst.append({})
-                if i == len(parts) - 1:
-                    lst[idx] = val
-                else:
-                    cur = lst[idx]
+            # Fast path for array index keys, only parse if likely
+            if "[" in part and part[-1] == "]":
+                parsed = parse_array_part(part)
+                if parsed is not None:
+                    name, idx = parsed
+                    lst = setdefault(cur, name, [])
+                    # Extend list efficiently
+                    llen = len(lst)
+                    if llen <= idx:
+                        lst.extend({} for _ in range(idx + 1 - llen))
+                    if i == last:
+                        lst[idx] = val
+                    else:
+                        cur = lst[idx]
+                    continue  # Done for this part
+
             # Normal object key
-            elif i == len(parts) - 1:
+            if i == last:
                 cur[part] = val
             else:
-                cur = cur.setdefault(part, {})
+                cur = setdefault(cur, part, {})
 
     return nested
