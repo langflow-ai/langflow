@@ -169,26 +169,28 @@ export default function UpdateComponentModal({
             )}
           </div>
           {isMultiple && (
-            <div className="-mx-4">
-              <TableComponent
-                columnDefs={columnDefs}
-                ref={agGrid}
-                domLayout="autoHeight"
-                rowData={components}
-                rowSelection="multiple"
-                className="ag-tool-mode ag-no-selection"
-                rowHeight={30}
-                headerHeight={30}
-                suppressRowClickSelection={false}
-                onSelectionChanged={(event) => {
-                  const selectedIds = event.api
-                    .getSelectedRows()
-                    .map((row) => row.id);
-                  setSelectedComponents(new Set(selectedIds));
-                }}
-                suppressRowHoverHighlight={true}
-                tableOptions={{ hide_options: true }}
-              />
+            <div className="max-h-[200px] overflow-y-auto overflow-x-hidden">
+              <div className="-mx-4">
+                <TableComponent
+                  columnDefs={columnDefs}
+                  ref={agGrid}
+                  domLayout="autoHeight"
+                  rowData={components}
+                  rowSelection="multiple"
+                  className="ag-tool-mode ag-no-selection"
+                  rowHeight={30}
+                  headerHeight={30}
+                  suppressRowClickSelection={false}
+                  onSelectionChanged={(event) => {
+                    const selectedIds = event.api
+                      .getSelectedRows()
+                      .map((row) => row.id);
+                    setSelectedComponents(new Set(selectedIds));
+                  }}
+                  suppressRowHoverHighlight={true}
+                  tableOptions={{ hide_options: true }}
+                />
+              </div>
             </div>
           )}
           <div

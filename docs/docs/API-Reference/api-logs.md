@@ -38,7 +38,8 @@ Stream logs in real-time using Server Sent Events (SSE).
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/logs-stream" \
-  -H "accept: text/event-stream"
+  -H "accept: text/event-stream" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -84,7 +85,8 @@ With default values, the endpoint returns the last 10 lines of logs.
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/logs?lines_before=0&lines_after=0&timestamp=0" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
