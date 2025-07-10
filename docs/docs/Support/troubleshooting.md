@@ -112,6 +112,17 @@ There are two possible reasons for this error:
 
 * **Version conflict during installation**: Some version conflicts might have occurred during the installation process. To resolve this issue, reinstall Langflow and its dependencies by running `python -m pip install langflow --pre -U --force-reinstall`.
 
+### Environment variables not available from terminal
+
+Environment variables set in your terminal are not automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
+To set environment variables for Langflow Desktop, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
+
+### Package is not installed
+
+In Langflow OSS, you can follow the error message's instructions to install the missing dependency.
+
+To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
+
 ## Langflow upgrade issues
 
 The following issues can occur when upgrading your Langflow version.
@@ -138,6 +149,22 @@ The cache folder location depends on your OS:
 - **Linux**: `home/<username>/.cache/langflow/`
 - **WSL2 on Windows**: `home/<username>/.cache/langflow/`
 - **macOS**: `/Users/<username>/Library/Caches/langflow/`
+
+## Langflow uninstall issues
+
+The following issues can occur when uninstalling Langflow.
+
+### Dot directory isn't deleted when uninstalling Langflow Desktop on macOS
+
+On macOS, uninstalling Langflow Desktop deletes the `.app` file but doesn't delete files in `~/.langflow`, which includes files generated during usage like cache and settings.
+
+If you reinstall Langflow Desktop, it starts with the existing data from the previous installation.
+
+To fully remove a Langflow Desktop macOS installation, you must also delete `~/.langflow`:
+
+    ```bash
+    rm -rf .langflow
+    ```
 
 ## MCP server issues
 

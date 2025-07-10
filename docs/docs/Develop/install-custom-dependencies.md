@@ -5,7 +5,30 @@ slug: /install-custom-dependencies
 
 Langflow provides optional dependency groups and support for custom dependencies to extend Langflow functionality.
 
-## Install optional dependency groups
+## Install custom dependencies in Langflow Desktop {#langflow-desktop}
+
+To add dependencies to Langflow Desktop, add an entry for the package to the application's `requirements.txt` file:
+
+    * On macOS, the file is located at `/Users/USER/.langflow/data/requirements.txt`.
+    * On Windows, the file is located at `C:\Users\USER\AppData\Roaming\com.Langflow\data\requirements.txt`.
+
+Add the dependency and version to `requirements.txt` on separate lines in the format `PACKAGE==VERSION`, such as `docling==2.40.0`.
+
+Restart Langflow Desktop to install the dependencies.
+
+If you need to change or uninstall custom dependencies. edit the `requirements.txt` file, and then restart Langflow Desktop.
+
+## Install custom dependencies in Langflow OSS
+
+To install your own custom dependencies in your Langflow environment, add them with your package manager.
+
+If you're working within a cloned Langflow repository, add dependencies with `uv add` because there is already a `pyproject.toml` file for uv to reference:
+
+```bash
+uv add langflow DEPENDENCY
+```
+
+### Install optional dependency groups
 
 Langflow OSS provides optional dependency groups that extend its functionality.
 
@@ -21,16 +44,6 @@ To install multiple extras, use commas to separate each dependency group:
 
 ```bash
 uv pip install "langflow[deploy,local,postgresql]"
-```
-
-## Install custom dependencies
-
-To install your own custom dependencies in your Langflow environment, add them with your package manager.
-
-If you're working within a cloned Langflow repository, add dependencies with `uv add` because there is already a `pyproject.toml` file for uv to reference:
-
-```bash
-uv add langflow DEPENDENCY
 ```
 
 ### Use a virtual environment to test custom dependencies

@@ -20,6 +20,14 @@ module.exports = {
           id: "Get-Started/get-started-quickstart",
           label: "Quickstart"
         },
+        {
+          type: "category",
+          label: "Tutorials",
+          items: [
+            "Tutorials/chat-with-rag",
+            "Tutorials/chat-with-files",
+          ],
+        },
       ],
     },
     {
@@ -337,6 +345,11 @@ module.exports = {
           type: "doc",
           id: "Integrations/Composio/integrations-composio",
           label: "Composio",
+        },
+        {
+          type: "doc",
+          id: "Integrations/Docling/integrations-docling",
+          label: "Docling",
         },
         {
           type: 'category',
