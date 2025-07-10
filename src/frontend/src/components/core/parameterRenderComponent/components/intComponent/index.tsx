@@ -1,3 +1,5 @@
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { cn } from "@/utils/utils";
 import {
   NumberDecrementStepper,
   NumberIncrementStepper,
@@ -7,8 +9,6 @@ import {
 } from "@chakra-ui/number-input";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { cn } from "@/utils/utils";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
 import type { InputProps, IntComponentType } from "../../types";
 

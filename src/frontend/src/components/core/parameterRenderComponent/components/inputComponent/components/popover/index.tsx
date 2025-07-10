@@ -1,7 +1,3 @@
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import { uniqueId } from "lodash";
-import { X } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +14,10 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import { uniqueId } from "lodash";
+import { X } from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
 
 const OptionBadge = ({
   option,

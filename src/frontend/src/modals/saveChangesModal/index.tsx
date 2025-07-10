@@ -1,7 +1,7 @@
-import { truncate } from "lodash";
-import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import Loading from "@/components/ui/loading";
+import { truncate } from "lodash";
+import { useState } from "react";
 import ConfirmationModal from "../confirmationModal";
 
 export function SaveChangesModal({

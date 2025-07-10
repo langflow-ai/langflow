@@ -1,6 +1,6 @@
-import { create } from "zustand";
 import { OPENAI_VOICES } from "@/constants/constants";
 import type { VoiceStoreType } from "@/types/zustand/voice/voice.types";
+import { create } from "zustand";
 
 export const useVoiceStore = create<VoiceStoreType>((set, get) => ({
   voices: [],

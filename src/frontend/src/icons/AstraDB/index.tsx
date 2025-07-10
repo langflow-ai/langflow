@@ -1,6 +1,6 @@
+import { useDarkStore } from "@/stores/darkStore";
 import type React from "react";
 import { forwardRef } from "react";
-import { useDarkStore } from "@/stores/darkStore";
 import AstraSVG from "./AstraDB";
 
 export const AstraDBIcon = forwardRef<

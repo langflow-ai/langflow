@@ -1,4 +1,3 @@
-import { memo, useCallback } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import {
   Disclosure,
@@ -7,6 +6,7 @@ import {
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import type { APIClassType } from "@/types/api";
+import { memo, useCallback } from "react";
 import SidebarItemsList from "../sidebarItemsList";
 
 export const CategoryDisclosure = memo(function CategoryDisclosure({

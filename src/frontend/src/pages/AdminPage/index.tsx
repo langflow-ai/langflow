@@ -1,5 +1,3 @@
-import { cloneDeep } from "lodash";
-import { useContext, useEffect, useRef, useState } from "react";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import {
   useAddUser,
@@ -8,6 +6,8 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import CustomLoader from "@/customization/components/custom-loader";
+import { cloneDeep } from "lodash";
+import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";

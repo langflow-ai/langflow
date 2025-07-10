@@ -1,5 +1,3 @@
-import { useStoreApi } from "@xyflow/react";
-import { useCallback } from "react";
 import { NODE_WIDTH } from "@/constants/constants";
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
@@ -7,6 +5,8 @@ import type { APIClassType } from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
 import { getNodeId } from "@/utils/reactflowUtils";
 import { getNodeRenderType } from "@/utils/utils";
+import { useStoreApi } from "@xyflow/react";
+import { useCallback } from "react";
 
 export function useAddComponent() {
   const store = useStoreApi();

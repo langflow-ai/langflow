@@ -1,6 +1,6 @@
+import { useDarkStore } from "@/stores/darkStore";
 import type React from "react";
 import { forwardRef } from "react";
-import { useDarkStore } from "@/stores/darkStore";
 import SvgAWS from "./AWS";
 
 export const AWSIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(

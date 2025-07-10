@@ -1,8 +1,8 @@
-import { useContext } from "react";
 import { AuthContext } from "@/contexts/authContext";
 import { CustomNavigate } from "@/customization/components/custom-navigate";
 import { LoadingPage } from "@/pages/LoadingPage";
 import useAuthStore from "@/stores/authStore";
+import { useContext } from "react";
 
 export const ProtectedAdminRoute = ({ children }) => {
   const { userData } = useContext(AuthContext);

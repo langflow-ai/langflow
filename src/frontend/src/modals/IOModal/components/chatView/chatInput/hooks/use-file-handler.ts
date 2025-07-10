@@ -1,5 +1,3 @@
-import { useState } from "react";
-import ShortUniqueId from "short-unique-id";
 import { INVALID_FILE_SIZE_ALERT } from "@/constants/alerts_constants";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
@@ -11,6 +9,8 @@ import useAlertStore from "@/stores/alertStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FilePreviewType } from "@/types/components";
 import { formatFileSize } from "@/utils/stringManipulation";
+import { useState } from "react";
+import ShortUniqueId from "short-unique-id";
 
 export const useFileHandler = (currentFlowId: string) => {
   const [files, setFiles] = useState<FilePreviewType[]>([]);

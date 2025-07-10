@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import React, {
   forwardRef,
   memo,
@@ -6,7 +7,6 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { IconComponentProps } from "../../../types/components";
 import { getCachedIcon, getNodeIcon } from "../../../utils/styleUtils";
 import { cn } from "../../../utils/utils";

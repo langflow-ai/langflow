@@ -1,5 +1,5 @@
-import { useMemo } from "react";
 import sortFields from "@/CustomNodes/utils/sort-fields";
+import { useMemo } from "react";
 import type { APIClassType } from "../../../types/api";
 
 const useRowData = (nodeClass: APIClassType, open: boolean) => {

@@ -1,4 +1,3 @@
-import { memo, useCallback } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Disclosure,
@@ -6,6 +5,7 @@ import {
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { memo, useCallback } from "react";
 import type { BundleItemProps } from "../../types";
 import SidebarItemsList from "../sidebarItemsList";
 

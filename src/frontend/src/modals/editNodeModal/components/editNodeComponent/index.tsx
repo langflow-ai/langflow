@@ -1,7 +1,7 @@
-import type { ColDef } from "ag-grid-community";
-import { useMemo } from "react";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import type { APIClassType } from "@/types/api";
+import type { ColDef } from "ag-grid-community";
+import { useMemo } from "react";
 import useColumnDefs from "../../hooks/use-column-defs";
 import useRowData from "../../hooks/use-row-data";
 

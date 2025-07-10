@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
   DEFAULT_POLLING_INTERVAL,
   DEFAULT_TIMEOUT,
@@ -6,6 +5,7 @@ import {
 import { EventDeliveryType } from "@/constants/enums";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import axios from "axios";
 import type { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";

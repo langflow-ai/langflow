@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
 import type { InputProps } from "@/components/core/parameterRenderComponent/types";
@@ -7,6 +6,7 @@ import { DialogFooter, DialogHeader } from "@/components/ui/dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
 import { Input } from "@/components/ui/input";
 import { cn, testIdCase } from "@/utils/utils";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ListItem from "./ListItem";
 
 // Update interface with better types

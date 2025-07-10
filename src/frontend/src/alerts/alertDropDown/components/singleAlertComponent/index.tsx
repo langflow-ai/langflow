@@ -1,7 +1,7 @@
+import { CustomLink } from "@/customization/components/custom-link";
 import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { CustomLink } from "@/customization/components/custom-link";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import type { SingleAlertComponentType } from "../../../../types/alerts";
 

@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
 import {
   PAGINATION_PAGE,
   PAGINATION_ROWS_COUNT,
   PAGINATION_SIZE,
 } from "@/constants/constants";
+import { useEffect, useState } from "react";
 import type { PaginatorComponentType } from "../../../types/components";
 import IconComponent from "../../common/genericIconComponent";
 import { Button } from "../../ui/button";

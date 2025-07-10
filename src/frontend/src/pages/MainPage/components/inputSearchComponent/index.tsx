@@ -1,6 +1,6 @@
-import type { ChangeEvent, KeyboardEvent } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
+import type { ChangeEvent, KeyboardEvent } from "react";
 
 type InputSearchComponentProps = {
   loading: boolean;

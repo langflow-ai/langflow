@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/utils/utils";
 import {
   AnimatePresence,
   type AnimatePresenceProps,
@@ -8,7 +9,6 @@ import {
   type Variants,
 } from "framer-motion";
 import { Children, useCallback, useEffect, useRef, useState } from "react";
-import { cn } from "@/utils/utils";
 
 export type TextLoopProps = {
   children: React.ReactNode | React.ReactNode[];

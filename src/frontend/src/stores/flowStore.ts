@@ -1,13 +1,3 @@
-import {
-  addEdge,
-  applyEdgeChanges,
-  applyNodeChanges,
-  type EdgeChange,
-  type Node,
-  type NodeChange,
-} from "@xyflow/react";
-import { cloneDeep, zip } from "lodash";
-import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import { BROKEN_EDGES_WARNING } from "@/constants/constants";
@@ -18,6 +8,16 @@ import {
   trackFlowBuild,
 } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
+import {
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
+} from "@xyflow/react";
+import { cloneDeep, zip } from "lodash";
+import { create } from "zustand";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import type { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import type { ChatInputType, ChatOutputType } from "../types/chat";

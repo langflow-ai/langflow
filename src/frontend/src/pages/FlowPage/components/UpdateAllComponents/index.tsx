@@ -1,6 +1,3 @@
-import { useUpdateNodeInternals } from "@xyflow/react";
-import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useRef, useState } from "react";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
 import useUpdateAllNodes, {
   type UpdateNodesType,
@@ -13,6 +10,9 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { cn } from "@/utils/utils";
+import { useUpdateNodeInternals } from "@xyflow/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useMemo, useRef, useState } from "react";
 
 const ERROR_MESSAGE_UPDATING_COMPONENTS = "Error updating components";
 const ERROR_MESSAGE_UPDATING_COMPONENTS_LIST = [

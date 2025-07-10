@@ -1,4 +1,3 @@
-import { memo, useEffect, useRef, useState } from "react";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -8,6 +7,7 @@ import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType } from "@/types/api";
 import { cn } from "@/utils/utils";
+import { memo, useEffect, useRef, useState } from "react";
 import type { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
 

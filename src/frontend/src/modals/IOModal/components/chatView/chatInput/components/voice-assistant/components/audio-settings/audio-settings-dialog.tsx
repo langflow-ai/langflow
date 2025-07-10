@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
@@ -18,6 +17,7 @@ import GeneralGlobalVariableModal from "@/shared/components/global-variable-moda
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
+import { useEffect, useRef, useState } from "react";
 import AudioSettingsHeader from "./components/header";
 import LanguageSelect from "./components/language-select";
 import MicrophoneSelect from "./components/microphone-select";
@@ -76,13 +76,12 @@ const SettingsVoiceModal = ({
   );
 
   const openaiVoices = useVoiceStore((state) => state.openaiVoices);
-  const [allVoices, setAllVoices] =
-    useState<
-      {
-        name: string;
-        value: string;
-      }[]
-    >(openaiVoices);
+  const [allVoices, setAllVoices] = useState<
+    {
+      name: string;
+      value: string;
+    }[]
+  >(openaiVoices);
 
   const saveButtonClicked = useRef(false);
 

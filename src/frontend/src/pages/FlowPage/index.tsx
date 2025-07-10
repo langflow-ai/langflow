@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-import { useBlocker, useParams } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
@@ -10,8 +8,10 @@ import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
-import useFlowStore from "../../stores/flowStore";
+import { useEffect, useState } from "react";
+import { useBlocker, useParams } from "react-router-dom";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import useFlowStore from "../../stores/flowStore";
 import { FlowSidebarComponent } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
 

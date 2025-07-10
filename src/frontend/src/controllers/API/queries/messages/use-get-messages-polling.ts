@@ -1,7 +1,7 @@
+import { useMessagesStore } from "@/stores/messagesStore";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { ColDef, ColGroupDef } from "ag-grid-community";
 import { useEffect, useRef } from "react";
-import { useMessagesStore } from "@/stores/messagesStore";
 import {
   extractColumnsFromRows,
   prepareSessionIdForAPI,

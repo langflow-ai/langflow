@@ -1,6 +1,3 @@
-import { NodeResizer } from "@xyflow/react";
-import { debounce } from "lodash";
-import { useMemo, useRef, useState } from "react";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MAX_HEIGHT,
@@ -12,6 +9,9 @@ import { useAlternate } from "@/shared/hooks/use-alternate";
 import useFlowStore from "@/stores/flowStore";
 import type { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
+import { NodeResizer } from "@xyflow/react";
+import { debounce } from "lodash";
+import { useMemo, useRef, useState } from "react";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 

@@ -1,6 +1,6 @@
+import useFlowStore from "@/stores/flowStore";
 import { cloneDeep } from "lodash"; // or any other deep cloning library you prefer
 import { useCallback } from "react";
-import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "../../types/api";
 import { updateHiddenOutputs } from "../helpers/update-hidden-outputs";
 
