@@ -7,6 +7,14 @@ module.exports = {
       items: [
         "Get-Started/get-started-installation",
         "Get-Started/get-started-quickstart",
+        {
+          type: "category",
+          label: "Tutorials",
+          items: [
+            "Tutorials/chat-with-rag",
+            "Tutorials/chat-with-files",
+          ],
+        },
       ],
     },
     {
@@ -294,6 +302,11 @@ module.exports = {
           label: "Composio",
         },
         {
+          type: "doc",
+          id: "Integrations/Docling/integrations-docling",
+          label: "Docling",
+        },
+        {
           type: 'category',
           label: 'Google',
           items: [
@@ -352,12 +365,12 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Changelog",
+      label: "Release notes",
       items: [
         {
-          type: "link",
-          label: "Changelog",
-          href: "https://github.com/langflow-ai/langflow/releases/latest",
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
         },
       ],
     },
