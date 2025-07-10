@@ -3,6 +3,9 @@ title: Contribute to Langflow
 slug: /contributing-how-to-contribute
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 This guide is intended to help you start contributing to Langflow.
 As an open-source project in a rapidly developing field, Langflow welcomes contributions, whether it be in the form of a new feature, improved infrastructure, or better documentation.
 
@@ -18,6 +21,10 @@ Install Langflow from source by forking the repository, and then set up your dev
 * [Node.js](https://nodejs.org/en/download/package-manager)
 * [Make](https://www.gnu.org/software/make/#documentation)
 
+:::tip Windows
+For Windows installations, you don't need need Make, and you can find [Windows scripts](https://github.com/langflow-ai/langflow/tree/main/scripts/windows) in the Langflow repository.
+:::
+
 ### Clone the Langflow repository
 
 1. Fork the [Langflow GitHub repository](https://github.com/langflow-ai/langflow).
@@ -32,73 +39,163 @@ Replace the following:
 
 ### Run Langflow from source
 
-If you're not developing, but want to run Langflow from source after cloning the repo, run:
+If you're not developing, but want to run Langflow from source after cloning the repo, run the following commands.
 
-```bash
-make run_cli
-```
+<Tabs groupId="os">
+  <TabItem value="macOS/Linux" label="macOS/Linux" default>
 
-This command:
-- Installs frontend and backend dependencies
-- Builds the frontend static files
-- Starts the application with default settings
+    1. To run Langflow from source, run the following command:
+    ```bash
+    make run_cli
+    ```
 
-The `make run_cli` command allows you to configure the application such as logging level, host, port, and environment variables.
+    This command does the following:
+    - Installs frontend and backend dependencies
+    - Builds the frontend static files
+    - Starts the application with default settings
 
-For example, this command starts Langflow with custom settings for the logging level, host binding, and port number, and specifies a custom `.env` file.
+    The Langflow frontend is available at `http://localhost:7860/`.
 
-```bash
-make run_cli log_level=info host=localhost port=8000 env=.env.custom
-```
+  </TabItem>
+  <TabItem value="Windows" label="Windows">
 
-The `make run_cli` command accepts the following parameters:
+    To run Langflow from source on Windows, you can use the Langflow project's included scripts, or run the commands in the terminal.
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `log_level` | `debug` | Set the logging level. Options: `debug`, `info`, `warning`, `error`, `critical` |
-| `host` | `0.0.0.0` | The host address to bind the server to. Use `localhost` or `127.0.0.1` for local-only access. |
-| `port` | `7860` | The port number to run the server on. |
-| `env` | `.env` | Path to the environment file containing configuration variables. |
-| `open_browser` | `true` | Whether to automatically open the browser when starting. Set to `false` to disable. |
+    1. To run Langflow with the included scripts, navigate to the `scripts/windows` directory.
+    Two scripts are available to install and start Langflow.
+
+    2. Run Langflow with one of the scripts.
+
+    <Tabs groupId="windows-shell">
+      <TabItem value="Windows CMD" label="Windows CMD" default>
+
+        To install and start Langflow with a Windows Batch file, double-click `build_and_run.bat`.
+
+      </TabItem>
+      <TabItem value="Powershell" label="Powershell">
+
+        To install and start Langflow with the Powershell script, run:
+
+            ```ps
+            .\build_and_run.ps1
+            ```
+
+      </TabItem>
+    </Tabs>
+
+    **Alternatively**, to run Langflow from source with the Windows Command Line or Powershell, do the following.
+
+    <Tabs groupId="windows-shell">
+      <TabItem value="Windows CMD" label="Windows CMD" default>
+
+        1. Run the following commands to build the Langflow frontend.
+        ```
+        cd src/frontend && npm install && npm run build && npm run start
+        ```
+
+        2. Copy the contents of the built `src/frontend/build` directory to `src/backend/base/langflow/frontend`.
+
+        3. To start Langflow, run the following command.
+        ```
+        uv run langflow run
+        ```
+
+        The frontend is served at http://localhost:7860.
+
+      </TabItem>
+      <TabItem value="Powershell" label="Powershell">
+
+        1. Run the following commands to build the Langflow frontend.
+        ```
+        cd src/frontend
+        npm install
+        npm run build
+        npm run start
+        ```
+
+        2. Copy the contents of the built `src/frontend/build` directory to `src/backend/base/langflow/frontend`.
+
+        3. To start Langflow, run the following command.
+        ```
+        uv run langflow run
+        ```
+
+        The frontend is served at http://localhost:7860.
+
+      </TabItem>
+    </Tabs>
+
+  </TabItem>
+</Tabs>
 
 ### Set up your Langflow development environment
 
+<Tabs groupId="os">
+  <TabItem value="macOS/Linux" label="macOS/Linux" default>
+
 1. To set up the Langflow development environment, run the following command:
+    ```bash
+    make init
+    ```
 
-```bash
-make init
-```
-
-This command sets up the development environment by:
-- Checking for uv and npm.
-- Installing backend and frontend dependencies.
-- Installing pre-commit hooks.
+    This command sets up the development environment by doing the following:
+    - Checking for uv and npm.
+    - Installing backend and frontend dependencies.
+    - Installing pre-commit hooks.
 
 2. Run the backend and frontend in separate terminals for development:
 
-```bash
-# Run backend in development mode (includes hot reload)
-make backend
+    ```bash
+    # Run backend in development mode (includes hot reload)
+    make backend
 
-# In another terminal, run frontend in development mode (includes hot reload)
-make frontend
-```
+    # In another terminal, run frontend in development mode (includes hot reload)
+    make frontend
+    ```
 
-The `make backend` and `make frontend` commands automatically install dependencies, so you don't need to run install commands separately.
+    The frontend is served at `http://localhost:7860`.
 
-3. (Optional) Install pre-commit hooks to help keep your changes clean and well-formatted. `make init` installs pre-commit hooks automatically.
+    The `make backend` and `make frontend` commands automatically install dependencies, so you don't need to run install commands separately.
 
-```bash
-uv sync
-uv run pre-commit install
-```
+3. Optional: Install pre-commit hooks to help keep your changes clean and well-formatted. `make init` installs pre-commit hooks automatically.
 
-:::note
-With pre-commit hooks installed, you need to use `uv run git commit` instead of `git commit` directly.
-:::
+    ```bash
+    uv sync
+    uv run pre-commit install
+    ```
+
+    :::note
+    With pre-commit hooks installed, you need to use `uv run git commit` instead of `git commit` directly.
+    :::
 
 4. To test your changes, run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
 To run all tests, including unit tests, integration tests, and coverage, run `make tests`.
+
+  </TabItem>
+  <TabItem value="Windows" label="Windows">
+
+Since Windows does not include `make`, building and running Langflow from source uses `npm` and `uv`.
+
+To set up the Langflow development environment, run the frontend and backend in separate terminals.
+
+1. To run the frontend, run the following commands.
+
+    ```bash
+    cd src/frontend
+    npm install
+    npm run start
+    ```
+
+2. To run the backend, run the following command.
+
+    ```bash
+    uv run langflow run --backend-only
+    ```
+
+The frontend is served at `http://localhost:7860`.
+
+  </TabItem>
+</Tabs>
 
 ### Debug
 
@@ -142,10 +239,12 @@ cd docs
 
 4. To install dependencies and start a local Docusaurus static site with hot reloading, run:
 ```bash
-yarn install && yarn start
+yarn install
+yarn start
 ```
 
-The documentation will be available at `localhost:3000` and all the files are located in the `/docs` folder.
+The documentation is available at `localhost:3000`.
+The Markdown content files are located in the `langflow/docs/docs` folder.
 
 5. Optional: Run `yarn build` to build the site locally and ensure there are no broken links.
 
