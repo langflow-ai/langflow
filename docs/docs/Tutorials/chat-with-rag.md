@@ -109,7 +109,7 @@ In situations where many users load data or you need to load data programmatical
 
 When the flow runs, the flow ingests the selected file, chunks the data, loads the data into the vector store database, and then generates embeddings for the chunks, which are also stored in the vector store.
 
-Your database now contains data with vector embeddings that an LLM can use to respond to queries, as demonstrated in the next section of the tutorial.
+Your database now contains data with vector embeddings that an LLM can use as context to respond to queries, as demonstrated in the next section of the tutorial.
 
 ## Chat with your flow from a JavaScript application
 
