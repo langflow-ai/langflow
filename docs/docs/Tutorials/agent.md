@@ -22,24 +22,30 @@ This tutorial uses an OpenAI LLM. If you want to use a different provider, you n
 
 ## Create an agentic flow
 
-The following steps modify the [**Simple agent**](/simple-agent) template to connect [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components as tools for the **Agent**.
-The Directory component loads all files of a given type from a target directory on your local machine, and the Web search component performs a DuckDuckGo search.
+The following steps modify the [**Simple agent**](/simple-agent) template to connect [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components as tools for an **Agent** component.
+The **Directory** component loads all files of a given type from a target directory on your local machine, and the **Web search** component performs a DuckDuckGo search.
+When connected to an **Agent** component as tools, the agent has the option to use these components when handling requests.
 
 1. In Langflow, click **New Flow**, and then select the **Simple agent** template.
-2. Remove the **URL** and **Calculator** tools, and drag the [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components to your workspace.
-3. In the **Directory** component's **Path** field, enter the path to your directory, and the types of files you want to provide to your agent.
-In this example, the directory name is `customer_orders` and the file type is `.csv`, because you want the agent to have access to a record of customer purchases.
-If you don't have a `.csv` file available, you can download [customer-orders.csv](/files/customer_orders/customer_orders.csv) and save it in a folder on your local machine called `customer_orders`.
-This example assumes you're searching `customer_orders` for an `email` value, but you can adapt the tutorial to suit your data.
-4. In the **Directory** and **Web search** components, enable **Tool Mode**, and connect the **Toolset** port to the agent's **Tools** port.
-This mode registers the connected tools with your Agent, so it understands what they do and how to use them.
-5. In the **Agent** component, enter your OpenAI API key.
+2. Remove the **URL** and **Calculator** tools, and  then drag the [**Directory**](/components-data#directory) and [**Web search**](/components-data#web-search) components into your workspace.
+3. In the **Directory** component's **Path** field, enter the directory path and file types that you want to make available to the **Agent** component.
+
+    In this tutorial,  the agent needs access to a record of customer purchases, so the directory name is `customer_orders` and the file type is `.csv`. Later in this tutorial, the agent will be prompted to find `email` values in the customer data.
+ 
+    You can adapt the tutorial to suit your data, or, to follow along with the tutorial, you can download [`customer-orders.csv`](/files/customer_orders/customer_orders.csv) and save it in a `customer_orders` folder on your local machine.
+4. In the [component header menu](/concepts-components#component-menus) for the **Directory** and **Web search** components, enable **Tool Mode** so you can use the components with an agent.
+
+5. For both tool components, connect the **Toolset** port to the Agent component's **Tools** port.
+6. In the **Agent** component, enter your OpenAI API key.
 
     If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
 
-6. To verify that your flow is operational, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM a question, such as `Recommend 3 used items for carol.davis@example.com, based on previous orders.`
-The LLM should respond with recommendations and web links for items based on previous orders in `customer_orders.csv`.
-The Playground displays the agent's chain of thought as it uses the Directory component's `as_dataframe` tool to retrieve a [DataFrame](/concepts-objects#dataframe-object), and the Web search component's `perform_search` tool to find links to related items.
+7. To test the flow, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM a question, such as `Recommend 3 used items for carol.davis@example.com, based on previous orders.`
+
+    Given the example prompt, the LLM would respond with recommendations and web links for items based on previous orders in `customer_orders.csv`.
+    
+    The **Playground** prints the agent's chain of thought as it selects tools to use and interacts with functionality provided by those tools.
+    For example, the agent can use the **Directory** component's `as_dataframe` tool to retrieve a [DataFrame](/concepts-objects#dataframe-object), and the **Web search** component's `perform_search` tool to find links to related items.
 
 ## Send requests to your flow from a JavaScript application
 
