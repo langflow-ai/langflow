@@ -112,6 +112,11 @@ There are two possible reasons for this error:
 
 * **Version conflict during installation**: Some version conflicts might have occurred during the installation process. To resolve this issue, reinstall Langflow and its dependencies by running `python -m pip install langflow --pre -U --force-reinstall`.
 
+### Environment variables not available from terminal
+
+Environment variables set in your terminal are not automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
+To set environment variables for Langflow Desktop, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
+
 ### Package is not installed
 
 In Langflow OSS, you can follow the error message's instructions to install the missing dependency.
