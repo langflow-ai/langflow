@@ -294,6 +294,11 @@ module.exports = {
           label: "Composio",
         },
         {
+          type: "doc",
+          id: "Integrations/Docling/integrations-docling",
+          label: "Docling",
+        },
+        {
           type: 'category',
           label: 'Google',
           items: [
