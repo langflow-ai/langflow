@@ -84,12 +84,9 @@ class LCModelComponent(Component):
                 raise ValueError(msg)
 
     async def text_response(self) -> Message:
-        input_value = self.input_value
-        stream = self.stream
-        system_message = self.system_message
         output = self.build_model()
         result = await self.get_chat_result(
-            runnable=output, stream=stream, input_value=input_value, system_message=system_message
+            runnable=output, stream=self.stream, input_value=self.input_value, system_message=self.system_message
         )
         self.status = result
         return result
@@ -176,6 +173,7 @@ class LCModelComponent(Component):
         input_value: str | Message,
         system_message: str | None = None,
     ) -> Message:
+        # NVIDIA reasoning models use detailed thinking
         if getattr(self, "detailed_thinking", False):
             system_message = DETAILED_THINKING_PREFIX + (system_message or "")
 
