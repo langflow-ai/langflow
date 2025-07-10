@@ -179,7 +179,7 @@ The following table lists the environment variables supported by Langflow.
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | <Link id="DO_NOT_TRACK"/>DO_NOT_TRACK | Boolean | `false` | If this option is enabled, Langflow does not track telemetry. |
-| <Link id="LANGFLOW_AUTO_LOGIN"/><span class="env-prefix">LANGFLOW_</span>AUTO_LOGIN | Boolean | `true` | Enable automatic login for Langflow. Set to `false` to disable automatic login and require the login form to log into the Langflow UI. Setting to `false` requires [`LANGFLOW_SUPERUSER`](#LANGFLOW_SUPERUSER) and [`LANGFLOW_SUPERUSER_PASSWORD`](environment-variables.md#LANGFLOW_SUPERUSER_PASSWORD) to be set. |
+| <Link id="LANGFLOW_AUTO_LOGIN"/><span class="env-prefix">LANGFLOW_</span>AUTO_LOGIN | Boolean | `true` | Enable automatic login for Langflow. Set to `false` to disable automatic login and require the login form to log into the Langflow UI. Setting to `false` requires [`LANGFLOW_SUPERUSER`](#LANGFLOW_SUPERUSER) and [`LANGFLOW_SUPERUSER_PASSWORD`](environment-variables.md#LANGFLOW_SUPERUSER_PASSWORD) to be set. For more information, see [Authentication](/configuration-authentication). |
 | <Link id="LANGFLOW_AUTO_SAVING"/><span class="env-prefix">LANGFLOW_</span>AUTO_SAVING | Boolean | `true` | Enable flow auto-saving.<br/>See [`--auto-saving` option](./configuration-cli.md#run-auto-saving). |
 | <Link id="LANGFLOW_AUTO_SAVING_INTERVAL"/><span class="env-prefix">LANGFLOW_</span>AUTO_SAVING_INTERVAL | Integer | `1000` | Set the interval for flow auto-saving in milliseconds.<br/>See [`--auto-saving-interval` option](./configuration-cli.md#run-auto-saving-interval). |
 | <Link id="LANGFLOW_BACKEND_ONLY"/><span class="env-prefix">LANGFLOW_</span>BACKEND_ONLY | Boolean | `false` | Only run Langflow's backend server (no frontend).<br/>See [`--backend-only` option](./configuration-cli.md#run-backend-only). |
@@ -241,6 +241,7 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_GOOGLE_OAUTH_CLIENT_ID"/><span class="env-prefix">LANGFLOW_</span>GOOGLE_OAUTH_CLIENT_ID | String | Not set | Google OAuth Client ID for authentication. |
 | <Link id="LANGFLOW_GOOGLE_OAUTH_CLIENT_SECRET"/><span class="env-prefix">LANGFLOW_</span>GOOGLE_OAUTH_CLIENT_SECRET | String | Not set | Google OAuth Client Secret for authentication. |
 LANGFLOW_GOOGLE_OAUTH_REDIRECT_URI=<host>/api/v1/oauth/google/callback
+| <Link id="SKIP_AUTH_AUTO_LOGIN"/>SKIP_AUTH_AUTO_LOGIN | Boolean | `false` | If set to `true`, disables automatic login and enforces authentication, regardless of the value of `LANGFLOW_AUTO_LOGIN`.
 </div>
 
 
