@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -5,13 +7,11 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import type { Category } from "@/types/templates/types";
-import { useState } from "react";
-import { useParams } from "react-router-dom";
 import type { newFlowModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import GetStartedComponent from "./components/GetStartedComponent";
-import TemplateContentComponent from "./components/TemplateContentComponent";
 import { Nav } from "./components/navComponent";
+import TemplateContentComponent from "./components/TemplateContentComponent";
 
 export default function TemplatesModal({
   open,

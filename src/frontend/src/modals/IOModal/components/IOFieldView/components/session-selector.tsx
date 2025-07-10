@@ -1,3 +1,6 @@
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Input } from "@/components/ui/input";
@@ -8,14 +11,11 @@ import {
   SelectTrigger,
 } from "@/components/ui/select-custom";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import type React from "react";
-import { useEffect, useRef, useState } from "react";
-import { v5 as uuidv5 } from "uuid";
 
 export default function SessionSelector({
   deleteSession,

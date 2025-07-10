@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import useAlertStore from "../../../../../stores/alertStore";
-
 import RenderKey from "@/components/common/renderIconComponent/components/renderKey";
 import ForwardedIconComponent from "../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../components/ui/button";
 import BaseModal from "../../../../../modals/baseModal";
+import useAlertStore from "../../../../../stores/alertStore";
 import { useShortcutsStore } from "../../../../../stores/shortcuts";
 import { toCamelCase, toTitleCase } from "../../../../../utils/utils";
 

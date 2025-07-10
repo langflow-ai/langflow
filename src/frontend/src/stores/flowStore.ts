@@ -1,3 +1,14 @@
+import {
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
+} from "@xyflow/react";
+import { cloneDeep, zip } from "lodash";
+import { create } from "zustand";
+import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import { BROKEN_EDGES_WARNING } from "@/constants/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
@@ -6,18 +17,7 @@ import {
   trackDataLoaded,
   trackFlowBuild,
 } from "@/customization/utils/analytics";
-import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { brokenEdgeMessage } from "@/utils/utils";
-import {
-  type EdgeChange,
-  type Node,
-  type NodeChange,
-  addEdge,
-  applyEdgeChanges,
-  applyNodeChanges,
-} from "@xyflow/react";
-import { cloneDeep, zip } from "lodash";
-import { create } from "zustand";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import type { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import type { ChatInputType, ChatOutputType } from "../types/chat";
@@ -42,8 +42,8 @@ import {
   getConnectedSubgraph,
   getHandleId,
   getNodeId,
-  scapeJSONParse,
   scapedJSONStringfy,
+  scapeJSONParse,
   unselectAllNodesEdges,
   updateGroupRecursion,
   validateEdge,

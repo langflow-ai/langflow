@@ -1,9 +1,3 @@
-import { IS_AUTO_LOGIN } from "@/constants/constants";
-import { baseURL } from "@/customization/constants";
-import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
-import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
-import useAuthStore from "@/stores/authStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import axios, {
   type AxiosError,
   type AxiosInstance,
@@ -12,6 +6,12 @@ import axios, {
 import * as fetchIntercept from "fetch-intercept";
 import { useEffect } from "react";
 import { Cookies } from "react-cookie";
+import { IS_AUTO_LOGIN } from "@/constants/constants";
+import { baseURL } from "@/customization/constants";
+import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
+import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
+import useAuthStore from "@/stores/authStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { BuildStatus, type EventDeliveryType } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";

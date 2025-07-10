@@ -1,11 +1,11 @@
+import { Separator } from "@radix-ui/react-separator";
+import { useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import { GetStartedProgress } from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons/components/get-started-progress";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import CustomGetStartedProgress from "@/customization/components/custom-get-started-progress";
 import useAuthStore from "@/stores/authStore";
-import { Separator } from "@radix-ui/react-separator";
-import { useState } from "react";
 import { AddFolderButton } from "./add-folder-button";
 import { UploadFolderButton } from "./upload-folder-button";
 

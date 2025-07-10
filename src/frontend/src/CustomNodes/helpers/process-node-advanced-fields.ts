@@ -1,6 +1,6 @@
+import { cloneDeep } from "lodash";
 import type { APIClassType } from "@/types/api";
 import type { EdgeType } from "@/types/flow";
-import { cloneDeep } from "lodash";
 
 export function processNodeAdvancedFields(
   resData: APIClassType,

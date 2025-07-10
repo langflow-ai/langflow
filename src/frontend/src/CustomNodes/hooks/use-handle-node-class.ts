@@ -1,7 +1,7 @@
-import useFlowStore from "@/stores/flowStore";
-import type { AllNodeType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
+import useFlowStore from "@/stores/flowStore";
+import type { AllNodeType } from "@/types/flow";
 
 const useHandleNodeClass = (
   nodeId: string,

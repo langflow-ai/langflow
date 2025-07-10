@@ -1,3 +1,10 @@
+import { useEffect, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
+import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
+import useUpdateValidationStatus from "@/CustomNodes/hooks/use-update-validation-status";
+import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status-string";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
@@ -5,11 +12,6 @@ import { BuildStatus } from "@/constants/enums";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
-import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
-import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
-import useUpdateValidationStatus from "@/CustomNodes/hooks/use-update-validation-status";
-import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status-string";
 import useAlertStore from "@/stores/alertStore";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
@@ -19,11 +21,10 @@ import type { VertexBuildTypeAPI } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
-import { useEffect, useRef, useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import BuildStatusDisplay from "./components/build-status-display";
 import { normalizeTimeString } from "./utils/format-run-time";
+
 const POLLING_TIMEOUT = 21000;
 const POLLING_INTERVAL = 3000;
 

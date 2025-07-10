@@ -1,11 +1,11 @@
+import * as Form from "@radix-ui/react-form";
+import { type FormEvent, useEffect, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { useAddUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
-import * as Form from "@radix-ui/react-form";
-import { type FormEvent, useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { SIGNUP_ERROR_ALERT } from "../../constants/alerts_constants";
@@ -15,9 +15,9 @@ import {
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import type {
-  UserInputType,
   inputHandlerEventType,
   signUpInputStateType,
+  UserInputType,
 } from "../../types/components";
 
 export default function SignUp(): JSX.Element {

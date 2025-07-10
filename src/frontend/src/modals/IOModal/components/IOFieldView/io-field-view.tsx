@@ -1,8 +1,8 @@
-import CustomIOFileInput from "@/customization/components/custom-file-input";
-import useHandleNewValue from "@/CustomNodes/hooks/use-handle-new-value";
-import type { AllNodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
+import useHandleNewValue from "@/CustomNodes/hooks/use-handle-new-value";
+import CustomIOFileInput from "@/customization/components/custom-file-input";
+import type { AllNodeType } from "@/types/flow";
 import ImageViewer from "../../../../components/common/ImageViewer";
 import CsvOutputComponent from "../../../../components/core/csvOutputComponent";
 import DataOutputComponent from "../../../../components/core/dataOutputComponent";
@@ -11,9 +11,9 @@ import PdfViewer from "../../../../components/core/pdfViewer";
 import { Textarea } from "../../../../components/ui/textarea";
 import { PDFViewConstant } from "../../../../constants/constants";
 import {
+  InputOutput,
   IOInputTypes,
   IOOutputTypes,
-  InputOutput,
 } from "../../../../constants/enums";
 import TextOutputView from "../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../stores/flowStore";

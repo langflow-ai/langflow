@@ -12,13 +12,6 @@
  */
 
 import {
-  getLeftHandleId,
-  getRightHandleId,
-} from "@/CustomNodes/utils/get-handle-id";
-import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
-import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
-import useFlowStore from "@/stores/flowStore";
-import {
   type Connection,
   type Edge,
   getOutgoers,
@@ -29,14 +22,21 @@ import {
 } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import ShortUniqueId from "short-unique-id";
+import {
+  getLeftHandleId,
+  getRightHandleId,
+} from "@/CustomNodes/utils/get-handle-id";
+import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
+import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
+import useFlowStore from "@/stores/flowStore";
 import getFieldTitle from "../CustomNodes/utils/get-field-title";
 import {
   INPUT_TYPES,
   IS_MAC,
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
-  specialCharsRegex,
   SUCCESS_BUILD,
+  specialCharsRegex,
 } from "../constants/constants";
 import { DESCRIPTIONS } from "../flow_constants";
 import type {
@@ -63,6 +63,7 @@ import type {
 } from "../types/utils/reactflowUtils";
 import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
+
 const uid = new ShortUniqueId();
 
 export function checkChatInput(nodes: Node[]) {

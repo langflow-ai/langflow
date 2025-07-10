@@ -1,8 +1,8 @@
 "use client";
 import {
   AnimatePresence,
-  motion,
   MotionConfig,
+  motion,
   type Transition,
   type Variant,
   type Variants,

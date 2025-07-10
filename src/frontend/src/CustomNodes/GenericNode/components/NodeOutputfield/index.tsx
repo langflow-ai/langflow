@@ -1,7 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { useShortcutsStore } from "@/stores/shortcuts";
-import type { targetHandleType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import {
@@ -14,6 +10,10 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { Badge } from "@/components/ui/badge";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useShortcutsStore } from "@/stores/shortcuts";
+import type { targetHandleType } from "@/types/flow";
 import ForwardedIconComponent, {
   default as IconComponent,
 } from "../../../../components/common/genericIconComponent";
@@ -34,8 +34,8 @@ import {
   logTypeIsError,
   logTypeIsUnknown,
 } from "../../../../utils/utils";
-import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
+import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
 
 const _EyeIcon = memo(

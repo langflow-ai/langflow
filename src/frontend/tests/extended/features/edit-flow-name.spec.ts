@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { renameFlow } from "../../utils/rename-flow";
+
 test(
   "user should be able to edit flow name by clicking on the header or on the main page",
   { tag: ["@release", "@workspace", "@components"] },

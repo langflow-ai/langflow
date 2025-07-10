@@ -1,7 +1,7 @@
-import useAlertStore from "@/stores/alertStore";
-import type { FileType } from "@/types/file_management";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
+import useAlertStore from "@/stores/alertStore";
+import type { FileType } from "@/types/file_management";
 import { ForwardedIconComponent } from "../../components/common/genericIconComponent";
 import BaseModal from "../baseModal";
 import DragFilesComponent from "./components/dragFilesComponent";

@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
@@ -9,8 +11,6 @@ import {
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
-import { useEffect, useMemo, useRef } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { default as IconComponent } from "../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
@@ -25,8 +25,8 @@ import { useTypesStore } from "../../../../stores/typesStore";
 import type { NodeInputFieldComponentType } from "../../../../types/components";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
-import NodeInputInfo from "../NodeInputInfo";
 import HandleRenderComponent from "../handleRenderComponent";
+import NodeInputInfo from "../NodeInputInfo";
 
 export default function NodeInputField({
   id,

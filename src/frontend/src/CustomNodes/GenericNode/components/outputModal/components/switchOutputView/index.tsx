@@ -1,7 +1,7 @@
+import { useMemo } from "react";
 import JsonOutputViewComponent from "@/components/core/jsonOutputComponent/json-output-view";
 import { MAX_TEXT_LENGTH } from "@/constants/constants";
 import type { LogsLogType, OutputLogType } from "@/types/api";
-import { useMemo } from "react";
 import ForwardedIconComponent from "../../../../../../components/common/genericIconComponent";
 import DataOutputComponent from "../../../../../../components/core/dataOutputComponent";
 import {
@@ -13,6 +13,7 @@ import { Case } from "../../../../../../shared/components/caseComponent";
 import TextOutputView from "../../../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../../../stores/flowStore";
 import ErrorOutput from "./components";
+
 // Define the props type
 interface SwitchOutputViewProps {
   nodeId: string;

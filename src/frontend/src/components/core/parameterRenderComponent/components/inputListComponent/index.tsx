@@ -2,12 +2,11 @@ import _ from "lodash";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "../../../../ui/input";
-import { ButtonInputList } from "./components/button-input-list";
-
 import { cn } from "../../../../../utils/utils";
+import { Input } from "../../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputListComponentType, InputProps } from "../../types";
+import { ButtonInputList } from "./components/button-input-list";
 import { DeleteButtonInputList } from "./components/delete-button-input-list";
 
 export default function InputListComponent({

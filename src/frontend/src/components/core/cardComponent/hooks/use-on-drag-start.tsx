@@ -1,6 +1,6 @@
-import type { FlowType } from "@/types/flow";
 import { useCallback } from "react";
 import { createRoot } from "react-dom/client";
+import type { FlowType } from "@/types/flow";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import DragCardComponent from "../components/dragCardComponent";
 

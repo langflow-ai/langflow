@@ -1,6 +1,6 @@
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useEffect, useRef, useState } from "react";
 
 export default function EditMessageField({
   message: initialMessage,

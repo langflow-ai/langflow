@@ -1,11 +1,11 @@
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
-import useAddFlow from "@/hooks/flows/use-add-flow";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import Fuse from "fuse.js";
 import { SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
+import useAddFlow from "@/hooks/flows/use-add-flow";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { ForwardedIconComponent } from "../../../../components/common/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { useFolderStore } from "../../../../stores/foldersStore";

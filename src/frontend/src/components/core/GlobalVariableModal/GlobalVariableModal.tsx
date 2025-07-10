@@ -1,21 +1,20 @@
-import {
-  useGetGlobalVariables,
-  usePatchGlobalVariables,
-  usePostGlobalVariables,
-} from "@/controllers/API/queries/variables";
-import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
-import type { GlobalVariable } from "@/types/global_variables";
 import { useEffect, useState } from "react";
-
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
+import {
+  useGetGlobalVariables,
+  usePatchGlobalVariables,
+  usePostGlobalVariables,
+} from "@/controllers/API/queries/variables";
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
+import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import { useTypesStore } from "@/stores/typesStore";
 import type { ResponseErrorDetailAPI } from "@/types/api";
+import type { GlobalVariable } from "@/types/global_variables";
 import InputComponent from "../parameterRenderComponent/components/inputComponent";
 import sortByName from "./utils/sort-by-name";
 

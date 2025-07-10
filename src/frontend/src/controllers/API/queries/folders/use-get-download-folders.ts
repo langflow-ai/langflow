@@ -1,9 +1,10 @@
+import type { UseMutationResult } from "@tanstack/react-query";
 import { customGetDownloadTypeFolders } from "@/customization/utils/custom-get-download-folders";
 import type { useMutationFunctionType } from "@/types/api";
-import type { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+
 interface IGetDownloadFolders {
   folderId: string;
 }

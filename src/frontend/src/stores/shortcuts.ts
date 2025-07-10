@@ -1,5 +1,5 @@
-import { toCamelCase } from "@/utils/utils";
 import { create } from "zustand";
+import { toCamelCase } from "@/utils/utils";
 import { defaultShortcuts } from "../constants/constants";
 import type { shortcutsStoreType } from "../types/store";
 

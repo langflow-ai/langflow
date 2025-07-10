@@ -1,5 +1,5 @@
-import type { BuildStatus } from "@/constants/enums";
 import NodeStatus from "@/CustomNodes/GenericNode/components/NodeStatus";
+import type { BuildStatus } from "@/constants/enums";
 import type { VertexBuildTypeAPI } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
 

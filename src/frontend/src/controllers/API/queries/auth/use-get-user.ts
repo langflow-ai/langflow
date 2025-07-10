@@ -1,6 +1,6 @@
-import useAuthStore from "@/stores/authStore";
 import type { UseMutationResult } from "@tanstack/react-query";
-import type { useMutationFunctionType, Users } from "../../../../types/api";
+import useAuthStore from "@/stores/authStore";
+import type { Users, useMutationFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";

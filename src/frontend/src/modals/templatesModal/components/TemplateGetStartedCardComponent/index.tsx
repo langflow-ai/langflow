@@ -1,10 +1,10 @@
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
-import { useParams } from "react-router-dom";
 import type { CardData } from "../../../../types/templates/types";
 
 export default function TemplateGetStartedCardComponent({

@@ -1,6 +1,6 @@
+import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { testIdCase } from "@/utils/utils";
-import { useEffect, useState } from "react";
 import type { InputProps, TabComponentType } from "../../types";
 
 export default function TabComponent({

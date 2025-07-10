@@ -1,3 +1,9 @@
+import useDetectScroll, {
+  Axis,
+  Direction,
+} from "@smakss/react-scroll-direction";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import CustomChatInput from "@/customization/components/custom-chat-input";
@@ -7,15 +13,9 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import useDetectScroll, {
-  Axis,
-  Direction,
-} from "@smakss/react-scroll-direction";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { v5 as uuidv5 } from "uuid";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
-import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import useFlowStore from "../../../../../stores/flowStore";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import type { ChatMessageType } from "../../../../../types/chat";
 import type { chatViewProps } from "../../../../../types/components";
 import FlowRunningSqueleton from "../../flow-running-squeleton";
