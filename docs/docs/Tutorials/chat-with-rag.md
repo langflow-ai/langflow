@@ -14,6 +14,7 @@ This tutorial demonstrates how you can use Langflow to create a chatbot applicat
 - [A running Langflow instance](/get-started-installation)
 - [A Langflow API key](/configuration-api-keys)
 - [An OpenAI API key](https://platform.openai.com/)
+- [Langflow JavaScript client installed](/typescript-client)
 - Familiarity with vector search concepts and applications, such as [vector databases](https://www.datastax.com/guides/what-is-a-vector-database) and [RAG](https://www.datastax.com/guides/what-is-retrieval-augmented-generation)
 
 ## Create a vector RAG flow
@@ -126,10 +127,8 @@ This tutorial uses JavaScript for demonstration purposes.
 2. Copy the following script into a JavaScript file, and then replace the placeholders with the information you gathered in the previous step:
 
     ```js
-    #!/usr/bin/env node
-
     const readline = require('readline');
-    const fetch = require('node-fetch');
+    const { LangflowClient } = require('@datastax/langflow-client');
 
     const API_KEY = 'LANGFLOW_API_KEY';
     const SERVER = 'LANGFLOW_SERVER_ADDRESS';
@@ -137,21 +136,20 @@ This tutorial uses JavaScript for demonstration purposes.
 
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
+    // Initialize the Langflow client
+    const client = new LangflowClient({
+        baseUrl: SERVER,
+        apiKey: API_KEY
+    });
+
     async function sendMessage(message) {
         try {
-            const response = await fetch(`${SERVER}/api/v1/run/${FLOW_ID}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
-                body: JSON.stringify({
-                    output_type: 'chat',
-                    input_type: 'chat',
-                    input_value: message,
-                    session_id: 'user_1'
-                })
+            const response = await client.flow(FLOW_ID).run(message, {
+                session_id: 'user_1'
             });
 
-            const data = await response.json();
-            return data.outputs?.[0]?.outputs?.[0]?.results?.message?.data?.text || 'No response';
+            // Use the convenience method to get the chat output text
+            return response.chatOutputText() || 'No response';
         } catch (error) {
             return `Error: ${error.message}`;
         }
@@ -180,27 +178,11 @@ This tutorial uses JavaScript for demonstration purposes.
     chat();
     ```
 
-    The script creates a Node application that chats with the content in your vector database.
-
-    The script uses the `chat` input and output types to communicate with your Langflow flow.
+    The script creates a Node application that chats with the content in your vector database, using the `chat` input and output types to communicate with your flow.
     Chat maintains ongoing conversation context across multiple messages. If you used `text` type inputs and outputs, each request is a standalone text string.
 
-    The script parses the message text out of Langflow's JSON response and presents it back to your application, where you can chat with it more with follow-up questions.
-    ```json
-    {
-      "outputs": [{
-        "outputs": [{
-          "results": {
-            "message": {
-              "data": {
-                "text": "The actual response text"
-              }
-            }
-          }
-        }]
-      }]
-    }
-    ```
+    The Langflow TypeScript client's `chatOutputText()` convenience method simplifies working with Langflow's complex JSON response structure.
+    Instead of manually navigating through multiple levels of nested objects with `data.outputs[0].outputs[0].results.message.data.text`, the client automatically extracts the message text and handles potential undefined values gracefully.
 
 3. Save and run the script to send the requests and test the flow.
 
