@@ -136,18 +136,20 @@ To delete the virtual environment, type `Remove-Item VENV_NAME`.
     uv pip install langflow
     ```
 
+    To install a specific version of the Langflow package by adding the required version to the command, such as `uv pip install langflow==1.4.22`.
+
     <details>
-    <summary>Alternative install commands</summary>
-    To install a specific version of the Langflow package by adding the required version to the command, such as `uv pip install langflow==1.3.2`.
+    <summary>Reinstall or upgrade Langflow</summary>
 
     To reinstall Langflow and all of its dependencies, run `uv pip install langflow --force-reinstall`.
 
     To upgrade Langflow to the latest version, run `uv pip install langflow -U`.
     However, the Langflow team recommends taking steps to backup your existing installation before you upgrade Langflow.
     For more information, see [Prepare to upgrade](/release-notes#prepare-to-upgrade).
+
     </details>
 
-1. Start Langflow:
+4. Start Langflow:
 
     ```bash
     uv run langflow run
@@ -155,9 +157,9 @@ To delete the virtual environment, type `Remove-Item VENV_NAME`.
 
     It can take a few minutes for Langflow to start.
 
-2. To confirm that a local Langflow instance is running, navigate to the default Langflow URL `http://127.0.0.1:7860`.
+5. To confirm that a local Langflow instance is running, navigate to the default Langflow URL `http://127.0.0.1:7860`.
 
-3. Create your first flow with the [Quickstart](/get-started-quickstart).
+6. Create your first flow with the [Quickstart](/get-started-quickstart).
 
 For upgrade information, see the [Release notes](/release-notes).
 
