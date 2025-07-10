@@ -56,15 +56,16 @@ export default function PromptModal({
     // Match *any* brace run around an identifier
     const regex = /(\{+)([^{}]+)(\}+)/g;
     const matches: string[] = [];
-    let match;
+    let match: RegExpExecArray | null = regex.exec(valueToCheck);
 
-    while ((match = regex.exec(valueToCheck))) {
+    while (match) {
       const [openRun, varName, closeRun] = [match[1], match[2], match[3]];
 
       // keep only odd, balanced runs (actual variables)
       if (openRun.length === closeRun.length && openRun.length % 2 === 1) {
         matches.push(`{${varName}}`); // normalise to single-brace form
       }
+      match = regex.exec(valueToCheck);
     }
 
     const invalid_chars: string[] = [];

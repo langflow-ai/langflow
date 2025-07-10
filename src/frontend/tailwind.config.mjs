@@ -1,11 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 import tailwindcssForms from "@tailwindcss/forms";
 import tailwindcssTypography from "@tailwindcss/typography";
+import { fontFamily } from "tailwindcss/defaultTheme";
+import plugin from "tailwindcss/plugin";
 import tailwindcssAnimate from "tailwindcss-animate";
 import tailwindcssDottedBackground from "tailwindcss-dotted-background";
-import { fontFamily } from "tailwindcss/defaultTheme";
-
-import plugin from "tailwindcss/plugin";
 
 const config = {
   variants: {
@@ -168,7 +167,6 @@ const config = {
         },
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
-        "accent-pink": "hsl(var(--accent-pink))",
         "accent-pink-foreground": "hsl(var(--accent-pink-foreground))",
         "accent-purple-foreground": "hsl(var(--accent-purple-foreground))",
         "accent-red-foreground": "hsl(var(--accent-red-foreground))",

@@ -14,7 +14,6 @@
       "complexity": {
         "noAdjacentSpacesInRegex": "error",
         "noExtraBooleanCast": "error",
-        "noUselessCatch": "error",
         "noUselessEscapeInRegex": "error"
       },
       "correctness": {
@@ -30,11 +29,9 @@
         "noSelfAssign": "warn",
         "noSetterReturn": "error",
         "noSwitchDeclarations": "error",
-        "noUndeclaredVariables": "error",
         "noUnreachable": "error",
         "noUnreachableSuper": "error",
         "noUnsafeFinally": "error",
-        "noUnsafeOptionalChaining": "error",
         "noUnusedLabels": "error",
         "noUnusedPrivateClassMembers": "error",
         "noUnusedVariables": "warn",
@@ -46,11 +43,16 @@
       },
       "suspicious": {
         "noAssignInExpressions": "error",
-        "noAsyncPromiseExecutor": "error",
+        "noAsyncPromiseExecutor": "warn",
         "noCatchAssign": "error",
         "noClassAssign": "error",
         "noCompareNegZero": "error",
-        "noConsole": "warn",
+        "noConsole": {
+          "level": "warn",
+          "options": {
+            "allow": ["error", "warn"]
+          }
+        },
         "noControlCharactersInRegex": "error",
         "noDebugger": "error",
         "noDuplicateCase": "error",

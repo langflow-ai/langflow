@@ -267,7 +267,6 @@ test(
         console.log(`Test passed on attempt ${attempt}`);
         return;
       } catch (error) {
-        error = error as Error;
         console.log(`Attempt ${attempt} failed:`, error);
 
         if (attempt === maxRetries) {
