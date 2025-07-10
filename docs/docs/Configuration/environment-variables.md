@@ -242,6 +242,14 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_GOOGLE_OAUTH_CLIENT_SECRET"/><span class="env-prefix">LANGFLOW_</span>GOOGLE_OAUTH_CLIENT_SECRET | String | Not set | Google OAuth Client Secret for authentication. |
 LANGFLOW_GOOGLE_OAUTH_REDIRECT_URI=<host>/api/v1/oauth/google/callback
 | <Link id="SKIP_AUTH_AUTO_LOGIN"/>SKIP_AUTH_AUTO_LOGIN | Boolean | `false` | If set to `true`, disables automatic login and enforces authentication, regardless of the value of `LANGFLOW_AUTO_LOGIN`.
+| <Link id="LANGFLOW_ENABLE_OAUTH"/><span class="env-prefix">LANGFLOW_</span>ENABLE_OAUTH | Boolean | `false` | Enable OAuth authentication (Google and Microsoft AD). |
+| <Link id="LANGFLOW_MICROSOFT_OAUTH_CLIENT_SECRET"/><span class="env-prefix">LANGFLOW_</span>MICROSOFT_OAUTH_CLIENT_SECRET | String | Not set | Microsoft AD OAuth Client Secret for authentication. |
+| <Link id="LANGFLOW_MICROSOFT_OAUTH_CLIENT_ID"/><span class="env-prefix">LANGFLOW_</span>MICROSOFT_OAUTH_CLIENT_ID | String | Not set | Microsoft AD OAuth Client ID for authentication. |
+| <Link id="LANGFLOW_MICROSOFT_OAUTH_TENANT_ID"/><span class="env-prefix">LANGFLOW_</span>MICROSOFT_OAUTH_TENANT_ID | String | Not set | Microsoft AD Tenant ID (optional, for single tenant). |
+| <Link id="LANGFLOW_MICROSOFT_OAUTH_REDIRECT_URI"/><span class="env-prefix">LANGFLOW_</span>MICROSOFT_OAUTH_REDIRECT_URI | String | `<host>/api/v1/oauth/microsoft/callback` | Microsoft AD OAuth Redirect URI. |
+| <Link id="LANGFLOW_GOOGLE_OAUTH_CLIENT_ID"/><span class="env-prefix">LANGFLOW_</span>GOOGLE_OAUTH_CLIENT_ID | String | Not set | Google OAuth Client ID for authentication. |
+| <Link id="LANGFLOW_GOOGLE_OAUTH_CLIENT_SECRET"/><span class="env-prefix">LANGFLOW_</span>GOOGLE_OAUTH_CLIENT_SECRET | String | Not set | Google OAuth Client Secret for authentication. |
+LANGFLOW_GOOGLE_OAUTH_REDIRECT_URI=<host>/api/v1/oauth/google/callback
 </div>
 
 
