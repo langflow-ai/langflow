@@ -20,20 +20,30 @@ This tutorial demonstrates how you can use Langflow to create a chatbot applicat
 ## Create a vector RAG flow
 
 1. In Langflow, click **New Flow**, and then select the **Vector Store RAG** template.
-2. Add your **OpenAI** API key to the **OpenAI Embeddings** components.
 
-    Optionally, replace both **Astra DB** vector store components with [**Chroma DB**](/components-vector-stores#chroma-db) vector store components, or use another vector store of your choice.
-    This example assumes you're using Chroma DB.
+    <details>
+      <summary>About the Vector Store RAG template</summary>
+    This template has two flows.
 
-    The **Load Data Flow** (bottom of the workspace) populates the vector store with data from a local file.
-    It ingests data from a local file, splits it into chunks, indexes it into your vector database, and computes embeddings for the chunks using the connected OpenAI embeddings model.
-    Your loading flow should look like this:
+    The **Load Data Flow** at the bottom of the workspace populates a vector store with data from a file.
+    This data is used to respond to queries submitted to the **Retriever Flow**, which is at the top of the workspace.
+
+   Specifically, the **Load Data Flow** ingests data from a local file, splits the data into chunks, loads and indexes the data in your vector database, and then computes embeddings for the chunks. The embeddings are also stored with the loaded data. This flow only needs to run when you need to load data into your vector database.
+ 
+    The **Retriever Flow** receives chat input, generates an embedding for the input, and then uses several components to reconstruct chunks into text and generate a response by comparing the new embedding to the stored embeddings to find similar data.
+<!-- I'm not really clear what the Parser component is doing, or where the embedding comparison is actually happening-->    
+    </details>
+
+2. Add your **OpenAI** API key to both **OpenAI Embeddings** components.
+
+3. Optional: Replace both **Astra DB** vector store components with a **Chrome DB** or another [vector store component](/components-vector-stores) of your choice.
+This tutorial uses Chroma DB.
+
+The **Load Data Flow** should have **File**, **Split Text**, **Embedding Model**, vector store (such as **Chroma DB**), and **Chat Output** components:
 
     ![File loader chat flow](/img/tutorial-chatbot-embed-files.png)
 
-    The **Retriever Flow** (top of the workspace) embeds the user's queries into vectors, which are compared to the vector store data from the **Load Data Flow** for contextual similarity.
-
-    Your chat flow should look like this:
+The **Retriever Flow** should have **Chat Input**, **Embedding Model**, vector store, **Parser**, **Prompt**, **Language Model**, and **Chat Output** components:
 
     ![Chat with RAG flow](/img/tutorial-chatbot-chat-flow.png)
 
@@ -54,13 +64,12 @@ In situations where many users load data or you need to load data programmatical
     1. In your RAG chatbot flow, click the **File component**, and then click **File**.
     2. Select the local file you want to upload, and then click **Open**.
         The file is loaded to your Langflow server.
-    3. To run the loading flow, click the vector store component, and then click <Icon name="Play" aria-hidden="true" /> **Run component**.
-        <Icon name="Play" aria-hidden="true" /> **Run component** runs the selected component and all prior dependent components.
+    3. To load the data into your vector store, click the vector store component, and then click <Icon name="Play" aria-hidden="true" /> **Run component** to run the selected component and all prior dependent components.
 
   </TabItem>
   <TabItem value="API" label="API">
 
-    To load data programmatically, use the `/v2/files/` and `/v1/run/$FLOW_ID` endpoints. The first endpoint loads a file to your Langflow server, and then returns an uploaded file path. The second endpoint runs your RAG chatbot loading flow with the uploaded file by referencing the uploaded file path.
+    To load data programmatically, use the `/v2/files/` and `/v1/run/$FLOW_ID` endpoints. The first endpoint loads a file to your Langflow server, and then returns an uploaded file path. The second endpoint runs the **Load Data FLow**, referencing the uploaded file path, to chunk, embed, and load the data into the vector store.
 
     The following script demonstrates this process.
     For help with creating this script, use the [Langflow File Upload Utility](https://langflow-file-upload-examples.onrender.com/).
@@ -114,7 +123,7 @@ Your database now contains data with vector embeddings that an LLM can use as co
 
 ## Chat with your flow from a JavaScript application
 
-To chat with the data in your vector database, create a chatbot application that runs your RAG chatbot chat flow programmatically.
+To chat with the data in your vector database, create a chatbot application that runs the **Retriever Flow** programmatically.
 
 This tutorial uses JavaScript for demonstration purposes.
 
@@ -181,8 +190,10 @@ This tutorial uses JavaScript for demonstration purposes.
     The script creates a Node application that chats with the content in your vector database, using the `chat` input and output types to communicate with your flow.
     Chat maintains ongoing conversation context across multiple messages. If you used `text` type inputs and outputs, each request is a standalone text string.
 
-    The Langflow TypeScript client's `chatOutputText()` convenience method simplifies working with Langflow's complex JSON response structure.
+    :::tip
+    The [Langflow TypeScript client](/typescript-client) has a `chatOutputText()` convenience method simplifies working with Langflow's complex JSON response structure.
     Instead of manually navigating through multiple levels of nested objects with `data.outputs[0].outputs[0].results.message.data.text`, the client automatically extracts the message text and handles potential undefined values gracefully.
+    :::
 
 3. Save and run the script to send the requests and test the flow.
 
