@@ -23,15 +23,16 @@ This tutorial demonstrates how you can use Langflow to create a chatbot applicat
 
     <details>
       <summary>About the Vector Store RAG template</summary>
+
     This template has two flows.
 
     The **Load Data Flow** at the bottom of the workspace populates a vector store with data from a file.
     This data is used to respond to queries submitted to the **Retriever Flow**, which is at the top of the workspace.
 
-   Specifically, the **Load Data Flow** ingests data from a local file, splits the data into chunks, loads and indexes the data in your vector database, and then computes embeddings for the chunks. The embeddings are also stored with the loaded data. This flow only needs to run when you need to load data into your vector database.
- 
+    Specifically, the **Load Data Flow** ingests data from a local file, splits the data into chunks, loads and indexes the data in your vector database, and then computes embeddings for the chunks. The embeddings are also stored with the loaded data. This flow only needs to run when you need to load data into your vector database.
+
     The **Retriever Flow** receives chat input, generates an embedding for the input, and then uses several components to reconstruct chunks into text and generate a response by comparing the new embedding to the stored embeddings to find similar data.
-<!-- I'm not really clear what the Parser component is doing, or where the embedding comparison is actually happening-->    
+
     </details>
 
 2. Add your **OpenAI** API key to both **OpenAI Embeddings** components.
@@ -39,11 +40,11 @@ This tutorial demonstrates how you can use Langflow to create a chatbot applicat
 3. Optional: Replace both **Astra DB** vector store components with a **Chrome DB** or another [vector store component](/components-vector-stores) of your choice.
 This tutorial uses Chroma DB.
 
-The **Load Data Flow** should have **File**, **Split Text**, **Embedding Model**, vector store (such as **Chroma DB**), and **Chat Output** components:
+    The **Load Data Flow** should have **File**, **Split Text**, **Embedding Model**, vector store (such as **Chroma DB**), and **Chat Output** components:
 
     ![File loader chat flow](/img/tutorial-chatbot-embed-files.png)
 
-The **Retriever Flow** should have **Chat Input**, **Embedding Model**, vector store, **Parser**, **Prompt**, **Language Model**, and **Chat Output** components:
+    The **Retriever Flow** should have **Chat Input**, **Embedding Model**, vector store, **Parser**, **Prompt**, **Language Model**, and **Chat Output** components:
 
     ![Chat with RAG flow](/img/tutorial-chatbot-chat-flow.png)
 
@@ -69,7 +70,7 @@ In situations where many users load data or you need to load data programmatical
   </TabItem>
   <TabItem value="API" label="API">
 
-    To load data programmatically, use the `/v2/files/` and `/v1/run/$FLOW_ID` endpoints. The first endpoint loads a file to your Langflow server, and then returns an uploaded file path. The second endpoint runs the **Load Data FLow**, referencing the uploaded file path, to chunk, embed, and load the data into the vector store.
+    To load data programmatically, use the `/v2/files/` and `/v1/run/$FLOW_ID` endpoints. The first endpoint loads a file to your Langflow server, and then returns an uploaded file path. The second endpoint runs the **Load Data Flow**, referencing the uploaded file path, to chunk, embed, and load the data into the vector store.
 
     The following script demonstrates this process.
     For help with creating this script, use the [Langflow File Upload Utility](https://langflow-file-upload-examples.onrender.com/).
@@ -191,8 +192,8 @@ This tutorial uses JavaScript for demonstration purposes.
     Chat maintains ongoing conversation context across multiple messages. If you used `text` type inputs and outputs, each request is a standalone text string.
 
     :::tip
-    The [Langflow TypeScript client](/typescript-client) has a `chatOutputText()` convenience method simplifies working with Langflow's complex JSON response structure.
-    Instead of manually navigating through multiple levels of nested objects with `data.outputs[0].outputs[0].results.message.data.text`, the client automatically extracts the message text and handles potential undefined values gracefully.
+    The [Langflow TypeScript client](/typescript-client) has a `chatOutputText()` convenience method that simplifies working with Langflow's complex JSON response structure.
+    Instead of manually navigating through multiple levels of nested objects with `data.outputs[0].outputs[0].results.message.data.text`, the client automatically extracts the message text and handles potentially undefined values gracefully.
     :::
 
 3. Save and run the script to send the requests and test the flow.
@@ -217,7 +218,7 @@ This tutorial uses JavaScript for demonstration purposes.
 
 ## Next steps
 
-For more information on building or extending this vector RAG chat, see the following:
+For more information on building or extending this tutorial, see the following:
 
 * [Model Context Protocol (MCP) servers](/mcp-server)
 * [Langflow deployment overview](/deployment-overview)
