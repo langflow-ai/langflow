@@ -122,7 +122,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         setFlowType(flowType === "flows" ? "components" : "flows");
       }
     }
-  }, [isEmptyFolder, flows, folderId, myCollectionId, flowType]);
+  }, [isEmptyFolder]);
 
   const [selectedFlows, setSelectedFlows] = useState<string[]>([]);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
