@@ -157,7 +157,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
           const id: sourceHandleType = {
             id: sourceNode.data.id,
-            name: name,
+            name: output?.name ?? name,
             output_types: outputTypes,
             dataType: sourceNode.data.type,
           };
@@ -1904,7 +1904,7 @@ export async function downloadFlow(
   flow: FlowType,
   flowName: string,
   flowDescription?: string,
-) {
+): Promise<string | undefined | void> {
   try {
     const clonedFlow = cloneDeep(flow);
 
@@ -1919,9 +1919,10 @@ export async function downloadFlow(
     const sortedData = sortJsonStructure(flowData);
     const sortedJsonString = JSON.stringify(sortedData, null, 2);
 
-    customDownloadFlow(flow, sortedJsonString, flowName);
+    return await customDownloadFlow(flow, sortedJsonString, flowName);
   } catch (error) {
     console.error("Error downloading flow:", error);
+    throw error;
   }
 }
 
