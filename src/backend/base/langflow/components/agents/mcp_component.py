@@ -1,9 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import re
 import uuid
-from typing import Any
-
-from langchain_core.tools import StructuredTool
+from typing import TYPE_CHECKING, Any
 
 from langflow.api.v2.mcp import get_server
 from langflow.base.mcp.util import (
@@ -13,7 +13,6 @@ from langflow.base.mcp.util import (
     update_tools,
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
-from langflow.inputs.inputs import InputTypes
 from langflow.io import DropdownInput, McpInput, MessageTextInput, Output
 from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
@@ -25,6 +24,12 @@ from langflow.services.cache.utils import CacheMiss
 # Import get_server from the backend API
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_session, get_settings_service, get_storage_service
+
+if TYPE_CHECKING:
+    from langchain_core.tools import StructuredTool
+
+    from langflow.inputs.inputs import InputTypes
+    from langflow.services.shared_component_cache.service import SharedComponentCacheService
 
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
@@ -65,7 +70,7 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
     return nested
 
 
-def safe_cache_get(cache, key, default=None):
+def safe_cache_get(cache: SharedComponentCacheService, key, default=None):
     """Safely get a value from cache, handling CacheMiss objects."""
     try:
         value = cache.get(key)
@@ -77,7 +82,7 @@ def safe_cache_get(cache, key, default=None):
         return value
 
 
-def safe_cache_set(cache, key, value):
+def safe_cache_set(cache: SharedComponentCacheService, key, value):
     """Safely set a value in cache, handling potential errors."""
     try:
         cache.set(key, value)
