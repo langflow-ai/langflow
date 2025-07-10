@@ -459,7 +459,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "What is the document is about?"
+                "value": "What is this document about?"
               },
               "sender": {
                 "advanced": true,
