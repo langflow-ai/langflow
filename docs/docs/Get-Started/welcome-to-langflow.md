@@ -1,6 +1,5 @@
 ---
 title: Welcome to Langflow
-slug: /
 hide_table_of_contents: true
 ---
 
@@ -33,7 +32,7 @@ For example:
 
 Join Langflow's vibrant community of developers and AI enthusiasts. See the following resources to join discussions, share your projects, and get support:
 
-* [Contribute to Langflow](contributing-how-to-contribute)
+* [Contribute to Langflow](/contributing-how-to-contribute)
 * [Langflow Discord Server](https://discord.gg/EqksyE2EX9)
 * [@langflow_ai](https://twitter.com/langflow_ai)
 

@@ -24,8 +24,8 @@ export default function FooterWrapper(props) {
       onMouseLeave={() => setIsHovered(false)}
       style={{
         position: 'fixed',
-        right: '20px',
-        bottom: '20px',
+        right: '21px',
+        bottom: '21px',
         zIndex: 100,
         display: 'flex',
         alignItems: 'center',
@@ -60,7 +60,7 @@ export default function FooterWrapper(props) {
         }}
       >
         <img
-          src="/img/langflow-icon-black-transparent.svg"
+          src="img/langflow-icon-black-transparent.svg"
           style={{ width: "40px" }}
           alt="Search"
         />

@@ -71,7 +71,7 @@ jobs:
         id: draft_url
         if: success()
         run: |
-          echo "url=${{ vars.DOCS_DRAFT_BASE_URL }}/langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}/index.html" >> $GITHUB_OUTPUT
+          echo "url=${{ vars.DOCS_DRAFT_BASE_URL }}/langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}/" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: cd docs && yarn install
