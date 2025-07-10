@@ -156,6 +156,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-public-server",
+          label: "Deploy a public Langflow server"
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-caddyfile",
           label: "Deploy Langflow on a remote server"
         },
@@ -347,12 +352,12 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Changelog",
+      label: "Release notes",
       items: [
         {
-          type: "link",
-          label: "Changelog",
-          href: "https://github.com/langflow-ai/langflow/releases/latest",
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
         },
       ],
     },

@@ -59,7 +59,7 @@ export default function TemplatesModal({
 
   return (
     <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
-      <BaseModal.Content overflowHidden className="flex flex-col p-0">
+      <BaseModal.Content className="flex flex-col p-0">
         <div className="flex h-full">
           <SidebarProvider width="15rem" defaultOpen={false}>
             <Nav
@@ -67,7 +67,7 @@ export default function TemplatesModal({
               currentTab={currentTab}
               setCurrentTab={setCurrentTab}
             />
-            <main className="flex flex-1 flex-col gap-4 overflow-hidden p-6 md:gap-8">
+            <main className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
               {currentTab === "get-started" ? (
                 <GetStartedComponent />
               ) : (
