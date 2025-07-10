@@ -2,7 +2,7 @@
 name = "langflow"
 version = "1.5.0.post1"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.13"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -214,6 +214,11 @@ local = [
 ]
 clickhouse-connect = [
     "clickhouse-connect==0.7.19"
+]
+
+
+nemoguardrails = [
+    "nemoguardrails>=0.14.1",
 ]
 
 nv-ingest = [
