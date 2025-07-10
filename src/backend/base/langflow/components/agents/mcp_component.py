@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-import re
 import uuid
 from typing import TYPE_CHECKING, Any
 
 from langflow.api.v2.mcp import get_server
+from langflow.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
 from langflow.base.mcp.util import (
     MCPSseClient,
     MCPStdioClient,
@@ -19,7 +19,6 @@ from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.services.auth.utils import create_user_longterm_token
-from langflow.services.cache.utils import CacheMiss
 
 # Import get_server from the backend API
 from langflow.services.database.models.user.crud import get_user_by_id
@@ -29,65 +28,6 @@ if TYPE_CHECKING:
     from langchain_core.tools import StructuredTool
 
     from langflow.inputs.inputs import InputTypes
-    from langflow.services.cache.base import CacheService
-
-
-def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
-    """If any key looks nested (contains a dot or "[index]"), rebuild the.
-
-    full nested structure; otherwise return flat as is.
-    """
-    # Quick check: do we have any nested keys?
-    if not any(re.search(r"\.|\[\d+\]", key) for key in flat):
-        return flat
-
-    # Otherwise, unflatten into dicts/lists
-    nested: dict[str, Any] = {}
-    array_re = re.compile(r"^(.+)\[(\d+)\]$")
-
-    for key, val in flat.items():
-        parts = key.split(".")
-        cur = nested
-        for i, part in enumerate(parts):
-            m = array_re.match(part)
-            # Array segment?
-            if m:
-                name, idx = m.group(1), int(m.group(2))
-                lst = cur.setdefault(name, [])
-                # Ensure list is big enough
-                while len(lst) <= idx:
-                    lst.append({})
-                if i == len(parts) - 1:
-                    lst[idx] = val
-                else:
-                    cur = lst[idx]
-            # Normal object key
-            elif i == len(parts) - 1:
-                cur[part] = val
-            else:
-                cur = cur.setdefault(part, {})
-
-    return nested
-
-
-def safe_cache_get(cache: CacheService, key, default=None):
-    """Safely get a value from cache, handling CacheMiss objects."""
-    try:
-        value = cache.get(key)
-        if isinstance(value, CacheMiss):
-            return default
-    except (AttributeError, KeyError, TypeError):
-        return default
-    else:
-        return value
-
-
-def safe_cache_set(cache: CacheService, key, value):
-    """Safely set a value in cache, handling potential errors."""
-    try:
-        cache.set(key, value)
-    except (AttributeError, TypeError) as e:
-        logger.warning(f"Failed to set cache key '{key}': {e}")
 
 
 class MCPToolsComponent(ComponentWithCache):
