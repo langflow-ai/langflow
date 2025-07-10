@@ -1,16 +1,16 @@
 ---
-title: Publish flows
+title: Share flows
 slug: /concepts-publish
 ---
+
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import ChatWidget from '@site/src/components/ChatWidget';
 
 Langflow provides several ways to publish and integrate your flows into external applications. Whether you want to expose your flow as an API endpoint, embed it as a chat widget in your website, or share it as a public playground, this guide covers the options available for making your flows accessible to users.
 
 ## API access
 
-The **API access** pane presents code templates for integrating your flow into external applications.
+Langflow provides code snippets to help you get started with the Langflow API.
 
 As of Langflow version 1.5, all API requests require authentication with a Langflow API key, even if `AUTO_LOGIN` is set to `True`.
 For more information, see [API keys](/configuration-api-keys).
@@ -22,68 +22,57 @@ export LANGFLOW_API_KEY="sk..."
 
 ![API pane](/img/api-pane.png)
 
-<Tabs>
+For more information, see [Run your flows from external applications](/get-started-quickstart#run-your-flows-from-external-applications).
 
-<TabItem value="Python" label="Python">
+### Input schema
 
-The **Python** tab displays code to interact with your flow using the Python `requests` library.
+Tweaks are added to the `payload` of requests to Langflow's `/run` endpoint to temporarily change component parameters within your flow.
+They don't modify the underlying flow configuration or persist between runs.
+To assist with formatting, you can define tweaks in Langflow's **Input Schema** pane before copying the code snippet.
 
-1. Copy and paste the code into a Python script.
-2. Run the script.
+For more information, see [Use tweaks to apply temporary overrides to a flow run](/get-started-quickstart#use-tweaks-to-apply-temporary-overrides-to-a-flow-run).
 
-```python
-python3 python-test-script.py --message="tell me about something interesting"
-```
+Additionally, you can re-name your flow's API endpoint from the default UUID to a more memorable and user-friendly name.
 
-The response content depends on your flow. Make sure the endpoint returns a successful response.
+To set a custom endpoint name:
+1. In the **Input Schema** pane, locate the **Endpoint Name** field.
+2. Enter a name using only letters, numbers, hyphens, and underscores.
+The endpoint name is automatically saved with your flow.
 
-</TabItem>
+## Export
 
-<TabItem value="JavaScript" label="JavaScript" default>
+**Export** a flow to download it as a JSON file to your local machine.
 
-The **JavaScript API** tab displays code to interact with your flow in JavaScript.
+1. To **Export** your flow, in the **Playground**, click **Share**, and then click **Export**.
+2. To save your API keys with the flow, select **Save with my API keys**.
+Your flow is saved with any Global variables included.
 
-1. Copy and paste the code into a JavaScript file.
-2. Run the script.
+:::important
+If your key is saved as a Global variable, only the global variable you created to contain the value is saved. If your key value is manually entered into a component field, the actual key value is saved in the JSON file.
+:::
 
-```text
-node test-script.js "tell me about something interesting"
-```
+When you share your flow file with another user who has the same global variables populated, the flow runs without requiring keys to be added again.
 
-The response content depends on your flow. Make sure the endpoint returns a successful response.
+The `FLOW_NAME.json` file is downloaded to your local machine.
 
-</TabItem>
-<TabItem value="curl" label="curl" default>
+You can then **Import** the downloaded flow into another Langflow instance.
 
-The **cURL** tab displays sample code for posting a query to your flow.
+## MCP server
 
-Copy the code and run it to post a query to your flow and get the result.
+**MCP server** exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use to take actions.
 
-The response content depends on your flow. Make sure the endpoint returns a successful response.
+For more information, see [MCP server](/mcp-server).
 
-</TabItem>
-</Tabs>
-
-### Temporary overrides
-
-The **Temporary overrides** tab displays the available parameters for your flow.
-Modifying the parameters changes the code parameters across all windows.
-For example, changing the **Chat Input** component's `input_value` changes that value across all API calls to the `/run` endpoint of this flow.
-
-### Send files to your flow with the API
-
-For information on sending files to the Langflow API, see [Files endpoint](/api-files).
-
-## Shareable playground
-
-The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/$FLOW_ID` endpoint.
-
-You can share this endpoint publicly using a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
-
-If you're using **Datastax Langflow**, you can share the URL with any users within your **Organization**.
+For information about using Langflow as an *MCP client*, see [MCP client](/mcp-client).
 
 ## Embed into site
 
 The **Embed into site** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
 
 For more information, see [Embedded chat widget](/embedded-chat-widget).
+
+## Shareable playground
+
+The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/$FLOW_ID` endpoint.
+
+You can share this endpoint publicly using a sharing platform like [ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).

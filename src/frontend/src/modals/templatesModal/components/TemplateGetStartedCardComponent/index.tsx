@@ -42,7 +42,7 @@ export default function TemplateGetStartedCardComponent({
 
   return flow ? (
     <div
-      className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring"
+      className="group relative flex h-full min-h-[200px] w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring md:min-h-[250px]"
       tabIndex={1}
       onKeyDown={handleKeyDown}
       onClick={handleClick}

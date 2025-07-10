@@ -153,53 +153,53 @@ The output does not appear in the **Playground**.
 
 1. To use the **Chat Input** and **Chat Output** components in a flow, connect them to components that accept or send the [Message](/concepts-objects#message-object) type.
 
-For this example, connect a **Chat Input** component to an **OpenAI** model component's **Input** port, and then connect the **OpenAI** model component's **Message** port to the **Chat Output** component.
+    For this example, connect a **Chat Input** component to an **OpenAI** model component's **Input** port, and then connect the **OpenAI** model component's **Message** port to the **Chat Output** component.
 
 2. In the **OpenAI** model component, in the **OpenAI API Key** field, add your **OpenAI API key**.
 
-The flow looks like this:
+    The flow looks like this:
 
-![Chat input and output components connected to an OpenAI model](/img/component-chat-io.png)
+    ![Chat input and output components connected to an OpenAI model](/img/component-chat-io.png)
 
 3. To send a message to your flow, open the **Playground**, and then enter a message.
-The **OpenAI** model component responds.
-Optionally, in the **OpenAI** model component, enter a **System Message** to control the model's response.
-4. In the Langflow UI, click your flow name, and then click **Logs**.
-The **Logs** pane opens.
-Here, you can inspect your component logs.
-![Logs pane](/img/logs.png)
+    The **OpenAI** model component responds.
+    Optionally, in the **OpenAI** model component, enter a **System Message** to control the model's response.
+4. In the Langflow UI, click **Logs**.
+    The **Logs** pane opens.
+    Here, you can inspect your component logs.
+    ![Logs pane](/img/logs.png)
 
 5. Your first message was sent by the **Chat Input** component to the **OpenAI** model component.
-Click **Outputs** to view the sent message:
-```text
-  "messages": [
-    {
-      "message": "What's the recommended way to install Docker on Mac M1?",
-      "sender": "User",
-      "sender_name": "User",
-      "session_id": "Session Apr 21, 17:37:04",
-      "stream_url": null,
-      "component_id": "ChatInput-4WKag",
-      "files": [],
-      "type": "text"
-    }
-  ],
-```
+    Click **Outputs** to view the sent message:
+    ```text
+      "messages": [
+        {
+          "message": "What's the recommended way to install Docker on Mac M1?",
+          "sender": "User",
+          "sender_name": "User",
+          "session_id": "Session Apr 21, 17:37:04",
+          "stream_url": null,
+          "component_id": "ChatInput-4WKag",
+          "files": [],
+          "type": "text"
+        }
+      ],
+    ```
 6. Your second message was sent by the **OpenAI** model component to the **Chat Output** component.
-This is the raw text output of the model's response.
-The **Chat Output** component accepts this text as input and presents it as a formatted message.
-Click **Outputs** to view the sent message:
-```text
-  "outputs":
-    "text_output":
-      "message": "To install Docker on a Mac with an M1 chip, you should use Docker Desktop for Mac, which is optimized for Apple Silicon. Here's a step-by-step guide to installing Docker on your M1 Mac:\n\n1.
-      ...
-      "type": "text"
-```
+    This is the raw text output of the model's response.
+    The **Chat Output** component accepts this text as input and presents it as a formatted message.
+    Click **Outputs** to view the sent message:
+    ```text
+      "outputs":
+        "text_output":
+          "message": "To install Docker on a Mac with an M1 chip, you should use Docker Desktop for Mac, which is optimized for Apple Silicon. Here's a step-by-step guide to installing Docker on your M1 Mac:\n\n1.
+          ...
+          "type": "text"
+    ```
 
-:::tip
-Optionally, to view the outputs of each component in the flow, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
-:::
+    :::tip
+    Optionally, to view the outputs of each component in the flow, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output**.
+    :::
 
 ### Send chat messages with the API
 
@@ -208,6 +208,7 @@ To send the same example messages programmatically to your Langflow server, do t
 
 1. To get your Langflow endpoint, click **Share**, and then click **API access**.
 2. Copy the command from the **cURL** tab, and then paste it in your terminal.
+
 The values for `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` are automatically completed with values from your Langflow deployment.
 If your values are different, you must replace them.
 ```text
@@ -221,11 +222,13 @@ curl --request POST \
   "input_type": "chat"
 }'
 ```
+
 3. Modify `input_value` so it contains the question, `What's the recommended way to install Docker on Mac M1?`.
 
-Note the `output_type` and `input_type` parameters that are passed with the message. The `chat` type provides additional configuration options, and the messages appear in the **Playground**. The `text` type returns only text strings, and does not appear in the **Playground**.
+    Note the `output_type` and `input_type` parameters that are passed with the message. The `chat` type provides additional configuration options, and the messages appear in the **Playground**. The `text` type returns only text strings, and does not appear in the **Playground**.
 
 4. Add a custom `session_id` to the message's `data` object.
+
 ```text
 curl --request POST \
   --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
