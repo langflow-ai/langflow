@@ -23,6 +23,11 @@ from langflow.services.deps import get_settings_service
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
 
+# HTTP status codes used in validation
+HTTP_NOT_FOUND = 404
+HTTP_BAD_REQUEST = 400
+HTTP_INTERNAL_SERVER_ERROR = 500
+
 
 def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
     """Sanitize a name for MCP usage by removing emojis, diacritics, and special characters.
@@ -391,19 +396,38 @@ class MCPSessionManager:
                 # Break down the health check to understand why cleanup is triggered
                 task_not_done = not task.done()
 
+                # Additional check for stream health
+                stream_is_healthy = True
+                try:
+                    # Check if the session's write stream is still open
+                    if hasattr(session, "_write_stream") and hasattr(session._write_stream, "_closed"):
+                        stream_is_healthy = not session._write_stream._closed
+                    elif hasattr(session, "_write_stream") and hasattr(session._write_stream, "_state"):
+                        # Check anyio stream state
+                        stream_is_healthy = session._write_stream._state.open_send_channels > 0
+                except (AttributeError, TypeError):
+                    # If we can't check stream health, assume it's unhealthy
+                    stream_is_healthy = False
+
                 logger.debug(f"Session health check for context_id {context_id}:")
                 logger.debug(f"  - task_not_done: {task_not_done}")
+                logger.debug(f"  - stream_is_healthy: {stream_is_healthy}")
 
-                # For MCP ClientSession, we rely on the background task being alive
-                session_is_healthy = task_not_done
+                # For MCP ClientSession, we need both task and stream to be healthy
+                session_is_healthy = task_not_done and stream_is_healthy
 
                 logger.debug(f"  - session_is_healthy: {session_is_healthy}")
 
                 if session_is_healthy:
                     logger.debug(f"Session for context_id {context_id} is healthy, reusing")
                     return session
-                msg = f"Session for context_id {context_id} failed health check: background task is done"
-                logger.info(msg)
+
+                if not task_not_done:
+                    msg = f"Session for context_id {context_id} failed health check: background task is done"
+                    logger.info(msg)
+                elif not stream_is_healthy:
+                    msg = f"Session for context_id {context_id} failed health check: stream is closed"
+                    logger.info(msg)
 
             except Exception as e:  # noqa: BLE001
                 msg = f"Session for context_id {context_id} is dead due to exception: {e}"
@@ -652,20 +676,59 @@ class MCPStdioClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_{param_hash}"
 
-        try:
-            # Get or create persistent session
-            session = await self._get_or_create_session()
-            return await session.call_tool(tool_name, arguments=arguments)
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                # Get or create persistent session
+                session = await self._get_or_create_session()
+                return await session.call_tool(tool_name, arguments=arguments)
 
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            msg = f"Failed to run tool '{tool_name}': {e}"
-            logger.error(msg)
-            # Clean up failed session from cache
-            if self._session_context and self._component_cache:
-                cache_key = f"mcp_session_stdio_{self._session_context}"
-                self._component_cache.delete(cache_key)
-            self._connected = False
-            raise ValueError(msg) from e
+            except Exception as e:
+                # Import ClosedResourceError for detection
+                try:
+                    from anyio import ClosedResourceError
+
+                    is_closed_resource_error = isinstance(e, ClosedResourceError)
+                except ImportError:
+                    is_closed_resource_error = "ClosedResourceError" in str(type(e))
+
+                # If it's a ClosedResourceError and we have retries left, clean up and retry
+                if is_closed_resource_error and attempt < max_retries - 1:
+                    logger.warning(f"MCP session closed for tool '{tool_name}', retrying with fresh session...")
+                    # Clean up the dead session
+                    if self._session_context:
+                        session_manager = self._get_session_manager()
+                        await session_manager._cleanup_session(self._session_context)
+                    continue
+
+                # For other errors or no retries left, handle as before
+                if isinstance(e, ConnectionError | TimeoutError | OSError | ValueError) or is_closed_resource_error:
+                    msg = f"Failed to run tool '{tool_name}': {e}"
+                    logger.error(msg)
+                    # Clean up failed session from cache
+                    if self._session_context and self._component_cache:
+                        cache_key = f"mcp_session_stdio_{self._session_context}"
+                        self._component_cache.delete(cache_key)
+                    self._connected = False
+                    raise ValueError(msg) from e
+                # Re-raise unexpected errors
+                raise
+
+        # This should never be reached due to the exception handling above
+        msg = f"Failed to run tool '{tool_name}': Maximum retries exceeded"
+        raise ValueError(msg)
+
+    async def disconnect(self):
+        """Properly close the connection and clean up resources."""
+        # Clean up session using session manager
+        if self._session_context:
+            session_manager = self._get_session_manager()
+            await session_manager._cleanup_session(self._session_context)
+
+        self.session = None
+        self._connection_params = None
+        self._connected = False
+        self._session_context = None
 
     async def __aenter__(self):
         return self
@@ -707,13 +770,32 @@ class MCPSseClient:
 
             async with httpx.AsyncClient() as client:
                 try:
-                    # First try a HEAD request to check if server is reachable
-                    response = await client.head(url, timeout=5.0)
-                    if response.status_code >= HTTP_ERROR_STATUS_CODE:
-                        return False, f"Server returned error status: {response.status_code}"
+                    # For SSE endpoints, try a GET request with short timeout
+                    # Many SSE servers don't support HEAD requests and return 404
+                    response = await client.get(url, timeout=2.0, headers={"Accept": "text/event-stream"})
+
+                    # For SSE, we expect the server to either:
+                    # 1. Start streaming (200)
+                    # 2. Return 404 if HEAD/GET without proper SSE handshake is not supported
+                    # 3. Return other status codes that we should handle gracefully
+
+                    # Don't fail on 404 since many SSE endpoints return this for non-SSE requests
+                    if response.status_code == HTTP_NOT_FOUND:
+                        # This is likely an SSE endpoint that doesn't support regular GET
+                        # Let the actual SSE connection attempt handle this
+                        return True, ""
+
+                    # Fail on client errors except 404, but allow server errors and redirects
+                    if (
+                        HTTP_BAD_REQUEST <= response.status_code < HTTP_INTERNAL_SERVER_ERROR
+                        and response.status_code != HTTP_NOT_FOUND
+                    ):
+                        return False, f"Server returned client error status: {response.status_code}"
 
                 except httpx.TimeoutException:
-                    return False, "Connection timed out. Server may be down or unreachable."
+                    # Timeout on a short request might indicate the server is trying to stream
+                    # This is actually expected behavior for SSE endpoints
+                    return True, ""
                 except httpx.NetworkError:
                     return False, "Network error. Could not reach the server."
                 else:
@@ -728,9 +810,11 @@ class MCPSseClient:
             return url
         try:
             async with httpx.AsyncClient(follow_redirects=False) as client:
-                response = await client.request("HEAD", url)
+                # Use GET with SSE headers instead of HEAD since many SSE servers don't support HEAD
+                response = await client.get(url, timeout=2.0, headers={"Accept": "text/event-stream"})
                 if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
                     return response.headers.get("Location", url)
+                # Don't treat 404 as an error here - let the main connection handle it
         except (httpx.RequestError, httpx.HTTPError) as e:
             logger.warning(f"Error checking redirects: {e}")
         return url
@@ -834,20 +918,47 @@ class MCPSseClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_sse_{param_hash}"
 
-        try:
-            # Get or create persistent session
-            session = await self._get_or_create_session()
-            return await session.call_tool(tool_name, arguments=arguments)
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                # Get or create persistent session
+                session = await self._get_or_create_session()
+                return await session.call_tool(tool_name, arguments=arguments)
 
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            msg = f"Failed to run tool '{tool_name}': {e}"
-            logger.error(msg)
-            # Clean up failed session from cache
-            if self._session_context and self._component_cache:
-                cache_key = f"mcp_session_sse_{self._session_context}"
-                self._component_cache.delete(cache_key)
-            self._connected = False
-            raise ValueError(msg) from e
+            except Exception as e:
+                # Import ClosedResourceError for detection
+                try:
+                    from anyio import ClosedResourceError
+
+                    is_closed_resource_error = isinstance(e, ClosedResourceError)
+                except ImportError:
+                    is_closed_resource_error = "ClosedResourceError" in str(type(e))
+
+                # If it's a ClosedResourceError and we have retries left, clean up and retry
+                if is_closed_resource_error and attempt < max_retries - 1:
+                    logger.warning(f"MCP session closed for tool '{tool_name}', retrying with fresh session...")
+                    # Clean up the dead session
+                    if self._session_context:
+                        session_manager = self._get_session_manager()
+                        await session_manager._cleanup_session(self._session_context)
+                    continue
+
+                # For other errors or no retries left, handle as before
+                if isinstance(e, ConnectionError | TimeoutError | OSError | ValueError) or is_closed_resource_error:
+                    msg = f"Failed to run tool '{tool_name}': {e}"
+                    logger.error(msg)
+                    # Clean up failed session from cache
+                    if self._session_context and self._component_cache:
+                        cache_key = f"mcp_session_sse_{self._session_context}"
+                        self._component_cache.delete(cache_key)
+                    self._connected = False
+                    raise ValueError(msg) from e
+                # Re-raise unexpected errors
+                raise
+
+        # This should never be reached due to the exception handling above
+        msg = f"Failed to run tool '{tool_name}': Maximum retries exceeded"
+        raise ValueError(msg)
 
     async def __aenter__(self):
         return self
