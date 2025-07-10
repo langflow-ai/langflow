@@ -1474,7 +1474,7 @@ class Component(CustomComponent):
             and not (self._vertex.is_output or self._vertex.is_input)
             and not self.is_connected_to_chat_output()
             and not isinstance(message, ErrorMessage)
-        ) or not self._is_database_available()
+        )
 
     async def send_message(self, message: Message, id_: str | None = None):
         if self._should_skip_message(message):
@@ -1486,25 +1486,32 @@ class Component(CustomComponent):
             message.session_id = session_id
         if hasattr(message, "flow_id") and isinstance(message.flow_id, str):
             message.flow_id = UUID(message.flow_id)
-        stored_message = await self._store_message(message)
+        if self._is_database_available():
+            stored_message = await self._store_message(message)
+            self._stored_message_id = stored_message.id
+        else:
+            stored_message = message
 
-        self._stored_message_id = stored_message.id
         try:
             complete_message = ""
             if (
-                self._should_stream_message(stored_message, message)
+                self._should_stream_message(message)
                 and message is not None
                 and isinstance(message.text, AsyncIterator | Iterator)
             ):
                 complete_message = await self._stream_message(message.text, stored_message)
                 stored_message.text = complete_message
-                stored_message = await self._update_stored_message(stored_message)
+                if self._is_database_available():
+                    stored_message = await self._update_stored_message(stored_message)
+                else:
+                    stored_message = message
             else:
                 # Only send message event for non-streaming messages
                 await self._send_message_event(stored_message, id_=id_)
         except Exception:
             # remove the message from the database
-            await delete_message(stored_message.id)
+            if self._is_database_available():
+                await delete_message(stored_message.id)
             raise
         self.status = stored_message
         return stored_message
@@ -1546,12 +1553,9 @@ class Component(CustomComponent):
 
             await asyncio.to_thread(_send_event)
 
-    def _should_stream_message(self, stored_message: Message, original_message: Message) -> bool:
+    def _should_stream_message(self, original_message: Message) -> bool:
         return bool(
-            hasattr(self, "_event_manager")
-            and self._event_manager
-            and stored_message.id
-            and not isinstance(original_message.text, str)
+            hasattr(self, "_event_manager") and self._event_manager and not isinstance(original_message.text, str)
         )
 
     async def _update_stored_message(self, message: Message) -> Message:
