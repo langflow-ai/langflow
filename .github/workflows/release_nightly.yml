@@ -235,15 +235,16 @@ jobs:
       main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 
-  call_docker_build_main_all:
-    name: Call Docker Build Workflow for langflow-all
-    if: always() && ${{ inputs.build_docker_main == 'true' }}
-    needs: [release-nightly-main]
-    uses: ./.github/workflows/docker-build.yml
-    with:
-      release_type: nightly-main-all
-      main_version: ${{ inputs.nightly_tag_main }}
-    secrets: inherit
+  # TODO: Uncomment this when our runner can fit the builds that contain pytorch (and other large dependencies)
+  # call_docker_build_main_all:
+  #   name: Call Docker Build Workflow for langflow-all
+  #   if: always() && ${{ inputs.build_docker_main == 'true' }}
+  #   needs: [release-nightly-main]
+  #   uses: ./.github/workflows/docker-build.yml
+  #   with:
+  #     release_type: nightly-main-all
+  #     main_version: ${{ inputs.nightly_tag_main }}
+  #   secrets: inherit
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint

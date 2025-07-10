@@ -7,6 +7,14 @@ module.exports = {
       items: [
         "Get-Started/get-started-installation",
         "Get-Started/get-started-quickstart",
+        {
+          type: "category",
+          label: "Tutorials",
+          items: [
+            "Tutorials/chat-with-rag",
+            "Tutorials/chat-with-files",
+          ],
+        },
       ],
     },
     {
@@ -30,7 +38,6 @@ module.exports = {
       items: [
         "Concepts/concepts-overview",
         "Concepts/concepts-playground",
-        "Concepts/concepts-components",
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
@@ -43,6 +50,7 @@ module.exports = {
       type: "category",
       label: "Components",
       items: [
+        "Concepts/concepts-components",
         "Components/components-agents",
         "Components/components-bundles",
         "Components/components-custom-components",
@@ -153,6 +161,11 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-docker",
           label: "Docker"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-public-server",
+          label: "Deploy a public Langflow server"
         },
         {
           type: "doc",
@@ -289,6 +302,11 @@ module.exports = {
           label: "Composio",
         },
         {
+          type: "doc",
+          id: "Integrations/Docling/integrations-docling",
+          label: "Docling",
+        },
+        {
           type: 'category',
           label: 'Google',
           items: [
@@ -347,12 +365,12 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Changelog",
+      label: "Release notes",
       items: [
         {
-          type: "link",
-          label: "Changelog",
-          href: "https://github.com/langflow-ai/langflow/releases/latest",
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
         },
       ],
     },

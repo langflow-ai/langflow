@@ -13,6 +13,35 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
 - [A running Langflow instance](/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/api-keys)
+- [A Langflow API key](/configuration-api-keys)
+
+## Create a Langflow API key
+
+A [Langflow API key](/configuration-api-keys) is a user-specific token you can use with Langflow.
+
+To create a Langflow API key, do the following:
+
+1. In Langflow, click your user icon, and then select **Settings**.
+2. Click **Langflow API Keys**, and then click <Icon name="Plus" aria-hidden="true"/> **Add New**.
+3. Name your key, and then click **Create API Key**.
+4. Copy the API key and store it in a secure location.
+5. Include your `LANGFLOW_API_KEY` in requests like this:
+    ```text
+    curl --request POST \
+     --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
+     --header 'Content-Type: application/json' \
+     --header 'x-api-key: LANGFLOW_API_KEY' \
+     --data '{
+       "output_type": "chat",
+       "input_type": "chat",
+       "input_value": "Hello"
+     }'
+    ```
+    The API access pane's code snippets include a script that looks for a `LANGFLOW_API_KEY` environment variable set in your terminal session.
+    Set this variable in your terminal so you can copy and paste the commands.
+    ```bash
+    export LANGFLOW_API_KEY="sk..."
+    ```
 
 ## Run the Simple Agent template flow
 
@@ -67,47 +96,48 @@ Langflow provides code snippets to help you get started with the Langflow API.
 1. To open the **API access pane**, in the **Playground**, click **Share**, and then click **API access**.
 
     The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data.
-    The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow.
+    The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow, and a script to include your `LANGFLOW_API_KEY` if you've set it as an environment variable in your terminal session.
     Replace these values if you're using the code for a different server or flow.
-    The default Langflow server address is `http://localhost:7860`
+    The default Langflow server address is `http://localhost:7860`.
 
     <Tabs groupId="Language">
       <TabItem value="Python" label="Python" default>
-    
+
     ```python
     import requests
-    
+
     url = "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID"  # The complete API endpoint URL for this flow
-    
+
     # Request payload configuration
     payload = {
         "output_type": "chat",
         "input_type": "chat",
         "input_value": "hello world!"
     }
-    
+
     # Request headers
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "x-api-key": "$LANGFLOW_API_KEY"
     }
-    
+
     try:
         # Send API request
         response = requests.request("POST", url, json=payload, headers=headers)
         response.raise_for_status()  # Raise exception for bad status codes
-    
+
         # Print response
         print(response.text)
-    
+
     except requests.exceptions.RequestException as e:
         print(f"Error making API request: {e}")
     except ValueError as e:
         print(f"Error parsing response: {e}")
     ```
-    
+
       </TabItem>
       <TabItem value="JavaScript" label="JavaScript">
-    
+
     ```js
     const payload = {
         "output_type": "chat",
@@ -115,40 +145,42 @@ Langflow provides code snippets to help you get started with the Langflow API.
         "input_value": "hello world!",
         "session_id": "user_1"
     };
-    
+
     const options = {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'x-api-key': 'LANGFLOW_API_KEY'
         },
         body: JSON.stringify(payload)
     };
-    
+
     fetch('http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID', options)
         .then(response => response.json())
         .then(response => console.log(response))
         .catch(err => console.error(err));
     ```
-    
+
       </TabItem>
-    
+
       <TabItem value="curl" label="curl">
-    
-    ```text
+
+    ```bash
     curl --request POST \
          --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false' \
          --header 'Content-Type: application/json' \
+         --header "x-api-key: LANGFLOW_API_KEY" \
          --data '{
-    		           "output_type": "chat",
-    		           "input_type": "chat",
-    		           "input_value": "hello world!"
-    		         }'
-    
+          "output_type": "chat",
+          "input_type": "chat",
+          "input_value": "hello world!"
+          }'
+
     # A 200 response confirms the call succeeded.
     ```
-    
+
       </TabItem>
-    
+
     </Tabs>
 
 2. Copy the snippet, paste it in a script file, and then run the script to send the request.
@@ -339,50 +371,53 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
 
     <Tabs groupId="Languages">
       <TabItem value="Python" label="Python" default>
-    
+
     ```python
     import requests
     import json
-    
+
     url = "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID"
-    
+
     def ask_agent(question):
         payload = {
             "output_type": "chat",
             "input_type": "chat",
             "input_value": question,
         }
-    
-        headers = {"Content-Type": "application/json"}
-    
+
+        headers = {
+        "Content-Type": "application/json",
+        "x-api-key": "LANGFLOW_API_KEY"
+        }
+
         try:
             response = requests.post(url, json=payload, headers=headers)
             response.raise_for_status()
-    
+
             # Get the response message
             data = response.json()
             message = data["outputs"][0]["outputs"][0]["outputs"]["message"]["message"]
             return message
-    
+
         except Exception as e:
             return f"Error: {str(e)}"
-    
+
     def extract_message(data):
         try:
             return data["outputs"][0]["outputs"][0]["outputs"]["message"]["message"]
         except (KeyError, IndexError):
             return None
-    
+
     # Store the previous answer from ask_agent response
     previous_answer = None
-    
+
     # the terminal chat
     while True:
         # Get user input
         print("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?')")
         print("Type 'quit' to exit or 'compare' to see the previous answer")
         user_question = input("Your question: ")
-        
+
         if user_question.lower() == 'quit':
             break
         elif user_question.lower() == 'compare':
@@ -391,30 +426,30 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
             else:
                 print("\nNo previous answer to compare with!")
             continue
-        
+
         # Get and display the answer
         result = ask_agent(user_question)
-        print(f"\nAgent's answer: {result}")    
+        print(f"\nAgent's answer: {result}")
         # Store the answer for comparison
         previous_answer = result
     ```
-    
+
       </TabItem>
       <TabItem value="JavaScript" label="JavaScript">
-    
+
     ```js
     const readline = require('readline');
-    
+
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
     });
-    
+
     const url = 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID';
-    
+
     // Store the previous answer from askAgent response
     let previousAnswer = null;
-    
+
     // the agent flow, with question as input_value
     async function askAgent(question) {
         const payload = {
@@ -422,19 +457,20 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
             "input_type": "chat",
             "input_value": question
         };
-    
+
         const options = {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'x-api-key': 'LANGFLOW_API_KEY'
             },
             body: JSON.stringify(payload)
         };
-    
+
         try {
             const response = await fetch(url, options);
             const data = await response.json();
-    
+
             // Extract the message from the nested response
             const message = data.outputs[0].outputs[0].outputs.message.message;
             return message;
@@ -442,19 +478,19 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
             return `Error: ${error.message}`;
         }
     }
-    
+
     // the terminal chat
     async function startChat() {
         console.log("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?'");
         console.log("Type 'quit' to exit or 'compare' to see the previous answer");
-    
+
         const askQuestion = () => {
             rl.question('\nYour question: ', async (userQuestion) => {
                 if (userQuestion.toLowerCase() === 'quit') {
                     rl.close();
                     return;
                 }
-    
+
                 if (userQuestion.toLowerCase() === 'compare') {
                     if (previousAnswer) {
                         console.log(`\nPrevious answer was: ${previousAnswer}`);
@@ -464,20 +500,20 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
                     askQuestion();
                     return;
                 }
-    
+
                 const result = await askAgent(userQuestion);
                 console.log(`\nAgent's answer: ${result}`);
                 previousAnswer = result;
                 askQuestion();
             });
         };
-    
+
         askQuestion();
     }
-    
+
     startChat();
     ```
-    
+
       </TabItem>
     </Tabs>
 

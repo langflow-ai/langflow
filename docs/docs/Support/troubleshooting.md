@@ -9,10 +9,10 @@ This page provides troubleshooting advice for issues you might encounter when us
 
 As Langflow development continues, components are often recategorized or deprecated for better alignment or to prepare for new components.
 
-If a component appears to be missing from the expected location on the component sidebar, try the following:
+If a component appears to be missing from the expected location on the **Components** menu, try the following:
 
 * Search for the component or check other component categories, including [Bundles](/components-bundle-components).
-* [Expose legacy components](/concepts-components#components-sidebar), which are hidden by default.
+* [Expose legacy components](/concepts-components#component-menus), which are hidden by default.
 * Check the [Changelog](https://github.com/langflow-ai/langflow/releases/latest) for component changes in recent releases.
 * Make sure the component isn't already present in your flow if it is a single-use component.
 
@@ -33,10 +33,6 @@ If you get an API key error when running a flow, try the following:
 ## Langflow installation issues
 
 The following issues can occur when installing Langflow.
-
-### C++ build tools required for Langflow Desktop on Windows
-
-Microsoft Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or [install Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
 
 ### Langflow installation freezes at pip dependency resolution
 
@@ -75,6 +71,10 @@ sudo apt-get install gcc
 ### Installation failure from `webrtcvad` package
 
 If you experience an error from the `webrtcvad` package, run `uv pip install webrtcvad-wheels` in your virtual environment, and then retry the Langflow installation.
+
+### C++ build tools required for Langflow Desktop on Windows
+
+Microsoft Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or [install Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
 
 ## Langflow startup issues
 
@@ -117,6 +117,12 @@ There are two possible reasons for this error:
 Environment variables set in your terminal are not automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
 To set environment variables for Langflow Desktop, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
 
+### Package is not installed
+
+In Langflow OSS, you can follow the error message's instructions to install the missing dependency.
+
+To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
+
 ## Langflow upgrade issues
 
 The following issues can occur when upgrading your Langflow version.
@@ -143,6 +149,22 @@ The cache folder location depends on your OS:
 - **Linux**: `home/<username>/.cache/langflow/`
 - **WSL2 on Windows**: `home/<username>/.cache/langflow/`
 - **macOS**: `/Users/<username>/Library/Caches/langflow/`
+
+## Langflow uninstall issues
+
+The following issues can occur when uninstalling Langflow.
+
+### Dot directory isn't deleted when uninstalling Langflow Desktop on macOS
+
+On macOS, uninstalling Langflow Desktop deletes the `.app` file but doesn't delete files in `~/.langflow`, which includes files generated during usage like cache and settings.
+
+If you reinstall Langflow Desktop, it starts with the existing data from the previous installation.
+
+To fully remove a Langflow Desktop macOS installation, you must also delete `~/.langflow`:
+
+    ```bash
+    rm -rf .langflow
+    ```
 
 ## MCP server issues
 

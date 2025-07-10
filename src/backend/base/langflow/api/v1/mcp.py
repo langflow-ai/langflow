@@ -3,13 +3,13 @@ import base64
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from functools import wraps
-from typing import Annotated, Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import uuid4
 
 import pydantic
 from anyio import BrokenResourceError
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from loguru import logger
 from mcp import types
@@ -17,13 +17,13 @@ from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
+from langflow.api.utils import CurrentActiveMCPUser
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
-from langflow.base.mcp.util import get_flow_snake_case
+from langflow.base.mcp.util import get_flow_snake_case, sanitize_mcp_name
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
-from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
@@ -186,7 +186,7 @@ async def handle_list_tools():
                 if flow.user_id is None:
                     continue
 
-                base_name = "_".join(flow.name.lower().split())
+                base_name = sanitize_mcp_name(flow.name)
                 name = base_name[:MAX_MCP_TOOL_NAME_LENGTH]
                 if name in existing_names:
                     i = 1
@@ -251,10 +251,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
             input_value=processed_inputs.get("input_value", ""), session_id=conversation_id
         )
 
-        async def send_progress_updates():
-            if not (mcp_config.enable_progress_notifications and server.request_context.meta.progressToken):
-                return
-
+        async def send_progress_updates(progress_token):
             try:
                 progress = 0.0
                 while True:
@@ -274,7 +271,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
         try:
             progress_task = None
             if mcp_config.enable_progress_notifications and server.request_context.meta.progressToken:
-                progress_task = asyncio.create_task(send_progress_updates())
+                progress_task = asyncio.create_task(send_progress_updates(server.request_context.meta.progressToken))
 
             try:
                 try:
@@ -284,20 +281,25 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                         stream=False,
                         api_key_user=current_user,
                     )
-                    # Process all outputs and messages
+                    # Process all outputs and messages, ensuring no duplicates
+                    processed_texts = set()
+
+                    def add_result(text: str):
+                        if text not in processed_texts:
+                            processed_texts.add(text)
+                            collected_results.append(types.TextContent(type="text", text=text))
+
                     for run_output in result.outputs:
                         for component_output in run_output.outputs:
                             # Handle messages
                             for msg in component_output.messages or []:
-                                text_content = types.TextContent(type="text", text=msg.message)
-                                collected_results.append(text_content)
+                                add_result(msg.message)
                             # Handle results
                             for value in (component_output.results or {}).values():
                                 if isinstance(value, Message):
-                                    text_content = types.TextContent(type="text", text=value.get_text())
-                                    collected_results.append(text_content)
+                                    add_result(value.get_text())
                                 else:
-                                    collected_results.append(types.TextContent(type="text", text=str(value)))
+                                    add_result(str(value))
                 except Exception as e:  # noqa: BLE001
                     error_msg = f"Error Executing the {flow.name} tool. Error: {e!s}"
                     collected_results.append(types.TextContent(type="text", text=error_msg))
@@ -306,9 +308,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
             finally:
                 if progress_task:
                     progress_task.cancel()
-                    await asyncio.wait([progress_task])
-                    if not progress_task.cancelled() and (exc := progress_task.exception()) is not None:
-                        raise exc
+                    await asyncio.gather(progress_task, return_exceptions=True)
 
         except Exception:
             if mcp_config.enable_progress_notifications and (
@@ -345,7 +345,7 @@ async def im_alive():
 
 
 @router.get("/sse", response_class=StreamingResponse)
-async def handle_sse(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
+async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
     msg = f"Starting SSE connection, server name: {server.name}"
     logger.info(msg)
     token = current_user_ctx.set(current_user)

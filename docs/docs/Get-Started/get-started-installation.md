@@ -47,6 +47,8 @@ Langflow can be installed in multiple ways:
   </TabItem>
 </Tabs>
 
+  After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
+
 ### Manage your version of Langflow Desktop
 
 When a new version of Langflow is available, Langflow Desktop displays an upgrade message.
@@ -60,6 +62,10 @@ To manage your version of Langflow Desktop, follow these steps:
   A confirmation pane containing the selected version's changelog appears.
   3. To apply the change, click **Confirm**.
   Langflow desktop restarts to install and activate the new version.
+
+### Manage dependencies in Langflow Desktop
+
+To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
 
 ## Install and run Langflow with Docker {#install-and-run-langflow-docker}
 
@@ -150,6 +156,10 @@ To delete the virtual environment, type `Remove-Item VENV_NAME`.
 It can take a few minutes for Langflow to start.
 
 After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
+
+### Install Langflow from source
+
+To install Langflow from source, see [Install Langflow from source](/contributing-how-to-contribute#install-langflow-from-source).
 
 ### Manage Langflow OSS versions
 

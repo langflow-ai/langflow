@@ -30,7 +30,7 @@ from langflow.utils.constants import (
     MESSAGE_SENDER_NAME_USER,
     MESSAGE_SENDER_USER,
 )
-from langflow.utils.image import create_data_url
+from langflow.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:
     from langflow.schema.dataframe import DataFrame
@@ -206,8 +206,7 @@ class Message(Data):
             if isinstance(file, Image):
                 content_dicts.append(file.to_content_dict())
             else:
-                image_url = create_data_url(file)
-                content_dicts.append({"type": "image_url", "image_url": {"url": image_url}})
+                content_dicts.append(create_image_content_dict(file))
         return content_dicts
 
     def load_lc_prompt(self):
@@ -403,12 +402,18 @@ class ErrorMessage(Message):
         """Format the error reason without markdown."""
         if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
             reason = f"{exception.body.get('message')}\n"
+        elif hasattr(exception, "_message"):
+            reason = f"{exception._message()}\n" if callable(exception._message) else f"{exception._message}\n"
         elif hasattr(exception, "code"):
             reason = f"Code: {exception.code}\n"
         elif hasattr(exception, "args") and exception.args:
             reason = f"{exception.args[0]}\n"
         elif isinstance(exception, ValidationError):
             reason = f"{exception!s}\n"
+        elif hasattr(exception, "detail"):
+            reason = f"{exception.detail}\n"
+        elif hasattr(exception, "message"):
+            reason = f"{exception.message}\n"
         else:
             reason = "An unknown error occurred.\n"
         return reason
