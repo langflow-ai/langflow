@@ -352,12 +352,12 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Changelog",
+      label: "Release notes",
       items: [
         {
-          type: "link",
-          label: "Changelog",
-          href: "https://github.com/langflow-ai/langflow/releases/latest",
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
         },
       ],
     },
@@ -379,11 +379,6 @@ module.exports = {
           type: "doc",
           id: "Support/luna-for-langflow",
           label: "Enterprise support",
-        },
-        {
-          type: "doc",
-          id: "Support/release-notes",
-          label: "Release notes",
         },
       ],
     },
