@@ -7,7 +7,6 @@ import { useDarkStore } from "./stores/darkStore";
 
 export default function App() {
   const dark = useDarkStore((state) => state.dark);
-  let badVar = "single quotes"; // bad formatting
   useEffect(() => {
     if (!dark) {
       document.getElementById("body")!.classList.remove("dark");

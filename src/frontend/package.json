@@ -98,7 +98,8 @@
     "serve": "vite preview",
     "format": "npx prettier --write \"{tests,src}/**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore",
     "check-format": "npx prettier --check \"{tests,src}/**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore",
-    "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
+    "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite",
+    "prepare": "husky"
   },
   "eslintConfig": {
     "extends": [
@@ -119,6 +120,11 @@
     ]
   },
   "proxy": "http://localhost:7860",
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md}": [
+      "npx @biomejs/biome check --write"
+    ]
+  },
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
     "@jest/types": "^30.0.1",
@@ -139,9 +145,11 @@
     "@vitejs/plugin-react-swc": "^3.7.0",
     "autoprefixer": "^10.4.19",
     "eslint": "^9.5.0",
+    "husky": "^9.1.7",
     "jest": "^30.0.3",
     "jest-environment-jsdom": "^30.0.2",
     "jest-junit": "^16.0.0",
+    "lint-staged": "^16.1.2",
     "postcss": "^8.4.38",
     "prettier": "^3.3.2",
     "prettier-plugin-organize-imports": "^3.2.4",
