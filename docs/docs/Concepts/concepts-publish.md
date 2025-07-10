@@ -21,6 +21,7 @@ The **API access** pane presents code templates for integrating your flow into e
 
 As of Langflow version 1.5, all API requests require authentication with a Langflow API key, even if `AUTO_LOGIN` is set to `True`.
 For more information, see [API keys](/configuration-api-keys).
+
 The API access pane’s code snippets include a script that looks for a `LANGFLOW_API_KEY` environment variable set in your terminal session.
 To set this variable in your terminal:
     ```bash
