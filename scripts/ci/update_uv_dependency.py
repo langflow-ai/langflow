@@ -16,8 +16,10 @@ def update_uv_dep(base_version: str) -> None:
     content = pyproject_path.read_text(encoding="utf-8")
 
     # For the main project, update the langflow-base dependency in the UV section
-    # Updated pattern to handle PEP 440 version suffixes (.post, .dev, .a, .b, .rc, etc.)
-    pattern = re.compile(r'(dependencies\s*=\s*\[\s*\n\s*)("langflow-base==[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
+    # Updated pattern to handle PEP 440 version suffixes and both ~= and == version specifiers
+    pattern = re.compile(
+        r'(dependencies\s*=\s*\[\s*\n\s*)("langflow-base(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")'
+    )
     replacement = rf'\1"langflow-base-nightly=={base_version}"'
 
     # Check if the pattern is found
