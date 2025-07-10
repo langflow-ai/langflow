@@ -37,6 +37,7 @@ MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "Groq", "OpenAI"]
 class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
+    documentation: str = "https://docs.langflow.org/agents"
     icon = "bot"
     beta = False
     name = "Agent"
@@ -177,11 +178,15 @@ class AgentComponent(ToolCallingAgentComponent):
             return Data(data={"content": content, "error": "Could not parse as JSON"})
 
     async def get_memory_data(self):
-        return (
+        # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.
+        messages = (
             await MemoryComponent(**self.get_base_args())
             .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
             .retrieve_messages()
         )
+        return [
+            message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
+        ]
 
     def get_llm(self):
         if not isinstance(self.agent_llm, str):
