@@ -9,7 +9,13 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ## Prepare to upgrade
 
-To avoid the impact of potential breaking changes and test new versions, the Langflow team recommends the following:
+:::important
+Whenever possible, the Langflow team recommends installing new Langflow versions in a new virtual environment or VM before upgrading your primary installation.
+This allows you to [import flows](/concepts-flows-import#import-a-flow) from your existing installation and test them in the new version without disrupting your existing installation.
+In the event of breaking changes or bugs, your existing installation is preserved in a stable state.
+:::
+
+To avoid the impact of potential breaking changes and test new versions, the Langflow team recommends the following upgrade process:
 
 1. Recommended: [Export your projects](/api-projects#export-a-project) to create backups of your flows:
 
@@ -24,15 +30,15 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
 2. Install the new version:
 
-   * **Langflow OSS Python package**: Install the new version in a new virtual environment, and then [import your flows](/concepts-flows-import) to test them in the new version.
-   * **Langflow Docker image**: Run the new image in a separate container, and then [import your flows](/concepts-flows-import) to the version of Langflow running in the new container.
-   * **Langflow Desktop**: Upgrade Langflow Desktop, as explained in [Manage your version of Langflow Desktop](/get-started-installation#manage-your-version-of-langflow-desktop). If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
+   * **Langflow OSS Python package**: Install the new version in a new virtual environment. For instructions, see [Install and run the Langflow OSS Python package](/get-started-installation#install-and-run-the-langflow-oss-python-package).
+   * **Langflow Docker image**: Run the new image in a separate container.
+   * **Langflow Desktop**: To upgrade in place, open Langflow Desktop, and then click **Upgrade Available** in the header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
 
-   :::tip
-   If you experience data loss after upgrading Langflow Desktop, see [Unexpected data loss after Langflow Desktop upgrade](/troubleshoot#unexpected-data-loss-after-langflow-desktop-upgrade).
-   :::
+      <!--:::tip
+      If you experience data loss after an in-place upgrade of Langflow Desktop, see [Unexpected data loss after Langflow Desktop upgrade](/troubleshoot#unexpected-data-loss-after-langflow-desktop-upgrade).
+      :::-->
 
-3. Test your flows in the new version, [upgrading components](/concepts-components#component-versions) as needed.
+3. [import your flows](/concepts-flows-import) to test them in the new version, [upgrading components](/concepts-components#component-versions) as needed.
 
     When upgrading components, you can use the **Create backup flow before updating** option if you didn't previously export your flows.
 
