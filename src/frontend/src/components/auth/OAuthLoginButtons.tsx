@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { FaMicrosoft } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 
 interface OAuthLoginButtonsProps {
@@ -50,6 +51,7 @@ export default function OAuthLoginButtons({
             onClick={() => handleOAuthLogin("microsoft")}
             className="w-full"
           >
+            <FaMicrosoft className="mr-2 h-4 w-4" />
             Continue with Microsoft
           </Button>
         )}
