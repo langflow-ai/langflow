@@ -206,5 +206,7 @@ This tutorial uses JavaScript for demonstration purposes.
 
 ## Next steps
 
+For more information on building or extending this vector RAG chat, see the following:
+
 * [Model Context Protocol (MCP) servers](/mcp-server)
 * [Langflow deployment overview](/deployment-overview)
