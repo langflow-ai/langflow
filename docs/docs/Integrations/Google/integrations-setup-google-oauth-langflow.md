@@ -4,6 +4,7 @@ slug: /integrations-setup-google-oauth-langflow
 ---
 
 import TOCInline from '@theme/TOCInline';
+import Icon from "@site/src/components/icon";
 
 Langflow integrates with [Google OAuth](https://developers.google.com/identity/protocols/oauth2) for authenticating the [Gmail loader](/components-data#gmail-loader), [Google Drive loader](components-data#google-drive-loader), and [Google Drive Search](/components-data#google-drive-search) components.
 
@@ -45,7 +46,7 @@ With your OAuth application configured and your credentials JSON file created, f
 4. In the **Scopes** field of the Google Oauth Token component, enter the scope required to access your resources.
 For example, to allow your Langflow application to access a user's Google Drive, the scope is `https://www.googleapis.com/auth/drive`.
 For more information, see the [Google documentation](https://developers.google.com/identity/protocols/oauth2/scopes).
-5. To authenticate your application, in the **Google OAuth Token** component, click **Play**.
+5. To authenticate your application, in the **Google OAuth Token** component, click <Icon name="Play" aria-hidden="True" /> **Run component**.
 A new tab opens in the browser to authenticate your application using your Google Cloud account. You must authenticate the application with the same Google account that created the OAuth credentials.
 
 :::info

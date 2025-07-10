@@ -32,32 +32,32 @@ All of the flows in a project are exposed by default.
 To expose only specific flows and optionally rename them for agentic use, follow these steps:
 
 1. From the Langflow dashboard, select the project that contains the flows you want to serve as tools, and then click the **MCP Server** tab.
-Alternatively, you can quickly access the **MCP Server** tab from within any flow by selecting **Publish > MCP Server**.
+Alternatively, you can quickly access the **MCP Server** tab from within any flow by selecting **Share > MCP Server**.
 
-    The **MCP Server** tab displays a code template that you can use to connect MCP clients to the the project's MCP server.
+    The **Auto install** and **JSON** tabs display options for connecting MCP clients to the the project's MCP server.
 
-    The **Flows/Actions** section lists the flows that are currently being served as tools.
+    The **Flows/Tools** section lists the flows that are currently being served as tools.
 
     ![MCP server projects page](/img/mcp-server.png)
 
-2. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Actions**.
+2. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Tools**.
 
-3. In the **MCP Server Actions** window, select the flows that you want exposed as tools.
+3. In the **MCP Server Tools** window, select the flows that you want exposed as tools.
 
-    ![MCP server actions](/img/mcp-server-actions.png)
+    ![MCP server tools](/img/mcp-server-tools.png)
 
 4. Optional: Edit the **Flow Name** and **Flow Description**.
 
-    - **Flow Name**: Enter a name thats makes it clear what the flow does.
+    - **Tool Name**: Enter a name that makes it clear what the flow does.
 
-    - **Flow Description**: Enter a description that accurately describes the specific action(s) the flow performs.
+    - **Tool Description**: Enter a description that accurately describes the specific action(s) the flow performs.
 
    :::important
    MCP clients use the **Flow Name** and **Flow Description** to determine which action to use.
    For more information about naming and describing your flows, see [Name and describe your flows for agentic use](#name-and-describe-your-flows).
    :::
 
-5. Close the **MCP Server Actions** window to save your changes.
+5. Close the **MCP Server Tools** window to save your changes.
 
 {/* The anchor on this section (connect-clients-to-use-the-servers-actions) is currently a link target in the Langflow UI. Do not change. */}
 ## Connect clients to Langflow's MCP server {#connect-clients-to-use-the-servers-actions}
@@ -65,14 +65,26 @@ Alternatively, you can quickly access the **MCP Server** tab from within any flo
 The following procedure describes how to connect [Cursor](https://www.cursor.com/) to your Langflow project's MCP server to consume your flows as tools.
 However, you can connect any [MCP-compatible client](https://modelcontextprotocol.io/clients) following similar steps.
 
-1. Install [Cursor](https://docs.cursor.com/get-started/installation).
+<Tabs>
+  <TabItem value="Auto install" label="Auto install" default>
 
+1. Install [Cursor](https://docs.cursor.com/get-started/installation).
+2. In the Langflow dashboard, select the project that contains the flows you want to serve, and then click the **MCP Server** tab.
+3. To auto install your current Langflow project as an MCP server, click <Icon name="Plus" aria-hidden="True"/> **Add**.
+    The installation adds the server's configuration file to Cursor's `mcp.json` configuration file.
+
+    :::important
+    Auto installation only works if your HTTP client and Langflow server are on the same local machine.
+    In this is not the case, configure the client with the code in the **JSON** tab.
+    :::
+  </TabItem>
+  <TabItem value="JSON" label="JSON">
+
+1. Install [Cursor](https://docs.cursor.com/get-started/installation).
 2. In Cursor, go to **Cursor Settings > MCP**, and then click **Add New Global MCP Server**.
 This opens Cursor's global MCP configuration file, `mcp.json`.
-
 3. In the Langflow dashboard, select the project that contains the flows you want to serve, and then click the **MCP Server** tab.
-
-4. Copy the code template from the **MCP Server** tab, and then paste it into `mcp.json` in Cursor.
+4. Copy the code template from the **JSON** tab, and then paste it into `mcp.json` in Cursor.
 For example:
 
     ```json
@@ -91,6 +103,7 @@ For example:
 
     The **MCP Server** tab automatically includes the correct `PROJECT_NAME`, `LANGFLOW_SERVER_ADDRESS`, and `PROJECT_ID` values.
     The default Langflow server address is `http://localhost:7860`.
+    
     If you have [deployed a public Langflow server](/deployment-public-server), the address is automatically included.
 
     :::important
@@ -105,6 +118,9 @@ Cursor is now connected to your project's MCP server and your flows are register
 Cursor determines when to use tools based on your queries, and requests permissions when necessary.
 
 For more information, see the [Cursor's MCP documentation](https://docs.cursor.com/context/model-context-protocol).
+
+  </TabItem>
+</Tabs>
 
 ### MCP server authentication and environment variables {#authentication}
 
@@ -170,9 +186,9 @@ It's helpful to think of the names and descriptions as function names and code c
 
 For example, let's say you have a [Document Q&A](/document-qa) flow that loads a sample resume for an LLM to chat with, and that you've given it the following name and description:
 
- - **Flow Name**: `document_qa_for_resume`
+ - **Tool Name**: `document_qa_for_resume`
 
- - **Flow Description**: `A flow for analyzing Emily's resume.`
+ - **Tool Description**: `A flow for analyzing Emily's resume.`
 
 If you ask Cursor a question specifically about the resume, such as `What job experience does Emily have?`, the agent asks to call the MCP tool `document_qa_for_resume`.
 That's because your name and description provided the agent with a clear purpose for the tool.

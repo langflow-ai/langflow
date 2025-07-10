@@ -11,23 +11,21 @@ Vector databases store vector data, which backs AI workloads like chatbots and R
 
 Vector database components establish connections to existing vector databases or create in-memory vector stores for storing and retrieving vector data.
 
-Vector database components are distinct from [memory components](/components-memories), which are built specifically for storing and retrieving chat messages from external databases.
+Vector database components are distinct from [memory components](/components-memories), which are built specifically for storing and retrieving chat messages from internal Langflow memory or external databases. For more information, see [Memory management options](/memory).
 
 ## Use a vector store component in a flow
 
-This example uses the **Astra DB vector store** component. Your vector store component's parameters and authentication may be different, but the document ingestion workflow is the same. A document is loaded from a local machine and chunked. The Astra DB vector store generates embeddings with the connected [model](/components-models) component, and stores them in the connected Astra DB database.
+This example uses the **Chroma DB** vector store component. Your vector store component's parameters and authentication may be different, but the document ingestion workflow is the same. A document is loaded from a local machine and chunked. The vector store component generates embeddings with the connected [model](/components-models) component, and stores them in the connected vector database.
 
 This vector data can then be retrieved for workloads like Retrieval Augmented Generation.
 
-![](/img/vector-store-retrieval.png)
+![Embedding data into a vector store](/img/vector-store-document-ingestion.png)
 
 The user's chat input is embedded and compared to the vectors embedded during document ingestion for a similarity search.
 The results are output from the vector database component as a [Data](/concepts-objects) object and parsed into text.
 This text fills the `{context}` variable in the **Prompt** component, which informs the **Open AI model** component's responses.
 
-Alternatively, connect the vector database component's **Retriever** port to a [retriever tool](components-tools#retriever-tool), and then to an [agent](/components-agents) component. This enables the agent to use your vector database as a tool and make decisions based on the available data.
-
-![](/img/vector-store-agent-retrieval-tool.png)
+![Retrieval from a vector store](/img/vector-store-retrieval.png)
 
 ## Astra DB Vector Store
 

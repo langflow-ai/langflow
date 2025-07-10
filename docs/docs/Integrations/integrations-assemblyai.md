@@ -3,7 +3,7 @@ title: AssemblyAI
 slug: /integrations-assemblyai
 ---
 
-
+import Icon from "@site/src/components/icon";
 
 # AssemblyAI
 
@@ -137,10 +137,8 @@ To run the Transcription and Speech AI Flow:
 3. Connect the components as shown in the flow diagram. **Tip**: Freeze the path of the *Start Transcript* component to only submit the file once.
 4. Input the AssemblyAI API key in in all components that require the key (Start Transcript, Poll Transcript, Get Subtitles, LeMUR, List Transcripts).
 5. Select an audio or video file in the *Start Transcript* component.
-6. Run the flow by clicking **Play** on the *Parse Data* component. Make sure that the specified template is `{text}`.
-7. To generate subtitles, click **Play** on the *Get Subtitles* component.
-8. To apply an LLM to your audio file, click **Play** on the *LeMUR* component. Note that you need an upgraded AssemblyAI account to use LeMUR.
-9. To list all transcripts, click **Play** on the *List Transcript* component.
+6. Run the flow by clicking <Icon name="Play" aria-hidden="True" /> **Run component** on the *Parse Data* component. Make sure that the specified template is `{text}`.
+7. To generate subtitles, click <Icon name="Play" aria-hidden="True" /> **Run component** on the *List Transcript* component.
 
 
 ## Customization

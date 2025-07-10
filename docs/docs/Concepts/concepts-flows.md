@@ -3,13 +3,13 @@ title: Flows
 slug: /concepts-flows
 ---
 
+import Icon from "@site/src/components/icon";
+
 Flows in Langflow are fully serializable and can be saved and loaded from the file system. In this guide, we'll explore how to import and export flows.
 
-## Import Flow
+## Import flow
 
-If you've already got a Langflow JSON file, import it into Langflow by clicking on the project name and choosing **Import Flow**.
-
-![Import Flow](../../static/img/flows/import.gif)
+If you already have a Langflow JSON file on your local machine, from the **Projects** page, click <Icon name="Upload" aria-hidden="true"/> **Upload a flow**.
 
 Once imported, your flow is ready to use.
 
@@ -17,9 +17,31 @@ Once imported, your flow is ready to use.
 You can drag and drop Langflow JSON files directly from your file system into the Langflow window to import a flow, even into the initial Langflow splash screen.
 :::
 
-## Export Flow
+## Export a flow
 
-The option to export a flow is available in the same menu as shown above. Once exported as JSON, you can import your flow into another Langflow instance.
+You can export flows to transfer flows between Langflow instances or save backups of your flows.
+
+An exported flow is downloaded to your local machine as a JSON file named `FLOW_NAME.json`.
+
+There are three ways to export a flow:
+
+* From the **Projects** page, find the flow you want to export, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Export**.
+* When editing a flow, click **Share**, and then click **Export**.
+* Use the Langflow API [`/flows/download`](/api-flows#export-flows) endpoint.
+
+When exporting from the Langflow UI, you can select **Save with my API keys** to export the flow _and_ any defined API key variables.
+
+:::warning
+If you directly entered the key value into a component's API key field, then **Save with my API keys** exports the literal key value.
+
+If your key is stored in a Langflow global variable, **Save with my API keys** exports only the variable name.
+:::
+
+Non-API key variables are included in the export regardless of the **Save with my API keys** setting.
+
+When you or another user import the flow to another Langflow instance, that instance must have Langflow global variables with the same names and a valid values in order to run the flow successfully.
+If any variables are missing or invalid, those variables must be created or edited after importing the flow.
+
 
 ## Langflow JSON file contents
 
