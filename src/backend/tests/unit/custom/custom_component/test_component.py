@@ -134,3 +134,33 @@ async def test_send_message_without_database(monkeypatch):
     component._update_stored_message.assert_not_called()
     # Assert event manager's on_message was called
     assert event_manager.on_message.called
+
+
+@pytest.mark.asyncio
+async def test_agent_component_send_message_events(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+
+    from langflow.components.agents.agent import AgentComponent
+
+    agent = AgentComponent(
+        agent_llm="OpenAI",
+        input_value="Hello",
+        system_prompt="You are a helpful assistant.",
+        tools=[],
+        _session_id="test-session",
+    )
+    # Mock _is_database_available to return False
+    monkeypatch.setattr(agent, "_is_database_available", lambda: False)
+    # Mock event manager and its on_message method
+    event_manager = MagicMock()
+    agent._event_manager = event_manager
+    # Mock _store_message and _update_stored_message to ensure they are not called
+    agent._store_message = AsyncMock()
+    agent._update_stored_message = AsyncMock()
+    # Call message_response (which should internally send a message event)
+    await agent.message_response()
+    # Assert _store_message and _update_stored_message were not called
+    agent._store_message.assert_not_called()
+    agent._update_stored_message.assert_not_called()
+    # Assert event manager's on_message was called
+    assert event_manager.on_message.called
