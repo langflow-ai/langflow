@@ -40,7 +40,7 @@ def validate_code(code):
     add_type_ignores()
     tree.type_ignores = []
 
-    # Evaluate the import statements
+    # Validate import statements (static analysis only)
     for node in tree.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -49,18 +49,101 @@ def validate_code(code):
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
 
-    # Evaluate the function definition
+    # Validate function definition (static analysis only)
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
-            code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
-            try:
-                exec(code_obj)
-            except Exception as e:  # noqa: BLE001
-                logger.opt(exception=True).debug("Error executing function code")
-                errors["function"]["errors"].append(str(e))
+            # Basic structure checks
+            if not node.name.isidentifier():
+                errors["function"]["errors"].append("Invalid function name")
+            if not node.args:
+                errors["function"]["errors"].append("Function must have arguments")
+            if not node.body:
+                errors["function"]["errors"].append("Function must have a body")
+            
+            # Enhanced static analysis for common runtime errors
+            _check_common_runtime_errors(node, errors)
+            _check_undefined_variables(node, errors)
+            _check_return_statements(node, errors)
 
     # Return the errors dictionary
     return errors
+
+
+def _check_common_runtime_errors(func_node, errors):
+    """Check for common runtime errors using static analysis"""
+    for node in ast.walk(func_node):
+        # Check for division by zero
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+            if isinstance(node.right, ast.Constant) and node.right.value == 0:
+                errors["function"]["errors"].append("Division by zero detected")
+        
+        # Check for empty string access/slicing
+        if isinstance(node, ast.Subscript):
+            if isinstance(node.value, ast.Constant) and node.value.value == "":
+                errors["function"]["errors"].append("Attempting to index empty string")
+        
+        # Check for potential attribute errors on None
+        if isinstance(node, ast.Attribute):
+            if isinstance(node.value, ast.Constant) and node.value.value is None:
+                errors["function"]["errors"].append("Attempting to access attribute on None")
+        
+        # Check for mixing incompatible types in operations
+        if isinstance(node, ast.BinOp):
+            if isinstance(node.left, ast.Constant) and isinstance(node.right, ast.Constant):
+                left_val, right_val = node.left.value, node.right.value
+                if isinstance(node.op, ast.Add):
+                    # Check string + number
+                    if (isinstance(left_val, str) and isinstance(right_val, (int, float))) or \
+                       (isinstance(left_val, (int, float)) and isinstance(right_val, str)):
+                        errors["function"]["errors"].append("Cannot add string and number")
+
+
+def _check_undefined_variables(func_node, errors):
+    """Check for potentially undefined variables"""
+    defined_vars = set()
+    
+    # Collect function parameters
+    for arg in func_node.args.args:
+        defined_vars.add(arg.arg)
+    
+    # Walk through function body
+    for node in ast.walk(func_node):
+        # Track variable assignments
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    defined_vars.add(target.id)
+        
+        # Check variable usage
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+            # Skip built-ins and common globals
+            builtins = {'len', 'str', 'int', 'float', 'list', 'dict', 'tuple', 'set', 
+                       'print', 'range', 'enumerate', 'zip', 'map', 'filter', 'sorted',
+                       'min', 'max', 'sum', 'abs', 'round', 'bool', 'type', 'isinstance'}
+            
+            if node.id not in defined_vars and node.id not in builtins:
+                # Only warn about simple cases to avoid false positives
+                if node.id.islower() and '_' not in node.id:
+                    errors["function"]["errors"].append(f"Variable '{node.id}' may be undefined")
+
+
+def _check_return_statements(func_node, errors):
+    """Check return statement patterns"""
+    return_nodes = []
+    
+    for node in ast.walk(func_node):
+        if isinstance(node, ast.Return):
+            return_nodes.append(node)
+    
+    if not return_nodes:
+        errors["function"]["errors"].append("Function should have at least one return statement")
+    else:
+        # Check for inconsistent return types
+        has_value_return = any(ret.value is not None for ret in return_nodes)
+        has_empty_return = any(ret.value is None for ret in return_nodes)
+        
+        if has_value_return and has_empty_return:
+            errors["function"]["errors"].append("Inconsistent return statements (some return values, others don't)")
 
 
 def eval_function(function_string: str):
