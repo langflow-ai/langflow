@@ -10,10 +10,12 @@ from urllib.parse import urlparse
 from uuid import UUID
 
 import httpx
+from anyio import ClosedResourceError
 from httpx import codes as httpx_codes
 from langchain_core.tools import StructuredTool
 from loguru import logger
 from mcp import ClientSession
+from mcp.shared.exceptions import McpError
 from pydantic import BaseModel, Field, create_model
 from sqlmodel import select
 
@@ -807,9 +809,6 @@ class MCPStdioClient:
                 # Get or create persistent session
                 session = await self._get_or_create_session()
 
-                # Add timeout to prevent hanging
-                import asyncio
-
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
                     timeout=30.0,  # 30 second timeout
@@ -820,9 +819,6 @@ class MCPStdioClient:
 
                 # Import specific MCP error types for detection
                 try:
-                    from anyio import ClosedResourceError
-                    from mcp.shared.exceptions import McpError
-
                     is_closed_resource_error = isinstance(e, ClosedResourceError)
                     is_mcp_connection_error = isinstance(e, McpError) and "Connection closed" in str(e)
                 except ImportError:
