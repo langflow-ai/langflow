@@ -34,7 +34,7 @@ These endpoints don't require authentication, regardless of the `AUTO_LOGIN` set
 
 If you are running a Langflow version earlier than 1.5, if `AUTO_LOGIN=true`, Langflow automatically logs users in as a superuser without requiring authentication, and API requests can be made without a Langflow API key.
 
-If you set `SKIP_AUTH_AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key, regardless of the `AUTO_LOGIN` setting.
+If you set `SKIP_AUTH_AUTO_LOGIN=true` and `AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key.
 
 </details>
 
