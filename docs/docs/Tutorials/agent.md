@@ -169,4 +169,7 @@ Your application receives three URLs for recommended used items based on a custo
 
 ## Next steps
 
-You can build out this tutorial by connecting more tools to the agent, or add even more context for your LLMs by connecting [MCP servers](/mcp-client) to your agent as tools.
+For more information on building or extending this tutorial, see the following:
+
+* [Model Context Protocol (MCP) servers](/mcp-server)
+* [Langflow deployment overview](/deployment-overview)
