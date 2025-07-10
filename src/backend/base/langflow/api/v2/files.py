@@ -105,20 +105,14 @@ async def upload_user_file(
             detail=f"File size is larger than the maximum file size {max_file_size_upload}MB.",
         )
 
-    # Read file content and create a unique file name
-    try:
-        file_id, file_name = await save_file_routine(file, storage_service, current_user)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error saving file: {e}") from e
-
     # Create a new database record for the uploaded file.
     try:
         # Enforce unique constraint on name, except for the special _mcp_servers file
         new_filename = file.filename
         try:
-            root_filename, _ = new_filename.rsplit(".", 1)
+            root_filename, file_extension = new_filename.rsplit(".", 1)
         except ValueError:
-            root_filename, _ = new_filename, ""
+            root_filename, file_extension = new_filename, ""
 
         # Special handling for the MCP servers config file: always keep the same root filename
         if root_filename == MCP_SERVERS_FILE:
@@ -126,6 +120,7 @@ async def upload_user_file(
             existing_mcp_file = await get_file_by_name(root_filename, current_user, session)
             if existing_mcp_file:
                 await delete_file(existing_mcp_file.id, current_user, session, storage_service)
+            unique_filename = new_filename
         else:
             # For normal files, ensure unique name by appending a count if necessary
             stmt = select(UserFile).where(col(UserFile.name).like(f"{root_filename}%"))
@@ -144,10 +139,21 @@ async def upload_user_file(
                 count = max(counts) if counts else 0
                 root_filename = f"{root_filename} ({count + 1})"
 
+            # Create the unique filename with extension for storage
+            unique_filename = f"{root_filename}.{file_extension}" if file_extension else root_filename
+
+        # Read file content and save with unique filename
+        try:
+            file_id, stored_file_name = await save_file_routine(
+                file, storage_service, current_user, file_name=unique_filename
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error saving file: {e}") from e
+
         # Compute the file size based on the path
         file_size = await storage_service.get_file_size(
             flow_id=str(current_user.id),
-            file_name=file_name,
+            file_name=stored_file_name,
         )
 
         # Create a new file record
@@ -155,7 +161,7 @@ async def upload_user_file(
             id=file_id,
             user_id=current_user.id,
             name=root_filename,
-            path=f"{current_user.id}/{file_name}",
+            path=f"{current_user.id}/{stored_file_name}",
             size=file_size,
         )
         session.add(new_file)
