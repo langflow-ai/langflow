@@ -94,7 +94,7 @@ Volumes:
 
 If you want to deploy a specific version of Langflow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version `1.0-alpha`, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
 
-## Package your flow as a Docker image
+## Package your flow as a Docker image {#package-your-flow-as-a-docker-image}
 
 You can include your Langflow flow with the application image.
 When you build the image, your saved flow `.JSON` flow is included.

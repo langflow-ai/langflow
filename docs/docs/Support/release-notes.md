@@ -28,6 +28,10 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
    * **Langflow Docker image**: Run the new image in a separate container, and then [import your flows](/concepts-flows-import) to the version of Langflow running in the new container.
    * **Langflow Desktop**: Upgrade Langflow Desktop, as explained in [Manage your version of Langflow Desktop](/get-started-installation#manage-your-version-of-langflow-desktop). If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
 
+   :::tip
+   If you experience data loss after upgrading Langflow Desktop, see [Unexpected data loss after Langflow Desktop upgrade](/troubleshoot#unexpected-data-loss-after-langflow-desktop-upgrade).
+   :::
+
 3. Test your flows in the new version, [upgrading components](/concepts-components#component-versions) as needed.
 
     When upgrading components, you can use the **Create backup flow before updating** option if you didn't previously export your flows.
@@ -44,8 +48,8 @@ The following updates are included in this version:
 
 - Authentication changes
 
-    All API endpoints now require a Langflow API key to function, even when [LANGFLOW_AUTO_LOGIN](/environment-variables#LANGFLOW_AUTO_LOGIN) is enabled. This change enhances security by ensuring that automatic login features are properly authenticated.
-    The only exceptions are for the MCP endpoints at `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which will not require API keys.
+    To enhance security and ensure proper authentication for automatic login features, most API endpoints now require authentication with a Langflow API key, regardless of the `AUTO_LOGIN` setting.
+    The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
     For more information, see [API keys](/configuration-api-keys).
 
 - New Language Model and Embedding Model components
@@ -67,7 +71,7 @@ The following updates are included in this version:
 
 - Input schema replaces temporary overrides
 
-    The **Input schema** pane replaces the need to manage tweak values in the **API access** pane. When you enable a parameter in the **Input schema** pane, the parameter is automatically added to your flow’s code snippets, providing ready-to-use templates for making requests in your preferred programming language.
+    The **Input schema** pane replaces the need to manage tweak values in the **API access** pane. When you enable a parameter in the **Input schema** pane, the parameter is automatically added to your flow's code snippets, providing ready-to-use templates for making requests in your preferred programming language.
 
 - Tools category is now legacy
 

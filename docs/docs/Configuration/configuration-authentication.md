@@ -23,26 +23,25 @@ You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/ma
 
 ### LANGFLOW_AUTO_LOGIN
 
-In Langflow versions 1.5 and later, most API requests require a Langflow API key, even when `AUTO_LOGIN=true`.
-
-The only exceptions are the MCP endpoints: `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`.
-These endpoints don't require authentication, regardless of the `AUTO_LOGIN` setting.
-
-<details>
-<summary>Auto-login and API key authentication in earlier Langflow versions</summary>
-
-If you are running a Langflow version earlier than 1.5, if `AUTO_LOGIN=true`, Langflow automatically logs users in as a superuser without requiring authentication, and API requests can be made without a Langflow API key.
-
-If you set `SKIP_AUTH_AUTO_LOGIN=true` and `AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key.
-
-</details>
-
 Langflow **does not** allow users to have simultaneous or shared access to flows.
 If `AUTO_LOGIN` is enabled and user management is disabled (`LANGFLOW_NEW_USER_IS_ACTIVE=true`), users can access the same environment, but it is not password protected. If two users access the same flow, Langflow saves only the work of the last user to save.
 
 ```bash
 LANGFLOW_AUTO_LOGIN=True
 ```
+
+In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is set to `True`.
+The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
+
+<details>
+<summary>AUTO_LOGIN and SKIP_AUTH options</summary>
+
+In Langflow versions earlier than 1.5, if `AUTO_LOGIN=true`, then Langflow automatically logs users in as a superuser without requiring authentication.
+In this case, API requests don't require a Langflow API key.
+
+In Langflow version 1.5, you can set `SKIP_AUTH_AUTO_LOGIN=true` and `AUTO_LOGIN=true` to skip authentication for API requests.
+However, the `SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
+</details>
 
 ### LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD
 

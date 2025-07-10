@@ -67,7 +67,11 @@ The **Share** menu provides the following options for integrating your flow into
 * [**Export**](/concepts-flows-import#export-a-flow): Export your flow to your local machine as a JSON file.
 * [**MCP Server**](/mcp-server): Expose your flow as a tool for MCP-compatible clients.
 * [**Embed into site**](/concepts-publish#embedded-chat-widget): Embed your flow in HTML, React, or Angular applications.
-* [**Shareable Playground**](/concepts-publish#shareable-playground): Share your **Playground** interface with another user. This is specifically for sharing the **Playground** experience; it isn't for running a flow in a production application.
+* [**Shareable Playground**](/concepts-playground#share-a-flows-playground): Share your **Playground** interface with another user.
+
+    This is specifically for sharing the **Playground** experience; it isn't for running a flow in a production application.
+
+    The **Sharable Playground** isn't available for Langflow Desktop.
 
 ## See also
 

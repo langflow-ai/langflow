@@ -13,18 +13,17 @@ The API key has the same permissions and access as you do when you launch Langfl
 An API key represents the user who created it. If you create a key as a superuser, then that key will have superuser privileges.
 Anyone who has that key can authorize superuser actions through the Langflow API, including user management and flow management.
 
-In Langflow versions 1.5 and later, most API requests require a Langflow API key, even when `AUTO_LOGIN=true`.
-
-The only exceptions are the MCP endpoints: `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`.
-These endpoints don't require authentication, regardless of the `AUTO_LOGIN` setting.
+In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is set to `True`.
+The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
 
 <details>
-<summary>Auto-login and API key authentication in earlier Langflow versions</summary>
+<summary>AUTO_LOGIN and SKIP_AUTH options</summary>
 
-If you are running a Langflow version earlier than 1.5, if `AUTO_LOGIN=true`, Langflow automatically logs users in as a superuser without requiring authentication, and API requests can be made without a Langflow API key.
+In Langflow versions earlier than 1.5, if `AUTO_LOGIN=true`, then Langflow automatically logs users in as a superuser without requiring authentication.
+In this case, API requests don't require a Langflow API key.
 
-If you set `SKIP_AUTH_AUTO_LOGIN=true` and `AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key.
-
+In Langflow version 1.5, you can set `SKIP_AUTH_AUTO_LOGIN=true` and `AUTO_LOGIN=true` to skip authentication for API requests.
+However, the `SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
 </details>
 
 ## Generate a Langflow API key

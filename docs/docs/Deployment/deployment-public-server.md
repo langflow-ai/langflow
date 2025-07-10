@@ -6,7 +6,7 @@ slug: /deployment-public-server
 By default, your Langflow server at `http://localhost:7860` isn't exposed to the public internet.
 However, you can forward Langflow server traffic with a forwarding platform like [ngrok](https://ngrok.com/docs/getting-started/) or [zrok](https://docs.zrok.io/docs/getting-started) to make your server public.
 
-When your Langflow server is public, you can do things like [deploy your Langflow MCP server externally](#deploy-your-mcp-server-externally), [serve API requests](#serve-api-requests), and [share a flow's **Playground** externally](#share-a-flows-playground-externally).
+When your Langflow server is public, you can do things like [deploy your Langflow MCP server externally](#deploy-your-mcp-server-externally), [serve API requests](#serve-api-requests), and [share a flow's **Playground** publicly](#share-a-flows-playground).
 
 ## Prerequisites
 
@@ -55,7 +55,7 @@ When your Langflow server is public, you can do things like [deploy your Langflo
 
 ## Use a public Langflow server
 
-When your Langflow server is public, you can do things like [deploy your Langflow MCP server externally](#deploy-your-mcp-server-externally), [serve API requests](#serve-api-requests), and [share a flow's **Playground** externally](#share-a-flows-playground-externally).
+When your Langflow server is public, you can do things like [deploy your Langflow MCP server externally](#deploy-your-mcp-server-externally), [serve API requests](#serve-api-requests), and [share a flow's **Playground** publicly](#share-a-flows-playground).
 
 ### Deploy your MCP server externally
 
@@ -116,27 +116,9 @@ For example, the following code snippet calls an ngrok domain to trigger the spe
 
 For a demo of the Langflow API in a script, see the [Quickstart](/get-started-quickstart).
 
-### Share a flow's Playground externally
+### Share a flow's Playground
 
-:::important
-The **Shareable Playground** is for testing purposes only.
+After you deploy a public Langflow server, you can use the **Shareable Playground** option to make a flow's **Playground** available at a public URL.
+If a user accesses this URL, they can interact with the flow's chat input and output and view the results without installing Langflow or generating a Langflow API key.
 
-The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see the following:
-
-* [Embed a flow into a website](/concepts-publish#embedded-chat-widget)
-* [Use the Langflow API to run flows](/concepts-publish#api-access)
-* [About developing and configuring Langflow applications](/develop-overview)
-:::
-
-The **Shareable Playground** option exposes the [**Playground**](/concepts-playground) for a single flow at the `/public_flow/$FLOW_ID` endpoint.
-
-After you deploy a public Langflow server, you can share this public URL with another user to allow them to access the specified flow's **Playground** only.
-The user can interact with the flow's chat input and output and view the results without installing Langflow or generating a Langflow API key.
-
-To share a flow's **Playground** with another user, do the following:
-
-1. In Langflow, open the flow you want share.
-2. From the **Workspace**, click **Share**, and then enable **Shareable Playground**.
-3. Click **Shareable Playground** again to open the **Playground** window.
-This window's URL is the flow's **Shareable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
-4. Send the URL to another user to give them access to the flow's **Playground**.
+For more information, see [Share a flow's Playground](/concepts-playground#share-a-flows-playground).

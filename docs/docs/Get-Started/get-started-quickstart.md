@@ -11,22 +11,29 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
 ## Prerequisites
 
-- [A running Langflow instance](/get-started-installation)
-- [An OpenAI API key](https://platform.openai.com/api-keys)
-- [A Langflow API key](/configuration-api-keys)
+- [Install and start Langflow](/get-started-installation)
+- [Create an OpenAI API key](https://platform.openai.com/api-keys)
+- [Create a Langflow API key](/configuration-api-keys)
 
-## Create a Langflow API key
+<details>
+<summary>Create a Langflow API key</summary>
 
-A [Langflow API key](/configuration-api-keys) is a user-specific token you can use with Langflow.
+A Langflow API key is a user-specific token you can use with Langflow.
 
 To create a Langflow API key, do the following:
 
 1. In Langflow, click your user icon, and then select **Settings**.
 2. Click **Langflow API Keys**, and then click <Icon name="Plus" aria-hidden="true"/> **Add New**.
 3. Name your key, and then click **Create API Key**.
-4. Copy the API key and store it in a secure location.
-5. Include your `LANGFLOW_API_KEY` in requests like this:
-    ```text
+4. Copy the API key and store it securely.
+5. To use your Langflow API key in a request, set a `LANGFLOW_API_KEY` environment variable in your terminal, and then include an `x-api-key` header or query parameter with your request.
+For example:
+
+    ```bash
+    # Set variable
+    export LANGFLOW_API_KEY="sk..."
+
+    # Send request
     curl --request POST \
      --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
      --header 'Content-Type: application/json' \
@@ -37,11 +44,7 @@ To create a Langflow API key, do the following:
        "input_value": "Hello"
      }'
     ```
-    The API access pane's code snippets include a script that looks for a `LANGFLOW_API_KEY` environment variable set in your terminal session.
-    Set this variable in your terminal so you can copy and paste the commands.
-    ```bash
-    export LANGFLOW_API_KEY="sk..."
-    ```
+</details>
 
 ## Run the Simple Agent template flow
 

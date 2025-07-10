@@ -1,20 +1,21 @@
 ---
-title: Share and embed flows
+title: Run flows
 slug: /concepts-publish
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Langflow provides several ways to share and integrate your flows into external applications:
+After you build a flow, you probably want to run it within an application, such as a chatbot within a mobile app or website.
+
+Langflow provides several ways to run flows from external applications:
 
 * [Trigger flows with the Langflow API](#api-access)
 * [Add an embedded chat widget to a website](#embedded-chat-widget)
-* [Access a Langflow MCP server](#access-a-langflow-mcp-server)
-* [Share a public flow Playground](#share-a-flows-playground)
+* [Serve flows through a Langflow MCP server](#access-a-langflow-mcp-server)
 
-Although you can use these options with an isolated, local Langflow instance, they are typically more valuable when you have deployed a Langflow server or packaged Langflow as a dependency of an application.
-For more information, see [Deployment overview](/deployment-overview) and [Application development overview](/develop-application).
+Although you can use these options with an isolated, local Langflow instance, they are typically more valuable when you have [deployed a Langflow server](/deployment-overview) or packaged Langflow as a dependency of an application.
+For package dependencies, see [Application development overview](/develop-application) and [Package a flow as a Docker image](/deployment-docker#package-your-flow-as-a-docker-image).
 
 ## Use the Langflow API to run flows {#api-access}
 
@@ -499,7 +500,7 @@ export class AppComponent {
 
 </details>
 
-## Access a Langflow MCP server
+## Serve flows through a Langflow MCP server
 
 Each [Langflow project](/concepts-flows#projects) has an MCP server that exposes the project's flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use to generate responses.
 
@@ -507,34 +508,10 @@ You can also use Langflow as an MCP client, and you can serve your flows as tool
 
 For more information, see [Use Langflow as an MCP server](/mcp-server) and [Use Langflow as an MCP client](/mcp-client).
 
-## Share a flow's Playground
-
-:::important
-The **Shareable Playground** is for testing purposes only.
-
-The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see the following:
-
-* [Embed a flow into a website](#embedded-chat-widget)
-* [Use the Langflow API to run flows](#api-access)
-* [About developing and configuring Langflow applications](/develop-overview)
-:::
-
-The **Shareable Playground** option exposes the [**Playground**](/concepts-playground) for a single flow at the `/public_flow/$FLOW_ID` endpoint.
-
-After you [deploy a public Langflow server](/deployment-overview), you can share this public URL with another user to allow them to access the specified flow's **Playground** only.
-The user can interact with the flow's chat input and output and view the results without installing Langflow or generating a Langflow API key.
-
-To share a flow's **Playground** with another user, do the following:
-
-1. In Langflow, open the flow you want share.
-2. From the **Workspace**, click **Share**, and then enable **Shareable Playground**.
-3. Click **Shareable Playground** again to open the **Playground** window.
-This window's URL is the flow's **Shareable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
-4. Send the URL to another user to give them access to the flow's **Playground**.
-
 ## See also
 
 * [Develop an application with Langflow](/develop-application)
 * [Langflow deployment overview](/deployment-overview)
 * [Import and export flows](/concepts-flows-import)
 * [Files endpoints](/api-files)
+* [Use the Playground](/concepts-playground)

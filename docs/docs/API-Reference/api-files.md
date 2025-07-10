@@ -20,7 +20,6 @@ There are two versions of the `/files` endpoints.
 - `/v2` files are tracked in the Langflow database.
 - `/v2` supports bulk upload and delete.
 - `/v2` responses contain more descriptive metadata.
-- `/v2` endpoints have more strict security, requiring authentication by an API key or JWT.
 
 However, `/v2/files` doesn't support image files.
 To send image files to your flows through the API, use [Upload image files (v1)](#upload-image-files-v1).
@@ -194,7 +193,7 @@ curl -X DELETE \
 
 Use the `/files` endpoints to move files between your local machine and Langflow.
 
-The `v2` endpoints require authentication by an API key or JWT.
+The `/v2/files` endpoints can be authenticated by an API key or JWT.
 To create a Langflow API key and export it as an environment variable, see [Get started with the Langflow API](/api-reference-api-examples).
 
 ### Upload file (v2)

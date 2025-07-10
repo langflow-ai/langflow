@@ -6,7 +6,6 @@ slug: /concepts-playground
 import Icon from "@site/src/components/icon";
 
 <!-- TODO: Align and minimize duplications of playground content on the /concepts-overview, /about-langflow, and other pages -->
-<!-- TODO: Consider bringing Shared Playground from /concepts-publish to here. Replace w/ `See also` on /concepts-publish, and retitle /concepts-publish. -->
 
 The **Playground** is a dynamic interface designed for real-time interaction with LLMs, allowing users to chat, access memories, and monitor inputs and outputs. Here, users can directly prototype their models, making adjustments and observing different outcomes.
 
@@ -107,7 +106,28 @@ curl -X POST "http://localhost:7860/api/v1/run/FLOW_ID" \
 
 The image is displayed in the chat interface and can be processed by your flow components.
 
+## Share a flow's Playground
+
+:::important
+The **Shareable Playground** is for testing purposes only, and it isn't available for Langflow Desktop.
+
+The **Playground** isn't meant for embedding flows in applications. For information about running flows in applications or websites, see [Run flows](/concepts-publish).
+:::
+
+The **Shareable Playground** option exposes the **Playground** for a single flow at the `/public_flow/$FLOW_ID` endpoint.
+
+After you [deploy a public Langflow server](/deployment-overview), you can share this public URL with another user to allow them to access the specified flow's **Playground** only.
+The user can interact with the flow's chat input and output and view the results without installing Langflow or generating a Langflow API key.
+
+To share a flow's **Playground** with another user, do the following:
+
+1. In Langflow, open the flow you want share.
+2. From the **Workspace**, click **Share**, and then enable **Shareable Playground**.
+3. Click **Shareable Playground** again to open the **Playground** window.
+This window's URL is the flow's **Shareable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
+4. Send the URL to another user to give them access to the flow's **Playground**.
+
 ## See also
 
-- [Share a flow's Playground](/concepts-publish#share-a-flows-playground)
+- [Run flows](/concepts-publish)
 - [Session ID](/session-id)
