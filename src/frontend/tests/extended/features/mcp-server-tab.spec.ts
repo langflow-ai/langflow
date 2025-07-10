@@ -165,7 +165,9 @@ test(
         await expect(page.getByTestId("icon-check")).toBeVisible();
 
         // Get the SSE URL from the configuration
-        const configJson = await page.locator("pre").textContent();
+        const configJson = await page.evaluate(() => {
+          return navigator.clipboard.readText();
+        });
         expect(configJson).toContain("mcpServers");
         expect(configJson).toContain("mcp-proxy");
         expect(configJson).toContain("uvx");
@@ -180,8 +182,13 @@ test(
         await page.getByText("macOS/Linux", { exact: true }).click();
 
         await page.waitForSelector("pre", { state: "visible", timeout: 3000 });
+        // Copy configuration
+        await page.getByTestId("icon-copy").click();
+        await expect(page.getByTestId("icon-check")).toBeVisible();
 
-        const configJsonLinux = await page.locator("pre").textContent();
+        const configJsonLinux = await page.evaluate(() => {
+          return navigator.clipboard.readText();
+        });
 
         const sseUrlMatchLinux = configJsonLinux?.match(
           /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
