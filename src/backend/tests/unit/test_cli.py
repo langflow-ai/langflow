@@ -359,9 +359,9 @@ class TestExecuteCommand:
 
                 # Check that required fields have correct types
                 if "result" in output_data:
-                    assert output_data["result"] is not None or case["args"][-1] == str(temp_python_script), (
-                        f"Unexpected None result: {output_data}"
-                    )
+                    assert output_data["result"] is not None or case["args"][-1] == str(
+                        temp_python_script
+                    ), f"Unexpected None result: {output_data}"
 
                 if "type" in output_data:
                     assert isinstance(output_data["type"], str), f"Type should be string: {output_data}"
@@ -400,6 +400,84 @@ class TestExecuteCommand:
         result_quiet = runner.invoke(app, ["execute", "nonexistent.py", "test"])
         assert result_quiet.exit_code == 1
         # Quiet mode should not output error details to stdout
+
+    def test_execute_flow_json_valid(self, runner, json_memory_chatbot_no_llm):
+        """Test execute command with valid inline JSON from the memory chatbot fixture."""
+        valid_json = json_memory_chatbot_no_llm
+        result = runner.invoke(app, ["execute", "--flow-json", valid_json, "--input-value", "Hello World", "--verbose"])
+        assert result.exit_code == 0, result.output
+        assert "Processing inline JSON content..." in result.output
+        assert "✓ JSON content is valid" in result.output
+        assert "✓ Created temporary file:" in result.output
+        assert "JSON flow" in result.output or "graph" in result.output
+
+    def test_execute_flow_json_invalid(self, runner):
+        """Test execute command with invalid inline JSON."""
+        invalid_json = '{"nodes": [invalid json'
+        result = runner.invoke(
+            app, ["execute", "--flow-json", invalid_json, "--input-value", "Hello World", "--verbose"]
+        )
+        assert result.exit_code == 1
+        assert "Error: Invalid JSON content:" in result.output
+
+    def test_execute_stdin_valid(self, runner, json_memory_chatbot_no_llm):
+        """Test execute command with valid JSON from stdin using the memory chatbot fixture."""
+        result = runner.invoke(
+            app, ["execute", "--stdin", "--input-value", "Hello World", "--verbose"], input=json_memory_chatbot_no_llm
+        )
+        assert result.exit_code == 0, result.output
+        assert "Reading JSON content from stdin..." in result.output
+        assert "✓ JSON content from stdin is valid" in result.output
+        assert "✓ Created temporary file from stdin:" in result.output
+        assert "JSON flow" in result.output or "graph" in result.output
+
+    def test_execute_stdin_invalid(self, runner):
+        """Test execute command reading invalid JSON from stdin."""
+        invalid_json = '{"nodes": [invalid json'
+        result = runner.invoke(
+            app, ["execute", "--stdin", "--input-value", "Hello World", "--verbose"], input=invalid_json
+        )
+        assert result.exit_code == 1
+        assert "Error: Invalid JSON content from stdin:" in result.output
+
+    def test_execute_stdin_empty(self, runner):
+        """Test execute command reading empty content from stdin."""
+        result = runner.invoke(app, ["execute", "--stdin", "--input-value", "Hello World", "--verbose"], input="")
+        assert result.exit_code == 1
+        assert "Error: No content received from stdin" in result.output
+
+    def test_execute_input_validation_no_source(self, runner):
+        """Test execute command validation when no input source is provided."""
+        result = runner.invoke(app, ["execute", "--verbose"])
+        assert result.exit_code == 1
+        assert "Error: Must provide either script_path, --flow-json, or --stdin" in result.output
+
+    def test_execute_input_validation_multiple_sources(self, runner, temp_python_script):
+        """Test execute command validation when multiple input sources are provided."""
+        valid_json = '{"data": {"nodes": [], "edges": []}}'
+        # script_path + flow_json
+        result = runner.invoke(app, ["execute", str(temp_python_script), "--flow-json", valid_json, "--verbose"])
+        assert result.exit_code == 1
+        assert "Error: Cannot use script_path, --flow-json, and --stdin together" in result.output
+        # flow_json + stdin
+        result = runner.invoke(app, ["execute", "--flow-json", valid_json, "--stdin", "--verbose"])
+        assert result.exit_code == 1
+        assert "Error: Cannot use script_path, --flow-json, and --stdin together" in result.output
+        # script_path + stdin
+        result = runner.invoke(app, ["execute", str(temp_python_script), "--stdin", "--verbose"])
+        assert result.exit_code == 1
+        assert "Error: Cannot use script_path, --flow-json, and --stdin together" in result.output
+
+    def test_execute_help_shows_new_options(self, runner):
+        """Test that help output shows the new inline JSON options."""
+        result = runner.invoke(app, ["execute", "--help"])
+        assert result.exit_code == 0
+        assert "--flow-json" in result.output
+        assert "--stdin" in result.output
+        assert "Inline JSON flow content" in result.output
+        assert "Read JSON flow content" in result.output
+        assert "from stdin" in result.output
+        assert "when using --flow-json or --stdin" in result.output
 
 
 def validate_execute_command_json_response(
