@@ -4,7 +4,7 @@ import pytest
 from astrapy import DataAPIClient
 from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
 from langchain_core.documents import Document
-from langflow.components.embeddings import OpenAIEmbeddingsComponent
+from langflow.components.openai.openai import OpenAIEmbeddingsComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
 from langflow.schema.data import Data
 

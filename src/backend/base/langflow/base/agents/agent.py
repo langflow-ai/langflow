@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable
 
 from langflow.base.agents.callback import AgentAsyncHandler
@@ -12,7 +13,7 @@ from langflow.base.agents.utils import data_to_messages
 from langflow.custom.custom_component.component import Component, _get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import InputTypes, MultilineInput
-from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
+from langflow.io import BoolInput, HandleInput, IntInput, MessageInput
 from langflow.logging import logger
 from langflow.memory import delete_message
 from langflow.schema.content_block import ContentBlock
@@ -34,7 +35,7 @@ DEFAULT_AGENT_NAME = "Agent ({tools_names})"
 class LCAgentComponent(Component):
     trace_type = "agent"
     _base_inputs: list[InputTypes] = [
-        MessageTextInput(
+        MessageInput(
             name="input_value",
             display_name="Input",
             info="The input provided by the user for the agent to process.",
@@ -124,24 +125,39 @@ class LCAgentComponent(Component):
         if isinstance(agent, AgentExecutor):
             runnable = agent
         else:
-            if not hasattr(self, "tools") or not self.tools:
-                msg = "Tools are required to run the agent."
-                raise ValueError(msg)
+            # note the tools are not required to run the agent, hence the validation removed.
             handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
             verbose = hasattr(self, "verbose") and self.verbose
             max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,
-                tools=self.tools,
+                tools=self.tools or [],
                 handle_parsing_errors=handle_parsing_errors,
                 verbose=verbose,
                 max_iterations=max_iterations,
             )
-        input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
+        input_dict: dict[str, str | list[BaseMessage]] = {
+            "input": self.input_value.to_lc_message() if isinstance(self.input_value, Message) else self.input_value
+        }
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
-            input_dict["chat_history"] = data_to_messages(self.chat_history)
+            if isinstance(self.chat_history, Data):
+                input_dict["chat_history"] = data_to_messages(self.chat_history)
+            if all(isinstance(m, Message) for m in self.chat_history):
+                input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
+        if hasattr(input_dict["input"], "content") and isinstance(input_dict["input"].content, list):
+            # ! Because the input has to be a string, we must pass the images in the chat_history
+
+            image_dicts = [item for item in input_dict["input"].content if item.get("type") == "image"]
+            input_dict["input"].content = [item for item in input_dict["input"].content if item.get("type") != "image"]
+
+            if "chat_history" not in input_dict:
+                input_dict["chat_history"] = []
+            if isinstance(input_dict["chat_history"], list):
+                input_dict["chat_history"].extend(HumanMessage(content=[image_dict]) for image_dict in image_dicts)
+            else:
+                input_dict["chat_history"] = [HumanMessage(content=[image_dict]) for image_dict in image_dicts]
 
         if hasattr(self, "graph"):
             session_id = self.graph.session_id

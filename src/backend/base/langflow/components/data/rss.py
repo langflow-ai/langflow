@@ -11,6 +11,7 @@ from langflow.schema import DataFrame
 class RSSReaderComponent(Component):
     display_name = "RSS Reader"
     description = "Fetches and parses an RSS feed."
+    documentation: str = "https://docs.langflow.org/components-data#rss-reader"
     icon = "rss"
     name = "RSSReaderSimple"
 
@@ -20,7 +21,6 @@ class RSSReaderComponent(Component):
             display_name="RSS Feed URL",
             info="URL of the RSS feed to parse.",
             tool_mode=True,
-            input_types=[],
             required=True,
         ),
         IntInput(

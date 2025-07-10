@@ -4,21 +4,23 @@ from langflow.custom.custom_component.component import Component
 from langflow.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
 from langflow.utils.util import unescape_string
 
 
 class SplitTextComponent(Component):
     display_name: str = "Split Text"
     description: str = "Split text into chunks based on specified criteria."
+    documentation: str = "https://docs.langflow.org/components-processing#split-text"
     icon = "scissors-line-dashed"
     name = "SplitText"
 
     inputs = [
         HandleInput(
             name="data_inputs",
-            display_name="Data or DataFrame",
+            display_name="Input",
             info="The data with texts to split in chunks.",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "DataFrame", "Message"],
             required=True,
         ),
         IntInput(
@@ -64,8 +66,7 @@ class SplitTextComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Chunks", name="chunks", method="split_text"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Chunks", name="dataframe", method="split_text"),
     ]
 
     def _docs_to_data(self, docs) -> list[Data]:
@@ -94,6 +95,9 @@ class SplitTextComponent(Component):
             except Exception as e:
                 msg = f"Error converting DataFrame to documents: {e}"
                 raise TypeError(msg) from e
+        elif isinstance(self.data_inputs, Message):
+            self.data_inputs = [self.data_inputs.to_data()]
+            return self.split_text_base()
         else:
             if not self.data_inputs:
                 msg = "No data inputs provided"
@@ -133,8 +137,5 @@ class SplitTextComponent(Component):
             msg = f"Error splitting text: {e}"
             raise TypeError(msg) from e
 
-    def split_text(self) -> list[Data]:
-        return self._docs_to_data(self.split_text_base())
-
-    def as_dataframe(self) -> DataFrame:
-        return DataFrame(self.split_text())
+    def split_text(self) -> DataFrame:
+        return DataFrame(self._docs_to_data(self.split_text_base()))

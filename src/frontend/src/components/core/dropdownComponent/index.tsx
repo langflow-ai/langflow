@@ -45,6 +45,7 @@ export default function Dropdown({
   optionsMetaData,
   combobox,
   onSelect,
+  placeholder,
   editNode = false,
   id = "",
   children,
@@ -81,6 +82,7 @@ export default function Dropdown({
     // We should only reset the value if it's not in options and not in filteredOptions
     // and not a recently added custom value
     if (!options.includes(value) && !filteredOptions.includes(value)) {
+      if (value) onSelect("", undefined, true);
       return null;
     }
     return value;
@@ -94,7 +96,7 @@ export default function Dropdown({
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
-  const { helperText } = baseInputProps;
+  const { helperText, hasRefreshButton } = baseInputProps;
 
   // API and store hooks
   const postTemplateValue = usePostTemplateValue({
@@ -330,7 +332,7 @@ export default function Dropdown({
                 <>
                   {value && filteredOptions.includes(value)
                     ? value
-                    : SELECT_AN_OPTION}{" "}
+                    : placeholder || SELECT_AN_OPTION}{" "}
                 </>
               )}
             </span>
@@ -355,7 +357,7 @@ export default function Dropdown({
   );
 
   const renderSearchInput = () => (
-    <div className="flex items-center border-b px-3">
+    <div className="flex items-center border-b px-2.5">
       <ForwardedIconComponent
         name="search"
         className="mr-2 h-4 w-4 shrink-0 opacity-50"
@@ -364,66 +366,16 @@ export default function Dropdown({
         onChange={searchRoleByTerm}
         onKeyDown={handleInputKeyDown}
         placeholder="Search options..."
-        className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
         data-testid="dropdown_search_input"
       />
     </div>
   );
 
-  const renderCustomOptionDialog = () => (
-    <CommandGroup className="flex flex-col">
-      <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
-        <Button
-          className="w-full"
-          unstyled
-          onClick={() => {
-            setOpenDialog(true);
-          }}
-        >
-          <div className="flex items-center gap-2 pl-1">
-            <ForwardedIconComponent
-              name="Plus"
-              className="h-3 w-3 text-primary"
-            />
-            {`New ${firstWord}`}
-          </div>
-        </Button>
-      </CommandItem>
-      <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
-        <Button
-          className="w-full"
-          unstyled
-          onClick={() => {
-            handleRefreshButtonPress();
-          }}
-        >
-          <div className="flex items-center gap-2 pl-1">
-            <ForwardedIconComponent
-              name="RefreshCcw"
-              className={cn("refresh-icon h-3 w-3 text-primary")}
-            />
-            Refresh list
-          </div>
-        </Button>
-      </CommandItem>
-      <NodeDialog
-        open={openDialog}
-        dialogInputs={dialogInputs}
-        onClose={() => {
-          setOpenDialog(false);
-          setOpen(false);
-        }}
-        nodeId={nodeId!}
-        name={name!}
-        nodeClass={nodeClass!}
-      />
-    </CommandGroup>
-  );
-
   const renderOptionsList = () => (
-    <CommandList>
-      <CommandGroup defaultChecked={false}>
+    <CommandList className="max-h-[300px] overflow-y-auto">
+      <CommandGroup defaultChecked={false} className="p-0">
         {filteredOptions?.length > 0 ? (
           filteredOptions?.map((option, index) => (
             <ShadTooltip
@@ -439,10 +391,13 @@ export default function Dropdown({
                     onSelect(currentValue);
                     setOpen(false);
                   }}
-                  className="items-center"
+                  className="w-full items-center rounded-none"
                   data-testid={`${option}-${index}-option`}
                 >
-                  <div className="flex w-full items-center gap-2">
+                  <div
+                    className="flex w-full items-center gap-2"
+                    data-testid={`dropdown-option-${index}-container`}
+                  >
                     {filteredMetadata?.[index]?.icon && (
                       <ForwardedIconComponent
                         name={filteredMetadata?.[index]?.icon || "Unknown"}
@@ -450,14 +405,18 @@ export default function Dropdown({
                       />
                     )}
                     <div
-                      className={cn("flex truncate", {
-                        "flex-col":
-                          filteredMetadata && filteredMetadata?.length > 0,
-                        "w-full pl-2": !filteredMetadata?.[index]?.icon,
+                      className={cn("flex w-full", {
+                        "pl-2": !filteredMetadata?.[index]?.icon,
                       })}
                     >
-                      <div className="flex truncate">
-                        {option}{" "}
+                      <div
+                        className={cn("truncate text-[13px]", {
+                          "w-1/2": filteredMetadata?.length !== 0,
+                        })}
+                      >
+                        {option}
+                      </div>
+                      {filteredMetadata?.[index]?.status && (
                         <span
                           className={`flex items-center pl-2 text-xs ${getStatusColor(
                             filteredMetadata?.[index]?.status,
@@ -469,9 +428,10 @@ export default function Dropdown({
                             ]?.status?.toLowerCase()}
                           />
                         </span>
-                      </div>
-                      {filteredMetadata && filteredMetadata?.length > 0 ? (
-                        <div className="flex w-full items-center overflow-hidden text-muted-foreground">
+                      )}
+
+                      {filteredMetadata && filteredMetadata?.length > 0 && (
+                        <div className="ml-auto flex items-center overflow-hidden pl-2 text-muted-foreground">
                           {Object.entries(
                             filterMetadataKeys(filteredMetadata?.[index] || {}),
                           )
@@ -493,25 +453,27 @@ export default function Dropdown({
                                     className="mx-1 h-1 w-1 flex-shrink-0 overflow-visible fill-muted-foreground"
                                   />
                                 )}
-                                <div
-                                  className={cn("text-xs", {
-                                    "w-full truncate": i === arr.length - 1,
-                                  })}
-                                >{`${String(value)} ${key}`}</div>
+                                <div className="truncate text-xs">
+                                  {`${String(value)} ${key}`}
+                                </div>
                               </div>
                             ))}
                         </div>
-                      ) : (
-                        <div className="ml-auto flex">
-                          <ForwardedIconComponent
-                            name="Check"
-                            className={cn(
-                              "h-4 w-4 shrink-0 text-primary",
-                              value === option ? "opacity-100" : "opacity-0",
-                            )}
-                          />
-                        </div>
                       )}
+                      <div
+                        className={cn("pl-2", {
+                          "ml-auto":
+                            !filteredMetadata || filteredMetadata.length === 0,
+                        })}
+                      >
+                        <ForwardedIconComponent
+                          name="Check"
+                          className={cn(
+                            "h-4 w-4 shrink-0 text-primary",
+                            value === option ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                      </div>
                     </div>
                   </div>
                 </CommandItem>
@@ -525,7 +487,56 @@ export default function Dropdown({
         )}
       </CommandGroup>
       <CommandSeparator />
-      {dialogInputs && dialogInputs?.fields && renderCustomOptionDialog()}
+      {dialogInputs && dialogInputs?.fields && (
+        <CommandGroup className="p-0">
+          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
+            <Button
+              className="w-full"
+              unstyled
+              onClick={() => {
+                setOpenDialog(true);
+              }}
+            >
+              <div className="flex items-center gap-2 pl-1">
+                <ForwardedIconComponent
+                  name="Plus"
+                  className="h-3 w-3 text-primary"
+                />
+                {`New ${firstWord}`}
+              </div>
+            </Button>
+          </CommandItem>
+          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
+            <Button
+              className="w-full"
+              unstyled
+              data-testid={`refresh-dropdown-list-${name}`}
+              onClick={() => {
+                handleRefreshButtonPress();
+              }}
+            >
+              <div className="flex items-center gap-2 pl-1">
+                <ForwardedIconComponent
+                  name="RefreshCcw"
+                  className={cn("refresh-icon h-3 w-3 text-primary")}
+                />
+                Refresh list
+              </div>
+            </Button>
+          </CommandItem>
+          <NodeDialog
+            open={openDialog}
+            dialogInputs={dialogInputs}
+            onClose={() => {
+              setOpenDialog(false);
+              setOpen(false);
+            }}
+            nodeId={nodeId!}
+            name={name!}
+            nodeClass={nodeClass!}
+          />
+        </CommandGroup>
+      )}
     </CommandList>
   );
 
@@ -538,9 +549,31 @@ export default function Dropdown({
         children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
       }
     >
-      <Command>
+      <Command className="flex flex-col">
         {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
+        {!dialogInputs?.fields && hasRefreshButton && (
+          <div className="sticky bottom-0 border-t bg-background">
+            <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs font-semibold text-muted-foreground">
+              <Button
+                className="w-full"
+                unstyled
+                data-testid={`refresh-dropdown-list-${name}`}
+                onClick={() => {
+                  handleRefreshButtonPress();
+                }}
+              >
+                <div className="flex items-center gap-2 pl-1">
+                  <ForwardedIconComponent
+                    name="RefreshCcw"
+                    className={cn("refresh-icon h-3 w-3 text-primary")}
+                  />
+                  Refresh list
+                </div>
+              </Button>
+            </CommandItem>
+          </div>
+        )}
       </Command>
     </PopoverContentDropdown>
   );

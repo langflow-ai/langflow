@@ -272,6 +272,16 @@ export type StreamingRequestParams = {
   eventDeliveryConfig?: EventDeliveryType;
 };
 
+// Helper function to sanitize JSON strings
+function sanitizeJsonString(jsonStr: string): string {
+  // Replace NaN with null (valid JSON)
+  return jsonStr
+    .replace(/:\s*NaN\b/g, ": null")
+    .replace(/\[\s*NaN\s*\]/g, "[null]")
+    .replace(/,\s*NaN\s*,/g, ", null,")
+    .replace(/,\s*NaN\s*\]/g, ", null]");
+}
+
 async function performStreamingRequest({
   method,
   url,
@@ -323,7 +333,8 @@ async function performStreamingRequest({
           const allString = current.join("") + string;
           let data: object;
           try {
-            data = JSON.parse(allString);
+            const sanitizedJson = sanitizeJsonString(allString);
+            data = JSON.parse(sanitizedJson);
             current = [];
           } catch (e) {
             current.push(string);
@@ -342,7 +353,8 @@ async function performStreamingRequest({
     if (current.length > 0) {
       const allString = current.join("");
       if (allString) {
-        const data = JSON.parse(current.join(""));
+        const sanitizedJson = sanitizeJsonString(allString);
+        const data = JSON.parse(sanitizedJson);
         await onData(data);
       }
     }

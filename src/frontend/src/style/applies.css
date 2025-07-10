@@ -191,7 +191,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply form-input block w-full rounded-md border border-border bg-background px-3 text-left shadow-sm placeholder:text-placeholder-foreground hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
+    @apply form-input block w-full rounded-md border border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .input-edit-node {
@@ -905,7 +905,7 @@
     @apply flex items-center justify-between px-2 py-2;
   }
   .api-modal-tabs-content {
-    @apply -mt-1 h-full w-full pb-4;
+    @apply h-full w-full;
   }
   .api-modal-accordion-display {
     @apply mt-2 flex h-full w-full;
@@ -1247,8 +1247,16 @@
     @apply absolute right-3 w-14 -translate-y-3.5 cursor-text rounded-sm px-2 py-[1px] text-center hover:ring-[1px] hover:ring-slider-input-border;
   }
 
+  .cursor-pointer,
+  .cursor-default,
+  .cursor-not-allowed,
+  label,
+  button {
+    @apply select-none;
+  }
+
   .btn-add-input-list {
-    @apply flex h-8 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
+    @apply flex h-6 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
   }
 
   .btn-playground-actions {

@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.4.2"
+version = "0.5.0.post1"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -10,7 +10,6 @@ maintainers = [
     { name = "Carlos Coelho", email = "carlos@langflow.org" },
     { name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com" },
     { name = "Gabriel Almeida", email = "gabriel@langflow.org" },
-    { name = "Igor Carvalho", email = "igorr.ackerman@gmail.com" },
     { name = "Lucas Eduoli", email = "lucaseduoli@gmail.com" },
     { name = "Otávio Anovazzi", email = "otavio2204@gmail.com" },
     { name = "Rodrigo Nader", email = "rodrigo@langflow.org" },
@@ -78,14 +77,13 @@ dependencies = [
     "validators>=0.34.0",
     "networkx>=3.4.2",
     "json-repair>=0.30.3",
-    "mcp>=1.6.0",
+    "mcp~=1.10.1",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
     "jsonquerylang>=1.1.1",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
     'elevenlabs==1.58.1; python_version == "3.12"',
     'elevenlabs>=1.52.0; python_version != "3.12"',
-    "webrtcvad>=2.0.10",
     "scipy>=1.15.2",
     "ibm-watsonx-ai>=1.3.1",
     "langchain-ibm>=0.3.8",
@@ -233,12 +231,15 @@ Documentation = "https://docs.langflow.org"
 
 # Optional dependencies for uv
 [project.optional-dependencies]
+audio = [
+    "webrtcvad>=2.0.10",
+]
 
 postgresql = [
-  "sqlalchemy[postgresql_psycopg2binary]",
-    "sqlalchemy[postgresql_psycopg]",
-
+    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
+    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
 ]
+
 local = [
     "llama-cpp-python>=0.2.0",
     "sentence-transformers>=2.0.0",
