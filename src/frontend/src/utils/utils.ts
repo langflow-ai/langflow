@@ -681,7 +681,7 @@ export function tryParseJson(json: string) {
   try {
     const parsedJson = JSON.parse(json);
     return parsedJson;
-  } catch (error) {
+  } catch (_error) {
     return;
   }
 }

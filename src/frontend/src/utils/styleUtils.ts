@@ -525,7 +525,7 @@ export const getNodeIcon = async (name: string) => {
   if (dynamicIconImports[lucideIconName]) {
     try {
       return cacheAndReturn(lazy(dynamicIconImports[lucideIconName]));
-    } catch (e) {
+    } catch (_e) {
       // Fall through to next option
     }
   }

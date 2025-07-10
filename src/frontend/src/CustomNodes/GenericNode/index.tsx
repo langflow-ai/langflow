@@ -44,7 +44,7 @@ const MemoizedNodeStatus = memo(CustomNodeStatus);
 const MemoizedNodeDescription = memo(NodeDescription);
 const MemoizedNodeOutputs = memo(NodeOutputs);
 
-const HiddenOutputsButton = memo(
+const _HiddenOutputsButton = memo(
   ({
     showHiddenOutputs,
     onClick,
@@ -77,7 +77,7 @@ function GenericNode({
   const [borderColor, setBorderColor] = useState<string>("");
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
-  const [validationStatus, setValidationStatus] =
+  const [_validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
   const [openUpdateModal, setOpenUpdateModal] = useState(false);
 

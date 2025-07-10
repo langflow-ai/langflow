@@ -20,7 +20,7 @@ export default function InputListComponent({
   placeholder,
   listAddLabel,
 }: InputProps<string[], InputListComponentType>): JSX.Element {
-  const [dropdownOpen, setDropdownOpen] = useState<number | null>(null);
+  const [_dropdownOpen, setDropdownOpen] = useState<number | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 

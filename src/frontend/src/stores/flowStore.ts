@@ -568,7 +568,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   getFilterEdge: [],
   onConnect: (connection) => {
-    const dark = useDarkStore.getState().dark;
+    const _dark = useDarkStore.getState().dark;
     // const commonMarkerProps = {
     //   type: MarkerType.ArrowClosed,
     //   width: 20,
@@ -821,7 +821,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       stopNodeId,
       onGetOrderSuccess: () => {},
       onBuildComplete: (allNodesValid) => {
-        const nodeId = startNodeId || stopNodeId;
+        const _nodeId = startNodeId || stopNodeId;
         if (!silent) {
           if (allNodesValid) {
             get().setBuildInfo({ success: true });

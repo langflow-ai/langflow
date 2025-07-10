@@ -83,7 +83,7 @@ export default function SignUp(): JSX.Element {
           return;
         }
 
-        const data = Object.fromEntries(new FormData(event.currentTarget));
+        const _data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
       }}
       className="h-screen w-full"

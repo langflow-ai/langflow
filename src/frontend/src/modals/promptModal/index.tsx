@@ -45,7 +45,7 @@ export default function PromptModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const divRef = useRef(null);
-  const divRefPrompt = useRef(null);
+  const _divRefPrompt = useRef(null);
   const { mutate: postValidatePrompt } = usePostValidatePrompt();
   const [clickPosition, setClickPosition] = useState({ x: 0, y: 0 });
   const [scrollPosition, setScrollPosition] = useState(0);

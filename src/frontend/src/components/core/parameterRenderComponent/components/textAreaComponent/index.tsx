@@ -80,7 +80,7 @@ export default function TextAreaComponent({
     [nodeInformationMetadata?.nodeType],
   );
 
-  const isMCPSSE = useMemo(
+  const _isMCPSSE = useMemo(
     () => nodeInformationMetadata?.nodeType === "mcp_sse",
     [nodeInformationMetadata?.nodeType],
   );

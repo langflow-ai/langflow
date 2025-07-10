@@ -9,7 +9,7 @@ export default function SingleAlert({
   dropItem,
   removeAlert,
 }: SingleAlertComponentType): JSX.Element {
-  const [show, setShow] = useState(true);
+  const [_show, setShow] = useState(true);
   const type = dropItem.type;
 
   return type === "error" ? (

@@ -65,7 +65,7 @@ const SideBarFoldersButtonsComponent = ({
   const loading = !folders;
   const refInput = useRef<HTMLInputElement>(null);
 
-  const navigate = useCustomNavigate();
+  const _navigate = useCustomNavigate();
 
   const currentFolder = pathname.split("/");
   const urlWithoutPath =

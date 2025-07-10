@@ -35,7 +35,7 @@ test(
       await page.getByText("Add MCP Server", { exact: true }).click({
         timeout: 5000,
       });
-    } catch (error) {
+    } catch (_error) {
       await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
       await page.getByText("Add MCP Server", { exact: true }).click({
         timeout: 5000,

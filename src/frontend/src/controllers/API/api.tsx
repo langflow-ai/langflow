@@ -23,7 +23,7 @@ const api: AxiosInstance = axios.create({
   baseURL: baseURL,
 });
 
-const cookies = new Cookies();
+const _cookies = new Cookies();
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -125,7 +125,7 @@ function ApiInterceptor() {
         );
 
         return isDomainAllowed || isEndpointAllowed;
-      } catch (e) {
+      } catch (_e) {
         // Invalid URL
         return false;
       }
@@ -143,7 +143,7 @@ function ApiInterceptor() {
       try {
         const parsedURL = new URL(url);
         return EXTERNAL_DOMAINS.some((domain) => parsedURL.origin === domain);
-      } catch (e) {
+      } catch (_e) {
         return false;
       }
     };
@@ -340,7 +340,7 @@ async function performStreamingRequest({
             const sanitizedJson = sanitizeJsonString(allString);
             data = JSON.parse(sanitizedJson);
             current = [];
-          } catch (e) {
+          } catch (_e) {
             current.push(string);
             continue;
           }

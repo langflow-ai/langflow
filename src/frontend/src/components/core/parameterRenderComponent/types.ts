@@ -37,7 +37,7 @@ export type BaseInputProps<valueType = any> = {
 export type InputProps<
   valueType = any,
   T = {},
-  U extends object = object,
+  _U extends object = object,
 > = BaseInputProps<valueType> & T & { placeholder?: string };
 
 export type TableComponentType = {

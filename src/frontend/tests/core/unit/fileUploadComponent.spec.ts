@@ -363,7 +363,7 @@ test(
 
     // Read the test file content
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
-    const fileContent = fs.readFileSync(testFilePath);
+    const _fileContent = fs.readFileSync(testFilePath);
 
     await awaitBootstrapTest(page);
 

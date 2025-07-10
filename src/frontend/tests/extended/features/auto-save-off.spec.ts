@@ -66,7 +66,7 @@ test(
       );
 
       await page.getByText("Exit Anyway", { exact: true }).click();
-    } catch (error) {
+    } catch (_error) {
       console.log("Warning text not visible, skipping dialog confirmation");
     }
 

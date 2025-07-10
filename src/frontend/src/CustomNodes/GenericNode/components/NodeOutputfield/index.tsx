@@ -38,7 +38,7 @@ import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputModal from "../outputModal";
 
-const EyeIcon = memo(
+const _EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
     <IconComponent
       className={className}

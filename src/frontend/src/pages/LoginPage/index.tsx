@@ -59,7 +59,7 @@ export default function LoginPage(): JSX.Element {
           return;
         }
         signIn();
-        const data = Object.fromEntries(new FormData(event.currentTarget));
+        const _data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
       }}
       className="h-screen w-full"

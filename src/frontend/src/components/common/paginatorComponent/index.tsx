@@ -36,7 +36,7 @@ export default function PaginatorComponent({
   const disableFirstPage = pageIndex <= 1;
   const disableLastPage = pageIndex === maxIndex;
 
-  const handleValueChange = (pageSize: string) => {
+  const _handleValueChange = (pageSize: string) => {
     setPageSize(Number(pageSize));
     setMaxPageIndex(pages ?? Math.ceil(totalRowsCount / Number(pageSize)));
     paginate(1, Number(pageSize));

@@ -44,13 +44,13 @@ export default function StoreCardComponent({
 
   const name = data.is_component ? "Component" : "Flow";
 
-  async function getFlowData() {
+  async function _getFlowData() {
     const res = await getComponent(data.id);
     const newFlow = cloneFLowWithParent(res, res.id, data.is_component, true);
     return newFlow;
   }
 
-  function hasPlayground(flow?: FlowType) {
+  function _hasPlayground(flow?: FlowType) {
     if (!flow) {
       return false;
     }

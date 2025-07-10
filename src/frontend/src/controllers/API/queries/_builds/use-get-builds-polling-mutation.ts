@@ -8,8 +8,8 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-const ERROR_DISPLAY_INTERVAL = 10000;
-const ERROR_DISPLAY_COUNT = 1;
+const _ERROR_DISPLAY_INTERVAL = 10000;
+const _ERROR_DISPLAY_COUNT = 1;
 
 interface PollingItem {
   interval: NodeJS.Timeout;

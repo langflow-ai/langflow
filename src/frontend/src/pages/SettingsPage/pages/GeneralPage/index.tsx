@@ -124,7 +124,7 @@ export const GeneralPage = () => {
     },
   });
 
-  const handleSaveKey = (apikey: string) => {
+  const _handleSaveKey = (apikey: string) => {
     if (apikey) {
       mutate({ key: apikey });
       storeApiKey(apikey);

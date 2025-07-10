@@ -34,7 +34,7 @@ export default function ApiModal({
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
 }) {
-  const autoLogin = useAuthStore((state) => state.autoLogin);
+  const _autoLogin = useAuthStore((state) => state.autoLogin);
   const nodes = useFlowStore((state) => state.nodes);
   const [openTweaks, setOpenTweaks] = useState(false);
   const tweaks = useTweaksStore((state) => state.tweaks);

@@ -135,7 +135,7 @@ test(
   },
 );
 
-async function moveSlider(
+async function _moveSlider(
   page: Page,
   side: "left" | "right",
   advanced: boolean = false,

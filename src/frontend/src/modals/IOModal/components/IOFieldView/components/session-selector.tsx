@@ -49,7 +49,7 @@ export default function SessionSelector({
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();
   const inputRef = useRef<HTMLInputElement>(null);
-  const setNewChatOnPlayground = useFlowStore(
+  const _setNewChatOnPlayground = useFlowStore(
     (state) => state.setNewChatOnPlayground,
   );
 

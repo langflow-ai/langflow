@@ -11,7 +11,7 @@ export default function ObjectRender({
   if (typeof object === "string") {
     try {
       newObject = JSON.parse(object);
-    } catch (e) {
+    } catch (_e) {
       newObject = object;
     }
   }

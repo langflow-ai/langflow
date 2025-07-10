@@ -14,7 +14,7 @@ export default function EditMessageField({
   const [message, setMessage] = useState(initialMessage);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // used before to onBlur function, leave it here because in the future we may want this functionality again
-  const [isButtonClicked, setIsButtonClicked] = useState(false);
+  const [_isButtonClicked, setIsButtonClicked] = useState(false);
   const adjustTextareaHeight = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";

@@ -45,7 +45,7 @@ const JsonEditor = ({
   const [transformQuery, setTransformQuery] = useState(initialFilter ?? "");
   const [originalData, setOriginalData] = useState(data);
   const [isFiltered, setIsFiltered] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [_showSuccess, setShowSuccess] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const { customizeMenu } = useMenuCustomization(setSuccessData, setErrorData);
@@ -110,7 +110,7 @@ const JsonEditor = ({
                 setIsFiltered(true);
               }
               return;
-            } catch (jsonError) {
+            } catch (_jsonError) {
               setErrorData({
                 title: "Invalid Result",
                 list: [
@@ -208,7 +208,7 @@ const JsonEditor = ({
               setIsFiltered(true);
             }
             return;
-          } catch (jsonError) {
+          } catch (_jsonError) {
             setErrorData({
               title: "Invalid Result",
               list: [
@@ -249,7 +249,7 @@ const JsonEditor = ({
     setShowSuccess(false);
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const _handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleTransform();

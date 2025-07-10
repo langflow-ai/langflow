@@ -565,7 +565,7 @@ export default function Page({
     };
   }, [isAddingNote, shadowBoxWidth, shadowBoxHeight]);
 
-  const componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
+  const _componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
 
   const MIN_ZOOM = 0.2;
   const MAX_ZOOM = 8;

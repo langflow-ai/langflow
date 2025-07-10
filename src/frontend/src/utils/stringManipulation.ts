@@ -177,7 +177,7 @@ export function parseString(
           result = sanitizeMcpName(result);
           break;
       }
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`Error in parser ${parser}`);
     }
   }

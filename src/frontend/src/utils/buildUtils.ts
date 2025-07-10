@@ -544,7 +544,7 @@ async function onEvent(
           if (onGetOrderSuccess) onGetOrderSuccess();
           useFlowStore.getState().setIsBuilding(true);
           return true;
-        } catch (e) {
+        } catch (_e) {
           useFlowStore.getState().setIsBuilding(false);
           return false;
         }
@@ -688,7 +688,7 @@ export async function buildVertices({
   if (onValidateNodes) {
     try {
       onValidateNodes(verticesOrderResponse.verticesToRun);
-    } catch (e) {
+    } catch (_e) {
       useFlowStore.getState().setIsBuilding(false);
       return;
     }
@@ -697,7 +697,7 @@ export async function buildVertices({
   const verticesBuild = useFlowStore.getState().verticesBuild;
 
   const verticesIds = verticesBuild?.verticesIds!;
-  const verticesLayers = verticesBuild?.verticesLayers!;
+  const _verticesLayers = verticesBuild?.verticesLayers!;
   const runId = verticesBuild?.runId!;
   let stop = false;
 

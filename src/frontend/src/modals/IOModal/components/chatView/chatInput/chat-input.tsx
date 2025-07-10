@@ -176,7 +176,7 @@ export default function ChatInput({
         repeat: 1,
         files: filesToSend,
       });
-    } catch (error) {
+    } catch (_error) {
       setChatValueStore(storedChatValue);
       setFiles(storedFiles);
     }

@@ -766,7 +766,7 @@ function hasLoop(
 export function updateEdges(edges: EdgeType[]) {
   if (edges)
     edges.forEach((edge) => {
-      const targetHandleObject: targetHandleType = scapeJSONParse(
+      const _targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!,
       );
       edge.className = "";
@@ -1461,7 +1461,7 @@ export function generateNodeFromFlow(
   getNodeId: (type: string) => string,
 ): AllNodeType {
   const { nodes } = flow.data!;
-  const outputNode = cloneDeep(findLastNode(flow.data!));
+  const _outputNode = cloneDeep(findLastNode(flow.data!));
   const position = getMiddlePoint(nodes);
   const data = cloneDeep(flow);
   const id = getNodeId("groupComponent");

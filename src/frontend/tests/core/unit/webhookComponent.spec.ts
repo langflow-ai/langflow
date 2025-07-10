@@ -6,7 +6,7 @@ test(
   "user should be able to create an api key within a webhook component",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    const randomApiKeyDescription =
+    const _randomApiKeyDescription =
       Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
 
@@ -79,7 +79,7 @@ test(
       });
     });
 
-    const randomApiKeyDescription =
+    const _randomApiKeyDescription =
       Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
 

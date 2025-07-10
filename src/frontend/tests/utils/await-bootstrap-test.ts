@@ -34,7 +34,7 @@ export const awaitBootstrapTest = async (
       if (modalTitleElement) {
         modalCount = await modalTitleElement.count();
       }
-    } catch (error) {
+    } catch (_error) {
       modalCount = 0;
     }
 

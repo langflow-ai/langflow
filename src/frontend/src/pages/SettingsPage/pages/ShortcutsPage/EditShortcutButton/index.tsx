@@ -123,7 +123,7 @@ export default function EditShortcutButton({
 
   function checkForKeys(keys: string, keyToCompare: string): boolean {
     const keysArr = keys.split(" ");
-    const hasNewKey = false;
+    const _hasNewKey = false;
     return keysArr.some(
       (k) => k.toLowerCase().trim() === keyToCompare.toLowerCase().trim(),
     );

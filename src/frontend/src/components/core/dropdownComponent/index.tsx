@@ -89,7 +89,7 @@ export default function Dropdown({
   }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
-  const placeholderName = name
+  const _placeholderName = name
     ? formatPlaceholderName(name)
     : "Choose an option...";
   const { firstWord } = formatName(name);

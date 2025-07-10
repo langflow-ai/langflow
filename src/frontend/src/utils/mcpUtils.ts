@@ -16,7 +16,7 @@ export function extractFirstMcpServerFromJson(json: string | object): {
   if (typeof json === "string") {
     try {
       parsed = JSON.parse(json);
-    } catch (e) {
+    } catch (_e) {
       throw new Error("Invalid JSON format.");
     }
   }
@@ -92,10 +92,10 @@ export function extractMcpServersFromJson(
   if (typeof json === "string") {
     try {
       parsed = JSON.parse(json);
-    } catch (e) {
+    } catch (_e) {
       try {
         parsed = JSON.parse(`{${json}}`);
-      } catch (e) {
+      } catch (_e) {
         throw new Error("Invalid JSON format.");
       }
     }

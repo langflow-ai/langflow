@@ -96,7 +96,7 @@ export const useGetMessagesPollingMutation = (
     payload: MessagesQueryParams,
   ): Promise<MessagesResponse> => {
     const requestId = payload.id || "default";
-    const sessionId = payload.session_id;
+    const _sessionId = payload.session_id;
 
     if (requestInProgressRef.current[requestId]) {
       return Promise.reject("Request already in progress");
