@@ -12,7 +12,7 @@ Langflow provides several ways to run flows from external applications:
 
 * [Trigger flows with the Langflow API](#api-access)
 * [Add an embedded chat widget to a website](#embedded-chat-widget)
-* [Serve flows through a Langflow MCP server](#access-a-langflow-mcp-server)
+* [Serve flows through a Langflow MCP server](#serve-flows-through-a-langflow-mcp-server)
 
 Although you can use these options with an isolated, local Langflow instance, they are typically more valuable when you have [deployed a Langflow server](/deployment-overview) or packaged Langflow as a dependency of an application.
 For package dependencies, see [Application development overview](/develop-application) and [Package a flow as a Docker image](/deployment-docker#package-your-flow-as-a-docker-image).
