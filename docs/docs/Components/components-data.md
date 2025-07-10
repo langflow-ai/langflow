@@ -421,16 +421,16 @@ This component defines a webhook trigger that runs a flow when it receives an HT
 
 If the input is not valid JSON, the component wraps it in a `payload` object so that it can be processed and still trigger the flow.
 
-When you add a **Webhook** component to a flow, the flow's [**API access** pane](/concepts-publish#api-access) exposes an additional **Webhook cURL** tab that contains a `POST /v1/webhook/$FLOW_ID` code snippet.
-You can use this request to send data to the **Webhook** component and trigger the flow.
-For example:
+When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
+Replace `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` with the values from your Langflow deployment.
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_SERVER_URL/api/v1/webhook/$FLOW_ID" \
-  -H 'Content-Type: application/json'\
+  "http://LANGFLOW_SERVER_ADDRESS/api/v1/webhook/FLOW_ID" \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: LANGFLOW_API_KEY' \
   -d '{"any": "data"}'
-  ```
+```
 
 The **Webhook** component is often paired with a [**Parser** component](/components-processing#parser) to extract relevant data from the raw payload.
 For more information, see [Trigger flows with webhooks](/webhook).
