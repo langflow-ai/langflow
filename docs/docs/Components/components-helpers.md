@@ -5,6 +5,8 @@ slug: /components-helpers
 
 import Icon from "@site/src/components/icon";
 
+Helper components provide utility functions to help manage data, tasks, and other components in your flow.
+
 ## Calculator
 
 The Calculator component performs basic arithmetic operations on mathematical expressions. It supports addition, subtraction, multiplication, division, and exponentiation operations.

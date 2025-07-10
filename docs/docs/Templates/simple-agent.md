@@ -5,12 +5,11 @@ slug: /simple-agent
 
 import Icon from "@site/src/components/icon";
 
-This flow demonstrats a **Simple Agent** flow for an agentic application using an [Agent](/agents).
-
-An **agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
+This flow demonstrates using an [Agent](/agents) in a flow.
+An **Agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
 
 In this flow, the **Agent** reasons using a connected [Language model](/components-models) component.
-The agent selects the [Calculator](/components-helpers#calculator) tool for simple math problems, and the [URL](/components-data#url) tool to search a URL for content.
+The **Agent** selects the [Calculator](/components-helpers#calculator) tool for simple math problems, and the [URL](/components-data#url) tool to search a URL for content.
 
 ## Prerequisites
 
@@ -40,28 +39,28 @@ The **Simple Agent** flow is created.
 
 2. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 3. To confirm the tools are connected, ask the agent, `What tools are available to you?`
-The response is similar to the following:
-```text
-I have access to the following tools:
-Calculator: Perform basic arithmetic operations.
-fetch_content: Load and retrieve data from specified URLs.
-fetch_content_text: Load and retrieve text data from specified URLs.
-as_dataframe: Load and retrieve data in a structured format (dataframe) from specified URLs.
-get_current_date: Returns the current date and time in a selected timezone.
-```
+    The response is similar to the following:
+    ```text
+    I have access to the following tools:
+    Calculator: Perform basic arithmetic operations.
+    fetch_content: Load and retrieve data from specified URLs.
+    fetch_content_text: Load and retrieve text data from specified URLs.
+    as_dataframe: Load and retrieve data in a structured format (dataframe) from specified URLs.
+    get_current_date: Returns the current date and time in a selected timezone.
+    ```
 4. Ask the agent a question. For example, ask it to create a tabletop character using your favorite rules set.
-The agent tells you when it's using the `URL-fetch_content_text` tool to search for rules information, and when it's using `CalculatorComponent-evaluate_expression` to generate attributes with dice rolls.
-The final output should be similar to this:
+    The agent tells you when it's using the `URL-fetch_content_text` tool to search for rules information, and when it's using `CalculatorComponent-evaluate_expression` to generate attributes with dice rolls.
+    The final output should be similar to this:
 
-```text
-Final Attributes
-Strength (STR): 10
-Constitution (CON): 12
-Size (SIZ): 14
-Dexterity (DEX): 9
-Intelligence (INT): 11
-Power (POW): 13
-Charisma (CHA): 8
-```
+    ```text
+    Final Attributes
+    Strength (STR): 10
+    Constitution (CON): 12
+    Size (SIZ): 14
+    Dexterity (DEX): 9
+    Intelligence (INT): 11
+    Power (POW): 13
+    Charisma (CHA): 8
+    ```
 
 Now that your query has completed the journey from **Chat input** to **Chat output**, you have completed the **Simple Agent** flow.

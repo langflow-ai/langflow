@@ -3,12 +3,15 @@ title: Travel planning agent
 slug: /travel-planning-agent
 ---
 
+import Icon from "@site/src/components/icon";
+
 This flow demonstrates using multiple [Agent](/agents) components in a single flow.
+
 In this flow, multiple **Agents** plan a travel journey.
 Each agent is given a different responsibility defined by its **System Prompt** field.
 The **Chat input** defines where the user wants to go, and passes the result to the **City Selection** agent. The **Local Expert** agent then adds information based on the selected cities, and the **Travel Concierge** assembles a seven day travel plan in Markdown.
 
-All agents have access to the **Search API** and **URL Content Fetcher** components, while only the Travel Concierge can use the **Calculator** for computing the trip costs.
+All agents have access to the **Search API** and **URL Content Fetcher** components, while only the **Travel Concierge** agent can use the **Calculator** for computing the trip costs.
 
 ## Prerequisites
 
@@ -38,7 +41,7 @@ The **Travel Planning Agent** flow consists of these components:
 ## Run the travel planning agent flow
 
 1. Add your credentials to the Open AI and Search API components.
-2. Click **Playground** to start a chat session.
+2. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 You should receive a detailed, helpful answer to the journey defined in the **Chat input** component.
 
 Now that your query has completed the journey from **Chat input** to **Chat output**, you have completed the **Travel Planning Agent** flow.
