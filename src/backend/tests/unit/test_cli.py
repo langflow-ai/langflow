@@ -369,9 +369,9 @@ class TestExecuteCommand:
 
                 # Check that required fields have correct types
                 if "result" in output_data:
-                    assert output_data["result"] is not None or case["args"][-1] == str(temp_python_script), (
-                        f"Unexpected None result: {output_data}"
-                    )
+                    assert output_data["result"] is not None or case["args"][-1] == str(
+                        temp_python_script
+                    ), f"Unexpected None result: {output_data}"
 
                 if "type" in output_data:
                     assert isinstance(output_data["type"], str), f"Type should be string: {output_data}"
@@ -1732,3 +1732,248 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
 
                 # Verify that the download function was called
                 mock_download.assert_called_once()
+
+    # Inline JSON Tests
+
+    def test_serve_flow_json_valid(self, runner):
+        """Test serve command with valid inline JSON."""
+        from unittest.mock import MagicMock, patch
+
+        valid_json = '{"data": {"nodes": [{"id": "1", "type": "ChatInput"}], "edges": []}}'
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
+            mock_uvicorn.return_value = None
+            mock_graph = MagicMock()
+            mock_load_graph.return_value = mock_graph
+
+            result = runner.invoke(app, ["serve", "--flow-json", valid_json, "--verbose"])
+            assert result.exit_code == 0, result.output
+
+            # Verify inline JSON processing messages
+            assert "Processing inline JSON content..." in result.output
+            assert "✓ JSON content is valid" in result.output
+            assert "✓ Created temporary file:" in result.output
+            assert "Single Flow Served Successfully!" in result.output
+            assert "Source: inline JSON" in result.output
+
+    def test_serve_flow_json_invalid(self, runner):
+        """Test serve command with invalid inline JSON."""
+        invalid_json = '{"nodes": [invalid json'
+
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
+            result = runner.invoke(app, ["serve", "--flow-json", invalid_json, "--verbose"])
+            assert result.exit_code == 1
+            assert "Error: Invalid JSON content:" in result.output
+
+    def test_serve_stdin_valid(self, runner):
+        """Test serve command reading valid JSON from stdin."""
+        from unittest.mock import MagicMock, patch
+
+        valid_json = '{"data": {"nodes": [{"id": "1", "type": "ChatInput"}], "edges": []}}'
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
+            mock_uvicorn.return_value = None
+            mock_graph = MagicMock()
+            mock_load_graph.return_value = mock_graph
+
+            # Use input parameter to simulate stdin
+            result = runner.invoke(app, ["serve", "--stdin", "--verbose"], input=valid_json)
+            assert result.exit_code == 0, result.output
+
+            # Verify stdin processing messages
+            assert "Reading JSON content from stdin..." in result.output
+            assert "✓ JSON content from stdin is valid" in result.output
+            assert "✓ Created temporary file from stdin:" in result.output
+            assert "Single Flow Served Successfully!" in result.output
+            assert "Source: stdin" in result.output
+
+    def test_serve_stdin_invalid(self, runner):
+        """Test serve command reading invalid JSON from stdin."""
+        invalid_json = '{"nodes": [invalid json'
+
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
+            result = runner.invoke(app, ["serve", "--stdin", "--verbose"], input=invalid_json)
+            assert result.exit_code == 1
+            assert "Error: Invalid JSON content from stdin:" in result.output
+
+    def test_serve_stdin_empty(self, runner):
+        """Test serve command reading empty content from stdin."""
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
+            result = runner.invoke(app, ["serve", "--stdin", "--verbose"], input="")
+            assert result.exit_code == 1
+            assert "Error: No content received from stdin" in result.output
+
+    def test_serve_input_validation_no_source(self, runner):
+        """Test serve command validation when no input source is provided."""
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
+            result = runner.invoke(app, ["serve", "--verbose"])
+            assert result.exit_code == 1
+            assert "Error: Must provide either script_path, --flow-json, or --stdin" in result.output
+
+    def test_serve_input_validation_multiple_sources(self, runner, temp_python_script):
+        """Test serve command validation when multiple input sources are provided."""
+        valid_json = '{"data": {"nodes": [], "edges": []}}'
+
+        with patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}):
+            # Test script_path + flow_json
+            result = runner.invoke(app, ["serve", str(temp_python_script), "--flow-json", valid_json, "--verbose"])
+            assert result.exit_code == 1
+            assert "Error: Cannot use script_path, --flow-json, and --stdin together" in result.output
+
+            # Test flow_json + stdin
+            result = runner.invoke(app, ["serve", "--flow-json", valid_json, "--stdin", "--verbose"])
+            assert result.exit_code == 1
+            assert "Error: Cannot use script_path, --flow-json, and --stdin together" in result.output
+
+            # Test script_path + stdin
+            result = runner.invoke(app, ["serve", str(temp_python_script), "--stdin", "--verbose"])
+            assert result.exit_code == 1
+            assert "Error: Cannot use script_path, --flow-json, and --stdin together" in result.output
+
+    def test_serve_flow_json_with_mcp_mode(self, runner):
+        """Test serve command with inline JSON in MCP mode."""
+        from unittest.mock import MagicMock, patch
+
+        valid_json = '{"data": {"nodes": [{"id": "1", "type": "ChatInput"}], "edges": []}}'
+
+        with (
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
+            mock_uvicorn.return_value = None
+            mock_graph = MagicMock()
+            mock_load_graph.return_value = mock_graph
+
+            result = runner.invoke(app, ["serve", "--flow-json", valid_json, "--mcp", "--verbose"])
+            assert result.exit_code == 0, result.output
+
+            # Verify MCP mode with inline JSON
+            assert "🔧 Starting Langflow with MCP server enabled..." in result.output
+            assert "MCP Server Started!" in result.output
+            assert "Source: inline JSON" in result.output
+            assert "MCP SSE endpoint:" in result.output
+
+    def test_serve_stdin_with_mcp_mode(self, runner):
+        """Test serve command with stdin input in MCP mode."""
+        from unittest.mock import MagicMock, patch
+
+        valid_json = '{"data": {"nodes": [{"id": "1", "type": "ChatInput"}], "edges": []}}'
+
+        with (
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
+            mock_uvicorn.return_value = None
+            mock_graph = MagicMock()
+            mock_load_graph.return_value = mock_graph
+
+            result = runner.invoke(app, ["serve", "--stdin", "--mcp", "--verbose"], input=valid_json)
+            assert result.exit_code == 0, result.output
+
+            # Verify MCP mode with stdin
+            assert "🔧 Starting Langflow with MCP server enabled..." in result.output
+            assert "MCP Server Started!" in result.output
+            assert "Source: stdin" in result.output
+
+    def test_serve_flow_json_with_options(self, runner):
+        """Test serve command with inline JSON and various options."""
+        from unittest.mock import MagicMock, patch
+
+        valid_json = '{"data": {"nodes": [{"id": "1", "type": "ChatInput"}], "edges": []}}'
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
+            mock_uvicorn.return_value = None
+            mock_graph = MagicMock()
+            mock_load_graph.return_value = mock_graph
+
+            result = runner.invoke(
+                app,
+                [
+                    "serve",
+                    "--flow-json",
+                    valid_json,
+                    "--host",
+                    "0.0.0.0",  # noqa: S104
+                    "--port",
+                    "8080",
+                    "--log-level",
+                    "debug",
+                    "--verbose",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+
+            # Verify custom options are processed
+            assert "Configuring logging with level: debug" in result.output
+            assert "Single Flow Served Successfully!" in result.output
+
+    def test_serve_flow_json_temporary_file_cleanup(self, runner):
+        """Test that temporary files are properly cleaned up."""
+        from unittest.mock import MagicMock, patch
+
+        valid_json = '{"data": {"nodes": [{"id": "1", "type": "ChatInput"}], "edges": []}}'
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.uvicorn.run") as mock_uvicorn,
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+            patch("langflow.graph.Graph.prepare"),
+        ):
+            mock_uvicorn.return_value = None
+            mock_graph = MagicMock()
+            mock_load_graph.return_value = mock_graph
+
+            result = runner.invoke(app, ["serve", "--flow-json", valid_json, "--verbose"])
+            assert result.exit_code == 0, result.output
+
+            # Check that cleanup message is shown
+            assert "✓ Cleaned up temporary file:" in result.output
+
+    def test_serve_flow_json_cleanup_on_error(self, runner):
+        """Test that temporary files are cleaned up even when errors occur."""
+        from unittest.mock import patch
+
+        valid_json = '{"data": {"nodes": [{"id": "1", "type": "ChatInput"}], "edges": []}}'
+
+        with (
+            patch.dict("os.environ", {"LANGFLOW_API_KEY": "test-key"}),
+            patch("langflow.cli.commands.load_graph_from_path") as mock_load_graph,
+        ):
+            # Force an error during graph loading
+            mock_load_graph.side_effect = Exception("Graph loading failed")
+
+            result = runner.invoke(app, ["serve", "--flow-json", valid_json, "--verbose"])
+            assert result.exit_code == 1, result.output
+
+            # Check that cleanup still happens despite the error
+            # The cleanup should happen in the finally block
+            assert "Processing inline JSON content..." in result.output
+            assert "✓ JSON content is valid" in result.output
+
+    def test_serve_help_shows_new_options(self, runner):
+        """Test that help output shows the new inline JSON options."""
+        result = runner.invoke(app, ["serve", "--help"])
+        assert result.exit_code == 0
+        assert "--flow-json" in result.output
+        assert "--stdin" in result.output
+        assert "Inline JSON flow content" in result.output
+        assert "Read JSON flow content" in result.output
+        assert "from stdin" in result.output
+        assert "when using --flow-json or --stdin" in result.output
