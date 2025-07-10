@@ -21,8 +21,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.530387df.css">
-<script src="/assets/js/runtime~main.9aa38a11.js" defer="defer"></script>
-<script src="/assets/js/main.02e070e9.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.0409dc07.js" defer="defer"></script>
+<script src="/assets/js/main.a08bb881.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -46,9 +46,10 @@ For more information, see <a href="#start-a-secure-langflow-server-with-authenti
 <p>The Langflow project includes a <a href="https://github.com/langflow-ai/langflow/blob/main/.env.example" target="_blank" rel="noopener noreferrer"><code>.env.example</code></a> file to help you get started.
 You can copy the contents of this file into your own <code>.env</code> file and replace the example values with your own preferred settings.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="langflow_auto_login">LANGFLOW_AUTO_LOGIN<a href="#langflow_auto_login" class="hash-link" aria-label="Direct link to LANGFLOW_AUTO_LOGIN" title="Direct link to LANGFLOW_AUTO_LOGIN">​</a></h3>
-<p>When <code>True</code>, Langflow automatically logs users in with username <code>langflow</code> and password <code>langflow</code> without requiring user authentication.
-To disable automatic login and enforce user authentication, set this value to <code>False</code> in your <code>.env</code> file.
-By default, this variable is set to <code>True</code>.</p>
+<p>In Langflow versions 1.5 and later, most API requests require a Langflow API key, even when <code>AUTO_LOGIN=true</code>.</p>
+<p>The only exceptions are the MCP endpoints: <code>/v1/mcp</code>, <code>/v1/mcp-projects</code>, and <code>/v2/mcp</code>.
+These endpoints don&#x27;t require authentication, regardless of the <code>AUTO_LOGIN</code> setting.</p>
+<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Auto-login and API key authentication in earlier Langflow versions</summary><div><div class="collapsibleContent_i85q"><p>If you are running a Langflow version earlier than 1.5, if <code>AUTO_LOGIN=true</code>, Langflow automatically logs users in as a superuser without requiring authentication, and API requests can be made without a Langflow API key.</p><p>If you set <code>SKIP_AUTH_AUTO_LOGIN=true</code>, authentication will be skipped entirely, and API requests will not require a Langflow API key, regardless of the <code>AUTO_LOGIN</code> setting.</p></div></div></details>
 <p>Langflow <strong>does not</strong> allow users to have simultaneous or shared access to flows.
 If <code>AUTO_LOGIN</code> is enabled and user management is disabled (<code>LANGFLOW_NEW_USER_IS_ACTIVE=true</code>), users can access the same environment, but it is not password protected. If two users access the same flow, Langflow saves only the work of the last user to save.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_AUTO_LOGIN=True</span></div></div><br></code></div></div>
