@@ -16,12 +16,36 @@ Langflow can be installed in multiple ways:
 
 ## Install and run Langflow Desktop
 
-**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [version management](#manage-your-version-of-langflow-desktop) feature for managing your Langflow version. Langflow Desktop is currently available for macOS.
+**Langflow Desktop** is a desktop version of Langflow that includes all the features of open source Langflow, with an additional [version management](#manage-your-version-of-langflow-desktop) feature for managing your Langflow version.
+
+<Tabs groupId="os">
+  <TabItem value="macOS" label="macOS">
 
   1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
   2. Click **Download Langflow**, enter your contact information, and then click **Download**.
   3. Mount and install the Langflow application.
   4. When the installation completes, open the Langflow application.
+
+  After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
+
+  </TabItem>
+  <TabItem value="Windows" label="Windows">
+
+  1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
+  2. Click **Download Langflow**, enter your contact information, and then click **Download**.
+  3. Open the **File Explorer**, and then navigate to **Downloads**.
+  4. Double-click the downloaded `.msi` file, and then use the install wizard to install Langflow Desktop.
+
+      :::important
+      Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or [install Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
+      :::
+
+  5. When the installation completes, open the Langflow application.
+
+  After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
+
+  </TabItem>
+</Tabs>
 
   After confirming that Langflow is running, create your first flow with the [Quickstart](/get-started-quickstart).
 
@@ -38,6 +62,10 @@ To manage your version of Langflow Desktop, follow these steps:
   A confirmation pane containing the selected version's changelog appears.
   3. To apply the change, click **Confirm**.
   Langflow desktop restarts to install and activate the new version.
+
+### Manage dependencies in Langflow Desktop
+
+To manage dependencies in Langflow Desktop, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
 
 ## Install and run Langflow with Docker {#install-and-run-langflow-docker}
 
