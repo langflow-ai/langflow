@@ -92,7 +92,7 @@ For example, the **Prompt** component accepts inputs within curly braces, and ne
 Some components include dropdown menus to select the type of output sent to the next component.
 
 For example, the **Language Model** component includes **Model Response** or **Language Model** outputs.
-The **Model Response** output sends a [Message](/concepts-objects#message) output on to another Message port.
+The **Model Response** output sends a [Message](/concepts-objects#message-object) output on to another Message port.
 The **Language Model** output can be connected to components like [Structured output](/components-processing#structured-output) to use the LLM to power the component's reasoning.
 
 ### Port colors
