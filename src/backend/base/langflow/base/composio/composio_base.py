@@ -584,11 +584,13 @@ class ComposioBaseComponent(Component):
 
     def _remove_inputs_from_build_config(self, build_config: dict, keep_for_action: str) -> None:
         """Remove parameter UI fields that belong to other actions."""
+        protected_keys = {"code", "entity_id", "api_key", "auth_link", "action", "tool_mode"}
+        
         for action_key, lf_inputs in self._get_inputs_for_all_actions().items():
             if action_key == keep_for_action:
                 continue
             for inp in lf_inputs:
-                if inp.name is not None:
+                if inp.name is not None and inp.name not in protected_keys:
                     build_config.pop(inp.name, None)
 
     def _update_action_config(self, build_config: dict, selected_value: Any) -> None:
