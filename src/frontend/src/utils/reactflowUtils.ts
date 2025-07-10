@@ -1197,7 +1197,7 @@ export function reconnectEdges(
 ) {
   if (groupNode.type !== "genericNode" || !groupNode.data.node!.flow) return [];
   let newEdges = cloneDeep(excludedEdges);
-  const { nodes, edges } = groupNode.data.node!.flow!.data!;
+  const { nodes } = groupNode.data.node!.flow!.data!;
   const lastNode = findLastNode(groupNode.data.node!.flow!.data!);
   newEdges = newEdges.filter(
     (e) => !(nodes.some((n) => n.id === e.source) && e.source !== lastNode?.id),

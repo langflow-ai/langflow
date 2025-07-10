@@ -478,10 +478,6 @@ export type nodeGroupedObjType = {
   node: string[] | string;
 };
 
-type test = {
-  [char: string]: string;
-};
-
 export type tweakType = Array<{
   [key: string]: {
     [char: string]: string;

@@ -65,9 +65,6 @@ export function DefaultEdge({
     animated,
     selectable,
     deletable,
-    sourcePosition,
-    targetPosition,
-    pathOptions,
     selected,
     ...domSafeProps
   } = props;

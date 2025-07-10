@@ -84,7 +84,6 @@ export default function IOModal({
     : realFlowId;
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const { mutate: deleteMessagesFunction } = useDeleteMessages();
   const { mutate: deleteSessionFunction } = useDeleteSession();
 
   const [visibleSession, setvisibleSession] = useState<string | undefined>(

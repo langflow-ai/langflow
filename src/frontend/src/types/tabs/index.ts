@@ -1,8 +1,6 @@
 import type { XYPosition } from "@xyflow/react";
 import type { FlowType, NodeDataType } from "../flow";
 
-type OnChange<ChangesType> = (changes: ChangesType[]) => void;
-
 export type FlowsContextType = {
   //keep
   saveFlow: (flow?: FlowType, silent?: boolean) => Promise<void>;
