@@ -70,34 +70,35 @@ This component performs operations on [Data](/concepts-objects#data-object) obje
 All operations in the component require at least one [Data](/concepts-objects#data-object) input.
 2. In the **Operations** field, select the operation you want to perform.
 For example, send this request to the **Webhook** component.
-Replace `YOUR_FLOW_ID` with your flow ID.
-    ```bash
-    curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
-    -H 'Content-Type: application/json' \
-    -d '{
-      "id": 1,
-      "name": "Leanne Graham",
-      "username": "Bret",
-      "email": "Sincere@april.biz",
-      "address": {
-        "street": "Kulas Light",
-        "suite": "Apt. 556",
-        "city": "Gwenborough",
-        "zipcode": "92998-3874",
-        "geo": {
-          "lat": "-37.3159",
-          "lng": "81.1496"
-        }
-      },
-      "phone": "1-770-736-8031 x56442",
-      "website": "hildegard.org",
-      "company": {
-        "name": "Romaguera-Crona",
-        "catchPhrase": "Multi-layered client-server neural-net",
-        "bs": "harness real-time e-markets"
-      }
-    }'
-    ```
+Replace `FLOW_ID` and `LANGFLOW_API_KEY` with the values from your deployment.
+```bash
+curl -X POST "http://localhost:7860/api/v1/webhook/FLOW_ID" \
+-H 'Content-Type: application/json' \
+-H 'x-api-key: LANGFLOW_API_KEY' \
+-d '{
+  "id": 1,
+  "name": "Leanne Graham",
+  "username": "Bret",
+  "email": "Sincere@april.biz",
+  "address": {
+    "street": "Kulas Light",
+    "suite": "Apt. 556",
+    "city": "Gwenborough",
+    "zipcode": "92998-3874",
+    "geo": {
+      "lat": "-37.3159",
+      "lng": "81.1496"
+    }
+  },
+  "phone": "1-770-736-8031 x56442",
+  "website": "hildegard.org",
+  "company": {
+    "name": "Romaguera-Crona",
+    "catchPhrase": "Multi-layered client-server neural-net",
+    "bs": "harness real-time e-markets"
+  }
+}'
+```
 
 3. In the **Data Operations** component, select the **Select Keys** operation to extract specific user information.
 To add additional keys, click <Icon name="Plus" aria-hidden="True" /> **Add more**.
@@ -176,17 +177,20 @@ Avoid punctuation in the **Instructions** field, as it can cause errors.
 5. To run the flow, in the **Smart Filter** component, click <Icon name="Play" aria-hidden="true" /> **Run component**.
 6. To inspect the filtered data, in the **Smart Filter** component, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output**.
 The result is a structured DataFrame.
+
 ```text
 id | name             | company               | username        | email                              | address           | zip
 ---|------------------|----------------------|-----------------|------------------------------------|-------------------|-------
 1  | Emily Johnson    | ABC Corporation      | emily_johnson   | emily.johnson@abccorporation.com   | 123 Main St       | 12345
 2  | Michael Williams | XYZ Corp             | michael_williams| michael.williams@xyzcorp.com       | 456 Elm Ave       | 67890
 ```
+
 7. Add the **DataFrame Operations** component, and a **Chat Output** component to the flow.
 8. In the **DataFrame Operations** component, in the **Operation** field, select **Filter**.
 9. To apply a filter, in the **Column Name** field, enter a column to filter on. This example filters by `name`.
 10. Click **Playground**, and then click **Run Flow**.
 The flow extracts the values from the `name` column.
+
 ```text
 name
 Emily Johnson
@@ -467,6 +471,7 @@ This example uses the default Langflow server address.
 ```text
 curl -X POST "http://127.0.0.1:7860/api/v1/webhook/YOUR_FLOW_ID" \
 -H 'Content-Type: application/json' \
+-H 'x-api-key: LANGFLOW_API_KEY' \
 -d '{
     "Name": ["Alex Cruz", "Kalani Smith", "Noam Johnson"],
     "Role": ["Developer", "Designer", "Manager"],

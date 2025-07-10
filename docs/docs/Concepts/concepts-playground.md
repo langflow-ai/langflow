@@ -50,12 +50,14 @@ The `session_id` value can be configured in the **Controls** of the **Chat Input
 
 To have more than one session in a single flow, pass a specific session ID to a flow with the `session_id` parameter in the URL. All the components in the flow will automatically use this `session_id` value.
 
-To post a message to a flow with a specific session ID with curl, enter the following command.
-Replace `CUSTOM_SESSION_VALUE` with the session ID you want to send the request to.
+
+To post a message to a flow with a specific Session ID with curl, enter the following command.
+Replace `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` with the values from your Langflow deployment.
 
 ```bash
-   curl -X POST "http://localhost:7860/api/v1/run/$FLOW_ID" \
-   -H 'Content-Type: application/json' \
+   curl -X POST "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
+   -H "Content-Type: application/json" \
+   -H "x-api-key: LANGFLOW_API_KEY" \
    -d '{
        "session_id": "CUSTOM_SESSION_VALUE",
        "input_value": "message",
@@ -85,10 +87,11 @@ You can work with base64 images in the Playground in several ways:
 * **Programmatic Input**: Send base64-encoded images through the API.
 
 This example sends a base64-encoded image to the Playground using curl:
-
+Replace `LANGFLOW_SERVER_ADDRESS`, `FLOW_ID`, and `LANGFLOW_API_KEY` with the values from your Langflow deployment.
 ```bash
-curl -X POST "http://localhost:7860/api/v1/run/$FLOW_ID" \
--H 'Content-Type: application/json' \
+curl -X POST "http://localhost:7860/api/v1/run/FLOW_ID" \
+-H "Content-Type: application/json" \
+-H "x-api-key: LANGFLOW_API_KEY" \
 -d '{
     "session_id": "custom_session_123",
     "input_value": "What is in this image?",

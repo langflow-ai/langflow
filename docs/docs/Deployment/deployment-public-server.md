@@ -69,9 +69,9 @@ For example:
 
 ```bash
 curl -X POST \
-  "$PUBLIC_SERVER_DOMAIN/api/v1/webhook/$FLOW_ID" \
+  "PUBLIC_SERVER_DOMAIN/api/v1/webhook/FLOW_ID" \
   -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "x-api-key: LANGFLOW_API_KEY" \
   -d '{"data": "example-data"}'
 ```
 
@@ -97,7 +97,7 @@ For example, the following code snippet calls an ngrok domain to trigger the spe
     # Request headers
     headers = {
         "Content-Type": "application/json",
-        "x-api-key: $LANGFLOW_API_KEY"
+        "x-api-key: LANGFLOW_API_KEY"
     }
 
     try:

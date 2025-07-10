@@ -63,8 +63,9 @@ To use the **Webhook** component in a flow, do the following:
     The following example sends a payload containing `id`, `name`, and `email` strings:
 
     ```bash
-    curl -X POST "$LANGFLOW_SERVER_URL/api/v1/webhook/$FLOW_ID" \
-        -H 'Content-Type: application/json' \
+    curl -X POST "http://localhost:7860/api/v1/webhook/FLOW_ID" \
+        -H "Content-Type: application/json" \
+        -H "x-api-key: LANGFLOW_API_KEY" \
         -d '{"id": "12345", "name": "alex", "email": "alex@email.com"}'
     ```
 

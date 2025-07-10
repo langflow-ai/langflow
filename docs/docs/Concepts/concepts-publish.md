@@ -12,7 +12,13 @@ Langflow provides several ways to publish and integrate your flows into external
 
 Langflow provides code snippets to help you get started with the Langflow API.
 
-To access the **API access** pane, click **Share**, and then click **API access**.
+As of Langflow version 1.5, all API requests require authentication with a Langflow API key, even if `AUTO_LOGIN` is set to `True`.
+For more information, see [API keys](/configuration-api-keys).
+The API access pane’s code snippets include a script that looks for a `LANGFLOW_API_KEY` environment variable set in your terminal session.
+To set this variable in your terminal:
+```bash
+export LANGFLOW_API_KEY="sk..."
+```
 
 ![API pane](/img/api-pane.png)
 
