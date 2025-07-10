@@ -11,6 +11,7 @@ module.exports = {
           type: "category",
           label: "Tutorials",
           items: [
+            "Tutorials/chat-with-rag",
             "Tutorials/chat-with-files",
           ],
         },
