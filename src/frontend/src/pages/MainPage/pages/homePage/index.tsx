@@ -111,9 +111,18 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
           flow.is_component === (flowType === "components"),
       ) === undefined
     ) {
-      setFlowType(flowType === "flows" ? "components" : "flows");
+      const otherTabHasItems =
+        flows?.find(
+          (flow) =>
+            flow.folder_id === (folderId ?? myCollectionId) &&
+            flow.is_component === (flowType === "flows"),
+        ) !== undefined;
+
+      if (otherTabHasItems) {
+        setFlowType(flowType === "flows" ? "components" : "flows");
+      }
     }
-  }, [isEmptyFolder]);
+  }, [isEmptyFolder, flows, folderId, myCollectionId, flowType]);
 
   const [selectedFlows, setSelectedFlows] = useState<string[]>([]);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
@@ -222,7 +231,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     setSelectedFlows((old) =>
       old.filter((id) => data.flows.some((flow) => flow.id === id)),
     );
-  }, [data.flows]);
+  }, [folderData?.flows?.items]);
 
   // Reset key states when navigating away
   useEffect(() => {
