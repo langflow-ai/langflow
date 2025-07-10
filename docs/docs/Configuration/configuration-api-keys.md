@@ -178,6 +178,6 @@ You can store API keys for Langflow components as [global variables](/configurat
 
     You can override automatically set variables by manually entering a different variable name or value when you add the affected component to a flow.
 
-    Additionally, you can override all component settings by [running a flow with tweaks](/get-started-quickstart#use-tweaks-to-apply-temporary-overrides-to-a-flow-run), which are modifications to component settings that you make at runtime and apply to a single flow run only.
+    Additionally, you can override all component settings by [running a flow with tweaks](/concepts-publish#input-schema), which are modifications to component settings that you make at runtime and apply to a single flow run only.
 
 8. Click **Save Variable**.

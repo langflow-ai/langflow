@@ -62,7 +62,7 @@ curl -X POST \
 
 ### Upload image files (v1)
 
-Send image files to the Langflow API for use in a flow.
+Send image files to Langflow to use them in flows.
 
 The default file limit is 100 MB.
 To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
