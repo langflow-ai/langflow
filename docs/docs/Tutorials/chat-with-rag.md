@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This tutorial demonstrates how you can use Langflow to design a create a chatbot application that uses Retrieval Augmented Generation (RAG) to embed your data as vectors in a vector database, and then chat with the data.
+This tutorial demonstrates how you can use Langflow to create a chatbot application that uses Retrieval Augmented Generation (RAG) to embed your data as vectors in a vector database, and then chat with the data.
 
 ## Prerequisites
 
@@ -20,18 +20,24 @@ This tutorial demonstrates how you can use Langflow to design a create a chatbot
 
 1. In Langflow, click **New Flow**, and then select the **Vector Store RAG** template.
 2. Add your **OpenAI** API key to the **OpenAI Embeddings** components.
-3. Replace both **Astra DB** vector store components with [**Chroma DB**](/components-vector-stores#chroma-db) vector store components, or another vector store of your choice.
 
+    Optionally, replace both **Astra DB** vector store components with [**Chroma DB**](/components-vector-stores#chroma-db) vector store components, or use another vector store of your choice.
+    This example assumes you're using Chroma DB.
+
+    The **Load Data Flow** (bottom of the workspace) populates the vector store with data from a local file.
+    It ingests data from a local file, splits it into chunks, indexes it into your vector database, and computes embeddings for the chunks using the connected OpenAI embeddings model.
     Your loading flow should look like this:
 
     ![File loader chat flow](/img/tutorial-chatbot-embed-files.png)
+
+    The **Retriever Flow** (top of the workspace) embeds the user's queries into vectors, which are compared to the vector store data from the **Load Data Flow** for contextual similarity.
 
     Your chat flow should look like this:
 
     ![Chat with RAG flow](/img/tutorial-chatbot-chat-flow.png)
 
     The flows are ready to use.
-   Continue the tutorial to learn how to use the loading flow to load data into your vector store, and then call the chat flow in a chatbot application.
+    Continue the tutorial to learn how to use the loading flow to load data into your vector store, and then call the chat flow in a chatbot application.
 
 ## Load data and generate embeddings
 
@@ -54,7 +60,7 @@ In situations where many users load data or you need to load data programmatical
   <TabItem value="API" label="API">
 
     To load data programmatically, use the `/v2/files/` and `/v1/run/$FLOW_ID` endpoints. The first endpoint loads a file to your Langflow server, and then returns an uploaded file path. The second endpoint runs your RAG chatbot loading flow with the uploaded file by referencing the uploaded file path.
-     
+
     The following script demonstrates this process.
     For help with creating this script, use the [Langflow File Upload Utility](https://langflow-file-upload-examples.onrender.com/).
 
@@ -102,7 +108,7 @@ In situations where many users load data or you need to load data programmatical
 </Tabs>
 
 When the flow runs, the flow ingests the selected file, chunks the data, loads the data into the vector store database, and then generates embeddings for the chunks, which are also stored in the vector store.
-        
+
 Your database now contains data with vector embeddings that an LLM can use to respond to queries, as demonstrated in the next section of the tutorial.
 
 ## Chat with your flow from a JavaScript application
