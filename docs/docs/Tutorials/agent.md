@@ -31,7 +31,7 @@ When connected to an **Agent** component as tools, the agent has the option to u
 3. In the **Directory** component's **Path** field, enter the directory path and file types that you want to make available to the **Agent** component.
 
     In this tutorial,  the agent needs access to a record of customer purchases, so the directory name is `customer_orders` and the file type is `.csv`. Later in this tutorial, the agent will be prompted to find `email` values in the customer data.
- 
+
     You can adapt the tutorial to suit your data, or, to follow along with the tutorial, you can download [`customer-orders.csv`](/files/customer_orders/customer_orders.csv) and save it in a `customer_orders` folder on your local machine.
 4. In the [component header menu](/concepts-components#component-menus) for the **Directory** and **Web search** components, enable **Tool Mode** so you can use the components with an agent.
 
@@ -43,11 +43,11 @@ When connected to an **Agent** component as tools, the agent has the option to u
 7. To test the flow, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM a question, such as `Recommend 3 used items for carol.davis@example.com, based on previous orders.`
 
     Given the example prompt, the LLM would respond with recommendations and web links for items based on previous orders in `customer_orders.csv`.
-    
+
     The **Playground** prints the agent's chain of thought as it selects tools to use and interacts with functionality provided by those tools.
     For example, the agent can use the **Directory** component's `as_dataframe` tool to retrieve a [DataFrame](/concepts-objects#dataframe-object), and the **Web search** component's `perform_search` tool to find links to related items.
 
-## Send requests to your flow from a JavaScript application
+## Add a prompt component to the flow
 
 With your flow operational, connect it to a JavaScript application to use the agent's responses.
 
@@ -63,7 +63,9 @@ If you aren't using the `customer_orders.csv` example file, modify the input to 
 
     ![An agent component connected to web search and directory components](/img/tutorial-agent-with-directory.png)
 
-3. To construct a JavaScript application to connect to your flow, gather the following information:
+## Send requests to your flow from a JavaScript application
+
+1. To construct a JavaScript application to connect to your flow, gather the following information:
 
     * `LANGFLOW_SERVER_ADDRESS`: Your Langflow server's domain. The default value is `127.0.0.1:7860`. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-pane).
     * `FLOW_ID`: Your flow's UUID or custom endpoint name. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-pane).
@@ -72,9 +74,6 @@ If you aren't using the `customer_orders.csv` example file, modify the input to 
 2. Copy the following script into a JavaScript file, and then replace the placeholders with the information you gathered in the previous step.
 If you're using the `customer_orders.csv` example file, you can run this example as-is with the example email address in the code sample.
 If not, modify the `const email = "isabella.rodriguez@example.com"` to search for a value in your dataset.
-
-    <details open>
-    <summary>JavaScript</summary>
 
         ```js
         import { LangflowClient } from "@datastax/langflow-client";
@@ -138,10 +137,9 @@ If not, modify the `const email = "isabella.rodriguez@example.com"` to search fo
         console.log('Starting Langflow Agent...\n');
         runAgentFlow().catch(console.error);
         ```
-    </details>
 
-3. Save and run the script to send the request and test the flow.
-
+3.  Save and run the script to send the request and test the flow.
+    Your application receives three URLs for recommended used items based on a customer's previous orders in your local CSV, all without changing any code.
     <details closed>
     <summary>Response</summary>
 
@@ -167,11 +165,9 @@ If not, modify the `const email = "isabella.rodriguez@example.com"` to search fo
 
     </details>
 
-4. Check your flow's **Playground**.
+4.  To quickly check traffic to your flow, open the **Playground**.
     New sessions appear named after the user's email address.
     Keeping sessions distinct helps the agent maintain context. For more on session IDs, see [Session ID](/session-id).
-
-Your application receives three URLs for recommended used items based on a customer's previous orders in your local CSV, all without changing any code.
 
 ## Next steps
 
