@@ -26,6 +26,13 @@ To assist with formatting, you can define tweaks in Langflow's **Input Schema** 
 
 For more information, see [Use tweaks to apply temporary overrides to a flow run](/get-started-quickstart#use-tweaks-to-apply-temporary-overrides-to-a-flow-run).
 
+Additionally, you can re-name your flow's API endpoint from the default UUID to a more memorable and user-friendly name.
+
+To set a custom endpoint name:
+1. In the **Input Schema** pane, locate the **Endpoint Name** field.
+2. Enter a name using only letters, numbers, hyphens, and underscores.
+The endpoint name is automatically saved with your flow.
+
 ## Export
 
 **Export** a flow to download it as a JSON file to your local machine.
