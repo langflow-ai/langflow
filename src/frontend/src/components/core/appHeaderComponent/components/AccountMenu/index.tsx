@@ -12,7 +12,7 @@ import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
-import { cn } from "@/utils/utils";
+import { cn, computeNonPrereleaseVersion } from "@/utils/utils";
 import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import {
@@ -41,7 +41,14 @@ export const AccountMenu = () => {
     mutationLogout();
   };
 
-  const isLatestVersion = version === latestVersion;
+  const isLatestVersion = (() => {
+    if (!version || !latestVersion) return false;
+
+    const currentBaseVersion = computeNonPrereleaseVersion(version);
+    const latestBaseVersion = computeNonPrereleaseVersion(latestVersion);
+
+    return currentBaseVersion === latestBaseVersion;
+  })();
 
   return (
     <>

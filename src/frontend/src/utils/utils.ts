@@ -992,3 +992,15 @@ export function prepareSessionIdForAPI(session_id: string): string {
   const formatted = sessionIdFormatted(session_id);
   return encodeSessionId(formatted);
 }
+
+export const computeNonPrereleaseVersion = (
+  prereleaseVersion: string,
+): string => {
+  const prereleaseKeywords = ["a", "b", "rc", "dev", "post"];
+  for (const keyword of prereleaseKeywords) {
+    if (prereleaseVersion.includes(keyword)) {
+      return prereleaseVersion.split(keyword)[0].slice(0, -1);
+    }
+  }
+  return prereleaseVersion;
+};
