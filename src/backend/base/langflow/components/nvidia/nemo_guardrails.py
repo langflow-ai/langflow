@@ -3,9 +3,9 @@ import json
 import logging
 import time
 from contextlib import nullcontext
-from typing import Any
 
 import httpx
+import nest_asyncio
 import requests
 import yaml
 from nemoguardrails import RailsConfig
@@ -16,6 +16,9 @@ from langflow.field_typing import LanguageModel
 from langflow.inputs import BoolInput, DropdownInput, MessageTextInput, MultiselectInput, SecretStrInput
 from langflow.io import HandleInput, MultilineInput
 from langflow.schema.dotdict import dotdict
+
+# Apply nest_asyncio to allow sync code in async contexts
+nest_asyncio.apply()
 
 
 def setup_logging():
@@ -33,15 +36,15 @@ def setup_request_logging():
 
     def log_request(request):
         logging.debug("\n=== Request Details ===")
-        logging.debug(f"URL: {request.url}")
-        logging.debug(f"Method: {request.method}")
+        logging.debug("URL: %s", request.url)
+        logging.debug("Method: %s", request.method)
         logging.debug("Headers:")
         sensitive_headers = {"authorization", "api-key", "x-api-key", "token", "bearer", "secret"}
         for header, value in request.headers.items():
             if not any(sensitive in header.lower() for sensitive in sensitive_headers):
-                logging.debug(f"  {header}: {value}")
+                logging.debug("  %s: %s", header, value)
             else:
-                logging.debug(f"  {header}: [REDACTED]")
+                logging.debug("  %s: [REDACTED]", header)
         logging.debug("Body:")
         # Try to parse and redact sensitive info from body if it's JSON
         try:
@@ -133,26 +136,35 @@ DEFAULT_SELF_CHECK_HALLUCINATION_PROMPT = """You are given a statement.
 
 Check if it is factually consistent with the provided document."""
 
-DEFAULT_CONTENT_SAFETY_INPUT_PROMPT = """Task: Check if there is unsafe content in the user message in the below conversation...
-<BEGIN CONVERSATION>
-user: {{ user_input }}
-<END CONVERSATION>
-Provide your safety assessment in the following JSON format:
-{"User Safety": safe or unsafe, "Safety Categories": comma-separated list of violated categories (omit if all safe)}
-Do not include anything other than the output JSON in your response."""
+DEFAULT_CONTENT_SAFETY_INPUT_PROMPT = (
+    "Task: Check if there is unsafe content in the user message in the below conversation...\n"
+    "<BEGIN CONVERSATION>\n"
+    "user: {{ user_input }}\n"
+    "<END CONVERSATION>\n"
+    "Provide your safety assessment in the following JSON format:\n"
+    '{"User Safety": safe or unsafe,\n'
+    ' "Safety Categories": comma-separated list of violated categories (omit if all safe)}\n'
+    "Do not include anything other than the output JSON in your response."
+)
 
-DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT = """Task: Check if there is unsafe content in the agent response in the below conversation...
-<BEGIN CONVERSATION>
-user: {{ user_input }}
-agent: {{ bot_response }}
-<END CONVERSATION>
-Provide your safety assessment in the following JSON format:
-{"Response Safety": safe or unsafe, "Safety Categories": comma-separated list of violated categories (omit if all safe)}
-Do not include anything other than the output JSON in your response."""
+DEFAULT_CONTENT_SAFETY_OUTPUT_PROMPT = (
+    "Task: Check if there is unsafe content in the agent response in the below conversation...\n"
+    "<BEGIN CONVERSATION>\n"
+    "user: {{ user_input }}\n"
+    "agent: {{ bot_response }}\n"
+    "<END CONVERSATION>\n"
+    "Provide your safety assessment in the following JSON format:\n"
+    '{"Response Safety": safe or unsafe,\n'
+    ' "Safety Categories": comma-separated list of violated categories (omit if all safe)}\n'
+    "Do not include anything other than the output JSON in your response."
+)
 
-DEFAULT_TOPIC_CONTROL_INPUT_PROMPT = """Ensure that the input stays within the allowed discussion topics."""
+DEFAULT_TOPIC_CONTROL_INPUT_PROMPT = "Ensure that the input stays within the allowed discussion topics."
 
-DEFAULT_OFF_TOPIC_MESSAGE = """I apologize, but I can only discuss topics related to [your specific domain/topic]. Is there something else I can help you with?"""
+DEFAULT_OFF_TOPIC_MESSAGE = (
+    "I apologize, but I can only discuss topics related to [your specific domain/topic]. "
+    "Is there something else I can help you with?"
+)
 
 
 class NVIDIANeMoGuardrailsComponent(LCModelComponent):
@@ -183,6 +195,10 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
                 "jailbreak detection model",
             ],
             value=["self check input", "self check output"],
+            info=(
+                "Message to display when the input is off-topic. " "Use [your specific domain/topic] as a placeholder."
+            ),
+            advanced=True,
         ),
         HandleInput(
             name="llm",
@@ -288,7 +304,10 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             display_name="Off-Topic Message",
             advanced=True,
             value=DEFAULT_OFF_TOPIC_MESSAGE,
-            info="Message to display when the input is off-topic. Use [your specific domain/topic] as a placeholder for your domain.",
+            info=(
+                "Message to display when the input is off-topic. "
+                "Use [your specific domain/topic] as a placeholder for your domain."
+            ),
         ),
         MultilineInput(
             name="yaml_content",
@@ -327,6 +346,15 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
             },
             "prompts": [],
         }
+
+        # Add dummy main model to work around nemoguardrails bug
+        config_dict["models"].append(
+            {
+                "type": "main",
+                "engine": "nvidia_ai_endpoints",
+                "model": "mistralai/mixtral-8x7b-instruct-v0.1",
+            }
+        )
 
         # Self check rails
         if "self check input" in self.rails:
@@ -450,13 +478,17 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         # Validate required URLs are set when corresponding rails are enabled
         if "self check input" in self.rails and not self.self_check_model_url:
-            raise ValueError("self_check_model_url must be set when self check rails are enabled")
+            msg = "self_check_model_url must be set when self check rails are enabled"
+            raise ValueError(msg)
         if "topic control" in self.rails and not self.topic_control_model_url:
-            raise ValueError("topic_control_model_url must be set when topic control rails are enabled")
+            msg = "topic_control_model_url must be set when topic control rails are enabled"
+            raise ValueError(msg)
         if "content safety input" in self.rails and not self.content_safety_model_url:
-            raise ValueError("content_safety_model_url must be set when content safety rails are enabled")
+            msg = "content_safety_model_url must be set when content safety rails are enabled"
+            raise ValueError(msg)
         if "jailbreak detection model" in self.rails and not self.jailbreak_detection_model_url:
-            raise ValueError("jailbreak_detection_model_url must be set when jailbreak detection rails are enabled")
+            msg = "jailbreak_detection_model_url must be set when jailbreak detection rails are enabled"
+            raise ValueError(msg)
 
         yaml_content = self.generate_rails_config()
 
@@ -518,14 +550,14 @@ define bot refuse to respond
                 model_id = model["id"]
                 if model_id in known_good_models:
                     suitable_models.append(model_id)
-        except requests.RequestException:
+        except (requests.RequestException, requests.HTTPError):
             logging.exception("Error getting model names")
             # Let the UI handle the empty list case
             return []
         else:
             return suitable_models
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+    def update_build_config(self, build_config: dotdict, field_name: str | None = None):
         """Update build configuration with fresh model list when key fields change."""
         if field_name in {"self_check_model_url", "self_check_model_api_key"}:
             try:
