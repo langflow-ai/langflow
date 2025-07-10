@@ -23,9 +23,19 @@ You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/ma
 
 ### LANGFLOW_AUTO_LOGIN
 
-When `True`, Langflow automatically logs users in with username `langflow` and password `langflow` without requiring user authentication.
-To disable automatic login and enforce user authentication, set this value to `False` in your `.env` file.
-By default, this variable is set to `True`.
+In Langflow versions 1.5 and later, most API requests require a Langflow API key, even when `AUTO_LOGIN=true`.
+
+The only exceptions are the MCP endpoints: `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`.
+These endpoints don't require authentication, regardless of the `AUTO_LOGIN` setting.
+
+<details>
+<summary>Auto-login and API key authentication in earlier Langflow versions</summary>
+
+If you are running a Langflow version earlier than 1.5, if `AUTO_LOGIN=true`, Langflow automatically logs users in as a superuser without requiring authentication, and API requests can be made without a Langflow API key.
+
+If you set `SKIP_AUTH_AUTO_LOGIN=true`, authentication will be skipped entirely, and API requests will not require a Langflow API key, regardless of the `AUTO_LOGIN` setting.
+
+</details>
 
 Langflow **does not** allow users to have simultaneous or shared access to flows.
 If `AUTO_LOGIN` is enabled and user management is disabled (`LANGFLOW_NEW_USER_IS_ACTIVE=true`), users can access the same environment, but it is not password protected. If two users access the same flow, Langflow saves only the work of the last user to save.

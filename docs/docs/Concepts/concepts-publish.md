@@ -2,9 +2,9 @@
 title: Share and embed flows
 slug: /concepts-publish
 ---
+
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import ChatWidget from '@site/src/components/ChatWidget';
 
 Langflow provides several ways to share and integrate your flows into external applications:
 
@@ -30,7 +30,7 @@ To help you embed Langflow API requests in your scripts, Langflow automatically 
 To get these code snippets, do the following:
 
 1. In Langflow, open the flow that you want to embed in your application.
-2. Click **Share**, and then click **API access**.
+2. Click **Share**, and then select **API access**.
 
     These code snippets call the `/v1/run/$FLOW_ID` endpoint, and they automatically populate minimum values, like the Langflow server URL, flow ID, headers, and request parameters.
 
@@ -43,6 +43,20 @@ To get these code snippets, do the following:
 5. Run the snippet as is, or use the snippet in the context of a larger script.
 
 For more information and examples of other Langflow API endpoints, see [Get started with the Langflow API](/api-reference-api-examples).
+
+### Langflow API authentication
+
+In Langflow versions 1.5 and later, most API endpoints require authentication with a Langflow API key.
+The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
+
+Code snippets generated in the **API access** pane include a script that checks for a `LANGFLOW_API_KEY` environment variable set in the local terminal session.
+This script doesn't check for Langflow API keys set anywhere besides the local terminal session.
+
+For this script to work, you must set a `LANGFLOW_API_KEY` variable in the terminal session where you intend to run the code snippet, such as `export LANGFLOW_API_KEY="sk..."`.
+
+Alternatively, you can edit the code snippet to include an `x-api-key` header and ensure that the request can authenticate to the Langflow API.
+
+For more information, see [API keys](/configuration-api-keys) and [Get started with the Langflow API](/api-reference-api-examples)
 
 ### Input Schema (tweaks) {#input-schema}
 
@@ -62,24 +76,19 @@ These tweaks don't change the flow parameters set in the **Workspace**, and they
 
 Adding tweaks through the **Input Schema** can help you troubleshoot formatting issues with tweaks that you manually added to Langflow API requests.
 
-### Authentication
+### Use a flow ID alias
 
-If your snippet doesn't include an authentication header, consider adding one to ensure that your script can authenticate to the Langflow API.
-This is particularly important for scripts that call public or remote Langflow servers that might not have inherent superuser privileges.
+If you want your requests to use an alias instead of the actual flow ID, you can rename the flow's `/v1/run/$FLOW_ID` endpoint:
 
-<!--TODO_FOR_1.5:
-TODO: Verify what is auto-populated in the snippets, and which key is chosen if multiple
-TODO: Reduce duplication w api-reference-api-examples and configuration-api-keys
+1. In Langflow, open the flow, click **Share**, and then select **API access**.
+2. Click **Input Schema**.
+3. In the **Endpoint Name** field, enter an alias for your flow's ID, such as a memorable, human-readable name.
 
-In Langflow versions 1.5 and later, most API endpoints require authentication with a Langflow API key.
-The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
+    The name can contain only letters, numbers, hyphens, and underscores, such as `flow-customer-database-agent`.
 
-Code snippets generated in the **API access** pane automatically use a local Langflow API key, if one exists.
+4. To save the change, close the **Input Schema** pane.
 
-If your snippet doesn't include an authentication header, you must add one to ensure that your script can authenticate to the Langflow API.
--->
-
-For more information, see [Get started with the Langflow API](/api-reference-api-examples) and [API keys](/configuration-api-keys).
+The automatically generated code snippets now use your new endpoint name instead of the original flow ID, such as `url = "http://localhost:7868/api/v1/run/flow-customer-database-agent`.
 
 ## Embed a flow into a website {#embedded-chat-widget}
 
@@ -477,9 +486,9 @@ export class AppComponent {
 
 ## Access a Langflow MCP server
 
-Each [Langflow project](/concepts-flows#projects) has an MCP server that exposes the project's flows as tools that MCP clients can use to generate responses.
+Each [Langflow project](/concepts-flows#projects) has an MCP server that exposes the project's flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use to generate responses.
 
-You can also use Langflow as an MCP client, and you can serve your flows as tools to the Langflow MCP client.
+You can also use Langflow as an MCP client, and you can serve your flows as tools to a Langflow MCP client.
 
 For more information, see [Use Langflow as an MCP server](/mcp-server) and [Use Langflow as an MCP client](/mcp-client).
 

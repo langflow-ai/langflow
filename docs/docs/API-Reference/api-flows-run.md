@@ -27,6 +27,7 @@ This flow requires a chat input string (`input_value`), and uses default values 
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
     "input_value": "Tell me about something interesting!",
     "session_id": "chat-123",
@@ -91,6 +92,7 @@ curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID?stream=true" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
     "message": "Tell me something interesting!",
     "session_id": "chat-123"
@@ -157,7 +159,7 @@ curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID?stream=true" \
   -H "Content-Type: application/json" \
   -H "accept: application/json" \
-  -H "x-api-key: sk-..." \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
     "input_value": "Tell me a story",
     "input_type": "chat",
@@ -184,6 +186,7 @@ After you add a **Webhook** component to a flow, open the [**API access** pane](
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v1/webhook/$FLOW_ID" \
   -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{"data": "example-data"}'
 ```
 

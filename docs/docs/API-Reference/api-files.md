@@ -43,6 +43,7 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   -F "file=@FILE_NAME.txt"
 ```
 
@@ -66,11 +67,12 @@ Send image files to the Langflow API for use in a flow.
 The default file limit is 100 MB.
 To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
 
-1. Attach the image to a `POST /v1/files/upload/$FLOW_ID` request with `--form` and the file path:
+1. Attach the image to a `POST /v1/files/upload/$FLOW_ID` request with `--form` (`-F`) and the file path:
 
     ```bash
     curl -X POST "$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID" \
       -H "Content-Type: multipart/form-data" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
       -F "file=@PATH/TO/FILE.png"
     ```
 
@@ -92,7 +94,8 @@ To change this limit, set the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment varia
     ```bash
     curl -X POST \
         "$LANGFLOW_URL/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
-        -H 'Content-Type: application/json'\
+        -H "Content-Type: application/json" \
+        -H "x-api-key: $LANGFLOW_API_KEY" \
         -d '{
         "output_type": "chat",
         "input_type": "chat",
@@ -120,7 +123,8 @@ List all files associated with a specific flow.
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/files/list/$FLOW_ID" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -146,6 +150,7 @@ Download a specific file from a flow.
 curl -X GET \
   "$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_your_file.txt" \
   -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
   --output downloaded_file.txt
 ```
 
@@ -169,7 +174,8 @@ Delete a specific file from a flow.
 ```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-19-43_your_file.txt" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
   </TabItem>
@@ -201,7 +207,8 @@ To retrieve your current `user_id`, call the `/whoami` endpoint.
 ```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/users/whoami" \
-  -H "accept: application/json"
+  -H "accept: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
 ```
 
 Result:
@@ -280,6 +287,7 @@ In this example, the file uploaded to `/v2/files` is included with the `/v1/run`
 curl --request POST \
   --url "$LANGFLOW_URL/api/v1/run/$FLOW_ID" \
   --header "Content-Type: application/json" \
+  --header "x-api-key: $LANGFLOW_API_KEY" \
   --data '{
   "input_value": "what do you see?",
   "output_type": "chat",

@@ -55,7 +55,7 @@ To try this for yourself, you can use the [**Basic Prompting** template](/basic-
 If you have an **Agent** component in your flow, the **Playground** displays its tool calls and outputs so you can monitor the agent's tool use and understand the reasoning behind its responses.
 To try this for yourself, you can use the [**Simple Agent** template](/simple-agent).
 
-<!-- ![Playground window with agent response](/img/playground-with-agent.png) -->
+![Playground window with agent response](/img/playground-with-agent.png)
 
 For more information, see [Playground](/concepts-playground).
 

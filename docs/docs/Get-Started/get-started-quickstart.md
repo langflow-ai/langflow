@@ -13,6 +13,35 @@ Get started with Langflow by loading a template flow, running it, and then servi
 
 - [A running Langflow instance](/get-started-installation)
 - [An OpenAI API key](https://platform.openai.com/api-keys)
+- [A Langflow API key](/configuration-api-keys)
+
+## Create a Langflow API key
+
+A [Langflow API key](/configuration-api-keys) is a user-specific token you can use with Langflow.
+
+To create a Langflow API key, do the following:
+
+1. In Langflow, click your user icon, and then select **Settings**.
+2. Click **Langflow API Keys**, and then click <Icon name="Plus" aria-hidden="true"/> **Add New**.
+3. Name your key, and then click **Create API Key**.
+4. Copy the API key and store it in a secure location.
+5. Include your `LANGFLOW_API_KEY` in requests like this:
+    ```text
+    curl --request POST \
+     --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID' \
+     --header 'Content-Type: application/json' \
+     --header 'x-api-key: LANGFLOW_API_KEY' \
+     --data '{
+       "output_type": "chat",
+       "input_type": "chat",
+       "input_value": "Hello"
+     }'
+    ```
+    The API access pane's code snippets include a script that looks for a `LANGFLOW_API_KEY` environment variable set in your terminal session.
+    Set this variable in your terminal so you can copy and paste the commands.
+    ```bash
+    export LANGFLOW_API_KEY="sk..."
+    ```
 
 ## Run the Simple Agent template flow
 
@@ -64,9 +93,9 @@ Langflow provides code snippets to help you get started with the Langflow API.
 1. To open the **API access pane**, in the **Playground**, click **Share**, and then click **API access**.
 
     The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data.
-    The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow.
+    The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow, and a script to include your `LANGFLOW_API_KEY` if you've set it as an environment variable in your terminal session.
     Replace these values if you're using the code for a different server or flow.
-    The default Langflow server address is `http://localhost:7860`
+    The default Langflow server address is `http://localhost:7860`.
 
     <Tabs groupId="Language">
       <TabItem value="Python" label="Python" default>
@@ -85,7 +114,8 @@ Langflow provides code snippets to help you get started with the Langflow API.
 
     # Request headers
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "x-api-key": "$LANGFLOW_API_KEY"
     }
 
     try:
@@ -116,7 +146,8 @@ Langflow provides code snippets to help you get started with the Langflow API.
     const options = {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'x-api-key': 'LANGFLOW_API_KEY'
         },
         body: JSON.stringify(payload)
     };
@@ -135,6 +166,7 @@ Langflow provides code snippets to help you get started with the Langflow API.
     curl --request POST \
          --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false' \
          --header 'Content-Type: application/json' \
+         --header "x-api-key: LANGFLOW_API_KEY" \
          --data '{
           "output_type": "chat",
           "input_type": "chat",
@@ -350,7 +382,10 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
             "input_value": question,
         }
 
-        headers = {"Content-Type": "application/json"}
+        headers = {
+        "Content-Type": "application/json",
+        "x-api-key": "LANGFLOW_API_KEY"
+        }
 
         try:
             response = requests.post(url, json=payload, headers=headers)
@@ -423,7 +458,8 @@ This script runs a question-and-answer chat in your terminal and stores the Agen
         const options = {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'x-api-key': 'LANGFLOW_API_KEY'
             },
             body: JSON.stringify(payload)
         };
