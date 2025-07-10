@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from langchain_core.tools import StructuredTool
 
     from langflow.inputs.inputs import InputTypes
-    from langflow.services.shared_component_cache.service import SharedComponentCacheService
+    from langflow.services.cache.base import CacheService
 
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
@@ -70,7 +70,7 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
     return nested
 
 
-def safe_cache_get(cache: SharedComponentCacheService, key, default=None):
+def safe_cache_get(cache: CacheService, key, default=None):
     """Safely get a value from cache, handling CacheMiss objects."""
     try:
         value = cache.get(key)
@@ -82,7 +82,7 @@ def safe_cache_get(cache: SharedComponentCacheService, key, default=None):
         return value
 
 
-def safe_cache_set(cache: SharedComponentCacheService, key, value):
+def safe_cache_set(cache: CacheService, key, value):
     """Safely set a value in cache, handling potential errors."""
     try:
         cache.set(key, value)
