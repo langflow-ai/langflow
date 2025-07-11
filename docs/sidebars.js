@@ -26,6 +26,7 @@ module.exports = {
           items: [
             "Tutorials/chat-with-rag",
             "Tutorials/chat-with-files",
+            "Tutorials/agent",
           ],
         },
       ],
