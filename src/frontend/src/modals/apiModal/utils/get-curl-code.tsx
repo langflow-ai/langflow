@@ -89,7 +89,7 @@ export function getNewCurlCode({
 ${singleLinePayload}
 '@
 
-curl --request POST \`
+curl.exe --request POST \`
      --url "${apiUrl}?stream=false" \`
      --header "Content-Type: application/json" \`${authHeader ? "\n" + authHeader : ""}
      --data $jsonData`;
@@ -127,7 +127,7 @@ curl --request POST \`
   chatInputNodeIds.forEach((nodeId, index) => {
     if (detectedPlatform === "powershell") {
       uploadCommands.push(
-        `curl --request POST \`
+        `curl.exe --request POST \`
      --url "${baseUrl}/api/v1/files/upload/${flowId}" \`
      --header "x-api-key: YOUR_API_KEY_HERE" \`
      --form "file=@your_image_${uploadCounter}.jpg"`,
@@ -152,7 +152,7 @@ curl --request POST \`
   fileNodeIds.forEach((nodeId, index) => {
     if (detectedPlatform === "powershell") {
       uploadCommands.push(
-        `curl --request POST \`
+        `curl.exe --request POST \`
      --url "${baseUrl}/api/v2/files" \`
      --header "x-api-key: YOUR_API_KEY_HERE" \`
      --form "file=@your_file_${uploadCounter}.pdf"`,
@@ -196,7 +196,7 @@ ${uploadCommands.join("\n")}
 ##STEP1_END##
 
 ##STEP2_START##
-curl -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d '{
+curl.exe -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d '{
   "output_type": "${processedPayload.output_type || "chat"}",
   "input_type": "${processedPayload.input_type || "chat"}",
   "input_value": "${processedPayload.input_value || "Your message here"}",

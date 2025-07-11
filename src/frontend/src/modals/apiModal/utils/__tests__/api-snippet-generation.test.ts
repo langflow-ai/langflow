@@ -163,7 +163,7 @@ describe("API Snippet Generation Utilities", () => {
 
         // Check for required modules
         expect(code).toContain("const fs = require('fs')");
-        expect(code).toContain("const http = require('http')");
+        expect(code).toContain("httpModule = protocol === 'https:' ? require('https') : require('http')");
 
         // Check for file upload functions
         expect(code).toContain("createFormData");
@@ -227,7 +227,7 @@ describe("API Snippet Generation Utilities", () => {
         // Check for file upload commands
         expect(code).toContain("/api/v1/files/upload/");
         expect(code).toContain("/api/v2/files");
-        expect(code).toContain('-F "file=@');
+        expect(code).toContain('--form "file=@');
       });
     });
 
