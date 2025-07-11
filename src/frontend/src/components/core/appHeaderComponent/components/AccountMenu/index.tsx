@@ -12,8 +12,8 @@ import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
-import { cn, computeNonPrereleaseVersion } from "@/utils/utils";
-import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
+import { cn, stripReleaseStageFromVersion } from "@/utils/utils";
+import { FaDiscord, FaGithub } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import {
   HeaderMenu,
@@ -22,7 +22,6 @@ import {
   HeaderMenuItems,
   HeaderMenuToggle,
 } from "../HeaderMenu";
-import { ProfileIcon } from "../ProfileIcon";
 import ThemeButtons from "../ThemeButtons";
 
 export const AccountMenu = () => {
@@ -44,8 +43,8 @@ export const AccountMenu = () => {
   const isLatestVersion = (() => {
     if (!version || !latestVersion) return false;
 
-    const currentBaseVersion = computeNonPrereleaseVersion(version);
-    const latestBaseVersion = computeNonPrereleaseVersion(latestVersion);
+    const currentBaseVersion = stripReleaseStageFromVersion(version);
+    const latestBaseVersion = stripReleaseStageFromVersion(latestVersion);
 
     return currentBaseVersion === latestBaseVersion;
   })();
