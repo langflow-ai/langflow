@@ -212,10 +212,10 @@ export default function APITabsComponent() {
           
           if (parsedCode.hasSteps) {
             return (
-              <div className="api-modal-tabs-content overflow-hidden flex flex-col gap-4 h-full">
-                {/* Step 1 */}
+              <div className="api-modal-tabs-content overflow-auto flex flex-col gap-4 h-full">
+                {/* Step 1 - File uploads */}
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Step 1: Upload your file</h4>
+                  <h4 className="text-sm font-medium mb-2">Step 1: Upload your files</h4>
                   <div className="relative flex w-full">
                     <Button
                       variant="ghost"
@@ -248,10 +248,10 @@ export default function APITabsComponent() {
                   </div>
                 </div>
                 
-                {/* Step 2 */}
-                <div className="flex-1">
-                  <h4 className="text-sm font-medium mb-2">Step 2: Execute flow with uploaded file</h4>
-                  <div className="relative flex w-full">
+                {/* Step 2 - Execute flow */}
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  <h4 className="text-sm font-medium mb-2">Step 2: Execute flow with uploaded files</h4>
+                  <div className="relative flex h-full w-full">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -276,7 +276,7 @@ export default function APITabsComponent() {
                       wrapLongLines={true}
                       language={currentTab.language}
                       style={dark ? oneDark : oneLight}
-                      className="!mt-0 w-full min-h-48 overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
+                      className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
                     >
                       {parsedCode.step2}
                     </SyntaxHighlighter>

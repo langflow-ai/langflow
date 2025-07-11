@@ -51,3 +51,56 @@ export function getFileNodeId(tweaks: Record<string, any>): string | null {
   
   return null;
 }
+
+export function getAllChatInputNodeIds(tweaks: Record<string, any>): string[] {
+  const nodeIds: string[] = [];
+  for (const [nodeId, tweak] of Object.entries(tweaks)) {
+    if (!tweak || typeof tweak !== "object") continue;
+    
+    if ("files" in tweak && typeof tweak.files === "string") {
+      nodeIds.push(nodeId);
+    }
+  }
+  
+  return nodeIds;
+}
+
+export function getAllFileNodeIds(tweaks: Record<string, any>): string[] {
+  const nodeIds: string[] = [];
+  for (const [nodeId, tweak] of Object.entries(tweaks)) {
+    if (!tweak || typeof tweak !== "object") continue;
+    
+    // File component: { path: [...] }
+    if ("path" in tweak && Array.isArray(tweak.path)) {
+      nodeIds.push(nodeId);
+    }
+    
+    // Video File: { file_path: "..." }
+    if ("file_path" in tweak && typeof tweak.file_path === "string") {
+      nodeIds.push(nodeId);
+    }
+  }
+  
+  return nodeIds;
+}
+
+export function getNonFileTypeTweaks(tweaks: Record<string, any>): Record<string, any> {
+  const nonFileTweaks: Record<string, any> = {};
+  for (const [nodeId, tweak] of Object.entries(tweaks)) {
+    if (!tweak || typeof tweak !== "object") {
+      nonFileTweaks[nodeId] = tweak;
+      continue;
+    }
+    
+    // Skip file-related tweaks
+    const isFileComponent = ("path" in tweak && Array.isArray(tweak.path)) ||
+                           ("file_path" in tweak && typeof tweak.file_path === "string") ||
+                           ("files" in tweak && typeof tweak.files === "string");
+    
+    if (!isFileComponent) {
+      nonFileTweaks[nodeId] = tweak;
+    }
+  }
+  
+  return nonFileTweaks;
+}

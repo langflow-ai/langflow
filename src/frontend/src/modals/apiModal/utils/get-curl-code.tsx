@@ -1,7 +1,7 @@
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { GetCodeType } from "@/types/tweaks";
-import { hasChatInputFiles, hasFileTweaks, getChatInputNodeId, getFileNodeId } from "./detect-file-tweaks";
+import { hasChatInputFiles, hasFileTweaks, getChatInputNodeId, getFileNodeId, getAllChatInputNodeIds, getAllFileNodeIds, getNonFileTypeTweaks } from "./detect-file-tweaks";
 
 /**
  * Generates a cURL command for making a POST request to a webhook endpoint.
@@ -67,6 +67,7 @@ export function getNewCurlCode({
   const tweaks = processedPayload.tweaks || {};
   const hasFiles = hasFileTweaks(tweaks);
   const hasChatFiles = hasChatInputFiles(tweaks);
+  
 
   // If no file uploads, use existing logic
   if (!hasFiles) {
@@ -121,100 +122,93 @@ fi
     }
   }
 
-  // File upload logic
-  if (hasChatFiles) {
-    // Chat Input files - use v1 upload API + run endpoint with tweaks
-    const chatInputNodeId = getChatInputNodeId(tweaks) || "ChatInput-NodeId";
-    const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
-    
-    if (detectedPlatform === "powershell") {
-      const authHeader = isAuth ? `-H "x-api-key: $env:LANGFLOW_API_KEY"` : "";
+  // File upload logic - handle multiple file types additively
+  const chatInputNodeIds = getAllChatInputNodeIds(tweaks);
+  const fileNodeIds = getAllFileNodeIds(tweaks);
+  const nonFileTweaks = getNonFileTypeTweaks(tweaks);
 
-      return `##STEP1_START##
-curl -X POST "${baseUrl}/api/v1/files/upload/${flowId}"${authHeader ? " " + authHeader : ""} -F "file=@your_image_path.jpg"
+  // Build upload commands and tweak entries
+  const uploadCommands: string[] = [];
+  const tweakEntries: string[] = [];
+  let uploadCounter = 1;
+
+  // Add ChatInput file uploads (v1 API)
+  chatInputNodeIds.forEach((nodeId, index) => {
+    if (detectedPlatform === "powershell") {
+      const authHeader = isAuth ? ` -H "x-api-key: $env:LANGFLOW_API_KEY"` : "";
+      uploadCommands.push(`curl -X POST "${baseUrl}/api/v1/files/upload/${flowId}"${authHeader} -F "file=@your_image_${uploadCounter}.jpg"`);
+    } else {
+      const authHeader = isAuth ? ` -H "x-api-key: $LANGFLOW_API_KEY"` : "";
+      uploadCommands.push(`curl -X POST "${baseUrl}/api/v1/files/upload/${flowId}"${authHeader} -F "file=@your_image_${uploadCounter}.jpg"`);
+    }
+    const tweakEntry = `    "${nodeId}": {
+      "files": "REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}"
+    }`;
+    tweakEntries.push(tweakEntry);
+    uploadCounter++;
+  });
+
+  // Add File/VideoFile uploads (v2 API)
+  fileNodeIds.forEach((nodeId, index) => {
+    if (detectedPlatform === "powershell") {
+      const authHeader = isAuth ? ` -H "x-api-key: $env:LANGFLOW_API_KEY"` : "";
+      uploadCommands.push(`curl -X POST "${baseUrl}/api/v2/files"${authHeader} -F "file=@your_file_${uploadCounter}.pdf"`);
+    } else {
+      const authHeader = isAuth ? ` -H "x-api-key: $LANGFLOW_API_KEY"` : "";
+      uploadCommands.push(`curl -X POST "${baseUrl}/api/v2/files"${authHeader} -F "file=@your_file_${uploadCounter}.pdf"`);
+    }
+    const tweakEntry = `    "${nodeId}": {
+      "path": ["REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}"]
+    }`;
+    tweakEntries.push(tweakEntry);
+    uploadCounter++;
+  });
+
+  // Add non-file tweaks
+  Object.entries(nonFileTweaks).forEach(([nodeId, tweak]) => {
+    tweakEntries.push(`    "${nodeId}": ${JSON.stringify(tweak, null, 6).split('\n').join('\n    ')}`);
+  });
+
+  const allTweaks = tweakEntries.length > 0 ? tweakEntries.join(',\n') : '';
+
+  if (detectedPlatform === "powershell") {
+    const authHeader = isAuth ? ` -H "x-api-key: $env:LANGFLOW_API_KEY"` : "";
+    
+    const finalSnippet = `##STEP1_START##
+${uploadCommands.join('\n')}
 ##STEP1_END##
 
 ##STEP2_START##
-curl -X POST "${apiUrl}?stream=false" -H "Content-Type: application/json"${authHeader ? " " + authHeader : ""} -d '{
+curl -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d '{
   "output_type": "${processedPayload.output_type || "chat"}",
   "input_type": "${processedPayload.input_type || "chat"}",
   "input_value": "${processedPayload.input_value || "Your message here"}",
   "tweaks": {
-    "${chatInputNodeId}": {
-      "files": "REPLACE_WITH_FILE_PATH_FROM_STEP_1"
-    }
+${allTweaks}
   }
 }'
 ##STEP2_END##`;
-    } else {
-      const authHeader = isAuth ? `-H "x-api-key: $LANGFLOW_API_KEY"` : "";
-      
-      return `##STEP1_START##
-curl -X POST "${baseUrl}/api/v1/files/upload/${flowId}"${authHeader ? " " + authHeader : ""} -F "file=@your_image_path.jpg"
-##STEP1_END##
-
-##STEP2_START##
-curl -X POST \\
-  "${apiUrl}?stream=false" \\
-  -H "Content-Type: application/json"${authHeader ? " \\\n  " + authHeader : ""} \\
-  -d '{
-    "output_type": "${processedPayload.output_type || "chat"}",
-    "input_type": "${processedPayload.input_type || "chat"}",
-    "input_value": "${processedPayload.input_value || "Your message here"}",
-    "tweaks": {
-      "${chatInputNodeId}": {
-        "files": "REPLACE_WITH_FILE_PATH_FROM_STEP_1"
-      }
-    }
-  }'
-##STEP2_END##`;
-    }
+    return finalSnippet;
   } else {
-    // File/VideoFile components - use v2 upload API + run endpoint
-    const fileNodeId = getFileNodeId(tweaks) || "File-NodeId";
-    const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
+    const authHeader = isAuth ? ` -H "x-api-key: $LANGFLOW_API_KEY"` : "";
     
-    if (detectedPlatform === "powershell") {
-      const authHeader = isAuth ? `-H "x-api-key: $env:LANGFLOW_API_KEY"` : "";
-
-      return `##STEP1_START##
-curl -X POST "${baseUrl}/api/v2/files"${authHeader ? " " + authHeader : ""} -F "file=@your-file.pdf"
-##STEP1_END##
-
-##STEP2_START##
-curl -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader ? " " + authHeader : ""} -d '{
-  "output_type": "${processedPayload.output_type || "chat"}",
-  "input_type": "${processedPayload.input_type || "chat"}",
-  "input_value": "${processedPayload.input_value || "Your message here"}",
-  "tweaks": {
-    "${fileNodeId}": {
-      "path": ["REPLACE_WITH_FILE_PATH_FROM_STEP_1"]
-    }
-  }
-}'
-##STEP2_END##`;
-    } else {
-      const authHeader = isAuth ? `-H "x-api-key: $LANGFLOW_API_KEY"` : "";
-      
-      return `##STEP1_START##
-curl -X POST "${baseUrl}/api/v2/files"${authHeader ? " " + authHeader : ""} -F "file=@your-file.pdf"
+    const finalSnippet = `##STEP1_START##
+${uploadCommands.join('\n')}
 ##STEP1_END##
 
 ##STEP2_START##
 curl -X POST \\
   "${apiUrl}" \\
-  -H "Content-Type: application/json"${authHeader ? " \\\n  " + authHeader : ""} \\
+  -H "Content-Type: application/json"${authHeader ? " \\\n " + authHeader : ""} \\
   -d '{
     "output_type": "${processedPayload.output_type || "chat"}",
     "input_type": "${processedPayload.input_type || "chat"}",
     "input_value": "${processedPayload.input_value || "Your message here"}",
     "tweaks": {
-      "${fileNodeId}": {
-        "path": ["REPLACE_WITH_FILE_PATH_FROM_STEP_1"]
-      }
+${allTweaks}
     }
   }'
 ##STEP2_END##`;
-    }
+    return finalSnippet;
   }
 }

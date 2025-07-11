@@ -1,5 +1,5 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
-import { hasChatInputFiles, hasFileTweaks, getChatInputNodeId, getFileNodeId } from "./detect-file-tweaks";
+import { hasChatInputFiles, hasFileTweaks, getChatInputNodeId, getFileNodeId, getAllChatInputNodeIds, getAllFileNodeIds, getNonFileTypeTweaks } from "./detect-file-tweaks";
 
 export function getNewPythonApiCode({
   flowId,
@@ -73,114 +73,95 @@ except ValueError as e:
     print(f"Error parsing response: {e}")`;
   }
 
-  // File upload logic
-  if (hasChatFiles) {
-    // Chat Input files - use v1 upload API + run endpoint with tweaks
-    const chatInputNodeId = getChatInputNodeId(tweaks) || "ChatInput-NodeId";
-    const authSection = isAuth
-      ? `# API Configuration
+  // File upload logic - handle multiple file types additively
+  const chatInputNodeIds = getAllChatInputNodeIds(tweaks);
+  const fileNodeIds = getAllFileNodeIds(tweaks);
+  const nonFileTweaks = getNonFileTypeTweaks(tweaks);
+
+  const authSection = isAuth
+    ? `# API Configuration
 try:
     api_key = os.environ["LANGFLOW_API_KEY"]
 except KeyError:
     raise ValueError("LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.")
 
 `
-      : "";
+    : "";
 
-    const headersSection = isAuth
-      ? `headers = {"x-api-key": api_key} if api_key else {}`
-      : `headers = {}`;
+  const headersSection = isAuth
+    ? `headers = {"x-api-key": api_key} if api_key else {}`
+    : `headers = {}`;
 
-    return `import requests
-import os
+  // Build upload steps for each file component
+  const uploadSteps: string[] = [];
+  const tweakAssignments: string[] = [];
 
-${authSection}base_url = "${baseUrl}"
-flow_id = "${flowId}"
-
-# Step 1: Upload file for Chat Input
-${headersSection}
-
-with open("your-image.jpg", "rb") as f:
+  // ChatInput files (v1 API)
+  chatInputNodeIds.forEach((nodeId, index) => {
+    uploadSteps.push(`# Step ${uploadSteps.length + 1}: Upload file for ChatInput ${nodeId}
+with open("your_image_${index + 1}.jpg", "rb") as f:
     response = requests.post(
         f"{base_url}/api/v1/files/upload/{flow_id}",
         headers=headers,
         files={"file": f}
     )
     response.raise_for_status()
-    file_path = response.json()["file_path"]
+    chat_file_path_${index + 1} = response.json()["file_path"]`);
+    
+    tweakAssignments.push(`    "${nodeId}": {
+        "files": chat_file_path_${index + 1}
+    }`);
+  });
 
-# Step 2: Execute flow
-payload = {
-    "output_type": "${processedPayload.output_type || "chat"}",
-    "input_type": "${processedPayload.input_type || "chat"}",
-    "input_value": "${processedPayload.input_value || "Your message here"}",
-    "tweaks": {
-        "${chatInputNodeId}": {
-            "files": file_path
-        }
-    }
-}
-
-response = requests.post(
-    f"{base_url}/api/v1/run/{flow_id}?stream=false",
-    headers={"Content-Type": "application/json", **headers},
-    json=payload
-)
-response.raise_for_status()
-print(response.json())`;
-  } else {
-    // File/VideoFile components - use v2 upload API + run endpoint
-    const fileNodeId = getFileNodeId(tweaks) || "File-NodeId";
-    const authSection = isAuth
-      ? `# API Configuration
-try:
-    api_key = os.environ["LANGFLOW_API_KEY"]
-except KeyError:
-    raise ValueError("LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.")
-
-`
-      : "";
-
-    const headersSection = isAuth
-      ? `headers = {"x-api-key": api_key} if api_key else {}`
-      : `headers = {}`;
-
-    return `import requests
-import os
-
-${authSection}base_url = "${baseUrl}"
-flow_id = "${flowId}"
-
-# Step 1: Upload file
-${headersSection}
-
-with open("your-file.pdf", "rb") as f:
+  // File/VideoFile components (v2 API)
+  fileNodeIds.forEach((nodeId, index) => {
+    uploadSteps.push(`# Step ${uploadSteps.length + 1}: Upload file for File/VideoFile ${nodeId}
+with open("your_file_${index + 1}.pdf", "rb") as f:
     response = requests.post(
         f"{base_url}/api/v2/files",
         headers=headers,
         files={"file": f}
     )
     response.raise_for_status()
-    file_path = response.json()["path"]
+    file_path_${index + 1} = response.json()["path"]`);
+    
+    tweakAssignments.push(`    "${nodeId}": {
+        "path": [file_path_${index + 1}]
+    }`);
+  });
 
-# Step 2: Run flow with file_path
+  // Add non-file tweaks
+  Object.entries(nonFileTweaks).forEach(([nodeId, tweak]) => {
+    tweakAssignments.push(`    "${nodeId}": ${JSON.stringify(tweak, null, 4).split('\n').join('\n    ')}`);
+  });
+
+  const allTweaks = tweakAssignments.length > 0 ? tweakAssignments.join(',\n') : '';
+
+  return `import requests
+import os
+
+${authSection}base_url = "${baseUrl}"
+flow_id = "${flowId}"
+
+${headersSection}
+
+${uploadSteps.join('\n\n')}
+
+# Step ${uploadSteps.length + 1}: Execute flow with all file paths
 payload = {
     "output_type": "${processedPayload.output_type || "chat"}",
     "input_type": "${processedPayload.input_type || "chat"}",
     "input_value": "${processedPayload.input_value || "Your message here"}",
     "tweaks": {
-        "${fileNodeId}": {
-            "path": [file_path]
-        }
+${allTweaks}
     }
 }
 
 response = requests.post(
-    f"{base_url}/api/v1/run/{flow_id}",
+    f"{base_url}/api/v1/run/{endpointName || flowId}",
     headers={"Content-Type": "application/json", **headers},
     json=payload
 )
 response.raise_for_status()
 print(response.json())`;
-  }
 }
