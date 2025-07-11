@@ -139,24 +139,27 @@ This tutorial uses an OpenAI LLM. If you want to use a different provider, you n
     The `weather` MCP server is just **one** MCP server, and it's already improved your LLM's context.
     You can add more servers depending on the problems you want your application to solve. The MCP protocol ensures they are all added in the same way to the Agent, without having to know how the endpoints are structured or write custom integrations.
 
-    In the next section, add a `geolocation` MCP server so the user can discover the weather without having to fill in their location. And if the user wants to know the weather elsewhere, they can do that, too - the Agent understands the difference and dynamically selects the correct MCP server.
+    In the next section, add a `ip_geolocation` MCP server so the user can discover the weather without having to fill in their location.
+    If the user wants to know the weather elsewhere instead, the Agent understands the difference and dynamically selects the correct MCP server.
 
 ## Add a geolocation server
 
-The [Toolkit MCP Server](https://github.com/cyanheads/toolkit-mcp-server) includes multiple MCP servers for network monitoring, including IP geolocation. It isn't extremely precise, but if you want more precision, you can always use a different MCP server.
+The [Toolkit MCP Server](https://github.com/cyanheads/toolkit-mcp-server) includes multiple MCP servers for network monitoring, including IP geolocation. It isn't extremely precise, but it doesn't require an API key.
 
-This MCP server can be used with [npx](https://docs.npmjs.com/cli/v8/commands/npx), which downloads and runs the [Node registry package](https://www.npmjs.com/package/@cyanheads/toolkit-mcp-server) with one command.
+This MCP server can be started with [npx](https://docs.npmjs.com/cli/v8/commands/npx), which downloads and runs the [Node registry package](https://www.npmjs.com/package/@cyanheads/toolkit-mcp-server) with one command without installing the package locally.
 
 1. To add the Toolkit MCP Server to your flow, drag another MCP Tools component to your existing flow, and then click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
-2. In the **STDIO** pane, enter the following:
+2. Click **Add Server**.
+    In the **STDIO** pane, enter the following:
 
     - **Name:** `ip_geolocation`
     - **Command:** `npx @cyanheads/toolkit-mcp-server`
 
-The server is ready when the **Actions** list populates.
+    When the **Actions** list populates, the server is ready.
+
 3. In the **MCP Tools** component, enable **Tool Mode**, and then connect the **Toolset** port to the **Agent** component's **Tools** port.
 
-    At this point your flow has five components. The flow now has an additional MCP tools component that includes geolocation.
+    At this point, the flow has an additional `ip_geolocation` MCP tools component connected to the Agent.
 
     ![An agent component connected to MCP weather and geolocation servers](/img/tutorial-mcp-geolocation.png)
 
