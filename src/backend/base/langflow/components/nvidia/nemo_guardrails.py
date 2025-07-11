@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 import nest_asyncio
 import requests
@@ -434,9 +435,9 @@ define bot refuse to respond
         else:
             return suitable_models
 
-    def update_build_config(self, build_config: dotdict, field_name: str | None = None):
+    def update_build_config(self, build_config: dotdict, _field_value: Any = None, field_name: str | None = None):
         """Update build configuration with fresh model list when key fields change."""
-        if field_name in {"self_check_model_url", "self_check_model_api_key"}:
+        if field_name in {"self_check_model_url", "self_check_model_api_key", "self_check_model_name"}:
             try:
                 # Only try to fetch models if both URL and API key are provided
                 if self.self_check_model_url and self.self_check_model_api_key:
