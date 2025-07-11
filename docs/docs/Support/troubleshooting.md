@@ -3,6 +3,9 @@ title: Troubleshoot Langflow
 slug: /troubleshoot
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 This page provides troubleshooting advice for issues you might encounter when using Langflow or contributing to Langflow.
 
 ## Missing components
@@ -150,7 +153,7 @@ The cache folder location depends on your OS:
 - **WSL2 on Windows**: `home/<username>/.cache/langflow/`
 - **macOS**: `/Users/<username>/Library/Caches/langflow/`
 
-### Unexpected data loss after Langflow Desktop upgrade
+### Unexpected data loss after Langflow Desktop upgrade {#data-loss}
 
 If you upgrade Langflow Desktop and find that your projects, flows, and settings have been replaced by a fresh installation, follow these steps to attempt to recover the data from the prior version:
 
