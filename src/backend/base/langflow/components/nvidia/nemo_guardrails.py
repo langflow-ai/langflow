@@ -425,7 +425,6 @@ define bot refuse to respond
             "anthropic/claude-3-sonnet-20240229",
             "mistral/mistral-large-latest",
             "meta/llama-3.1-8b-instruct",
-            "google/gemma-2-9b-it",
             "google/gemma-2-2b-instruct",
         }
 
