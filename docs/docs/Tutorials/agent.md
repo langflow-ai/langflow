@@ -49,8 +49,6 @@ When connected to an **Agent** component as tools, the agent has the option to u
 
 ## Add a prompt component to the flow
 
-With your flow operational, connect it to a JavaScript application to use the agent's responses.
-
 In this example, the application sends a customer's email address to the Langflow agent. The agent compares the customer's previous orders within the Directory component, searches the web for used versions of those items, and returns three results.
 
 1. To include the email address as a value in your flow, add a [Prompt](/components-prompts) component to your flow between the **Chat Input** and **Agent**.
@@ -59,11 +57,13 @@ Adding the `{email}` value in curly braces creates a new input in the **Prompt**
 This creates a point for the user's email to enter the flow from your request.
 If you aren't using the `customer_orders.csv` example file, modify the input to search for a value in your dataset.
 
-    The flow appears like this.
+    At this point your flow has six components. The Chat Input is connected to the Prompt component's `email` input port. Then, the Prompt component's output port is connected to the Agent component's input port. The Directory and Web search components are connected to the Agent's Tools port. Finally, the Agent component's output port is connected to the Chat Output component, which returns the final response to the application.
 
     ![An agent component connected to web search and directory components](/img/tutorial-agent-with-directory.png)
 
 ## Send requests to your flow from a JavaScript application
+
+With your flow operational, connect it to a JavaScript application to use the agent's responses.
 
 1. To construct a JavaScript application to connect to your flow, gather the following information:
 
