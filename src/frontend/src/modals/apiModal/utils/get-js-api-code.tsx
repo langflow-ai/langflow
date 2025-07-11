@@ -70,9 +70,7 @@ fetch('${apiUrl}', options)
     });
   }
 
-  const authSection = `const apiKey = 'YOUR_API_KEY_HERE';
-
-`;
+  const authSection = ``;
 
   // Build upload steps for each file component
   const uploadSteps: string[] = [];
@@ -169,6 +167,11 @@ const httpModule = protocol === 'https:' ? require('https') : require('http');
 function createFormData(filePath) {
     const boundary = '----FormBoundary' + Date.now();
     const filename = path.basename(filePath);
+    
+    if (!fs.existsSync(filePath)) {
+        throw new Error(\`File not found: \${filePath}\`);
+    }
+    
     const fileData = fs.readFileSync(filePath);
     
     let data = '';
