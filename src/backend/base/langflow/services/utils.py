@@ -64,16 +64,7 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
         logger.debug("Creating default superuser.")
     else:
         logger.debug("Creating superuser.")
-    try:
-        return await create_super_user(username, password, db=session)
-    except Exception as exc:  # noqa: BLE001
-        if "UNIQUE constraint failed: user.username" in str(exc):
-            # This is to deal with workers running this
-            # at startup and trying to create the superuser
-            # at the same time.
-            logger.opt(exception=True).debug("Superuser already exists.")
-            return None
-        logger.opt(exception=True).debug("Error creating superuser.")
+    return await create_super_user(username, password, db=session)
 
 
 async def setup_superuser(settings_service, session: AsyncSession) -> None:
