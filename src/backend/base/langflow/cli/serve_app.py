@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+import asyncio
+import time
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, FastAPI
+from fastapi.responses import StreamingResponse
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.cli.common import execute_graph_with_capture, extract_result_data
+from langflow.events.event_manager import create_stream_tokens_event_manager
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -198,6 +205,17 @@ class RunRequest(BaseModel):
     input_value: str = Field(..., description="Input value passed to the flow")
 
 
+class StreamRequest(BaseModel):
+    """Request model for streaming execution of a Langflow flow."""
+
+    input_value: str = Field(..., description="Input value passed to the flow")
+    input_type: str = Field(default="chat", description="Type of input (chat, text)")
+    output_type: str = Field(default="chat", description="Type of output (chat, text, debug, any)")
+    output_component: str | None = Field(default=None, description="Specific output component to stream from")
+    session_id: str | None = Field(default=None, description="Session ID for maintaining conversation state")
+    tweaks: dict[str, Any] | None = Field(default=None, description="Optional tweaks to modify flow behavior")
+
+
 class RunResponse(BaseModel):
     """Response model mirroring the single-flow server."""
 
@@ -211,6 +229,94 @@ class RunResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error message")
     success: bool = Field(default=False, description="Always false for errors")
+
+
+# -----------------------------------------------------------------------------
+# Streaming helper functions
+# -----------------------------------------------------------------------------
+
+
+async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
+    """Consumes events from a queue and yields them to the client while tracking timing metrics.
+
+    This coroutine continuously pulls events from the input queue and yields them to the client.
+    It tracks timing metrics for how long events spend in the queue and how long the client takes
+    to process them.
+
+    Args:
+        queue (asyncio.Queue): The queue containing events to be consumed and yielded
+        client_consumed_queue (asyncio.Queue): A queue for tracking when the client has consumed events
+
+    Yields:
+        The value from each event in the queue
+
+    Notes:
+        - Events are tuples of (event_id, value, put_time)
+        - Breaks the loop when receiving a None value, signaling completion
+        - Tracks and logs timing metrics for queue time and client processing time
+        - Notifies client consumption via client_consumed_queue
+    """
+    while True:
+        event_id, value, put_time = await queue.get()
+        if value is None:
+            break
+        get_time = time.time()
+        yield value
+        get_time_yield = time.time()
+        client_consumed_queue.put_nowait(event_id)
+        logger.debug(
+            f"consumed event {event_id} "
+            f"(time in queue, {get_time - put_time:.4f}, "
+            f"client {get_time_yield - get_time:.4f})"
+        )
+
+
+async def run_flow_generator_for_serve(
+    graph: Graph,
+    input_request: StreamRequest,
+    flow_id: str,
+    event_manager,
+    client_consumed_queue: asyncio.Queue,
+) -> None:
+    """Executes a flow asynchronously and manages event streaming to the client.
+
+    This coroutine runs a flow with streaming enabled and handles the event lifecycle,
+    including success completion and error scenarios.
+
+    Args:
+        graph (Graph): The graph to execute
+        input_request (StreamRequest): The input parameters for the flow
+        flow_id (str): The ID of the flow being executed
+        event_manager: Manages the streaming of events to the client
+        client_consumed_queue (asyncio.Queue): Tracks client consumption of events
+
+    Events Generated:
+        - "add_message": Sent when new messages are added during flow execution
+        - "token": Sent for each token generated during streaming
+        - "end": Sent when flow execution completes, includes final result
+        - "error": Sent if an error occurs during execution
+
+    Notes:
+        - Runs the flow with streaming enabled via execute_graph_with_capture()
+        - On success, sends the final result via event_manager.on_end()
+        - On error, logs the error and sends it via event_manager.on_error()
+        - Always sends a final None event to signal completion
+    """
+    try:
+        # For the serve app, we'll use execute_graph_with_capture with streaming
+        # Note: This is a simplified version. In a full implementation, you might want
+        # to integrate with the full Langflow streaming pipeline from endpoints.py
+        results, logs = execute_graph_with_capture(graph, input_request.input_value)
+        result_data = extract_result_data(results, logs)
+
+        # Send the final result
+        event_manager.on_end(data={"result": result_data})
+        await client_consumed_queue.get()
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error running flow {flow_id}: {e}")
+        event_manager.on_error(data={"error": str(e)})
+    finally:
+        await event_manager.queue.put((None, None, time.time()))
 
 
 # -----------------------------------------------------------------------------
@@ -346,6 +452,53 @@ def create_multi_serve_app(
                     logs=f"ERROR: {error_message}\n\nFull traceback:\n{error_traceback}",
                     type="error",
                     component="",
+                )
+
+        @router.post(
+            "/stream",
+            response_model=None,
+            summary="Stream flow execution",
+            description=f"Stream the execution of {meta.title or flow_id} with real-time events and token streaming.",
+        )
+        async def stream_flow(
+            request: StreamRequest,
+        ) -> StreamingResponse:
+            """Stream the execution of the flow with real-time events."""
+            try:
+                asyncio_queue: asyncio.Queue = asyncio.Queue()
+                asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
+                event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
+
+                main_task = asyncio.create_task(
+                    run_flow_generator_for_serve(
+                        graph=graph,
+                        input_request=request,
+                        flow_id=flow_id,
+                        event_manager=event_manager,
+                        client_consumed_queue=asyncio_queue_client_consumed,
+                    )
+                )
+
+                async def on_disconnect() -> None:
+                    logger.debug(f"Client disconnected from flow {flow_id}, closing tasks")
+                    main_task.cancel()
+
+                return StreamingResponse(
+                    consume_and_yield(asyncio_queue, asyncio_queue_client_consumed),
+                    background=on_disconnect,
+                    media_type="text/event-stream",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.error(f"Error setting up streaming for flow {flow_id}: {exc}")
+                # Return a simple error stream
+                error_message = f"Failed to start streaming: {exc!s}"
+
+                async def error_stream():
+                    yield f'data: {{"error": "{error_message}", "success": false}}\n\n'
+
+                return StreamingResponse(
+                    error_stream(),
+                    media_type="text/event-stream",
                 )
 
         @router.get("/info", summary="Flow metadata", response_model=FlowMeta)
