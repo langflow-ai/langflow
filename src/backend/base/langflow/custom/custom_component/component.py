@@ -35,6 +35,7 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
+from langflow.services.deps import get_db_service
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -162,6 +163,8 @@ class Component(CustomComponent):
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
+        self._set_output_required_inputs()
+        self._database_available: bool | None = None
 
     def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
         source_dict = {}
@@ -1460,6 +1463,10 @@ class Component(CustomComponent):
 
         return has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
 
+    def _is_database_available(self) -> bool:
+        """Check if the database is available."""
+        return get_db_service().database_available
+
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type."""
         return (
@@ -1479,25 +1486,32 @@ class Component(CustomComponent):
             message.session_id = session_id
         if hasattr(message, "flow_id") and isinstance(message.flow_id, str):
             message.flow_id = UUID(message.flow_id)
-        stored_message = await self._store_message(message)
+        if self._is_database_available():
+            stored_message = await self._store_message(message)
+            self._stored_message_id = stored_message.id
+        else:
+            stored_message = message
 
-        self._stored_message_id = stored_message.id
         try:
             complete_message = ""
             if (
-                self._should_stream_message(stored_message, message)
+                self._should_stream_message(message)
                 and message is not None
                 and isinstance(message.text, AsyncIterator | Iterator)
             ):
                 complete_message = await self._stream_message(message.text, stored_message)
                 stored_message.text = complete_message
-                stored_message = await self._update_stored_message(stored_message)
+                if self._is_database_available():
+                    stored_message = await self._update_stored_message(stored_message)
+                else:
+                    stored_message = message
             else:
                 # Only send message event for non-streaming messages
                 await self._send_message_event(stored_message, id_=id_)
         except Exception:
             # remove the message from the database
-            await delete_message(stored_message.id)
+            if self._is_database_available():
+                await delete_message(stored_message.id)
             raise
         self.status = stored_message
         return stored_message
@@ -1539,12 +1553,9 @@ class Component(CustomComponent):
 
             await asyncio.to_thread(_send_event)
 
-    def _should_stream_message(self, stored_message: Message, original_message: Message) -> bool:
+    def _should_stream_message(self, original_message: Message) -> bool:
         return bool(
-            hasattr(self, "_event_manager")
-            and self._event_manager
-            and stored_message.id
-            and not isinstance(original_message.text, str)
+            hasattr(self, "_event_manager") and self._event_manager and not isinstance(original_message.text, str)
         )
 
     async def _update_stored_message(self, message: Message) -> Message:
