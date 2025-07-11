@@ -3,29 +3,24 @@ title: Deploy Langflow on Docker
 slug: /deployment-docker
 ---
 
-This guide demonstrates deploying Langflow with Docker and Docker Compose.
-
-Three options are available:
-
-* The [Quickstart](#quickstart) option starts a Docker container with default values.
-* The [Docker compose](#clone-the-repo-and-build-the-langflow-docker-container) option builds Langflow with a persistent PostgreSQL database service.
-* The [Package your flow as a docker image](#package-your-flow-as-a-docker-image) option demonstrates packaging an existing flow with a Dockerfile.
-
-For more information on configuring the Docker image, see [Customize the Langflow Docker image with your own code](#customize-the-langflow-docker-image-with-your-own-code).
+This guide shows you how to deploy Langflow using Docker. Choose the deployment method that best fits your needs.
 
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/)
 
-## Quickstart
+## Quickstart with Docker run
 
 With Docker installed and running on your system, run this command:
 
 `docker run -p 7860:7860 langflowai/langflow:latest`
 
 Langflow is now accessible at `http://localhost:7860/`.
-## Clone the repo and build the Langflow Docker container
+
+## Build Langflow with a Dockerfile
+
+Build Langflow with a persistent PostgreSQL database service from a Dockerfile.
 
 1. Clone the Langflow repository:
 
@@ -44,10 +39,11 @@ Langflow is now accessible at `http://localhost:7860/`.
 ### Configure Docker services
 
 The Docker Compose configuration spins up two services: `langflow` and `postgres`.
-
 To configure values for these services at container startup, include them in your `.env` file.
 
+:::tip
 An example `.env` file is available in the [project repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
+:::
 
 To pass the `.env` values at container startup, include the flag in your `docker run` command:
 
@@ -60,7 +56,7 @@ docker run -it --rm \
 
 ### Langflow service
 
-The `langflow`service serves both the backend API and frontend UI of the Langflow web application.
+The `langflow` service serves both the backend API and frontend UI of the Langflow web application.
 
 The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port `7860`. It depends on the `postgres` service.
 
@@ -94,6 +90,42 @@ Volumes:
 ### Deploy a specific Langflow version with Docker Compose
 
 If you want to deploy a specific version of Langflow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version `1.0-alpha`, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
+
+## Build a Langflow Docker image with all optional dependencies
+
+The `langflow-all` image is available from [Dockerhub](https://hub.docker.com/r/langflowai/langflow-all) or as a [Dockerfile](https://github.com/langflow-ai/langflow/blob/main/docker/build_and_push_with_extras.Dockerfile) in the Langflow repository.
+
+Use this image to include `nv-ingest` or `postgresql` dependencies without having to build a custom container. Additional extra dependencies are found in [uv.lock](https://github.com/langflow-ai/langflow/blob/main/uv.lock#L4851).
+
+### Pull the `langflow-all` image from Dockerhub
+
+To pull the `langflow-all` image from Dockerhub and run it, run this command:
+```bash
+docker run -p 7860:7860 langflowai/langflow-all:latest
+```
+
+The `langflow-nightly-all` image is also available. It is built from `main` and is more up-to-date, but may include untested or experimental changes.
+
+To pull the `langflow-nightly-all` image from Dockerhub and run it, run this command:
+```bash
+docker run -p 7860:7860 langflowai/langflow-all-nightly:latest
+```
+
+### Build the `langflow-all` image locally
+
+To build the `langflow-all` image, do the following:
+
+1. Build the image from the `langflow-all` [Dockerfile](https://github.com/langflow-ai/langflow/blob/main/docker/build_and_push_with_extras.Dockerfile):
+```
+docker build -t langflow-all:latest -f docker/build_and_push_with_extras.Dockerfile .
+```
+
+2. Run the container from the image:
+```
+docker run -p 7860:7860 langflow-all:latest
+```
+
+3. Langflow with all dependencies installed is now available at `http://localhost:7860`.
 
 ## Package your flow as a Docker image
 
