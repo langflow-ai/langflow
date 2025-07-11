@@ -165,6 +165,9 @@ with open("your-file.pdf", "rb") as f:
 
 # Step 2: Run flow with file_id
 payload = {
+    "output_type": "${processedPayload.output_type || "chat"}",
+    "input_type": "${processedPayload.input_type || "chat"}",
+    "input_value": "${processedPayload.input_value || "Your message here"}",
     "tweaks": {
         "${fileNodeId}": {
             "file_id": file_id

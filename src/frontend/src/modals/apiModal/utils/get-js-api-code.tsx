@@ -293,6 +293,9 @@ async function uploadAndExecuteFlow() {
         
         // Step 2: Run flow with file_id
         const executePayload = JSON.stringify({
+            "output_type": "${processedPayload.output_type || "chat"}",
+            "input_type": "${processedPayload.input_type || "chat"}",
+            "input_value": "${processedPayload.input_value || "Your message here"}",
             "tweaks": {
                 "${fileNodeId}": {
                     "file_id": fileId
