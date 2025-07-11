@@ -1,6 +1,24 @@
 // Standalone test for stripReleaseStageFromVersion function
 // This avoids importing from utils.ts which has dependency issues in test environment
 
+/**
+ * The stripReleaseStageFromVersion function removes release stage suffixes from version strings.
+ *
+ * How it works:
+ * 1. Checks for keywords in order: ["a", "b", "rc", "dev", "post"]
+ * 2. When a keyword is found, splits the version string on that keyword
+ * 3. Takes the first part of the split
+ * 4. Removes the last character using slice(0, -1)
+ *
+ * Examples:
+ * - "1.2.3a1" → splits on "a" → ["1.2.3", "1"] → takes "1.2.3" → slice(0,-1) → "1.2."
+ * - "1.2.3dev" → splits on "dev" → ["1.2.3", ""] → takes "1.2.3" → slice(0,-1) → "1.2."
+ * - "1.a.3" → splits on "a" → ["1.", "3"] → takes "1." → slice(0,-1) → "1"
+ * - "1.2.3" → no keywords found → returns "1.2.3" unchanged
+ *
+ * Note: The function finds the FIRST matching keyword in the order they appear in the array,
+ * so "1.2.3ba1" finds "a" first and becomes "1.2.3" (not "b").
+ */
 const stripReleaseStageFromVersion = (version: string): string => {
   const releaseStageKeywords = ["a", "b", "rc", "dev", "post"];
   for (const keyword of releaseStageKeywords) {
