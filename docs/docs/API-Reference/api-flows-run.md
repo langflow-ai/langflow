@@ -12,6 +12,11 @@ To create, read, update, and delete flows, see [Flow management endpoints](/api-
 
 ## Run flow
 
+:::tip
+Langflow automatically generates Python, JavaScript, and curl code snippets for the `/v1/run/$FLOW_ID` endpoint for all flows.
+For more information, see [Generate API code snippets](/concepts-publish#generate-api-code-snippets).
+:::
+
 Execute a specified flow by ID or name.
 Flow IDs can be found on the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
 

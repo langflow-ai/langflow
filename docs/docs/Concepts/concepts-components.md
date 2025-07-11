@@ -120,6 +120,8 @@ The following table lists the component port colors and their corresponding inpu
 
 ## Component code
 
+You can edit components in the visual editor and in code. When editing a flow, select a component, and then click <Icon name="Code" aria-hidden="true"/> **Code** to see and edit the component's underlying Python code.
+
 All components have underlying code that determines how you configure them and what actions they can perform.
 In the context of creating and running flows, component code does the following:
 

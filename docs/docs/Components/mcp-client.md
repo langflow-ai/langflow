@@ -19,10 +19,10 @@ The **MCP Tools** component connects to a [Model Context Protocol (MCP)](https:/
 
 This component has two modes, depending on the type of server you want to access:
 
-* To access tools provided by external, non-Langflow MCP servers, [use JSON](#mcp-stdio-mode) or [Stdio mode](#mcp-stdio-mode).
-* To use flows from your [Langflow projects](/concepts-overview#projects) as MCP tools, [use SSE mode](#mcp-sse-mode).
+* [Connect to a non-Langflow MCP server](#mcp-stdio-mode) with a JSON configuration file, server start command, or SSE URL to access tools provided by external, non-Langflow MCP servers.
+* [Connect to a Langflow MCP server](#mcp-sse-mode) to use flows from your [Langflow projects](/concepts-flows#projects) as MCP tools.
 
-### Use Stdio mode {#mcp-stdio-mode}
+### Connect to a non-Langflow MCP server {#mcp-stdio-mode}
 
 1. Add an **MCP Tools** component to your flow.
 
@@ -67,7 +67,7 @@ For example, if you use `mcp-server-fetch` with the `fetch` tool, you could ask 
 
 8. If you want the agent to be able to use more tools, repeat these steps to add more **Tools** components with different servers or tools.
 
-### Use SSE mode {#mcp-sse-mode}
+### Connect a Langflow MCP server {#mcp-sse-mode}
 
 Every Langflow project runs a separate MCP server that exposes the project's flows as MCP tools.
 For more information about your projects' MCP servers, including how to manage exposed flows, see [Use Langflow as an MCP server](/mcp-server).
