@@ -362,20 +362,35 @@ class NVIDIANeMoGuardrailsComponent(LCModelComponent):
 
         return yaml.dump(config_dict, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
-    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        # Validate required URLs are set when corresponding rails are enabled
-        if "self check input" in self.rails and not self.self_check_model_url:
-            msg = "self_check_model_url must be set when self check rails are enabled"
-            raise ValueError(msg)
+    def validate_rails_config(self):
+        # --- Self-check rails validation ---
+        self_check_rails = {"self check input", "self check output", "self check hallucination"}
+        if any(rail in self.rails for rail in self_check_rails):
+            if not self.self_check_model_url:
+                msg = "self_check_model_url must be set when self check rails are enabled"
+                raise ValueError(msg)
+            if not self.self_check_model_name:
+                msg = "You must select a self-check model when using self-check rails."
+                raise ValueError(msg)
+
+        # --- Topic control validation ---
         if "topic control" in self.rails and not self.topic_control_model_url:
             msg = "topic_control_model_url must be set when topic control rails are enabled"
             raise ValueError(msg)
-        if "content safety input" in self.rails and not self.content_safety_model_url:
+
+        # --- Content safety validation ---
+        content_safety_rails = {"content safety input", "content safety output"}
+        if any(rail in self.rails for rail in content_safety_rails) and not self.content_safety_model_url:
             msg = "content_safety_model_url must be set when content safety rails are enabled"
             raise ValueError(msg)
+
+        # --- Jailbreak detection validation ---
         if "jailbreak detection model" in self.rails and not self.jailbreak_detection_model_url:
             msg = "jailbreak_detection_model_url must be set when jailbreak detection rails are enabled"
             raise ValueError(msg)
+
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        self.validate_rails_config()
 
         yaml_content = self.generate_rails_config()
 
