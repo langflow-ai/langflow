@@ -80,7 +80,6 @@ export default function APITabsComponent() {
     streaming: streaming,
     flowId: flowId || "",
     processedPayload: processedPayload,
-    isAuth: !autologin,
   };
 
   // Platform selection for cURL
@@ -144,15 +143,15 @@ export default function APITabsComponent() {
   const parseStepCode = (code: string) => {
     const step1Match = code.match(/##STEP1_START##\n?([\s\S]*?)##STEP1_END##/);
     const step2Match = code.match(/##STEP2_START##\n?([\s\S]*?)##STEP2_END##/);
-    
+
     if (step1Match && step2Match) {
       return {
         hasSteps: true,
         step1: step1Match[1].trim(),
-        step2: step2Match[1].trim()
+        step2: step2Match[1].trim(),
       };
     }
-    
+
     return { hasSteps: false, fullCode: code };
   };
 
@@ -207,59 +206,104 @@ export default function APITabsComponent() {
         )}
 
         {/* Code content */}
-        {currentTab && (() => {
-          const parsedCode = parseStepCode(currentTab.code);
-          
-          if (parsedCode.hasSteps) {
-            return (
-              <div className="api-modal-tabs-content overflow-auto flex flex-col gap-4 h-full">
-                {/* Step 1 - File uploads */}
-                <div>
-                  <h4 className="text-sm font-medium mb-2">Step 1: Upload your files</h4>
-                  <div className="relative flex w-full">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => copyToClipboard(parsedCode.step1, "step1")}
-                      data-testid="btn-copy-step1"
-                      className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
-                    >
-                      {copiedStep === "step1" ? (
-                        <IconComponent
-                          name="Check"
-                          className="h-5 w-5 text-muted-foreground"
-                        />
-                      ) : (
-                        <IconComponent
-                          name="Copy"
-                          className="!h-5 !w-5 text-muted-foreground"
-                        />
-                      )}
-                    </Button>
-                    <SyntaxHighlighter
-                      showLineNumbers={false}
-                      wrapLongLines={true}
-                      language={currentTab.language}
-                      style={dark ? oneDark : oneLight}
-                      className="!mt-0 w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
-                    >
-                      {parsedCode.step1}
-                    </SyntaxHighlighter>
+        {currentTab &&
+          (() => {
+            const parsedCode = parseStepCode(currentTab.code);
+
+            if (parsedCode.hasSteps) {
+              return (
+                <div className="api-modal-tabs-content flex h-full flex-col gap-4 overflow-auto">
+                  {/* Step 1 - File uploads */}
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium">
+                      Step 1: Upload your files
+                    </h4>
+                    <div className="relative flex w-full">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          copyToClipboard(parsedCode.step1, "step1")
+                        }
+                        data-testid="btn-copy-step1"
+                        className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
+                      >
+                        {copiedStep === "step1" ? (
+                          <IconComponent
+                            name="Check"
+                            className="h-5 w-5 text-muted-foreground"
+                          />
+                        ) : (
+                          <IconComponent
+                            name="Copy"
+                            className="!h-5 !w-5 text-muted-foreground"
+                          />
+                        )}
+                      </Button>
+                      <SyntaxHighlighter
+                        showLineNumbers={false}
+                        wrapLongLines={true}
+                        language={currentTab.language}
+                        style={dark ? oneDark : oneLight}
+                        className="!mt-0 w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
+                      >
+                        {parsedCode.step1}
+                      </SyntaxHighlighter>
+                    </div>
+                  </div>
+
+                  {/* Step 2 - Execute flow */}
+                  <div className="flex flex-1 flex-col overflow-hidden">
+                    <h4 className="mb-2 text-sm font-medium">
+                      Step 2: Execute flow with uploaded files
+                    </h4>
+                    <div className="relative flex h-full w-full">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          copyToClipboard(parsedCode.step2, "step2")
+                        }
+                        data-testid="btn-copy-step2"
+                        className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
+                      >
+                        {copiedStep === "step2" ? (
+                          <IconComponent
+                            name="Check"
+                            className="h-5 w-5 text-muted-foreground"
+                          />
+                        ) : (
+                          <IconComponent
+                            name="Copy"
+                            className="!h-5 !w-5 text-muted-foreground"
+                          />
+                        )}
+                      </Button>
+                      <SyntaxHighlighter
+                        showLineNumbers={true}
+                        wrapLongLines={true}
+                        language={currentTab.language}
+                        style={dark ? oneDark : oneLight}
+                        className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
+                      >
+                        {parsedCode.step2}
+                      </SyntaxHighlighter>
+                    </div>
                   </div>
                 </div>
-                
-                {/* Step 2 - Execute flow */}
-                <div className="flex-1 overflow-hidden flex flex-col">
-                  <h4 className="text-sm font-medium mb-2">Step 2: Execute flow with uploaded files</h4>
+              );
+            } else {
+              return (
+                <div className="api-modal-tabs-content overflow-hidden">
                   <div className="relative flex h-full w-full">
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => copyToClipboard(parsedCode.step2, "step2")}
-                      data-testid="btn-copy-step2"
+                      onClick={() => copyToClipboard()}
+                      data-testid="btn-copy-code"
                       className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
                     >
-                      {copiedStep === "step2" ? (
+                      {isCopied ? (
                         <IconComponent
                           name="Check"
                           className="h-5 w-5 text-muted-foreground"
@@ -278,49 +322,13 @@ export default function APITabsComponent() {
                       style={dark ? oneDark : oneLight}
                       className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
                     >
-                      {parsedCode.step2}
+                      {currentTab.code}
                     </SyntaxHighlighter>
                   </div>
                 </div>
-              </div>
-            );
-          } else {
-            return (
-              <div className="api-modal-tabs-content overflow-hidden">
-                <div className="relative flex h-full w-full">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => copyToClipboard()}
-                    data-testid="btn-copy-code"
-                    className="!hover:bg-foreground group absolute right-4 top-2 z-10 select-none"
-                  >
-                    {isCopied ? (
-                      <IconComponent
-                        name="Check"
-                        className="h-5 w-5 text-muted-foreground"
-                      />
-                    ) : (
-                      <IconComponent
-                        name="Copy"
-                        className="!h-5 !w-5 text-muted-foreground"
-                      />
-                    )}
-                  </Button>
-                  <SyntaxHighlighter
-                    showLineNumbers={true}
-                    wrapLongLines={true}
-                    language={currentTab.language}
-                    style={dark ? oneDark : oneLight}
-                    className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
-                  >
-                    {currentTab.code}
-                  </SyntaxHighlighter>
-                </div>
-              </div>
-            );
-          }
-        })()}
+              );
+            }
+          })()}
       </div>
     </div>
   );
