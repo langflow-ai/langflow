@@ -163,7 +163,9 @@ describe("API Snippet Generation Utilities", () => {
 
         // Check for required modules
         expect(code).toContain("const fs = require('fs')");
-        expect(code).toContain("httpModule = protocol === 'https:' ? require('https') : require('http')");
+        expect(code).toContain(
+          "httpModule = protocol === 'https:' ? require('https') : require('http')",
+        );
 
         // Check for file upload functions
         expect(code).toContain("createFormData");
